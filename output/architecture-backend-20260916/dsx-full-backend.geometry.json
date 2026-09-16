@@ -1,0 +1,683 @@
+{
+  "nodes": {
+    "cpc": {
+      "zone": "page",
+      "x": 40,
+      "y": 224,
+      "w": 248,
+      "h": 112
+    },
+    "ingress": {
+      "zone": "csc",
+      "x": 344,
+      "y": 224,
+      "w": 208,
+      "h": 112
+    },
+    "obs": {
+      "zone": "csc",
+      "x": 608,
+      "y": 224,
+      "w": 280,
+      "h": 112
+    },
+    "grafana": {
+      "zone": "csc",
+      "x": 984,
+      "y": 224,
+      "w": 288,
+      "h": 112
+    },
+    "object": {
+      "zone": "csc",
+      "x": 1376,
+      "y": 224,
+      "w": 480,
+      "h": 112
+    },
+    "frontend": {
+      "zone": "page",
+      "x": 40,
+      "y": 456,
+      "w": 248,
+      "h": 160
+    },
+    "gateway": {
+      "zone": "csc",
+      "x": 344,
+      "y": 456,
+      "w": 192,
+      "h": 112
+    },
+    "api": {
+      "zone": "backend",
+      "x": 600,
+      "y": 456,
+      "w": 288,
+      "h": 112
+    },
+    "jobs": {
+      "zone": "backend",
+      "x": 984,
+      "y": 456,
+      "w": 288,
+      "h": 112
+    },
+    "incident": {
+      "zone": "backend",
+      "x": 1368,
+      "y": 456,
+      "w": 184,
+      "h": 112
+    },
+    "rca": {
+      "zone": "backend",
+      "x": 600,
+      "y": 656,
+      "w": 416,
+      "h": 112
+    },
+    "report": {
+      "zone": "backend",
+      "x": 1136,
+      "y": 656,
+      "w": 416,
+      "h": 112
+    },
+    "data": {
+      "zone": "backend",
+      "x": 600,
+      "y": 848,
+      "w": 288,
+      "h": 128
+    },
+    "knowledge": {
+      "zone": "backend",
+      "x": 944,
+      "y": 848,
+      "w": 280,
+      "h": 128
+    },
+    "llmcall": {
+      "zone": "backend",
+      "x": 1272,
+      "y": 848,
+      "w": 280,
+      "h": 128
+    },
+    "postgres": {
+      "zone": "csc",
+      "x": 1640,
+      "y": 456,
+      "w": 216,
+      "h": 256
+    },
+    "dynamo": {
+      "zone": "csc",
+      "x": 1640,
+      "y": 784,
+      "w": 216,
+      "h": 80
+    },
+    "llm": {
+      "zone": "csc",
+      "x": 1640,
+      "y": 920,
+      "w": 216,
+      "h": 80
+    },
+    "sources": {
+      "zone": "page",
+      "x": 40,
+      "y": 816,
+      "w": 248,
+      "h": 160
+    }
+  },
+  "edges": [
+    {
+      "id": "metrics",
+      "source": "cpc",
+      "target": "ingress",
+      "points": [
+        [
+          288,
+          264
+        ],
+        [
+          344,
+          264
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "logs",
+      "source": "cpc",
+      "target": "ingress",
+      "points": [
+        [
+          288,
+          312
+        ],
+        [
+          344,
+          312
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "metrics-store",
+      "source": "ingress",
+      "target": "obs",
+      "points": [
+        [
+          552,
+          264
+        ],
+        [
+          608,
+          264
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "logs-store",
+      "source": "ingress",
+      "target": "obs",
+      "points": [
+        [
+          552,
+          312
+        ],
+        [
+          608,
+          312
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "object-store",
+      "source": "obs",
+      "target": "object",
+      "points": [
+        [
+          856,
+          224
+        ],
+        [
+          856,
+          208
+        ],
+        [
+          1616,
+          208
+        ],
+        [
+          1616,
+          224
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "alert",
+      "source": "grafana",
+      "target": "incident",
+      "points": [
+        [
+          1176,
+          336
+        ],
+        [
+          1176,
+          376
+        ],
+        [
+          1456,
+          376
+        ],
+        [
+          1456,
+          456
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "front-gateway",
+      "source": "frontend",
+      "target": "gateway",
+      "points": [
+        [
+          288,
+          512
+        ],
+        [
+          344,
+          512
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "gateway-api",
+      "source": "gateway",
+      "target": "api",
+      "points": [
+        [
+          536,
+          512
+        ],
+        [
+          600,
+          512
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "api-jobs",
+      "source": "api",
+      "target": "jobs",
+      "points": [
+        [
+          888,
+          512
+        ],
+        [
+          984,
+          512
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "incident-jobs",
+      "source": "incident",
+      "target": "jobs",
+      "points": [
+        [
+          1368,
+          512
+        ],
+        [
+          1272,
+          512
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "jobs-rca",
+      "source": "jobs",
+      "target": "rca",
+      "points": [
+        [
+          1056,
+          568
+        ],
+        [
+          1056,
+          624
+        ],
+        [
+          808,
+          624
+        ],
+        [
+          808,
+          656
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "jobs-report",
+      "source": "jobs",
+      "target": "report",
+      "points": [
+        [
+          1176,
+          568
+        ],
+        [
+          1176,
+          608
+        ],
+        [
+          1328,
+          608
+        ],
+        [
+          1328,
+          656
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "backend-postgres",
+      "source": "backend",
+      "target": "postgres",
+      "points": [
+        [
+          1576,
+          608
+        ],
+        [
+          1640,
+          608
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "rca-llm",
+      "source": "rca",
+      "target": "llmcall",
+      "points": [
+        [
+          1016,
+          720
+        ],
+        [
+          1080,
+          720
+        ],
+        [
+          1080,
+          816
+        ],
+        [
+          1488,
+          816
+        ],
+        [
+          1488,
+          848
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "report-llm",
+      "source": "report",
+      "target": "llmcall",
+      "points": [
+        [
+          1408,
+          768
+        ],
+        [
+          1408,
+          848
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "call-dynamo",
+      "source": "llmcall",
+      "target": "dynamo",
+      "points": [
+        [
+          1552,
+          904
+        ],
+        [
+          1616,
+          904
+        ],
+        [
+          1616,
+          824
+        ],
+        [
+          1640,
+          824
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "dynamo-llm",
+      "source": "dynamo",
+      "target": "llm",
+      "points": [
+        [
+          1752,
+          864
+        ],
+        [
+          1752,
+          920
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "grafana-query",
+      "source": "grafana",
+      "target": "obs",
+      "points": [
+        [
+          984,
+          280
+        ],
+        [
+          888,
+          280
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "rca-data",
+      "source": "rca",
+      "target": "data",
+      "points": [
+        [
+          720,
+          768
+        ],
+        [
+          720,
+          848
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "report-data",
+      "source": "report",
+      "target": "data",
+      "points": [
+        [
+          1200,
+          768
+        ],
+        [
+          1200,
+          792
+        ],
+        [
+          840,
+          792
+        ],
+        [
+          840,
+          848
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "rca-kb",
+      "source": "rca",
+      "target": "knowledge",
+      "points": [
+        [
+          968,
+          768
+        ],
+        [
+          968,
+          848
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "report-kb",
+      "source": "report",
+      "target": "knowledge",
+      "points": [
+        [
+          1288,
+          768
+        ],
+        [
+          1288,
+          832
+        ],
+        [
+          1152,
+          832
+        ],
+        [
+          1152,
+          848
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "data-query",
+      "source": "data",
+      "target": "obs",
+      "points": [
+        [
+          600,
+          904
+        ],
+        [
+          552,
+          904
+        ],
+        [
+          552,
+          376
+        ],
+        [
+          736,
+          376
+        ],
+        [
+          736,
+          336
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "knowledge-source",
+      "source": "knowledge",
+      "target": "sources",
+      "points": [
+        [
+          944,
+          944
+        ],
+        [
+          920,
+          944
+        ],
+        [
+          920,
+          992
+        ],
+        [
+          272,
+          992
+        ],
+        [
+          272,
+          976
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    }
+  ],
+  "boundaries": {
+    "page": [
+      0,
+      168,
+      1920,
+      840
+    ],
+    "csc": [
+      320,
+      168,
+      1560,
+      840
+    ],
+    "backend": [
+      568,
+      400,
+      1008,
+      608
+    ]
+  }
+}

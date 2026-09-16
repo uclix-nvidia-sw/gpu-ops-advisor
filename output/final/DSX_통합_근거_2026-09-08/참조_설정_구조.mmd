@@ -1,0 +1,11 @@
+flowchart LR
+  subgraph REF["R-LOCAL · 소스에서 확인한 참조 설정 · 실행 검증 아님"]
+    C["MCP client"] -.->|"R06 · 18180 / 30180 / 80"| GW["CSC Agent Gateway"]
+    GW -.->|"R07 · 3001"| HUB["CSC Bridge hub"]
+    HUB -.->|"R08 · NATS4222 / request-reply"| TN["별도 테스트 NATS · namespace nats"]
+    LEAF["CPC Bridge leaf"] -.->|"R08 · NATS4222 / request-reply"| TN
+    LEAF -.->|"R09 · HTTP80 /mcp"| LGW["해당 CPC Agent Gateway"]
+    LGW -.->|"R10 · MCP3001"| MCP["해당 CPC MCP backend"]
+    PN["CPC Event Bus NATS"] -.->|"R03 · CSC Envoy7422 경유"| CN["CSC Event Bus NATS"]
+  end
+

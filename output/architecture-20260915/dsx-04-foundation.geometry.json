@@ -1,0 +1,340 @@
+{
+  "nodes": {
+    "query": {
+      "zone": "data",
+      "x": 64,
+      "y": 236,
+      "w": 344,
+      "h": 192
+    },
+    "q": {
+      "zone": "data",
+      "x": 504,
+      "y": 236,
+      "w": 384,
+      "h": 112
+    },
+    "storage": {
+      "zone": "data",
+      "x": 504,
+      "y": 412,
+      "w": 384,
+      "h": 120
+    },
+    "db": {
+      "zone": "data",
+      "x": 64,
+      "y": 508,
+      "w": 344,
+      "h": 144
+    },
+    "kb": {
+      "zone": "knowledge",
+      "x": 984,
+      "y": 236,
+      "w": 440,
+      "h": 240
+    },
+    "published": {
+      "zone": "knowledge",
+      "x": 1504,
+      "y": 236,
+      "w": 344,
+      "h": 192
+    },
+    "git": {
+      "zone": "knowledge",
+      "x": 1504,
+      "y": 532,
+      "w": 344,
+      "h": 120
+    },
+    "review": {
+      "zone": "knowledge",
+      "x": 984,
+      "y": 548,
+      "w": 440,
+      "h": 104
+    },
+    "routing": {
+      "zone": "model",
+      "x": 64,
+      "y": 792,
+      "w": 376,
+      "h": 192
+    },
+    "llm": {
+      "zone": "model",
+      "x": 520,
+      "y": 792,
+      "w": 400,
+      "h": 192
+    },
+    "volume": {
+      "zone": "model",
+      "x": 1000,
+      "y": 792,
+      "w": 376,
+      "h": 192
+    },
+    "eval": {
+      "zone": "model",
+      "x": 1456,
+      "y": 792,
+      "w": 392,
+      "h": 192
+    }
+  },
+  "edges": [
+    {
+      "id": "qq",
+      "source": "query",
+      "target": "q",
+      "points": [
+        [
+          408,
+          280
+        ],
+        [
+          504,
+          280
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "qs",
+      "source": "q",
+      "target": "storage",
+      "points": [
+        [
+          696,
+          348
+        ],
+        [
+          696,
+          412
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "qd",
+      "source": "query",
+      "target": "db",
+      "points": [
+        [
+          168,
+          428
+        ],
+        [
+          168,
+          508
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "qk",
+      "source": "query",
+      "target": "kb",
+      "points": [
+        [
+          344,
+          236
+        ],
+        [
+          344,
+          216
+        ],
+        [
+          1200,
+          216
+        ],
+        [
+          1200,
+          236
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "kp",
+      "source": "kb",
+      "target": "published",
+      "points": [
+        [
+          1424,
+          300
+        ],
+        [
+          1504,
+          300
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "kg",
+      "source": "kb",
+      "target": "git",
+      "points": [
+        [
+          1360,
+          476
+        ],
+        [
+          1360,
+          504
+        ],
+        [
+          1624,
+          504
+        ],
+        [
+          1624,
+          532
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "rev",
+      "source": "review",
+      "target": "kb",
+      "points": [
+        [
+          1112,
+          548
+        ],
+        [
+          1112,
+          476
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "drev",
+      "source": "db",
+      "target": "review",
+      "points": [
+        [
+          408,
+          580
+        ],
+        [
+          952,
+          580
+        ],
+        [
+          952,
+          600
+        ],
+        [
+          984,
+          600
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "rl",
+      "source": "routing",
+      "target": "llm",
+      "points": [
+        [
+          440,
+          888
+        ],
+        [
+          520,
+          888
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "lv",
+      "source": "llm",
+      "target": "volume",
+      "points": [
+        [
+          920,
+          888
+        ],
+        [
+          1000,
+          888
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "el",
+      "source": "eval",
+      "target": "llm",
+      "points": [
+        [
+          1616,
+          792
+        ],
+        [
+          1616,
+          776
+        ],
+        [
+          776,
+          776
+        ],
+        [
+          776,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    }
+  ],
+  "boundaries": {
+    "data": [
+      40,
+      168,
+      880,
+      520
+    ],
+    "knowledge": [
+      960,
+      168,
+      920,
+      520
+    ],
+    "model": [
+      40,
+      728,
+      1840,
+      288
+    ]
+  }
+}

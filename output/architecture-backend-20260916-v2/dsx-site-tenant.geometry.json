@@ -1,0 +1,289 @@
+{
+  "nodes": {
+    "site-a": {
+      "zone": "page",
+      "x": 40,
+      "y": 248,
+      "w": 352,
+      "h": 128
+    },
+    "site-b": {
+      "zone": "page",
+      "x": 40,
+      "y": 440,
+      "w": 352,
+      "h": 128
+    },
+    "write": {
+      "zone": "csc",
+      "x": 464,
+      "y": 296,
+      "w": 392,
+      "h": 232
+    },
+    "user": {
+      "zone": "page",
+      "x": 40,
+      "y": 656,
+      "w": 352,
+      "h": 128
+    },
+    "read": {
+      "zone": "csc",
+      "x": 464,
+      "y": 656,
+      "w": 392,
+      "h": 192
+    },
+    "idp": {
+      "zone": "page",
+      "x": 40,
+      "y": 856,
+      "w": 352,
+      "h": 128
+    },
+    "tenant-a": {
+      "zone": "mimir",
+      "x": 952,
+      "y": 312,
+      "w": 392,
+      "h": 304
+    },
+    "tenant-b": {
+      "zone": "mimir",
+      "x": 1392,
+      "y": 312,
+      "w": 440,
+      "h": 304
+    },
+    "objects": {
+      "zone": "mimir",
+      "x": 952,
+      "y": 856,
+      "w": 880,
+      "h": 112
+    }
+  },
+  "edges": [
+    {
+      "id": "ingest-a",
+      "source": "site-a",
+      "target": "write",
+      "points": [
+        [
+          392,
+          320
+        ],
+        [
+          464,
+          320
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "ingest-b",
+      "source": "site-b",
+      "target": "write",
+      "points": [
+        [
+          392,
+          496
+        ],
+        [
+          464,
+          496
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "write-a",
+      "source": "write",
+      "target": "tenant-a",
+      "points": [
+        [
+          856,
+          344
+        ],
+        [
+          952,
+          344
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "write-b",
+      "source": "write",
+      "target": "tenant-b",
+      "points": [
+        [
+          856,
+          456
+        ],
+        [
+          904,
+          456
+        ],
+        [
+          904,
+          280
+        ],
+        [
+          1568,
+          280
+        ],
+        [
+          1568,
+          312
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "user-query",
+      "source": "user",
+      "target": "read",
+      "points": [
+        [
+          392,
+          704
+        ],
+        [
+          464,
+          704
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "login",
+      "source": "user",
+      "target": "idp",
+      "points": [
+        [
+          216,
+          784
+        ],
+        [
+          216,
+          856
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "store-a",
+      "source": "tenant-a",
+      "target": "objects",
+      "points": [
+        [
+          1120,
+          616
+        ],
+        [
+          1120,
+          856
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "store-b",
+      "source": "tenant-b",
+      "target": "objects",
+      "points": [
+        [
+          1680,
+          616
+        ],
+        [
+          1680,
+          856
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "read-a",
+      "source": "read",
+      "target": "tenant-a",
+      "points": [
+        [
+          856,
+          704
+        ],
+        [
+          1000,
+          704
+        ],
+        [
+          1000,
+          616
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "read-b",
+      "source": "read",
+      "target": "tenant-b",
+      "points": [
+        [
+          856,
+          752
+        ],
+        [
+          1408,
+          752
+        ],
+        [
+          1408,
+          616
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    }
+  ],
+  "boundaries": {
+    "page": [
+      0,
+      168,
+      1920,
+      840
+    ],
+    "csc": [
+      440,
+      184,
+      1440,
+      824
+    ],
+    "mimir": [
+      928,
+      232,
+      928,
+      760
+    ]
+  }
+}

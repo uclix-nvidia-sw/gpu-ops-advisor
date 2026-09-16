@@ -1,0 +1,1143 @@
+[
+  {
+    "file": ".gitattributes",
+    "bytes": 85,
+    "original_sha256": null,
+    "repo_sha256": "1b053f052724c590aa0611fb0a5e96a7dac46bf5075287fb1c15f17ebd341e49",
+    "generated_for_repository": true
+  },
+  {
+    "file": ".gitignore",
+    "bytes": 232,
+    "original_sha256": null,
+    "repo_sha256": "d3be0f64d31532f8274f5016d9d58d46f76961c6b2bfabaa6a38389d66692b03",
+    "generated_for_repository": true
+  },
+  {
+    "file": "README.md",
+    "bytes": 23454,
+    "original_sha256": "2409b940d4f30db9d4315b951a38b13ef14a96ce2d677cfd7c0c7877146a6bd5",
+    "repo_sha256": "f8a4231ccf24aae56e767e8a5b1799f0919360bce90b2189704a917dc9ddfd01",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/DSX_통합개정산출물_v1.1_20260916.zip",
+    "bytes": 3627748,
+    "original_sha256": "a87dd2c67c9205f1e4f0ac1edaa2c4122531a1547c72aa8c8f0b153b5fb404c1",
+    "repo_sha256": "a87dd2c67c9205f1e4f0ac1edaa2c4122531a1547c72aa8c8f0b153b5fb404c1",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-architecture-preview.png",
+    "bytes": 334986,
+    "original_sha256": "4e56b396caad5beece8a6800041148214367c7ccd7ca312c630054f25bedec71",
+    "repo_sha256": "4e56b396caad5beece8a6800041148214367c7ccd7ca312c630054f25bedec71",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-architecture.png",
+    "bytes": 1835336,
+    "original_sha256": "dfe2b110cbc33932d69d56b2ee86afdebfea4c785382dcc73906a4dd354e55f0",
+    "repo_sha256": "dfe2b110cbc33932d69d56b2ee86afdebfea4c785382dcc73906a4dd354e55f0",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-architecture.svg",
+    "bytes": 26399,
+    "original_sha256": "bcb010b51ac11397f4d4b3bd60e160848072cbcdaa3e73ab0578c0d5364d4d39",
+    "repo_sha256": "bcb010b51ac11397f4d4b3bd60e160848072cbcdaa3e73ab0578c0d5364d4d39",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-incident-detail-preview.png",
+    "bytes": 184514,
+    "original_sha256": "23c65fbd3fc606d9f355ca8e3ee21e42d059ee58b4f23db7e621a48afbd37f6f",
+    "repo_sha256": "23c65fbd3fc606d9f355ca8e3ee21e42d059ee58b4f23db7e621a48afbd37f6f",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-incident-detail.png",
+    "bytes": 982263,
+    "original_sha256": "388f415706ba7b47338b371a70405fcae72ce17c5f2628f717ea4fe11ec95348",
+    "repo_sha256": "388f415706ba7b47338b371a70405fcae72ce17c5f2628f717ea4fe11ec95348",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/dsx-incident-detail.svg",
+    "bytes": 9457,
+    "original_sha256": "8a6bb6d6eee948c2f2514f4fd1965cc3765b74b3e88d3455f41da51670171e45",
+    "repo_sha256": "8a6bb6d6eee948c2f2514f4fd1965cc3765b74b3e88d3455f41da51670171e45",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260910/설계근거와_검토범위.md",
+    "bytes": 11906,
+    "original_sha256": "e4977611c1a64deb6f9620beb85b0e902762a161828f8fb7a68dcd121b50bc6b",
+    "repo_sha256": "e4977611c1a64deb6f9620beb85b0e902762a161828f8fb7a68dcd121b50bc6b",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/DSX_Architecture_20260915.html",
+    "bytes": 87780,
+    "original_sha256": "97e930efa4c037b059e3a094d3bc42ab9166b2d5926dd687010166b3c64b80eb",
+    "repo_sha256": "97e930efa4c037b059e3a094d3bc42ab9166b2d5926dd687010166b3c64b80eb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-01-overview.geometry.json",
+    "bytes": 11733,
+    "original_sha256": "0b60d1a7e281cea67f376dab4f779ccce0404fd8fffaa3096d861b2328fc8c1b",
+    "repo_sha256": "0b60d1a7e281cea67f376dab4f779ccce0404fd8fffaa3096d861b2328fc8c1b",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-01-overview.html",
+    "bytes": 26292,
+    "original_sha256": "7c74b249f5b5e70f7d81bc7ff272f59e4e88b41309d1e0debbfc9ae13b62507c",
+    "repo_sha256": "7c74b249f5b5e70f7d81bc7ff272f59e4e88b41309d1e0debbfc9ae13b62507c",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-01-overview.png",
+    "bytes": 608518,
+    "original_sha256": "7f39f9d90c48f2e66aebc853c542ffefb98eb10cc4b42039911a5387f04d1383",
+    "repo_sha256": "7f39f9d90c48f2e66aebc853c542ffefb98eb10cc4b42039911a5387f04d1383",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-01-overview.svg",
+    "bytes": 25899,
+    "original_sha256": "3d5460c47f73df2757c6556ed369bf8869c141a274cf106e09c7a9ad1b9312f3",
+    "repo_sha256": "3d5460c47f73df2757c6556ed369bf8869c141a274cf106e09c7a9ad1b9312f3",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-02-collection.geometry.json",
+    "bytes": 6735,
+    "original_sha256": "26772bb7cdbb6e096efc58ed8df607c24ab9e2b3b13156599a6a57bf8951302e",
+    "repo_sha256": "26772bb7cdbb6e096efc58ed8df607c24ab9e2b3b13156599a6a57bf8951302e",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-02-collection.html",
+    "bytes": 19244,
+    "original_sha256": "0140a39960b9aa5a02e6c7a74230531d25216c2aeda9de45619e2adecea748d4",
+    "repo_sha256": "0140a39960b9aa5a02e6c7a74230531d25216c2aeda9de45619e2adecea748d4",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-02-collection.png",
+    "bytes": 545379,
+    "original_sha256": "fbfc373ead7d2c01aec7676399a42d863b5299a99c36b89ed3beedab42f4cf06",
+    "repo_sha256": "fbfc373ead7d2c01aec7676399a42d863b5299a99c36b89ed3beedab42f4cf06",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-02-collection.svg",
+    "bytes": 18855,
+    "original_sha256": "d0d1fd1f9e969e346230735e327a4cbb7e4a3f02bf733ac11fabd0642c3cf500",
+    "repo_sha256": "d0d1fd1f9e969e346230735e327a4cbb7e4a3f02bf733ac11fabd0642c3cf500",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-03-services.geometry.json",
+    "bytes": 7453,
+    "original_sha256": "de0f63e2a90365799ec0875b19989fe2493600755ef02883c57a04bd1c53ba07",
+    "repo_sha256": "de0f63e2a90365799ec0875b19989fe2493600755ef02883c57a04bd1c53ba07",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-03-services.html",
+    "bytes": 23128,
+    "original_sha256": "8cdc502315bb6c4a632fb900b5d48578444e66e668b2392644225c1c69e71fd6",
+    "repo_sha256": "8cdc502315bb6c4a632fb900b5d48578444e66e668b2392644225c1c69e71fd6",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-03-services.png",
+    "bytes": 618554,
+    "original_sha256": "7078abef483a3fac0f384e8539e63852890e662cd9fca6ffd961b79e7cc45bb7",
+    "repo_sha256": "7078abef483a3fac0f384e8539e63852890e662cd9fca6ffd961b79e7cc45bb7",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-03-services.svg",
+    "bytes": 22723,
+    "original_sha256": "a982494f27bb1564b1e65076740c720141704e629f9bb61d77a60df1ed6360d8",
+    "repo_sha256": "a982494f27bb1564b1e65076740c720141704e629f9bb61d77a60df1ed6360d8",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-04-foundation.geometry.json",
+    "bytes": 5311,
+    "original_sha256": "45cdc830adab1d3f557504f675ca1405409ce9d7543f1582100c818113a7b983",
+    "repo_sha256": "45cdc830adab1d3f557504f675ca1405409ce9d7543f1582100c818113a7b983",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-04-foundation.html",
+    "bytes": 20264,
+    "original_sha256": "9f2a80eaf24254e4a41904e03e0c8bb76b7cdc075567abb6d06b3ca6c0ec7bce",
+    "repo_sha256": "9f2a80eaf24254e4a41904e03e0c8bb76b7cdc075567abb6d06b3ca6c0ec7bce",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-04-foundation.png",
+    "bytes": 573116,
+    "original_sha256": "b0c072034573a06abbfc9b28aa83a1f2579a59e6221f558538e5f0af2d6575eb",
+    "repo_sha256": "b0c072034573a06abbfc9b28aa83a1f2579a59e6221f558538e5f0af2d6575eb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/dsx-04-foundation.svg",
+    "bytes": 19865,
+    "original_sha256": "c5e78361327cb75e98c0958d8e1f5182af6755b31e0bad91d7502fafbb61712c",
+    "repo_sha256": "c5e78361327cb75e98c0958d8e1f5182af6755b31e0bad91d7502fafbb61712c",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-20260915/메모리_대조와_설계결정.md",
+    "bytes": 14100,
+    "original_sha256": "afed5985baaf89af4210d9224cbe9440a8f5e0b8f591fb913306379f11f82955",
+    "repo_sha256": "d18df768af5ee8d7f90816286768a57a7d685502b5466f5e276db298082a3f70",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/DSX_Full_Backend_Tenant_20260916_v2.html",
+    "bytes": 62583,
+    "original_sha256": "9900d7cde45a671ee496e571f9aeba71182e55d6b9d6c51a9eea7a0edef84d7e",
+    "repo_sha256": "9900d7cde45a671ee496e571f9aeba71182e55d6b9d6c51a9eea7a0edef84d7e",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-backend-detail.geometry.json",
+    "bytes": 6097,
+    "original_sha256": "51feaf55318c0c2f687ac8a2acc17aafd399d4b495cf799138663f2a89a78441",
+    "repo_sha256": "51feaf55318c0c2f687ac8a2acc17aafd399d4b495cf799138663f2a89a78441",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-backend-detail.html",
+    "bytes": 19071,
+    "original_sha256": "c83ceab14a27a37f505775fbbc7c8e89b7657f96ba657ed4cbc20b2b4ff155d1",
+    "repo_sha256": "c83ceab14a27a37f505775fbbc7c8e89b7657f96ba657ed4cbc20b2b4ff155d1",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-backend-detail.png",
+    "bytes": 620317,
+    "original_sha256": "6c4ca314eecc10996e1aac094fc4db05afe22a82b181286b3f5b75f170f6b403",
+    "repo_sha256": "6c4ca314eecc10996e1aac094fc4db05afe22a82b181286b3f5b75f170f6b403",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-backend-detail.svg",
+    "bytes": 18653,
+    "original_sha256": "4a4c411e6080b794a2e8f2b634c018f0ca2022bf62f2c5af861d63419d4226be",
+    "repo_sha256": "4a4c411e6080b794a2e8f2b634c018f0ca2022bf62f2c5af861d63419d4226be",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-full-backend.geometry.json",
+    "bytes": 11415,
+    "original_sha256": "707894f490639af5af0e4cd60c56f729171b7b2f04020e9b77f2e12b6e19582c",
+    "repo_sha256": "707894f490639af5af0e4cd60c56f729171b7b2f04020e9b77f2e12b6e19582c",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-full-backend.html",
+    "bytes": 26539,
+    "original_sha256": "bf552c7c726015a37fe8d175144d08ba4487f949b9236c044c8e223b43e35a41",
+    "repo_sha256": "bf552c7c726015a37fe8d175144d08ba4487f949b9236c044c8e223b43e35a41",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-full-backend.png",
+    "bytes": 591252,
+    "original_sha256": "8b4b48abf4e4fc2a3720575e0ce0ca333cf6e3500bb5c94739df81785f3014a1",
+    "repo_sha256": "8b4b48abf4e4fc2a3720575e0ce0ca333cf6e3500bb5c94739df81785f3014a1",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-full-backend.svg",
+    "bytes": 26129,
+    "original_sha256": "c83b830a14ad3add6d9708b69d60d028a68b2614ef0a469efc3be5c6d804d250",
+    "repo_sha256": "c83b830a14ad3add6d9708b69d60d028a68b2614ef0a469efc3be5c6d804d250",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-site-tenant.geometry.json",
+    "bytes": 4587,
+    "original_sha256": "59326e97dfe3cfd55065a0418e339c66f95a3bf735eafe0fd92606dccff214df",
+    "repo_sha256": "59326e97dfe3cfd55065a0418e339c66f95a3bf735eafe0fd92606dccff214df",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-site-tenant.html",
+    "bytes": 17482,
+    "original_sha256": "2dc9661c99482c02f81bdfc83979fb2cffd646d26315b850ff24d070c2e47c12",
+    "repo_sha256": "2dc9661c99482c02f81bdfc83979fb2cffd646d26315b850ff24d070c2e47c12",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-site-tenant.png",
+    "bytes": 519164,
+    "original_sha256": "9aa07387002a14267fa597b797c4fd55223f4ed6b893e781d549b149822b639e",
+    "repo_sha256": "9aa07387002a14267fa597b797c4fd55223f4ed6b893e781d549b149822b639e",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/dsx-site-tenant.svg",
+    "bytes": 17066,
+    "original_sha256": "d29a79f7e972fb3c2a36580f1ca6bbdfe200ffb02bdfb22f8695cffe0fca6e44",
+    "repo_sha256": "d29a79f7e972fb3c2a36580f1ca6bbdfe200ffb02bdfb22f8695cffe0fca6e44",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916-v2/구성_설명.md",
+    "bytes": 5944,
+    "original_sha256": "ba3e6d803fc41add0dc4fe94a221e81446a5af8ee15f82148c9505c9d4e1f248",
+    "repo_sha256": "0e1eb89795f413fe1ad37e47cc172504cf8132e7adaa8b925064e6bc828cf88f",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/architecture-backend-20260916/DSX_Full_Backend_20260916.html",
+    "bytes": 45172,
+    "original_sha256": "34a2f5360e5aa1888d03b30c971f3647f0f6bd94592be54744e9bafd408e57b3",
+    "repo_sha256": "34a2f5360e5aa1888d03b30c971f3647f0f6bd94592be54744e9bafd408e57b3",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-backend-detail.geometry.json",
+    "bytes": 6097,
+    "original_sha256": "51feaf55318c0c2f687ac8a2acc17aafd399d4b495cf799138663f2a89a78441",
+    "repo_sha256": "51feaf55318c0c2f687ac8a2acc17aafd399d4b495cf799138663f2a89a78441",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-backend-detail.html",
+    "bytes": 18925,
+    "original_sha256": "a14e8d8ed50b553350cd61155adb59554a13bb081cae5f7c266c25b94acc99bd",
+    "repo_sha256": "a14e8d8ed50b553350cd61155adb59554a13bb081cae5f7c266c25b94acc99bd",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-backend-detail.png",
+    "bytes": 614444,
+    "original_sha256": "7c5bf6762569c8254a19f1f307fa1890c545e0760f4bf64a08b32c0fb40fa152",
+    "repo_sha256": "7c5bf6762569c8254a19f1f307fa1890c545e0760f4bf64a08b32c0fb40fa152",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-backend-detail.svg",
+    "bytes": 18503,
+    "original_sha256": "0b77f3f7e0e25d9e84e62bf08d25cae3a7ca410ff9aace3205003a13c5c29a3d",
+    "repo_sha256": "0b77f3f7e0e25d9e84e62bf08d25cae3a7ca410ff9aace3205003a13c5c29a3d",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-full-backend.geometry.json",
+    "bytes": 11007,
+    "original_sha256": "a45f817163e68d1e5f8223d421f0d4599bb2b32ad166b5f66880751bcf4b3f0a",
+    "repo_sha256": "a45f817163e68d1e5f8223d421f0d4599bb2b32ad166b5f66880751bcf4b3f0a",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-full-backend.html",
+    "bytes": 26125,
+    "original_sha256": "0cea8ae1acef209cdec5b81c63a3f915de3ed23ff604575baa345513076405ef",
+    "repo_sha256": "0cea8ae1acef209cdec5b81c63a3f915de3ed23ff604575baa345513076405ef",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-full-backend.png",
+    "bytes": 587081,
+    "original_sha256": "4c4d7eb19be719e41fa3e3bcea1333a5a46c3c0ce772be1c18f745aaf75cc0ef",
+    "repo_sha256": "4c4d7eb19be719e41fa3e3bcea1333a5a46c3c0ce772be1c18f745aaf75cc0ef",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/dsx-full-backend.svg",
+    "bytes": 25711,
+    "original_sha256": "1d287a937410e5c34b2c5e97f7bc4b97b60fad9ed3a9904c139ad7c100b61d74",
+    "repo_sha256": "1d287a937410e5c34b2c5e97f7bc4b97b60fad9ed3a9904c139ad7c100b61d74",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-backend-20260916/구성_설명.md",
+    "bytes": 5237,
+    "original_sha256": "0b6ff8eb56b6f77bdbec0c596aebaebd7636c5ed85fe0ad2f4b18c71ccf26d06",
+    "repo_sha256": "0b6ff8eb56b6f77bdbec0c596aebaebd7636c5ed85fe0ad2f4b18c71ccf26d06",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/DSX_Architecture_Comparison_20260916.html",
+    "bytes": 49637,
+    "original_sha256": "c92b7c7ed379d8a319c1b2d0f07757b0e27d1f7e571f66592757e666c41b7bb0",
+    "repo_sha256": "c92b7c7ed379d8a319c1b2d0f07757b0e27d1f7e571f66592757e666c41b7bb0",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-current.geometry.json",
+    "bytes": 10303,
+    "original_sha256": "18e0801b5b37ac786d76bfdd280a417501674b9ed3537291a809c75281d0e82a",
+    "repo_sha256": "18e0801b5b37ac786d76bfdd280a417501674b9ed3537291a809c75281d0e82a",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-current.html",
+    "bytes": 24679,
+    "original_sha256": "6b131b80046807cf8f3d967f1a04aa98232ff8e2d2e458a02baccb3aa3e8958d",
+    "repo_sha256": "6b131b80046807cf8f3d967f1a04aa98232ff8e2d2e458a02baccb3aa3e8958d",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-current.png",
+    "bytes": 575911,
+    "original_sha256": "4d875fc5521430c99e9f095e39cb5ba2380ec3d011b41c9082f832816fd5d8c7",
+    "repo_sha256": "4d875fc5521430c99e9f095e39cb5ba2380ec3d011b41c9082f832816fd5d8c7",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-current.svg",
+    "bytes": 24281,
+    "original_sha256": "08b9debf20c37a980ccad3342d9fef49c579d59af87bf20a1c4217f6521cdfa6",
+    "repo_sha256": "08b9debf20c37a980ccad3342d9fef49c579d59af87bf20a1c4217f6521cdfa6",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-microservices.geometry.json",
+    "bytes": 10303,
+    "original_sha256": "18e0801b5b37ac786d76bfdd280a417501674b9ed3537291a809c75281d0e82a",
+    "repo_sha256": "18e0801b5b37ac786d76bfdd280a417501674b9ed3537291a809c75281d0e82a",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-microservices.html",
+    "bytes": 24848,
+    "original_sha256": "26121f362e4e6d6e8a8651847254d1dc5c33f731148f25148cd96bcf7adc48fe",
+    "repo_sha256": "26121f362e4e6d6e8a8651847254d1dc5c33f731148f25148cd96bcf7adc48fe",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-microservices.png",
+    "bytes": 559837,
+    "original_sha256": "950f922ed45bd7b1ddcf9ee37b49a510866f76df47a8ecd57ad911d580a838f8",
+    "repo_sha256": "950f922ed45bd7b1ddcf9ee37b49a510866f76df47a8ecd57ad911d580a838f8",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/dsx-microservices.svg",
+    "bytes": 24441,
+    "original_sha256": "e13339487b1ef8d2ec33fe04d04936ca6d1d4e0b8b7b3ab30c4f33a631eb7abb",
+    "repo_sha256": "e13339487b1ef8d2ec33fe04d04936ca6d1d4e0b8b7b3ab30c4f33a631eb7abb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/architecture-comparison-20260916/구조도_비교기준.md",
+    "bytes": 7665,
+    "original_sha256": "f9cdfc3c864c56f82ac73660098d8a3cb4f933f8ef6aa42c9532a44a49e418ad",
+    "repo_sha256": "f9cdfc3c864c56f82ac73660098d8a3cb4f933f8ef6aa42c9532a44a49e418ad",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/00_산출물_안내.md",
+    "bytes": 6194,
+    "original_sha256": "af9ac04bde65ce9171f439ae66532f911787f472bf7e2d17cd9e8d266f723f60",
+    "repo_sha256": "f23cf7498bfd8b91d8ce44a735e688e5737fdb1d543e639c1040d8697165296f",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md",
+    "bytes": 13145,
+    "original_sha256": "3fcf00c7d4b247516b3cdb88b0692ef95a7fb2d482532e407e4dfd4048bd0ac2",
+    "repo_sha256": "79dbac758b163a895e57b680cf529e31ccf4ec6a4b77723674c3f130348f6862",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md",
+    "bytes": 31067,
+    "original_sha256": "347644b794b540e1f97161a59d90092db0a30fa8491cf87bfd2d81057ded234f",
+    "repo_sha256": "b5b15c37f7764d848b9342e5fa35ab434af24ae686a2dfc727bf70787a1ea872",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/03_데이터_설계서.md",
+    "bytes": 44783,
+    "original_sha256": "90da8bf5b1205c506066f698b889962d217aeb6326bc9e0511391f57d14d98c0",
+    "repo_sha256": "757c4fc5efaf0c2ca23c152b6c5aaa394c8c90e2a89eb81fb389f45103f72f2f",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/04_Agent_동작_판단_명세서.md",
+    "bytes": 30957,
+    "original_sha256": "b8b64d73ff2b79ca46dc42a755d62992cb2f72310908bdc6e6790c2415a975b0",
+    "repo_sha256": "0bd981b796f3b3b80da7ed51f5bf5ae15b2e1dcd6b5e4e4abb40deeb83b33d4b",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/05_테스트_검수_기준서.md",
+    "bytes": 30161,
+    "original_sha256": "ff00448868b55aafde3e9328cab1be9b12b06758fc4380f7bd5d9858f7cc5dee",
+    "repo_sha256": "52861af9e890461c9f892c72c701551ce6cefbae7b6b765f5b488c9fc73383f3",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/06_배포_운영_인계서.md",
+    "bytes": 35188,
+    "original_sha256": "1faba9532f42b31eff7b01eb1739a238ccdd0f04aa759ed68a0d8ddc5005b317",
+    "repo_sha256": "1f47e78da7162669e58f0556767568a046ba30443ae63bcc692c43cedd7001c2",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.md",
+    "bytes": 44635,
+    "original_sha256": "56f66b4c13aa67077daa2c315e480901319de56c3332b30b93dacbfe8980f90c",
+    "repo_sha256": "5641e3667ce969ebc006dd69d22ee2d48b16a6ff49102314436154cb99e7d416",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.pdf",
+    "bytes": 206427,
+    "original_sha256": "2ae488f4561090cdae246622615c32c7ee60268bd9192d2cf87ce2fc1656cf94",
+    "repo_sha256": "2ae488f4561090cdae246622615c32c7ee60268bd9192d2cf87ce2fc1656cf94",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/08_GUI_화면설계서.md",
+    "bytes": 26969,
+    "original_sha256": "5e3fb9b46e90dc00ac309729a9336e1b0c73abe4e5a6cd3f7a8d81a9836d2e1d",
+    "repo_sha256": "ccc18f197322d8ac8d67f83e7f076e30da60a496cf49a21ce5167feda881e7c8",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/08_GUI_화면설계서.pdf",
+    "bytes": 165479,
+    "original_sha256": "3bb2ec44bf1052f9ee4afc7c426135c56115733b8ca3c1bd7e5b4dbe1457829a",
+    "repo_sha256": "3bb2ec44bf1052f9ee4afc7c426135c56115733b8ca3c1bd7e5b4dbe1457829a",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/09_통합검토_반영내역.md",
+    "bytes": 10724,
+    "original_sha256": "7c7357786db5721663017ccb48c089e2c94fa4d74cc3f238099b54aaf3d7fd9e",
+    "repo_sha256": "ff6f4bf916bed612194a76ed575c24b97120c7c0e62c24259b576ce43a455f6a",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/Backend_구성_설명_20260916.md",
+    "bytes": 5237,
+    "original_sha256": "0b6ff8eb56b6f77bdbec0c596aebaebd7636c5ed85fe0ad2f4b18c71ccf26d06",
+    "repo_sha256": "0b6ff8eb56b6f77bdbec0c596aebaebd7636c5ed85fe0ad2f4b18c71ccf26d06",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/CPC-2_Alloy_수집통합_진행공유_2026-09-15.md",
+    "bytes": 21385,
+    "original_sha256": "18d20f2ee37c728e5113958abc18a41ffb559058a107dc8bd4daf8ad97da0deb",
+    "repo_sha256": "18d20f2ee37c728e5113958abc18a41ffb559058a107dc8bd4daf8ad97da0deb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/GUI_DESIGN05_원본안내.md",
+    "bytes": 1667,
+    "original_sha256": "c423d5176fd23e7a5311f957580390b014fda3d6dc68a7eb6a1ac273369cf1f5",
+    "repo_sha256": "c423d5176fd23e7a5311f957580390b014fda3d6dc68a7eb6a1ac273369cf1f5",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/GUI_v1.0_PDF_편집원본.py",
+    "bytes": 20920,
+    "original_sha256": "e25bca1c0934f79034f3d429f176c6c0f41edc44d23a03586b9316e37d5fd964",
+    "repo_sha256": "e25bca1c0934f79034f3d429f176c6c0f41edc44d23a03586b9316e37d5fd964",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/GUI_화면설계서_v1.0.pdf",
+    "bytes": 3745818,
+    "original_sha256": "884fe8ac43a394c4b195ab24e4bdf27575d207d99ba478e4019933f01481cdb7",
+    "repo_sha256": "884fe8ac43a394c4b195ab24e4bdf27575d207d99ba478e4019933f01481cdb7",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/KB_v2.0_검토의견.md",
+    "bytes": 22243,
+    "original_sha256": "0cd31fc54027de51dd811dd91967058d5d54948e367a741b10b02dc1f1a2a417",
+    "repo_sha256": "0cd31fc54027de51dd811dd91967058d5d54948e367a741b10b02dc1f1a2a417",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/RCA_역할설계_v1.0.md",
+    "bytes": 38778,
+    "original_sha256": "87a2061affd1773b0fc36fedbb2cd931a47fc13a29bab202b77967e3214a7a1b",
+    "repo_sha256": "2b8bc853e53a87382257a61e17270a1bf62c290d1cc37a455bb848c8e1c5d302",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/개발산출물_6종_v1.0.zip",
+    "bytes": 53923,
+    "original_sha256": "ff883966456b49db3788eca22487a080e5fc3949109c7a510fc7e75dc507269e",
+    "repo_sha256": "ff883966456b49db3788eca22487a080e5fc3949109c7a510fc7e75dc507269e",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/공통판단기준_v1.0_20260916개정.md",
+    "bytes": 57164,
+    "original_sha256": "424aeb1784fd3a672cedd0c6f60d504107bac39b4724965f3003de885861d913",
+    "repo_sha256": "01a8c909973e043de42e7efadb14b873236a6c7521e2c5ef5d8853886eded0eb",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/메모리_대조와_설계결정_20260915.md",
+    "bytes": 14136,
+    "original_sha256": "afed5985baaf89af4210d9224cbe9440a8f5e0b8f591fb913306379f11f82955",
+    "repo_sha256": "5165f70b435b06aa7106261c355a2892095b4a45cf9532a024ef6bad579412a0",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/수집진행_분석메모.md",
+    "bytes": 35450,
+    "original_sha256": "ccc9957bb1cb23c2e0f68d91ec8155de48edb68855b3bbf780d88b764ad52a18",
+    "repo_sha256": "ccc9957bb1cb23c2e0f68d91ec8155de48edb68855b3bbf780d88b764ad52a18",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/외부_통합검토_및_개선안.docx",
+    "bytes": 62149,
+    "original_sha256": "ed5dd5eeb83058ae4f0214aeba15451cb9e1760de363468062f9010b5c512a6b",
+    "repo_sha256": "ed5dd5eeb83058ae4f0214aeba15451cb9e1760de363468062f9010b5c512a6b",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/운영보고서_역할설계_v1.1.md",
+    "bytes": 44669,
+    "original_sha256": "ab04873f06f7da736ae40d73ee02f52fa4dfae7ea1c59d68fe451a08f5869e1a",
+    "repo_sha256": "8c8e3c447ac2359f54a44dd8b6ff86e5acd3a2c46072440c8df747aad38e8cdf",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/원문_목록과_지문.json",
+    "bytes": 4419,
+    "original_sha256": "940020bbac434ce48890cb70fdc3a1a3b4101ace7ad25cf2694642259412dcd0",
+    "repo_sha256": "940020bbac434ce48890cb70fdc3a1a3b4101ace7ad25cf2694642259412dcd0",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/출처_안내.md",
+    "bytes": 2478,
+    "original_sha256": "af06639247733727eaff8b386d4a17b335d7e77ef5e13d84eb77552abc4b22f5",
+    "repo_sha256": "3abebec6009f18e90f32eaf5960b4f64ed1c6845437056d553acd52cfac2524e",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/프론트엔드_개발명세_v1.0.md",
+    "bytes": 36738,
+    "original_sha256": "26ac916d26c155658d9ba5769b0acdb809ac38da40e991536c43c0eba2926fc8",
+    "repo_sha256": "26ac916d26c155658d9ba5769b0acdb809ac38da40e991536c43c0eba2926fc8",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916-v1.1/sources/프론트엔드_개발명세_v1.0.pdf",
+    "bytes": 214692,
+    "original_sha256": "1c0bbc5fab23b21eda02360a49fa970aeaa400460045dcbf7bebb18a37c77618",
+    "repo_sha256": "1c0bbc5fab23b21eda02360a49fa970aeaa400460045dcbf7bebb18a37c77618",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/deliverables-20260916/00_산출물_안내.md",
+    "bytes": 5193,
+    "original_sha256": "fc471f3ca30f8de7fde8b6f06de8479c006cbe1c738449661f73d76813b8dedd",
+    "repo_sha256": "124c22844d605bf5e46a466e2ac503ebb7065b4d6783b2c44b84a6fd6940a17d",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/01_요구사항_개발범위_정의서.md",
+    "bytes": 11521,
+    "original_sha256": "716c7a55e8af3218a45590f76f47d55b1d5a4372233c20ffe7af4d4ebd935488",
+    "repo_sha256": "50de9fead4e719afdb91d157ca39926b44323e95c57a49860fdb1b07bd345e42",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/02_백엔드_API_작업명세서.md",
+    "bytes": 19132,
+    "original_sha256": "504da89ab7e469162597d2ccb8b73674a673ad2745504f0cacbf61323cc22801",
+    "repo_sha256": "8fa3852292c6e5077f0a632001bdcbb616cf64263641235d76786a4630dff6d4",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/03_데이터_설계서.md",
+    "bytes": 24139,
+    "original_sha256": "05ba68de6161d5e16ae25f4a23b86620abacfdc00180e03261e38a8333d19b05",
+    "repo_sha256": "480514b212907fa1404b8d16b09597debadb42f552d0958699e5dc330d88aa91",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/04_Agent_동작_판단_명세서.md",
+    "bytes": 22136,
+    "original_sha256": "7c2ea238897b722c4502dfd35ea3598c869a2e0b950d541298955582eb0998eb",
+    "repo_sha256": "1d816206d5aac813e3296ee5d519833275637c562630d5979420bd2cc1a0e2d4",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/05_테스트_검수_기준서.md",
+    "bytes": 18438,
+    "original_sha256": "bed2ee2018afff40e43d16c34b72c2e850ba6865eb5ab859d31fd4f932c482b3",
+    "repo_sha256": "799fefc74e8ccb16460405bd80e42b4d3ad8dd539d451b3420c29ffecd9ef607",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/deliverables-20260916/06_배포_운영_인계서.md",
+    "bytes": 20081,
+    "original_sha256": "13f54dd7304658f9082fb9e829dce9c2c2607fc2a098aa052c5e0aaeabe3a224",
+    "repo_sha256": "c98a20f6fa3062de715e80b8219f7083602035cd5d3803782e81919cd3d8ecad",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/dsx-agent-studio-site/dist/index.html",
+    "bytes": 132327,
+    "original_sha256": "2b47f84e6bf3f50fcdbc138af7061ab533a5b5dd81f8046637406b8238ba9535",
+    "repo_sha256": "2b47f84e6bf3f50fcdbc138af7061ab533a5b5dd81f8046637406b8238ba9535",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_구성_연동_기술기록_2026-09-08.md",
+    "bytes": 57849,
+    "original_sha256": "30eea2be11fcf75701b8279065591c328b7aaa7b595c8b3611b68ba0f84deda4",
+    "repo_sha256": "c8cee6389ad5be7361d639630ad51a6cafa0043117299394e169a28ec1d72883",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/source-manifest.json",
+    "bytes": 1203,
+    "original_sha256": "c4a77f8b84c09bec73c81b3046751188628eac433c4228377e47763eb818ab48",
+    "repo_sha256": "c4a77f8b84c09bec73c81b3046751188628eac433c4228377e47763eb818ab48",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/sources/DSX 구성·연동 기록-최보현.md",
+    "bytes": 48566,
+    "original_sha256": "21dc8df9afaad5ab40e9a4b7efe7f60a3cbe8e712ba5bfac98e950431b214404",
+    "repo_sha256": "21dc8df9afaad5ab40e9a4b7efe7f60a3cbe8e712ba5bfac98e950431b214404",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/sources/DSX_구성_연동_기술기록_이주원.md",
+    "bytes": 57885,
+    "original_sha256": "30eea2be11fcf75701b8279065591c328b7aaa7b595c8b3611b68ba0f84deda4",
+    "repo_sha256": "6ce7f1b218bc96a0c961474dda83509a1f8d3c3e12d0197c9db22c95b4512339",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/sources/dsx-구성연동-기록_오수경.md",
+    "bytes": 39703,
+    "original_sha256": "e488c96884971e82ff2e23dfbac8ab4b75a02525a5b7ea18a3ec066f73e8c4bc",
+    "repo_sha256": "e488c96884971e82ff2e23dfbac8ab4b75a02525a5b7ea18a3ec066f73e8c4bc",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/관측_데이터_흐름.mmd",
+    "bytes": 1305,
+    "original_sha256": "1d03b2b89f818efcee7b8cbf7c9556851e809f1d48747449114a446863019b6c",
+    "repo_sha256": "1d03b2b89f818efcee7b8cbf7c9556851e809f1d48747449114a446863019b6c",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_통합_근거_2026-09-08/참조_설정_구조.mmd",
+    "bytes": 622,
+    "original_sha256": "1bfea0059205a2f62d486b1fa3e0e6d2b71c2b0b2811c0436fe43dc6eae8514a",
+    "repo_sha256": "1bfea0059205a2f62d486b1fa3e0e6d2b71c2b0b2811c0436fe43dc6eae8514a",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/final/DSX_통합_아키텍처_복원_2026-09-08.md",
+    "bytes": 102161,
+    "original_sha256": "04aefc859e139b5ee1773123bc9c19a772573ab5a9da7121091ca38cbf8117db",
+    "repo_sha256": "1e6cefee1dcd838f947886e3bec0f945e6b7c48b1cc56d1ec0d05f18037e102b",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/gui-design-20260916/DSX_프론트엔드_개발명세_v1.0.md",
+    "bytes": 36738,
+    "original_sha256": "26ac916d26c155658d9ba5769b0acdb809ac38da40e991536c43c0eba2926fc8",
+    "repo_sha256": "26ac916d26c155658d9ba5769b0acdb809ac38da40e991536c43c0eba2926fc8",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/README.md",
+    "bytes": 1667,
+    "original_sha256": "c423d5176fd23e7a5311f957580390b014fda3d6dc68a7eb6a1ac273369cf1f5",
+    "repo_sha256": "c423d5176fd23e7a5311f957580390b014fda3d6dc68a7eb6a1ac273369cf1f5",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/build_documents.py",
+    "bytes": 20920,
+    "original_sha256": "e25bca1c0934f79034f3d429f176c6c0f41edc44d23a03586b9316e37d5fd964",
+    "repo_sha256": "e25bca1c0934f79034f3d429f176c6c0f41edc44d23a03586b9316e37d5fd964",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/README.md",
+    "bytes": 763,
+    "original_sha256": null,
+    "repo_sha256": "9467342c15f33faef87218248d0678448e62a86dea238f6ff293e2be90056c51",
+    "generated_for_repository": true
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S01-detail.png",
+    "bytes": 122447,
+    "original_sha256": "55ce030e364e55a18beece16796d7b571536e59aee57724e6426c1e1639ac395",
+    "repo_sha256": "55ce030e364e55a18beece16796d7b571536e59aee57724e6426c1e1639ac395",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S01.png",
+    "bytes": 165266,
+    "original_sha256": "a26cdf74538db4c045d72bdd20c83a4f3913691547d7f3d4aaf1e0831767619f",
+    "repo_sha256": "a26cdf74538db4c045d72bdd20c83a4f3913691547d7f3d4aaf1e0831767619f",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S02-detail.png",
+    "bytes": 139225,
+    "original_sha256": "4533437743373505c8d76110db2905aa9982958d9e578cd4d7b8a1f2646d9adf",
+    "repo_sha256": "4533437743373505c8d76110db2905aa9982958d9e578cd4d7b8a1f2646d9adf",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S02.png",
+    "bytes": 117630,
+    "original_sha256": "9db8b14b1d8a0ce4fe09fb80b2117b67917de3d14dc3b23b1dc392494e0e3058",
+    "repo_sha256": "9db8b14b1d8a0ce4fe09fb80b2117b67917de3d14dc3b23b1dc392494e0e3058",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S03-past.png",
+    "bytes": 166003,
+    "original_sha256": "eb3d3117c65762bb9371c76eee14e0b73945bb3f2e9afe84cb4a92e5085f3e75",
+    "repo_sha256": "eb3d3117c65762bb9371c76eee14e0b73945bb3f2e9afe84cb4a92e5085f3e75",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S03.png",
+    "bytes": 165414,
+    "original_sha256": "f05f11d13d000086044cef8196176557559398936d4e0d896c5aad873f8add4d",
+    "repo_sha256": "f05f11d13d000086044cef8196176557559398936d4e0d896c5aad873f8add4d",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S04.png",
+    "bytes": 143031,
+    "original_sha256": "5935281fc22f3de7d1f50eb480ebbf935132be4e5b9f8b0ab6c540b56c1b5a46",
+    "repo_sha256": "5935281fc22f3de7d1f50eb480ebbf935132be4e5b9f8b0ab6c540b56c1b5a46",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S05.png",
+    "bytes": 109080,
+    "original_sha256": "c3196826a5d61d7a536a43a6a8b97ae3c8acb8cbeb1f19ec8ca4bb0823409a33",
+    "repo_sha256": "c3196826a5d61d7a536a43a6a8b97ae3c8acb8cbeb1f19ec8ca4bb0823409a33",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S06.png",
+    "bytes": 123556,
+    "original_sha256": "eeaba0c9f0362b47a9e1ed2f5354bde2ab3d4f3534a7b56016097e908ccfda05",
+    "repo_sha256": "eeaba0c9f0362b47a9e1ed2f5354bde2ab3d4f3534a7b56016097e908ccfda05",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S07.png",
+    "bytes": 197478,
+    "original_sha256": "2828ed94e787aa22d2df4825de1402ece8989cd8a4b7ec114565ec15932f0d80",
+    "repo_sha256": "2828ed94e787aa22d2df4825de1402ece8989cd8a4b7ec114565ec15932f0d80",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S07B.png",
+    "bytes": 148710,
+    "original_sha256": "d3b176dfd6f7a8410fc5259e367a6180f18cb10a4eb793cb98158ace21cbebf9",
+    "repo_sha256": "d3b176dfd6f7a8410fc5259e367a6180f18cb10a4eb793cb98158ace21cbebf9",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S08.png",
+    "bytes": 141330,
+    "original_sha256": "a5a49190384717c81840abfd4cb67c1a31d65c2bbdf9f89f054265cd199831dc",
+    "repo_sha256": "a5a49190384717c81840abfd4cb67c1a31d65c2bbdf9f89f054265cd199831dc",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S09.png",
+    "bytes": 136229,
+    "original_sha256": "42b47c27767bb4b2034d219bc6577af5188915c3e20cfef50bef032d3317a51b",
+    "repo_sha256": "42b47c27767bb4b2034d219bc6577af5188915c3e20cfef50bef032d3317a51b",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S10.png",
+    "bytes": 158302,
+    "original_sha256": "1cf432fb06f865f97f3391071e2c1b4ed38cfe51ac193d1e494686a351442cea",
+    "repo_sha256": "1cf432fb06f865f97f3391071e2c1b4ed38cfe51ac193d1e494686a351442cea",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S11-cancel.png",
+    "bytes": 146679,
+    "original_sha256": "c17812f61c247d0c8d102b83d60f9118b7c956f2817be1b8afdc941d71e6d3cc",
+    "repo_sha256": "c17812f61c247d0c8d102b83d60f9118b7c956f2817be1b8afdc941d71e6d3cc",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S11-queued.png",
+    "bytes": 143571,
+    "original_sha256": "7a1c05829beb1a70f5765137581fc800b8e0ba7a51d27b8081d8ec545d2cd451",
+    "repo_sha256": "7a1c05829beb1a70f5765137581fc800b8e0ba7a51d27b8081d8ec545d2cd451",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S11.png",
+    "bytes": 143207,
+    "original_sha256": "66bbf3e2cef698c627dfc23b0a910bc760a6c4398d1631bb00c4b41e09ee2d99",
+    "repo_sha256": "66bbf3e2cef698c627dfc23b0a910bc760a6c4398d1631bb00c4b41e09ee2d99",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S12.png",
+    "bytes": 150174,
+    "original_sha256": "5741d6adfb77d5acf432038bcc9ff0c894a95a74dbd1deea3b7e95b78c4d13c2",
+    "repo_sha256": "5741d6adfb77d5acf432038bcc9ff0c894a95a74dbd1deea3b7e95b78c4d13c2",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S13-edit.png",
+    "bytes": 75911,
+    "original_sha256": "77e0f5db387ba0ec9191b6bbc315d3410db78e5935d99b80d58cdd2d166968c7",
+    "repo_sha256": "77e0f5db387ba0ec9191b6bbc315d3410db78e5935d99b80d58cdd2d166968c7",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S13.png",
+    "bytes": 136133,
+    "original_sha256": "a73a4526491131cc7742beefb0b877783030b5fb115654a79f401ee10c654057",
+    "repo_sha256": "a73a4526491131cc7742beefb0b877783030b5fb115654a79f401ee10c654057",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S14.png",
+    "bytes": 137090,
+    "original_sha256": "e2f4724559a5b3b8250b5beb1d4b1b240dea916e8b5bc7a9d7cb3dae4e80f0f4",
+    "repo_sha256": "e2f4724559a5b3b8250b5beb1d4b1b240dea916e8b5bc7a9d7cb3dae4e80f0f4",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S15.png",
+    "bytes": 127374,
+    "original_sha256": "c975b375d6cdec06896473ce85439ebef02957e655bd61f8b38656a799fd085f",
+    "repo_sha256": "c975b375d6cdec06896473ce85439ebef02957e655bd61f8b38656a799fd085f",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S16-desk.png",
+    "bytes": 136428,
+    "original_sha256": "3f30bc3a54b00621c61a77a2e7005c82defa3eb74a91ac54e661e8a0ed714462",
+    "repo_sha256": "3f30bc3a54b00621c61a77a2e7005c82defa3eb74a91ac54e661e8a0ed714462",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S16-mobile.png",
+    "bytes": 97408,
+    "original_sha256": "ab42451f65ad8d9cac68e8d5ccf238f6a4693353283b867207cb152d418be006",
+    "repo_sha256": "ab42451f65ad8d9cac68e8d5ccf238f6a4693353283b867207cb152d418be006",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/gui-design-20260916/screens/S16.png",
+    "bytes": 192386,
+    "original_sha256": "1ff3cf5b55110f004f14cf852b7531f34a52f9f99a094d5ea4c232ee20488a12",
+    "repo_sha256": "1ff3cf5b55110f004f14cf852b7531f34a52f9f99a094d5ea4c232ee20488a12",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/pdf/DSX_GUI_화면설계서_v1.0.pdf",
+    "bytes": 3745818,
+    "original_sha256": "884fe8ac43a394c4b195ab24e4bdf27575d207d99ba478e4019933f01481cdb7",
+    "repo_sha256": "884fe8ac43a394c4b195ab24e4bdf27575d207d99ba478e4019933f01481cdb7",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/pdf/DSX_프론트엔드_개발명세_v1.0.pdf",
+    "bytes": 214692,
+    "original_sha256": "1c0bbc5fab23b21eda02360a49fa970aeaa400460045dcbf7bebb18a37c77618",
+    "repo_sha256": "1c0bbc5fab23b21eda02360a49fa970aeaa400460045dcbf7bebb18a37c77618",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/playwright/capture-dsx-v5.cjs",
+    "bytes": 3136,
+    "original_sha256": "7b7f9e8e864f608419ea2ab27a00306332a4f56b2783ccbb8d3d27ac3632eaa5",
+    "repo_sha256": "7b7f9e8e864f608419ea2ab27a00306332a4f56b2783ccbb8d3d27ac3632eaa5",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/playwright/check-dsx-v5.cjs",
+    "bytes": 6245,
+    "original_sha256": "0cab87452beb0b7ca888330122f7333bd63cb46222690472bb828f0b90e6b5cb",
+    "repo_sha256": "0cab87452beb0b7ca888330122f7333bd63cb46222690472bb828f0b90e6b5cb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/share/DSX_Agent_KB_설계정리_2026-09-14.md",
+    "bytes": 11948,
+    "original_sha256": "ad561c9c48067ca63fed81118b944bb56bfd36bf656db69c074b3fe197d8e2b9",
+    "repo_sha256": "ad561c9c48067ca63fed81118b944bb56bfd36bf656db69c074b3fe197d8e2b9",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/share/DSX_Agent_공통판단기준과_인사이트사례_v1.0.md",
+    "bytes": 57662,
+    "original_sha256": "aa30f2275b7bcd8c49e6e1fc7f8033238fd446d4d54d7b185b13186166357bcc",
+    "repo_sha256": "f1eff91c26573bf2c5a8738b3f6e3de9bf9f5cf99750b3e7daf63ce337753c71",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_CPC_공통수집환경과_Agent업무_2026-09-15.md",
+    "bytes": 20113,
+    "original_sha256": "927b1110569ba67615d5687d59c4bc91b60be653f0b5c57439984348f4f3a608",
+    "repo_sha256": "5860aa09f58511a3df90f399b01cce2dc853a0335c61bc6f2cd8a563358b8952",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_GPU_RCA_Agent_역할과_데이터설계_v1.0.md",
+    "bytes": 38718,
+    "original_sha256": "87a2061affd1773b0fc36fedbb2cd931a47fc13a29bab202b77967e3214a7a1b",
+    "repo_sha256": "3dc49c2e58c71999d20f59abf752d63e120ce579e165f9f16c78d9ae88b06fa1",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_GPU_메트릭_참고대조목록_2026-09-15.md",
+    "bytes": 26744,
+    "original_sha256": "d9e0b6c582c242a5ae04178960d77383278cf1dfb6f83a478aae089ad9216829",
+    "repo_sha256": "d26abf95cae4e43e83c6343f1770f6be98b72032a1a4cdbffb25294a2df3b230",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_GPU_운영보고서_Agent_역할과_데이터설계_v1.1.md",
+    "bytes": 44609,
+    "original_sha256": "ab04873f06f7da736ae40d73ee02f52fa4dfae7ea1c59d68fe451a08f5869e1a",
+    "repo_sha256": "86d49a2048ff8b0111dc46abebcddb687730d53c4ba90660f656be52d1b805f2",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_KB_v2.0_구조_검토의견_및_설계확정조건.md",
+    "bytes": 22243,
+    "original_sha256": "0cd31fc54027de51dd811dd91967058d5d54948e367a741b10b02dc1f1a2a417",
+    "repo_sha256": "0cd31fc54027de51dd811dd91967058d5d54948e367a741b10b02dc1f1a2a417",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/share/DSX_Knowledge_Base_설계_및_구현_제안_v1.0.md",
+    "bytes": 41058,
+    "original_sha256": "b1701428fc226327a940c555a4d8c08bfa647c84c278ac2b45296df817866852",
+    "repo_sha256": "b1701428fc226327a940c555a4d8c08bfa647c84c278ac2b45296df817866852",
+    "changed_for_portability": false
+  },
+  {
+    "file": "output/share/DSX_공통_데이터수집경로와_메트릭조사_2026-09-15.md",
+    "bytes": 32768,
+    "original_sha256": "0f4f5cdc5d4e053261fd11379ab78184f2231e8ebe4a42c6d5b9e4824410e7f2",
+    "repo_sha256": "291a5c036228ce1700bbfe2a19400fd5516f8f5ebfca7889d8465f8112f3a624",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_두_Agent_지원업무와_데이터경계_2026-09-15.md",
+    "bytes": 26537,
+    "original_sha256": "5060f8d9c92386555c2e7dca704ff87ffff17f3270f82948635c58df8841f4e8",
+    "repo_sha256": "fddecc47e0ca606365533b11bfb3b5e36c8671dad064ea1936b308b81c93883e",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_사이트권한과_Mimir_Tenant_설계_2026-09-16.md",
+    "bytes": 11535,
+    "original_sha256": "309618a53f552781880125990cd0669b023621b9910eec1f7653b3fd441f9b0c",
+    "repo_sha256": "e3b35965ee41553bab4dbae4a486303bf7db51091cbbbf331afc647cf8793fd2",
+    "changed_for_portability": true
+  },
+  {
+    "file": "output/share/DSX_수집데이터_근거대조와_기능매핑_2026-09-15.md",
+    "bytes": 16216,
+    "original_sha256": "fe2080deb493ff26c96f41c7a5f0e32ceac0f6a1f93f57c5499d93dcc1eb7471",
+    "repo_sha256": "c9716fef206357f8b65ebefbc7c098be8a243c4750ac7ceec2f4934a74b52417",
+    "changed_for_portability": true
+  },
+  {
+    "file": "references/source-notes/_workspace/2026-08-24-001/final.md",
+    "bytes": 1751,
+    "original_sha256": "66475eda83318147659b7f1f55b82a4b6fad8157c226c32bc55ccce905bef40f",
+    "repo_sha256": "66475eda83318147659b7f1f55b82a4b6fad8157c226c32bc55ccce905bef40f",
+    "changed_for_portability": false
+  },
+  {
+    "file": "references/source-notes/_workspace/2026-08-24-002/final.md",
+    "bytes": 1553,
+    "original_sha256": "8dbe3f737ed2efa49bdf5f30ef1db27202cd50c2d5633c4d58cc3f810a4234f8",
+    "repo_sha256": "8dbe3f737ed2efa49bdf5f30ef1db27202cd50c2d5633c4d58cc3f810a4234f8",
+    "changed_for_portability": false
+  },
+  {
+    "file": "references/source-notes/tmp/final-authoring/beginner-v11/source-notes.txt",
+    "bytes": 1256,
+    "original_sha256": "c4b126066f3d8d74cf2a718464340f33fe98270cee5cf422756b39c8772322c6",
+    "repo_sha256": "c4b126066f3d8d74cf2a718464340f33fe98270cee5cf422756b39c8772322c6",
+    "changed_for_portability": false
+  },
+  {
+    "file": "references/source-notes/tmp/final-authoring/component-v02/source-notes.txt",
+    "bytes": 815,
+    "original_sha256": "b931de3e3d8e1ac7a1100d73ca7ba44409f41f04537f07d354cb10e3352452bb",
+    "repo_sha256": "b931de3e3d8e1ac7a1100d73ca7ba44409f41f04537f07d354cb10e3352452bb",
+    "changed_for_portability": false
+  },
+  {
+    "file": "references/source-notes/tmp/review_260824/source-notes.txt",
+    "bytes": 182,
+    "original_sha256": "eb09b553dd00c91d4d180a9ac324c8e262c23eb49030d1fc7eda8f973ef08773",
+    "repo_sha256": "eb09b553dd00c91d4d180a9ac324c8e262c23eb49030d1fc7eda8f973ef08773",
+    "changed_for_portability": false
+  },
+  {
+    "file": "references/경로변환_전_원문.zip",
+    "bytes": 784544,
+    "original_sha256": null,
+    "repo_sha256": "97387735c2a33a609ec8254d024a74ac86710e5fdac5b529666489bfc1ed2eda",
+    "generated_for_repository": true
+  },
+  {
+    "file": "references/저장소_묶음_안내.md",
+    "bytes": 3677,
+    "original_sha256": null,
+    "repo_sha256": "e1fa7377b6ab93728682eaa36c4532c3bc725f89657d8d44908b67325f2470b5",
+    "generated_for_repository": true
+  },
+  {
+    "file": "review/2026-09-15_Alloy_진행자료와_카탈로그_분석메모.md",
+    "bytes": 35450,
+    "original_sha256": "ccc9957bb1cb23c2e0f68d91ec8155de48edb68855b3bbf780d88b764ad52a18",
+    "repo_sha256": "ccc9957bb1cb23c2e0f68d91ec8155de48edb68855b3bbf780d88b764ad52a18",
+    "changed_for_portability": false
+  },
+  {
+    "file": "review/DSX_통합원고_검토본_v0.1.md",
+    "bytes": 52142,
+    "original_sha256": "3309e2e2191a96970da939a155e1a502834a04eb520ecf54e3b5f1aced3aab41",
+    "repo_sha256": "3309e2e2191a96970da939a155e1a502834a04eb520ecf54e3b5f1aced3aab41",
+    "changed_for_portability": false
+  },
+  {
+    "file": "tools/check_links.py",
+    "bytes": 2578,
+    "original_sha256": null,
+    "repo_sha256": "52d01a77bf2c698a61050f40f85bc62148e6912af5ce728e0d06200b0b87cf01",
+    "generated_for_repository": true
+  }
+]

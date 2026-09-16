@@ -1,0 +1,23 @@
+[
+  {
+    "source_id": "O",
+    "original_path": "C:\\Users\\이주원\\Downloads\\dsx-구성연동-기록_오수경.md",
+    "snapshot_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\final\\DSX_통합_근거_2026-09-08\\sources\\dsx-구성연동-기록_오수경.md",
+    "lines": 769,
+    "sha256": "E488C96884971E82FF2E23DFBAC8AB4B75A02525A5B7EA18A3EC066F73E8C4BC"
+  },
+  {
+    "source_id": "B",
+    "original_path": "C:\\Users\\이주원\\Downloads\\DSX 구성·연동 기록-최보현.md",
+    "snapshot_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\final\\DSX_통합_근거_2026-09-08\\sources\\DSX 구성·연동 기록-최보현.md",
+    "lines": 1784,
+    "sha256": "21DC8DF9AFAAD5AB40E9A4B7EFE7F60A3CBE8E712BA5BFAC98E950431B214404"
+  },
+  {
+    "source_id": "J",
+    "original_path": "C:\\Users\\이주원\\Downloads\\DSX_구성_연동_기술기록_이주원.md",
+    "snapshot_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\final\\DSX_통합_근거_2026-09-08\\sources\\DSX_구성_연동_기술기록_이주원.md",
+    "lines": 448,
+    "sha256": "30EEA2BE11FCF75701B8279065591C328B7AAA7B595C8B3611B68BA0F84DEDA4"
+  }
+]

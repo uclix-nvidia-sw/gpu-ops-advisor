@@ -1,0 +1,27 @@
+Slide 7 — NVIDIA DSX top-level definition
+- https://www.nvidia.com/ko-kr/data-center/products/dsx/
+- Used for the official scope: chip and systems, infrastructure software, facilities, partner technology; reference architectures, open software libraries, and workflow guides.
+
+Slide 10 — Omniverse role
+- https://docs.omniverse.nvidia.com/dsx/latest/
+- https://docs.omniverse.nvidia.com/dsx/latest/system-architecture.html
+- https://docs.omniverse.nvidia.com/dsx/latest/simready-assets.html
+- https://docs.omniverse.nvidia.com/dev-overview/latest/platform-overview.html
+- No generated or externally sourced image is used on this slide.
+
+Slide 30 — Core concepts
+- https://www.nvidia.com/en-us/solutions/ai/tokenomics-guide/
+- https://blogs.nvidia.com/blog/ai-factory/
+- https://www.nvidia.com/ko-kr/data-center/products/dsx/
+- https://docs.omniverse.nvidia.com/dsx/latest/
+
+Slide 31 — DSX summary
+- https://www.nvidia.com/ko-kr/data-center/products/dsx/
+- https://docs.nvidia.com/dsx
+- https://www.nvidia.com/gtc/session-catalog/sessions/gtc26-s81595/
+
+Section dividers added in v1.1
+- Slide 2: AI Factory와 NVIDIA DSX
+- Slide 12: AI Factory 설계·구축·운영 w. DSX
+- Slide 31: DSX 요약
+- Previous standalone `구축 전` divider removed.

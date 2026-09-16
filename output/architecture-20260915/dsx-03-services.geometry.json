@@ -1,0 +1,481 @@
+{
+  "nodes": {
+    "ui": {
+      "zone": "client",
+      "x": 64,
+      "y": 236,
+      "w": 304,
+      "h": 216
+    },
+    "api": {
+      "zone": "svc",
+      "x": 464,
+      "y": 236,
+      "w": 336,
+      "h": 216
+    },
+    "rca": {
+      "zone": "svc",
+      "x": 896,
+      "y": 236,
+      "w": 432,
+      "h": 176
+    },
+    "ops": {
+      "zone": "svc",
+      "x": 896,
+      "y": 488,
+      "w": 432,
+      "h": 176
+    },
+    "ingress": {
+      "zone": "svc",
+      "x": 1424,
+      "y": 236,
+      "w": 424,
+      "h": 176
+    },
+    "results": {
+      "zone": "svc",
+      "x": 1424,
+      "y": 488,
+      "w": 424,
+      "h": 176
+    },
+    "query": {
+      "zone": "common",
+      "x": 464,
+      "y": 792,
+      "w": 376,
+      "h": 192
+    },
+    "router": {
+      "zone": "common",
+      "x": 928,
+      "y": 792,
+      "w": 400,
+      "h": 192
+    },
+    "db": {
+      "zone": "common",
+      "x": 1424,
+      "y": 792,
+      "w": 424,
+      "h": 192
+    }
+  },
+  "edges": [
+    {
+      "id": "uiapi",
+      "source": "ui",
+      "target": "api",
+      "points": [
+        [
+          368,
+          328
+        ],
+        [
+          464,
+          328
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "apirca",
+      "source": "api",
+      "target": "rca",
+      "points": [
+        [
+          800,
+          280
+        ],
+        [
+          896,
+          280
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "apiops",
+      "source": "api",
+      "target": "ops",
+      "points": [
+        [
+          800,
+          424
+        ],
+        [
+          860,
+          424
+        ],
+        [
+          860,
+          540
+        ],
+        [
+          896,
+          540
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "grca",
+      "source": "ingress",
+      "target": "rca",
+      "points": [
+        [
+          1424,
+          360
+        ],
+        [
+          1328,
+          360
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "rr",
+      "source": "rca",
+      "target": "results",
+      "points": [
+        [
+          1328,
+          280
+        ],
+        [
+          1384,
+          280
+        ],
+        [
+          1384,
+          532
+        ],
+        [
+          1424,
+          532
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "or",
+      "source": "ops",
+      "target": "results",
+      "points": [
+        [
+          1328,
+          588
+        ],
+        [
+          1424,
+          588
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "resultdb",
+      "source": "results",
+      "target": "db",
+      "points": [
+        [
+          1712,
+          664
+        ],
+        [
+          1712,
+          792
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "aggdb",
+      "source": "ingress",
+      "target": "db",
+      "points": [
+        [
+          1848,
+          328
+        ],
+        [
+          1864,
+          328
+        ],
+        [
+          1864,
+          852
+        ],
+        [
+          1848,
+          852
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "airesults",
+      "source": "api",
+      "target": "results",
+      "points": [
+        [
+          752,
+          452
+        ],
+        [
+          752,
+          704
+        ],
+        [
+          1760,
+          704
+        ],
+        [
+          1760,
+          664
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "aiquery",
+      "source": "api",
+      "target": "query",
+      "points": [
+        [
+          464,
+          404
+        ],
+        [
+          440,
+          404
+        ],
+        [
+          440,
+          840
+        ],
+        [
+          464,
+          840
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "rcaq",
+      "source": "rca",
+      "target": "query",
+      "points": [
+        [
+          928,
+          412
+        ],
+        [
+          928,
+          452
+        ],
+        [
+          884,
+          452
+        ],
+        [
+          884,
+          752
+        ],
+        [
+          744,
+          752
+        ],
+        [
+          744,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "opsq",
+      "source": "ops",
+      "target": "query",
+      "points": [
+        [
+          976,
+          664
+        ],
+        [
+          976,
+          740
+        ],
+        [
+          808,
+          740
+        ],
+        [
+          808,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    },
+    {
+      "id": "rcamodel",
+      "source": "rca",
+      "target": "router",
+      "points": [
+        [
+          1240,
+          412
+        ],
+        [
+          1240,
+          440
+        ],
+        [
+          1360,
+          440
+        ],
+        [
+          1360,
+          760
+        ],
+        [
+          1240,
+          760
+        ],
+        [
+          1240,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "opsmodel",
+      "source": "ops",
+      "target": "router",
+      "points": [
+        [
+          1128,
+          664
+        ],
+        [
+          1128,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "aimodel",
+      "source": "api",
+      "target": "router",
+      "points": [
+        [
+          664,
+          452
+        ],
+        [
+          664,
+          720
+        ],
+        [
+          936,
+          720
+        ],
+        [
+          936,
+          760
+        ],
+        [
+          992,
+          760
+        ],
+        [
+          992,
+          792
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "querydb",
+      "source": "query",
+      "target": "db",
+      "points": [
+        [
+          808,
+          984
+        ],
+        [
+          808,
+          1000
+        ],
+        [
+          1464,
+          1000
+        ],
+        [
+          1464,
+          984
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": true
+    }
+  ],
+  "boundaries": {
+    "client": [
+      40,
+      168,
+      352,
+      840
+    ],
+    "svc": [
+      432,
+      168,
+      1448,
+      520
+    ],
+    "common": [
+      432,
+      728,
+      1448,
+      288
+    ]
+  }
+}

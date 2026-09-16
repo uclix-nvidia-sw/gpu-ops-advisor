@@ -1,0 +1,178 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      # The fake driver reports every UPDATE as one affected row, so a status
+      # guard that matches nothing still looks like success there. A real server
+      # is the only thing that catches it (it shipped "could not persist
+      # knowledge candidate approval" to operators). Keep the image in lockstep
+      # with charts/runai-rca/values.yaml.
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rca
+          POSTGRES_PASSWORD: rca
+          POSTGRES_DB: rcatest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rca -d rcatest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Test
+        working-directory: backend
+        env:
+          RCA_TEST_POSTGRES_DSN: postgres://rca:rca@localhost:5432/rcatest?sslmode=disable
+        run: go test ./...
+      # The store's writers release the memory lock across their Postgres round
+      # trips, so a mistake there is a data race rather than a failed assertion
+      # and the plain run above cannot see it. Runs without the Postgres DSN:
+      # this step is here for the concurrency, and the integration tests already
+      # had their turn.
+      - name: Test (race)
+        working-directory: backend
+        run: go test -race ./...
+
+  agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: agent/pyproject.toml
+      - name: Install
+        working-directory: agent
+        run: pip install -e ".[dev]"
+      - name: Lint
+        working-directory: agent
+        run: >-
+          ruff check --select F,B,I
+          app/collectors/base.py
+          app/collectors/kubernetes.py
+          app/llm.py
+          app/services/drilldown.py
+          app/services/investigator.py
+          app/services/orchestrator.py
+          app/services/pipeline.py
+          ontology/ingest.py
+          tests/test_ingest_case_snapshot_projection.py
+          tests/test_controller_pod_resolution.py
+          tests/test_analysis_budget.py
+          tests/test_drilldown.py
+          tests/test_investigator.py
+      # Every gate below runs on PRs too: a subset suite let #85 merge green and
+      # break main on tests/test_evidence_hygiene.py.
+      - name: Full test suite
+        working-directory: agent
+        run: pytest -q -n auto
+      - name: Eval gate
+        working-directory: agent
+        run: python -m eval.run_eval --fixtures eval/fixtures.jsonl --min-top1 0.95
+      - name: Eval holdout report
+        working-directory: agent
+        continue-on-error: true
+        run: python -m eval.run_eval --fixtures eval/fixtures_holdout.jsonl
+      - name: Novel incident E2E output gate
+        working-directory: agent
+        run: python -m eval.run_novel_incident_e2e_eval
+      - name: NAT config validate
+        working-directory: agent
+        run: |
+          nat validate --config_file configs/runai_rca_engine.yml
+          nat validate --config_file configs/runai_rca_eval.yml
+      - name: NAT eval gate
+        working-directory: agent
+        # Family fixtures exercise signature classification without live collector
+        # artifacts. Harness safety is covered separately by its unit tests.
+        run: ENABLE_RCA_OUTPUT_HARNESS=false python -m eval.check_nat_eval --min-avg 1.0
+
+  ontology-definitions:
+    # Compiles schema and function definitions, then runs the loader-graph test,
+    # whose fixture loads knowledge/alerts/known-issues into a scratch database.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      typedb:
+        # Keep in lockstep with charts/runai-rca/values.yaml.
+        image: typedb/typedb:3.11.5
+        ports:
+          - 1729:1729
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: agent/pyproject.toml
+      - name: Install
+        working-directory: agent
+        run: pip install -e ".[dev]"
+      - name: Wait for TypeDB
+        run: |
+          for _ in {1..60}; do
+            (echo > /dev/tcp/localhost/1729) && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Load schema and functions
+        working-directory: agent
+        run: |
+          ENABLE_TYPEDB=true TYPEDB_ADDRESS=localhost:1729 TYPEDB_USERNAME=admin TYPEDB_PASSWORD=password TYPEDB_DATABASE=ci_schema_check TYPEDB_TLS_ENABLED=false python -m ontology.load_schema
+          ENABLE_TYPEDB=true TYPEDB_ADDRESS=localhost:1729 TYPEDB_USERNAME=admin TYPEDB_PASSWORD=password TYPEDB_DATABASE=ci_schema_check TYPEDB_TLS_ENABLED=false python -m ontology.load_functions
+      - name: Loader graph behaviour
+        # Skips itself without TYPEDB_ADDRESS. The fake-transaction tests can see
+        # the TypeQL text but not the graph, so a relation that is written and
+        # never retired is invisible to them.
+        working-directory: agent
+        env:
+          RCA_TEST_TYPEDB: "1"
+          ENABLE_TYPEDB: "true"
+          TYPEDB_ADDRESS: localhost:1729
+          TYPEDB_USERNAME: admin
+          TYPEDB_PASSWORD: password
+          TYPEDB_DATABASE: ci_loader_check
+          TYPEDB_TLS_ENABLED: "false"
+        run: python -m pytest tests/test_typedb_integration.py -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Lint
+        working-directory: frontend
+        # Rules of Hooks only. A hook behind an early return type-checks, builds,
+        # and passes every unit test, then crashes the panel at runtime.
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+      - name: Test
+        working-directory: frontend
+        run: npm test

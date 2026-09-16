@@ -1,0 +1,15 @@
+// Dedicated local renderer for reproducible PDF illustrations; isolated from the user's browser.
+const fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('C:/Users/이주원/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{const b=await chromium.launch({channel:'msedge',headless:true});try{
+ const p=await b.newPage({viewport:{width:1280,height:720},deviceScaleFactor:2,colorScheme:'light'});
+ const dir='C:/Users/이주원/Documents/ChatGPT/DSX/output/gui-design-20260916/screens';
+ await p.goto('http://127.0.0.1:4176/');const c=p.locator('#dsx-page'),nav=v=>p.locator('.menu [data-go="'+v+'"]').click();
+ const shot=async(name,bottom=false)=>{await p.evaluate(end=>scrollTo(0,end?document.documentElement.scrollHeight:0),bottom);await p.screenshot({path:path.join(dir,name+'.png')});};
+ await shot('S01');await shot('S01-detail',true);
+ await nav('fleet');await shot('S02');await shot('S02-detail',true);await c.locator('[data-fleet-tab="workloads"]').click();await shot('S03');await c.locator('[data-mapping-time]').selectOption('past');await shot('S03-past');await c.locator('[data-fleet-tab="quality"]').click();await shot('S04');
+ await nav('cases');await shot('S05');await c.locator('[data-go="home"]').click();await shot('S06');await c.locator('[name="symptom"]').fill('GPU 응답 중단 전후의 영향과 다음 점검을 알려줘');await c.locator('[type=submit]').click();await shot('S11-queued');await c.locator('[data-job-step]').click();await shot('S11');await c.locator('[data-job-cancel]').click();await shot('S11-cancel');for(let i=0;i<3;i++)await c.locator('[data-job-step]').click();await c.locator('[data-job-result]').click();await shot('S07B');
+ await nav('cases');await c.locator('[data-go="investigation"]').click();await shot('S07');await nav('reports');await shot('S08');await c.locator('[data-save-analysis]').click();await shot('S09');await c.locator('[name="topics"][value="allocation"]').check();await c.locator('[type=submit]').click();for(let i=0;i<4;i++)await c.locator('[data-job-step]').click();await c.locator('[data-job-result]').click();await shot('S10');
+ await nav('knowledge');await shot('S12');await nav('settings');await shot('S13');await c.locator('[data-model-add]').click();await shot('S13-edit',true);await c.locator('.settings-tabs [data-settings-tab="routing"]').click();await shot('S14');await c.locator('[data-settings-tab="data"]').click();await shot('S15');
+ await nav('dashboard');await p.locator('[data-action="toggle-assistant"]').click();const a=p.locator('#dsx-assistant');await a.locator('textarea').fill('지금 확인해야 할 문제가 있어?');await a.locator('[type=submit]').click();await shot('S16');await a.getByRole('button',{name:'작업실에서 펼치기'}).click();await shot('S16-desk');await c.getByRole('button',{name:'대시보드와 함께 보기'}).click();await p.setViewportSize({width:390,height:844});await shot('S16-mobile');console.log('25 screen illustrations captured at 2x resolution');
+}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

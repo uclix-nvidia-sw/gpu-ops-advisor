@@ -1,0 +1,385 @@
+{
+  "nodes": {
+    "api": {
+      "zone": "api-runtime",
+      "x": 64,
+      "y": 248,
+      "w": 216,
+      "h": 144
+    },
+    "incident": {
+      "zone": "api-runtime",
+      "x": 320,
+      "y": 248,
+      "w": 216,
+      "h": 144
+    },
+    "jobs": {
+      "zone": "api-runtime",
+      "x": 64,
+      "y": 488,
+      "w": 472,
+      "h": 216
+    },
+    "rca": {
+      "zone": "workers",
+      "x": 648,
+      "y": 248,
+      "w": 576,
+      "h": 144
+    },
+    "report": {
+      "zone": "workers",
+      "x": 648,
+      "y": 512,
+      "w": 576,
+      "h": 144
+    },
+    "data": {
+      "zone": "shared",
+      "x": 1336,
+      "y": 248,
+      "w": 520,
+      "h": 112
+    },
+    "knowledge": {
+      "zone": "shared",
+      "x": 1336,
+      "y": 416,
+      "w": 520,
+      "h": 112
+    },
+    "llmcall": {
+      "zone": "shared",
+      "x": 1336,
+      "y": 584,
+      "w": 520,
+      "h": 128
+    },
+    "db": {
+      "zone": "page",
+      "x": 40,
+      "y": 840,
+      "w": 520,
+      "h": 160
+    },
+    "serving": {
+      "zone": "page",
+      "x": 664,
+      "y": 840,
+      "w": 584,
+      "h": 160
+    },
+    "refs": {
+      "zone": "page",
+      "x": 1312,
+      "y": 840,
+      "w": 568,
+      "h": 160
+    }
+  },
+  "edges": [
+    {
+      "id": "api-jobs",
+      "source": "api",
+      "target": "jobs",
+      "points": [
+        [
+          172,
+          392
+        ],
+        [
+          172,
+          488
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "incident-jobs",
+      "source": "incident",
+      "target": "jobs",
+      "points": [
+        [
+          428,
+          392
+        ],
+        [
+          428,
+          488
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "rca-jobs",
+      "source": "jobs",
+      "target": "rca",
+      "points": [
+        [
+          536,
+          520
+        ],
+        [
+          592,
+          520
+        ],
+        [
+          592,
+          320
+        ],
+        [
+          648,
+          320
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "report-jobs",
+      "source": "jobs",
+      "target": "report",
+      "points": [
+        [
+          536,
+          608
+        ],
+        [
+          648,
+          608
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "persist",
+      "source": "jobs",
+      "target": "db",
+      "points": [
+        [
+          256,
+          704
+        ],
+        [
+          256,
+          840
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "rca-llm",
+      "source": "rca",
+      "target": "llmcall",
+      "points": [
+        [
+          1152,
+          392
+        ],
+        [
+          1152,
+          464
+        ],
+        [
+          1304,
+          464
+        ],
+        [
+          1304,
+          624
+        ],
+        [
+          1336,
+          624
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "report-llm",
+      "source": "report",
+      "target": "llmcall",
+      "points": [
+        [
+          1224,
+          632
+        ],
+        [
+          1288,
+          632
+        ],
+        [
+          1288,
+          664
+        ],
+        [
+          1336,
+          664
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "model",
+      "source": "llmcall",
+      "target": "serving",
+      "points": [
+        [
+          1596,
+          712
+        ],
+        [
+          1596,
+          808
+        ],
+        [
+          1128,
+          808
+        ],
+        [
+          1128,
+          840
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "rca-data",
+      "source": "rca",
+      "target": "data",
+      "points": [
+        [
+          1224,
+          288
+        ],
+        [
+          1336,
+          288
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "report-data",
+      "source": "report",
+      "target": "data",
+      "points": [
+        [
+          1224,
+          544
+        ],
+        [
+          1280,
+          544
+        ],
+        [
+          1280,
+          320
+        ],
+        [
+          1336,
+          320
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "rca-knowledge",
+      "source": "rca",
+      "target": "knowledge",
+      "points": [
+        [
+          1224,
+          352
+        ],
+        [
+          1264,
+          352
+        ],
+        [
+          1264,
+          448
+        ],
+        [
+          1336,
+          448
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "report-knowledge",
+      "source": "report",
+      "target": "knowledge",
+      "points": [
+        [
+          1224,
+          584
+        ],
+        [
+          1296,
+          584
+        ],
+        [
+          1296,
+          496
+        ],
+        [
+          1336,
+          496
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    }
+  ],
+  "boundaries": {
+    "page": [
+      0,
+      168,
+      1920,
+      840
+    ],
+    "api-runtime": [
+      40,
+      184,
+      520,
+      576
+    ],
+    "workers": [
+      624,
+      184,
+      624,
+      576
+    ],
+    "shared": [
+      1312,
+      184,
+      568,
+      576
+    ]
+  }
+}

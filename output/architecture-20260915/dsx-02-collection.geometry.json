@@ -1,0 +1,432 @@
+{
+  "nodes": {
+    "source": {
+      "zone": "cpc2",
+      "x": 64,
+      "y": 236,
+      "w": 264,
+      "h": 104
+    },
+    "fleet": {
+      "zone": "cpc2",
+      "x": 392,
+      "y": 228,
+      "w": 272,
+      "h": 120
+    },
+    "exp": {
+      "zone": "cpc2",
+      "x": 392,
+      "y": 412,
+      "w": 272,
+      "h": 120
+    },
+    "podres": {
+      "zone": "cpc2",
+      "x": 64,
+      "y": 412,
+      "w": 264,
+      "h": 120
+    },
+    "kapi": {
+      "zone": "cpc2",
+      "x": 64,
+      "y": 592,
+      "w": 264,
+      "h": 96
+    },
+    "ksm": {
+      "zone": "cpc2",
+      "x": 392,
+      "y": 592,
+      "w": 272,
+      "h": 96
+    },
+    "alloy": {
+      "zone": "cpc2",
+      "x": 752,
+      "y": 320,
+      "w": 296,
+      "h": 368
+    },
+    "gate": {
+      "zone": "obs",
+      "x": 1144,
+      "y": 260,
+      "w": 216,
+      "h": 176
+    },
+    "mimir": {
+      "zone": "obs",
+      "x": 1424,
+      "y": 236,
+      "w": 424,
+      "h": 112
+    },
+    "loki": {
+      "zone": "obs",
+      "x": 1424,
+      "y": 412,
+      "w": 424,
+      "h": 96
+    },
+    "os": {
+      "zone": "obs",
+      "x": 1424,
+      "y": 592,
+      "w": 424,
+      "h": 96
+    },
+    "cpc1": {
+      "zone": "state",
+      "x": 64,
+      "y": 808,
+      "w": 560,
+      "h": 176
+    },
+    "mapping": {
+      "zone": "state",
+      "x": 664,
+      "y": 808,
+      "w": 568,
+      "h": 176
+    },
+    "verified": {
+      "zone": "state",
+      "x": 1272,
+      "y": 808,
+      "w": 576,
+      "h": 176
+    }
+  },
+  "edges": [
+    {
+      "id": "sf",
+      "source": "source",
+      "target": "fleet",
+      "points": [
+        [
+          328,
+          276
+        ],
+        [
+          392,
+          276
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "se",
+      "source": "source",
+      "target": "exp",
+      "points": [
+        [
+          208,
+          340
+        ],
+        [
+          208,
+          372
+        ],
+        [
+          360,
+          372
+        ],
+        [
+          360,
+          444
+        ],
+        [
+          392,
+          444
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "pe",
+      "source": "podres",
+      "target": "exp",
+      "points": [
+        [
+          328,
+          492
+        ],
+        [
+          392,
+          492
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "kk",
+      "source": "kapi",
+      "target": "ksm",
+      "points": [
+        [
+          328,
+          640
+        ],
+        [
+          392,
+          640
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "fa",
+      "source": "fleet",
+      "target": "alloy",
+      "points": [
+        [
+          664,
+          264
+        ],
+        [
+          824,
+          264
+        ],
+        [
+          824,
+          320
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "fl",
+      "source": "fleet",
+      "target": "alloy",
+      "points": [
+        [
+          664,
+          312
+        ],
+        [
+          696,
+          312
+        ],
+        [
+          696,
+          364
+        ],
+        [
+          752,
+          364
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "ea",
+      "source": "exp",
+      "target": "alloy",
+      "points": [
+        [
+          664,
+          472
+        ],
+        [
+          752,
+          472
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "ka",
+      "source": "ksm",
+      "target": "alloy",
+      "points": [
+        [
+          664,
+          640
+        ],
+        [
+          752,
+          640
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "am",
+      "source": "alloy",
+      "target": "gate",
+      "points": [
+        [
+          1048,
+          380
+        ],
+        [
+          1096,
+          380
+        ],
+        [
+          1096,
+          300
+        ],
+        [
+          1144,
+          300
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "al",
+      "source": "alloy",
+      "target": "gate",
+      "points": [
+        [
+          1048,
+          536
+        ],
+        [
+          1112,
+          536
+        ],
+        [
+          1112,
+          404
+        ],
+        [
+          1144,
+          404
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "gm",
+      "source": "gate",
+      "target": "mimir",
+      "points": [
+        [
+          1360,
+          292
+        ],
+        [
+          1424,
+          292
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "gl",
+      "source": "gate",
+      "target": "loki",
+      "points": [
+        [
+          1360,
+          396
+        ],
+        [
+          1392,
+          396
+        ],
+        [
+          1392,
+          460
+        ],
+        [
+          1424,
+          460
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "mos",
+      "source": "mimir",
+      "target": "os",
+      "points": [
+        [
+          1848,
+          292
+        ],
+        [
+          1864,
+          292
+        ],
+        [
+          1864,
+          640
+        ],
+        [
+          1848,
+          640
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "los",
+      "source": "loki",
+      "target": "os",
+      "points": [
+        [
+          1640,
+          508
+        ],
+        [
+          1640,
+          592
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    }
+  ],
+  "boundaries": {
+    "cpc2": [
+      40,
+      168,
+      1040,
+      552
+    ],
+    "obs": [
+      1120,
+      168,
+      760,
+      552
+    ],
+    "state": [
+      40,
+      752,
+      1840,
+      264
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+# NAT eval/profiler run output (configs/runai_rca_eval.yml eval.general.output.dir)
+agent/.tmp/
+
+# Go
+backend/runai-rca-backend
+backend/backend
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Local env
+.env
+.env.*
+!.env.example
+*.tsbuildinfo

@@ -1,0 +1,645 @@
+{
+  "nodes": {
+    "cpc": {
+      "zone": "external",
+      "x": 64,
+      "y": 248,
+      "w": 232,
+      "h": 112
+    },
+    "client": {
+      "zone": "external",
+      "x": 64,
+      "y": 448,
+      "w": 232,
+      "h": 144
+    },
+    "gateway": {
+      "zone": "csc",
+      "x": 392,
+      "y": 264,
+      "w": 176,
+      "h": 112
+    },
+    "observations": {
+      "zone": "csc",
+      "x": 632,
+      "y": 264,
+      "w": 288,
+      "h": 112
+    },
+    "grafana": {
+      "zone": "csc",
+      "x": 1000,
+      "y": 264,
+      "w": 352,
+      "h": 112
+    },
+    "object": {
+      "zone": "csc",
+      "x": 1456,
+      "y": 264,
+      "w": 384,
+      "h": 112
+    },
+    "api": {
+      "zone": "backend",
+      "x": 392,
+      "y": 488,
+      "w": 264,
+      "h": 112
+    },
+    "jobs": {
+      "zone": "backend",
+      "x": 744,
+      "y": 488,
+      "w": 720,
+      "h": 112
+    },
+    "tools": {
+      "zone": "backend",
+      "x": 392,
+      "y": 688,
+      "w": 264,
+      "h": 112
+    },
+    "rca": {
+      "zone": "backend",
+      "x": 744,
+      "y": 688,
+      "w": 312,
+      "h": 112
+    },
+    "report": {
+      "zone": "backend",
+      "x": 1128,
+      "y": 688,
+      "w": 336,
+      "h": 112
+    },
+    "db": {
+      "zone": "csc",
+      "x": 392,
+      "y": 896,
+      "w": 400,
+      "h": 80
+    },
+    "kb": {
+      "zone": "csc",
+      "x": 848,
+      "y": 896,
+      "w": 616,
+      "h": 80
+    },
+    "dynamo": {
+      "zone": "csc",
+      "x": 1544,
+      "y": 496,
+      "w": 296,
+      "h": 144
+    },
+    "llm": {
+      "zone": "csc",
+      "x": 1544,
+      "y": 744,
+      "w": 296,
+      "h": 184
+    }
+  },
+  "edges": [
+    {
+      "id": "metrics",
+      "source": "cpc",
+      "target": "gateway",
+      "points": [
+        [
+          296,
+          280
+        ],
+        [
+          392,
+          280
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "logs",
+      "source": "cpc",
+      "target": "gateway",
+      "points": [
+        [
+          296,
+          328
+        ],
+        [
+          392,
+          328
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "ingest",
+      "source": "gateway",
+      "target": "observations",
+      "points": [
+        [
+          568,
+          304
+        ],
+        [
+          632,
+          304
+        ]
+      ],
+      "color": "#2468CF",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "ingest-logs",
+      "source": "gateway",
+      "target": "observations",
+      "points": [
+        [
+          568,
+          344
+        ],
+        [
+          632,
+          344
+        ]
+      ],
+      "color": "#D14A57",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "store",
+      "source": "observations",
+      "target": "object",
+      "points": [
+        [
+          840,
+          264
+        ],
+        [
+          840,
+          244
+        ],
+        [
+          1640,
+          244
+        ],
+        [
+          1640,
+          264
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "alert",
+      "source": "grafana",
+      "target": "jobs",
+      "points": [
+        [
+          1184,
+          376
+        ],
+        [
+          1184,
+          488
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": false
+    },
+    {
+      "id": "client-api",
+      "source": "client",
+      "target": "api",
+      "points": [
+        [
+          296,
+          504
+        ],
+        [
+          392,
+          504
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "submit",
+      "source": "api",
+      "target": "jobs",
+      "points": [
+        [
+          656,
+          544
+        ],
+        [
+          744,
+          544
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "rca-job",
+      "source": "rca",
+      "target": "jobs",
+      "points": [
+        [
+          856,
+          688
+        ],
+        [
+          856,
+          600
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "report-job",
+      "source": "report",
+      "target": "jobs",
+      "points": [
+        [
+          1296,
+          688
+        ],
+        [
+          1296,
+          600
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "persist",
+      "source": "jobs",
+      "target": "db",
+      "points": [
+        [
+          744,
+          584
+        ],
+        [
+          704,
+          584
+        ],
+        [
+          704,
+          856
+        ],
+        [
+          720,
+          856
+        ],
+        [
+          720,
+          896
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "api-llm",
+      "source": "api",
+      "target": "dynamo",
+      "points": [
+        [
+          600,
+          600
+        ],
+        [
+          600,
+          624
+        ],
+        [
+          1544,
+          624
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "rca-llm",
+      "source": "rca",
+      "target": "dynamo",
+      "points": [
+        [
+          1056,
+          720
+        ],
+        [
+          1084,
+          720
+        ],
+        [
+          1084,
+          664
+        ],
+        [
+          1520,
+          664
+        ],
+        [
+          1520,
+          536
+        ],
+        [
+          1544,
+          536
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "report-llm",
+      "source": "report",
+      "target": "dynamo",
+      "points": [
+        [
+          1464,
+          744
+        ],
+        [
+          1504,
+          744
+        ],
+        [
+          1504,
+          584
+        ],
+        [
+          1544,
+          584
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "inference",
+      "source": "dynamo",
+      "target": "llm",
+      "points": [
+        [
+          1696,
+          640
+        ],
+        [
+          1696,
+          744
+        ]
+      ],
+      "color": "#16866C",
+      "dashed": false,
+      "both": true
+    },
+    {
+      "id": "grafana-query",
+      "source": "grafana",
+      "target": "observations",
+      "points": [
+        [
+          1000,
+          328
+        ],
+        [
+          920,
+          328
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "api-tools",
+      "source": "api",
+      "target": "tools",
+      "points": [
+        [
+          528,
+          600
+        ],
+        [
+          528,
+          688
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "rca-tools",
+      "source": "rca",
+      "target": "tools",
+      "points": [
+        [
+          744,
+          744
+        ],
+        [
+          656,
+          744
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "report-tools",
+      "source": "report",
+      "target": "tools",
+      "points": [
+        [
+          1128,
+          768
+        ],
+        [
+          1104,
+          768
+        ],
+        [
+          1104,
+          816
+        ],
+        [
+          688,
+          816
+        ],
+        [
+          688,
+          776
+        ],
+        [
+          656,
+          776
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "query-observations",
+      "source": "tools",
+      "target": "observations",
+      "points": [
+        [
+          424,
+          688
+        ],
+        [
+          424,
+          640
+        ],
+        [
+          344,
+          640
+        ],
+        [
+          344,
+          416
+        ],
+        [
+          704,
+          416
+        ],
+        [
+          704,
+          376
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "query-db",
+      "source": "tools",
+      "target": "db",
+      "points": [
+        [
+          464,
+          800
+        ],
+        [
+          464,
+          896
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "query-incidents",
+      "source": "tools",
+      "target": "jobs",
+      "points": [
+        [
+          656,
+          712
+        ],
+        [
+          672,
+          712
+        ],
+        [
+          672,
+          648
+        ],
+        [
+          792,
+          648
+        ],
+        [
+          792,
+          600
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    },
+    {
+      "id": "query-kb",
+      "source": "tools",
+      "target": "kb",
+      "points": [
+        [
+          624,
+          800
+        ],
+        [
+          624,
+          840
+        ],
+        [
+          920,
+          840
+        ],
+        [
+          920,
+          896
+        ]
+      ],
+      "color": "#596D81",
+      "dashed": true,
+      "both": false
+    }
+  ],
+  "boundaries": {
+    "external": [
+      40,
+      168,
+      280,
+      464
+    ],
+    "csc": [
+      352,
+      168,
+      1528,
+      840
+    ],
+    "backend": [
+      368,
+      432,
+      1120,
+      396
+    ]
+  }
+}

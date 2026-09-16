@@ -1,0 +1,92 @@
+[
+  {
+    "file": "외부_통합검토_및_개선안.docx",
+    "original_path": "C:\\Users\\이주원\\Downloads\\DSX_설계_통합검토_및_개선안.docx",
+    "bytes": 62149,
+    "sha256": "ed5dd5eeb83058ae4f0214aeba15451cb9e1760de363468062f9010b5c512a6b"
+  },
+  {
+    "file": "공통판단기준_v1.0_20260916개정.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\share\\DSX_Agent_공통판단기준과_인사이트사례_v1.0.md",
+    "bytes": 57117,
+    "sha256": "424aeb1784fd3a672cedd0c6f60d504107bac39b4724965f3003de885861d913"
+  },
+  {
+    "file": "RCA_역할설계_v1.0.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\share\\DSX_GPU_RCA_Agent_역할과_데이터설계_v1.0.md",
+    "bytes": 38708,
+    "sha256": "87a2061affd1773b0fc36fedbb2cd931a47fc13a29bab202b77967e3214a7a1b"
+  },
+  {
+    "file": "운영보고서_역할설계_v1.1.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\share\\DSX_GPU_운영보고서_Agent_역할과_데이터설계_v1.1.md",
+    "bytes": 44599,
+    "sha256": "ab04873f06f7da736ae40d73ee02f52fa4dfae7ea1c59d68fe451a08f5869e1a"
+  },
+  {
+    "file": "Backend_구성_설명_20260916.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\architecture-backend-20260916\\구성_설명.md",
+    "bytes": 5237,
+    "sha256": "0b6ff8eb56b6f77bdbec0c596aebaebd7636c5ed85fe0ad2f4b18c71ccf26d06"
+  },
+  {
+    "file": "메모리_대조와_설계결정_20260915.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\architecture-20260915\\메모리_대조와_설계결정.md",
+    "bytes": 14076,
+    "sha256": "afed5985baaf89af4210d9224cbe9440a8f5e0b8f591fb913306379f11f82955"
+  },
+  {
+    "file": "KB_v2.0_검토의견.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\share\\DSX_KB_v2.0_구조_검토의견_및_설계확정조건.md",
+    "bytes": 22243,
+    "sha256": "0cd31fc54027de51dd811dd91967058d5d54948e367a741b10b02dc1f1a2a417"
+  },
+  {
+    "file": "수집진행_분석메모.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\review\\2026-09-15_Alloy_진행자료와_카탈로그_분석메모.md",
+    "bytes": 35450,
+    "sha256": "ccc9957bb1cb23c2e0f68d91ec8155de48edb68855b3bbf780d88b764ad52a18"
+  },
+  {
+    "file": "CPC-2_Alloy_수집통합_진행공유_2026-09-15.md",
+    "original_path": "C:\\Users\\이주원\\Downloads\\CPC-2_Alloy_수집통합_진행공유_2026-09-15 (1).md",
+    "bytes": 21385,
+    "sha256": "18d20f2ee37c728e5113958abc18a41ffb559058a107dc8bd4daf8ad97da0deb"
+  },
+  {
+    "file": "프론트엔드_개발명세_v1.0.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\gui-design-20260916\\DSX_프론트엔드_개발명세_v1.0.md",
+    "bytes": 36738,
+    "sha256": "26ac916d26c155658d9ba5769b0acdb809ac38da40e991536c43c0eba2926fc8"
+  },
+  {
+    "file": "GUI_v1.0_PDF_편집원본.py",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\gui-design-20260916\\build_documents.py",
+    "bytes": 20920,
+    "sha256": "e25bca1c0934f79034f3d429f176c6c0f41edc44d23a03586b9316e37d5fd964"
+  },
+  {
+    "file": "GUI_DESIGN05_원본안내.md",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\gui-design-20260916\\README.md",
+    "bytes": 1667,
+    "sha256": "c423d5176fd23e7a5311f957580390b014fda3d6dc68a7eb6a1ac273369cf1f5"
+  },
+  {
+    "file": "GUI_화면설계서_v1.0.pdf",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\pdf\\DSX_GUI_화면설계서_v1.0.pdf",
+    "bytes": 3745818,
+    "sha256": "884fe8ac43a394c4b195ab24e4bdf27575d207d99ba478e4019933f01481cdb7"
+  },
+  {
+    "file": "프론트엔드_개발명세_v1.0.pdf",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\pdf\\DSX_프론트엔드_개발명세_v1.0.pdf",
+    "bytes": 214692,
+    "sha256": "1c0bbc5fab23b21eda02360a49fa970aeaa400460045dcbf7bebb18a37c77618"
+  },
+  {
+    "file": "개발산출물_6종_v1.0.zip",
+    "original_path": "C:\\Users\\이주원\\Documents\\ChatGPT\\DSX\\output\\DSX_개발산출물_6종_v1.0_20260916.zip",
+    "bytes": 53923,
+    "sha256": "ff883966456b49db3788eca22487a080e5fc3949109c7a510fc7e75dc507269e"
+  }
+]
