@@ -1,12 +1,12 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+
 site:
   title: GPU Ops Advisor
-
-structure:
-  - type: space
-    key: gpu-ops-advisor
-    title: GPU Ops Advisor
-    path: docs
-    default: true
-
-content:
-  directory: ./
+  structure:
+    - type: space
+      key: gpu-ops-advisor
+      title: GPU Ops Advisor
+      path: docs
+      default: true
+      content:
+        directory: ./
