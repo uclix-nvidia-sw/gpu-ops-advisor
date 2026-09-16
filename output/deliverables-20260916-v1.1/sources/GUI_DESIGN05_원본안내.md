@@ -1,3 +1,5 @@
+> 과거 인계 기록입니다. 아래 경로·명령·게시 상태·검증 결과는 작성 당시 기준이며 현재 실행 안내가 아닙니다. 현재 남아 있는 자료는 [화면 참고 안내](../../gui-design-20260916/README.md), 삭제 전 도구는 [Git 고정본](<https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/c2dd94ecfb1c31b5a8c84cea008888f8fb03d70c/output/gui-design-20260916/build_documents.py>)에서 확인합니다.
+
 # DSX GUI 개발 인계 - 2026-09-16
 
 - 공유 웹: https://dsx-agent-studio-20260914.uclick-ljw.chatgpt.site (DESIGN 05, 기존 공개 범위 유지)
