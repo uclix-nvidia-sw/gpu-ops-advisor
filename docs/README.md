@@ -4,7 +4,7 @@ CPC-1·CPC-2의 GPU·Node·Pod 관측을 CSC에서 연결해 **장애 원인 조
 
 이 저장소는 DSX의 설계 결정, 개발 명세, 구조도, 화면 시안과 검수·인계 기준을 관리합니다. **현재 개발 기준은 2026-09-16 통합 개정본 v1.1**입니다. 문서와 화면 시안이 준비된 단계이며 실제 Backend·DB·LLM 통합과 제품 검수의 완료를 뜻하지 않습니다.
 
-[개발 문서 목록](../output/deliverables-20260916-v1.1/00_산출물_안내.md) · [화면설계](../output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) · [전체 구조 설명](../output/architecture-backend-20260916/구성_설명.md) · [통합 검토 반영 내역](../output/deliverables-20260916-v1.1/09_통합검토_반영내역.md)
+[개발 문서 목록](../output/deliverables-20260916-v1.1/00_산출물_안내.md) · [화면설계](../output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) · [전체 구조 설명](<../output/architecture-backend-20260916-v2/구성_설명.md>) · [통합 검토 반영 내역](../output/deliverables-20260916-v1.1/09_통합검토_반영내역.md)
 
 ## 처음 읽는 순서
 
@@ -106,7 +106,7 @@ Backend의 8개 기능은 **API 서버 1종과 Worker 2종, 공유 코드**로 �
 
 긴 작업은 PostgreSQL에 커밋한 뒤 `job_id`를 반환하고 Worker가 실행합니다. 사건 갱신과 RCA 접수, 결과 저장과 유효 시도의 완료는 각각 원자적으로 처리합니다. 업무 큐·재시작 복구·취소·재시도·전체 기한은 Backend의 책임이고 Dynamo의 추론 대기와 구분합니다.
 
-API/Worker의 구현 언어·프레임워크, 배포 이미지·복제 수, 추론 GPU·엔진·모델은 실제 환경에 맞춰 확정합니다. Nemotron 3 Super는 기존 기록의 초기 후보이며 배포 확정값이 아닙니다. 상세 설계는 [Backend 구성 설명](../output/architecture-backend-20260916/구성_설명.md)과 [API 명세](../output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md)를 참조합니다.
+API/Worker의 구현 언어·프레임워크, 배포 이미지·복제 수, 추론 GPU·엔진·모델은 실제 환경에 맞춰 확정합니다. Nemotron 3 Super는 기존 기록의 초기 후보이며 배포 확정값이 아닙니다. 상세 설계는 [Backend 구성 설명](<../output/architecture-backend-20260916-v2/구성_설명.md>)과 [API 명세](../output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md)를 참조합니다.
 
 ## 구현에서 유지할 판단·실행 기준
 
@@ -190,42 +190,50 @@ CPC-2의 일부 확인 기록을 두 CPC 전체의 제품 검수 PASS로 확장�
 
 ## 기존 기록과 결정 배경
 
-현재 기준과 과거 설계의 관계를 추적할 수 있도록 기존 자료를 보존합니다. 이전 문서의 실험·제안·확인 시점은 해당 기록의 범위로 읽습니다.
+현재 개발에 필요한 기록과 출처 사본을 유지합니다. 대체된 구조도·중복 자료는 Git 이력에서 확인할 수 있습니다. 이전 문서의 실험·제안·확인 시점은 해당 기록의 범위로 읽습니다.
 
 | 기록 | README에 반영한 맥락 |
 |---|---|
-| [8월 DSX 통합 원고](../review/DSX_통합원고_검토본_v0.1.md) | DSX·Omniverse·시설/전력·시뮬레이션의 검토 배경. 현재 GPU 운영 Agent 범위와 구분 |
 | [9/8 통합 아키텍처 복원](../output/final/DSX_통합_아키텍처_복원_2026-09-08.md) · [구성·연동 기술기록](../output/final/DSX_구성_연동_기술기록_2026-09-08.md) | CPC/CSC·수집·저장 기반과 환경별 실험 기록 |
-| [메모리 대조와 설계결정](../output/architecture-20260915/메모리_대조와_설계결정.md) | 두 전문 Agent·공통 Assistant, 직접 Webhook, 관측·업무·추론 저장 역할 |
+| [메모리 대조와 설계결정](<../output/deliverables-20260916-v1.1/sources/메모리_대조와_설계결정_20260915.md>) | 두 전문 Agent·공통 Assistant, 직접 Webhook, 관측·업무·추론 저장 역할 |
 | [공통 수집환경과 Agent 업무](../output/share/DSX_CPC_공통수집환경과_Agent업무_2026-09-15.md) · [데이터 근거와 기능 매핑](../output/share/DSX_수집데이터_근거대조와_기능매핑_2026-09-15.md) | 양 CPC의 공통 활용 기반과 실제 확인 범위 |
 | [RCA 역할 설계](../output/share/DSX_GPU_RCA_Agent_역할과_데이터설계_v1.0.md) · [보고서 역할 설계](../output/share/DSX_GPU_운영보고서_Agent_역할과_데이터설계_v1.1.md) | R/O 전체 업무와 필요한 데이터 경계 |
 | [공통판단 기준](../output/share/DSX_Agent_공통판단기준과_인사이트사례_v1.0.md) · [KB v2.0 검토](../output/share/DSX_KB_v2.0_구조_검토의견_및_설계확정조건.md) | 결정적 계산·수치 기준·발행 지식·등록 절차의 역할 |
-| [마이크로서비스 비교안](../output/architecture-comparison-20260916/구조도_비교기준.md) → [Backend 상세안](../output/architecture-backend-20260916/구성_설명.md) | 분리 검토 후 API 서버·두 Worker·공유 모듈을 현재 기준으로 채택 |
+| [최신 Backend 구조 v2](<../output/architecture-backend-20260916-v2/구성_설명.md>) | API 서버·두 Worker·공유 모듈. 사이트·인증 관련 추가안은 후속 검토 |
 | [외부 검토와 출처 묶음](../output/deliverables-20260916-v1.1/sources/출처_안내.md) · [원문 지문](../output/deliverables-20260916-v1.1/sources/원문_목록과_지문.json) | v1.1에서 대조한 원문 15개와 고정 버전 |
 
 별도 Mapper 상시 서비스를 새로 두기보다 기존 매핑과 보존 관측을 공통 도구에서 조회·복원합니다. 알림 경로는 Grafana 관리형 Alerting의 직접 Webhook을 사용합니다. 예전 자료의 Ruler/Alertmanager 경로, Exchange/NATS 실험, 서비스 5개 분리안은 현행 필수 구성으로 적용하지 않습니다.
 
 CPC-2의 최신 수집 진행안은 KSM·GPU Exporter를 Alloy가 직접 수집하는 경로입니다. Exporter 작업 라벨과 KSM의 동시점 UID 조인 기록을 활용하며, 전환 전 Prometheus remote_write·Alloy 수신 경로와 구분합니다. 기존 Prometheus 모니터링의 제거를 뜻하지 않고 CPC-1 전환 상태는 별도로 확인합니다.
 
-## 저장소 구성
+## 저장소 구성과 사용
+
+현재 개발 기준은 통합 명세 v1.1과 Backend 구조도 v2입니다. v2의 사이트·인증 추가안은 후속 검토 대상이며, 이번 자료 정리가 API·데이터 계약을 변경하지는 않습니다.
 
 ```text
 .
 ├── README.md
+├── docs/README.md
 ├── output/
-│   ├── deliverables-20260916-v1.1/   # 현행 개발 기준과 출처 보관본
-│   ├── deliverables-20260916/        # 최초 6종 v1.0
-│   ├── architecture-backend-20260916/ # 현행 Backend 구조 설명·도식
-│   ├── architecture-20260915/        # 메모리 대조·설계결정
-│   ├── architecture-comparison-20260916/ # 구조 비교 검토안
-│   ├── gui-design-20260916/          # 기존 FE 명세·화면 이미지·편집 자료
-│   ├── share/                       # 역할·판단·수집·KB 공유 기록
-│   ├── final/                       # 기존 아키텍처·기술기록 복원본
-│   └── pdf/                         # 기존 PDF 산출물
-└── review/                          # 검토 원고·수집 자료 대조
+│   ├── deliverables-20260916-v1.1/   # 현행 명세·PDF·필요한 출처 사본
+│   ├── architecture-backend-20260916-v2/ # 최신 구조도·편집 원본
+│   ├── gui-design-20260916/         # DESIGN 05 화면 캡처·안내
+│   ├── share/                      # 역할·판단·수집·KB 기록
+│   └── final/                      # 기존 환경 복원 기록과 근거
+├── review/                         # 개발 착수 분석
+├── references/                     # 과거 원문 ZIP·지문·근거 메모
+└── tools/check_links.py            # 로컬 링크·자산 경로 검사
 ```
 
-기타 날짜별 시각 자료는 해당 `output/` 폴더에 보관합니다.
+구조도는 [전체 Backend](<../output/architecture-backend-20260916-v2/dsx-full-backend.png>)와 [Backend 상세](<../output/architecture-backend-20260916-v2/dsx-backend-detail.png>)를 확인합니다. [화면 이미지 목록](<../output/gui-design-20260916/screens/README.md>)은 FE 구현의 배치 참고 자료입니다.
+
+[보존 자료 안내](<../references/저장소_묶음_안내.md>)의 ZIP·파일 지문은 과거 배포 시점의 기록입니다. 현재 파일 목록은 Git을 기준으로 확인합니다.
+
+저장소 루트에서 Python 3.9 이상으로 링크를 검사합니다.
+
+```bash
+python tools/check_links.py
+```
 
 ## GitHub에서 변경을 관리하는 기준
 
