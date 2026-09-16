@@ -23,13 +23,27 @@ jobs:
           - component: backend
             context: backend
             image: gpu-ops-advisor-backend
-          - component: agent
-            context: agent
-            image: gpu-ops-advisor-agent
           - component: frontend
             context: frontend
             image: gpu-ops-advisor-frontend
-
+          - component: aggregator
+            context: aggregator
+            image: gpu-ops-advisor-aggregator
+          - component: grafana
+            context: grafana
+            image: gpu-ops-advisor-grafana
+          - component: postgresql
+            context: postgresql
+            image: gpu-ops-advisor-postgresql
+          - component: scheduler
+            context: scheduler
+            image: gpu-ops-advisor-scheduler
+          - component: rcca-agent
+            context: rcca-agent
+            image: gpu-ops-advisor-rcca-agent
+          - component: ops-agent
+            context: ops-agent
+            image: gpu-ops-advisor-ops-agent
     steps:
       - name: Checkout
         uses: actions/checkout@v5
