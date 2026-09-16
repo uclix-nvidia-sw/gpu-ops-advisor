@@ -142,15 +142,9 @@ DESIGN 05의 7개 메뉴와 S01~S16/S07B를 유지합니다. 공통 Assistant는
 | 연결·설정 | S13 모델, S14 모델 지정, S15 데이터 연결 |
 | 전역 기능 | S16 공통 Assistant |
 
-Python 3.9 이상이 있는 환경에서 저장소 루트를 기준으로 다음 명령을 실행하면 [정적 시안](<output/dsx-agent-studio-site/dist/index.html>)을 확인할 수 있습니다. 별도 패키지 설치나 빌드는 필요하지 않습니다.
+화면 구성은 아래 PDF와 DESIGN 05 화면 캡처·기록에서 확인할 수 있습니다. 실행 가능한 정적 시안은 현재 저장소에 포함되어 있지 않습니다.
 
-```bash
-python -m http.server 8000 --bind 127.0.0.1 --directory output/dsx-agent-studio-site/dist
-```
-
-브라우저에서 [로컬 시안](http://127.0.0.1:8000)을 엽니다. 종료는 실행한 터미널에서 `Ctrl+C`입니다.
-
-시안은 가상 데이터와 현재 탭의 작업·대화 상태를 사용하며 모델 설정은 브라우저에 저장합니다. 실제 인증·API·DB·LLM·정기 예약은 연결되어 있지 않습니다. v1.1에서 보완한 Pod 조사·KB 관리·일정·권한·복구 흐름은 아래 최신 명세가 구현 기준이며, 기존 이미지에 모두 반영된 상태는 아닙니다.
+v1.1에서 보완한 Pod 조사·KB 관리·일정·권한·복구 흐름은 아래 최신 명세가 구현 기준이며, 기존 이미지에 모두 반영된 상태는 아닙니다.
 
 [프론트엔드 PDF](<output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.pdf>) · [화면설계 PDF](<output/deliverables-20260916-v1.1/08_GUI_화면설계서.pdf>) · [DESIGN 05 시안 기록](<output/gui-design-20260916/README.md>)
 
@@ -178,7 +172,7 @@ python -m http.server 8000 --bind 127.0.0.1 --directory output/dsx-agent-studio-
 | 영역 | 2026-09-16 기준 |
 |---|---|
 | 설계·명세 | 외부 개선 21개 항목을 반영한 v1.1 작성·문서 간 대조 완료 |
-| 화면 시안 | DESIGN 05 정적 시안과 기존 시각 검증 기록 존재. 최신 계약의 실제 서비스 연결은 후속 구현 |
+| 화면 시안 | DESIGN 05 화면 캡처와 기존 시각 검증 기록 존재. 최신 계약의 실제 서비스 연결은 후속 구현 |
 | 기존 관측 기반 | 두 CPC의 중앙 조회·매핑 활용 기록 존재 |
 | CPC-2 직접 수집 | Alloy 직접 수집, 일부 target·동시점 Pod UID 조인·GPU_UTIL 0값의 짧은 확인 기록 존재 |
 | 추가 관측 검증 | CPC-1 직접 경로 전환, 최종 재배포 후 Loki 최신 수신, 장기 이력·부하 반응·내구성 등 대상별 확인 필요 |
@@ -226,7 +220,6 @@ CPC-2의 최신 수집 진행안은 KSM·GPU Exporter를 Alloy가 직접 수집�
 │   ├── deliverables-20260916-v1.1/    # 현행 명세·PDF·출처 열람본
 │   ├── deliverables-20260916/         # 최초 6종
 │   ├── architecture-*/               # 연결된 구조 설명·HTML·SVG·PNG
-│   ├── dsx-agent-studio-site/dist/    # 정적 시안
 │   ├── gui-design-20260916/           # DESIGN 05 화면 자료
 │   ├── pdf/                          # 이전 GUI/FE PDF
 │   ├── share/                        # 연결된 역할·판단·수집·KB 기록

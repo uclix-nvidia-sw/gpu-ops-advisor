@@ -4,14 +4,14 @@ CPC-1·CPC-2의 GPU·Node·Pod 관측을 CSC에서 연결해 **장애 원인 조
 
 이 저장소는 DSX의 설계 결정, 개발 명세, 구조도, 화면 시안과 검수·인계 기준을 관리합니다. **현재 개발 기준은 2026-09-16 통합 개정본 v1.1**입니다. 문서와 화면 시안이 준비된 단계이며 실제 Backend·DB·LLM 통합과 제품 검수의 완료를 뜻하지 않습니다.
 
-[개발 문서 목록](output/deliverables-20260916-v1.1/00_산출물_안내.md) · [화면설계](output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) · [전체 구조 설명](output/architecture-backend-20260916/구성_설명.md) · [통합 검토 반영 내역](output/deliverables-20260916-v1.1/09_통합검토_반영내역.md)
+[개발 문서 목록](../output/deliverables-20260916-v1.1/00_산출물_안내.md) · [화면설계](../output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) · [전체 구조 설명](../output/architecture-backend-20260916/구성_설명.md) · [통합 검토 반영 내역](../output/deliverables-20260916-v1.1/09_통합검토_반영내역.md)
 
 ## 처음 읽는 순서
 
 1. 이 README에서 서비스 목적·구조·현재 상태를 확인합니다.
-2. [요구사항·개발 범위](output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md)에서 담당 기능과 완료 조건을 확인합니다.
+2. [요구사항·개발 범위](../output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md)에서 담당 기능과 완료 조건을 확인합니다.
 3. 개발 역할에 따라 API·데이터·Agent·프론트엔드 명세를 읽습니다.
-4. [테스트 기준](output/deliverables-20260916-v1.1/05_테스트_검수_기준서.md)과 [운영 인계서](output/deliverables-20260916-v1.1/06_배포_운영_인계서.md)에 구현 결과와 실환경 증거를 연결합니다.
+4. [테스트 기준](../output/deliverables-20260916-v1.1/05_테스트_검수_기준서.md)과 [운영 인계서](../output/deliverables-20260916-v1.1/06_배포_운영_인계서.md)에 구현 결과와 실환경 증거를 연결합니다.
 
 ## 제공할 기능
 
@@ -57,7 +57,7 @@ CPC-1·CPC-2의 GPU·Node·Pod 관측을 CSC에서 연결해 **장애 원인 조
 | O10 | 조치 전후 변화 | 전후 수치·실제 조치 기록·비교 조건 |
 | O11 | 관측 품질 | 공동 관측률, 누락·신선도·분석 가능 범위 |
 
-세부 입력·산식·출력과 보류 조건은 [Agent 명세](output/deliverables-20260916-v1.1/04_Agent_동작_판단_명세서.md)를 따릅니다. P0는 기본 흐름의 선행 구현, P1은 전문 분석·운영 완성 순서이며 **둘 다 개발 범위**입니다. 일·주·월 정기 보고서는 P0에 포함됩니다.
+세부 입력·산식·출력과 보류 조건은 [Agent 명세](../output/deliverables-20260916-v1.1/04_Agent_동작_판단_명세서.md)를 따릅니다. P0는 기본 흐름의 선행 구현, P1은 전문 분석·운영 완성 순서이며 **둘 다 개발 범위**입니다. 일·주·월 정기 보고서는 P0에 포함됩니다.
 
 ## 구조
 
@@ -106,7 +106,7 @@ Backend의 8개 기능은 **API 서버 1종과 Worker 2종, 공유 코드**로 �
 
 긴 작업은 PostgreSQL에 커밋한 뒤 `job_id`를 반환하고 Worker가 실행합니다. 사건 갱신과 RCA 접수, 결과 저장과 유효 시도의 완료는 각각 원자적으로 처리합니다. 업무 큐·재시작 복구·취소·재시도·전체 기한은 Backend의 책임이고 Dynamo의 추론 대기와 구분합니다.
 
-API/Worker의 구현 언어·프레임워크, 배포 이미지·복제 수, 추론 GPU·엔진·모델은 실제 환경에 맞춰 확정합니다. Nemotron 3 Super는 기존 기록의 초기 후보이며 배포 확정값이 아닙니다. 상세 설계는 [Backend 구성 설명](output/architecture-backend-20260916/구성_설명.md)과 [API 명세](output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md)를 참조합니다.
+API/Worker의 구현 언어·프레임워크, 배포 이미지·복제 수, 추론 GPU·엔진·모델은 실제 환경에 맞춰 확정합니다. Nemotron 3 Super는 기존 기록의 초기 후보이며 배포 확정값이 아닙니다. 상세 설계는 [Backend 구성 설명](../output/architecture-backend-20260916/구성_설명.md)과 [API 명세](../output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md)를 참조합니다.
 
 ## 구현에서 유지할 판단·실행 기준
 
@@ -142,17 +142,11 @@ DESIGN 05의 7개 메뉴와 S01~S16/S07B를 유지합니다. 공통 Assistant는
 | 연결·설정 | S13 모델, S14 모델 지정, S15 데이터 연결 |
 | 전역 기능 | S16 공통 Assistant |
 
-Python 3가 있는 환경에서 저장소 루트를 기준으로 다음 명령을 실행하면 [정적 시안](output/dsx-agent-studio-site/dist/index.html)을 확인할 수 있습니다. 별도 패키지 설치나 빌드는 필요하지 않습니다.
+화면 구성은 아래 PDF와 DESIGN 05 화면 캡처·기록에서 확인할 수 있습니다. 실행 가능한 정적 시안은 현재 저장소에 포함되어 있지 않습니다.
 
-```bash
-python -m http.server 8000 --bind 127.0.0.1 --directory output/dsx-agent-studio-site/dist
-```
+v1.1에서 보완한 Pod 조사·KB 관리·일정·권한·복구 흐름은 아래 최신 명세가 구현 기준이며, 기존 이미지에 모두 반영된 상태는 아닙니다.
 
-브라우저에서 [로컬 시안](http://127.0.0.1:8000)을 엽니다. 종료는 실행한 터미널에서 `Ctrl+C`입니다.
-
-시안은 가상 데이터와 현재 탭의 작업·대화 상태를 사용하며 모델 설정은 브라우저에 저장합니다. 실제 인증·API·DB·LLM·정기 예약은 연결되어 있지 않습니다. v1.1에서 보완한 Pod 조사·KB 관리·일정·권한·복구 흐름은 아래 최신 명세가 구현 기준이며, 기존 이미지에 모두 반영된 상태는 아닙니다.
-
-[프론트엔드 PDF](output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.pdf) · [화면설계 PDF](output/deliverables-20260916-v1.1/08_GUI_화면설계서.pdf) · [DESIGN 05 시안 기록](output/gui-design-20260916/README.md)
+[프론트엔드 PDF](../output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.pdf) · [화면설계 PDF](../output/deliverables-20260916-v1.1/08_GUI_화면설계서.pdf) · [DESIGN 05 시안 기록](../output/gui-design-20260916/README.md)
 
 ## 개발 문서
 
@@ -160,32 +154,32 @@ python -m http.server 8000 --bind 127.0.0.1 --directory output/dsx-agent-studio-
 
 | 번호 | 문서 | 기준 |
 |---|---|---|
-| 00 | [산출물 안내](output/deliverables-20260916-v1.1/00_산출물_안내.md) | 버전·목록·출처·검증 상태 |
-| 01 | [요구사항·개발 범위](output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md) | F01~F14, N01~N05, P0/P1·완료 조건 |
-| 02 | [Backend·API 명세](output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md) | API·DTO·권한·상태 전이·실행 계약 |
-| 03 | [데이터 설계](output/deliverables-20260916-v1.1/03_데이터_설계서.md) | D01~D14, 식별·관측·이력·DB·보존 |
-| 04 | [Agent 동작·판단 명세](output/deliverables-20260916-v1.1/04_Agent_동작_판단_명세서.md) | R01~R09, O01~O11, 산식·정책·출력 |
-| 05 | [테스트·검수 기준](output/deliverables-20260916-v1.1/05_테스트_검수_기준서.md) | T01~T40, 고정 사례·기대값·실행 증거 |
-| 06 | [배포·운영 인계](output/deliverables-20260916-v1.1/06_배포_운영_인계서.md) | C01~C12, CPC별 활성화·설정·복원·담당 |
-| 07 | [프론트엔드 개발 명세](output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.md) | 화면·API·접근성·AC01~AC15·요구사항 추적 |
-| 08 | [GUI 화면설계](output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) | 화면별 입력·행동·결과·예외·완료 경로 |
-| 09 | [통합 검토 반영 내역](output/deliverables-20260916-v1.1/09_통합검토_반영내역.md) | 외부 개선 21개 항목의 재검토·선택·반영 위치 |
+| 00 | [산출물 안내](../output/deliverables-20260916-v1.1/00_산출물_안내.md) | 버전·목록·출처·검증 상태 |
+| 01 | [요구사항·개발 범위](../output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md) | F01~F14, N01~N05, P0/P1·완료 조건 |
+| 02 | [Backend·API 명세](../output/deliverables-20260916-v1.1/02_백엔드_API_작업명세서.md) | API·DTO·권한·상태 전이·실행 계약 |
+| 03 | [데이터 설계](../output/deliverables-20260916-v1.1/03_데이터_설계서.md) | D01~D14, 식별·관측·이력·DB·보존 |
+| 04 | [Agent 동작·판단 명세](../output/deliverables-20260916-v1.1/04_Agent_동작_판단_명세서.md) | R01~R09, O01~O11, 산식·정책·출력 |
+| 05 | [테스트·검수 기준](../output/deliverables-20260916-v1.1/05_테스트_검수_기준서.md) | T01~T40, 고정 사례·기대값·실행 증거 |
+| 06 | [배포·운영 인계](../output/deliverables-20260916-v1.1/06_배포_운영_인계서.md) | C01~C12, CPC별 활성화·설정·복원·담당 |
+| 07 | [프론트엔드 개발 명세](../output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.md) | 화면·API·접근성·AC01~AC15·요구사항 추적 |
+| 08 | [GUI 화면설계](../output/deliverables-20260916-v1.1/08_GUI_화면설계서.md) | 화면별 입력·행동·결과·예외·완료 경로 |
+| 09 | [통합 검토 반영 내역](../output/deliverables-20260916-v1.1/09_통합검토_반영내역.md) | 외부 개선 21개 항목의 재검토·선택·반영 위치 |
 
-[통합 개정본 ZIP](output/DSX_통합개정산출물_v1.1_20260916.zip)에는 위 문서, PDF 2종과 원문 15개가 포함되어 있습니다. 이후 변경은 저장소의 최신 Markdown과 이 README의 기준 버전을 따르며, 날짜·버전이 붙은 ZIP은 당시 배포본으로 보존합니다.
+[통합 개정본 ZIP](../output/DSX_통합개정산출물_v1.1_20260916.zip)에는 위 문서, PDF 2종과 원문 15개가 포함되어 있습니다. 이후 변경은 저장소의 최신 Markdown과 이 README의 기준 버전을 따르며, 날짜·버전이 붙은 ZIP은 당시 배포본으로 보존합니다.
 
 ## 현재 상태와 다음 개발 단계
 
 | 영역 | 2026-09-16 기준 |
 |---|---|
 | 설계·명세 | 외부 개선 21개 항목을 반영한 v1.1 작성·문서 간 대조 완료 |
-| 화면 시안 | DESIGN 05 정적 시안과 기존 시각 검증 기록 존재. 최신 계약의 실제 서비스 연결은 후속 구현 |
+| 화면 시안 | DESIGN 05 화면 캡처와 기존 시각 검증 기록 존재. 최신 계약의 실제 서비스 연결은 후속 구현 |
 | 기존 관측 기반 | 두 CPC의 중앙 조회·매핑 활용 기록 존재 |
 | CPC-2 직접 수집 | Alloy 직접 수집, 일부 target·동시점 Pod UID 조인·GPU_UTIL 0값의 짧은 확인 기록 존재 |
 | 추가 관측 검증 | CPC-1 직접 경로 전환, 최종 재배포 후 Loki 최신 수신, 장기 이력·부하 반응·내구성 등 대상별 확인 필요 |
 | Backend 통합·제품 검수 | T01~T40 전체 NOT RUN. 실제 앱 배포 패키지·migration·복원 명령은 구현 후 연결 |
 | 운영값·WBS | 담당자·일정, 인증·Endpoint·한도·성능·보존·RPO/RTO는 C01~C12와 후속 WBS에서 확정 |
 
-CPC-2의 일부 확인 기록을 두 CPC 전체의 제품 검수 PASS로 확장하지 않습니다. 실환경 활성 여부는 [인계서 C04](output/deliverables-20260916-v1.1/06_배포_운영_인계서.md)의 **CPC × R/O 40행**에서 모의 정상·실환경 정상·부족 처리를 각각 기록합니다. 현재 조회가 된다는 사실만으로 기간별 GPU-hours나 업무 복구까지 확인된 것은 아닙니다.
+CPC-2의 일부 확인 기록을 두 CPC 전체의 제품 검수 PASS로 확장하지 않습니다. 실환경 활성 여부는 [인계서 C04](../output/deliverables-20260916-v1.1/06_배포_운영_인계서.md)의 **CPC × R/O 40행**에서 모의 정상·실환경 정상·부족 처리를 각각 기록합니다. 현재 조회가 된다는 사실만으로 기간별 GPU-hours나 업무 복구까지 확인된 것은 아닙니다.
 
 개발은 다음 순서로 연결합니다. 상세 일정과 담당은 WBS에 배정합니다.
 
@@ -200,14 +194,14 @@ CPC-2의 일부 확인 기록을 두 CPC 전체의 제품 검수 PASS로 확장�
 
 | 기록 | README에 반영한 맥락 |
 |---|---|
-| [8월 DSX 통합 원고](review/DSX_통합원고_검토본_v0.1.md) | DSX·Omniverse·시설/전력·시뮬레이션의 검토 배경. 현재 GPU 운영 Agent 범위와 구분 |
-| [9/8 통합 아키텍처 복원](output/final/DSX_통합_아키텍처_복원_2026-09-08.md) · [구성·연동 기술기록](output/final/DSX_구성_연동_기술기록_2026-09-08.md) | CPC/CSC·수집·저장 기반과 환경별 실험 기록 |
-| [메모리 대조와 설계결정](output/architecture-20260915/메모리_대조와_설계결정.md) | 두 전문 Agent·공통 Assistant, 직접 Webhook, 관측·업무·추론 저장 역할 |
-| [공통 수집환경과 Agent 업무](output/share/DSX_CPC_공통수집환경과_Agent업무_2026-09-15.md) · [데이터 근거와 기능 매핑](output/share/DSX_수집데이터_근거대조와_기능매핑_2026-09-15.md) | 양 CPC의 공통 활용 기반과 실제 확인 범위 |
-| [RCA 역할 설계](output/share/DSX_GPU_RCA_Agent_역할과_데이터설계_v1.0.md) · [보고서 역할 설계](output/share/DSX_GPU_운영보고서_Agent_역할과_데이터설계_v1.1.md) | R/O 전체 업무와 필요한 데이터 경계 |
-| [공통판단 기준](output/share/DSX_Agent_공통판단기준과_인사이트사례_v1.0.md) · [KB v2.0 검토](output/share/DSX_KB_v2.0_구조_검토의견_및_설계확정조건.md) | 결정적 계산·수치 기준·발행 지식·등록 절차의 역할 |
-| [마이크로서비스 비교안](output/architecture-comparison-20260916/구조도_비교기준.md) → [Backend 상세안](output/architecture-backend-20260916/구성_설명.md) | 분리 검토 후 API 서버·두 Worker·공유 모듈을 현재 기준으로 채택 |
-| [외부 검토와 출처 묶음](output/deliverables-20260916-v1.1/sources/출처_안내.md) · [원문 지문](output/deliverables-20260916-v1.1/sources/원문_목록과_지문.json) | v1.1에서 대조한 원문 15개와 고정 버전 |
+| [8월 DSX 통합 원고](../review/DSX_통합원고_검토본_v0.1.md) | DSX·Omniverse·시설/전력·시뮬레이션의 검토 배경. 현재 GPU 운영 Agent 범위와 구분 |
+| [9/8 통합 아키텍처 복원](../output/final/DSX_통합_아키텍처_복원_2026-09-08.md) · [구성·연동 기술기록](../output/final/DSX_구성_연동_기술기록_2026-09-08.md) | CPC/CSC·수집·저장 기반과 환경별 실험 기록 |
+| [메모리 대조와 설계결정](../output/architecture-20260915/메모리_대조와_설계결정.md) | 두 전문 Agent·공통 Assistant, 직접 Webhook, 관측·업무·추론 저장 역할 |
+| [공통 수집환경과 Agent 업무](../output/share/DSX_CPC_공통수집환경과_Agent업무_2026-09-15.md) · [데이터 근거와 기능 매핑](../output/share/DSX_수집데이터_근거대조와_기능매핑_2026-09-15.md) | 양 CPC의 공통 활용 기반과 실제 확인 범위 |
+| [RCA 역할 설계](../output/share/DSX_GPU_RCA_Agent_역할과_데이터설계_v1.0.md) · [보고서 역할 설계](../output/share/DSX_GPU_운영보고서_Agent_역할과_데이터설계_v1.1.md) | R/O 전체 업무와 필요한 데이터 경계 |
+| [공통판단 기준](../output/share/DSX_Agent_공통판단기준과_인사이트사례_v1.0.md) · [KB v2.0 검토](../output/share/DSX_KB_v2.0_구조_검토의견_및_설계확정조건.md) | 결정적 계산·수치 기준·발행 지식·등록 절차의 역할 |
+| [마이크로서비스 비교안](../output/architecture-comparison-20260916/구조도_비교기준.md) → [Backend 상세안](../output/architecture-backend-20260916/구성_설명.md) | 분리 검토 후 API 서버·두 Worker·공유 모듈을 현재 기준으로 채택 |
+| [외부 검토와 출처 묶음](../output/deliverables-20260916-v1.1/sources/출처_안내.md) · [원문 지문](../output/deliverables-20260916-v1.1/sources/원문_목록과_지문.json) | v1.1에서 대조한 원문 15개와 고정 버전 |
 
 별도 Mapper 상시 서비스를 새로 두기보다 기존 매핑과 보존 관측을 공통 도구에서 조회·복원합니다. 알림 경로는 Grafana 관리형 Alerting의 직접 Webhook을 사용합니다. 예전 자료의 Ruler/Alertmanager 경로, Exchange/NATS 실험, 서비스 5개 분리안은 현행 필수 구성으로 적용하지 않습니다.
 
@@ -224,17 +218,14 @@ CPC-2의 최신 수집 진행안은 KSM·GPU Exporter를 Alloy가 직접 수집�
 │   ├── architecture-backend-20260916/ # 현행 Backend 구조 설명·도식
 │   ├── architecture-20260915/        # 메모리 대조·설계결정
 │   ├── architecture-comparison-20260916/ # 구조 비교 검토안
-│   ├── dsx-agent-studio-site/dist/   # DESIGN 05 정적 시안
 │   ├── gui-design-20260916/          # 기존 FE 명세·화면 이미지·편집 자료
 │   ├── share/                       # 역할·판단·수집·KB 공유 기록
 │   ├── final/                       # 기존 아키텍처·기술기록 복원본
 │   └── pdf/                         # 기존 PDF 산출물
-├── review/                          # 검토 원고·수집 자료 대조
-├── recovery/                        # 과거 자료 복구본
-└── dsx-exchange-upstream/            # DSX Exchange 외부 구현 참고
+└── review/                          # 검토 원고·수집 자료 대조
 ```
 
-기타 날짜별 시각 자료는 해당 `output/` 폴더에 보관합니다. `_workspace/`, `.tmp/`, `tmp/`는 로컬 작업·렌더·검증 중간 자료입니다. `dsx-exchange-upstream/`의 실행 방법·의존성·라이선스는 [해당 README](dsx-exchange-upstream/README.md)와 원본 정책을 따릅니다. 이 디렉터리의 코드가 GPU Operations Backend 구현을 대신하지는 않습니다.
+기타 날짜별 시각 자료는 해당 `output/` 폴더에 보관합니다.
 
 ## GitHub에서 변경을 관리하는 기준
 
@@ -248,4 +239,4 @@ CPC-2의 최신 수집 진행안은 KSM·GPU Exporter를 Alloy가 직접 수집�
 
 자동 GPU reset·Node 재부팅·cordon/drain·Pod 종료·자원 재배치·전력 제어, 냉각/BMS/DCIM·Digital Twin 제어, Exchange/NATS 신규 도입, Run:ai API·quota·대기열 신규 연동, 과금·청구·검증되지 않은 절감액 확정은 기본 개발 범위에 포함하지 않습니다.
 
-기존 CPC 수집 기반은 활용하며 서비스 연동에 필요한 결함 수정과 추가 필드 검증은 포함합니다. 상세 범위 변경은 [요구사항 정의서](output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md)에 먼저 반영합니다.
+기존 CPC 수집 기반은 활용하며 서비스 연동에 필요한 결함 수정과 추가 필드 검증은 포함합니다. 상세 범위 변경은 [요구사항 정의서](../output/deliverables-20260916-v1.1/01_요구사항_개발범위_정의서.md)에 먼저 반영합니다.
