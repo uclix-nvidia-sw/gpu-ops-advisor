@@ -1,6 +1,6 @@
 # 12. 보고서 Agent 모듈 설계서
 
-버전 1.3 · 모듈 report · 독립 실행·배포 · O01~O11
+버전 1.3 · 모듈 report · 독립 실행·배포 · O01~O11 · NVIDIA NeMo Agent Toolkit(NAT) 적용 설계
 
 ## 1. 역할·경계
 
@@ -10,9 +10,37 @@ Backend의 즉시·정기 요청을 Job Controller에서 배분받아 집계·�
 
 scope, time_range, timezone, topic_ids, group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id를 받는다. 정기 입력에는 occurrence_id·schedule_revision과 고정 기간이 포함된다. 02의 입력 계약을 재검증한다.
 
-JC claim → 주제별 입력 품질 → 공통 조회·신원/단위/시간 연결 → 04의 결정적 산식 → 규칙/해석 → 저장 값에 연결된 설명 → candidate·HTML/CSV 저장 → JC complete 순서다. R/O 공통 산식을 복사해 별도 구현하지 않는다.
+JC claim → 주제별 수집 계획 → Incident·공개 RCA 결과 DB와 Grafana MCP 조회 → 신원/단위/시간·품질 연결 → 04의 결정적 산식 → 규칙/해석 → 저장 값에 연결된 설명 → candidate·HTML/CSV 저장 → JC complete 순서다. 주제에 필요한 출처만 조회하며 R/O 공통 산식을 복사해 별도 구현하지 않는다.
 
 자기 job/attempt의 결과 candidate·근거·파일만 쓴다. jobs·일정·사건은 직접 변경하지 않는다. 한 주제의 입력 부족 때문에 독립적인 주제를 소거하지 않는다. 재시도·마감·동시성은 10/14를 따른다.
+
+### 2.1 모듈 내부 구성
+
+Worker 프로세스 안에 NAT 순차 워크플로를 둔다. 기간·주제별 수집 계획과 계산은 코드가 결정하고, LLM은 검증된 수치·근거의 해석과 문장 작성을 담당한다. O01~O11을 별도 하위 Agent로 나누지 않는다.
+
+| 내부 구성 | 책임 | 사용하는 자료/연결 |
+|---|---|---|
+| Worker 실행부 | claim·heartbeat·취소·deadline·저장·완료 보고 | JC API, 자기 후보·근거·파일 |
+| 수집 계획 | 절대 기간·주제·필수/선택 자료 결정 | 입력 snapshot, 주제별 조회 정의 |
+| 사고·분석 이력 조회 | 해당 범위 사건과 공개된 RCA 결과 읽기 | incidents, jobs.published_result_id → result_candidates |
+| 기간 관측 조회 | 지표·관련 로그·매핑 이력 수집 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
+| 집계·계산 | 시간·대상 연결, 누락·중복 검사, 주제별 수치 계산 | 04 공통 계산 함수 |
+| 설명·검증·출력 | 근거 기반 해석, 수치 참조 검증, HTML/CSV 생성 | LLM, 검증된 수치 레지스트리 |
+
+### 2.2 자료 선택과 기간 기준
+
+| 보고서 내용 | 우선 참조 자료 | 자료가 없을 때 |
+|---|---|---|
+| 사고·원인·반복 장애 | Incident 이력 + 공개 RCA 결과 + 필요한 로그·지표 | 사건은 있으나 RCA 미완료이면 미완료로 표시. 원인 추정으로 대체하지 않음 |
+| 사용량·할당·저활동·에너지 | Grafana MCP의 기간 지표 + 매핑 이력·품질 | 해당 주제를 partial/blocked로 표시. RCA가 없다는 이유로 중단하지 않음 |
+| 사고 당시 작업 영향 | 당시 매핑·작업 근거 + 사건·RCA 결과 | 현재 매핑을 과거로 소급하지 않음 |
+| 조치 전후 변화 | 실제 조치 기록 + 전후 지표·로그 + 관련 RCA | 권고만 있으면 조치 실행으로 집계하지 않음 |
+
+RCA 결과 DB는 이번 보고서를 위해 새 RCA를 실행하는 경로가 아니다. 보고서는 원인 판정의 출처와 수준을 유지해 인용하고, 관측 데이터로 기간 통계와 변화 설명을 보완한다. Runbook 직접 검색은 기본 보고서 흐름에 포함하지 않으며 보고서의 판단 기준·운영 정책은 기존 발행 revision을 사용한다.
+
+실행 예정 시각과 분석 대상 기간을 구분한다. Backend가 계산한 절대 time_range를 그대로 사용하며 Worker 기동 시각으로 기간을 다시 계산하지 않는다. 수집 시작 시 data_cutoff_at과 읽은 사건 snapshot·공개 RCA result ID/hash 목록을 고정해 evidence에 저장한다. 작성 중 새 RCA가 발행돼도 같은 보고서에 섞지 않는다. 원본 관측 저장소의 시간별 조회는 DB snapshot 보장을 뜻하지 않으므로 실제 응답 snapshot·관측/수집 시각도 보존한다.
+
+재시도 시 확보된 불변 입력·증거는 검증 후 참조할 수 있지만 이전 attempt의 candidate를 새 final로 재활용하지 않는다. 새 자료가 필요하면 다시 확보한 시점·범위를 기록한다. 원본 소실·조회 제한으로 완전성을 확인할 수 없으면 해당 통계만 보류한다.
 
 ## 3. 보고서 업무
 

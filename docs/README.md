@@ -1,6 +1,6 @@
 # 개발 문서 안내
 
-현재 기준은 **DSX v1.3**입니다. Job Controller는 큐와 기존 자원 내 배분을 맡고, 정기 보고서는 Backend가 생성합니다. RCA 요청은 Incident에서만 시작합니다.
+현재 기준은 **DSX v1.3**입니다. Job Controller는 큐와 기존 자원 내 배분을 맡고, 정기 보고서는 Backend가 생성합니다. RCA 요청은 Incident에서만 시작합니다. 두 Agent 내부에는 NAT 워크플로를 적용합니다. RCA는 Runbook·사고 증거·Grafana MCP를, 보고서는 Incident·공개 RCA 결과 DB와 MCP 기간 관측을 사용합니다. 상세 연결·운영·검수 기준은 03/04/05/06/11/12/14에 있습니다.
 
 [저장소 README](../README.md) · [전체 구조도](../output/architecture-modules-20260917-v1.3/README.md) · [보존한 환경 근거](evidence/README.md)
 

@@ -4,15 +4,30 @@
 
 ## 1. 공통 역할
 
-RCA·보고서 Agent는 JC에서 배분받은 잡만 실행한다. 조회·연결·계산·품질 규칙은 공통 코드, LLM은 근거 해석·설명·등록 조사 선택을 담당한다. 장비 변경 도구나 일반 대화 기능은 없다.
+RCA·보고서 Agent는 JC에서 배분받은 잡만 실행한다. 각 Worker 내부에 독립 NAT 워크플로를 두고 RCA는 Runbook 기반 조사, 보고서는 DB·기간 관측의 집계·설명을 수행한다. 공통 코드는 MCP 연결 처리·정규화·계산·품질 등 실제 중복 함수만 재사용하며 중앙 업무 서비스로 배포하지 않는다. LLM은 근거 해석·설명·등록 조사 선택을 담당한다. 장비 변경 도구나 일반 대화 기능은 없다.
 
 ## 2. 실행과 상태
 
-scope·대상·기간·입력 snapshot 검증 → 버전/마감 고정 → 등록 query 조회 → 신원/품질 검사 → 결정적 계산 → 공유 용량 내 직렬 추론 → 결과 검증 → candidate 저장 → JC complete 순서다. 인증 검사는 범위 밖이지만 입력·조회 범위·도구 허용 목록·예산·결과 검증은 유지한다.
+공통 실행부는 scope·대상·기간·입력 snapshot 검증 → 버전/마감 고정 → 해당 NAT 워크플로 실행 → 결과 검증 → candidate 저장 → JC complete 순서다. 워크플로의 조사·계산 순서는 11/12를 따른다. NAT가 업무 큐·Worker lease·최종 공개를 소유하지 않는다. 인증 검사는 범위 밖이지만 입력·조회 범위·도구 허용 목록·예산·결과 검증은 유지한다.
 
 job.status는 10, tool_status=ok/partial/empty/unavailable/parse_error는 03, 주제 상태는 ready/partial/blocked/not_applicable, 설명은 complete/failed/omitted로 구분한다. 결과 미발행이면 result_status/narrative_status는 null이다.
 
 결과 전체 result_status는 적용 항목에서 모두 ready면 ready, 하나라도 유효 ready/partial이 있고 전부 ready가 아니면 partial, 모두 blocked면 blocked, 적용 항목이 없으면 not_applicable이다. RCA는 purpose별 assessments, 보고서는 topics를 기준으로 계산한다. 실행 성공이 데이터 충분함·원인 확정·사건 종결을 뜻하지 않는다.
+
+### 2.1 NAT 구성과 업무 함수
+
+각 Worker는 NAT Python 실행 기능을 내장하고 자기 워크플로만 실행한다. 두 워크플로의 설정·프롬프트·등록 함수·모델 참조를 분리한다. MCP function group은 필요한 원격 도구만 연결하며 업무 함수가 입력 범위와 응답을 검사한 뒤 호출한다. 설정은 구성 요소와 버전 연결용이며 범용 조사 YAML 해석 엔진을 추가하지 않는다.
+
+| 함수 역할 | RCA | 보고서 | 실행 주체 |
+|---|---|---|---|
+| Runbook 검색·적용 검사 | 호환 발행본 확인, 없으면 일반 조사 | 기본 흐름에서 생략 | 코드 검사 + LLM 해석 |
+| Incident·공개 결과 읽기 | 고정된 사고 증거 | 기간 사건·공개 RCA 결과 | 정해진 DB 함수 |
+| Grafana MCP 관측 조회 | 부족한 사고 증거와 후속 조사 | 주제별 기간 지표·관련 로그 | 범위를 제한한 조회 함수 |
+| 계산·품질·규칙 | 조사 수치·조건 확인 | 주제별 지표·통계 산출 | Python 코드 |
+| 결과 설명 | 원인 후보·지지/반박·권고 | 기간 현황·변화·한계 | LLM, 수치·증거 참조 |
+| 검증·저장·완료 | 자기 후보·근거 | 자기 후보·근거·파일 | Worker 코드, LLM 선택 도구 아님 |
+
+RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT Tool Calling 구성을 검증해 사용한다. 보고서는 등록된 수집·계산 순서를 실행하며 LLM에 집계 산식을 생성시키지 않는다. NAT 호출 중에도 비동기 heartbeat가 계속 동작해야 하며 숨은 병렬 추론·중첩 재시도로 14의 한도를 초과하지 않는다.
 
 ## 3. RCA
 
@@ -34,7 +49,7 @@ job.status는 10, tool_status=ok/partial/empty/unavailable/parse_error는 03, �
 
 0은 관측된 유효 0이다. 수집 실패·미지원·센티널·오래된 값은 null과 이유로 처리한다. counter 리셋·기기 교체·소스 변경 경계는 각각 검증한 구간만 계산한다.
 
-할당 이력의 기준은 공통 조회 모듈이 Mimir에 보존된 원본 표본 시각·관계·수집 완전성으로 복원한 구간이다. UI를 열었는지와 관계없이 보존 기간 안의 같은 입력을 사용한다. 시각·완전성·해상도 또는 보존이 부족하면 해당 기간 계산만 보류한다. 복원 방법과 스냅샷 저장은 03의 이력 생성 계약을 따른다.
+할당 이력의 기준은 Mimir에 보존된 원본 표본 시각·관계·수집 완전성으로 복원한 구간이다. Agent는 Grafana MCP 응답을 정규화해 같은 복원 함수를 사용한다. UI를 열었는지와 관계없이 보존 기간 안의 같은 입력을 사용한다. 시각·완전성·해상도 또는 보존이 부족하면 해당 기간 계산만 보류한다. 복원 방법과 스냅샷 저장은 03의 이력 생성 계약을 따른다.
 
 계산용 query revision은 원본 관측 시각·원본 주기·값 유지·구간 경계·chunk 겹침 제거·최대 유효시간을 고정한다. 범위 조회의 평가 시각이나 차트 점 수를 원본 샘플 수로 사용하지 않는다. 저장소가 지원하면 원본 range-vector 표본을 제한된 chunk로 조회해 사용하며, 원본성이 확인되지 않는 다운샘플 자료로 급증·시간·P95를 확정하지 않는다. UI chart_step은 표시 전용이고 이미 저장된 계산 결과를 바꾸지 않는다.
 
@@ -112,7 +127,7 @@ LLM 결과·사용자 메모·유사도 높은 문서를 자동으로 검증된 
 
 LLM 입력에는 요청 scope·시간, 구조화 사실/수치·품질·evidence ID, 호환 발행 지식의 필요한 구간, 허용 도구·예산만 포함한다. 원시 메트릭·전체 Loki 로그를 통째로 전달하지 않는다. 로그·문서 안의 지시문은 분석 데이터로 취급하고 서버 실행 규칙을 바꾸지 않는다.
 
-허용 도구는 자산 해석, 현재/과거 매핑, 등록 메트릭·로그 조회, 사건 이력, 제공되는 Pod 근거, Knowledge 조회다. 임의 SQL/PromQL/LogQL·쉘·장비 변경 도구를 노출하지 않는다. 도구 출력의 숫자를 다시 추정하지 않는다.
+허용 도구는 자산 해석, 현재/과거 매핑, 등록 메트릭·로그 조회, 사건 이력, 제공되는 Pod 근거, Knowledge 조회다. 임의 SQL/PromQL/LogQL·쉘·장비 변경 도구를 LLM에 노출하지 않는다. MCP의 query_prometheus/query_loki_logs는 검증된 query ID·인자를 실제 쿼리로 만드는 업무 함수를 통해 호출한다. NAT의 도구 include 목록만으로 scope·시간·쿼리 내용이 제한된다고 가정하지 않는다. 도구 출력의 숫자를 다시 추정하지 않는다.
 
 저장 전에는 JSON 스키마, 필수 필드, enum, 대상 scope, evidence ID 존재, 값·단위·기간·반올림 일치, 인과 판단 승격, 권고 선행 조건을 검사한다. 사실·수치는 구조화 값에서 렌더링하고 설명에 있는 수치 참조도 해당 필드와 연결한다. 검증 실패는 제한된 재생성 또는 설명 생략으로 처리하며 잘못된 설명을 정상 결과로 저장하지 않는다.
 
@@ -170,3 +185,12 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 ## 9. 검수
 
 수치 고정 사례·근거 연결·설명 실패·버전 재현은 [05](05_테스트_검수_기준서.md), 큐 수명주기는 [14](14_모듈간_호출과_공통실행_계약.md)를 따른다. 제품 시험은 NOT RUN이다.
+
+## 10. NAT 적용 근거
+
+NAT의 Python 실행·사용자 정의 함수·MCP 클라이언트 기능을 사용한다. 아래는 도구 기능의 근거이며 DSX의 큐·소유권·판단 규칙은 이 설계의 결정이다. 설치 버전과 실제 모델 호환성은 C11에서 검증·고정한다.
+
+- [NVIDIA 워크플로 실행](https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/about-running-workflows.html)
+- [NVIDIA 사용자 정의 함수](https://docs.nvidia.com/nemo/agent-toolkit/latest/extend/custom-components/custom-functions/functions.html)
+- [NVIDIA MCP 클라이언트](https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/mcp-client.html)
+- [NVIDIA Tool Calling Agent](https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/tool-calling-agent/index.html)

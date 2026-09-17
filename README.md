@@ -29,7 +29,12 @@ Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모�
 | 정기 보고서 | Backend 내부 스케줄러 → 같은 보고서 큐 → 보고서 Agent |
 | 처리 용량 변경 | 운영자가 Agent 수·동시 처리 한도를 수동 조정 |
 
-Job Controller는 큐 관리와 **기존 자원 한도 안에서 잡 배분**을 맡습니다. 처리 여유가 없으면 큐에서 대기합니다. Backend·Incident·Job Controller·RCA·보고서는 각각 독립 실행·배포하며 공통 조회·계산 코드는 라이브러리로 공유합니다.
+Job Controller는 큐 관리와 **기존 자원 한도 안에서 잡 배분**을 맡습니다. 처리 여유가 없으면 큐에서 대기합니다. Backend·Incident·Job Controller·RCA·보고서는 각각 독립 실행·배포합니다. 두 Agent는 **NVIDIA NeMo Agent Toolkit(NAT)** 워크플로를 내부에서 실행하며, 공통 정규화·계산 함수만 라이브러리로 재사용합니다.
+
+- RCA: Runbook 검색·적용 조건 확인 → 필요한 사고 증거를 Grafana MCP로 조회 → 원인·권고 분석 → 결과·근거 저장.
+- 보고서: Incident·공개 RCA 결과 DB + Grafana MCP의 기간 지표·로그 → 집계·계산 → 설명·보고서 저장.
+
+Grafana MCP는 관측 조회 연결을 맡으며 Backend의 기존 조회 경로와 수집 기반은 유지합니다. 최종 결과 공개는 기존 Job Controller 완료 검증을 거칩니다. NAT/MCP 실환경 연동은 설계 단계이며 실제 검수 완료를 뜻하지 않습니다.
 
 Chatbot/Assistant, GUI 직접 RCA 실행, 독립 Scheduler, HPA/자동 확장, 제품 인증·RBAC·사용자 tenant는 이번 범위에서 제외합니다. 기존 관측 저장소 접속 설정은 유지합니다.
 
