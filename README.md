@@ -120,11 +120,11 @@ DESIGN 05의 7개 메뉴와 S01~S16/S07B를 유지합니다. 공통 Assistant는
 | 연결·설정 | S13 모델, S14 모델 지정, S15 데이터 연결 |
 | 전역 기능 | S16 공통 Assistant |
 
-화면 구성은 아래 PDF와 DESIGN 05 화면 캡처·기록에서 확인할 수 있습니다. 실행 가능한 정적 시안은 현재 저장소에 포함되어 있지 않습니다.
+이전 화면 구성은 아래 PDF의 Git 기록과 DESIGN 05 캡처에서 확인할 수 있습니다. 현재 실행 가능한 데모 프론트엔드는 위의 frontend 실행 안내를 따릅니다.
 
 v1.1에서 보완한 Pod 조사·KB 관리·일정·권한·복구 흐름은 아래 최신 명세가 구현 기준이며, 기존 이미지에 모두 반영된 상태는 아닙니다.
 
-[이전 프론트엔드 PDF](<output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.pdf>) · [이전 화면설계 PDF](<output/deliverables-20260916-v1.1/08_GUI_화면설계서.pdf>) · [DESIGN 05 시안 기록](<output/gui-design-20260916/README.md>)
+[이전 프론트엔드 PDF](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/fa79de88f131333c48516d676ee811944d8d698a/output/deliverables-20260916-v1.1/07_%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C_%EA%B0%9C%EB%B0%9C%EB%AA%85%EC%84%B8%EC%84%9C.pdf) · [이전 화면설계 PDF](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/fa79de88f131333c48516d676ee811944d8d698a/output/deliverables-20260916-v1.1/08_GUI_%ED%99%94%EB%A9%B4%EC%84%A4%EA%B3%84%EC%84%9C.pdf) · [DESIGN 05 시안 기록](<output/gui-design-20260916/README.md>)
 
 ## 개발 문서
 
