@@ -1,10 +1,25 @@
 # DSX GPU Operations
 
-GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고서를 제공하는 서비스입니다. **현재 개발 기준은 v1.3**이며, 문서가 준비된 상태입니다. Backend·Agent·DB·실환경 통합이 완료된 것은 아닙니다.
+GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고서를 제공하는 서비스입니다. **현재 개발 기준은 v1.3**이며, Go Backend와 React 연결에 v1.3 변경을 반영했습니다. 실제 JC·Agent·관측/LLM 실환경 통합은 아직 완료되지 않았습니다.
 
 [개발 문서 15종](output/deliverables-20260917-v1.3/00_산출물_안내.md) · [전체 구조도](output/architecture-modules-20260917-v1.3/README.md) · [문서 탐색](docs/README.md) · [변경·정리 내역](output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)
 
 ## 구조와 사용자 흐름
+
+## 처음 읽는 순서
+
+React 기반 프론트엔드는 루트의 [`frontend/`](frontend/README.md)에 있습니다. `cd frontend`, `npm ci`, `npm run dev`로 실행합니다. 7개 메뉴와 조사·보고서·일정·지식·모델 설정을 실제 Go API에 연결했습니다. 데모 저장소·가짜 완료 처리는 제거했습니다. 지식·모델·설정은 PostgreSQL에 저장하며, 정기 일정은 Backend 내부에서 처리하고 Agent·실시간 관측·LLM 실행은 별도 모듈 연결이 필요합니다. [프론트엔드 검증 기록](frontend/QA.md)에 실행 결과와 미검증 범위를 분리했습니다.
+
+Go Backend는 [`backend/`](backend/README.md)에 있습니다. Docker 없이 `./backend/scripts/dev-db.ps1`, `./backend/scripts/dev-server.ps1`을 별도 터미널에서 실행합니다. 모든 업무 화면이 `/api/v1`을 호출하며 `/settings/backend`에서 서비스 연결 상태를 확인합니다. 사용자·Agent 인증은 이번 단계에서 제외했습니다. [Backend API](backend/API.md) · [최소 테스트/E2E 결과](backend/QA.md).
+
+1. 이 README에서 서비스 목적·구조·현재 상태를 확인합니다.
+2. [요구사항·개발 범위](<output/deliverables-20260917-v1.3/01_요구사항_개발범위_정의서.md>)에서 담당 기능과 완료 조건을 확인합니다.
+3. 개발 역할에 따라 API·데이터·Agent·프론트엔드 명세를 읽습니다.
+4. [테스트 기준](<output/deliverables-20260917-v1.3/05_테스트_검수_기준서.md>)과 [운영 인계서](<output/deliverables-20260917-v1.3/06_배포_운영_인계서.md>)에 구현 결과와 실환경 증거를 연결합니다.
+
+## 제공할 기능
+
+Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모듈이며 Job Controller에서 작업을 인수합니다.
 
 | 목적 | 흐름 |
 |---|---|

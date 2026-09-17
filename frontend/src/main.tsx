@@ -3,18 +3,18 @@ import { Component, StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
-import { Assistant } from './components/assistant';
 import { Empty } from './components/ui';
 import { AppProvider } from './lib/store';
-import { AnalysisForm, Cases } from './pages/Cases';
+import { Cases } from './pages/Cases';
 import { Dashboard } from './pages/Dashboard';
 import { Fleet } from './pages/Fleet';
-import { DemoJobRunner, JobDetail, Jobs } from './pages/Jobs';
+import { JobDetail, Jobs } from './pages/Jobs';
 import { Knowledge } from './pages/Knowledge';
 import { ReportForm, Reports } from './pages/Reports';
 import { ResultPage } from './pages/Results';
 import { Schedules } from './pages/Schedules';
 import { Settings } from './pages/Settings';
+import { Backend } from './pages/Backend';
 import './styles.css';
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
   state = { error: false };
@@ -25,7 +25,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: boolean 
     return this.state.error ? (
       <div className="error-boundary">
         <h1>화면을 불러오지 못했습니다.</h1>
-        <p>새로고침 후 다시 확인해 주세요. 데모 저장 데이터는 유지됩니다.</p>
+        <p>새로고침 후 다시 확인해 주세요. 서버에 저장된 기록은 유지됩니다.</p>
         <button className="button primary" onClick={() => location.reload()}>
           다시 불러오기
         </button>
@@ -46,7 +46,6 @@ root.render(
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <BrowserRouter>
-            <DemoJobRunner />
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
@@ -59,7 +58,7 @@ root.render(
                 />
                 <Route path="fleet/quality" element={<Fleet key="quality" view="quality" />} />
                 <Route path="cases" element={<Cases />} />
-                <Route path="analyses/new" element={<AnalysisForm />} />
+                <Route path="analyses/new" element={<Navigate to="/cases" replace />} />
                 <Route path="analyses/:id" element={<ResultPage kind="analysis" />} />
                 <Route path="incidents/:id" element={<ResultPage kind="incident" />} />
                 <Route path="reports" element={<Reports />} />
@@ -72,22 +71,12 @@ root.render(
                 <Route path="knowledge" element={<Knowledge />} />
                 <Route path="settings" element={<Navigate to="/settings/models" replace />} />
                 <Route path="settings/models" element={<Settings key="models" view="models" />} />
+                <Route path="settings/backend" element={<Backend />} />
                 <Route
                   path="settings/routing"
                   element={<Settings key="routing" view="routing" />}
                 />
                 <Route path="settings/data" element={<Settings key="data" view="data" />} />
-                <Route
-                  path="conversations/:id"
-                  element={
-                    <div className="page conversation-page">
-                      <h1 className="sr-only" tabIndex={-1}>
-                        공통 Assistant
-                      </h1>
-                      <Assistant full />
-                    </div>
-                  }
-                />
                 <Route
                   path="*"
                   element={

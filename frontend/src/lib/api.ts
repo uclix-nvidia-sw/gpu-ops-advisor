@@ -1,4 +1,4 @@
-/** Production transport foundation. Demo UI uses demoRepository until backend integration. */
+/** Same-origin transport for the Go API. */
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -30,6 +30,11 @@ export async function apiRequest<T>(
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
   });
+  if (!response.headers.get('Content-Type')?.includes('application/json'))
+    throw new ApiError(
+      response.status,
+      '백엔드 응답을 확인할 수 없습니다. 서버 연결을 확인해 주세요.',
+    );
   const body = await response.json();
   if (!response.ok)
     throw new ApiError(
