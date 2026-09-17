@@ -1,0 +1,17 @@
+# Keep working-tree text files consistently CRLF.
+* text=auto eol=crlf
+
+# Keep binary assets unchanged.
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.ico -text
+*.pdf -text
+*.zip -text
+*.docx -text
+*.xlsx -text
+*.pptx -text
+*.woff -text
+*.woff2 -text
