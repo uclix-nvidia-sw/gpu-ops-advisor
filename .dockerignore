@@ -1,0 +1,10 @@
+.git
+**/.local
+**/bin
+**/*.exe
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+output
+frontend

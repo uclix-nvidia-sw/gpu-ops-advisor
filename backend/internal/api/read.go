@@ -184,7 +184,10 @@ func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 	deadline, _ := time.Parse(time.RFC3339Nano, String(v, "deadline_at"))
 	remaining := time.Now().Before(deadline) && String(v, "kind") == "report"
 	out["can_cancel"] = remaining && Has([]string{"queued", "running", "retry_wait"}, String(v, "status")) && v["cancel_requested_at"] == nil
-	out["can_retry"] = remaining && String(v, "status") == "failed" && Number(v, "attempt_no") < Number(v, "max_attempts") && Number(v, "budget_used") < Number(v, "token_budget") && Has([]string{"transient_error", "dependency_unavailable", "timeout"}, String(v, "termination_reason"))
+	versions, _ := v["versions"].(map[string]any)
+	execution, _ := versions["execution"].(map[string]any)
+	attemptBudget := Number(execution, "attempt_budget")
+	out["can_retry"] = remaining && String(v, "status") == "failed" && v["retryable"] == true && attemptBudget > 0 && Number(v, "attempt_no") < Number(v, "max_attempts") && Number(v, "budget_used")+attemptBudget <= Number(v, "token_budget") && Has([]string{"transient_error", "dependency_unavailable", "timeout"}, String(v, "termination_reason"))
 	out["result_ref"] = nil
 	out["result_status"] = "unpublished"
 	out["narrative_status"] = nil

@@ -6,8 +6,8 @@ import (
 )
 
 func TestScopeAndTimeBoundaries(t *testing.T) {
-	outer := Scope{[]ClusterScope{{"cpc-1", []string{"dev"}}}}
-	if Contains(outer, Scope{[]ClusterScope{{"cpc-1", nil}}}) || Contains(outer, Scope{[]ClusterScope{{"cpc-2", []string{"dev"}}}}) {
+	outer := Scope{Clusters: []ClusterScope{{ClusterID: "cpc-1", Namespaces: []string{"dev"}}}}
+	if Contains(outer, Scope{Clusters: []ClusterScope{{ClusterID: "cpc-1", Namespaces: nil}}}) || Contains(outer, Scope{Clusters: []ClusterScope{{ClusterID: "cpc-2", Namespaces: []string{"dev"}}}}) {
 		t.Fatal("scope boundary crossed")
 	}
 	for _, raw := range []Object{{"cluster_ids": []string{"cpc-1"}}, {"clusters": []any{Object{"cluster_id": "cpc-1", "namespaces": []string{}}}}, {"clusters": []any{Object{"cluster_id": "cpc-1"}}}} {

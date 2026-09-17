@@ -14,7 +14,9 @@ services:
       timeout: 3s
       retries: 10
   backend:
-    build: .
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgres://dsx:local-development-only@postgres:5432/dsx?sslmode=disable
       DSX_ADDRESS: 0.0.0.0:8080
@@ -22,8 +24,20 @@ services:
       DSX_MIGRATE: "true"
       DSX_SEED: "true"
       DSX_SCHEDULER_ENABLED: "true"
+      DSX_JOB_CONTROLLER_URL: http://job-controller:8090
     ports:
       - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  job-controller:
+    build:
+      context: ..
+      dockerfile: job-controller/Dockerfile
+    environment:
+      DATABASE_URL: postgres://dsx:local-development-only@postgres:5432/dsx?sslmode=disable
+      JC_ADDRESS: 0.0.0.0:8090
+      DSX_ALLOW_UNAUTHENTICATED_NETWORK: "true"
     depends_on:
       postgres:
         condition: service_healthy

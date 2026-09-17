@@ -1,0 +1,20 @@
+# Overlay: docker compose -f backend/compose.yaml -f incident/compose.yaml up --build
+# Relative paths resolve against the first compose file (backend/compose.yaml).
+services:
+  backend:
+    environment:
+      DSX_INCIDENT_URL: http://incident:8091
+  incident:
+    build:
+      context: ..
+      dockerfile: incident/Dockerfile
+    environment:
+      DATABASE_URL: postgres://dsx:local-development-only@postgres:5432/dsx?sslmode=disable
+      INCIDENT_ADDRESS: 0.0.0.0:8091
+      INCIDENT_JOB_CONTROLLER_URL: http://job-controller:8090
+      DSX_ALLOW_UNAUTHENTICATED_NETWORK: "true"
+    ports:
+      - "127.0.0.1:8091:8091"
+    depends_on:
+      postgres:
+        condition: service_healthy

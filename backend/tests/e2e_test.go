@@ -438,6 +438,9 @@ func request(t *testing.T, u, method string, b any, status int, headers ...strin
 	if resp.StatusCode != status {
 		t.Fatalf("%s %s: got %d want %d: %s", method, u, resp.StatusCode, status, data)
 	}
+	if status == http.StatusNoContent {
+		return nil
+	}
 	var out Object
 	must(t, json.Unmarshal(data, &out))
 	return out

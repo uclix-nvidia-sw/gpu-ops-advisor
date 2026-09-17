@@ -8,10 +8,11 @@ Backend가 GUI 조회·입력 검증·지식/모델/설정·정기 보고서 발
 
 ```powershell
 ./backend/scripts/dev-db.ps1
+./job-controller/scripts/dev-server.ps1
 ./backend/scripts/dev-server.ps1
 ```
 
-Go 1.26, PostgreSQL 16을 사용합니다. dev-db는 공식 Maven 배포의 embedded-postgres 16.9를 내려받아 `.local/postgres`에서 실행하며 이후 재사용합니다. 개발 DB는 127.0.0.1:55432, Backend는 127.0.0.1:8080입니다. Frontend는 별도 `npm run dev`로 실행합니다. Docker/compose는 선택입니다.
+Go 1.26, PostgreSQL 16을 사용합니다. dev-db는 공식 Maven 배포의 embedded-postgres 16.9를 내려받아 `.local/postgres`에서 실행하며 이후 재사용합니다. 개발 DB는 127.0.0.1:55432, Backend는 127.0.0.1:8080, JC는 127.0.0.1:8090입니다. Frontend는 별도 `npm run dev`로 실행합니다. Docker/compose는 선택입니다.
 
 `.env.example`은 설정 예시이며 서버가 자동으로 읽지 않습니다. PowerShell 환경 변수로 설정하거나 배포 환경에 주입합니다. 개발 스크립트는 migration/seed/내부 스케줄러를 켭니다.
 
@@ -48,6 +49,6 @@ cd backend
 go build -o bin/dsx-backend.exe ./cmd/server
 ```
 
-테스트는 실제 PostgreSQL의 고유 e2e schema에서 실행하고 해당 schema만 정리합니다. JC는 테스트 내부 HTTP 계약 fixture입니다. Go 포맷 후 CRLF를 복구합니다.
+테스트는 실제 PostgreSQL의 고유 e2e schema에서 실행하고 해당 schema만 정리합니다. 기존 Backend 계약 검사는 HTTP fixture, `TestRealJobController`는 실제 JC와 Backend를 HTTP로 연결해 검사합니다. Agent만 테스트 프로토콜 드라이버이며 LLM은 호출하지 않습니다. Go 포맷 후 CRLF를 복구합니다.
 
 [API](API.md) · [검증 기록](QA.md)
