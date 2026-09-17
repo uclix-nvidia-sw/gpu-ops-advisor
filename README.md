@@ -2,13 +2,15 @@
 
 CPC-1·CPC-2의 GPU·Node·Pod 관측을 CSC에서 연결해 **장애 원인 조사와 운영 개선 검토를 지원하는 서비스**입니다. 대시보드와 공통 Assistant에서 대상을 선택하고, 조사·보고서·근거·후속 조치 기록까지 같은 흐름으로 확인합니다.
 
-이 저장소는 DSX의 설계 결정, 개발 명세, 구조도, 화면 시안과 검수·인계 기준을 관리합니다. **현재 개발 기준은 2026-09-17 모듈 분리 개정본 v1.2**입니다. 문서와 화면 시안이 준비된 단계이며 실제 Backend·DB·LLM 통합과 제품 검수의 완료를 뜻하지 않습니다.
+이 저장소는 DSX의 설계 결정, 개발 명세, 구조도, 화면 시안과 검수·인계 기준을 관리합니다. **현재 개발 기준은 2026-09-17 모듈 분리 개정본 v1.2**입니다. React 프론트엔드가 Go Backend·PostgreSQL에 연결되어 있으며, 실제 Agent·관측·LLM 통합과 전체 제품 검수는 별도입니다.
 
 [개발 문서 목록](<output/deliverables-20260917-v1.2/00_산출물_안내.md>) · [화면설계](<output/deliverables-20260917-v1.2/08_GUI_화면설계서.md>) · [현재 모듈 구조](<output/deliverables-20260917-v1.2/00_산출물_안내.md>) · [통합 검토 반영 내역](<output/deliverables-20260917-v1.2/09_통합검토_반영내역.md>)
 
 ## 처음 읽는 순서
 
-React 기반 프론트엔드는 루트의 [`frontend/`](frontend/README.md)에 있습니다. `cd frontend`, `npm ci`, `npm run dev`로 실행합니다. 현재는 7개 메뉴·조사/보고서/일정·지식·모델 설정을 확인할 수 있는 **데모 데이터 기반 프론트엔드**이며, 실제 Backend·인증·LLM·예약 실행은 아직 연결되지 않았습니다. [프론트엔드 검증 기록](frontend/QA.md)에 실행 결과와 미검증 범위를 분리했습니다.
+React 기반 프론트엔드는 루트의 [`frontend/`](frontend/README.md)에 있습니다. `cd frontend`, `npm ci`, `npm run dev`로 실행합니다. 7개 메뉴와 조사·보고서·일정·지식·모델 설정을 실제 Go API에 연결했습니다. 데모 저장소·가짜 완료 처리는 제거했습니다. 지식·모델·설정은 PostgreSQL에 저장하며, Agent·실시간 관측·LLM·예약 실행은 소유 모듈 연결이 필요합니다. [프론트엔드 검증 기록](frontend/QA.md)에 실행 결과와 미검증 범위를 분리했습니다.
+
+Go Backend는 [`backend/`](backend/README.md)에 있습니다. Docker 없이 `./backend/scripts/dev-db.ps1`, `./backend/scripts/dev-server.ps1`을 별도 터미널에서 실행합니다. 모든 업무 화면이 `/api/v1`을 호출하며 `/settings/backend`에서 서비스 연결 상태를 확인합니다. 사용자·Agent 인증은 이번 단계에서 제외했습니다. [Backend API](backend/API.md) · [최소 테스트/E2E 결과](backend/QA.md).
 
 1. 이 README에서 서비스 목적·구조·현재 상태를 확인합니다.
 2. [요구사항·개발 범위](<output/deliverables-20260917-v1.2/01_요구사항_개발범위_정의서.md>)에서 담당 기능과 완료 조건을 확인합니다.
