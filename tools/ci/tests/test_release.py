@@ -38,12 +38,13 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(result["publish_chart"], "false")
             self.assertEqual(result["chart_version"], "1.3.0-ci.12.2")
 
-    def test_main_publishes_images_and_tag_publishes_both(self):
+    def test_main_and_tag_publish_images_and_chart(self):
         self.env.update(GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/main")
         result = metadata(self.env, "1.3.0")
         self.assertEqual(
-            (result["publish_images"], result["publish_chart"]), ("true", "false")
+            (result["publish_images"], result["publish_chart"]), ("true", "true")
         )
+        self.assertEqual(result["chart_version"], "1.3.0-ci.12.2")
         self.env["GITHUB_REF"] = "refs/tags/v1.3.0"
         result = metadata(self.env, "1.3.0")
         self.assertEqual(

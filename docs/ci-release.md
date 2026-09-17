@@ -11,12 +11,14 @@
 | 이벤트 | 테스트 / 이미지 빌드 | GHCR 이미지 | Helm artifact | OCI chart |
 | --- | --- | --- | --- | --- |
 | Pull request | 실행 | 미발행 | 검토용 `1.3.0-ci.<run>.<attempt>` | 미발행 |
-| main push | 실행 | `sha-<full-commit-sha>` | 동일 CI 버전, 이미지 digest 고정 | 미발행 |
+| main push 또는 PR merge | 실행 | `sha-<full-commit-sha>` | 동일 CI 버전, 이미지 digest 고정 | CI 버전으로 발행 |
 | `v1.3.0` 버전 태그 push | 실행 | `v1.3.0` | `1.3.0`, 이미지 digest 고정 | 발행 |
 | workflow_dispatch | 실행 | 미발행 | 검토용 CI 버전 | 미발행 |
 
 이미지 위치: `ghcr.io/<lowercase-github-owner>/gpu-ops-advisor-<component>:<tag>`.
 Chart 위치: `oci://ghcr.io/<lowercase-github-owner>/charts/gpu-ops-advisor`.
+
+`main`의 성공한 실행은 이미지와 Helm chart를 모두 GitHub Packages에 발행합니다. chart는 `1.3.0-ci.<run>.<attempt>` 형태의 고유 버전을 쓰며, 버전 태그 실행은 `1.3.0` 같은 정식 버전을 씁니다. Actions의 `helm-chart-<version>` 다운로드 산출물도 계속 유지합니다. OCI에서 CI 버전을 받을 때는 `helm pull ... --version 1.3.0-ci.<run>.<attempt>`처럼 해당 버전을 지정합니다.
 
 `frontend`만 `frontend/`를 Docker context로 쓰고, Go 서비스·Agent·MCP는 저장소 루트를 사용합니다. Linux/amd64 이미지 7개를 각각 빌드합니다. PR·수동 실행도 OCI image exporter로 실제 이미지 생성까지 검사하지만 레지스트리에 올리지는 않습니다.
 

@@ -30,4 +30,10 @@ GitHub 원격 workflow 실행, GHCR 이미지/OCI chart 발행, Linux 컨테이�
 
 `services.postgres.options`는 shell script가 아닌 Docker 프로세스 인자 문자열이므로 healthcheck의 작은따옴표가 인자 경계로 처리되지 않았습니다. 두 서비스 정의를 folded YAML의 `--health-cmd "pg_isready ..."`로 수정했습니다.
 
-검증: YAML에서 수정된 options를 읽어 .NET ProcessStartInfo로 Docker CLI `create ... --help`에 전달했습니다. 기존 설정 exit 125, 수정한 Go/Agent 설정 모두 exit 0을 확인했습니다. 이 검사는 컨테이너를 생성하거나 Docker engine을 시작하지 않습니다. actionlint, 릴리스 단위 테스트 3개, diff 검사도 통과했습니다. 수정본은 새 커밋을 push한 실행에서 컨테이너 초기화 이후 단계까지 확인해야 합니다. 기존 실행의 Re-run은 이전 커밋의 잘못된 설정을 다시 사용합니다.
+검증: YAML에서 수정된 options를 읽어 .NET ProcessStartInfo로 Docker CLI `create ... --help`에 전달했습니다. 기존 설정 exit 125, 수정한 Go/Agent 설정 모두 exit 0을 확인했습니다. 이 검사는 컨테이너를 생성하거나 Docker engine을 시작하지 않습니다. actionlint, 릴리스 단위 테스트 3개, diff 검사도 통과했습니다. 기존 실행의 Re-run은 이전 커밋의 잘못된 설정을 다시 사용합니다.
+
+## GitHub 성공 실행과 chart 발행 조건
+
+[실행 35201173393](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/35201173393)은 수정된 main 커밋 `9c9c44f`에서 전체 CI에 성공했습니다. Go 4개 작업, Agent E2E, Frontend, Helm 검사, Linux 이미지 7개 빌드/발행과 chart 패키징이 통과했습니다. [helm-chart-1.3.0-ci.2.1 artifact](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/35201173393/artifacts/10488510711)도 생성됐습니다. 위 최초 로컬 검증 당시의 미실행 항목 중 GitHub 실행·Linux 이미지 빌드·GHCR 이미지 발행은 이 실행으로 확인됐습니다.
+
+당시 main은 chart artifact만 생성하고 OCI chart는 버전 태그에서만 발행하는 설정이었습니다. 이후 main push/merge도 동일한 이미지 발행 조건으로 OCI chart를 발행하도록 변경했습니다. CI 버전으로 정식 버전과 구분하고, PR·수동 실행의 미발행 동작은 유지합니다. 이 추가 변경의 원격 OCI 발행은 새 커밋을 push한 실행에서 확인해야 합니다. Kubernetes 설치와 운영 외부 서비스 연결은 아직 미검증입니다.

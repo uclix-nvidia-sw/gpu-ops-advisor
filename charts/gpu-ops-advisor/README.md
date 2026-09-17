@@ -17,7 +17,7 @@
 
 ## 패키지 받기
 
-GitHub Actions의 `helm-chart-<version>` artifact 안에 `.tgz`, SHA256 파일, `rendered.yaml`, `release-manifest.json`이 들어 있습니다. `main` push는 commit SHA로 이미지가 발행되고, `v1.3.0` 같은 버전 태그는 이미지와 OCI chart가 함께 발행됩니다. PR·수동 실행 패키지는 검토용이며 이미지가 발행되지 않습니다. 세부 흐름은 [CI 안내](../../docs/ci-release.md)를 참조하세요.
+GitHub Actions의 `helm-chart-<version>` artifact 안에 `.tgz`, SHA256 파일, `rendered.yaml`, `release-manifest.json`이 들어 있습니다. `main` push/merge는 commit SHA 이미지와 CI 버전(`1.3.0-ci.<run>.<attempt>`)의 OCI chart를 함께 발행합니다. `v1.3.0` 같은 버전 태그는 정식 버전의 이미지와 OCI chart를 발행합니다. PR·수동 실행 패키지는 검토용이며 이미지가 발행되지 않습니다. 세부 흐름은 [CI 안내](../../docs/ci-release.md)를 참조하세요.
 
 ```sh
 sha256sum -c gpu-ops-advisor-1.3.0.tgz.sha256

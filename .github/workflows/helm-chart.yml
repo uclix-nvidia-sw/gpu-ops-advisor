@@ -51,7 +51,7 @@ jobs:
             dist/release-manifest.json
           if-no-files-found: error
           retention-days: 30
-      - name: Publish release chart to OCI
+      - name: Publish chart to OCI
         if: inputs.publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

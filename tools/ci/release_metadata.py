@@ -33,7 +33,7 @@ def metadata(env, chart_version):
         "image_tag": ref.removeprefix("refs/tags/") if tagged else f"sha-{sha}",
         "namespace": env["GITHUB_REPOSITORY_OWNER"].lower(),
         "publish_images": str(publish_images).lower(),
-        "publish_chart": str(tagged).lower(),
+        "publish_chart": str(publish_images).lower(),
     }
 
 
