@@ -1,4 +1,0 @@
-Official NVIDIA references for slide claims:
-- https://docs.nvidia.com/dsx-exchange/architecture
-- https://docs.nvidia.com/dsx-exchange/bms-integration
-- https://docs.nvidia.com/dsx
