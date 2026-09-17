@@ -1,0 +1,23 @@
+{{- $root := . -}}
+{{- $ports := dict "backend" 8080 "frontend" 8080 "job-controller" 8090 "incident" 8091 "grafana-mcp" 8000 -}}
+{{- range $name, $port := $ports }}
+{{- if (index $root.Values.components $name).enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gpu.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "gpu.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ $root.Release.Name }}
+    app.kubernetes.io/component: {{ $name }}
+  ports:
+    - name: http
+      port: {{ $port }}
+      targetPort: http
+{{- end }}
+{{- end }}

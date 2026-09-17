@@ -1,0 +1,116 @@
+# CI sets namespace, tag and published image digests in the packaged chart.
+global:
+  imageRegistry: ghcr.io
+  imageNamespace: replace-with-github-owner
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+database:
+  existingSecret: gpu-ops-advisor-database
+  urlKey: DATABASE_URL
+  passwordKey: POSTGRES_PASSWORD
+
+postgres:
+  enabled: true
+  image: postgres:16.9-alpine
+  database: dsx
+  username: dsx
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 1Gi}
+
+grafana:
+  url: http://grafana.monitoring.svc:3000
+  existingSecret: gpu-ops-advisor-grafana
+  tokenKey: GRAFANA_SERVICE_ACCOUNT_TOKEN
+
+llm:
+  # Optional Secret containing LLM_API_KEY; model/base URL are deployment values.
+  existingSecret: ""
+  apiKeyKey: LLM_API_KEY
+  baseUrl: ""
+  model: ""
+  requestTimeoutSeconds: 300
+  defaultMaxTokens: 4096
+  synthesisMaxTokens: 16384
+  insightMaxTokens: 1024
+
+configuration:
+  # Empty objects use the checked-in JSON profiles under files/.
+  # For actual collection supply reviewed datasource UIDs, queries and revisions.
+  agents: {}
+  jobController: {}
+  incident: {}
+  # Existing DB settings/revisions are not silently replaced on an upgrade.
+  applyJobController: false
+  applyIncident: false
+  seedDemoData: false
+  executionProfileRevision: local-v1
+
+artifacts:
+  persistence:
+    enabled: true
+    existingClaim: ""
+    size: 10Gi
+    storageClass: ""
+
+components:
+  backend:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-backend, tag: "", digest: ""}
+    resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}
+    env: {}
+  frontend:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-frontend, tag: "", digest: ""}
+    resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {memory: 256Mi}}
+    env: {}
+  job-controller:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-job-controller, tag: "", digest: ""}
+    resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}
+    env: {}
+  incident:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-incident, tag: "", digest: ""}
+    resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}
+    env: {}
+  rcca-agent:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-rcca-agent, tag: "", digest: ""}
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 2Gi}}
+    env: {}
+  ops-agent:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-ops-agent, tag: "", digest: ""}
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 2Gi}}
+    env: {}
+  grafana-mcp:
+    enabled: true
+    replicas: 1
+    image: {repository: gpu-ops-advisor-grafana-mcp, tag: "", digest: ""}
+    resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}
+    env: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: gpu-ops.example.internal
+  tls: []
+
+nodeSelector:
+  kubernetes.io/os: linux
+  kubernetes.io/arch: amd64
+tolerations: []
+affinity: {}

@@ -6,6 +6,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.local/
+*.egg-info/
 # NAT eval/profiler run output (configs/runai_rca_eval.yml eval.general.output.dir)
 agent/.tmp/
 

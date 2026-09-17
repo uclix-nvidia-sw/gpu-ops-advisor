@@ -1,0 +1,16 @@
+{{- if and (index .Values.components "ops-agent").enabled .Values.artifacts.persistence.enabled (not .Values.artifacts.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "gpu.fullname" . }}-artifacts
+  labels:
+    {{- include "gpu.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.artifacts.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.artifacts.persistence.size }}
+{{- end }}

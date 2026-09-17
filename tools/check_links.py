@@ -4,6 +4,7 @@ from urllib.parse import unquote, urlsplit
 import html
 import re
 import sys
+import os
 
 ROOT = Path(__file__).resolve().parents[1]
 FENCE = re.compile(r'^```[^\n]*\n.*?^```[^\n]*$', re.M | re.S)
@@ -15,7 +16,12 @@ def check(root):
     errors = []
     checked = 0
     documents = 0
-    for source in sorted(root.rglob('*')):
+    excluded = {'.git', 'node_modules', '.venv', '.local', 'dist', '__pycache__', '.pytest_cache', '.ruff_cache'}
+    sources = []
+    for current, directories, filenames in os.walk(root):
+        directories[:] = [d for d in directories if d not in excluded]
+        sources.extend(Path(current) / name for name in filenames)
+    for source in sorted(sources):
         if not source.is_file() or source.suffix.lower() not in ('.md', '.html', '.svg'):
             continue
         if {'.git', 'node_modules', '.venv'} & set(source.relative_to(root).parts):

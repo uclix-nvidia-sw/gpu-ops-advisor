@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.release.outputs.matrix }}
+      image-tag: ${{ steps.release.outputs.image_tag }}
+      chart-version: ${{ steps.release.outputs.chart_version }}
+      namespace: ${{ steps.release.outputs.namespace }}
+      publish-images: ${{ steps.release.outputs.publish_images }}
+      publish-chart: ${{ steps.release.outputs.publish_chart }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: release
+        run: python tools/ci/release_metadata.py
+
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  images:
+    needs: [metadata, tests]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/container-images.yml
+    with:
+      matrix: ${{ needs.metadata.outputs.matrix }}
+      image-tag: ${{ needs.metadata.outputs.image-tag }}
+      namespace: ${{ needs.metadata.outputs.namespace }}
+      publish: ${{ needs.metadata.outputs.publish-images == 'true' }}
+
+  chart:
+    needs: [metadata, tests, images]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/helm-chart.yml
+    with:
+      chart-version: ${{ needs.metadata.outputs.chart-version }}
+      image-tag: ${{ needs.metadata.outputs.image-tag }}
+      namespace: ${{ needs.metadata.outputs.namespace }}
+      publish: ${{ needs.metadata.outputs.publish-chart == 'true' }}
+
+  required:
+    name: CI required
+    if: always()
+    needs: [metadata, tests, images, chart]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          failed = [name for name, job in json.loads(os.environ['RESULTS']).items() if job['result'] != 'success']
+          if failed:
+              raise SystemExit('Failed or skipped gates: ' + ', '.join(failed))
+          PY

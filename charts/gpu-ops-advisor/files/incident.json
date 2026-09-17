@@ -1,0 +1,30 @@
+{
+  "grafana_source": "local-grafana",
+  "cluster_label": "cluster_id",
+  "max_body_bytes": 1048576,
+  "max_alerts": 200,
+  "max_alert_age_seconds": 86400,
+  "max_future_seconds": 300,
+  "window_before_seconds": 1800,
+  "window_after_seconds": 300,
+  "dispatch_seconds": 86400,
+  "deadline_seconds": 172800,
+  "execution_profile_revision": "local-v1",
+  "analysis_policies": [
+    {
+      "alertname": "GPUAlert",
+      "revision": "gpu-alert-v1",
+      "purpose_ids": [
+        "R01",
+        "R02"
+      ],
+      "evidence_labels": [
+        "severity"
+      ],
+      "evidence_annotations": [
+        "error_code"
+      ]
+    }
+  ],
+  "job_controller_url": "http://127.0.0.1:8090"
+}

@@ -1,0 +1,14 @@
+Release {{ .Release.Name }} contains the enabled GPU Ops components.
+
+Required existing Secrets:
+  Database: {{ .Values.database.existingSecret }} ({{ .Values.database.urlKey }}{{ if .Values.postgres.enabled }}, {{ .Values.database.passwordKey }}{{ end }})
+  Grafana: {{ .Values.grafana.existingSecret }} ({{ .Values.grafana.tokenKey }})
+{{- if .Values.llm.existingSecret }}
+  LLM: {{ .Values.llm.existingSecret }} ({{ .Values.llm.apiKeyKey }})
+{{- end }}
+
+Access inside the trusted network:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "gpu.fullname" . }}-frontend 8080:8080
+
+Review the deployment profiles before collecting real metrics/logs.
+See charts/gpu-ops-advisor/README.md for storage, endpoints and first-install setup.

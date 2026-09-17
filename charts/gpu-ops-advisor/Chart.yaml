@@ -1,0 +1,7 @@
+apiVersion: v2
+name: gpu-ops-advisor
+description: GPU operations Backend, Job Controller, Incident, RCA/report workers and Grafana MCP
+type: application
+version: 1.3.0
+appVersion: "1.3.0"
+kubeVersion: ">=1.27.0-0"

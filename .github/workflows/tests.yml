@@ -1,178 +1,156 @@
-name: Tests
-
+name: Module tests
 on:
-  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
 
 jobs:
-  backend:
+  go:
+    name: Go / ${{ matrix.module }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [shared, backend, job-controller, incident]
     services:
-      # The fake driver reports every UPDATE as one affected row, so a status
-      # guard that matches nothing still looks like success there. A real server
-      # is the only thing that catches it (it shipped "could not persist
-      # knowledge candidate approval" to operators). Keep the image in lockstep
-      # with charts/runai-rca/values.yaml.
       postgres:
-        image: pgvector/pgvector:pg16
+        image: postgres:16.9-alpine
         env:
-          POSTGRES_USER: rca
-          POSTGRES_PASSWORD: rca
-          POSTGRES_DB: rcatest
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U rca -d rcatest"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+          POSTGRES_USER: dsx
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: dsx_test
+        ports: ['5432:5432']
+        options: --health-cmd 'pg_isready -U dsx -d dsx_test' --health-interval 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: backend/go.mod
-      - name: Vet
-        working-directory: backend
-        run: go vet ./...
-      - name: Test
-        working-directory: backend
-        env:
-          RCA_TEST_POSTGRES_DSN: postgres://rca:rca@localhost:5432/rcatest?sslmode=disable
-        run: go test ./...
-      # The store's writers release the memory lock across their Postgres round
-      # trips, so a mistake there is a data race rather than a failed assertion
-      # and the plain run above cannot see it. Runs without the Postgres DSN:
-      # this step is here for the concurrency, and the integration tests already
-      # had their turn.
-      - name: Test (race)
-        working-directory: backend
-        run: go test -race ./...
-
-  agent:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: agent/pyproject.toml
-      - name: Install
-        working-directory: agent
-        run: pip install -e ".[dev]"
-      - name: Lint
-        working-directory: agent
-        run: >-
-          ruff check --select F,B,I
-          app/collectors/base.py
-          app/collectors/kubernetes.py
-          app/llm.py
-          app/services/drilldown.py
-          app/services/investigator.py
-          app/services/orchestrator.py
-          app/services/pipeline.py
-          ontology/ingest.py
-          tests/test_ingest_case_snapshot_projection.py
-          tests/test_controller_pod_resolution.py
-          tests/test_analysis_budget.py
-          tests/test_drilldown.py
-          tests/test_investigator.py
-      # Every gate below runs on PRs too: a subset suite let #85 merge green and
-      # break main on tests/test_evidence_hygiene.py.
-      - name: Full test suite
-        working-directory: agent
-        run: pytest -q -n auto
-      - name: Eval gate
-        working-directory: agent
-        run: python -m eval.run_eval --fixtures eval/fixtures.jsonl --min-top1 0.95
-      - name: Eval holdout report
-        working-directory: agent
-        continue-on-error: true
-        run: python -m eval.run_eval --fixtures eval/fixtures_holdout.jsonl
-      - name: Novel incident E2E output gate
-        working-directory: agent
-        run: python -m eval.run_novel_incident_e2e_eval
-      - name: NAT config validate
-        working-directory: agent
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Vet, unit tests and build
+        working-directory: ${{ matrix.module }}
         run: |
-          nat validate --config_file configs/runai_rca_engine.yml
-          nat validate --config_file configs/runai_rca_eval.yml
-      - name: NAT eval gate
-        working-directory: agent
-        # Family fixtures exercise signature classification without live collector
-        # artifacts. Harness safety is covered separately by its unit tests.
-        run: ENABLE_RCA_OUTPUT_HARNESS=false python -m eval.check_nat_eval --min-avg 1.0
+          go vet ./...
+          go test -race ./...
+          go build ./...
+      - name: Real Backend, JC and Incident E2E
+        if: matrix.module == 'backend' || matrix.module == 'incident'
+        env:
+          E2E_DATABASE_URL: postgres://dsx:ci-only@127.0.0.1:5432/dsx_test?sslmode=disable
+          MODULE: ${{ matrix.module }}
+        run: |
+          mkdir -p .local
+          go -C backend build -o ../.local/backend-e2e ./cmd/server
+          export E2E_BACKEND_BINARY="$GITHUB_WORKSPACE/.local/backend-e2e"
+          go -C "$MODULE" test -tags=e2e ./tests -v -count=1 -timeout=10m
 
-  ontology-definitions:
-    # Compiles schema and function definitions, then runs the loader-graph test,
-    # whose fixture loads knowledge/alerts/known-issues into a scratch database.
+  agents:
+    name: Python / both agents + real MCP E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
-      typedb:
-        # Keep in lockstep with charts/runai-rca/values.yaml.
-        image: typedb/typedb:3.11.5
-        ports:
-          - 1729:1729
+      postgres:
+        image: postgres:16.9-alpine
+        env:
+          POSTGRES_USER: dsx
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: agent_e2e
+        ports: ['5432:5432']
+        options: --health-cmd 'pg_isready -U dsx -d agent_e2e' --health-interval 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
           cache: pip
-          cache-dependency-path: agent/pyproject.toml
-      - name: Install
-        working-directory: agent
-        run: pip install -e ".[dev]"
-      - name: Wait for TypeDB
+          cache-dependency-path: agents/requirements.txt
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: job-controller/go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Install both workers
+        run: pip install -r agents/requirements.txt -e shared/python -e rcca-agent -e ops-agent ruff==0.14.0
+      - name: Lint
         run: |
-          for _ in {1..60}; do
-            (echo > /dev/tcp/localhost/1729) && exit 0
-            sleep 1
-          done
-          exit 1
-      - name: Load schema and functions
-        working-directory: agent
+          ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
+          ruff format --check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
+      - name: Build JC and download verified official MCP
         run: |
-          ENABLE_TYPEDB=true TYPEDB_ADDRESS=localhost:1729 TYPEDB_USERNAME=admin TYPEDB_PASSWORD=password TYPEDB_DATABASE=ci_schema_check TYPEDB_TLS_ENABLED=false python -m ontology.load_schema
-          ENABLE_TYPEDB=true TYPEDB_ADDRESS=localhost:1729 TYPEDB_USERNAME=admin TYPEDB_PASSWORD=password TYPEDB_DATABASE=ci_schema_check TYPEDB_TLS_ENABLED=false python -m ontology.load_functions
-      - name: Loader graph behaviour
-        # Skips itself without TYPEDB_ADDRESS. The fake-transaction tests can see
-        # the TypeQL text but not the graph, so a relation that is written and
-        # never retired is invisible to them.
-        working-directory: agent
+          mkdir -p .local/mcp-grafana
+          go -C job-controller build -o ../.local/job-controller ./cmd/server
+          cd .local/mcp-grafana
+          release=https://github.com/grafana/mcp-grafana/releases/download/v1.4.2
+          curl --fail --location --retry 3 "$release/mcp-grafana_Linux_x86_64.tar.gz" -o mcp-grafana_Linux_x86_64.tar.gz
+          curl --fail --location --retry 3 "$release/mcp-grafana_1.4.2_checksums.txt" -o checksums.txt
+          grep ' mcp-grafana_Linux_x86_64.tar.gz$' checksums.txt | sha256sum --check --strict
+          tar -xzf mcp-grafana_Linux_x86_64.tar.gz
+      - name: Unit, lifecycle and real process E2E
         env:
-          RCA_TEST_TYPEDB: "1"
-          ENABLE_TYPEDB: "true"
-          TYPEDB_ADDRESS: localhost:1729
-          TYPEDB_USERNAME: admin
-          TYPEDB_PASSWORD: password
-          TYPEDB_DATABASE: ci_loader_check
-          TYPEDB_TLS_ENABLED: "false"
-        run: python -m pytest tests/test_typedb_integration.py -q
+          RUN_AGENT_E2E: '1'
+          AGENT_E2E_DATABASE_URL: postgres://dsx:ci-only@127.0.0.1:5432/agent_e2e?sslmode=disable
+          JC_BINARY: ${{ github.workspace }}/.local/job-controller
+          GRAFANA_MCP_BINARY: ${{ github.workspace }}/.local/mcp-grafana/mcp-grafana
+        run: python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/agent-e2e/results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-test-results
+          include-hidden-files: true
+          path: |
+            .local/agent-e2e/results.xml
+            .local/agent-e2e/*.log
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Install
-        working-directory: frontend
-        run: npm ci
-      - name: Lint
-        working-directory: frontend
-        # Rules of Hooks only. A hook behind an early return type-checks, builds,
-        # and passes every unit test, then crashes the panel at runtime.
-        run: npm run lint
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-      - name: Test
-        working-directory: frontend
-        run: npm test
+      - run: npm ci --ignore-scripts
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 14
+
+  chart:
+    name: Helm and pipeline contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.17.3
+      - run: pip install PyYAML==6.0.2 jsonschema==4.26.0
+      - name: Validate GitHub Actions
+        run: |
+          mkdir -p .local/actionlint
+          cd .local/actionlint
+          release=https://github.com/rhysd/actionlint/releases/download/v1.7.11
+          curl --fail --location --retry 3 "$release/actionlint_1.7.11_linux_amd64.tar.gz" -o actionlint.tar.gz
+          curl --fail --location --retry 3 "$release/actionlint_1.7.11_checksums.txt" -o checksums.txt
+          expected=$(awk '$2 == "actionlint_1.7.11_linux_amd64.tar.gz" {print $1}' checksums.txt)
+          test -n "$expected"
+          printf '%s  actionlint.tar.gz\n' "$expected" | sha256sum --check --strict
+          tar -xzf actionlint.tar.gz
+          cd ../..
+          .local/actionlint/actionlint
+      - run: python tools/ci/check_chart.py
+      - run: python -m unittest discover -s tools/ci/tests -v
+      - run: python tools/check_links.py

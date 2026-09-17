@@ -4,6 +4,8 @@ GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고�
 
 [개발 문서 15종](output/deliverables-20260917-v1.3/00_산출물_안내.md) · [전체 구조도](output/architecture-modules-20260917-v1.3/README.md) · [문서 탐색](docs/README.md) · [변경·정리 내역](output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)
 
+[CI·릴리스 파이프라인](docs/ci-release.md) · [Helm 설치 안내 — 기본 8개 Pod](charts/gpu-ops-advisor/README.md) · [RCA·보고서 Agent](agents/README.md)
+
 ## 구조와 사용자 흐름
 
 ## 처음 읽는 순서

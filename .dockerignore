@@ -8,3 +8,6 @@
 **/.env.*
 output
 frontend
+.venv
+.local
+**/__pycache__

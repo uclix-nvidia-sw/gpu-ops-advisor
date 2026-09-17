@@ -1,0 +1,11 @@
+function_groups:
+  grafana:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: ${GRAFANA_MCP_URL:-http://127.0.0.1:8000/mcp}
+    include: [query_prometheus, query_loki_logs]
+    tool_call_timeout: 30
+    reconnect_enabled: false
+workflow:
+  _type: rcca_workflow

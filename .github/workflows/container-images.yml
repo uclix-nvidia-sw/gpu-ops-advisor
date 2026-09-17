@@ -1,104 +1,68 @@
-name: Container Images
-
+name: Container images
 on:
-  workflow_dispatch:
-
+  workflow_call:
+    inputs:
+      matrix:
+        type: string
+        required: true
+      image-tag:
+        type: string
+        required: true
+      namespace:
+        type: string
+        required: true
+      publish:
+        type: boolean
+        default: false
 permissions:
   contents: read
   packages: write
-
-env:
-  REGISTRY: ghcr.io
-
 jobs:
   build:
-    name: Build ${{ matrix.component }}
+    name: Image / ${{ matrix.component }}
     runs-on: ubuntu-latest
-    # Main pushes are published after version-bump.yml updates Chart.yaml.
-    if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - component: backend
-            context: backend
-            image: gpu-ops-advisor-backend
-          - component: frontend
-            context: frontend
-            image: gpu-ops-advisor-frontend
-          - component: aggregator
-            context: aggregator
-            image: gpu-ops-advisor-aggregator
-          - component: grafana
-            context: grafana
-            image: gpu-ops-advisor-grafana
-          - component: postgresql
-            context: postgresql
-            image: gpu-ops-advisor-postgresql
-          - component: scheduler
-            context: scheduler
-            image: gpu-ops-advisor-scheduler
-          - component: rcca-agent
-            context: rcca-agent
-            image: gpu-ops-advisor-rcca-agent
-          - component: ops-agent
-            context: ops-agent
-            image: gpu-ops-advisor-ops-agent
+      matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Normalize image namespace
-        id: namespace
-        shell: bash
-        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Read chart app version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          version=$(awk -F: '/^appVersion:/{v=$2; sub(/#.*/,"",v); gsub(/"/,"",v); gsub(/^[ \t]+|[ \t\r]+$/,"",v); print v; exit}' charts/gpu-ops-advisor/Chart.yaml)
-          if [[ -z "$version" ]]; then
-            echo "ERROR: appVersion not found in charts/gpu-ops-advisor/Chart.yaml" >&2
-            exit 1
-          fi
-          echo "appVersion=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: inputs.publish
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract image metadata
-        id: meta
-        uses: docker/metadata-action@v6
+      - uses: docker/build-push-action@v6
+        id: image
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.owner }}/${{ matrix.image }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix=sha-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ steps.version.outputs.appVersion }},enable={{is_default_branch}}
-          labels: |
-            org.opencontainers.image.title=${{ matrix.image }}
-            org.opencontainers.image.description=Run:AI RCA ${{ matrix.component }} service
-
-      - name: Build and optionally push image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./${{ matrix.context }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ inputs.publish }}
+          outputs: ${{ !inputs.publish && 'type=oci,dest=/tmp/image.tar' || '' }}
+          tags: ghcr.io/${{ inputs.namespace }}/gpu-ops-advisor-${{ matrix.component }}:${{ inputs.image-tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+      - name: Record image digest
+        env:
+          COMPONENT: ${{ matrix.component }}
+          IMAGE: ghcr.io/${{ inputs.namespace }}/gpu-ops-advisor-${{ matrix.component }}:${{ inputs.image-tag }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          PUBLISHED: ${{ inputs.publish }}
+        run: |
+          mkdir -p dist/images
+          python - <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path('dist/images') / (os.environ['COMPONENT'] + '.json')
+          p.write_text(json.dumps({k.lower(): os.environ[k] for k in ('COMPONENT','IMAGE','DIGEST','PUBLISHED')}, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.component }}
+          path: dist/images/*.json
+          retention-days: 14

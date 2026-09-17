@@ -1,0 +1,9 @@
+[
+  {"component": "backend", "context": ".", "dockerfile": "backend/Dockerfile"},
+  {"component": "frontend", "context": "frontend", "dockerfile": "frontend/Dockerfile"},
+  {"component": "job-controller", "context": ".", "dockerfile": "job-controller/Dockerfile"},
+  {"component": "incident", "context": ".", "dockerfile": "incident/Dockerfile"},
+  {"component": "rcca-agent", "context": ".", "dockerfile": "rcca-agent/Dockerfile"},
+  {"component": "ops-agent", "context": ".", "dockerfile": "ops-agent/Dockerfile"},
+  {"component": "grafana-mcp", "context": ".", "dockerfile": "grafana-mcp/Dockerfile"}
+]
