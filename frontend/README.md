@@ -1,6 +1,8 @@
 # DSX Frontend
 
-React + TypeScript + Vite 기반의 독립 프론트엔드입니다. 개발 기준은 `output/deliverables-20260916-v1.1/07_프론트엔드_개발명세서.md`와 08 GUI 설계입니다.
+React + TypeScript + Vite 기반의 독립 프론트엔드입니다. 개발 기준은 [v1.3 FE 명세](../output/deliverables-20260917-v1.3/07_프론트엔드_개발명세서.md)와 [GUI 설계](../output/deliverables-20260917-v1.3/08_GUI_화면설계서.md)입니다.
+
+**현재 코드는 이전 설계의 데모입니다.** Assistant·직접 RCA 요청·역할 선택 UI가 남아 있으며 v1.3 전환에서 제거합니다. 아래 실행/데모 설명은 현 코드 상태를 기록한 것이고 새 기능 기준이 아닙니다.
 
 ## 실행
 
@@ -66,7 +68,7 @@ gpu-ops-advisor/
 
 `src/lib/api.ts`에 `/api/v1` JSON 요청, 조건부 변경 헤더, 멱등 키, 구조화 오류·Retry-After 전달을 위한 전송 기반을 두었습니다. 현재 화면은 `demoRepository`를 사용합니다. **환경 변수 하나로 실서비스 연결이 완료되는 상태는 아닙니다.**
 
-통합 시 화면별 DTO를 02/03의 응답과 연결하고, `/me`에서 principal·access_revision·grant를 받아 캐시 키와 허용 범위를 검증해야 합니다. 데모 수명주기 `DemoJobRunner`는 제거하고 `/jobs` 조회의 backoff·Retry-After·terminal 중단으로 교체합니다. 모델/지식/일정의 서버 검증, 메시지 복구, 증거 조회·다운로드의 접근 검사도 별도 통합 시험 대상입니다.
+통합 시 화면별 DTO를 v1.3의 02/03에 연결합니다. 제품 인증·/me·권한 grant와 대화 API는 이번 범위에서 제외하며 CPC/Namespace는 분석 필터로 사용합니다. 데모 수명주기 `DemoJobRunner`는 제거하고 `/jobs` 조회의 backoff·Retry-After·terminal 중단으로 교체합니다. 모델/지식/일정의 서버 입력 검증, 사건 결과 조회·보고서 접수·다운로드는 별도 통합 시험 대상입니다. RCA 실행은 Incident만 접수하며 일정 발생은 Backend가 수행합니다.
 
 ## 컨테이너
 

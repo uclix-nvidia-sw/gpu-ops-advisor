@@ -1,9 +1,0 @@
-# DESIGN 05 화면 참고 자료
-
-현재 개발 기준은 [프론트엔드 명세 v1.1](../deliverables-20260916-v1.1/07_프론트엔드_개발명세서.md)과 [화면설계 v1.1](../deliverables-20260916-v1.1/08_GUI_화면설계서.md)입니다.
-
-- [화면 캡처 25개](screens/README.md): 유지할 메뉴·배치·화면 ID의 참고 자료입니다.
-- [기존 GUI PDF](../deliverables-20260916-v1.1/sources/GUI_화면설계서_v1.0.pdf), [기존 FE PDF](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/fa79de88f131333c48516d676ee811944d8d698a/output/deliverables-20260916-v1.1/sources/%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C_%EA%B0%9C%EB%B0%9C%EB%AA%85%EC%84%B8_v1.0.pdf), [기존 FE 원고](../deliverables-20260916-v1.1/sources/프론트엔드_개발명세_v1.0.md): 중복본을 제거하고 출처 폴더의 한 벌로 통일했습니다.
-- [당시 시안·검증 기록](../deliverables-20260916-v1.1/sources/GUI_DESIGN05_원본안내.md): 과거 결과이며 현재 제품 검수 증거가 아닙니다.
-
-캡처는 가상 데이터 기반이며 v1.1의 추가 버튼·폼·예외 처리가 모두 반영된 것은 아닙니다. 실행 HTML은 저장소에 없고, 해당 시안의 검사·캡처 도구와 v1.0 PDF 생성 코드는 Git 이력으로 보존합니다. 이 폴더에서 현재 제품을 실행하거나 PDF를 재생성하는 명령은 제공하지 않습니다.
