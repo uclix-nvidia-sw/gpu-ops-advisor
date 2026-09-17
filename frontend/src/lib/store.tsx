@@ -1,113 +1,68 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { allScope, initialDatabase } from '../data/fixtures';
-import type { Database, Scope } from './types';
-const key = 'dsx-frontend-demo-v1';
-function read(): Database {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    /* invalid demo snapshot falls back to fixtures */
-  }
-  return structuredClone(initialDatabase);
-}
-export const demoRepository = {
-  async reset() {
-    localStorage.removeItem(key);
-    return structuredClone(initialDatabase);
-  },
-  async get() {
-    return read();
-  },
-  async change(update: (db: Database) => void) {
-    const db = read();
-    update(db);
-    localStorage.setItem(key, JSON.stringify(db));
-    return db;
-  },
-};
-export function useDatabase() {
-  const client = useQueryClient();
-  const query = useQuery({
-    queryKey: ['demo-database'],
-    queryFn: demoRepository.get,
-    staleTime: 0,
-  });
-  const mutate = async (update: (db: Database) => void) => {
-    const next = await demoRepository.change(update);
-    client.setQueryData(['demo-database'], next);
-  };
-  const reset = async () => {
-    client.setQueryData(['demo-database'], await demoRepository.reset());
-  };
-  return { db: query.data, mutate, reset, isLoading: query.isLoading, error: query.error };
-}
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { apiRequest } from './api';
+import { currentRange } from './live';
+import type { Scope, TimeRange } from './types';
 type AppState = {
   scope: Scope;
-  setScope: (scope: Scope) => void;
+  registeredScope: Scope;
+  setScope: (s: Scope) => void;
   period: string;
-  setPeriod: (v: string) => void;
-  assistant: boolean;
-  setAssistant: (v: boolean) => void;
-  assistantContext: string;
-  ask: (context: string) => void;
-  notify: (text: string) => void;
+  setPeriod: (s: string) => void;
+  timeRange: TimeRange;
+  refresh: () => void;
+  notify: (s: string) => void;
   toast: string;
-  role: string;
-  setRole: (s: string) => void;
+  ready: boolean;
+  connection: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown };
+  canOperate: boolean;
+  canManage: boolean;
+  canKnowledge: boolean;
 };
 const AppContext = createContext<AppState>(null!);
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [scope, setScope] = useState<Scope>(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem('dsx-scope') || 'null') || allScope;
-    } catch {
-      return allScope;
-    }
+  const client = useQueryClient();
+  const connection = useQuery({
+    queryKey: ['api', 'clusters'],
+    queryFn: () => apiRequest<{ items: Scope['clusters'] }>('/clusters'),
+    retry: false,
+    refetchInterval: 30000,
   });
-  const [period, setPeriod] = useState('1h');
-  const [assistant, setAssistant] = useState(false);
-  const [assistantContext, setContext] = useState('일반 질문 · 운영 데이터 참조 없음');
-  const [toast, setToast] = useState('');
-  const [role, changeRole] = useState(() => {
-    const saved = sessionStorage.getItem('dsx-demo-role');
-    return saved && ['operator', 'viewer', 'knowledge', 'admin'].includes(saved)
-      ? saved
-      : 'operator';
-  });
-  const notify = (s: string) => {
-    setToast(s);
-    window.setTimeout(() => setToast(''), 4500);
+  const [selected, setScope] = useState<Scope | null>(null),
+    [period, setPeriod] = useState('1h'),
+    [tick, setTick] = useState(0),
+    [toast, setToast] = useState('');
+  const registeredScope: Scope = {
+    clusters:
+      connection.data?.items.map((c) => ({ cluster_id: c.cluster_id, namespaces: c.namespaces })) ||
+      [],
   };
-  const setRole = (s: string) => {
-    changeRole(s);
-    sessionStorage.setItem('dsx-demo-role', s);
-    setAssistant(false);
-    setContext('일반 질문 · 운영 데이터 참조 없음');
-    notify('데모 역할이 변경되었습니다. 실제 권한 검증은 백엔드 연결 후 적용됩니다.');
-  };
+  const scope = selected || registeredScope;
+  const timeRange = useMemo(() => currentRange(parseInt(period)), [period, tick]);
+  const ready = connection.isSuccess;
   return (
     <AppContext.Provider
       value={{
         scope,
-        setScope: (s) => {
-          setScope(s);
-          sessionStorage.setItem('dsx-scope', JSON.stringify(s));
-        },
+        registeredScope,
+        setScope,
         period,
         setPeriod,
-        assistant,
-        setAssistant,
-        assistantContext,
-        ask: (c) => {
-          setContext(c);
-          setAssistant(true);
+        timeRange,
+        refresh: () => {
+          setTick((t) => t + 1);
+          void client.invalidateQueries({ queryKey: ['api'] });
         },
-        notify,
+        notify: (s) => {
+          setToast(s);
+          window.setTimeout(() => setToast(''), 5000);
+        },
         toast,
-        role,
-        setRole,
+        ready,
+        connection,
+        canOperate: ready,
+        canManage: ready,
+        canKnowledge: ready,
       }}
     >
       {children}

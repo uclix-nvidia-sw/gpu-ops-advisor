@@ -1,0 +1,31 @@
+# Optional development environment; native scripts do not require Docker.
+services:
+  postgres:
+    image: postgres:16.9-alpine
+    environment:
+      POSTGRES_DB: dsx
+      POSTGRES_USER: dsx
+      POSTGRES_PASSWORD: local-development-only
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dsx -d dsx"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  backend:
+    build: .
+    environment:
+      DATABASE_URL: postgres://dsx:local-development-only@postgres:5432/dsx?sslmode=disable
+      DSX_ADDRESS: 0.0.0.0:8080
+      DSX_ALLOW_UNAUTHENTICATED_NETWORK: "true"
+      DSX_MIGRATE: "true"
+      DSX_SEED: "true"
+      DSX_SCHEDULER_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres-data:

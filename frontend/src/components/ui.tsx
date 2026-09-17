@@ -215,33 +215,3 @@ export function Modal({
     </dialog>
   );
 }
-export function Evidence({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="관측 근거 상세" onClose={onClose}>
-      <div className="stack">
-        <Badge status="partial" />
-        <h3>GPU Xid 오류 · 관측 스냅샷</h3>
-        <dl className="details">
-          <dt>근거 ID</dt>
-          <dd>ev-xid79-20260916</dd>
-          <dt>대상</dt>
-          <dd>CPC-1 / dgx-03 / GPU-c38a</dd>
-          <dt>원본 관측 시각</dt>
-          <dd>2026-09-16 13:42:18 KST</dd>
-          <dt>수신 시각</dt>
-          <dd>2026-09-16 13:42:22 KST</dd>
-          <dt>조회 시각</dt>
-          <dd>2026-09-16 14:08:00 KST</dd>
-          <dt>유효 구간</dt>
-          <dd>13:40:00 이상 · 13:45:00 미만</dd>
-          <dt>출처</dt>
-          <dd>Loki · 예시 로그 스냅샷</dd>
-        </dl>
-        <pre>NVRM: Xid (PCI:0000:81:00): 79,{'\n'}GPU has fallen off the bus.</pre>
-        <Notice>
-          화면 검증용 고정 근거입니다. 실제 로그 조회와 접근 권한 검사는 백엔드 연결이 필요합니다.
-        </Notice>
-      </div>
-    </Modal>
-  );
-}

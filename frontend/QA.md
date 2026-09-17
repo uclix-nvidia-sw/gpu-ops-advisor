@@ -1,3 +1,17 @@
+# Frontend v1.3 Backend 연결 검증
+
+2026-09-17: 사용자/권한 부트스트랩을 등록 CPC 조회로 바꾸고, 직접 RCA/Assistant/용량 변경 UI를 제거했습니다. 일정 입력과 revision 수정은 Backend v1.3 API에 연결했습니다.
+
+- Vitest 최소 3개·TypeScript/Vite build: PASS.
+- 실제 브라우저 일정 생성·다음 실행 시각·일시 정지·실행 시각 수정: PASS.
+- 검증용 일정은 일시 정지 상태이며 revision 3, 매일 10:00 KST입니다.
+- Go/PostgreSQL E2E: [Backend QA](../backend/QA.md).
+- 실제 JC/Agent/LLM 실행·실시간 관측 통합은 NOT RUN입니다.
+
+아래는 과거 버전의 검증 기록으로 현행 검수 결과에 합산하지 않습니다.
+
+---
+
 # 프론트엔드 API 연결 검증
 
 
