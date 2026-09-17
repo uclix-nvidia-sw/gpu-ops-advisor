@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
-import { formatDate } from '../lib/domain';
+import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 export function Jobs() {
   const app = useApp();
@@ -112,7 +112,10 @@ export function JobDetail() {
               <dt>종료 사유</dt>
               <dd>{str(j.termination_reason, '—')}</dd>
             </dl>
-            {j.cancel_requested_at != null && (
+            {j.queue_reason != null && (
+              <Notice>{labels[str(j.queue_reason)] || str(j.queue_reason)}</Notice>
+            )}
+            {j.cancel_requested_at != null && j.status === 'running' && (
               <Notice>취소 요청 처리 중 · {formatDate(str(j.cancel_requested_at))}</Notice>
             )}
             <div className="head-actions">

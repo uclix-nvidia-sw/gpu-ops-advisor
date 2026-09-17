@@ -1,9 +1,6 @@
 package migrations
 
-import _ "embed"
+import shared "gpu-ops-advisor/shared/migrations"
 
-//go:embed 001_backend.sql
-var Baseline string
-
-//go:embed 002_contract_13.sql
-var Upgrade string
+var Baseline = shared.Baseline
+var Upgrade = shared.Upgrade

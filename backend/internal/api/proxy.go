@@ -187,7 +187,7 @@ func (s *Server) incidents(w http.ResponseWriter, q *Request, parts []string) er
 		}
 	}
 	if q.R.Method == "PATCH" && len(parts) == 2 {
-		if e := only(q.Body, "memo", "review_status"); e != nil {
+		if e := only(q.Body, "memo", "review_status", "state"); e != nil {
 			return e
 		}
 		if len(q.Body) == 0 {
@@ -202,6 +202,9 @@ func (s *Server) incidents(w http.ResponseWriter, q *Request, parts []string) er
 			if !Has([]string{"unreviewed", "reviewing", "reviewed"}, String(Object{"v": v}, "v")) {
 				return Invalid("review_status")
 			}
+		}
+		if _, exists := q.Body["state"]; exists && !Has([]string{"open", "acknowledged", "closed"}, String(q.Body, "state")) {
+			return Invalid("state")
 		}
 		if q.R.Header.Get("If-Match") == "" {
 			return Invalid("If-Match")
