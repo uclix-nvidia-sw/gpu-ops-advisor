@@ -23,3 +23,11 @@
 로컬 검토용 chart는 `dist/gpu-ops-advisor-1.3.0-local.tgz`와 SHA256 파일로 생성합니다. 이 패키지는 원본의 이미지 namespace placeholder를 포함하므로 설치 전 실제 발행된 이미지로 설정해야 합니다. CI artifact는 해당 실행에서 생성한 실제 이미지 metadata로 자동 패키징합니다.
 
 GitHub 원격 workflow 실행, GHCR 이미지/OCI chart 발행, Linux 컨테이너 빌드/실행, Kubernetes 실제 설치, 운영 Grafana/Mimir/Loki/LLM 연결은 이번 로컬 검증에서 **미실행**입니다. 로컬 Go는 일반 테스트이며 `-race`는 Linux CI에 구성했습니다. 기존 Windows Docker 환경 문제는 재설정하지 않았습니다.
+
+## 첫 GitHub 실행 후 수정
+
+[실행 35200636511](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/35200636511)은 main push로 자동 실행됐습니다. Frontend와 Helm 검증은 통과했지만 Go 4개 작업과 Agent 작업은 PostgreSQL 컨테이너 생성 단계에서 실패했습니다. 실제 오류는 `unknown shorthand flag: 'U' in -U`, exit 125였습니다.
+
+`services.postgres.options`는 shell script가 아닌 Docker 프로세스 인자 문자열이므로 healthcheck의 작은따옴표가 인자 경계로 처리되지 않았습니다. 두 서비스 정의를 folded YAML의 `--health-cmd "pg_isready ..."`로 수정했습니다.
+
+검증: YAML에서 수정된 options를 읽어 .NET ProcessStartInfo로 Docker CLI `create ... --help`에 전달했습니다. 기존 설정 exit 125, 수정한 Go/Agent 설정 모두 exit 0을 확인했습니다. 이 검사는 컨테이너를 생성하거나 Docker engine을 시작하지 않습니다. actionlint, 릴리스 단위 테스트 3개, diff 검사도 통과했습니다. 수정본은 새 커밋을 push한 실행에서 컨테이너 초기화 이후 단계까지 확인해야 합니다. 기존 실행의 Re-run은 이전 커밋의 잘못된 설정을 다시 사용합니다.

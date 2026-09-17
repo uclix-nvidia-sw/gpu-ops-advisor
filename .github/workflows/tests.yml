@@ -21,7 +21,12 @@ jobs:
           POSTGRES_PASSWORD: ci-only
           POSTGRES_DB: dsx_test
         ports: ['5432:5432']
-        options: --health-cmd 'pg_isready -U dsx -d dsx_test' --health-interval 3s --health-retries 20
+        # Runner passes options directly to Docker; use double quotes for one argument.
+        options: >-
+          --health-cmd "pg_isready -U dsx -d dsx_test"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -57,7 +62,12 @@ jobs:
           POSTGRES_PASSWORD: ci-only
           POSTGRES_DB: agent_e2e
         ports: ['5432:5432']
-        options: --health-cmd 'pg_isready -U dsx -d agent_e2e' --health-interval 3s --health-retries 20
+        # Runner passes options directly to Docker; use double quotes for one argument.
+        options: >-
+          --health-cmd "pg_isready -U dsx -d agent_e2e"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
