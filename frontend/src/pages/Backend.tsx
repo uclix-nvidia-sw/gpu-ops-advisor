@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Badge, Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { apiRequest, ApiError } from '../lib/api';
 import { useCommand } from '../lib/live';
+import { randomId } from '../lib/browserCrypto';
 
 type Revision = {
   knowledge_id: string;
@@ -26,7 +27,7 @@ const message = (error: unknown) =>
 export function Backend() {
   const client = useQueryClient();
   const cmd = useCommand(),
-    pendingKey = useRef(crypto.randomUUID());
+    pendingKey = useRef(randomId());
   const health = useQuery({
     queryKey: ['api', 'health'],
     queryFn: () => apiRequest<Health>('/health/ready'),
@@ -61,7 +62,7 @@ export function Backend() {
         source_refs: [],
       });
       if (!revision) return;
-      pendingKey.current = crypto.randomUUID();
+      pendingKey.current = randomId();
       setSaved(revision);
       setTitle('');
       setText('');

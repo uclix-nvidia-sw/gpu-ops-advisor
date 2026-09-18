@@ -51,3 +51,8 @@
 # 2026-09-18 클러스터 등록 흐름 검증
 
 프로덕션 빌드와 Vitest 3개, Prettier 검사 통과. Headless Edge에서 빈 목록 표시, 등록 화면 이동, 등록 요청의 멱등 키, 등록 후 목록·범위 갱신, 중복 등록 오류, 새로고침 및 모바일 화면을 확인했다. 클러스터가 없을 때 범위 없는 대시보드 조회가 실행되지 않음을 확인했다. 브라우저 API 응답은 격리된 fixture이며, 실제 PostgreSQL·Backend의 등록과 저장 동작은 Backend E2E에서 별도로 검증했다.
+# 2026-09-18 HTTP NodePort 등록 오류 회귀 검사
+
+일반 HTTP origin에서 `isSecureContext=false`, `crypto.subtle`/`crypto.randomUUID`가 undefined인 조건으로 기존 digest 오류를 재현했다. 기존 localhost 검증은 secure context 예외 때문에 이 실패를 찾지 못했다.
+
+수정 후 동일 HTTP 조건에서 클러스터 등록, 응답 유실(503) 후 새로고침·동일 멱등 키 재전송, 중복 등록 오류, 백엔드 연결 화면 렌더링을 Headless Edge로 확인했다. 브라우저 API는 격리 fixture를 사용했다. Vitest 9개와 TypeScript·프로덕션 빌드·Prettier 검사 통과. SHA-256 결과와 저장소 키는 기존 Web Crypto 결과와 동일하며, UUID는 HTTP에서도 사용 가능한 getRandomValues로 생성한다. 운영 클러스터의 수정 이미지 배포 검증은 아직 수행하지 않았다.

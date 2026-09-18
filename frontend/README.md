@@ -27,6 +27,7 @@ npm run dev
 - 일정: Backend의 평탄한 calendar 입력·report_spec, revision 수정·일시 정지·occurrence 조회.
 - 지식/모델: 불변 revision·검토/발행, rca/report 모델 라우팅, secret_ref만 저장.
 - 변경 요청: 멱등 키를 생성하고 응답 유실 시 같은 본문/키/최초 버전을 재사용합니다.
+- HTTP NodePort 접속: 요청 fingerprint는 브라우저 SHA-256 구현으로, UUID는 `crypto.getRandomValues`로 생성합니다. HTTPS 전용 `crypto.subtle`·`crypto.randomUUID`에 의존하지 않습니다. 기존 SHA-256 fingerprint와 재시도 키는 유지합니다.
 
 현재 JC/Incident/Agent 실행 서비스는 연결되지 않았습니다. 미연결 기능은 503을 표시하며 가짜 완료·결과를 만들지 않습니다. 테스트 fixture는 앱에 연결하지 않습니다.
 

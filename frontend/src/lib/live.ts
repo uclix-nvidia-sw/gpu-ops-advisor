@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { ApiError, apiRequest } from './api';
+import { randomId, sha256Hex } from './browserCrypto';
 export type Row = Record<string, unknown>;
 export const obj = (v: unknown): Row =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Row) : {};
@@ -105,13 +106,9 @@ export function useCommand() {
     try {
       let receipt: { key: string; version?: number } | undefined;
       if (options.idempotent !== false) {
-        const digest = await crypto.subtle.digest(
-          'SHA-256',
-          new TextEncoder().encode(canonical(['1.3', options.method || 'POST', path, body])),
-        );
-        storage = `dsx-pending-${Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+        storage = `dsx-pending-${sha256Hex(canonical(['1.3', options.method || 'POST', path, body]))}`;
         receipt = JSON.parse(sessionStorage.getItem(storage) || 'null') || {
-          key: crypto.randomUUID(),
+          key: randomId(),
           version: options.version,
         };
         sessionStorage.setItem(storage, JSON.stringify(receipt));
