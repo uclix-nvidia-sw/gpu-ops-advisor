@@ -81,6 +81,9 @@ jobs:
           cache-dependency-path: '**/go.sum'
       - name: Install both workers
         run: pip install -r agents/requirements.txt -e shared/python -e rcca-agent -e ops-agent ruff==0.14.0
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.17.3
       - name: Lint
         run: |
           ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci

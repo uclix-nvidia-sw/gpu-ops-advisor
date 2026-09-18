@@ -1,4 +1,7 @@
 # CI sets namespace, tag and published image digests in the packaged chart.
+# Resource prefix defaults to the release name, e.g. gpu-ops-ops-agent.
+fullnameOverride: ""
+
 global:
   imageRegistry: ghcr.io
   imageNamespace: replace-with-github-owner
@@ -12,6 +15,8 @@ database:
 
 postgres:
   enabled: true
+  # Keep the existing StatefulSet/Service name when upgrading an older installation.
+  nameOverride: ""
   image: postgres:16.9-alpine
   database: dsx
   username: dsx
@@ -56,6 +61,8 @@ artifacts:
   persistence:
     enabled: true
     existingClaim: ""
+    # Keep the existing chart-managed PVC name when shortening workload names.
+    nameOverride: ""
     size: 10Gi
     storageClass: ""
 

@@ -94,11 +94,50 @@ spec:
                       time.sleep(2)
           resources:
             {{- toYaml $component.resources | nindent 12 }}
+        - name: wait-for-grafana-mcp
+          image: {{ include "gpu.image" (dict "root" $root "component" $component) | quote }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          env:
+            - name: GRAFANA_MCP_URL
+              value: {{ index $env "GRAFANA_MCP_URL" | quote }}
+          command: [python, -u, -c]
+          args:
+            - |
+              import os, time, urllib.request
+              from urllib.parse import urlsplit, urlunsplit
+              endpoint = urlsplit(os.environ['GRAFANA_MCP_URL'])
+              health = urlunsplit(endpoint._replace(path='/healthz', query='', fragment=''))
+              while True:
+                  try:
+                      urllib.request.urlopen(health, timeout=3).close()
+                      print('Grafana MCP is ready', flush=True)
+                      break
+                  except Exception as error:
+                      print('Waiting for Grafana MCP:', type(error).__name__, flush=True)
+                      time.sleep(2)
+          resources:
+            {{- toYaml $component.resources | nindent 12 }}
       {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ include "gpu.image" (dict "root" $root "component" $component) | quote }}
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          {{- if eq $name "grafana-mcp" }}
+          args:
+            - -t
+            - streamable-http
+            - -address
+            - "0.0.0.0:8000"
+            - -enabled-tools
+            - datasource,prometheus,loki
+            - -disable-write
+            - -max-loki-log-limit
+            - "5000"
+            - -grafana-timeout
+            - 30s
+            - -allowed-hosts
+            - {{ printf "localhost:8000,127.0.0.1:8000,%s-grafana-mcp:8000,%s-grafana-mcp.%s:8000,%s-grafana-mcp.%s.svc:8000,%s-grafana-mcp.%s.svc.cluster.local:8000" $base $base $root.Release.Namespace $base $root.Release.Namespace $base $root.Release.Namespace | quote }}
+          {{- end }}
           {{- if or $env $db (eq $name "grafana-mcp") }}
           env:
             {{- range $key, $value := $env }}
@@ -135,14 +174,35 @@ spec:
           {{- if eq $name "backend" }}{{- $health = "/api/v1/health/ready" }}{{- end }}
           {{- if has $name (list "job-controller" "incident") }}{{- $health = "/internal/v1/health/ready" }}{{- end }}
           startupProbe:
-            httpGet: {path: {{ $health }}, port: http}
+            httpGet:
+              path: {{ $health | replace "/ready" "/live" }}
+              port: http
+              {{- if eq $name "grafana-mcp" }}
+              httpHeaders:
+                - name: Host
+                  value: {{ $base }}-grafana-mcp:8000
+              {{- end }}
             failureThreshold: 60
             periodSeconds: 5
           readinessProbe:
-            httpGet: {path: {{ $health }}, port: http}
+            httpGet:
+              path: {{ $health }}
+              port: http
+              {{- if eq $name "grafana-mcp" }}
+              httpHeaders:
+                - name: Host
+                  value: {{ $base }}-grafana-mcp:8000
+              {{- end }}
             periodSeconds: 5
           livenessProbe:
-            httpGet: {path: {{ $health | replace "/ready" "/live" }}, port: http}
+            httpGet:
+              path: {{ $health | replace "/ready" "/live" }}
+              port: http
+              {{- if eq $name "grafana-mcp" }}
+              httpHeaders:
+                - name: Host
+                  value: {{ $base }}-grafana-mcp:8000
+              {{- end }}
             periodSeconds: 10
           {{- end }}
           resources:
@@ -168,7 +228,7 @@ spec:
         - name: artifacts
           {{- if and (eq $name "ops-agent") $root.Values.artifacts.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ default (printf "%s-artifacts" $base) $root.Values.artifacts.persistence.existingClaim }}
+            claimName: {{ default (include "gpu.artifactsName" $root) $root.Values.artifacts.persistence.existingClaim }}
           {{- else }}
           emptyDir: {}
           {{- end }}

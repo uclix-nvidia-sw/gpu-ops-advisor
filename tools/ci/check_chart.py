@@ -79,12 +79,28 @@ def main():
         if d["kind"] == "Deployment"
     }
     assert set(deployments) == names
+    mcp = deployments["grafana-mcp"]["spec"]["template"]["spec"]["containers"][0]
+    hosts = mcp["args"][mcp["args"].index("-allowed-hosts") + 1].split(",")
+    assert "*" not in hosts
+    assert "verify-grafana-mcp:8000" in hosts
+    assert "verify-grafana-mcp.default.svc.cluster.local:8000" in hosts
+    for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+        assert mcp[probe]["httpGet"]["httpHeaders"] == [
+            {"name": "Host", "value": "verify-grafana-mcp:8000"}
+        ]
+    for name in ("backend", "incident", "job-controller"):
+        container = deployments[name]["spec"]["template"]["spec"]["containers"][0]
+        assert container["startupProbe"]["httpGet"]["path"].endswith("/live")
+        assert container["readinessProbe"]["httpGet"]["path"].endswith("/ready")
     config = next(d for d in docs if d["kind"] == "ConfigMap")["data"]
     agent_profile = json.loads(config["agents.json"])
     assert agent_profile["clusters"] == {}, "Default installs must discover sources"
     assert all(q["validated"] is True for q in agent_profile["queries"].values())
     assert "REPLACE_" not in config["agents.json"]
-    assert "http://verify-gpu-ops-advisor-backend:8080" in config["nginx.conf"]
+    assert "http://verify-backend:8080" in config["nginx.conf"]
+    assert all(
+        d["metadata"]["name"] == f"verify-{name}" for name, d in deployments.items()
+    )
     for name in ("rcca-agent", "ops-agent"):
         pod = deployments[name]["spec"]["template"]["spec"]
         c = pod["containers"][0]
@@ -93,6 +109,81 @@ def main():
         assert env["GRAFANA_MCP_URL"]["value"].endswith("-grafana-mcp:8000/mcp")
         assert "secretKeyRef" in env["DATABASE_URL"]["valueFrom"]
         assert "readinessProbe" not in c and pod["initContainers"]
+        waits = {i["name"]: i for i in pod["initContainers"]}
+        assert set(waits) == {"wait-for-job-controller", "wait-for-grafana-mcp"}
+        assert (
+            waits["wait-for-grafana-mcp"]["env"][0]["value"]
+            == env["GRAFANA_MCP_URL"]["value"]
+        )
+        compile(waits["wait-for-grafana-mcp"]["args"][0], "mcp-init", "exec")
+    renamed = render("--set", "fullnameOverride=gpu-ops")
+    assert any(
+        d["kind"] == "StatefulSet" and d["metadata"]["name"] == "gpu-ops-postgres"
+        for d in renamed
+    )
+    assert any(
+        d["kind"] == "PersistentVolumeClaim"
+        and d["metadata"]["name"] == "gpu-ops-artifacts"
+        for d in renamed
+    )
+    migrated = render(
+        "--set",
+        "fullnameOverride=gpu-ops,postgres.nameOverride=verify-gpu-ops-advisor-postgres,artifacts.persistence.nameOverride=verify-gpu-ops-advisor-artifacts",
+    )
+    existing = render(
+        "--namespace",
+        "gpu-ops-advisor",
+        "--set",
+        "fullnameOverride=gpu-ops-gpu-ops-advisor",
+    )
+    mcp = next(
+        d
+        for d in existing
+        if d["kind"] == "Deployment" and d["metadata"]["name"].endswith("-grafana-mcp")
+    )["spec"]["template"]["spec"]["containers"][0]
+    existing_host = "gpu-ops-gpu-ops-advisor-grafana-mcp:8000"
+    assert existing_host in mcp["args"][mcp["args"].index("-allowed-hosts") + 1].split(
+        ","
+    )
+    for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+        assert mcp[probe]["httpGet"]["httpHeaders"] == [
+            {"name": "Host", "value": existing_host}
+        ]
+    pg = next(d for d in migrated if d["kind"] == "StatefulSet")
+    assert (
+        pg["metadata"]["name"]
+        == pg["spec"]["serviceName"]
+        == "verify-gpu-ops-advisor-postgres"
+    )
+    assert (
+        next(d for d in migrated if d["kind"] == "PersistentVolumeClaim")["metadata"][
+            "name"
+        ]
+        == "verify-gpu-ops-advisor-artifacts"
+    )
+    report_pod = next(
+        d
+        for d in migrated
+        if d["kind"] == "Deployment" and d["metadata"]["name"] == "gpu-ops-ops-agent"
+    )["spec"]["template"]["spec"]
+    assert (
+        next(v for v in report_pod["volumes"] if v["name"] == "artifacts")[
+            "persistentVolumeClaim"
+        ]["claimName"]
+        == "verify-gpu-ops-advisor-artifacts"
+    )
+    customized = render(
+        "--set", "components.ops-agent.env.GRAFANA_MCP_URL=http://custom-mcp:8000/mcp"
+    )
+    report_pod = next(
+        d
+        for d in customized
+        if d["kind"] == "Deployment" and d["metadata"]["name"] == "verify-ops-agent"
+    )["spec"]["template"]["spec"]
+    assert (
+        report_pod["initContainers"][1]["env"][0]["value"]
+        == "http://custom-mcp:8000/mcp"
+    )
     external = render(
         "--set",
         "postgres.enabled=false,artifacts.persistence.enabled=false,ingress.enabled=true,llm.existingSecret=test-llm",

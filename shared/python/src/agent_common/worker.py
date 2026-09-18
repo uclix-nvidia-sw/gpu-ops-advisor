@@ -1,4 +1,5 @@
 import asyncio
+from builtins import BaseExceptionGroup
 import contextlib
 import logging
 import os
@@ -198,14 +199,50 @@ class Worker:
                     await asyncio.sleep(2)
 
 
+def transient_connection_error(exc):
+    if isinstance(exc, BaseExceptionGroup):
+        return all(transient_connection_error(child) for child in exc.exceptions)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in {429, 502, 503, 504}
+    return isinstance(
+        exc,
+        (
+            httpx.NetworkError,
+            httpx.TimeoutException,
+            httpx.RemoteProtocolError,
+            ConnectionError,
+            TimeoutError,
+        ),
+    )
+
+
 async def serve_nat(settings, once=False):
     from nat.runtime.loader import load_workflow
 
-    async with load_workflow(settings.nat_config_file, max_concurrency=1) as manager:
+    delay = 2
+    while True:
+        async with contextlib.AsyncExitStack() as stack:
+            try:
+                manager = await stack.enter_async_context(
+                    load_workflow(settings.nat_config_file, max_concurrency=1)
+                )
+            except Exception as exc:
+                if not transient_connection_error(exc):
+                    raise
+                # Retry only initialization, before registering/claiming any JC work.
+                # Do not log upstream exception bodies, which can contain credentials.
+                log.warning(
+                    "MCP connection unavailable during startup; retrying in %ss", delay
+                )
+            else:
+                log.info("MCP workflow initialized; starting %s worker", settings.kind)
 
-        async def runner(claim):
-            async with manager.run(claim) as run:
-                value = await run.result()
-                return value["result"], value["evidence"]
+                async def runner(claim):
+                    async with manager.run(claim) as run:
+                        value = await run.result()
+                        return value["result"], value["evidence"]
 
-        await Worker(settings, runner).serve(once)
+                await Worker(settings, runner).serve(once)
+                return
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 30)

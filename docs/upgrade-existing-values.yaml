@@ -1,0 +1,9 @@
+# 기존 release=gpu-ops 설치의 앱 이름만 줄이는 업그레이드용 overlay.
+# 사용법: helm-upgrade-existing.md. 기존 환경 values 뒤에 -f로 전달하세요.
+# DB와 chart 소유 보고서 PVC 이름을 유지해 기존 데이터/DB Secret을 계속 사용합니다.
+fullnameOverride: gpu-ops
+postgres:
+  nameOverride: gpu-ops-gpu-ops-advisor-postgres
+artifacts:
+  persistence:
+    nameOverride: gpu-ops-gpu-ops-advisor-artifacts

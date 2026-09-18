@@ -1,6 +1,8 @@
 # 내장 PostgreSQL을 사용하는 Helm 설치
 
-[설치용 values](deployment-values.yaml)는 PostgreSQL Pod 1개와 DB PVC 10Gi를 사용한다. 외부 DB는 필요 없다. 기본 구성은 PostgreSQL을 포함한 8개 Pod다. 아래 명령은 저장소 루트에서 **Bash/Linux/WSL**로 실행하며, 릴리스 이름과 namespace는 모두 `gpu-ops`로 고정한다.
+[설치용 values](deployment-values.yaml)는 PostgreSQL Pod 1개와 DB PVC 10Gi를 사용한다. 외부 DB는 필요 없다. 기본 구성은 PostgreSQL을 포함한 8개 Pod다. 아래 명령은 저장소 루트에서 **Bash/Linux/WSL**로 실행하며, 릴리스 이름은 `gpu-ops`, namespace는 `gpu-ops-advisor`로 고정한다.
+
+**기존 긴 이름으로 설치한 릴리스를 업그레이드한다면 먼저 [기존 설치 업그레이드](helm-upgrade-existing.md)를 따른다.** 아래 DB URL과 리소스 이름은 새 설치 기준이다.
 
 ## 1. 환경 값 준비
 
@@ -35,7 +37,7 @@ Chart는 Secret을 생성하지 않는다. 아래 파일을 로컬 편집기로 
 
 ```dotenv
 POSTGRES_PASSWORD=REPLACE_DB_PASSWORD
-DATABASE_URL=postgresql://dsx:REPLACE_URL_ENCODED_DB_PASSWORD@gpu-ops-gpu-ops-advisor-postgres:5432/dsx?sslmode=disable
+DATABASE_URL=postgresql://dsx:REPLACE_URL_ENCODED_DB_PASSWORD@gpu-ops-postgres:5432/dsx?sslmode=disable
 ```
 
 두 값에는 **같은 비밀번호**를 사용한다. `POSTGRES_PASSWORD`에는 원문, URL에는 percent-encoding한 비밀번호를 넣는다. 릴리스 이름을 바꾸면 DB 호스트명도 바뀐다. 기존 DB PVC를 재사용하는 경우 기존 비밀번호를 사용해야 하며 Secret만 바꿔도 기존 PostgreSQL 사용자의 비밀번호가 바뀌지는 않는다.
@@ -58,13 +60,13 @@ LLM_API_KEY=REPLACE_LLM_API_KEY
 
 ```bash
 chmod 600 .local/helm/*.env
-kubectl create namespace gpu-ops --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n gpu-ops create secret generic gpu-ops-advisor-database \
+kubectl create namespace gpu-ops-advisor --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n gpu-ops-advisor create secret generic gpu-ops-advisor-database \
   --from-env-file=.local/helm/database.env
-kubectl -n gpu-ops create secret generic gpu-ops-advisor-grafana \
+kubectl -n gpu-ops-advisor create secret generic gpu-ops-advisor-grafana \
   --from-env-file=.local/helm/grafana.env
 # 인증 없는 LLM 서버이면 아래 명령 생략 + values의 llm.existingSecret을 ""로 설정
-kubectl -n gpu-ops create secret generic gpu-ops-advisor-llm \
+kubectl -n gpu-ops-advisor create secret generic gpu-ops-advisor-llm \
   --from-env-file=.local/helm/llm.env
 ```
 
@@ -86,7 +88,7 @@ printf '\n'
 printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io \
   --username "$GHCR_USER" --password-stdin
 
-kubectl -n gpu-ops create secret docker-registry ghcr-pull \
+kubectl -n gpu-ops-advisor create secret docker-registry ghcr-pull \
   --docker-server=ghcr.io \
   --docker-username="$GHCR_USER" \
   --docker-password="$GHCR_TOKEN"
@@ -114,13 +116,13 @@ CHART_PACKAGE=".local/helm/gpu-ops-advisor-${CHART_VERSION}.tgz"
 helm lint "$CHART_PACKAGE" --strict \
   --values .local/helm/values.yaml
 
-helm template gpu-ops "$CHART_PACKAGE" --namespace gpu-ops \
+helm template gpu-ops "$CHART_PACKAGE" --namespace gpu-ops-advisor \
   --values .local/helm/values.yaml \
   > .local/helm/rendered.yaml
 
 # 실제 설치 (동일 명령으로 업그레이드 가능)
 helm upgrade --install gpu-ops "$CHART_PACKAGE" \
-  --namespace gpu-ops \
+  --namespace gpu-ops-advisor \
   --values .local/helm/values.yaml \
   --wait --timeout 10m
 ```
@@ -130,11 +132,11 @@ Actions에서 `.tgz`를 이미 받았다면 `helm pull`을 생략하고 `CHART_P
 ## 4. 설치 확인과 접속
 
 ```bash
-helm status gpu-ops -n gpu-ops
-kubectl -n gpu-ops get pods,pvc,svc
-kubectl -n gpu-ops rollout status statefulset/gpu-ops-gpu-ops-advisor-postgres
-kubectl -n gpu-ops logs deployment/gpu-ops-gpu-ops-advisor-grafana-mcp --tail=100
-kubectl -n gpu-ops port-forward svc/gpu-ops-gpu-ops-advisor-frontend 8080:8080
+helm status gpu-ops -n gpu-ops-advisor
+kubectl -n gpu-ops-advisor get pods,pvc,svc
+kubectl -n gpu-ops-advisor rollout status statefulset/gpu-ops-postgres
+kubectl -n gpu-ops-advisor logs deployment/gpu-ops-grafana-mcp --tail=100
+kubectl -n gpu-ops-advisor port-forward svc/gpu-ops-frontend 8080:8080
 ```
 
 포트 포워딩 실행 중 브라우저에서 `http://localhost:8080`으로 접속한다. 분석 작업을 실행해 Worker 로그와 evidence에서 datasource 자동 탐색 및 실제 query 성공을 확인한다. 기본 Ingress는 꺼져 있다.

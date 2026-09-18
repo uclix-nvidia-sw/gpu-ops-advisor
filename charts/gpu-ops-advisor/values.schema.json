@@ -134,6 +134,9 @@
       "properties": {
         "enabled": {
           "type": "boolean"
+        },
+        "nameOverride": {
+          "$ref": "#/definitions/resourceNameOverride"
         }
       }
     },
@@ -145,6 +148,24 @@
       "properties": {
         "enabled": {
           "type": "boolean"
+        }
+      }
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "nameOverride": {
+              "$ref": "#/definitions/resourceNameOverride"
+            }
+          }
         }
       }
     }
@@ -211,6 +232,11 @@
           }
         }
       }
+    },
+    "resourceNameOverride": {
+      "type": "string",
+      "maxLength": 63,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
     }
   }
 }

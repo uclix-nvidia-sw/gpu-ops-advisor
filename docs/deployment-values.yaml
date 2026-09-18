@@ -1,7 +1,11 @@
 # 내장 PostgreSQL 설치용 override. 사용법: helm-install.md
-# release/namespace: gpu-ops / gpu-ops
+# release/namespace: gpu-ops / gpu-ops-advisor
 # REPLACE_*를 실제 환경 값으로 수정하세요. 비밀값은 Kubernetes Secret에 넣습니다.
 # CI 발행 chart의 이미지 namespace/tag/digest는 그대로 사용합니다.
+# 기존 긴 이름의 설치를 업그레이드하면 upgrade-existing-values.yaml도 함께 사용합니다.
+
+# 빈 값이면 릴리스 이름만 사용: gpu-ops-ops-agent, gpu-ops-postgres 등.
+fullnameOverride: ""
 
 global:
   # private GHCR 이미지 다운로드용 Secret을 같은 namespace에 준비합니다.

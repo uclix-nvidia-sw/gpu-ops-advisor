@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "gpu.fullname" . }}-postgres
+  name: {{ include "gpu.postgresName" . }}
   labels:
     {{- include "gpu.labels" . | nindent 4 }}
 spec:
@@ -18,11 +18,11 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "gpu.fullname" . }}-postgres
+  name: {{ include "gpu.postgresName" . }}
   labels:
     {{- include "gpu.labels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "gpu.fullname" . }}-postgres
+  serviceName: {{ include "gpu.postgresName" . }}
   replicas: 1
   selector:
     matchLabels:

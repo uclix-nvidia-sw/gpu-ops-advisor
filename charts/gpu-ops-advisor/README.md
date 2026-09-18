@@ -28,9 +28,11 @@ helm pull oci://ghcr.io/<github-owner>/charts/gpu-ops-advisor --version 1.3.0
 
 ## 설치 준비
 
+리소스 이름은 기본적으로 `<release>-<component>`입니다. 예: `gpu-ops-ops-agent`, `gpu-ops-postgres`. `fullnameOverride`로 접두사를 변경할 수 있습니다. 이전 `<release>-gpu-ops-advisor-<component>` 설치를 업그레이드할 때는 [기존 설치 업그레이드 안내](../../docs/helm-upgrade-existing.md)에 따라 DB/보고서 PVC 이름을 유지하고 앱 Deployment를 전환하세요.
+
 내장 PostgreSQL을 사용하는 설치는 [설치용 values](../../docs/deployment-values.yaml)와 [Secret 준비·설치 명령 안내](../../docs/helm-install.md)를 사용할 수 있습니다.
 
-릴리스 이름을 `gpu-ops`, namespace를 `gpu-ops`로 설치하면 DB 서비스명은 `gpu-ops-gpu-ops-advisor-postgres`입니다. 다른 릴리스 이름을 쓰면 `helm template`으로 이름을 확인하고 DB URL도 맞춥니다. 모든 Secret은 같은 namespace에 미리 준비합니다. chart 자체는 Secret을 생성하지 않으며 값에 비밀을 넣지 않습니다.
+릴리스 이름을 `gpu-ops`, namespace를 `gpu-ops`로 설치하면 DB 서비스명은 `gpu-ops-postgres`입니다. 다른 릴리스 이름을 쓰면 `helm template`으로 이름을 확인하고 DB URL도 맞춥니다. 모든 Secret은 같은 namespace에 미리 준비합니다. chart 자체는 Secret을 생성하지 않으며 값에 비밀을 넣지 않습니다.
 
 | 기존 Secret 기본 이름 | 필수 key | 용도 |
 | --- | --- | --- |
@@ -39,7 +41,7 @@ helm pull oci://ghcr.io/<github-owner>/charts/gpu-ops-advisor --version 1.3.0
 | gpu-ops-advisor-grafana | GRAFANA_SERVICE_ACCOUNT_TOKEN | 기존 Grafana의 읽기 권한 service account |
 | 사용자가 `llm.existingSecret`으로 지정 | LLM_API_KEY | LLM API 인증; 인증 없는 서버이면 생략 가능 |
 
-내장 DB URL 형식은 `postgresql://dsx:<URL-encoded-password>@gpu-ops-gpu-ops-advisor-postgres:5432/dsx?sslmode=disable`이며 Secret의 `POSTGRES_PASSWORD`와 같은 비밀번호를 사용합니다. 외부 DB라면 해당 주소·사용자·TLS 설정으로 지정합니다. 스키마 초기화는 서비스가 advisory lock을 잡고 수행하며 DB 사용자는 해당 스키마에 DDL 권한이 필요합니다.
+내장 DB URL 형식은 `postgresql://dsx:<URL-encoded-password>@gpu-ops-postgres:5432/dsx?sslmode=disable`이며 Secret의 `POSTGRES_PASSWORD`와 같은 비밀번호를 사용합니다. 외부 DB라면 해당 주소·사용자·TLS 설정으로 지정합니다. 스키마 초기화는 서비스가 advisory lock을 잡고 수행하며 DB 사용자는 해당 스키마에 DDL 권한이 필요합니다.
 
 운영 Secret 관리 방식으로 주입하거나, 권한을 제한한 로컬 env 파일을 이용할 수 있습니다. 파일을 저장소에 추가하지 않습니다.
 
@@ -84,16 +86,18 @@ LLM 모델·주소·토큰 한도는 [Agent 설정](../../agents/README.md)의 �
 helm upgrade --install gpu-ops ./gpu-ops-advisor-1.3.0.tgz \
   --namespace gpu-ops --values deployment-values.yaml --wait --timeout 10m
 kubectl -n gpu-ops get pods,pvc,svc
-kubectl -n gpu-ops port-forward svc/gpu-ops-gpu-ops-advisor-frontend 8080:8080
+kubectl -n gpu-ops port-forward svc/gpu-ops-frontend 8080:8080
 ```
 
-모든 Service는 ClusterIP이며 Ingress 기본값은 꺼져 있습니다. 현재 제품의 인증 제외 범위에 맞춰 신뢰하는 내부 네트워크에서 사용합니다. Incident webhook은 클러스터 내부의 `http://gpu-ops-gpu-ops-advisor-incident:8091`에 별도로 연결합니다. 외부 Grafana에서 webhook을 전달해야 하면 운영 네트워크에 맞는 내부 라우팅을 구성합니다. frontend Ingress는 `ingress.enabled`, `className`, `host`, `tls`로 설정합니다.
+모든 Service는 ClusterIP이며 Ingress 기본값은 꺼져 있습니다. 현재 제품의 인증 제외 범위에 맞춰 신뢰하는 내부 네트워크에서 사용합니다. Incident webhook은 클러스터 내부의 `http://gpu-ops-incident:8091`에 별도로 연결합니다. 외부 Grafana에서 webhook을 전달해야 하면 운영 네트워크에 맞는 내부 라우팅을 구성합니다. frontend Ingress는 `ingress.enabled`, `className`, `host`, `tls`로 설정합니다.
 
 GHCR 이미지가 비공개라면 `global.imagePullSecrets: [{name: ghcr-pull}]`과 동일 namespace의 registry Secret이 필요합니다. CI 패키지에 들어 있는 이미지 digest는 유지하고, 직접 소스로 설치할 때는 `global.imageNamespace`와 각 `components.<name>.image.tag`에 실제 발행된 이미지를 지정합니다.
 
 PostgreSQL 데이터 PVC와 보고서 파일 PVC는 각각 기본 10Gi입니다. StorageClass 기본값은 클러스터 기본 StorageClass를 사용합니다. 보고서 PVC는 `artifacts.persistence.existingClaim`으로 기존 PVC를 지정할 수 있습니다. PostgreSQL StatefulSet의 PVC는 삭제 시 자동 정리되지 않지만 **chart가 만든 보고서 PVC는 Helm uninstall 시 삭제됩니다**. 보고서를 보존할 배포는 기존 PVC를 사용하고 DB·파일을 함께 백업하세요. `persistence.enabled=false`는 재시작 시 데이터를 잃는 임시 저장소입니다.
 
-현재 chart는 서비스별 1 replica를 schema로 제한하고, 업그레이드는 Recreate 방식이라 잠깐의 중단이 있습니다. 수동 확장이 필요한 경우 JC capacity/worker profile과 공유 파일 저장 방식을 함께 설계한 뒤 replica 제한을 변경합니다. Kubernetes HTTP probe는 HTTP 서비스에만 있으며 Worker는 JC readiness를 기다린 후 시작하고 JC heartbeat로 상태를 관리합니다.
+현재 chart는 서비스별 1 replica를 schema로 제한하고, 업그레이드는 Recreate 방식이라 잠깐의 중단이 있습니다. 수동 확장이 필요한 경우 JC capacity/worker profile과 공유 파일 저장 방식을 함께 설계한 뒤 replica 제한을 변경합니다. Kubernetes HTTP probe는 HTTP 서비스에만 있으며 Worker는 JC와 Grafana MCP readiness를 기다린 후 시작하고 JC heartbeat로 상태를 관리합니다.
+
+Grafana MCP에는 내부 Service DNS와 포트가 포함된 `-allowed-hosts`를 전달하고 probe의 `Host` 헤더도 맞춥니다. Pod IP를 사용하는 기본 probe는 공식 MCP의 Host 검증에서 403으로 거부됩니다. HTTP 서비스의 startup/liveness는 생존 여부를, readiness는 의존성과 설정 준비 여부를 확인합니다. 새 이미지가 포함된 chart로 기존 긴 이름 설치를 업그레이드하는 절차는 [기존 설치 안내](../../docs/helm-upgrade-existing.md)를 참고하세요.
 
 ## 로컬 검증
 

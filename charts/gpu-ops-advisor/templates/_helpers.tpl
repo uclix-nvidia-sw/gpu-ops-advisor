@@ -1,5 +1,13 @@
 {{- define "gpu.fullname" -}}
-{{- printf "%s-%s" .Release.Name .Chart.Name | trunc 40 | trimSuffix "-" -}}
+{{- default .Release.Name .Values.fullnameOverride | trunc 40 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "gpu.postgresName" -}}
+{{- default (printf "%s-postgres" (include "gpu.fullname" .)) .Values.postgres.nameOverride -}}
+{{- end -}}
+
+{{- define "gpu.artifactsName" -}}
+{{- default (printf "%s-artifacts" (include "gpu.fullname" .)) .Values.artifacts.persistence.nameOverride -}}
 {{- end -}}
 
 {{- define "gpu.labels" -}}

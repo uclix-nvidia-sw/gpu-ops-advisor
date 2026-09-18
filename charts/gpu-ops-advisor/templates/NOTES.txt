@@ -10,5 +10,7 @@ Required existing Secrets:
 Access inside the trusted network:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "gpu.fullname" . }}-frontend 8080:8080
 
-Review the deployment profiles before collecting real metrics/logs.
+Database Service: {{ include "gpu.postgresName" . }}:5432
+Worker startup waits for Job Controller and Grafana MCP readiness.
+Agents discover Grafana datasources using the built-in profile.
 See charts/gpu-ops-advisor/README.md for storage, endpoints and first-install setup.
