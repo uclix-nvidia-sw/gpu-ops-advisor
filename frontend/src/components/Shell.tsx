@@ -18,7 +18,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { scopeLabel } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
-import { Field, Modal } from './ui';
+import { Empty, Field, Modal, PageHead } from './ui';
 const nav = [
   { to: '/dashboard', label: '운영 대시보드', icon: LayoutDashboard },
   { to: '/fleet/assets', label: '자산·관측', icon: Server },
@@ -125,7 +125,7 @@ export function Shell() {
             <span className="scope-label">관측 범위</span>
             <button
               className="scope-button"
-              disabled={!app.ready}
+              disabled={!app.ready || !app.registeredScope.clusters.length}
               onClick={() => {
                 setDraft(structuredClone(app.scope));
                 setScopeError('');
@@ -161,7 +161,28 @@ export function Shell() {
         </div>
         <main id="main-content">
           <QueryState query={me}>
-            <Outlet />
+            {!app.registeredScope.clusters.length &&
+            !location.pathname.startsWith('/settings') &&
+            !location.pathname.startsWith('/knowledge') ? (
+              <div className="page">
+                <PageHead
+                  eyebrow="GET STARTED"
+                  title="클러스터 등록"
+                  description="분석할 클러스터를 등록해 시작하세요."
+                />
+                <Empty
+                  title="등록된 클러스터가 없습니다."
+                  description="클러스터를 등록하면 관측 범위를 선택하고 분석을 요청할 수 있습니다."
+                  action={
+                    <Link className="button primary" to="/settings/data">
+                      클러스터 등록하기
+                    </Link>
+                  }
+                />
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </QueryState>
         </main>
         <footer className="app-footer">

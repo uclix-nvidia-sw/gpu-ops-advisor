@@ -14,7 +14,7 @@ Backend가 GUI 조회·입력 검증·지식/모델/설정·정기 보고서 발
 
 Go 1.26, PostgreSQL 16을 사용합니다. dev-db는 공식 Maven 배포의 embedded-postgres 16.9를 내려받아 `.local/postgres`에서 실행하며 이후 재사용합니다. 개발 DB는 127.0.0.1:55432, Backend는 127.0.0.1:8080, JC는 127.0.0.1:8090입니다. Frontend는 별도 `npm run dev`로 실행합니다. Docker/compose는 선택입니다.
 
-`.env.example`은 설정 예시이며 서버가 자동으로 읽지 않습니다. PowerShell 환경 변수로 설정하거나 배포 환경에 주입합니다. 개발 스크립트는 migration/seed/내부 스케줄러를 켭니다.
+`.env.example`은 설정 예시이며 서버가 자동으로 읽지 않습니다. PowerShell 환경 변수로 설정하거나 배포 환경에 주입합니다. 개발 스크립트는 migration/seed/내부 스케줄러를 켭니다. 운영에서는 `DSX_SEED=false`여도 필수 `C07` 운영 한도를 자동 생성하며, 기존 설정은 덮어쓰지 않습니다. 클러스터 0건은 정상 초기 상태로 취급합니다. 실제 분석에는 등록된 클러스터가 필요합니다.
 
 - `DSX_JOB_CONTROLLER_URL`: JC base URL. `/internal/v1/jobs/report`, receipts, report 명령, queue-status 호출.
 - `DSX_INCIDENT_URL`: Incident base URL. 메타데이터 PATCH만 위임.

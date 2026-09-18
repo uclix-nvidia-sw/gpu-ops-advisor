@@ -16,8 +16,9 @@
 
 | 경로 | 처리 |
 |---|---|
-| GET /health/live, /health/ready | 프로세스 / DB·migration·등록 CPC·필수 한도. Worker 부재와 구분 |
-| GET /clusters | 등록 CPC 필터 목록 |
+| GET /health/live, /health/ready | 프로세스 / DB·migration·필수 운영 한도. 클러스터 0건도 Ready이며 미등록 CPC 분석은 422로 거부 |
+| GET /clusters | 등록 CPC 필터 목록. 미등록 상태는 빈 items 배열 |
+| POST /clusters | `{ "cluster_id": "production-gpu" }` 등록. Idempotency-Key 필수, 201 생성·재전송, 409 중복·키 충돌 |
 | GET /dashboard | scope·time_range JSON query 또는 from/to, 저장 사건/잡 요약 |
 | GET /assets, /workloads | scope·target(JSON)·kind·at 또는 time_range, 식별 이력 |
 | GET /observation-quality | scope·at 또는 time_range, 저장 수집 품질 |
@@ -70,3 +71,9 @@
 DB 저장 조회·일정·지식·설정은 독립 동작한다. JC/Incident 미설정 명령은 503, 정기 전달은 pending/backoff로 유지된다. 마감 후 receipt 조회가 불가능하면 확인 가능한 때까지 pending을 유지하며, receipt=404가 확인되어야 마감 실패로 확정한다. JC 접수는 Agent 실행 성공을 뜻하지 않는다.
 
 실시간 Mimir/Loki 조회, Agent 집계/LLM, 외부 파일 저장소 전송은 이번 Backend 구현의 실환경 검증 범위 밖이다. 관측이 없으면 미확인/빈 목록이며 임의 수치를 생성하지 않는다.
+
+### 최초 기동과 readiness
+
+Backend는 기동 시 필수 `C07` 운영 한도를 자동 생성한다. 기존 행은 config/enabled/version을 보존한다. `DSX_SEED=false`에서도 동작하며 예제 클러스터는 등록하지 않는다. 등록 클러스터가 없어도 API 조회를 위한 readiness는 성공한다. 분석·보고서 실행에는 실제 cluster ID 등록이 필요하다. 화면의 연결·설정 → 데이터 연결에서 등록하거나 `POST /clusters`를 사용한다. 등록은 수집 성공을 의미하지 않으며 collection_status는 unknown으로 시작한다. 클러스터 등록과 감사 기록, 멱등 receipt는 한 트랜잭션으로 저장한다.
+
+readiness 실패는 `DATABASE_UNAVAILABLE`(DB/스키마 조회 실패), `SCHEMA_NOT_READY`(version 2 미적용), `LIMITS_NOT_CONFIGURED`(C07 누락·비활성·유효하지 않은 한도)로 구분한다. 모든 경우 HTTP 503이며 liveness와는 별개다.

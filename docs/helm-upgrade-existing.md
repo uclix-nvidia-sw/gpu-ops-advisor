@@ -46,7 +46,7 @@ MCP 이미지는 Docker 서비스 이름을 허용하고, chart는 실제 Helm S
 
 ## Backend readiness 확인
 
-Backend 로그에는 응답 코드가 없어 원인을 확정할 수 없다. 코드상 readiness는 DB 연결뿐 아니라 schema version 2, 활성 `C07` limits, 활성 `cluster_registry` 행을 요구한다. `seedDemoData: false`인 새 DB에서 운영 설정을 아직 등록하지 않았다면 503을 반환한다. 새 chart의 startup은 `/api/v1/health/live`, readiness는 `/api/v1/health/ready`로 분리했다. 설정 부족 상태를 재시작으로 해결하려고 하지 않지만, 필요한 설정이 없으면 계속 `0/1`이다.
+기존 Backend는 C07 한도와 활성 클러스터가 모두 있어야 Ready가 되었고, 데모 seed를 끄면 두 항목을 자동 생성하지 않았다. 따라서 새 DB에 설치할 때 readiness가 503으로 유지되었다. 수정된 Backend 이미지는 데모 seed와 별도로 C07을 자동 초기화하며 기존 설정은 보존한다. 클러스터 0건은 정상 초기 상태로 허용하고 실제 분석 요청에서는 등록 여부를 계속 검사한다. 새 이미지가 포함된 chart로 업그레이드하면 추가 SQL 없이 기동된다.
 
 Backend가 계속 Ready가 아니면 다음으로 설정 상태를 확인한다.
 
@@ -60,7 +60,7 @@ SELECT id, enabled FROM cluster_registry;
 SQL
 ```
 
-운영 클러스터 ID와 limits는 실제 환경에 맞게 등록해야 한다. `seedDemoData: true`로 바꾸어 예제 클러스터를 운영 환경에 넣지 않는다. Backend가 Ready가 아니면 위 `helm upgrade --wait`도 성공하지 않으므로 설정 상태를 먼저 해결한다.
+실제 분석 대상 클러스터 ID는 환경에 맞게 등록한다. 기본 운영 한도는 자동 생성되며, 기존 C07이 비활성화되었거나 유효하지 않으면 운영 설정을 수정해야 한다. `seedDemoData: true`로 바꾸어 예제 클러스터를 운영 환경에 넣지 않는다.
 
 ## MCP 연결 확인
 
@@ -77,3 +77,9 @@ kubectl -n gpu-ops-advisor get endpointslice \
 ```
 
 Endpoint가 Ready인데도 연결 실패가 계속되면 Pod 간 네트워크/NetworkPolicy/Service 라우팅을 확인한다. 준비 대기와 재시도는 네트워크 차단을 해제하지 않는다. 이름 변경 전 진단 명령은 리소스 접두사로 `gpu-ops-gpu-ops-advisor`를 사용한다.
+
+## 설치 후 클러스터 등록
+
+클러스터가 없는 최초 설치에서도 Backend가 Ready가 되고 화면에 “등록된 클러스터가 없습니다”가 표시된다. **클러스터 등록하기 → 연결·설정 → 데이터 연결 → 클러스터 등록**에서 실제 클러스터 ID를 입력한다. Grafana에서 조회하는 메트릭·로그의 클러스터 라벨 값과 일치해야 하며, Mimir/Loki URL이나 datasource UID는 입력하지 않는다. 등록 후 목록과 관측 범위가 갱신되며 서버 재시작은 필요 없다. 등록 전에는 분석 화면 대신 등록 안내를 표시한다.
+
+이 흐름은 수정된 Backend와 Frontend 이미지가 모두 포함된 새 chart에 적용된다. 실제 클러스터에 데이터가 없거나 Grafana 권한이 부족한 경우 등록 자체는 가능하지만 수집 결과는 별도로 확인해야 한다.

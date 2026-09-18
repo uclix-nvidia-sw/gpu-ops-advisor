@@ -1,5 +1,13 @@
 # Backend v1.3 검증 기록
 
+## 2026-09-18 운영 초기화 회귀 검사
+
+실제 PostgreSQL의 빈 schema와 실제 Backend 실행 파일을 `DSX_MIGRATE=true`, `DSX_SEED=false`로 기동했다. 필수 C07 한도만 생성되고 예제 클러스터 없이 readiness 200이 되는 것을 확인했다. 미등록 클러스터 보고서 요청은 422로 거부하며, 이후 HTTP 등록 → 목록·범위 조회를 검증했다. 등록의 입력 검증, 멱등 재전송, 중복 충돌, 감사 기록 1건, 기존 비활성 클러스터 보존을 확인했다. 기존 C07 config/enabled/version은 재초기화해도 유지한다. 누락·비활성·유효하지 않은 한도와 미적용 스키마는 readiness 503을 유지한다.
+
+Go 단위 테스트, vet, 서버 빌드 및 Backend E2E 전체(`TestFreshBackendWithoutDemoSeed`, `TestBackendE2E`, `TestRealJobController`) 통과. 운영 Kubernetes에 수정 이미지를 배포한 검증은 아직 수행하지 않았다.
+
+## 2026-09-17 검증
+
 2026-09-17 / Windows / Go 1.26.2 / native PostgreSQL 16.9 / Docker 미사용.
 
 - Go 단위 테스트 2개: scope/시간 경계, 달력 DST gap/fold·23시간 완료일·월말·월요일 시작 주간: PASS.

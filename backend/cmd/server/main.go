@@ -43,6 +43,9 @@ func run() error {
 			return e
 		}
 	}
+	if e = db.EnsureDefaults(ctx); e != nil {
+		return e
+	}
 	handler := api.New(db, c)
 	handler.RunScheduler(ctx)
 	srv := &http.Server{Addr: c.Address, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 130 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}

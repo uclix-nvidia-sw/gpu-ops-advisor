@@ -82,9 +82,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if path == "/health/ready" {
 			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 			defer cancel()
-			var schemaReady bool
-			if e := s.DB.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=2) AND EXISTS(SELECT 1 FROM service_profiles WHERE kind='limits' AND name='C07' AND enabled AND (config->>'max_body_bytes')::integer>0 AND (config->>'max_query_days')::integer>0 AND (config->>'module_timeout_seconds')::integer>0) AND EXISTS(SELECT 1 FROM cluster_registry WHERE enabled)").Scan(&schemaReady); e != nil || !schemaReady {
-				s.writeError(w, id, Fail(503, "DATABASE_UNAVAILABLE", "저장소 연결이 준비되지 않았습니다."))
+			if e := s.readiness(ctx); e != nil {
+				s.writeError(w, id, e)
 				return
 			}
 		}
@@ -240,6 +239,9 @@ func (s *Server) route(w http.ResponseWriter, q *Request, path string) error {
 	}
 	if path == "/service-status" && r.Method == "GET" {
 		return s.status(w, q)
+	}
+	if path == "/clusters" && r.Method == "POST" {
+		return s.registerCluster(w, q)
 	}
 	if path == "/clusters" && r.Method == "GET" {
 		sc, e := s.registeredScope(q)

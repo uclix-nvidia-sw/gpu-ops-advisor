@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Badge, Field, Modal, NavTabs, Notice, PageHead, Panel } from '../components/ui';
+import { Badge, Empty, Field, Modal, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, More, QueryState } from '../components/live';
 import {
   num,
@@ -292,8 +292,12 @@ function RouteEditor({ initial, models }: { initial: Row; models: Row[] }) {
   );
 }
 function DataSettings() {
-  const modules = useResource('/service-status'),
+  const app = useApp(),
+    cmd = useCommand(),
+    modules = useResource('/service-status'),
     clusters = useList('/clusters');
+  const [registering, setRegistering] = useState(false),
+    [clusterId, setClusterId] = useState('');
   return (
     <div className="stack">
       <Panel title="서비스 연결 상태">
@@ -315,34 +319,110 @@ function DataSettings() {
           </div>
         </QueryState>
       </Panel>
-      <Panel title="관측 CPC">
+      <Panel
+        title="관측 클러스터"
+        action={
+          <button
+            className="button primary"
+            disabled={!app.canManage}
+            onClick={() => {
+              setClusterId('');
+              cmd.setError('');
+              setRegistering(true);
+            }}
+          >
+            클러스터 등록
+          </button>
+        }
+      >
         <QueryState query={clusters}>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>CPC</th>
-                  <th>Namespace</th>
-                  <th>수집 상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clusters.items.map((c) => (
-                  <tr key={str(c.id)}>
-                    <td>{str(c.cluster_id)}</td>
-                    <td>
-                      {c.namespaces === null ? '전체 Namespace' : strings(c.namespaces).join(', ')}
-                    </td>
-                    <td>
-                      <Badge status={str(c.collection_status, 'unknown')} />
-                    </td>
+          {!clusters.items.length ? (
+            <Empty
+              title="등록된 클러스터가 없습니다."
+              description="클러스터 등록 버튼으로 분석 대상을 추가하세요."
+            />
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>CPC</th>
+                    <th>Namespace</th>
+                    <th>수집 상태</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {clusters.items.map((c) => (
+                    <tr key={str(c.id)}>
+                      <td>{str(c.cluster_id)}</td>
+                      <td>
+                        {c.namespaces === null
+                          ? '전체 Namespace'
+                          : strings(c.namespaces).join(', ')}
+                      </td>
+                      <td>
+                        <Badge status={str(c.collection_status, 'unknown')} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </QueryState>
       </Panel>
+      {registering && (
+        <Modal
+          title="클러스터 등록"
+          onClose={() => {
+            if (!cmd.busy) setRegistering(false);
+          }}
+        >
+          <form
+            className="stack"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (await cmd.run('/clusters', { cluster_id: clusterId.trim() })) {
+                setRegistering(false);
+                app.notify('클러스터가 등록되었습니다.');
+              }
+            }}
+          >
+            <Field label="클러스터 ID">
+              <input
+                required
+                maxLength={200}
+                autoFocus
+                value={clusterId}
+                disabled={cmd.busy}
+                onChange={(event) => setClusterId(event.target.value)}
+                placeholder="예: production-gpu"
+              />
+            </Field>
+            <p className="muted">
+              Grafana에서 조회하는 메트릭·로그의 클러스터 라벨 값과 동일하게 입력하세요. 데이터소스
+              주소는 별도로 입력하지 않습니다.
+            </p>
+            <CommandError error={cmd.error} />
+            <div className="form-actions">
+              <button
+                type="button"
+                className="button"
+                disabled={cmd.busy}
+                onClick={() => setRegistering(false)}
+              >
+                취소
+              </button>
+              <button
+                className="button primary"
+                disabled={cmd.busy || !clusterId.trim() || !app.canManage}
+              >
+                {cmd.busy ? '등록 중…' : '등록'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
       <Panel title="큐·Worker·용량 상태">
         <QueryState query={modules}>
           <div className="live-padding">

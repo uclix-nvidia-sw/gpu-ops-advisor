@@ -101,7 +101,24 @@ func Audit(ctx context.Context, tx pgx.Tx, actor, action, kind, id, requestID st
 	_, e := tx.Exec(ctx, "INSERT INTO audit_events(id,actor,action,resource_type,resource_id,request_id,before_ref,after_ref) VALUES($1,$2,$3,$4,$5,$6,$7,$8)", contract.ID(), actor, action, kind, id, requestID, before, after)
 	return e
 }
+
+// EnsureDefaults creates required runtime limits on a fresh database without
+// registering example clusters or overwriting operator-managed configuration.
+func (s *Store) EnsureDefaults(ctx context.Context) error {
+	return s.Transaction(ctx, func(tx pgx.Tx) error {
+		_, e := tx.Exec(ctx, "INSERT INTO service_profiles(id,kind,name,config) VALUES($1,'limits','C07',$2) ON CONFLICT(kind,name) DO NOTHING", contract.ID(), contract.Object{
+			"max_query_days": 31, "max_body_bytes": 1048576, "max_log_lines": 1000,
+			"max_requests_per_minute": 120, "max_text_length": 16000,
+			"max_inflight_requests": 16, "module_timeout_seconds": 10,
+		})
+		return e
+	})
+}
+
 func (s *Store) Seed(ctx context.Context) error {
+	if e := s.EnsureDefaults(ctx); e != nil {
+		return e
+	}
 	return s.Transaction(ctx, func(tx pgx.Tx) error {
 		for _, cluster := range []string{"cpc-1", "cpc-2"} {
 			if _, e := tx.Exec(ctx, "INSERT INTO cluster_registry(id) VALUES($1) ON CONFLICT DO NOTHING", cluster); e != nil {
@@ -111,7 +128,7 @@ func (s *Store) Seed(ctx context.Context) error {
 		for _, p := range []struct {
 			Name, Kind string
 			Config     contract.Object
-		}{{"C02", "settings", contract.Object{"description": "관측 연결 설정", "poll_interval_ms": 5000, "max_backoff_ms": 60000}}, {"C03", "settings", contract.Object{"description": "관측 주기 설정", "poll_interval_ms": 5000, "max_backoff_ms": 60000}}, {"C04", "settings", contract.Object{"description": "관측 범위 설정"}}, {"C06", "settings", contract.Object{"description": "모델 관측 설정"}}, {"model-routes", "routing", contract.Object{}}, {"C07", "limits", contract.Object{"max_query_days": 31, "max_body_bytes": 1048576, "max_log_lines": 1000, "max_requests_per_minute": 120, "max_text_length": 16000, "max_inflight_requests": 16, "module_timeout_seconds": 10}}} {
+		}{{"C02", "settings", contract.Object{"description": "관측 연결 설정", "poll_interval_ms": 5000, "max_backoff_ms": 60000}}, {"C03", "settings", contract.Object{"description": "관측 주기 설정", "poll_interval_ms": 5000, "max_backoff_ms": 60000}}, {"C04", "settings", contract.Object{"description": "관측 범위 설정"}}, {"C06", "settings", contract.Object{"description": "모델 관측 설정"}}, {"model-routes", "routing", contract.Object{}}} {
 			_, e := tx.Exec(ctx, "INSERT INTO service_profiles(id,kind,name,config) VALUES($1,$2,$3,$4) ON CONFLICT(kind,name) DO NOTHING", contract.ID(), p.Kind, p.Name, p.Config)
 			if e != nil {
 				return fmt.Errorf("seed profiles: %w", e)

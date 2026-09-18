@@ -78,7 +78,7 @@ LLM 모델·주소·토큰 한도는 [Agent 설정](../../agents/README.md)의 �
 
 고급 환경에서는 `configuration.agents`에 전체 프로필 객체를 지정해 기존의 명시적 UID/selector 매핑이나 생산자별 의미 계약을 유지할 수 있습니다. `configuration.jobController`, `configuration.incident`도 전체 객체로 대체할 수 있습니다. 내장 프로필과 chart 내부 복사본의 일치는 CI가 검사합니다. 이 기능은 두 Worker와 Grafana MCP의 새 이미지 및 새 chart를 함께 발행한 뒤 사용할 수 있습니다.
 
-최초 설치는 JC·Incident 설정을 DB에 초기화합니다. 업그레이드 시 기존 DB 설정은 보존하며, 전달한 설정이 DB revision과 다르면 서비스는 시작을 거부합니다. 명시적으로 설정을 적용할 때만 `configuration.applyJobController`/`applyIncident`를 `true`로 설정하고, 정책·실행 프로필의 변경은 새 revision으로 관리합니다. `seedDemoData` 기본값은 `false`이며 실제 cluster_registry 및 운영 설정은 별도로 등록합니다.
+최초 설치는 JC·Incident 설정을 DB에 초기화합니다. 업그레이드 시 기존 DB 설정은 보존하며, 전달한 설정이 DB revision과 다르면 서비스는 시작을 거부합니다. 명시적으로 설정을 적용할 때만 `configuration.applyJobController`/`applyIncident`를 `true`로 설정하고, 정책·실행 프로필의 변경은 새 revision으로 관리합니다. `seedDemoData` 기본값은 `false`입니다. Backend는 필수 `C07` 운영 한도를 자동 초기화하고 기존 설정은 보존합니다. 클러스터가 0건이어도 Ready가 되며, 실제 분석을 실행하려면 cluster_registry에 대상 클러스터를 등록해야 합니다.
 
 ## 설치 및 확인
 
@@ -108,3 +108,9 @@ python -m unittest discover -s tools/ci/tests -v
 ```
 
 Helm 3.17.3을 PATH에 설치하거나 `HELM_BINARY`를 지정합니다. 기본/외부 DB/임시 저장소/기존 PVC/Ingress/Secret/digest 설정의 실제 Helm 렌더링과 패키지 재렌더링을 검사합니다. Kubernetes에 실제 설치한 결과나 운영 Grafana·LLM 통합 검수를 뜻하지 않습니다.
+
+## 설치 후 클러스터 등록
+
+클러스터가 없는 최초 설치에서도 Backend가 Ready가 되고 화면에 “등록된 클러스터가 없습니다”가 표시된다. **클러스터 등록하기 → 연결·설정 → 데이터 연결 → 클러스터 등록**에서 실제 클러스터 ID를 입력한다. Grafana에서 조회하는 메트릭·로그의 클러스터 라벨 값과 일치해야 하며, Mimir/Loki URL이나 datasource UID는 입력하지 않는다. 등록 후 목록과 관측 범위가 갱신되며 서버 재시작은 필요 없다. 등록 전에는 분석 화면 대신 등록 안내를 표시한다.
+
+이 흐름은 수정된 Backend와 Frontend 이미지가 모두 포함된 새 chart에 적용된다. 실제 클러스터에 데이터가 없거나 Grafana 권한이 부족한 경우 등록 자체는 가능하지만 수집 결과는 별도로 확인해야 한다.

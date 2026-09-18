@@ -60,7 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast,
         ready,
         connection,
-        canOperate: ready,
+        canOperate: ready && scope.clusters.length > 0,
         canManage: ready,
         canKnowledge: ready,
       }}

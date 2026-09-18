@@ -27,7 +27,7 @@ cp docs/deployment-values.yaml .local/helm/values.yaml
 
 Grafana에는 해당 데이터소스가 이미 등록되어 있어야 하며 토큰에 datasource 목록·label·query 조회 권한이 필요하다. 데이터의 클러스터 라벨 값은 작업의 cluster ID와 정확히 일치해야 한다. 여러 datasource에 같은 클러스터가 존재하거나 라벨이 없으면 임의로 전체 데이터를 조회하지 않고 원인을 표시한다. 지원 라벨과 상세 동작은 [Chart 안내](../charts/gpu-ops-advisor/README.md)를 참고한다. 실제 메트릭이나 로그 의미 계약이 없는 항목은 데이터 부족으로 남으며 자동 탐색이 원본 데이터를 생성하지는 않는다.
 
-`seedDemoData: false`이므로 실제 `cluster_registry`와 운영 설정도 별도로 등록해야 한다. 필요한 경우 `configuration.jobController`와 `configuration.incident`에 환경에 맞춘 전체 객체를 지정한다. Grafana alert를 받을 경우 Incident webhook 연결도 별도 구성한다. Pod가 Ready인 것과 실제 데이터 수집/분석 준비가 끝난 것은 다르다.
+필수 `C07` 운영 한도는 Backend가 자동 초기화한다. `seedDemoData: false`에서는 예제 클러스터를 생성하지 않으며, 실제 분석 대상은 `cluster_registry`에 등록해야 한다. 클러스터가 0건이어도 Backend와 화면 조회는 가능하다. 필요한 경우 `configuration.jobController`와 `configuration.incident`에 환경에 맞춘 전체 객체를 지정한다. Grafana alert를 받을 경우 Incident webhook 연결도 별도 구성한다. Pod가 Ready인 것과 실제 데이터 수집/분석 준비가 끝난 것은 다르다.
 
 ## 2. Secret 준비
 
@@ -142,3 +142,9 @@ kubectl -n gpu-ops-advisor port-forward svc/gpu-ops-frontend 8080:8080
 포트 포워딩 실행 중 브라우저에서 `http://localhost:8080`으로 접속한다. 분석 작업을 실행해 Worker 로그와 evidence에서 datasource 자동 탐색 및 실제 query 성공을 확인한다. 기본 Ingress는 꺼져 있다.
 
 업그레이드에서 기존 DB의 JC/Incident 설정은 보존된다. 설정 revision을 변경해 적용할 때만 `configuration.applyJobController` / `configuration.applyIncident`를 명시적으로 활성화한다. PostgreSQL PVC는 uninstall 후에도 남지만 chart가 생성한 보고서 PVC는 삭제되므로, 보고서를 보존할 배포는 기존 PVC를 지정한다.
+
+## 설치 후 클러스터 등록
+
+클러스터가 없는 최초 설치에서도 Backend가 Ready가 되고 화면에 “등록된 클러스터가 없습니다”가 표시된다. **클러스터 등록하기 → 연결·설정 → 데이터 연결 → 클러스터 등록**에서 실제 클러스터 ID를 입력한다. Grafana에서 조회하는 메트릭·로그의 클러스터 라벨 값과 일치해야 하며, Mimir/Loki URL이나 datasource UID는 입력하지 않는다. 등록 후 목록과 관측 범위가 갱신되며 서버 재시작은 필요 없다. 등록 전에는 분석 화면 대신 등록 안내를 표시한다.
+
+이 흐름은 수정된 Backend와 Frontend 이미지가 모두 포함된 새 chart에 적용된다. 실제 클러스터에 데이터가 없거나 Grafana 권한이 부족한 경우 등록 자체는 가능하지만 수집 결과는 별도로 확인해야 한다.
