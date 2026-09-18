@@ -32,7 +32,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	return Config{SharedLimit: 1, KindLimits: map[string]int{"rca": 1, "report": 1}, Workers: map[string]WorkerProfile{"rca-v1": {"rca", 1}, "report-v1": {"report", 1}}, Execution: map[string]Execution{"local-v1": {3, 3000, 1000, 30, 5, 5, "1.3"}}, FreshSeconds: 90, Versions: Object{"query": "unconfigured", "parser": "unconfigured", "criteria": "unconfigured", "result_schema": "1.3"}}
+	return Config{SharedLimit: 1, KindLimits: map[string]int{"rca": 1, "report": 1}, Workers: map[string]WorkerProfile{"rca-v1": {"rca", 1}, "report-v1": {"report", 1}}, Execution: map[string]Execution{"local-v1": {3, 98304, 32768, 30, 5, 5, "1.3"}}, FreshSeconds: 90, Versions: Object{"query": "unconfigured", "parser": "unconfigured", "criteria": "unconfigured", "result_schema": "1.3"}}
 }
 func (c Config) Validate() error {
 	if c.SharedLimit < 1 || c.FreshSeconds < 1 || len(c.Workers) == 0 || len(c.Execution) == 0 {

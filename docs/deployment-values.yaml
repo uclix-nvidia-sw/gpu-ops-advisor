@@ -50,8 +50,8 @@ configuration:
   agents: {}
   jobController: {}
   incident: {}
-  applyJobController: false
-  applyIncident: false
+  applyJobController: true
+  applyIncident: true
   seedDemoData: false
   executionProfileRevision: local-v1
 

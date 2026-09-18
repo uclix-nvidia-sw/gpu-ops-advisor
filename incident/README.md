@@ -19,7 +19,7 @@ Go 1.26와 PostgreSQL을 사용합니다. Docker가 없어도 저장소 루트�
 
 세 모듈의 `DATABASE_URL`은 같은 DB를 가리켜야 합니다. 공통 스키마에 `004_incident.sql`을 추가했으며 Incident가 자신의 마이그레이션과 운영 정책 등록을 수행합니다. JC의 queue 테이블은 변경하지 않습니다. cluster_registry는 Backend 초기화/운영 등록을 사용합니다.
 
-`.env.example`은 환경 변수 예시이며 자동으로 읽지 않습니다. 기본값은 개발용 정책입니다. 운영 설정은 `INCIDENT_CONFIG_FILE`에 `config.example.json` 형식의 파일 경로를 지정합니다. 동일 Grafana source에 설정을 변경할 때는 `INCIDENT_APPLY_CONFIG=true`를 한 번 명시하고 모든 Incident 복제본의 설정을 맞춥니다. 이전 설정의 프로세스는 503으로 차단됩니다. 적용 후 해당 환경 변수는 false로 되돌립니다.
+`.env.example`은 환경 변수 예시이며 자동으로 읽지 않습니다. 기본값은 개발용 정책입니다. 운영 설정은 `INCIDENT_CONFIG_FILE`에 `config.example.json` 형식의 파일 경로를 지정합니다. `INCIDENT_APPLY_CONFIG`는 미지정 시 `true`이며 시작할 때 전달한 설정을 DB에 적용합니다. 모든 Incident 복제본의 설정을 맞춥니다. 이전 설정의 프로세스는 503으로 차단됩니다. 자동 적용을 끄려면 `INCIDENT_APPLY_CONFIG=false`를 명시합니다.
 
 정책 revision의 내용은 불변입니다. 조사 목적·증거 필드 등을 바꿀 때 새 revision ID를 사용합니다. JC 주소만 바꿀 때는 `INCIDENT_JOB_CONTROLLER_URL`을 사용할 수 있지만 이것도 운영 설정 revision 변경에 해당합니다.
 

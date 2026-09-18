@@ -72,13 +72,15 @@ artifacts:
 
 LLM 모델·주소·토큰 한도는 [Agent 설정](../../agents/README.md)의 동일한 설정을 사용합니다. 단계별 모델은 `components.rcca-agent.env.LLM_MODEL_PLANNER` 등 `components.<name>.env`에 문자열로 설정할 수 있습니다. 비밀값은 위 Secret 참조를 사용합니다.
 
+기본 실행 프로필은 `local-v1` 하나이며, 입력·출력을 포함해 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. `llm.synthesisMaxTokens`만 바꿔서는 실행 예산이 늘어나지 않습니다. 기존 설치는 [토큰 예산 업데이트](../../docs/helm-install.md#기존-설치의-llm-토큰-예산-업데이트)에 따라 업그레이드하고 새 보고서를 요청합니다.
+
 `configuration.agents: {}`는 내장 수집 프로필을 사용합니다. 별도 `agents.json`을 만들거나 datasource UID, Mimir/Loki 접속 정보를 입력할 필요가 없습니다. Agent가 Grafana MCP의 `list_datasources`와 label 조회 도구로 작업 대상 클러스터에 해당하는 Prometheus 호환/Mimir 및 Loki datasource와 selector를 찾습니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. 기본 쿼리의 `validated`는 모두 `true`이며 수집 차단 스위치로 사용하지 않습니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
 
 탐색은 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 라벨 순서로 수행합니다. 첫 번째로 값이 존재하는 라벨에서 작업의 cluster ID와 정확히 일치하는 대상을 찾습니다. 일치하는 datasource가 하나일 때만 조회하며, 후보가 여러 개거나 클러스터 라벨이 없거나 권한/통신 오류가 있으면 원인을 evidence와 Worker 로그에 남깁니다. `cpc-2`와 `cpc2` 같은 별칭을 임의로 동일시하거나 전체 클러스터로 조회 범위를 넓히지 않습니다. 표준 배포에서는 Grafana에 올바른 데이터소스와 클러스터 라벨이 준비되어 있어야 합니다.
 
 고급 환경에서는 `configuration.agents`에 전체 프로필 객체를 지정해 기존의 명시적 UID/selector 매핑이나 생산자별 의미 계약을 유지할 수 있습니다. `configuration.jobController`, `configuration.incident`도 전체 객체로 대체할 수 있습니다. 내장 프로필과 chart 내부 복사본의 일치는 CI가 검사합니다. 이 기능은 두 Worker와 Grafana MCP의 새 이미지 및 새 chart를 함께 발행한 뒤 사용할 수 있습니다.
 
-최초 설치는 JC·Incident 설정을 DB에 초기화합니다. 업그레이드 시 기존 DB 설정은 보존하며, 전달한 설정이 DB revision과 다르면 서비스는 시작을 거부합니다. 명시적으로 설정을 적용할 때만 `configuration.applyJobController`/`applyIncident`를 `true`로 설정하고, 정책·실행 프로필의 변경은 새 revision으로 관리합니다. `seedDemoData` 기본값은 `false`입니다. Backend는 필수 `C07` 운영 한도를 자동 초기화하고 기존 설정은 보존합니다. 클러스터가 0건이어도 Ready가 되며, 실제 분석을 실행하려면 cluster_registry에 대상 클러스터를 등록해야 합니다.
+`configuration.applyJobController`와 `applyIncident`의 기본값은 모두 `true`입니다. 최초 설치와 업그레이드 시 JC·Incident 설정을 DB에 적용하며, 이미 접수된 작업의 입력·예산 스냅샷은 유지합니다. 기존 values에서 두 옵션을 `false`로 지정했다면 삭제하거나 `true`로 변경합니다. Incident 분석 정책의 내용을 바꿀 때는 정책 revision을 새로 지정합니다. `seedDemoData` 기본값은 `false`입니다. Backend는 필수 `C07` 운영 한도를 자동 초기화하고 기존 설정은 보존합니다. 클러스터가 0건이어도 Ready가 되며, 실제 분석을 실행하려면 cluster_registry에 대상 클러스터를 등록해야 합니다.
 
 ## 설치 및 확인
 

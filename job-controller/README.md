@@ -35,7 +35,7 @@ capacity → job → attempt 순서로 DB 트랜잭션을 잠그며, 인수·결
 
 query/parser/criteria의 개발 기본 revision은 `unconfigured`입니다. Agent와 연결할 때 실제 배포 revision을 설정해야 합니다. model snapshot은 Backend routing의 참조이고 미설정이면 null입니다. 설정 누락을 Agent가 실제 분석 성공으로 처리하면 안 됩니다.
 
-설정 변경은 새 파일로 `JC_APPLY_CONFIG=true`를 명시한 새 프로세스에서 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 배포 후 `JC_APPLY_CONFIG`를 다시 false로 둡니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 실행 프로필 revision은 새 ID로 추가하고 기존 ID의 의미를 바꾸지 마세요.
+`JC_APPLY_CONFIG`는 미지정 시 `true`이며, 시작할 때 전달한 설정을 DB에 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 기본 실행 프로필은 `local-v1` 하나이며 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. 예산 변경은 새로 접수되는 작업에 적용하고, 기존 작업은 접수 시 저장한 실행 설정 스냅샷을 사용합니다. 자동 적용을 끄려면 `JC_APPLY_CONFIG=false`를 명시합니다.
 
 ## 추론 격리와 취소
 

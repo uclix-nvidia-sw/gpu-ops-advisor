@@ -17,8 +17,8 @@
   "execution_profiles": {
     "local-v1": {
       "max_attempts": 3,
-      "token_budget": 3000,
-      "attempt_budget": 1000,
+      "token_budget": 98304,
+      "attempt_budget": 32768,
       "lease_seconds": 30,
       "heartbeat_seconds": 5,
       "retry_seconds": 5,

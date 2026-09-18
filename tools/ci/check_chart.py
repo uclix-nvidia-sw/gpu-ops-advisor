@@ -93,6 +93,25 @@ def main():
         assert container["startupProbe"]["httpGet"]["path"].endswith("/live")
         assert container["readinessProbe"]["httpGet"]["path"].endswith("/ready")
     config = next(d for d in docs if d["kind"] == "ConfigMap")["data"]
+    execution_revision = values["configuration"]["executionProfileRevision"]
+    profiles = json.loads(config["job-controller.json"])["execution_profiles"]
+    assert set(profiles) == {execution_revision}, "One default execution profile"
+    execution = profiles[execution_revision]
+    assert execution["attempt_budget"] >= 8192 + values["llm"]["synthesisMaxTokens"]
+    assert (
+        execution["token_budget"]
+        >= execution["max_attempts"] * execution["attempt_budget"]
+    )
+    assert (
+        json.loads(config["incident.json"])["execution_profile_revision"]
+        == execution_revision
+    )
+    for name, flag in [
+        ("job-controller", "JC_APPLY_CONFIG"),
+        ("incident", "INCIDENT_APPLY_CONFIG"),
+    ]:
+        env = deployments[name]["spec"]["template"]["spec"]["containers"][0]["env"]
+        assert next(e["value"] for e in env if e["name"] == flag) == "true"
     agent_profile = json.loads(config["agents.json"])
     assert agent_profile["clusters"] == {}, "Default installs must discover sources"
     assert all(q["validated"] is True for q in agent_profile["queries"].values())

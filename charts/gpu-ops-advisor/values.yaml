@@ -51,9 +51,9 @@ configuration:
   agents: {}
   jobController: {}
   incident: {}
-  # Existing DB settings/revisions are not silently replaced on an upgrade.
-  applyJobController: false
-  applyIncident: false
+  # Apply the supplied JC/Incident configuration to the DB at startup.
+  applyJobController: true
+  applyIncident: true
   seedDemoData: false
   executionProfileRevision: local-v1
 

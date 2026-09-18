@@ -129,6 +129,23 @@ helm upgrade --install gpu-ops "$CHART_PACKAGE" \
 
 Actions에서 `.tgz`를 이미 받았다면 `helm pull`을 생략하고 `CHART_PACKAGE`에 해당 파일 경로를 넣는다. 패키지의 이미지 namespace/tag/digest를 이 values 파일은 덮어쓰지 않는다. 저장소의 `./charts/gpu-ops-advisor`를 직접 설치하려면 실제 발행된 이미지 namespace와 각 컴포넌트의 tag/digest를 별도로 설정해야 한다.
 
+### 기존 설치의 LLM 토큰 예산 업데이트
+
+기본 실행 프로필은 `local-v1` 하나이며, 시도당 32,768, 작업 전체 98,304로 최대 3회의 예산을 확보한다. 별도 프로필을 선택할 필요는 없다. `llm.synthesisMaxTokens`는 한 응답의 출력 한도이고, 실행 프로필 예산은 입력과 출력을 모두 포함하므로 출력 한도만 올리면 해결되지 않는다.
+
+`configuration.applyJobController`와 `configuration.applyIncident`는 모두 기본값이 `true`이다. 설치·업그레이드 시 전달한 설정을 DB에 적용하므로 추가 `--set` 옵션 없이 업그레이드한다. 기존 values에 두 옵션이 `false`로 명시되어 있으면 삭제하거나 `true`로 변경한다. 기본 설정은 `configuration.jobController: {}`, `incident: {}`, `executionProfileRevision: local-v1`을 사용한다.
+
+```bash
+helm upgrade gpu-ops "$CHART_PACKAGE" \
+  --namespace gpu-ops-advisor \
+  --values .local/helm/values.yaml \
+  --wait --timeout 10m
+```
+
+두 apply 옵션은 이후에도 기본값 `true`를 유지한다. 사용자 정의 JC 설정을 사용한다면 `local-v1`의 `attempt_budget`과 `token_budget`도 각각 32,768과 98,304로 변경한다. DB에서 직접 변경한 JC/Incident 운영 설정은 다음 시작 시 values의 설정으로 갱신되므로 필요한 변경은 values에도 반영한다.
+
+완료되거나 이미 접수된 작업의 예산은 바뀌지 않는다. 보고서 화면에서 **새 조건으로 보고서 요청**으로 새 작업을 생성하고 `llm_usage.calls`와 `narrative_status`를 확인한다. 예산 상향은 LLM 호출을 허용하는 변경이며, 수집 데이터 부족이나 모델 서버의 컨텍스트 한도를 해결하지는 않는다.
+
 ## 4. 설치 확인과 접속
 
 ```bash
@@ -141,7 +158,7 @@ kubectl -n gpu-ops-advisor port-forward svc/gpu-ops-frontend 8080:8080
 
 포트 포워딩 실행 중 브라우저에서 `http://localhost:8080`으로 접속한다. 분석 작업을 실행해 Worker 로그와 evidence에서 datasource 자동 탐색 및 실제 query 성공을 확인한다. 기본 Ingress는 꺼져 있다.
 
-업그레이드에서 기존 DB의 JC/Incident 설정은 보존된다. 설정 revision을 변경해 적용할 때만 `configuration.applyJobController` / `configuration.applyIncident`를 명시적으로 활성화한다. PostgreSQL PVC는 uninstall 후에도 남지만 chart가 생성한 보고서 PVC는 삭제되므로, 보고서를 보존할 배포는 기존 PVC를 지정한다.
+업그레이드에서 JC/Incident 운영 설정은 기본적으로 values의 설정을 DB에 적용한다. 이미 접수된 작업의 입력·예산 스냅샷과 저장된 보고서는 그대로 유지된다. PostgreSQL PVC는 uninstall 후에도 남지만 chart가 생성한 보고서 PVC는 삭제되므로, 보고서를 보존할 배포는 기존 PVC를 지정한다.
 
 ## 설치 후 클러스터 등록
 

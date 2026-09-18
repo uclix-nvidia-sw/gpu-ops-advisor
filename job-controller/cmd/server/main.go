@@ -44,7 +44,7 @@ func run() error {
 		return e
 	}
 	startup, cancel := context.WithTimeout(ctx, 30*time.Second)
-	e = jc.Prepare(startup, os.Getenv("JC_APPLY_CONFIG") == "true")
+	e = jc.Prepare(startup, os.Getenv("JC_APPLY_CONFIG") == "" || os.Getenv("JC_APPLY_CONFIG") == "true")
 	cancel()
 	if e != nil {
 		return e
