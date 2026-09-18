@@ -53,6 +53,16 @@ RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT To
 
 계산용 query revision은 원본 관측 시각·원본 주기·값 유지·구간 경계·chunk 겹침 제거·최대 유효시간을 고정한다. 범위 조회의 평가 시각이나 차트 점 수를 원본 샘플 수로 사용하지 않는다. 저장소가 지원하면 원본 range-vector 표본을 제한된 chunk로 조회해 사용하며, 원본성이 확인되지 않는 다운샘플 자료로 급증·시간·P95를 확정하지 않는다. UI chart_step은 표시 전용이고 이미 저장된 계산 결과를 바꾸지 않는다.
 
+### 5.1.1 현재 구현의 GPU–Pod 연결 관측
+
+O02/O08은 D08 할당 계약과 별도로 D01의 GPU 작업 라벨과 D06의 같은 시점 Pod UID를 사용한다. 이름 기반 조인 키는 `cluster_id+namespace+pod+node`이며, 하나의 UID만 유효한 구간을 채택한다. Pod 이름 재사용으로 UID가 겹치는 구간이나 다른 클러스터의 관계는 연결하지 않는다. 원본에 직접 포함된 pod_uid/uid가 있으면 해당 신원을 사용한다.
+
+DCGM 활동값 0도 GPU–Pod 연결의 관측 근거가 될 수 있다. 반면 정규화된 D08 allocation-info의 0은 활성 할당 근거에서 제외한다. 이 둘을 같은 의미로 처리하지 않는다.
+
+관측 연결은 mode=unknown, episode 없음으로 처리한다. `mapped_gpu_hours`는 cluster_id+GPU UUID별 유효 연결 구간 합집합 초를 3,600으로 나눈 값이다. O08의 Namespace별 값은 각 Namespace 안에서 같은 계산을 하므로 공유 GPU가 여러 Namespace에 나타나면 Namespace 합계가 전체 GPU 관측 시간을 넘을 수 있다.
+
+관측 연결만으로 독점·MIG 할당량, 실사용률, 과금량이나 60분 저활동 후보를 확정하지 않는다. 현재 구현은 독점 할당 근거가 없으면 `current_allocated_gpu`, `allocated_gpu_hours`, O08의 독점 할당 그룹 값을 null로 유지한다. 가능한 관측 지표는 보존하고 해당 주제에 부족 사유를 남긴다. 필드 원본은 [03 §5.1](03_데이터_설계서.md), 구현은 [정규화](../../shared/python/src/agent_common/normalize.py)와 [보고서 계산](../../ops-agent/src/ops_agent/workflow.py)이다.
+
 ### 5.2 산식
 
 | 지표 | 산식·단위 | 제한 |
@@ -184,7 +194,7 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 ## 9. 검수
 
-수치 고정 사례·근거 연결·설명 실패·버전 재현은 [05](05_테스트_검수_기준서.md), 큐 수명주기는 [14](14_모듈간_호출과_공통실행_계약.md)를 따른다. 제품 시험은 NOT RUN이다.
+수치 고정 사례·근거 연결·설명 실패·버전 재현은 [05](05_테스트_검수_기준서.md), 큐 수명주기는 [14](14_모듈간_호출과_공통실행_계약.md)를 따른다. 시험 환경과 실행 결과는 각 모듈 QA를 참조하며 고정 사례 시험을 운영 데이터·모델 품질 검수로 확대 해석하지 않는다.
 
 ## 10. NAT 적용 근거
 
