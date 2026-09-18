@@ -3873,6 +3873,9 @@ td small {
 .result-section {
   min-width: 0;
 }
+.report-topic-head {
+  justify-content: space-between;
+}
 @media (max-width: 1100px) {
   .live-two-columns {
     grid-template-columns: 1fr;

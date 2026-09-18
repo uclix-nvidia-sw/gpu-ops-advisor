@@ -18,13 +18,13 @@ from .prompts import EXPLANATION
 
 PLAN = {
     "O01": ("D01", "D03", "D04", "D06"),
-    "O02": ("D08", "D06", "D10"),
+    "O02": ("D08", "D01", "D06", "D10"),
     "O03": ("D08", "D06", "D02", "D10"),
     "O04": ("D08", "D06", "D02"),
     "O05": ("D10",),
     "O06": ("D08", "D06", "D13"),
     "O07": ("D07", "D12"),
-    "O08": ("D08", "D06", "D12"),
+    "O08": ("D08", "D01", "D06", "D12"),
     "O09": ("D11", "D10"),
     "O10": ("D11", "D02", "D13", "D09"),
     "O11": ("D10",),
@@ -89,6 +89,15 @@ def calculate(topic_id, data, collected, context, db_evidence):
     activity = gpu_intervals(collected.get("D02", []), period)
     all_refs = [e for q in PLAN[topic_id] for e in collected.get(q, [])]
     topic["evidence_refs"] = refs(all_refs)
+    topic["quality"]["observations"] = [
+        dict(
+            query_id=e["query_id"],
+            cluster_id=e.get("cluster_id"),
+            tool_status=e["tool_status"],
+            **e["quality"],
+        )
+        for e in all_refs
+    ]
 
     def put(
         name,
@@ -151,13 +160,59 @@ def calculate(topic_id, data, collected, context, db_evidence):
                 )
         topic["missing_inputs"].append("inventory_completeness_and_change_events")
     elif topic_id in {"O02", "O08"}:
+        observed = allocations(
+            collected.get("D01", []), period, collected.get("D06", []), observed=True
+        )
+        observed_rows = intervals(collected.get("D01", []), period)
+        devices = {
+            (
+                r["cluster_id"],
+                r["labels"].get("gpu_uuid")
+                or r["labels"].get("UUID")
+                or r["labels"].get("uuid"),
+            )
+            for r in observed_rows
+            if r["intervals"]
+        }
+        devices = {k for k in devices if k[1]}
+        if devices:
+            put(
+                "observed_gpu_count",
+                len(devices),
+                "physical_gpu",
+                "unique_observed_inventory",
+                evidence=collected.get("D01", []),
+            )
+        if observed:
+            observed_refs = collected.get("D01", []) + collected.get("D06", [])
+            put(
+                "mapped_gpu_count",
+                len({(m["cluster_id"], m["gpu_uuid"]) for m in observed}),
+                "physical_gpu",
+                "observed_gpu_pod_identity_join",
+                evidence=observed_refs,
+            )
+            put(
+                "mapped_gpu_hours",
+                allocation_hours(observed, "unknown"),
+                "GPU-hours",
+                "observed_gpu_pod_interval_union",
+                evidence=observed_refs,
+            )
+            topic["quality"]["mapping_basis"] = "DCGM_Pod_UID_observation"
+        elif devices:
+            topic["missing_inputs"].append("gpu_pod_identity_missing")
+        if not mapping:
+            topic["missing_inputs"].append("allocation_contract_missing")
+        elif any(m["mode"] == "unknown" for m in mapping):
+            topic["missing_inputs"].append("allocation_mode_unverified")
         exclusive = [m for m in mapping if m["mode"] == "exclusive"]
         current = {
             (m["cluster_id"], m["gpu_uuid"]) for m in exclusive if m["end"] >= end
         }
         put(
             "current_allocated_gpu",
-            len(current) if mapping else None,
+            len(current) if exclusive else None,
             "physical_gpu",
             "unique_exclusive_devices",
         )
@@ -177,13 +232,32 @@ def calculate(topic_id, data, collected, context, db_evidence):
             "MIG_history_missing",
         )
         if topic_id == "O08":
+            observed_groups = defaultdict(list)
+            for m in observed:
+                observed_groups[(m["cluster_id"], m["namespace"])].append(m)
+            for i, (key, rows) in enumerate(sorted(observed_groups.items(), key=str)):
+                put(
+                    "observed_namespace_hours." + str(i),
+                    allocation_hours(rows, "unknown"),
+                    "GPU-hours",
+                    "observed_gpu_pod_interval_union",
+                    evidence=collected.get("D01", []) + collected.get("D06", []),
+                    target={"cluster_id": key[0], "namespace": key[1]},
+                )
+            if observed:
+                topic["missing_inputs"].append(
+                    "observed_mapping_not_exclusive_allocation"
+                )
+                topic["missing_inputs"].append("project_owner_mapping")
             groups = defaultdict(list)
             for m in mapping:
                 groups[(m["cluster_id"], m["namespace"], m["project"])].append(m)
             for i, (key, rows) in enumerate(sorted(groups.items(), key=str)):
                 put(
                     "allocation_group." + str(i),
-                    allocation_hours(rows),
+                    allocation_hours(rows)
+                    if any(m["mode"] == "exclusive" for m in rows)
+                    else None,
                     "GPU-hours",
                     "valid_interval_union",
                     target={
@@ -522,6 +596,7 @@ def calculate(topic_id, data, collected, context, db_evidence):
         topic["missing_inputs"].append("incomplete_observation")
         if useful:
             topic["status"] = "partial"
+    topic["missing_inputs"] = list(dict.fromkeys(topic["missing_inputs"]))
     return topic
 
 

@@ -70,13 +70,15 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 - 보고서는 REPEATABLE READ에서 data cutoff, Incident, 공개된 RCA ID/hash, 실제 조치 기록을 고정합니다. RCA 원인 수준은 인용한 결과 수준을 유지합니다.
 - LLM 설명은 검증된 사실 ID 선택으로 제한하고 저장된 `value_refs`로 렌더링합니다. 자유 문장의 새 수치·인과 주장은 허용하지 않습니다.
 - timeout/cancel 이후 추론 종료가 확인되지 않으면 `remote_call_state=unknown`으로 fail을 보내 JC의 격리 정책에 맡깁니다. 저장 실패는 succeeded가 아닙니다.
-- HTML escape, CSV 수식 방어, 서버 생성 파일명, checksum을 적용합니다. 재다운로드에는 저장 파일을 사용하며 새 분석이 필요 없습니다.
+- Agent는 HTML·CSV 파일과 checksum을 저장합니다. Backend 다운로드 API는 발행된 결과에서 HTML 표와 항목별 CSV를 렌더링하며 새 조회·분석은 하지 않습니다. HTML escape와 CSV 수식 방어를 적용합니다. 화면 상단의 HTML·CSV 다운로드 버튼으로 받을 수 있습니다.
 
 ## 배포 입력이 필요한 부분
 
 코드가 모든 R/O ID를 받아 주제별 결과와 부족 입력을 반환하지만, 실제 생산자 의미를 추정하지 않습니다. 다음 입력이 없으면 해당 판단은 `partial/blocked` 또는 null입니다.
 
 - `D08`의 `gpu_ops_allocation_info`는 실제로 존재한다고 가정한 metric이 아니라 **배포 시 매핑할 정규화 계약 예시**입니다. `gpu_uuid`/`UUID`, namespace, pod, pod_uid 또는 동시 KSM uid, allocation_mode, allocation_episode_key, MIG instance_id를 검증해야 합니다. episode가 없으면 장시간 저활동 후보를 만들지 않습니다.
+- O02·O08은 이 정규화 metric이 없어도 기존 DCGM 활용률(D01)과 `kube_pod_info`(D06)의 동시 구간을 연결해 관측 GPU 수, GPU–Pod 연결 관측 시간, Namespace별 연결 관측 시간을 산출합니다. 같은 이름의 Pod UID가 중첩되는 구간은 제외합니다. 이 수치는 독점 할당량·실제 연산 시간과 구분하며 공유 GPU의 Namespace별 시간을 합산해 전체 할당량으로 사용하지 않습니다.
+- Prometheus 원본 표본 수 또는 응답 크기가 한도를 넘으면 시간 구간을 자동으로 줄여 다시 조회합니다. `max_queries`와 실행시간 한도는 재조회에도 적용되며, 끝내 수집하지 못한 구간·원본 경고는 부분 수집으로 남깁니다. 결과의 주제별 관측 품질에는 조회별 상태와 표본 수가 저장됩니다.
 - `D07`의 `gpu_ops_effective_unbound_request` 역시 검증된 recording rule/원본으로 교체해야 합니다. scheduler 버전별 effective request 규칙, terminal/binding, resource 단위를 확인해야 합니다.
 - Fleet 상태는 `health_contracts`에 producer별 `checks`/`health`/revision 매핑을 등록한 JSON에만 의미를 부여합니다. 원본 여러 incidents 항목을 각각 보존합니다. 미등록 상태는 unknown입니다.
 - 토폴로지, 현재 조치 범위, 정책·정상 관측 기간, 실제 작업 중단/재개 증거가 없는 R04/R07/R08/R09를 확정하지 않습니다. reset 안전·업무 복구를 자동 판정하지 않습니다.

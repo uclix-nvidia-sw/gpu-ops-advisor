@@ -23,6 +23,7 @@ import {
 } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import { useApp } from '../lib/store';
+import { ReportContent } from '../components/ReportContent';
 export function ResultPage({ kind }: { kind: string }) {
   const { id } = useParams(),
     app = useApp(),
@@ -54,7 +55,9 @@ export function ResultPage({ kind }: { kind: string }) {
         a = document.createElement('a');
       a.href = url;
       a.download = `report-${id}.${format}`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       setDownloadError(errorText(e));
@@ -71,11 +74,26 @@ export function ResultPage({ kind }: { kind: string }) {
         }
         description={id || ''}
         actions={
-          <Link className="button" to={kind === 'report' ? '/reports' : '/cases'}>
-            목록으로
-          </Link>
+          <>
+            {kind === 'report' &&
+              r.result_ref != null &&
+              ['html', 'csv'].map((format) => (
+                <button
+                  className={`button ${format === 'html' ? 'primary' : ''}`}
+                  key={format}
+                  disabled={downloading}
+                  onClick={() => download(format)}
+                >
+                  {format.toUpperCase()} 다운로드
+                </button>
+              ))}
+            <Link className="button" to={kind === 'report' ? '/reports' : '/cases'}>
+              목록으로
+            </Link>
+          </>
         }
       />
+      <CommandError error={downloadError} />
       <QueryState query={q}>
         <Panel title={str(r.title, kind === 'incident' ? '사건 관측' : '저장된 결과')}>
           <div className="live-padding stack">
@@ -84,7 +102,11 @@ export function ResultPage({ kind }: { kind: string }) {
               {kind !== 'incident' && <Badge status={str(r.result_status) || null} />}
               <span>{formatDate(str(r.created_at))}</span>
             </div>
-            <ResultContent value={kind === 'incident' ? r : r.result} onEvidence={setEvidence} />
+            {kind === 'report' ? (
+              <ReportContent value={r.result} onEvidence={setEvidence} />
+            ) : (
+              <ResultContent value={kind === 'incident' ? r : r.result} onEvidence={setEvidence} />
+            )}
             <div className="head-actions">
               {kind !== 'incident' && (
                 <Link className="button" to={`/jobs/${id}`}>
@@ -96,20 +118,7 @@ export function ResultPage({ kind }: { kind: string }) {
                   새 조건으로 보고서 요청
                 </Link>
               )}
-              {kind === 'report' &&
-                r.result_ref != null &&
-                ['html', 'csv'].map((f) => (
-                  <button
-                    className="button"
-                    disabled={downloading}
-                    key={f}
-                    onClick={() => download(f)}
-                  >
-                    {f.toUpperCase()} 내보내기
-                  </button>
-                ))}
             </div>
-            <CommandError error={downloadError} />
             {kind === 'incident' && app.canOperate && (
               <form
                 className="stack"

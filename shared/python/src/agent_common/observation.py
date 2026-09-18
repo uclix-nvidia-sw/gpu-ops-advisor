@@ -148,8 +148,9 @@ class Observation:
             # Query strings come only from reviewed configuration and escaped scope labels.
             base = "{" + ",".join(filters) + "}"
             cursor = start
+            chunk_seconds = limits.get("chunk_seconds", 3600)
             while cursor < end:
-                stop = min(end, cursor + limits.get("chunk_seconds", 3600))
+                stop = min(end, cursor + chunk_seconds)
                 window = {"start": iso(cursor), "end": iso(stop)}
                 if (
                     self.calls >= limits["max_queries"]
@@ -197,6 +198,7 @@ class Observation:
                     "unit": definition.get("unit"),
                     "datasource_uid": uid,
                     "query_revision": definition["revision"],
+                    "metric": definition.get("metric"),
                 }
                 try:
                     async with asyncio.timeout(
@@ -207,34 +209,62 @@ class Observation:
                     ):
                         response = unwrap(await self.tools[name](args))
                     size = len(json.dumps(response, ensure_ascii=False).encode())
+                    payload = (
+                        response.get("data", response)
+                        if isinstance(response, dict)
+                        else response
+                    )
+                    rows = (
+                        payload.get("result", payload)
+                        if isinstance(payload, dict)
+                        else payload
+                    )
+                    count = (
+                        sum(len(r.get("values", [])) or 1 for r in rows)
+                        if isinstance(rows, list)
+                        else 0
+                    )
+                    quality.update(
+                        sample_count=count,
+                        series_count=len(rows) if isinstance(rows, list) else 0,
+                    )
+                    # Range vectors contain many samples per series. Re-query a smaller
+                    # time window instead of throwing away a successfully fetched hour.
+                    # Every retry still consumes the same query/deadline budget.
+                    if (
+                        source != "loki"
+                        and (size > limits["max_bytes"] or count > limits["max_rows"])
+                        and stop - cursor > 1
+                    ):
+                        ratio = min(
+                            limits["max_bytes"] / max(size, 1),
+                            limits["max_rows"] / max(count, 1),
+                        )
+                        chunk_seconds = max(
+                            1, int((stop - cursor) * min(0.5, ratio * 0.8))
+                        )
+                        continue
                     if size > limits["max_bytes"]:
                         response = {}
                         quality.update(complete=False, reason="response_byte_limit")
                         status = "partial"
                     else:
-                        payload = (
-                            response.get("data", response)
-                            if isinstance(response, dict)
-                            else response
-                        )
-                        rows = (
-                            payload.get("result", payload)
-                            if isinstance(payload, dict)
-                            else payload
-                        )
-                        count = (
-                            sum(len(r.get("values", [])) or 1 for r in rows)
-                            if isinstance(rows, list)
-                            else 0
-                        )
                         warning = (
                             bool(response.get("warnings"))
                             if isinstance(response, dict)
                             else False
                         )
-                        if count >= limits["max_rows"] or warning:
+                        limited = (
+                            count >= limits["max_rows"]
+                            if source == "loki"
+                            else count > limits["max_rows"]
+                        )
+                        if limited or warning:
                             quality.update(
-                                complete=False, reason="row_limit_or_source_warning"
+                                complete=False,
+                                reason="source_warning"
+                                if warning
+                                else "sample_limit_exceeded",
                             )
                         status = (
                             "partial"

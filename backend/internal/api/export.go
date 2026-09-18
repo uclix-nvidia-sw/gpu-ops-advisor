@@ -32,6 +32,9 @@ func (s *Server) exportReport(w http.ResponseWriter, q *Request, id string) erro
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=report-"+String(job, "id")+"."+format)
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
+	if metrics := reportMetrics(body); len(metrics) > 0 {
+		return exportMetrics(w, id, format, body, metrics)
+	}
 	if format == "html" {
 		data, _ := json.MarshalIndent(body, "", "  ")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

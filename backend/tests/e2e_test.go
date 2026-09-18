@@ -125,7 +125,8 @@ func TestBackendE2E(t *testing.T) {
 	})
 	t.Run("only_published_candidate_and_safe_export_survive_restart", func(t *testing.T) {
 		candidate := ID()
-		body := Object{"result_status": "partial", "narrative_status": "omitted", "note": "<script>alert(1)</script>", "formula": "=1+1"}
+		body := Object{"result_status": "partial", "narrative_status": "omitted", "note": "<script>alert(1)</script>", "formula": "=1+1",
+			"topics": []any{Object{"topic_id": "O02", "metrics": []any{Object{"id": "O02.mapped_gpu_hours", "value": 1.5, "unit": "GPU-hours", "method": "observed_gpu_pod_interval_union", "target": Object{"namespace": "=1+1"}, "quality": Object{}}}}}}
 		_, e = db.Pool.Exec(ctx, "INSERT INTO result_candidates(id,job_id,attempt_no,kind,schema_version,body,content_hash,validation_status) VALUES($1,$2,1,'report','1.3',$3,'hash','valid')", candidate, reportID, body)
 		must(t, e)
 		job := call("GET", "/reports/"+reportID, nil, 200)
@@ -153,6 +154,9 @@ func TestBackendE2E(t *testing.T) {
 			}
 			if format == "html" && strings.Contains(string(data), "<script>") {
 				t.Fatal("HTML injection")
+			}
+			if format == "html" && !strings.Contains(string(data), "<table>") {
+				t.Fatal("report metrics were not rendered")
 			}
 			if format == "csv" && !strings.Contains(string(data), "'=1+1") {
 				t.Fatal("CSV formula injection")
