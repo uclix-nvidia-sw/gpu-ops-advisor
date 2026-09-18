@@ -50,6 +50,7 @@ func TestRealJobController(t *testing.T) {
 	must(t, db.Migrate(ctx))
 	must(t, db.Seed(ctx))
 	cfg := jc.DefaultConfig()
+	attemptBudget := cfg.Execution["local-v1"].AttemptBudget
 	controller, e := jc.New(db.Pool, cfg)
 	must(t, e)
 	must(t, controller.Prepare(ctx, false))
@@ -271,8 +272,8 @@ func TestRealJobController(t *testing.T) {
 		exec("UPDATE jobs SET eligible_at=clock_timestamp()-interval '1 second' WHERE id=$1", id)
 		cl3 := call("/claims", w, 200)
 		v := call("/jobs/"+id+"/fail", Object{"attempt_no": cl3["attempt_no"], "claim_token": cl3["claim_token"], "code": "transient_error", "retryable": true, "remote_call_state": "terminated"}, 200)
-		if v["status"] != "failed" || Number(v, "budget_used") != 3000 {
-			t.Fatal(v)
+		if v["status"] != "failed" || Number(v, "budget_used") != 3*attemptBudget {
+			t.Fatalf("expected failed job with three reserved attempt budgets (%d): %v", 3*attemptBudget, v)
 		}
 		apiCall("POST", "/jobs/"+id+"/retry", Object{"reason": "E2E retry"}, 409, "If-Match", fmt.Sprint(Number(v, "version")), "Idempotency-Key", ID())
 	})
@@ -399,8 +400,8 @@ func TestRealJobController(t *testing.T) {
 		headers := []string{"Idempotency-Key", ID(), "If-Match", fmt.Sprint(Number(v, "version"))}
 		a := apiCall("POST", "/jobs/"+id+"/retry", Object{"reason": "recover"}, 200, headers...)
 		b := apiCall("POST", "/jobs/"+id+"/retry", Object{"reason": "recover"}, 200, headers...)
-		if a["version"] != b["version"] || Number(b, "budget_used") != 1000 || Number(b, "attempt_no") != 1 {
-			t.Fatal(a, b)
+		if a["version"] != b["version"] || Number(b, "budget_used") != attemptBudget || Number(b, "attempt_no") != 1 {
+			t.Fatalf("retry receipt must preserve one reserved attempt budget (%d): %v %v", attemptBudget, a, b)
 		}
 		cl = call("/claims", w, 200)
 		if Number(cl, "attempt_no") != 2 {
