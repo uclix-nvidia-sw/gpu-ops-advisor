@@ -27,14 +27,14 @@ Copy-Item agents/.env.example agents/.env
 
 `.env`에 기존 `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` 등을 설정합니다. `/chat/completions`를 호출하며 단계별 모델 설정, 300초 요청 상한, 기본 4096/설명 16384/insight 1024 토큰 설정을 지원합니다. 실제 호출은 JC attempt budget과 deadline으로 추가 제한합니다. 키는 코드·이미지에 넣지 않습니다. 모델/주소/키가 없으면 LLM 설명을 생략하고 유효한 결정적 결과는 유지합니다.
 
-실행 전 `agents/config.example.json`을 배포 프로필로 복사해 `AGENT_CONFIG_FILE`로 지정합니다. 실제 datasource UID, CPC selector, 원본 주기·최대 유효시간·단위·query revision을 검수하고 해당 query의 `validated`를 `true`로 바꿉니다. 예시의 `false`는 미검증 출처가 계산에 섞이지 않도록 하는 차단값입니다. C07 숫자도 예시이며 운영 확정값이 아닙니다.
+기본 실행은 포함된 `agents/config.example.json` 프로필을 그대로 사용하며 별도 파일 작성이 필요 없습니다. 기본 쿼리는 모두 `validated: true`이고 이 필드는 수집 차단 스위치로 사용하지 않습니다. Grafana MCP로 datasource 목록과 클러스터 label 값을 탐색해 UID/selector를 자동으로 결정합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
 
-Mimir tenant는 Grafana 데이터소스 헤더에서 설정합니다. 예시 CPC-2 지표는 `cluster_id="cpc-2"`, Loki는 `cluster="cpc2"` selector를 사용하며 tenant/실제 UID는 운영 환경에서 확인해야 합니다. Worker에 Mimir/Loki 직접 주소를 주지 않습니다.
+Mimir tenant와 인증은 기존 Grafana 데이터소스 설정을 사용합니다. Worker에 Mimir/Loki 직접 주소·계정·UID를 주지 않습니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. `cpc-2`와 `cpc2` 같은 서로 다른 cluster ID는 자동으로 동일시하지 않습니다. 고급 환경의 명시적 매핑·생산자별 의미 계약이 필요하면 `AGENT_CONFIG_FILE`로 전체 프로필을 선택적으로 지정할 수 있습니다. C07 숫자는 예시이며 운영 확정값이 아닙니다.
 
 ```powershell
 $env:GRAFANA_URL='https://your-grafana'
 # GRAFANA_SERVICE_ACCOUNT_TOKEN은 로컬 환경에 설정
-.local/mcp-grafana/mcp-grafana.exe -t streamable-http -address 127.0.0.1:8000 -enabled-tools prometheus,loki -disable-write -max-loki-log-limit 5000
+.local/mcp-grafana/mcp-grafana.exe -t streamable-http -address 127.0.0.1:8000 -enabled-tools datasource,prometheus,loki -disable-write -max-loki-log-limit 5000
 ```
 
 별도 터미널에서 JC·DB를 먼저 준비하고 Worker를 실행합니다. `agents/.env`의 Docker 호스트명 대신 로컬 접속 주소를 사용합니다. `.env`는 CLI가 자동으로 읽지 않으므로 `uv run --env-file`을 사용합니다.
@@ -89,6 +89,6 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 ./agents/scripts/test.ps1 -E2E -PgBin ./backend/.local/postgres/bin/bin
 ```
 
-E2E는 Windows PostgreSQL 바이너리와 Go가 필요합니다. `PG_BIN`, `JC_BINARY`, `GRAFANA_MCP_BINARY`로 경로를 변경할 수 있습니다. 테스트마다 별도 PostgreSQL data directory/포트를 만들고, 생성한 서비스만 종료합니다. 로그·출력은 gitignore 대상 `.local/agent-e2e/`에 남깁니다. 자세한 검증 결과는 [QA.md](QA.md)입니다.
+E2E는 Windows PostgreSQL 바이너리와 Go가 필요합니다. 스크립트는 JC와 Incident를 빌드합니다. `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `GRAFANA_MCP_BINARY`로 경로를 변경할 수 있습니다. 실제 Incident 웹훅 → outbox → JC → RCA Worker → 결과 발행 경로를 포함하며, 이 테스트는 snapshot을 DB에 직접 삽입하지 않습니다. 별도 legacy snapshot/Runbook 사례도 유지합니다. 테스트마다 별도 PostgreSQL data directory/포트를 만들고, 생성한 서비스만 종료합니다. 로그·출력은 gitignore 대상 `.local/agent-e2e/`에 남깁니다. 자세한 검증 결과는 [QA.md](QA.md)입니다.
 
 기술 확인 근거: [NAT MCP client](https://docs.nvidia.com/nemo/agent-toolkit/1.5/build-workflows/mcp-client.html), [NAT custom functions](https://docs.nvidia.com/nemo/agent-toolkit/1.5/extend/custom-components/custom-functions/functions.html), [공식 Grafana MCP](https://github.com/grafana/mcp-grafana/tree/v1.4.2).

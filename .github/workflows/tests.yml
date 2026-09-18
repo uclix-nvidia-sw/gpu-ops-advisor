@@ -85,10 +85,11 @@ jobs:
         run: |
           ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
           ruff format --check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
-      - name: Build JC and download verified official MCP
+      - name: Build JC and Incident and download verified official MCP
         run: |
           mkdir -p .local/mcp-grafana
           go -C job-controller build -o ../.local/job-controller ./cmd/server
+          go -C incident build -o ../.local/incident ./cmd/server
           cd .local/mcp-grafana
           release=https://github.com/grafana/mcp-grafana/releases/download/v1.4.2
           curl --fail --location --retry 3 "$release/mcp-grafana_Linux_x86_64.tar.gz" -o mcp-grafana_Linux_x86_64.tar.gz
@@ -100,6 +101,7 @@ jobs:
           RUN_AGENT_E2E: '1'
           AGENT_E2E_DATABASE_URL: postgres://dsx:ci-only@127.0.0.1:5432/agent_e2e?sslmode=disable
           JC_BINARY: ${{ github.workspace }}/.local/job-controller
+          INCIDENT_BINARY: ${{ github.workspace }}/.local/incident
           GRAFANA_MCP_BINARY: ${{ github.workspace }}/.local/mcp-grafana/mcp-grafana
         run: python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/agent-e2e/results.xml
       - uses: actions/upload-artifact@v4

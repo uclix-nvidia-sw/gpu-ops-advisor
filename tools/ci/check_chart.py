@@ -80,6 +80,10 @@ def main():
     }
     assert set(deployments) == names
     config = next(d for d in docs if d["kind"] == "ConfigMap")["data"]
+    agent_profile = json.loads(config["agents.json"])
+    assert agent_profile["clusters"] == {}, "Default installs must discover sources"
+    assert all(q["validated"] is True for q in agent_profile["queries"].values())
+    assert "REPLACE_" not in config["agents.json"]
     assert "http://verify-gpu-ops-advisor-backend:8080" in config["nginx.conf"]
     for name in ("rcca-agent", "ops-agent"):
         pod = deployments[name]["spec"]["template"]["spec"]

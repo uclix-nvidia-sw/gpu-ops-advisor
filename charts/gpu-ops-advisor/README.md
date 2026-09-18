@@ -28,6 +28,8 @@ helm pull oci://ghcr.io/<github-owner>/charts/gpu-ops-advisor --version 1.3.0
 
 ## 설치 준비
 
+내장 PostgreSQL을 사용하는 설치는 [설치용 values](../../docs/deployment-values.yaml)와 [Secret 준비·설치 명령 안내](../../docs/helm-install.md)를 사용할 수 있습니다.
+
 릴리스 이름을 `gpu-ops`, namespace를 `gpu-ops`로 설치하면 DB 서비스명은 `gpu-ops-gpu-ops-advisor-postgres`입니다. 다른 릴리스 이름을 쓰면 `helm template`으로 이름을 확인하고 DB URL도 맞춥니다. 모든 Secret은 같은 namespace에 미리 준비합니다. chart 자체는 Secret을 생성하지 않으며 값에 비밀을 넣지 않습니다.
 
 | 기존 Secret 기본 이름 | 필수 key | 용도 |
@@ -68,7 +70,11 @@ artifacts:
 
 LLM 모델·주소·토큰 한도는 [Agent 설정](../../agents/README.md)의 동일한 설정을 사용합니다. 단계별 모델은 `components.rcca-agent.env.LLM_MODEL_PLANNER` 등 `components.<name>.env`에 문자열로 설정할 수 있습니다. 비밀값은 위 Secret 참조를 사용합니다.
 
-기본 `files/agents.json`은 검수 전 예시입니다. 실제 datasource UID·cluster selector·query revision·단위·parser를 검수한 전체 JSON을 별도 파일로 준비하고 `--set-json configuration.agents="$(cat /secure/agents.json)"` 또는 values의 `configuration.agents`에 **전체 프로필 객체**로 설정합니다. 예시 `validated: false`는 의도적인 수집 차단값입니다. `configuration.jobController`, `configuration.incident`도 전체 객체로 대체할 수 있습니다. 원본 예시와 chart 내부 복사본의 일치는 CI가 검사합니다.
+`configuration.agents: {}`는 내장 수집 프로필을 사용합니다. 별도 `agents.json`을 만들거나 datasource UID, Mimir/Loki 접속 정보를 입력할 필요가 없습니다. Agent가 Grafana MCP의 `list_datasources`와 label 조회 도구로 작업 대상 클러스터에 해당하는 Prometheus 호환/Mimir 및 Loki datasource와 selector를 찾습니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. 기본 쿼리의 `validated`는 모두 `true`이며 수집 차단 스위치로 사용하지 않습니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
+
+탐색은 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 라벨 순서로 수행합니다. 첫 번째로 값이 존재하는 라벨에서 작업의 cluster ID와 정확히 일치하는 대상을 찾습니다. 일치하는 datasource가 하나일 때만 조회하며, 후보가 여러 개거나 클러스터 라벨이 없거나 권한/통신 오류가 있으면 원인을 evidence와 Worker 로그에 남깁니다. `cpc-2`와 `cpc2` 같은 별칭을 임의로 동일시하거나 전체 클러스터로 조회 범위를 넓히지 않습니다. 표준 배포에서는 Grafana에 올바른 데이터소스와 클러스터 라벨이 준비되어 있어야 합니다.
+
+고급 환경에서는 `configuration.agents`에 전체 프로필 객체를 지정해 기존의 명시적 UID/selector 매핑이나 생산자별 의미 계약을 유지할 수 있습니다. `configuration.jobController`, `configuration.incident`도 전체 객체로 대체할 수 있습니다. 내장 프로필과 chart 내부 복사본의 일치는 CI가 검사합니다. 이 기능은 두 Worker와 Grafana MCP의 새 이미지 및 새 chart를 함께 발행한 뒤 사용할 수 있습니다.
 
 최초 설치는 JC·Incident 설정을 DB에 초기화합니다. 업그레이드 시 기존 DB 설정은 보존하며, 전달한 설정이 DB revision과 다르면 서비스는 시작을 거부합니다. 명시적으로 설정을 적용할 때만 `configuration.applyJobController`/`applyIncident`를 `true`로 설정하고, 정책·실행 프로필의 변경은 새 revision으로 관리합니다. `seedDemoData` 기본값은 `false`이며 실제 cluster_registry 및 운영 설정은 별도로 등록합니다.
 

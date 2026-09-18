@@ -71,6 +71,23 @@ def content_hash(value):
     return hashlib.sha256(go_json(value).encode()).hexdigest()
 
 
+def incident_source(snapshot):
+    """Read immutable Incident alerts without treating webhook fields as verified facts."""
+    if not isinstance(snapshot, dict):
+        raise ValueError("invalid incident snapshot")
+    if "alert" in snapshot:
+        if not isinstance(snapshot["alert"], dict):
+            raise ValueError("invalid incident alert")
+        # Incident stores the raw Grafana alert here. Keep it raw; procedure selection
+        # falls back to the registered purposes, not unverified fields in the webhook.
+        return {"alert": snapshot["alert"]}
+    if "evidence" in snapshot:
+        # Compatibility with previously accepted, immutable evidence-format snapshots.
+        source = snapshot["evidence"]
+        return source if isinstance(source, dict) else {"raw": source}
+    raise ValueError("incident snapshot requires alert or evidence")
+
+
 def validate_input(kind, data):
     clusters = data["scope"]["clusters"]
     if not clusters or len({c["cluster_id"] for c in clusters}) != len(clusters):
@@ -89,6 +106,7 @@ def validate_input(kind, data):
             raise ValueError("incident outside investigation period")
         ids, allowed = data["purpose_ids"], {f"R{i:02}" for i in range(1, 10)}
         snapshot = data["incident_snapshot"]
+        incident_source(snapshot)
         if snapshot["input"] != {
             k: v for k, v in data.items() if k != "incident_snapshot"
         }:

@@ -4,7 +4,7 @@ function_groups:
     server:
       transport: streamable-http
       url: ${GRAFANA_MCP_URL:-http://127.0.0.1:8000/mcp}
-    include: [query_prometheus, query_loki_logs]
+    include: [query_prometheus, query_loki_logs, list_datasources, list_prometheus_label_values, list_loki_label_values]
     tool_call_timeout: 30
     reconnect_enabled: false
 workflow:

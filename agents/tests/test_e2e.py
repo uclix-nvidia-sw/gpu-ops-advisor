@@ -1,4 +1,4 @@
-"""Real PostgreSQL + JC + Worker processes + NAT + official Grafana MCP.
+"""Real PostgreSQL + Incident + JC + Worker processes + NAT + official Grafana MCP.
 
 Only upstream Grafana datasource responses and the inference endpoint are fixtures.
 No production metrics or model-quality claims are made by this suite.
@@ -109,7 +109,18 @@ class Upstream(BaseHTTPRequestHandler):
         query = parse_qs(u.query)
         self.requests.append((u.path, query))
         if u.path == "/api/datasources":
-            return self.send([])
+            return self.send(
+                [
+                    {"id": 1, "uid": "mimir", "name": "Metrics", "type": "prometheus"},
+                    {"id": 2, "uid": "loki", "name": "Logs", "type": "loki"},
+                ]
+            )
+        if "/label/" in u.path and u.path.endswith("/values"):
+            label = u.path.split("/label/", 1)[1].split("/", 1)[0]
+            expected = "cluster" if "/loki/" in u.path else "cluster_id"
+            return self.send(
+                {"status": "success", "data": ["cpc-2"] if label == expected else []}
+            )
         if (
             "/api/datasources/uid/" in u.path
             and "/proxy/" not in u.path
@@ -179,7 +190,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "resultType": "streams",
                         "result": [
                             {
-                                "stream": {"cluster": "cpc2", "namespace": "dev"},
+                                "stream": {"cluster": "cpc-2", "namespace": "dev"},
                                 "values": [[str(start), line]],
                             }
                         ],
@@ -221,7 +232,10 @@ def stack():
         )
     )
     jc = Path(os.getenv("JC_BINARY", str(ROOT / (".local/job-controller" + extension))))
-    assert mcp.is_file() and jc.is_file()
+    incident = Path(
+        os.getenv("INCIDENT_BINARY", str(ROOT / (".local/incident" + extension)))
+    )
+    assert mcp.is_file() and jc.is_file() and incident.is_file()
     initdb, pg_ctl = pg_bin / ("initdb" + extension), pg_bin / ("pg_ctl" + extension)
     schema = "agent_e2e_" + uuid4().hex
     data = LOCAL / ("pg-" + uuid4().hex)
@@ -328,6 +342,20 @@ def stack():
             conn.execute(
                 "INSERT INTO cluster_registry(id) VALUES('cpc-2') ON CONFLICT DO NOTHING"
             )
+        incident_url = f"http://127.0.0.1:{port()}"
+        ip = spawn(
+            [str(incident)],
+            {
+                **os.environ,
+                "DATABASE_URL": url,
+                "INCIDENT_CONFIG_FILE": str(ROOT / "incident/config.example.json"),
+                "INCIDENT_JOB_CONTROLLER_URL": f"http://127.0.0.1:{jc_port}",
+                "INCIDENT_ADDRESS": incident_url.removeprefix("http://"),
+                "INCIDENT_APPLY_CONFIG": "false",
+            },
+            "incident",
+        )
+        wait_http(incident_url + "/internal/v1/health/ready", ip)
         upstream_url = f"http://127.0.0.1:{upstream.server_port}"
         mp = spawn(
             [
@@ -337,7 +365,7 @@ def stack():
                 "-address",
                 f"127.0.0.1:{mcp_port}",
                 "-enabled-tools",
-                "prometheus,loki",
+                "datasource,prometheus,loki",
                 "-disable-write",
                 "-max-loki-log-limit",
                 "5000",
@@ -351,7 +379,6 @@ def stack():
         )
         wait_http(f"http://127.0.0.1:{mcp_port}/healthz", mp)
         profile = json.loads((ROOT / "agents/config.example.json").read_text())
-        profile["clusters"]["cpc-2"].update(mimir_uid="mimir", loki_uid="loki")
         profile["health_contracts"] = {
             "fixture-v1": {
                 "producer_contract": "fixture-v1",
@@ -362,8 +389,6 @@ def stack():
                 },
             }
         }
-        for q in profile["queries"].values():
-            q.update(validated=True, revision="fixture-original-v1")
         profile_path = LOCAL / "profile.json"
         profile_path.write_text(json.dumps(profile))
         worker_env = {
@@ -377,7 +402,14 @@ def stack():
             "LLM_API_KEY": "fixture-only",
             "ARTIFACT_DIR": str(LOCAL / "artifacts"),
         }
-        yield dict(url=url, jc=jc_url, env=worker_env, spawn=spawn, profile=profile)
+        yield dict(
+            url=url,
+            jc=jc_url,
+            incident=incident_url,
+            env=worker_env,
+            spawn=spawn,
+            profile=profile,
+        )
     finally:
         upstream.shutdown()
         upstream.server_close()
@@ -494,6 +526,101 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack):
     assert any("/api/v1/query" in p for p, _ in Upstream.requests)
     assert any("/loki/api/v1/query_range" in p for p, _ in Upstream.requests)
     assert any(p == "/v1/chat/completions" for p, _ in Upstream.requests)
+
+
+@pytest.mark.e2e
+def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
+    alert = {
+        "status": "firing",
+        "fingerprint": uuid4().hex,
+        "startsAt": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+        "labels": {
+            "alertname": "GPUAlert",
+            "cluster_id": "cpc-2",
+            "namespace": "dev",
+            "node": "node-1",
+            "gpu_uuid": "GPU-1",
+            "severity": "warning",
+        },
+        "annotations": {
+            "summary": "GPU alert from real Incident path",
+            "error_code": "Xid 79",
+        },
+    }
+    response = httpx.post(
+        stack["incident"] + "/webhooks/grafana", json={"alerts": [alert]}, timeout=10
+    )
+    assert response.status_code == 202, response.text
+    item = response.json()["items"][0]
+    assert item["outbox_id"], item
+    # Read what Incident persisted and delivered; never manufacture an RCA snapshot/job.
+    with psycopg.connect(stack["url"], autocommit=True) as conn:
+        snapshot, digest = conn.execute(
+            "SELECT snapshot,content_hash FROM incident_evidence_versions WHERE incident_id=%s AND revision=%s",
+            (item["incident_id"], item["evidence_version"]),
+        ).fetchone()
+        assert snapshot["alert"] == alert and "evidence" not in snapshot
+        assert content_hash(snapshot) == digest
+        for _ in range(100):
+            jid, status = conn.execute(
+                "SELECT job_id,status FROM enqueue_outbox WHERE id=%s",
+                (item["outbox_id"],),
+            ).fetchone()
+            if jid and status == "accepted":
+                break
+            time.sleep(0.1)
+        else:
+            pytest.fail("Incident did not dispatch RCA through its outbox")
+    result, evidence = worker_result(stack, "rca", str(jid), "-incident-webhook")
+    assert result["incident_id"] == item["incident_id"]
+    assert {a["purpose_id"] for a in result["assessments"]} == {"R01", "R02"}
+    assert ("incident_snapshot", "ok") in evidence
+    assert any(query.startswith("D") for query, _ in evidence)
+    with psycopg.connect(stack["url"]) as conn:
+        saved_snapshot, checksum = conn.execute(
+            "SELECT snapshot,checksum FROM evidence WHERE job_id=%s AND query_id='incident_snapshot'",
+            (jid,),
+        ).fetchone()
+        assert saved_snapshot == snapshot and checksum == digest
+        unchanged = conn.execute(
+            "SELECT snapshot,content_hash FROM incident_evidence_versions WHERE incident_id=%s AND revision=%s",
+            (item["incident_id"], item["evidence_version"]),
+        ).fetchone()
+        assert unchanged == (snapshot, digest)
+
+
+@pytest.mark.e2e
+def test_builtin_profile_without_datasource_configuration(stack):
+    builtin_stack = {
+        **stack,
+        "env": {
+            **stack["env"],
+            "AGENT_CONFIG_FILE": str(ROOT / "agents/config.example.json"),
+        },
+    }
+    request_start = len(Upstream.requests)
+    data = dict(
+        scope=SCOPE,
+        time_range=PERIOD,
+        timezone="UTC",
+        topic_ids=["O09", "O10"],
+        group_by=["cluster"],
+    )
+    jid = submit(builtin_stack, "report", data)
+    report, evidence = worker_result(builtin_stack, "report", jid, "-builtin")
+    energy = next(t for t in report["topics"] if t["topic_id"] == "O09")["metrics"][0]
+    assert energy["value"] == 0.25
+    assert any(q == "D11" and s == "ok" for q, s in evidence)
+    assert any(q == "D09" and s == "ok" for q, s in evidence)
+    requests = Upstream.requests[request_start:]
+    assert any(p == "/api/datasources" for p, _ in requests)
+    assert any("/label/cluster_id/values" in p for p, _ in requests)
+    assert any("/label/cluster/values" in p for p, _ in requests)
+    for path, args in requests:
+        if path.endswith("/api/v1/query"):
+            assert 'cluster_id="cpc-2"' in args["query"][0]
+        if path.endswith("/loki/api/v1/query_range"):
+            assert 'cluster="cpc-2"' in args["query"][0]
 
 
 @pytest.mark.e2e

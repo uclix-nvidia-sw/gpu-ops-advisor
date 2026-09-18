@@ -45,6 +45,7 @@ GPU UUID는 입력 라벨에 있을 때만 보존합니다. node/pod/namespace �
 - 24시간보다 오래된 알람, 아직 미래인 알람, resolved 또는 closed 사건은 보존만 합니다. 허용된 시계 오차보다 미래인 timestamp는 invalid입니다. 기간·한도는 설정할 수 있습니다.
 - 사건 state와 alarm_status는 분리됩니다. Grafana resolved는 alarm_status만 바꾸고 사건을 resolved/closed나 장비·업무 회복으로 자동 판정하지 않습니다. 같은 생명주기의 늦은 firing은 resolved를 되돌리지 않습니다.
 - snapshot에는 완전한 RCA input과 원본 alert·정책을 고정하고 hash를 저장합니다. JC는 input·snapshot·hash를 실제 검증합니다. source_key는 `incident:<id>:evidence:<version>:profile:<revision>`입니다.
+- RCA는 snapshot의 `alert`를 원본 증거로 읽으며 이미 저장된 snapshot을 변환하거나 hash를 다시 쓰지 않습니다. 실제 RCA 실행까지의 회귀 검증은 [Agent 통합 테스트](../agents/tests/test_e2e.py)의 Grafana webhook 경로에 포함됩니다.
 - 5초 전달 루프는 자기 outbox 행만 잠그고 같은 envelope로 재전송합니다. JC 응답 유실·기한 경과 시 receipt를 먼저 확인합니다. JC가 내려가 있어도 Webhook은 로컬 영속 저장 후 202를 반환합니다. 마감 뒤 JC receipt 조회마저 실패하면 pending을 유지합니다.
 - RCA Agent가 없으면 JC 접수는 queued입니다. 실제 GPU 조사·LLM 추론을 Incident가 수행하지 않습니다.
 

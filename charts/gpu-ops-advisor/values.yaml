@@ -41,7 +41,8 @@ llm:
 
 configuration:
   # Empty objects use the checked-in JSON profiles under files/.
-  # For actual collection supply reviewed datasource UIDs, queries and revisions.
+  # Agents discover datasource UIDs and cluster labels through Grafana MCP.
+  # No separate agents.json is required; agents is an optional expert override.
   agents: {}
   jobController: {}
   incident: {}

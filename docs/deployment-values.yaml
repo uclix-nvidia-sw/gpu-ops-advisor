@@ -1,0 +1,72 @@
+# 내장 PostgreSQL 설치용 override. 사용법: helm-install.md
+# release/namespace: gpu-ops / gpu-ops
+# REPLACE_*를 실제 환경 값으로 수정하세요. 비밀값은 Kubernetes Secret에 넣습니다.
+# CI 발행 chart의 이미지 namespace/tag/digest는 그대로 사용합니다.
+
+global:
+  # private GHCR 이미지 다운로드용 Secret을 같은 namespace에 준비합니다.
+  imagePullSecrets:
+    - name: ghcr-pull
+
+database:
+  existingSecret: gpu-ops-advisor-database
+  urlKey: DATABASE_URL
+  passwordKey: POSTGRES_PASSWORD
+
+postgres:
+  enabled: true
+  database: dsx
+  username: dsx
+  persistence:
+    enabled: true
+    size: 10Gi
+    # 빈 문자열이면 클러스터 기본 StorageClass. 기본값이 없으면 이름을 지정합니다.
+    storageClass: ""
+
+grafana:
+  # MCP Pod에서 접근 가능한 기존 Grafana 주소
+  url: "http://192.168.20.186:31891"
+  existingSecret: gpu-ops-advisor-grafana
+  tokenKey: GRAFANA_SERVICE_ACCOUNT_TOKEN
+
+llm:
+  # 인증 없는 LLM 서버는 existingSecret: ""로 변경합니다.
+  existingSecret: gpu-ops-advisor-llm
+  apiKeyKey: LLM_API_KEY
+  baseUrl: "https://REPLACE_LLM_HOST/v1"
+  model: "REPLACE_LLM_MODEL"
+  requestTimeoutSeconds: 300
+  defaultMaxTokens: 4096
+  synthesisMaxTokens: 16384
+  insightMaxTokens: 1024
+
+configuration:
+  # 내장 프로필 사용. Grafana MCP에서 datasource UID와 클러스터 라벨을 자동 탐색합니다.
+  # 별도 agents.json / Mimir·Loki 접속 설정 / validated 설정은 필요 없습니다.
+  agents: {}
+  jobController: {}
+  incident: {}
+  applyJobController: false
+  applyIncident: false
+  seedDemoData: false
+  executionProfileRevision: local-v1
+
+artifacts:
+  persistence:
+    enabled: true
+    # 보고서를 uninstall 후에도 보존하려면 미리 만든 PVC 이름을 지정합니다.
+    # 빈 값이면 chart가 PVC를 만들며 helm uninstall 시 삭제됩니다.
+    existingClaim: ""
+    size: 10Gi
+    storageClass: ""
+
+ingress:
+  enabled: false
+  # Ingress 사용 시 enabled/className/host/tls를 환경에 맞게 설정합니다.
+  className: ""
+  host: "REPLACE_GPU_OPS_HOST"
+  tls: []
+
+nodeSelector:
+  kubernetes.io/os: linux
+  kubernetes.io/arch: amd64

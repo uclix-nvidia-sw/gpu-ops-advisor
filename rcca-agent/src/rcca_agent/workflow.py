@@ -7,6 +7,7 @@ from agent_common.contracts import (
     content_hash,
     timestamp,
     now,
+    incident_source,
 )
 from agent_common.llm import explain
 from agent_common.normalize import allocations
@@ -69,9 +70,7 @@ async def run(tools):
     claim, profile = ctx["claim"], ctx["profile"]
     data = claim["input"]
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
-    source = data["incident_snapshot"]["evidence"]
-    if not isinstance(source, dict):
-        source = {"raw": source}
+    source = incident_source(data["incident_snapshot"])
     obs = Observation(tools, profile, data, ctx["deadline"])
     eid = str(uuid4())
     obs.evidence.append(

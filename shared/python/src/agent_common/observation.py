@@ -1,11 +1,15 @@
 import asyncio
 import json
+import logging
 import re
 import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from .contracts import timestamp, now
+from .discovery import Discovery, DiscoveryError
+
+log = logging.getLogger(__name__)
 
 
 def iso(t):
@@ -38,6 +42,30 @@ class Observation:
         self.evidence = []
         self.calls = 0
         self.cache = {}
+        self.discovery_calls = 0
+        self.discovery = Discovery(self._discover)
+
+    async def _discover(self, name, args):
+        limits = self.profile["limits"]
+        if self.discovery_calls >= limits.get("max_discovery_calls", 64):
+            raise DiscoveryError("discovery_budget_exhausted")
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise DiscoveryError("discovery_deadline_exhausted")
+        self.discovery_calls += 1
+        try:
+            async with asyncio.timeout(
+                min(limits.get("query_timeout_seconds", 30), remaining)
+            ):
+                result = unwrap(await self.tools[name](args))
+            if len(json.dumps(result).encode()) > limits["max_bytes"]:
+                raise DiscoveryError("discovery_response_byte_limit")
+            return result
+        except DiscoveryError:
+            raise
+        except Exception as exc:
+            # Never put upstream error bodies or credentials into evidence/logs.
+            raise DiscoveryError("datasource_discovery_failed") from exc
 
     async def collect(self, query_id, period=None):
         period = period or self.data["time_range"]
@@ -69,8 +97,25 @@ class Observation:
             ]
         out = []
         for scope in self.data["scope"]["clusters"]:
-            cluster = self.profile["clusters"].get(scope["cluster_id"])
-            if not cluster or not definition.get("validated", False):
+            source = definition["source"]
+            cluster = self.profile.get("clusters", {}).get(scope["cluster_id"], {})
+            uid_key = "loki_uid" if source == "loki" else "mimir_uid"
+            selector_key = "loki_selector" if source == "loki" else "metric_selector"
+            try:
+                if cluster.get(uid_key) and selector_key in cluster:
+                    # Optional legacy/expert overrides; normal deployments discover both.
+                    uid, selector = cluster[uid_key], dict(cluster[selector_key])
+                else:
+                    uid, selector = await self.discovery.resolve(
+                        source, scope["cluster_id"], period
+                    )
+            except DiscoveryError as exc:
+                log.warning(
+                    "Grafana discovery unavailable source=%s cluster=%s reason=%s",
+                    source,
+                    scope["cluster_id"],
+                    exc.reason,
+                )
                 out.append(
                     self._evidence(
                         query_id,
@@ -78,17 +123,11 @@ class Observation:
                         period,
                         {},
                         "unavailable",
-                        {"reason": "unsupported_source"},
+                        {"reason": exc.reason, "source": source},
                     )
                 )
                 continue
-            selector = dict(
-                cluster[
-                    "loki_selector"
-                    if definition["source"] == "loki"
-                    else "metric_selector"
-                ]
-            )
+            selector = dict(selector)
             target = (
                 self.data.get("target") or self.data.get("resource_selectors") or {}
             )
@@ -127,8 +166,6 @@ class Observation:
                         )
                     )
                     break
-                source = definition["source"]
-                uid = cluster["loki_uid" if source == "loki" else "mimir_uid"]
                 if source == "loki":
                     name = "query_loki_logs"
                     args = dict(
