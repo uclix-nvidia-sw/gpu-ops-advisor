@@ -73,6 +73,31 @@ def main():
         ), f"Stale chart config: {name}"
     subprocess.run([HELM, "lint", "--strict", str(CHART)], check=True)
     docs = render()
+    services = {
+        d["metadata"]["name"]: d["spec"] for d in docs if d["kind"] == "Service"
+    }
+    frontend = services["verify-frontend"]
+    assert frontend["type"] == "NodePort"
+    assert frontend["ports"] == [
+        {"name": "http", "port": 8080, "targetPort": "http", "nodePort": 30006}
+    ]
+    assert all(
+        s.get("type", "ClusterIP") == "ClusterIP"
+        for name, s in services.items()
+        if name != "verify-frontend"
+    )
+    internal = next(
+        d["spec"]
+        for d in render("--set", "frontendService.type=ClusterIP")
+        if d["kind"] == "Service" and d["metadata"]["name"] == "verify-frontend"
+    )
+    assert internal["type"] == "ClusterIP" and "nodePort" not in internal["ports"][0]
+    custom_port = next(
+        d["spec"]
+        for d in render("--set", "frontendService.nodePort=30007")
+        if d["kind"] == "Service" and d["metadata"]["name"] == "verify-frontend"
+    )
+    assert custom_port["ports"][0]["nodePort"] == 30007
     deployments = {
         d["metadata"]["labels"]["app.kubernetes.io/component"]: d
         for d in docs

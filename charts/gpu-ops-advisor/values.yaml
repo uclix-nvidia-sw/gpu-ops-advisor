@@ -66,6 +66,10 @@ artifacts:
     size: 10Gi
     storageClass: ""
 
+frontendService:
+  type: NodePort
+  nodePort: 30006
+
 components:
   backend:
     enabled: true

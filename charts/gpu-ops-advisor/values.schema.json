@@ -10,9 +10,19 @@
     "llm",
     "configuration",
     "artifacts",
-    "ingress"
+    "ingress",
+    "frontendService"
   ],
   "properties": {
+    "frontendService": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "nodePort"],
+      "properties": {
+        "type": {"type": "string", "enum": ["ClusterIP", "NodePort"]},
+        "nodePort": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    },
     "components": {
       "type": "object",
       "additionalProperties": false,

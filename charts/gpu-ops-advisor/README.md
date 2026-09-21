@@ -91,7 +91,7 @@ kubectl -n gpu-ops get pods,pvc,svc
 kubectl -n gpu-ops port-forward svc/gpu-ops-frontend 8080:8080
 ```
 
-모든 Service는 ClusterIP이며 Ingress 기본값은 꺼져 있습니다. 현재 제품의 인증 제외 범위에 맞춰 신뢰하는 내부 네트워크에서 사용합니다. Incident webhook은 클러스터 내부의 `http://gpu-ops-incident:8091`에 별도로 연결합니다. 외부 Grafana에서 webhook을 전달해야 하면 운영 네트워크에 맞는 내부 라우팅을 구성합니다. frontend Ingress는 `ingress.enabled`, `className`, `host`, `tls`로 설정합니다.
+Frontend Service는 기본적으로 NodePort `30006`을 사용하며 `http://<노드 IP>:30006`으로 접속합니다. Service·컨테이너 포트는 `8080`입니다. `frontendService.type`과 `frontendService.nodePort`로 변경할 수 있고, `ClusterIP`를 선택하면 NodePort를 할당하지 않습니다. 다른 Service는 ClusterIP이며 Ingress 기본값은 꺼져 있습니다. 현재 제품의 인증 제외 범위에 맞춰 신뢰하는 내부 네트워크에서 사용합니다. Incident webhook은 클러스터 내부의 `http://gpu-ops-incident:8091`에 별도로 연결합니다. 외부 Grafana에서 webhook을 전달해야 하면 운영 네트워크에 맞는 내부 라우팅을 구성합니다. frontend Ingress는 `ingress.enabled`, `className`, `host`, `tls`로 설정합니다.
 
 GHCR 이미지가 비공개라면 `global.imagePullSecrets: [{name: ghcr-pull}]`과 동일 namespace의 registry Secret이 필요합니다. CI 패키지에 들어 있는 이미지 digest는 유지하고, 직접 소스로 설치할 때는 `global.imageNamespace`와 각 `components.<name>.image.tag`에 실제 발행된 이미지를 지정합니다.
 

@@ -64,6 +64,10 @@ artifacts:
     size: 10Gi
     storageClass: ""
 
+frontendService:
+  type: NodePort
+  nodePort: 30006
+
 ingress:
   enabled: false
   # Ingress 사용 시 enabled/className/host/tls를 환경에 맞게 설정합니다.

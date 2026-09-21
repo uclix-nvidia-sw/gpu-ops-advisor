@@ -153,10 +153,10 @@ helm status gpu-ops -n gpu-ops-advisor
 kubectl -n gpu-ops-advisor get pods,pvc,svc
 kubectl -n gpu-ops-advisor rollout status statefulset/gpu-ops-postgres
 kubectl -n gpu-ops-advisor logs deployment/gpu-ops-grafana-mcp --tail=100
-kubectl -n gpu-ops-advisor port-forward svc/gpu-ops-frontend 8080:8080
+kubectl -n gpu-ops-advisor get svc gpu-ops-frontend
 ```
 
-포트 포워딩 실행 중 브라우저에서 `http://localhost:8080`으로 접속한다. 분석 작업을 실행해 Worker 로그와 evidence에서 datasource 자동 탐색 및 실제 query 성공을 확인한다. 기본 Ingress는 꺼져 있다.
+Frontend는 기본값 `frontendService.type: NodePort`, `frontendService.nodePort: 30006`으로 배포된다. 브라우저에서 `http://192.168.20.186:30006`으로 접속한다(다른 환경은 노드 IP를 사용). 기존 설치도 새 chart로 업그레이드하면 같은 포트가 적용되므로 별도 Service patch는 필요 없다. `--reuse-values`로 이전 values 전체를 재사용하기보다 위 설치 명령처럼 사용자 values 파일을 전달해 새 기본값을 병합한다. 분석 작업을 실행해 Worker 로그와 evidence에서 datasource 자동 탐색 및 실제 query 성공을 확인한다. 기본 Ingress는 꺼져 있다.
 
 업그레이드에서 JC/Incident 운영 설정은 기본적으로 values의 설정을 DB에 적용한다. 이미 접수된 작업의 입력·예산 스냅샷과 저장된 보고서는 그대로 유지된다. PostgreSQL PVC는 uninstall 후에도 남지만 chart가 생성한 보고서 PVC는 삭제되므로, 보고서를 보존할 배포는 기존 PVC를 지정한다.
 

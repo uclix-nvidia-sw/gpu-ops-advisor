@@ -11,7 +11,11 @@ metadata:
     {{- include "gpu.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $name }}
 spec:
+{{- if eq $name "frontend" }}
+  type: {{ $root.Values.frontendService.type }}
+{{- else }}
   type: ClusterIP
+{{- end }}
   selector:
     app.kubernetes.io/instance: {{ $root.Release.Name }}
     app.kubernetes.io/component: {{ $name }}
@@ -19,5 +23,8 @@ spec:
     - name: http
       port: {{ $port }}
       targetPort: http
+{{- if and (eq $name "frontend") (eq $root.Values.frontendService.type "NodePort") }}
+      nodePort: {{ $root.Values.frontendService.nodePort }}
+{{- end }}
 {{- end }}
 {{- end }}
