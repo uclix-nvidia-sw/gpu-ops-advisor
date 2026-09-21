@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from .contracts import timestamp, now
 from .discovery import Discovery, DiscoveryError
+from .grafana_time import prometheus_time
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +189,7 @@ class Observation:
                         datasourceUid=uid,
                         expr=expr,
                         queryType="instant",
-                        endTime=window["end"],
+                        endTime=prometheus_time(window["end"]),
                     )
                 self.calls += 1
                 quality = {

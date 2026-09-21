@@ -16,6 +16,14 @@
 
 각 Worker는 독립 프로세스/이미지이고 공유 코드는 패키지입니다. 별도 업무 큐·접수 API·일정 루프·장비 조작·RCA 직접 요청은 없습니다. JC register → claim → heartbeat → candidate/evidence 저장 → complete로 실행합니다. 한 프로세스에서 한 작업씩 처리하며 JC가 전역 슬롯을 제어합니다.
 
+## Grafana 시간 형식과 LLM 오류 진단
+
+Grafana MCP 1.4.2의 Prometheus 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. Worker는 Prometheus 탐색·조회 요청에서만 UTC 밀리초로 변환합니다. 탐색 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며, 원본 Incident snapshot·해시·증거 시각과 Loki 요청의 정밀도는 유지합니다.
+
+LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사가 성공해도 기존 `inference_quarantined`는 자동 해제되지 않습니다. 원격 추론 종료를 확인한 뒤 [Job Controller 운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따릅니다.
+
+이 처리는 공유 Python 모듈에 있으므로 배포할 때 `rcca-agent`와 `ops-agent` 이미지를 함께 다시 빌드합니다.
+
 ## Windows 실행
 
 저장소 루트의 PowerShell에서 실행합니다. Python 3.12와 NAT 1.5.0을 사용합니다.

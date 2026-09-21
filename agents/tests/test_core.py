@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 import json
@@ -175,6 +176,74 @@ async def test_llm_transport_and_unknown_termination():
         with pytest.raises(RemoteUncertain):
             await llm.complete("facts", {})
         assert states[-1] == "unknown"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error",
+    [
+        httpx.ConnectError,
+        httpx.ReadTimeout,
+        httpx.RemoteProtocolError,
+        asyncio.CancelledError,
+    ],
+)
+async def test_llm_transport_logs_safe_diagnostics_and_preserves_quarantine(
+    error, caplog
+):
+    def handler(request):
+        raise error("Bearer secret-token and private-prompt") from OSError(
+            "private-upstream-detail"
+        )
+
+    settings = Settings(
+        "rca",
+        llm_base_url="http://test/v1",
+        llm_model="model",
+        llm_api_key="secret-token",
+    )
+    states = []
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 10000, states.append, http)
+        expected = (
+            asyncio.CancelledError
+            if error is asyncio.CancelledError
+            else RemoteUncertain
+        )
+        with pytest.raises(expected):
+            await llm.complete("private-prompt", {}, stage="investigation")
+    assert states == ["running", "unknown"]
+    assert f"error_type={error.__name__}" in caplog.text
+    assert "cause_type=OSError" in caplog.text
+    assert "stage=investigation attempt=1" in caplog.text
+    assert "elapsed_seconds=" in caplog.text and "timeout_seconds=" in caplog.text
+    assert all(
+        secret not in caplog.text
+        for secret in ("secret-token", "private-prompt", "private-upstream-detail")
+    )
+
+
+@pytest.mark.asyncio
+async def test_llm_http_error_logs_status_without_body_or_quarantine(caplog):
+    def handler(request):
+        return httpx.Response(401, json={"error": "private-response"})
+
+    settings = Settings(
+        "rca",
+        llm_base_url="http://test/v1",
+        llm_model="model",
+        llm_api_key="secret-token",
+    )
+    states = []
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 10000, states.append, http)
+        assert await llm.complete("private-prompt", {}) is None
+    assert states == ["running", "terminated"]
+    assert "LLM HTTP failed" in caplog.text and "status=401" in caplog.text
+    assert all(
+        secret not in caplog.text
+        for secret in ("secret-token", "private-prompt", "private-response")
+    )
 
 
 @pytest.mark.asyncio

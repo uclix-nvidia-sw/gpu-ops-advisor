@@ -5,9 +5,43 @@ import time
 import pytest
 
 from agent_common.observation import Observation
+from agent_common.grafana_time import prometheus_time
 
 
 PERIOD = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T01:00:00Z"}
+
+
+@pytest.mark.parametrize(
+    "value,expected,rounded_start",
+    [
+        (
+            "2026-09-21T02:34:41.713295Z",
+            "2026-09-21T02:34:41.713Z",
+            "2026-09-21T02:34:41.714Z",
+        ),
+        (
+            "2026-09-21T11:34:41.713295+09:00",
+            "2026-09-21T02:34:41.713Z",
+            "2026-09-21T02:34:41.714Z",
+        ),
+        (
+            "2026-09-21T23:59:59.999999Z",
+            "2026-09-21T23:59:59.999Z",
+            "2026-09-22T00:00:00Z",
+        ),
+        ("2026-09-21T02:34:41Z", "2026-09-21T02:34:41Z", "2026-09-21T02:34:41Z"),
+    ],
+)
+def test_prometheus_time_supports_fractional_alert_times(
+    value, expected, rounded_start
+):
+    assert prometheus_time(value) == expected
+    assert prometheus_time(value, ceiling=True) == rounded_start
+
+
+def test_prometheus_time_requires_timezone():
+    with pytest.raises(ValueError, match="timezone required"):
+        prometheus_time("2026-09-21T02:34:41.713295")
 
 
 def profile():
@@ -89,6 +123,45 @@ async def test_builtin_profile_discovers_both_sources_and_preserves_scope():
         if "label_values" in name:
             assert args["startRfc3339"] == PERIOD["start"]
             assert args["endRfc3339"] == PERIOD["end"]
+
+
+@pytest.mark.asyncio
+async def test_fractional_times_normalized_only_for_prometheus_requests():
+    grafana = Grafana()
+    obs = observation(grafana)
+    period = {
+        "start": "2026-09-21T02:04:10.123456Z",
+        "end": "2026-09-21T02:34:41.713295Z",
+    }
+    obs.data["time_range"] = period.copy()
+    await obs.collect("D02")
+    await obs.collect("D09")
+    assert obs.data["time_range"] == period
+    for name, args in grafana.calls:
+        if name == "list_prometheus_label_values":
+            assert args["startRfc3339"] == "2026-09-21T02:04:10.124Z"
+            assert args["endRfc3339"] == "2026-09-21T02:34:41.713Z"
+        elif name == "query_prometheus":
+            assert args["endTime"] == "2026-09-21T02:34:41.713Z"
+        elif name in {"list_loki_label_values", "query_loki_logs"}:
+            assert args["startRfc3339"] == period["start"]
+            assert args["endRfc3339"] == period["end"]
+    assert all(e["time_range"] == period for e in obs.evidence)
+
+
+@pytest.mark.asyncio
+async def test_discovery_submillisecond_range_does_not_expand_scope():
+    grafana = Grafana()
+    obs = observation(grafana)
+    obs.data["time_range"] = {
+        "start": "2026-09-21T02:04:10.123456Z",
+        "end": "2026-09-21T02:04:10.123789Z",
+    }
+    result = await obs.collect("D02")
+    assert result[0]["quality"]["reason"] == "time_range_below_millisecond_resolution"
+    assert not any(
+        "label_values" in name or name.startswith("query_") for name, _ in grafana.calls
+    )
 
 
 @pytest.mark.asyncio

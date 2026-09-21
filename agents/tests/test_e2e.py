@@ -576,6 +576,10 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
     assert {a["purpose_id"] for a in result["assessments"]} == {"R01", "R02"}
     assert ("incident_snapshot", "ok") in evidence
     assert any(query.startswith("D") for query, _ in evidence)
+    # A published blocked result must not hide MCP rejecting fractional times.
+    assert all(
+        status in {"ok", "empty"} for query, status in evidence if query.startswith("D")
+    ), evidence
     with psycopg.connect(stack["url"]) as conn:
         saved_snapshot, checksum = conn.execute(
             "SELECT snapshot,checksum FROM evidence WHERE job_id=%s AND query_id='incident_snapshot'",

@@ -2,6 +2,9 @@
 
 import json
 
+from .grafana_time import prometheus_time
+from .contracts import timestamp
+
 
 class DiscoveryError(ValueError):
     def __init__(self, reason):
@@ -76,6 +79,13 @@ class Discovery:
                     endRfc3339=period["end"],
                 )
                 if source_type == "prometheus":
+                    args["startRfc3339"] = prometheus_time(
+                        period["start"], ceiling=True
+                    )
+                    args["endRfc3339"] = prometheus_time(period["end"])
+                    if timestamp(args["startRfc3339"]) > timestamp(args["endRfc3339"]):
+                        # No millisecond sample can exist inside this interval.
+                        raise DiscoveryError("time_range_below_millisecond_resolution")
                     args["limit"] = 5001
                 values = await self._cached(f"list_{source_type}_label_values", args)
                 if not isinstance(values, list) or any(

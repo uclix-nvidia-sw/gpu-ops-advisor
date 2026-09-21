@@ -2,10 +2,13 @@
 
 import asyncio
 import json
+import logging
 import re
 import time
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 
 class RemoteUncertain(RuntimeError):
@@ -83,6 +86,7 @@ class LLM:
                 if timeout <= 0:
                     return None
                 self.state("running")
+                started = time.monotonic()
                 try:
                     response = await client.post(
                         self.settings.llm_base_url + "/chat/completions",
@@ -98,10 +102,30 @@ class LLM:
                     asyncio.CancelledError,
                 ) as exc:
                     self.state("unknown")
+                    # Upstream exception messages may contain credentials or inputs.
+                    # Keep only exception class names, never messages or tracebacks.
+                    log.warning(
+                        "LLM transport failed stage=%s attempt=%d error_type=%s "
+                        "cause_type=%s elapsed_seconds=%.3f timeout_seconds=%.3f",
+                        stage,
+                        attempt + 1,
+                        type(exc).__name__,
+                        type(exc.__cause__).__name__ if exc.__cause__ else "none",
+                        time.monotonic() - started,
+                        timeout,
+                    )
                     if isinstance(exc, asyncio.CancelledError):
                         raise
                     raise RemoteUncertain("inference termination unconfirmed") from None
                 self.state("terminated")
+                if response.is_error:
+                    log.warning(
+                        "LLM HTTP failed stage=%s attempt=%d status=%d elapsed_seconds=%.3f",
+                        stage,
+                        attempt + 1,
+                        response.status_code,
+                        time.monotonic() - started,
+                    )
                 if response.status_code in {429, 500, 502, 503, 504} and attempt < 2:
                     await asyncio.sleep(
                         min(0.25 * 2**attempt, max(0, self.deadline - time.monotonic()))
