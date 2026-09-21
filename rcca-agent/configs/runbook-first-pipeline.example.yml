@@ -1,0 +1,88 @@
+schema: gpu-rca-pipeline/1.0
+status: design_example
+runtime_loadable: false
+
+input:
+  require_incident_snapshot: true
+  accepted_origins: [grafana, ui, fault_injection]
+  preserve_raw_alert: true
+  synthetic_marker_required_for_fault_injection: true
+
+retrieval:
+  order: runbook_first
+  corpus:
+    kind: runbook
+    states_at_job_submission: [published]
+    allow_retired_after_pinning: true
+    require_pinned_revision: true
+    require_reviewed_content_hash: true
+    enforce_scope_before_search: true
+    unknown_compatibility: verify_with_candidate_observations
+  document_fields:
+    codes: {weight: 8, exact_boost: 12}
+    producer_events: {weight: 5}
+    aliases: {weight: 4}
+    title: {weight: 3}
+    category: {weight: 3}
+    symptoms: {weight: 2}
+    description: {weight: 1}
+  engine:
+    type: weighted_sum_of_per_field_bm25
+    tokenizer_revision: gpu-lexical-v2
+    deduplicate_query_terms: true
+    exact_match_source: search.codes
+    index_revision: pinned-per-job
+    top_k: 5
+    min_score: null # Calibration and threshold gate not implemented yet.
+    preserve_component_scores: true
+
+applicability:
+  verify:
+    - producer_contract
+    - cluster_scope
+    - gpu_model
+    - required_evidence
+    - event_order
+    - exclusions
+    - metric_freshness
+    - source_binding_status
+  statuses: [retrieved, applicable, rejected, insufficient_evidence]
+  insufficient_evidence: hold_without_causal_confirmation
+
+runbook_path:
+  execute_registered_queries_only: true
+  respect_observation_priority: true
+  allow_side_effects: false
+  recommendation_execution: not_performed
+
+hypothesis_fallback:
+  enter_when:
+    - no_retrieval_candidate
+    - below_calibrated_score
+    - all_candidates_rejected
+    - all_candidates_contradicted
+  max_hypotheses: 3
+  registered_queries_only: true
+  require_discriminating_query: true
+  allow_confirmed_without_rule: false
+  auto_publish_runbook: false
+  never_enter_on: [index_failure, hash_mismatch, scope_denied, query_failed, stale_data]
+
+evidence:
+  record:
+    - query_text_hash
+    - tokenizer_revision
+    - index_revision
+    - corpus_revision
+    - candidate_rank
+    - bm25_score
+    - exact_match
+    - applicability_status
+    - rejection_reason
+    - query_revision
+    - source_and_sample_time
+
+limits:
+  inherit_runtime_query_budget: true
+  stop_on_sufficient_evidence: true
+  distinguish_empty_stale_unsupported_failed: true
