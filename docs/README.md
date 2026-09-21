@@ -4,6 +4,11 @@
 
 [저장소 README](../README.md) · [전체 구조도](../output/architecture-modules-20260917-v1.3/README.md) · [보존한 환경 근거](evidence/README.md)
 
+## 팀 공통 개발 지침
+
+- [CLAUDE.md: 영어 공통 지침](../CLAUDE.md) · [한국어 번역](CLAUDE.ko.md)
+- [AGENTS.md: Agent 시작 지침](../AGENTS.md) · [한국어 번역](AGENTS.ko.md)
+
 ## 현행 개발 문서
 
 - [00_산출물_안내](../output/deliverables-20260917-v1.3/00_산출물_안내.md)
