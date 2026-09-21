@@ -1,9 +1,10 @@
 # 수집 환경 근거
 
-현행 설계의 데이터 가용성 판단에 필요한 기록 두 종류만 보존한다. 과거 명세·화면 시안·중복 ZIP은 Git 이력으로 확인한다.
+현행 설계의 데이터 가용성 판단에 필요한 기록과 DCGM Field catalog를 보존한다. 과거 명세·화면 시안·중복 ZIP은 Git 이력으로 확인한다.
 
 - CPC-2 기록: Alloy 직접 수집·GPU↔Pod UID 검증, 마지막 재배포 뒤 Loki 확인 대기 등 실제 확인 범위.
 - 메트릭 대조 목록: Exporter/Fleet 필드의 이름·출처·표본 등장 여부. 현재 활성 지표 전체 목록을 뜻하지 않는다.
+- [CPC-1](dcgm/cpc-1-dcgm-dmon-field-catalog.txt)·[CPC-2](dcgm/cpc-2-dcgm-dmon-field-catalog.txt) DCGM Field catalog: `dcgmi dmon --list` 출력. 실제 수집된 sample이나 Mimir 시계열 목록을 뜻하지 않는다.
 
 내용은 당시 기록이며 최신 환경 상태를 보장하지 않는다. v1.3에서 사용할 값·기간·CPC·단위는 [데이터 설계](../../output/deliverables-20260917-v1.3/03_데이터_설계서.md)와 [배포 원장](../../output/deliverables-20260917-v1.3/06_배포_운영_인계서.md)에서 재확인한다.
 

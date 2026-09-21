@@ -28,6 +28,13 @@
 - [13_Incident_모듈_설계서](../output/deliverables-20260917-v1.3/13_Incident_모듈_설계서.md)
 - [14_모듈간_호출과_공통실행_계약](../output/deliverables-20260917-v1.3/14_모듈간_호출과_공통실행_계약.md)
 
+## 설계 검토 초안
+
+아래 문서는 확정된 v1.3 산출물이 아니라 **팀 검토용 초안**입니다. GPU 노드 RCA의 Knowledge DB·런북 구조를 제안하며 운영 DB에는 반영되지 않았습니다. 검토·승격 후 현행 개발 문서로 편입합니다.
+
+- [GPU 노드 RCA Runbook 설계 초안](gpu-node-rca-runbook-design.md)
+- [GPU 노드 RCA Knowledge DB 참고 설계](knowledge-db-reference.md)
+
 ## 구현 상태
 
 현재 문서는 제품 코드 `775ab2f`의 Backend 초기화·클러스터 등록, 보고서 관측 집계·분할 조회·화면/다운로드, 운영 설정 변경을 반영했습니다. [산출물 안내](../output/deliverables-20260917-v1.3/00_산출물_안내.md)에서 구현 범위와 QA를, [반영내역](../output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)에서 변경·삭제 근거를 확인합니다.
