@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "보고서 · Backend 정기 일정과 outbox",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      812
+    ]
+  },
+  "participants": [
+    {
+      "id": "backend",
+      "label": "Backend",
+      "type": "backend"
+    },
+    {
+      "id": "db",
+      "label": "PostgreSQL",
+      "type": "database"
+    },
+    {
+      "id": "jc",
+      "label": "Job Controller",
+      "type": "backend"
+    }
+  ],
+  "segments": [
+    {
+      "from": 147,
+      "to": 326,
+      "label": "A · Backend 내부 일정 루프"
+    },
+    {
+      "from": 363,
+      "to": 734,
+      "label": "B · 별도 pending 전달 루프"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "backend",
+      "to": "db",
+      "y": 164,
+      "label": "01 도래한 일정 잠금·조회",
+      "variant": "default"
+    },
+    {
+      "id": "m02",
+      "from": "db",
+      "to": "backend",
+      "y": 212,
+      "label": "02 일정 revision·기간",
+      "variant": "return"
+    },
+    {
+      "id": "m03",
+      "from": "backend",
+      "to": "db",
+      "y": 260,
+      "label": "03 발생 건·outbox·다음 일정 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m04",
+      "from": "db",
+      "to": "backend",
+      "y": 308,
+      "label": "04 COMMIT 완료",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "backend",
+      "to": "db",
+      "y": 380,
+      "label": "05 pending outbox 잠금",
+      "variant": "default"
+    },
+    {
+      "id": "m06",
+      "from": "db",
+      "to": "backend",
+      "y": 428,
+      "label": "06 고정 envelope",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "backend",
+      "to": "jc",
+      "y": 476,
+      "label": "07 POST /jobs/report",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m08",
+      "from": "jc",
+      "to": "db",
+      "y": 524,
+      "label": "08 job·receipt 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m09",
+      "from": "db",
+      "to": "jc",
+      "y": 572,
+      "label": "09 COMMIT 완료",
+      "variant": "return"
+    },
+    {
+      "id": "m10",
+      "from": "jc",
+      "to": "backend",
+      "y": 620,
+      "label": "10 202 · job_id",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "backend",
+      "to": "db",
+      "y": 668,
+      "label": "11 outbox·발생 건 갱신",
+      "variant": "default"
+    },
+    {
+      "id": "m12",
+      "from": "db",
+      "to": "backend",
+      "y": 716,
+      "label": "12 COMMIT 완료",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "별도 Scheduler 없음",
+      "items": [
+        "일정 계산·발생과 전달은 Backend 내부. 이후 보고서 실행 단계로 연결."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "영속성과 멱등성",
+      "items": [
+        "발생 건과 outbox는 같은 트랜잭션. 고정된 기간·revision 사용."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "복구",
+      "items": [
+        "전송 실패는 backoff. 마감·거절 시 receipt로 기존 접수 확인."
+      ]
+    }
+  ]
+}

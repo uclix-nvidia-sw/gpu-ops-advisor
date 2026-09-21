@@ -12,12 +12,14 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 
 목록은 `items,next_cursor`, 기본 limit=50·최대 200, `(created_at DESC,id DESC)` 순서다. cursor는 필터·정렬을 함께 검증한다. 변경은 `Idempotency-Key`, 수정/명령은 `If-Match: version`을 사용한다. 같은 키·다른 본문은 409. 이미 적용된 같은 명령 재전송은 If-Match보다 receipt 확인이 먼저다.
 
-오류는 `{error:{code,message,retryable,details},request_id}`. 404는 없음/제공하지 않는 API, 409는 충돌, 422는 입력 오류, 503은 일시적 의존 서비스 장애다. 큐가 정상 접수했지만 실행 슬롯이 없는 경우는 202 queued이며 503이 아니다.
+오류는 `{error:{code,message,retryable,details},request_id}`. 404는 없음/제공하지 않는 API, 409는 충돌, 422는 입력 오류, 503은 의존 서비스 장애 또는 필수 스키마·설정 미준비다. 큐가 정상 접수했지만 실행 슬롯이 없는 경우는 202 queued이며 503이 아니다.
 
 ## API 목록
 
 | Method·경로 | 입력/처리 | 응답·소유 |
 |---|---|---|
+| GET /clusters | 등록 클러스터 조회·scope | 분석 범위 선택용 목록 |
+| POST /clusters | cluster_id·멱등 키 | 등록 201, 중복 409, 수집 상태 unknown |
 | GET /dashboard | scope, 기간 | 관측·사건·잡 요약 |
 | GET /assets, /workloads, /observation-quality | scope, 대상, at 또는 기간 | 식별·관계·품질 DTO |
 | GET /incidents, /incidents/{id} | 사건 필터/ID | Incident 저장 사건·RCA job 연결 |
@@ -25,7 +27,7 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 | GET /analyses, /analyses/{id} | incident_id, scope / RCA job ID | 발행된 RCA 결과 또는 미발행 상태 |
 | POST /reports | 보고서 조건·멱등 키 | JC 커밋 후 202, job_id=report_id |
 | GET /reports, /reports/{id} | 필터/보고서 job ID | 저장 결과·주제 상태 |
-| GET /reports/{id}/export?format=html 또는 csv | 저장된 final | 기존 산출 파일 또는 저장 값으로 렌더링 |
+| GET /reports/{id}/export?format=html 또는 csv | 저장된 final | Backend가 발행된 결과 값으로 HTML/CSV 렌더링 |
 | GET /jobs, /jobs/{id} | kind/status/scope / ID | JC 상태·안전한 attempt 이력 |
 | POST /jobs/{id}/cancel, /retry | report만, If-Match·멱등 키 | JC 명령 결과. RCA에는 409 kind_not_allowed |
 | GET/POST /schedules | 목록/일정 조건 | Backend 일정, 생성 201 |
@@ -46,6 +48,22 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 | GET /health/live, /health/ready | 없음 | 생존 / DB·필수 설정 준비 |
 
 `POST /analyses`, RCA retry/new-analysis, 대화 API, GUI 레플리카 변경 API는 제공하지 않는다. `/settings`를 통한 임의 용량·배포 변경도 제공하지 않는다. Incident 상태 변경이 필요하면 Backend가 Incident의 메타데이터 PATCH를 위임하되 RCA 실행을 부수 효과로 만들지 않는다.
+
+## 클러스터 등록과 준비 상태
+
+`POST /clusters`는 `Idempotency-Key`와 `{"cluster_id":"production-gpu"}`를 받는다. ID는 비어 있지 않은 문자열이며 UTF-8 바이트 길이 200 이하, 앞뒤 공백·제어 문자 없는 값이어야 한다. 응답 본문은 `id,cluster_id,namespaces:null,collection_status:"unknown"`이다. 등록은 관측 데이터 수집 성공을 의미하지 않는다.
+
+같은 멱등 키·동일 본문의 재전송은 기존 응답을 반환한다. 새 키로 기존 ID를 등록하면 `409 CLUSTER_ALREADY_REGISTERED`이며 비활성 행도 자동 활성화하지 않는다. 같은 키·다른 본문은 409, 잘못된 입력 또는 필수 키 누락은 422다. ID는 Grafana에서 조회하는 실제 클러스터 라벨 값과 일치시킨다.
+
+`GET /health/live`는 프로세스의 HTTP 응답 여부를 확인한다. `GET /health/ready`는 DB 스키마 version 2와 활성 C07 API 한도의 7개 양수 값을 확인한다. 활성 클러스터 유무와 MCP·LLM 상태는 이 검사의 조건이 아니다. 클러스터가 없는 최초 설치도 Ready가 되며 미등록 범위의 보고서 요청은 입력 검증에서 거부한다.
+
+| readiness 오류 | 의미 |
+|---|---|
+| `DATABASE_UNAVAILABLE` | DB 연결·스키마 또는 운영 한도 조회 실패 |
+| `SCHEMA_NOT_READY` | 스키마 version 2 기록 없음 |
+| `LIMITS_NOT_CONFIGURED` | C07 누락·비활성 또는 필수 한도가 양수가 아님 |
+
+오류 응답은 모두 503이다. 기본 설정 초기화와 실제 기본값은 [06 배포·운영](06_배포_운영_인계서.md)에 둔다. 구현: [클러스터 등록](../../backend/internal/api/clusters.go), [readiness](../../backend/internal/api/readiness.go).
 
 ## 보고서 접수와 응답
 
@@ -84,5 +102,9 @@ Backend는 `source_module=backend,source_key=manual:<Idempotency-Key>`로 JC의 
 결과 조회는 jobs의 published result_ref만 사용한다. 미완료 후보 파일을 정상 결과로 노출하지 않는다. 파일명은 서버 생성, HTML 이스케이프·CSV 수식 방어, URL/파일경로 입력 검증을 적용한다. 모델 연결은 등록된 내부 endpoint만 허용하고 secret_ref만 저장·표시한다. 라우팅에서 사용 중인 모델 비활성화는 대체 지정 또는 409이며 진행 중 job의 모델을 조용히 교체하지 않는다.
 
 지식은 검토한 content_hash가 일치할 때 발행하며 발행본은 불변이다. 실제 조치 기록은 target·occurred_at·performed_by·action_summary를 받지만 장비 제어를 실행하지 않는다. performed_by는 미인증 입력임을 표시한다.
+
+### 보고서 다운로드의 현재 구현
+
+Backend는 발행된 `result_candidates.body`의 `measurements`와 `topics[].metrics`를 읽어 출력하며 새 분석을 실행하지 않는다. 수치가 있으면 HTML은 항목·대상·값·단위·제한 사유 표를, CSV는 `id,target,value,unit,method,reason,evidence_refs` 열을 생성한다. null 값은 ‘산출 불가’로 표시한다. HTML은 원본 결과와 해석 제한을 포함하고 텍스트를 escape하며 CSV는 수식 문자를 방어한다. 수치 배열이 비어 있으면 기존 JSON 기반 HTML/필드별 CSV 출력을 사용한다. Agent의 저장 파일을 그대로 전송하는 경로와는 구분한다. 구현: [export](../../backend/internal/api/export.go), [수치 출력](../../backend/internal/api/report_export.go).
 
 [DB](03_데이터_설계서.md) · [큐](10_Job_Controller_모듈_설계서.md) · [공통 계약](14_모듈간_호출과_공통실행_계약.md)

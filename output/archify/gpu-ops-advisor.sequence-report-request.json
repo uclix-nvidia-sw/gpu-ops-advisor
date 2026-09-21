@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "보고서 · 즉시 요청과 완료 후 조회",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      880
+    ]
+  },
+  "participants": [
+    {
+      "id": "client",
+      "label": "Client · Frontend",
+      "type": "frontend"
+    },
+    {
+      "id": "backend",
+      "label": "Backend",
+      "type": "backend"
+    },
+    {
+      "id": "db",
+      "label": "PostgreSQL",
+      "type": "database"
+    },
+    {
+      "id": "jc",
+      "label": "Job Controller",
+      "type": "backend"
+    }
+  ],
+  "segments": [
+    {
+      "from": 147,
+      "to": 378,
+      "label": "A · 즉시 보고서 접수"
+    },
+    {
+      "from": 415,
+      "to": 646,
+      "label": "B · 보고서 실행·공개 후 별도 조회 요청"
+    },
+    {
+      "from": 683,
+      "to": 802,
+      "label": "C · 공개된 결과 내보내기 요청"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "client",
+      "to": "backend",
+      "y": 164,
+      "label": "01 POST /api/v1/reports",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "backend",
+      "to": "db",
+      "y": 192,
+      "label": "02 manual_report_intents 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "db",
+      "to": "backend",
+      "y": 220,
+      "label": "03 COMMIT · 고정 envelope",
+      "variant": "return"
+    },
+    {
+      "id": "m04",
+      "from": "backend",
+      "to": "jc",
+      "y": 248,
+      "label": "04 POST /jobs/report",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m05",
+      "from": "jc",
+      "to": "db",
+      "y": 276,
+      "label": "05 job·receipt 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m06",
+      "from": "db",
+      "to": "jc",
+      "y": 304,
+      "label": "06 COMMIT 완료",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "jc",
+      "to": "backend",
+      "y": 332,
+      "label": "07 202 · job_id",
+      "variant": "return"
+    },
+    {
+      "id": "m08",
+      "from": "backend",
+      "to": "client",
+      "y": 360,
+      "label": "08 202 · job_id·status_url",
+      "variant": "return"
+    },
+    {
+      "id": "m09",
+      "from": "client",
+      "to": "backend",
+      "y": 432,
+      "label": "09 GET /api/v1/jobs/{id}",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "backend",
+      "to": "db",
+      "y": 460,
+      "label": "10 작업 상태·공개 참조 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m11",
+      "from": "db",
+      "to": "backend",
+      "y": 488,
+      "label": "11 작업 상태·result_ref",
+      "variant": "return"
+    },
+    {
+      "id": "m12",
+      "from": "backend",
+      "to": "client",
+      "y": 516,
+      "label": "12 200 · 상태",
+      "variant": "return"
+    },
+    {
+      "id": "m13",
+      "from": "client",
+      "to": "backend",
+      "y": 544,
+      "label": "13 GET /api/v1/reports/{id}",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m14",
+      "from": "backend",
+      "to": "db",
+      "y": 572,
+      "label": "14 공개 결과·근거 참조 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m15",
+      "from": "db",
+      "to": "backend",
+      "y": 600,
+      "label": "15 게시된 결과",
+      "variant": "return"
+    },
+    {
+      "id": "m16",
+      "from": "backend",
+      "to": "client",
+      "y": 628,
+      "label": "16 200 · 보고서 결과",
+      "variant": "return"
+    },
+    {
+      "id": "m17",
+      "from": "client",
+      "to": "backend",
+      "y": 700,
+      "label": "17 GET /reports/{id}/export",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m18",
+      "from": "backend",
+      "to": "db",
+      "y": 728,
+      "label": "18 공개 결과 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m19",
+      "from": "db",
+      "to": "backend",
+      "y": 756,
+      "label": "19 결과 body",
+      "variant": "return"
+    },
+    {
+      "id": "m20",
+      "from": "backend",
+      "to": "client",
+      "y": 784,
+      "label": "20 200 · HTML / CSV",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "즉시 요청의 영속성",
+      "items": [
+        "고정 intent 저장 후 JC 직접 호출. 정기 outbox와 구분."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "완료 알림 없음",
+      "items": [
+        "B·C는 별도 사용자 요청. 분석 완료 callback이나 push 없음."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "다운로드 구현",
+      "items": [
+        "Backend가 DB 공개 결과로 HTML/CSV 생성. Worker 파일 직접 전달 아님."
+      ]
+    }
+  ]
+}

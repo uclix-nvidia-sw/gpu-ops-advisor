@@ -1,6 +1,6 @@
-# 개발 문서 안내
+# GPU Ops Advisor 개발 문서 안내
 
-현재 기준은 **DSX v1.3**입니다. Job Controller는 큐와 기존 자원 내 배분을 맡고, 정기 보고서는 Backend가 생성합니다. RCA 요청은 Incident에서만 시작합니다. 두 Agent 내부에는 NAT 워크플로를 적용합니다. RCA는 Runbook·사고 증거·Grafana MCP를, 보고서는 Incident·공개 RCA 결과 DB와 MCP 기간 관측을 사용합니다. 상세 연결·운영·검수 기준은 03/04/05/06/11/12/14에 있습니다.
+현재 기준은 **GPU Ops Advisor v1.3**입니다. Job Controller는 큐와 기존 자원 내 배분을 맡고, 정기 보고서 일정·요청 생성은 Backend, 보고서 실행은 보고서 Agent가 담당합니다. RCA 요청은 Incident에서만 시작합니다. 두 Agent 내부에는 NAT 워크플로를 적용합니다. RCA는 Runbook·사고 증거·Grafana MCP를, 보고서는 Incident·공개 RCA 결과 DB와 MCP 기간 관측을 사용합니다. 상세 연결·운영·검수 기준은 03/04/05/06/11/12/14에 있습니다.
 
 [저장소 README](../README.md) · [전체 구조도](../output/architecture-modules-20260917-v1.3/README.md) · [보존한 환경 근거](evidence/README.md)
 
@@ -24,4 +24,12 @@
 
 ## 구현 상태
 
-[프론트엔드](../frontend/README.md)는 이전 UI가 남아 있는 데모입니다. 실제 서버 연동·새 화면 전환과 제품 검수는 후속 작업입니다. 구버전 자료를 현행 개발 기준으로 사용하지 않습니다.
+현재 문서는 제품 코드 `775ab2f`의 Backend 초기화·클러스터 등록, 보고서 관측 집계·분할 조회·화면/다운로드, 운영 설정 변경을 반영했습니다. [산출물 안내](../output/deliverables-20260917-v1.3/00_산출물_안내.md)에서 구현 범위와 QA를, [반영내역](../output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)에서 변경·삭제 근거를 확인합니다.
+
+Frontend는 실제 Go API를 호출합니다. Agent의 실제 프로세스 연동 시험 기록은 있으나 Grafana 데이터·LLM 응답은 fixture를 사용했으며, 운영 환경의 분석 품질 검수와 구분합니다. 각 모듈 QA의 날짜·환경·범위를 따르고 구버전 자료를 현행 검수 결과로 사용하지 않습니다.
+
+## 실행·배포 안내
+
+- [Frontend](../frontend/README.md) · [Backend](../backend/README.md)
+- [Incident](../incident/README.md) · [Job Controller](../job-controller/README.md) · [두 Agent](../agents/README.md)
+- [Helm 설치](helm-install.md) · [기존 배포 업그레이드](helm-upgrade-existing.md) · [CI·릴리스](ci-release.md)
