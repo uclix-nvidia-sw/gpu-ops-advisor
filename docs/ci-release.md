@@ -43,7 +43,7 @@ Agent E2E는 `AGENT_E2E_DATABASE_URL`을 주면 외부 테스트 DB에 임시 sc
 
 ## 릴리스 방법
 
-1. [Chart.yaml](../charts/gpu-ops-advisor/Chart.yaml)의 `version`/`appVersion`을 제품 릴리스 버전으로 변경하고 PR 검증을 통과시킵니다.
+1. [Chart.yaml](../charts/gpu-ops-advisor/Chart.yaml)의 `version`/`appVersion`을 제품 릴리스 버전으로 변경하고 관련 검증을 수행합니다. [현재 협업 방식](team-development.md)에 따라 승인 후 main에 직접 push하거나 검증된 PR을 병합하고, 해당 main 커밋의 CI 성공을 확인합니다.
 2. main에 반영한 커밋에 동일 버전의 태그(예: `v1.3.0`)를 push합니다. 태그와 chart version이 다르면 시작 단계에서 실패합니다.
 3. 전체 테스트·7개 이미지 빌드/발행이 통과하면 chart artifact와 OCI chart가 만들어집니다. OCI chart 발행은 이 단계 이후에만 수행합니다.
 4. [설치 안내](../charts/gpu-ops-advisor/README.md)에 따라 Secret·운영 프로필·PVC를 준비하고 패키지를 설치합니다.
