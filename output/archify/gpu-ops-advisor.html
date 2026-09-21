@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU Ops Advisor · Architecture / Sequence</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0}body{font-family:system-ui,"Malgun Gothic",sans-serif;background:#f7f9fc;color:#172b42}
+header{height:48px;display:flex;align-items:center;gap:24px;padding:0 24px;border-bottom:1px solid #dce3ed;background:#fff}
+header strong{font-size:14px}nav{display:flex;height:100%;gap:8px}nav a{display:flex;align-items:center;padding:0 16px;color:#52647a;text-decoration:none;font-size:14px;border-bottom:3px solid transparent}
+nav a[aria-current="page"]{color:#007e9b;border-color:#009bb5;font-weight:650}a:focus-visible{outline:2px solid #007e9b;outline-offset:-4px}
+select{max-width:280px;min-width:0;padding:5px;border:1px solid #9caabd;border-radius:4px;font:inherit;font-size:13px;color:inherit;background:inherit}
+iframe{display:block;width:100%;height:calc(100dvh - 48px);border:0}
+@media(max-width:560px){header{padding:0 8px;gap:8px}header strong{display:none}}
+@media(prefers-color-scheme:dark){body{background:#030818;color:#edf4fc}header{background:#0b1323;border-color:#253249}nav a{color:#bac9dc}nav a[aria-current="page"]{color:#45d2e8}}
+</style>
+</head>
+<body>
+<header>
+<strong>GPU Ops Advisor</strong>
+<nav aria-label="다이어그램 선택">
+<a href="#architecture" aria-current="page">Architecture</a>
+<a href="#sequence">Sequence</a>
+</nav>
+<select id="scenario" aria-label="Sequence 시나리오" hidden>
+<option value="sequence">RCA · 접수</option>
+<option value="sequence-rca-execution">RCA · 실행</option>
+<option value="sequence-report-request">보고서 · 즉시 요청·조회</option>
+<option value="sequence-report-schedule">보고서 · 정기 접수</option>
+<option value="sequence-report-execution">보고서 · 실행</option>
+</select>
+</header>
+<iframe id="diagram" title="Architecture 다이어그램" src="gpu-ops-advisor.architecture.html" allowfullscreen></iframe>
+<script>
+const frame = document.getElementById('diagram');
+const links = [...document.querySelectorAll('nav a')];
+const scenario = document.getElementById('scenario');
+function showDiagram() {
+  const option = [...scenario.options].find(option => '#' + option.value === location.hash);
+  const type = option ? option.value : 'architecture';
+  scenario.hidden = !option;
+  if (option) scenario.value = type;
+  const source = 'gpu-ops-advisor.' + type + '.html';
+  if (frame.getAttribute('src') !== source) frame.setAttribute('src', source);
+  frame.title = (option ? option.text : 'Architecture') + ' 다이어그램';
+  for (const link of links) {
+    if (link.hash === (option ? '#sequence' : '#architecture')) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+}
+window.addEventListener('hashchange', showDiagram);
+scenario.addEventListener('change', () => { location.hash = scenario.value; });
+showDiagram();
+</script>
+</body>
+</html>

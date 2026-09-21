@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "RCA · Webhook 접수와 비동기 전달",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      812
+    ]
+  },
+  "participants": [
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "type": "external"
+    },
+    {
+      "id": "incident",
+      "label": "Incident",
+      "type": "backend"
+    },
+    {
+      "id": "db",
+      "label": "PostgreSQL",
+      "type": "database"
+    },
+    {
+      "id": "jc",
+      "label": "Job Controller",
+      "type": "backend"
+    }
+  ],
+  "segments": [
+    {
+      "from": 147,
+      "to": 382,
+      "label": "A · 신규·분석 적격 Webhook"
+    },
+    {
+      "from": 419,
+      "to": 734,
+      "label": "B · 별도 outbox 전달 루프"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "grafana",
+      "to": "incident",
+      "y": 164,
+      "label": "01 POST /webhooks/grafana",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "incident",
+      "to": "db",
+      "y": 204,
+      "label": "02 receipt 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "db",
+      "to": "incident",
+      "y": 244,
+      "label": "03 기존 receipt 없음",
+      "variant": "return"
+    },
+    {
+      "id": "m04",
+      "from": "incident",
+      "to": "db",
+      "y": 284,
+      "label": "04 사건·snapshot·outbox 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m05",
+      "from": "db",
+      "to": "incident",
+      "y": 324,
+      "label": "05 COMMIT 완료",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "incident",
+      "to": "grafana",
+      "y": 364,
+      "label": "06 202 · 접수 결과",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "incident",
+      "to": "db",
+      "y": 436,
+      "label": "07 pending outbox 잠금",
+      "variant": "default"
+    },
+    {
+      "id": "m08",
+      "from": "db",
+      "to": "incident",
+      "y": 476,
+      "label": "08 입력 envelope",
+      "variant": "return"
+    },
+    {
+      "id": "m09",
+      "from": "incident",
+      "to": "jc",
+      "y": 516,
+      "label": "09 POST /jobs/rca",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "jc",
+      "to": "db",
+      "y": 556,
+      "label": "10 job·receipt 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m11",
+      "from": "db",
+      "to": "jc",
+      "y": 596,
+      "label": "11 COMMIT 완료",
+      "variant": "return"
+    },
+    {
+      "id": "m12",
+      "from": "jc",
+      "to": "incident",
+      "y": 636,
+      "label": "12 202 · job_id",
+      "variant": "return"
+    },
+    {
+      "id": "m13",
+      "from": "incident",
+      "to": "db",
+      "y": 676,
+      "label": "13 outbox accepted 갱신",
+      "variant": "default"
+    },
+    {
+      "id": "m14",
+      "from": "db",
+      "to": "incident",
+      "y": 716,
+      "label": "14 COMMIT 완료",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "접수와 실행",
+      "items": [
+        "202는 Grafana 요청의 최종 응답. 실제 분석은 RCA 실행 단계."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "중복·재전송",
+      "items": [
+        "중복 Webhook은 DB receipt 재사용. outbox는 재시도·receipt로 조정."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "순서와 범위",
+      "items": [
+        "B는 A의 COMMIT 뒤 독립 실행. 제품 인증·외부 이벤트 발행 없음."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,623 @@
+{
+  "status": "pass",
+  "binding": {
+    "gpu-ops-advisor.html": {
+      "sha256": "fc12df123a070cab3166f66daa8a453c2bc2393a6eb055d254c68aefb682e8de",
+      "bytes": 3026
+    },
+    "gpu-ops-advisor.architecture.html": {
+      "sha256": "5eabe1bff48f6b6c74be45c3b3ea4ee07a72f058694fae1a10c4f1a2b416f2de",
+      "bytes": 855062
+    },
+    "gpu-ops-advisor.sequence.html": {
+      "sha256": "eeae64674826263e3307ed3ddee636c13a0badf33e9379f86c07f39df0e1e9d0",
+      "bytes": 806510
+    },
+    "gpu-ops-advisor.sequence-rca-execution.html": {
+      "sha256": "c2bde9533cc2026f69659b243e081e51b94982f0f38b8835eac3865d2923a755",
+      "bytes": 810712
+    },
+    "gpu-ops-advisor.sequence-report-request.html": {
+      "sha256": "24777fc27a9514ca3b1d5291e91aeff1dc306be0fabb28e6334551111c203406",
+      "bytes": 811274
+    },
+    "gpu-ops-advisor.sequence-report-schedule.html": {
+      "sha256": "e3b7f6607fdacd49e1b7d4d2bddac7fa2b5f96f48b7dbb2b3dbc5b8616252b72",
+      "bytes": 804192
+    },
+    "gpu-ops-advisor.sequence-report-execution.html": {
+      "sha256": "3fd59f992a93ffd2a659b1aeb2585b401208ec743e178d5fb05b39c6523ced3e",
+      "bytes": 813634
+    }
+  },
+  "checks": [
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "sequence",
+      "selected": "#sequence",
+      "title": "RCA · 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "sequence-rca-execution",
+      "selected": "#sequence",
+      "title": "RCA · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-rca-execution.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "sequence-report-request",
+      "selected": "#sequence",
+      "title": "보고서 · 즉시 요청·조회 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-request.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "sequence-report-schedule",
+      "selected": "#sequence",
+      "title": "보고서 · 정기 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-schedule.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "sequence-report-execution",
+      "selected": "#sequence",
+      "title": "보고서 · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-execution.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1440,
+        900,
+        1440,
+        900
+      ],
+      "inner": [
+        1440,
+        852,
+        1440,
+        852
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "sequence",
+      "selected": "#sequence",
+      "title": "RCA · 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "sequence-rca-execution",
+      "selected": "#sequence",
+      "title": "RCA · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-rca-execution.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "sequence-report-request",
+      "selected": "#sequence",
+      "title": "보고서 · 즉시 요청·조회 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-request.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "sequence-report-schedule",
+      "selected": "#sequence",
+      "title": "보고서 · 정기 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-schedule.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "sequence-report-execution",
+      "selected": "#sequence",
+      "title": "보고서 · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-execution.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1600,
+        1000,
+        1600,
+        1000
+      ],
+      "inner": [
+        1600,
+        952,
+        1600,
+        952
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "sequence",
+      "selected": "#sequence",
+      "title": "RCA · 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "sequence-rca-execution",
+      "selected": "#sequence",
+      "title": "RCA · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-rca-execution.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "sequence-report-request",
+      "selected": "#sequence",
+      "title": "보고서 · 즉시 요청·조회 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-request.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "sequence-report-schedule",
+      "selected": "#sequence",
+      "title": "보고서 · 정기 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-schedule.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "sequence-report-execution",
+      "selected": "#sequence",
+      "title": "보고서 · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-execution.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        1920,
+        1080,
+        1920,
+        1080
+      ],
+      "inner": [
+        1920,
+        1032,
+        1920,
+        1032
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "sequence",
+      "selected": "#sequence",
+      "title": "RCA · 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "sequence-rca-execution",
+      "selected": "#sequence",
+      "title": "RCA · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-rca-execution.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "sequence-report-request",
+      "selected": "#sequence",
+      "title": "보고서 · 즉시 요청·조회 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-request.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "sequence-report-schedule",
+      "selected": "#sequence",
+      "title": "보고서 · 정기 접수 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-schedule.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "sequence-report-execution",
+      "selected": "#sequence",
+      "title": "보고서 · 실행 다이어그램",
+      "url": "/gpu-ops-advisor.sequence-report-execution.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "type": "architecture",
+      "selected": "#architecture",
+      "title": "Architecture 다이어그램",
+      "url": "/gpu-ops-advisor.architecture.html",
+      "svg": true,
+      "outer": [
+        2048,
+        1320,
+        2048,
+        1320
+      ],
+      "inner": [
+        2048,
+        1272,
+        2048,
+        1272
+      ]
+    }
+  ]
+}

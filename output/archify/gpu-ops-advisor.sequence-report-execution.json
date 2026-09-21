@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "보고서 · 관측·파일 생성과 결과 공개",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      880
+    ]
+  },
+  "participants": [
+    {
+      "id": "jc",
+      "label": "Job Controller",
+      "type": "backend"
+    },
+    {
+      "id": "worker",
+      "label": "GPU Ops 보고서 Agent",
+      "type": "backend"
+    },
+    {
+      "id": "db",
+      "label": "PostgreSQL",
+      "type": "database"
+    },
+    {
+      "id": "mcp",
+      "label": "Grafana MCP",
+      "type": "backend"
+    },
+    {
+      "id": "llm",
+      "label": "LLM endpoint",
+      "type": "external"
+    },
+    {
+      "id": "files",
+      "label": "보고서 파일",
+      "type": "database"
+    }
+  ],
+  "segments": [
+    {
+      "from": 147,
+      "to": 322,
+      "label": "A · 등록된 Worker가 작업 인수"
+    },
+    {
+      "from": 359,
+      "to": 478,
+      "label": "B · 필요한 관측의 cache miss · LLM 사용 예"
+    },
+    {
+      "from": 515,
+      "to": 802,
+      "label": "C · 후보 저장과 공개"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "worker",
+      "to": "jc",
+      "y": 164,
+      "label": "01 POST /claims",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "jc",
+      "to": "db",
+      "y": 192,
+      "label": "02 job·attempt·lease·slot 확보",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "db",
+      "to": "jc",
+      "y": 220,
+      "label": "03 COMMIT · claim 정보",
+      "variant": "return"
+    },
+    {
+      "id": "m04",
+      "from": "jc",
+      "to": "worker",
+      "y": 248,
+      "label": "04 200 · claim",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "worker",
+      "to": "db",
+      "y": 276,
+      "label": "05 기간 사건·공개 RCA 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m06",
+      "from": "db",
+      "to": "worker",
+      "y": 304,
+      "label": "06 고정 기준 시각·참조 결과",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "worker",
+      "to": "mcp",
+      "y": 376,
+      "label": "07 도구 탐색·관측 조회",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m08",
+      "from": "mcp",
+      "to": "worker",
+      "y": 404,
+      "label": "08 지표·로그 / 품질 상태",
+      "variant": "return"
+    },
+    {
+      "id": "m09",
+      "from": "worker",
+      "to": "llm",
+      "y": 432,
+      "label": "09 POST /chat/completions",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "llm",
+      "to": "worker",
+      "y": 460,
+      "label": "10 근거 기반 설명",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "worker",
+      "to": "jc",
+      "y": 532,
+      "label": "11 POST heartbeat",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m12",
+      "from": "jc",
+      "to": "worker",
+      "y": 560,
+      "label": "12 200 · lease·취소 상태",
+      "variant": "return"
+    },
+    {
+      "id": "m13",
+      "from": "worker",
+      "to": "files",
+      "y": 588,
+      "label": "13 HTML·CSV 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m14",
+      "from": "files",
+      "to": "worker",
+      "y": 616,
+      "label": "14 경로·checksum",
+      "variant": "return"
+    },
+    {
+      "id": "m15",
+      "from": "worker",
+      "to": "db",
+      "y": 644,
+      "label": "15 유효 attempt·후보·근거 저장",
+      "variant": "default"
+    },
+    {
+      "id": "m16",
+      "from": "db",
+      "to": "worker",
+      "y": 672,
+      "label": "16 COMMIT · candidate_id·hash",
+      "variant": "return"
+    },
+    {
+      "id": "m17",
+      "from": "worker",
+      "to": "jc",
+      "y": 700,
+      "label": "17 POST complete",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m18",
+      "from": "jc",
+      "to": "db",
+      "y": 728,
+      "label": "18 검증·published_result_id 확정",
+      "variant": "default"
+    },
+    {
+      "id": "m19",
+      "from": "db",
+      "to": "jc",
+      "y": 756,
+      "label": "19 COMMIT · succeeded",
+      "variant": "return"
+    },
+    {
+      "id": "m20",
+      "from": "jc",
+      "to": "worker",
+      "y": 784,
+      "label": "20 200 · 공개 참조",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "관측 캐시",
+      "items": [
+        "hit: 같은 실행의 근거 재사용. miss: MCP 조회; DB fallback 없음."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "실행 조건",
+      "items": [
+        "코드가 수치를 계산. LLM은 설정·근거가 있을 때 설명."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "비동기·공개",
+      "items": [
+        "작업 중 heartbeat 병행. complete 재시도는 동일 후보·hash 사용."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1026 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GPU Ops Advisor · CPC·CSC 모듈 연결",
+    "quality_profile": "standard",
+    "viewBox": [
+      1390,
+      850
+    ],
+    "repository": {
+      "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor",
+      "provider": "github",
+      "revision": "5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac",
+      "link_mode": "web"
+    }
+  },
+  "components": [
+    {
+      "id": "grafana",
+      "type": "external",
+      "label": "Grafana",
+      "sublabel": "알림 평가 · 데이터소스 API",
+      "pos": [
+        726,
+        227
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        }
+      ]
+    },
+    {
+      "id": "incident",
+      "type": "backend",
+      "label": "Incident",
+      "sublabel": "사건 snapshot · RCA outbox",
+      "pos": [
+        726,
+        335
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "incident/service/ingest.go"
+        },
+        {
+          "path": "incident/service/delivery.go"
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Frontend · 브라우저",
+      "sublabel": "조회 · 즉시 보고서 요청",
+      "pos": [
+        265,
+        623
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/lib/api.ts"
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Backend",
+      "sublabel": "API · 내부 정기 스케줄러",
+      "pos": [
+        510,
+        459
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "backend/internal/api/proxy.go"
+        },
+        {
+          "path": "backend/internal/api/schedules.go"
+        }
+      ]
+    },
+    {
+      "id": "jc",
+      "type": "backend",
+      "label": "Job Controller",
+      "sublabel": "영속 큐 · claim · 공개 검증",
+      "pos": [
+        721,
+        459
+      ],
+      "size": [
+        160,
+        56
+      ],
+      "sources": [
+        {
+          "path": "job-controller/controller/claim.go"
+        },
+        {
+          "path": "job-controller/controller/attempt.go"
+        }
+      ]
+    },
+    {
+      "id": "rca",
+      "type": "backend",
+      "label": "GPU RCA Agent",
+      "sublabel": "독립 Worker · NAT 조사",
+      "pos": [
+        942,
+        335
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "rcca-agent/src/rcca_agent/workflow.py"
+        },
+        {
+          "path": "rcca-agent/configs/workflow.yml"
+        },
+        {
+          "path": "shared/python/src/agent_common/worker.py"
+        }
+      ]
+    },
+    {
+      "id": "ops",
+      "type": "backend",
+      "label": "GPU Ops 보고서 Agent",
+      "sublabel": "독립 Worker · NAT 계산·설명",
+      "pos": [
+        942,
+        583
+      ],
+      "size": [
+        160,
+        56
+      ],
+      "sources": [
+        {
+          "path": "ops-agent/src/ops_agent/workflow.py"
+        },
+        {
+          "path": "ops-agent/configs/workflow.yml"
+        },
+        {
+          "path": "shared/python/src/agent_common/worker.py"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "type": "backend",
+      "label": "Grafana MCP",
+      "sublabel": "두 Agent의 읽기 전용 도구",
+      "pos": [
+        942,
+        227
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "grafana-mcp/README.md"
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "LLM endpoint",
+      "sublabel": "공유 OpenAI 호환 추론 API",
+      "pos": [
+        1136,
+        459
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "shared/python/src/agent_common/llm.py"
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "사건 · 작업 · 근거 · 결과",
+      "pos": [
+        726,
+        680
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "shared/python/src/agent_common/store.py"
+        },
+        {
+          "path": "backend/internal/api/schedules.go"
+        },
+        {
+          "path": "job-controller/controller/attempt.go"
+        }
+      ]
+    },
+    {
+      "id": "fleet",
+      "type": "external",
+      "label": "Fleet Intelligence Agent",
+      "sublabel": "GPU·호스트 지표 / 상태·이벤트",
+      "pos": [
+        270,
+        75
+      ],
+      "size": [
+        172,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "dcgm",
+      "type": "external",
+      "label": "DCGM Exporter",
+      "sublabel": "GPU 지표 · GPU↔Pod 매핑",
+      "pos": [
+        30,
+        255
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "type": "external",
+      "label": "Host Exporter",
+      "sublabel": "hall 구성 · 실제 배포 확인",
+      "pos": [
+        270,
+        480
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        }
+      ]
+    },
+    {
+      "id": "ksm",
+      "type": "external",
+      "label": "kube-state-metrics",
+      "sublabel": "Node·Pod 상태 / 요청량·UID",
+      "pos": [
+        30,
+        480
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "alloy",
+      "type": "external",
+      "label": "Grafana Alloy",
+      "sublabel": "OTLP 수신 · scrape · 가공",
+      "pos": [
+        270,
+        255
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "external",
+      "label": "Envoy Ingest Gateway",
+      "sublabel": "CSC 수신 · 경로/tenant 분기",
+      "pos": [
+        495,
+        75
+      ],
+      "size": [
+        160,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "mimir",
+      "type": "external",
+      "label": "Grafana Mimir",
+      "sublabel": "메트릭 저장 · PromQL",
+      "pos": [
+        728,
+        75
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "loki",
+      "type": "external",
+      "label": "Grafana Loki",
+      "sublabel": "로그·이벤트 저장 · LogQL",
+      "pos": [
+        960,
+        75
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        },
+        {
+          "path": "docs/evidence/CPC-2_수집검증_20260915.md"
+        }
+      ]
+    },
+    {
+      "id": "object",
+      "type": "database",
+      "label": "Object Storage",
+      "sublabel": "블록·청크·인덱스",
+      "pos": [
+        1193,
+        75
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "sources": [
+        {
+          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "CPC-1 … CPC-N · 사이트별 수집 모듈",
+      "wraps": [
+        "fleet",
+        "dcgm",
+        "host",
+        "ksm",
+        "alloy"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Client · 사용자 접점",
+      "wraps": [
+        "client"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "CSC · 중앙 수신·저장 및 업무 서비스",
+      "wraps": [
+        "grafana",
+        "incident",
+        "backend",
+        "jc",
+        "rca",
+        "ops",
+        "mcp",
+        "llm",
+        "db",
+        "gateway",
+        "mimir",
+        "loki",
+        "object"
+      ],
+      "pad": 30
+    }
+  ],
+  "connections": [
+    {
+      "id": "webhook",
+      "from": "grafana",
+      "to": "incident",
+      "label": "① Webhook",
+      "variant": "emphasis",
+      "labelAt": [
+        761,
+        302
+      ]
+    },
+    {
+      "id": "submit-rca",
+      "from": "incident",
+      "to": "jc",
+      "label": "② RCA 접수",
+      "variant": "emphasis",
+      "labelAt": [
+        761,
+        416
+      ],
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "client-api",
+      "from": "client",
+      "to": "backend",
+      "label": "/api/v1",
+      "labelAt": [
+        430,
+        555
+      ]
+    },
+    {
+      "id": "submit-report",
+      "from": "backend",
+      "to": "jc",
+      "label": "보고서 접수",
+      "labelAt": [
+        710,
+        440
+      ]
+    },
+    {
+      "id": "rca-control",
+      "from": "rca",
+      "to": "jc",
+      "label": "③ claim · complete",
+      "variant": "emphasis",
+      "labelAt": [
+        855,
+        420
+      ]
+    },
+    {
+      "id": "ops-control",
+      "from": "ops",
+      "to": "jc",
+      "label": "claim · complete",
+      "labelAt": [
+        855,
+        543
+      ]
+    },
+    {
+      "id": "rca-mcp",
+      "from": "rca",
+      "to": "mcp",
+      "label": "관측 조회",
+      "labelAt": [
+        975,
+        308
+      ]
+    },
+    {
+      "id": "ops-mcp",
+      "from": "ops",
+      "to": "mcp",
+      "label": "관측 조회",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          1305,
+          611
+        ],
+        [
+          1305,
+          255
+        ]
+      ],
+      "labelAt": [
+        1350,
+        420
+      ]
+    },
+    {
+      "id": "mcp-grafana",
+      "from": "mcp",
+      "to": "grafana",
+      "label": "조회 API"
+    },
+    {
+      "id": "rca-llm",
+      "from": "rca",
+      "to": "llm",
+      "label": "추론 API",
+      "labelAt": [
+        1148,
+        416
+      ]
+    },
+    {
+      "id": "ops-llm",
+      "from": "ops",
+      "to": "llm",
+      "label": "추론 API",
+      "labelAt": [
+        1148,
+        551
+      ]
+    },
+    {
+      "id": "incident-db",
+      "from": "incident",
+      "to": "db",
+      "label": "사건·outbox",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          675,
+          363
+        ],
+        [
+          675,
+          708
+        ]
+      ],
+      "labelAt": [
+        623,
+        413
+      ]
+    },
+    {
+      "id": "backend-db",
+      "from": "backend",
+      "to": "db",
+      "label": "조회·설정·일정",
+      "labelAt": [
+        744,
+        630
+      ]
+    },
+    {
+      "id": "jc-db",
+      "from": "jc",
+      "to": "db",
+      "label": "작업·공개 참조",
+      "labelAt": [
+        750,
+        578
+      ],
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "rca-db",
+      "from": "rca",
+      "to": "db",
+      "label": "④ 읽기·후보 저장",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "via": [
+        [
+          1017,
+          399
+        ],
+        [
+          920,
+          399
+        ],
+        [
+          920,
+          708
+        ]
+      ],
+      "labelAt": [
+        990,
+        415
+      ]
+    },
+    {
+      "id": "ops-db",
+      "from": "ops",
+      "to": "db",
+      "label": "읽기·후보 저장",
+      "labelAt": [
+        855,
+        656
+      ]
+    },
+    {
+      "id": "fleet-otlp",
+      "from": "fleet",
+      "to": "alloy",
+      "label": "OTLP 지표·로그",
+      "labelAt": [
+        338,
+        180
+      ],
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "dcgm-scrape",
+      "from": "alloy",
+      "to": "dcgm",
+      "label": "GET /metrics",
+      "labelAt": [
+        218,
+        266
+      ]
+    },
+    {
+      "id": "dcgm-metrics",
+      "from": "dcgm",
+      "to": "alloy",
+      "label": "GPU 메트릭",
+      "variant": "dashed",
+      "labelAt": [
+        218,
+        248
+      ]
+    },
+    {
+      "id": "host-scrape",
+      "from": "alloy",
+      "to": "host",
+      "label": "scrape · 배포 확인",
+      "labelAt": [
+        293,
+        390
+      ]
+    },
+    {
+      "id": "host-metrics",
+      "from": "host",
+      "to": "alloy",
+      "label": "호스트 메트릭",
+      "variant": "dashed",
+      "labelAt": [
+        390,
+        428
+      ]
+    },
+    {
+      "id": "ksm-scrape",
+      "from": "alloy",
+      "to": "ksm",
+      "label": "GET /metrics",
+      "labelAt": [
+        188,
+        368
+      ]
+    },
+    {
+      "id": "ksm-metrics",
+      "from": "ksm",
+      "to": "alloy",
+      "label": "K8s 메트릭",
+      "variant": "dashed",
+      "labelAt": [
+        262,
+        412
+      ]
+    },
+    {
+      "id": "alloy-gateway",
+      "from": "alloy",
+      "to": "gateway",
+      "label": "remote_write · OTLP · Loki push"
+    },
+    {
+      "id": "gateway-mimir",
+      "from": "gateway",
+      "to": "mimir",
+      "label": "지표 수신"
+    },
+    {
+      "id": "gateway-loki",
+      "from": "gateway",
+      "to": "loki",
+      "label": "로그 수신",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          575,
+          158
+        ],
+        [
+          1035,
+          158
+        ]
+      ],
+      "labelAt": [
+        675,
+        150
+      ]
+    },
+    {
+      "id": "mimir-object",
+      "from": "mimir",
+      "to": "object",
+      "label": "메트릭 블록 저장",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          803,
+          55
+        ],
+        [
+          1268,
+          55
+        ]
+      ]
+    },
+    {
+      "id": "loki-object",
+      "from": "loki",
+      "to": "object",
+      "label": "로그 청크 저장"
+    },
+    {
+      "id": "grafana-mimir",
+      "from": "grafana",
+      "to": "mimir",
+      "label": "PromQL 요청",
+      "labelAt": [
+        758,
+        195
+      ],
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "mimir-grafana",
+      "from": "mimir",
+      "to": "grafana",
+      "label": "메트릭 결과",
+      "variant": "dashed",
+      "labelAt": [
+        859,
+        210
+      ],
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "grafana-loki",
+      "from": "grafana",
+      "to": "loki",
+      "label": "LogQL 요청",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        920,
+        195
+      ]
+    },
+    {
+      "id": "loki-grafana",
+      "from": "loki",
+      "to": "grafana",
+      "label": "로그 결과",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        990,
+        215
+      ]
+    },
+    {
+      "id": "webhook-return",
+      "from": "incident",
+      "to": "grafana",
+      "variant": "dashed"
+    },
+    {
+      "id": "submit-rca-return",
+      "from": "jc",
+      "to": "incident",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "client-api-return",
+      "from": "backend",
+      "to": "client",
+      "variant": "dashed"
+    },
+    {
+      "id": "submit-report-return",
+      "from": "jc",
+      "to": "backend",
+      "variant": "dashed"
+    },
+    {
+      "id": "rca-control-return",
+      "from": "jc",
+      "to": "rca",
+      "variant": "dashed"
+    },
+    {
+      "id": "ops-control-return",
+      "from": "jc",
+      "to": "ops",
+      "variant": "dashed"
+    },
+    {
+      "id": "rca-mcp-return",
+      "from": "mcp",
+      "to": "rca",
+      "variant": "dashed"
+    },
+    {
+      "id": "ops-mcp-return",
+      "from": "mcp",
+      "to": "ops",
+      "variant": "dashed",
+      "toSide": "right",
+      "fromSide": "right",
+      "via": [
+        [
+          1305,
+          255
+        ],
+        [
+          1305,
+          611
+        ]
+      ]
+    },
+    {
+      "id": "mcp-grafana-return",
+      "from": "grafana",
+      "to": "mcp",
+      "variant": "dashed"
+    },
+    {
+      "id": "rca-llm-return",
+      "from": "llm",
+      "to": "rca",
+      "variant": "dashed"
+    },
+    {
+      "id": "ops-llm-return",
+      "from": "llm",
+      "to": "ops",
+      "variant": "dashed"
+    },
+    {
+      "id": "incident-db-return",
+      "from": "db",
+      "to": "incident",
+      "variant": "dashed",
+      "toSide": "left",
+      "fromSide": "left",
+      "via": [
+        [
+          675,
+          708
+        ],
+        [
+          675,
+          363
+        ]
+      ]
+    },
+    {
+      "id": "backend-db-return",
+      "from": "db",
+      "to": "backend",
+      "variant": "dashed"
+    },
+    {
+      "id": "jc-db-return",
+      "from": "db",
+      "to": "jc",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "rca-db-return",
+      "from": "db",
+      "to": "rca",
+      "variant": "dashed",
+      "toSide": "bottom",
+      "fromSide": "right",
+      "via": [
+        [
+          920,
+          708
+        ],
+        [
+          920,
+          399
+        ],
+        [
+          1017,
+          399
+        ]
+      ]
+    },
+    {
+      "id": "ops-db-return",
+      "from": "db",
+      "to": "ops",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "화살표 읽기",
+      "items": [
+        "실선: 요청·전송 / 반대 점선: 응답.",
+        "JC → Worker: claim 응답. 교차선은 비접속."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "수신 경로 · CSC Gateway",
+      "items": [
+        "remote_write·OTLP 지표 → Mimir.",
+        "Loki push 로그 → Loki. CPC 라벨 유지."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "근거와 범위",
+      "items": [
+        "CPC-2 수집 확인. CPC-1/N은 별도 확인.",
+        "Host Exporter·Object Storage: 배포 미확인."
+      ]
+    }
+  ]
+}
