@@ -6,6 +6,7 @@
 
 ## 팀 공통 개발 지침
 
+- [팀 개발 역할과 협업 규칙](team-development.md): 담당 범위, 작업 시작·PR·리뷰, DB 변경과 배포 절차
 - [CLAUDE.md: 영어 공통 지침](../CLAUDE.md) · [한국어 번역](CLAUDE.ko.md)
 - [AGENTS.md: Agent 시작 지침](../AGENTS.md) · [한국어 번역](AGENTS.ko.md)
 

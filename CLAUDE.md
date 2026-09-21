@@ -53,6 +53,7 @@ If documents and code diverge, treat code and tests as current behavior and upda
 
 ## Working Style
 
+- Follow the [team collaboration rules](docs/team-development.md) for ownership, branches, reviews, and deployment handoffs.
 - Keep changes focused and reuse existing structure before adding abstractions, tools, or dependencies.
 - Prefer small, surgical edits; do not reformat or rename unrelated files.
 - Match existing naming and the language of the surrounding documentation. Keep code identifiers and developer-facing comments in English.
