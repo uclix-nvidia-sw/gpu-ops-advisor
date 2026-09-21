@@ -14,6 +14,8 @@
 | `grafana-mcp` | 공식 Grafana MCP v1.4.2, Prometheus/Mimir·Loki 읽기 도구 |
 | `agents` | 공통 배포 프로필, Compose, 설치·테스트 스크립트, QA |
 
+`agents/`는 제품의 두 Worker가 함께 사용하는 설정·테스트·실행 스크립트·문서를 담고, 실제 공통 실행 코드는 `shared/python/`에 있습니다. [.claude/rules/agents.md](../.claude/rules/agents.md)는 이 제품 코드를 수정하는 코딩 에이전트용 개발 지침입니다.
+
 각 Worker는 독립 프로세스/이미지이고 공유 코드는 패키지입니다. 별도 업무 큐·접수 API·일정 루프·장비 조작·RCA 직접 요청은 없습니다. JC register → claim → heartbeat → candidate/evidence 저장 → complete로 실행합니다. 한 프로세스에서 한 작업씩 처리하며 JC가 전역 슬롯을 제어합니다.
 
 ## Grafana 시간 형식과 LLM 오류 진단
@@ -23,6 +25,30 @@ Grafana MCP 1.4.2의 Prometheus 시간 파서는 마이크로초 시각(예: `20
 LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사가 성공해도 기존 `inference_quarantined`는 자동 해제되지 않습니다. 원격 추론 종료를 확인한 뒤 [Job Controller 운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따릅니다.
 
 이 처리는 공유 Python 모듈에 있으므로 배포할 때 `rcca-agent`와 `ops-agent` 이미지를 함께 다시 빌드합니다.
+
+## 모델 호출 timeout 조정
+
+현재 저장소에서 출발점은 [chart values](../charts/gpu-ops-advisor/values.yaml)의 `llm.requestTimeoutSeconds`이며 기본값은 300초다. 이 값은 Worker의 `LLM_REQUEST_TIMEOUT_SECONDS`로 전달된다. 실제 요청 시간에는 작업의 남은 deadline도 적용되므로 이 값만 늘린다고 전체 작업 시간이 늘어나는 것은 아니다.
+
+timeout은 모델에 보낸 요청의 통신 대기 제한, deadline은 분석 작업 전체의 마감 시간이다. Worker는 Agent 프로필의 `limits.deadline_seconds`와 JC가 준 `deadline_at` 중 먼저 끝나는 제한을 따른다. 모델 요청에 설정하는 timeout도 남은 시간보다 길게 잡지 않는다. 예를 들어 요청 timeout이 300초여도 전체 작업에 40초만 남았다면 그 요청 때문에 300초를 더 쓸 수 있는 것은 아니다.
+
+1. [현재 협업 규칙](../docs/team-development.md)에 따라 변경 담당자를 지정하고 추가 리뷰가 필요하면 요청한다. 담당자는 두 Agent의 호출과 deadline·슬롯·격리 정책 영향을 검증하고, C-1/C-2·B에게 관련 내용을 공유한다.
+2. 변경할 원본 설정, 실제 배포에 쓰는 override, 목표 시간, 적용·복구 순서를 작업 대화·Issue 또는 PR에 적는다. 외부 모델 서버·프록시·Ingress·LiteLLM 등을 사용하는 환경이라면 해당 설정을 소유한 별도 저장소·담당자도 기록한다. 이 저장소가 그 외부 설정까지 관리한다고 가정하지 않는다.
+3. 사용자 요청·승인 범위에서 main 반영과 CI 발행을 마친 뒤 지정한 사람이 별도로 승인된 배포를 수행한다. 실제 Worker 설정값, RCA·보고서 작업의 ID·상태·소요 시간·결과 공개 여부와 슬롯 상태를 확인한다. HTTP 성공만으로 검증을 끝내지 않는다.
+4. timeout 뒤 원격 추론의 종료가 불명확하면 슬롯이 격리될 수 있다. 이후 요청이 성공했다고 이전 격리가 해제된 것은 아니다. [추론 격리와 취소](../job-controller/README.md#추론-격리와-취소)에 따라 원격 종료를 확인한 뒤 처리한다.
+
+연결이 끊겼다고 모델 서버의 계산까지 멈췄다고 단정할 수는 없다. 슬롯 격리는 “기존 계산이 끝났는지 모르니 이 자리를 바로 다른 작업에 내주지 말자”는 안전장치다. 설정을 바꾸거나 새 요청을 성공시키는 것과 기존 작업의 종료 확인은 별개다.
+
+공유 기록 예시이며, 실제 적용 결과는 아니다:
+
+```text
+변경: 모델 요청 시간 상한 조정 (기존 값 → 합의한 값)
+담당/리뷰(선택): 변경 담당자 / 요청한 경우 담당자, 미요청이면 표시
+적용: 커밋·CI 실행·chart 버전, 대상 환경·namespace·release, values 위치
+확인: 실제 설정값, RCA·보고서 작업 ID·상태·소요 시간, 결과·슬롯 상태
+미확인: 실행하지 못한 검증, 후속 담당자와 기한
+복구: 변경 전 버전·설정, DB 영향 여부, 복구 순서
+```
 
 ## Windows 실행
 

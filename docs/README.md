@@ -7,8 +7,22 @@
 ## 팀 공통 개발 지침
 
 - [팀 개발 역할과 협업 규칙](team-development.md): 담당 범위, 현재 main 작업·향후 PR 절차, DB 변경과 배포
-- [CLAUDE.md: 영어 공통 지침](../CLAUDE.md) · [한국어 번역](CLAUDE.ko.md)
-- [AGENTS.md: Agent 시작 지침](../AGENTS.md) · [한국어 번역](AGENTS.ko.md)
+- [CLAUDE.md: 공통 원칙과 규칙 안내](../CLAUDE.md) · [한국어 번역](CLAUDE.ko.md)
+- [AGENTS.md: 코딩 에이전트 시작 지침](../AGENTS.md) · [한국어 번역](AGENTS.ko.md)
+- [작업·완료 기준](../.claude/rules/workflow.md) · [안전수칙](../.claude/rules/safety.md)
+- [Frontend](../.claude/rules/frontend.md) · [Go·DB](../.claude/rules/go-services.md) · [제품 Agent·공통 Python](../.claude/rules/agents.md) · [배포·설정·CI](../.claude/rules/deployment.md)
+- [분리한 여섯 규칙의 한국어 번역](rules.ko.md) · [검증 성공 기준](rules.ko.md#공통-완료-기준)
+- [처음 작업을 시작할 때 쓰는 담당별 프롬프트 4가지](agent-prompts.md)
+
+`AGENTS.md`와 `.claude/rules/`는 코딩 도우미가 읽는 지침입니다. 제품의 `agents/`는 RCA·Ops Worker용 공통 설정·테스트·실행 안내이며, 두 Worker가 재사용하는 실제 Python 코드는 `shared/python/`에 있습니다. 이 규칙들은 지침이지 commit·push·배포 권한을 강제로 차단하는 설정은 아닙니다.
+
+### 지침을 수정하고 확인하는 방법
+
+공통 원칙은 루트 `CLAUDE.md`, 세부 규칙은 해당 영어 규칙 파일을 수정하고 한국어 번역도 함께 맞춥니다. 한국어 번역은 중복으로 자동 로딩되지 않도록 `docs/`에만 둡니다. 개인 설정이나 별도 hook은 이 구조에 포함하지 않습니다.
+
+문서 변경의 성공 기준은 링크·프롬프트 경로가 유효하고, 규칙의 적용 범위가 맞으며, 기존 정책과 번역이 일치하는 것입니다. `python tools/check_links.py`로 로컬 링크를 확인하고, 절 제목 링크와 프롬프트 코드 블록의 경로는 따로 확인합니다. 문서 검사 성공과 실제 도구의 로딩 확인은 별개입니다.
+
+Claude Code에서는 새 세션을 열어 `/context`에서 공통 규칙을 확인하고, 담당 모듈 파일을 읽은 뒤 해당 경로 규칙도 확인합니다. 경로 없는 규칙은 시작할 때, `paths`가 있는 규칙은 맞는 파일을 읽을 때 로딩되는 방식입니다. 다른 코딩 도구는 루트 `AGENTS.md`의 안내에 따라 같은 규칙을 읽게 합니다. 실제 세션에서 확인하기 전에는 자동 적용 검증을 완료했다고 적지 않습니다. [Claude Code 공식 안내](https://code.claude.com/docs/en/memory)
 
 ## 현행 개발 문서
 
