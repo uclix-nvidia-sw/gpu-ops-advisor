@@ -2,6 +2,15 @@
 
 GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고서를 제공하는 서비스입니다. **현재 개발 기준은 v1.3**입니다. Frontend·Backend·Incident·Job Controller·두 Agent와 Grafana MCP 연결 코드가 있으며, 현재 구현과 시험 범위는 아래 안내 및 모듈별 QA에서 확인할 수 있습니다.
 
+## [Architecture · Sequence 다이어그램 열기 →](output/archify/gpu-ops-advisor.html)
+
+**전체 시스템 구성과 실제 요청 처리 순서를 한 화면에서 탐색하는 HTML 뷰어입니다.** 저장소 코드와 설계 문서를 바탕으로 Archify로 작성했으며, 상단 탭으로 구조도와 시퀀스를 전환할 수 있습니다.
+
+- **Architecture:** CPC 수집 모듈, CSC 수신·저장 및 분석 모듈, Client를 구분하고 두 Agent·Job Controller·Grafana MCP·LLM·DB의 연결과 화살표 방향을 보여줍니다.
+- **Sequence:** RCA 접수·실행, 즉시 보고서 요청·조회, 정기 보고서 접수, 보고서 실행의 다섯 시나리오에서 호출·응답과 데이터 저장·결과 공개 순서를 확인할 수 있습니다.
+
+GitHub의 위 링크는 HTML 파일 페이지로 연결됩니다. **다이어그램을 보려면 저장소를 내려받고 `output/archify/gpu-ops-advisor.html`을 브라우저에서 여세요.** 같은 폴더의 다이어그램 HTML 파일들도 함께 유지해야 합니다. [뷰어 안내·검증 기록](output/archify/README.md) · [Sequence 코드 근거](output/archify/sequence-evidence.md)
+
 [개발 문서 15종](output/deliverables-20260917-v1.3/00_산출물_안내.md) · [전체 구조도](output/architecture-modules-20260917-v1.3/README.md) · [문서 탐색](docs/README.md) · [변경·정리 내역](output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)
 
 [CI·릴리스 파이프라인](docs/ci-release.md) · [Helm 설치 안내 — 기본 8개 Pod](charts/gpu-ops-advisor/README.md) · [RCA·보고서 Agent](agents/README.md)
