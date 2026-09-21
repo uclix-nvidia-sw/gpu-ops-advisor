@@ -127,5 +127,5 @@ RCA에서는 Incident의 cluster/GPU UUID/사고 시각으로 Category에 연결
 ## 7. 검토 근거
 
 - 사용자 제공 `gpu-ops-advisor-main (1).zip`: `rcca-agent/configs/workflow.yml`, `rcca-agent/README.md`, `backend/internal/api/knowledge.go`, `shared/migrations/001_backend.sql`, `output/deliverables-20260917-v1.3/03_데이터_설계서.md`, `11_RCA_Agent_모듈_설계서.md`.
-- 사용자 제공 `DCGM이_알고_있는_모든_field(field_ID_포함)_cpc1.txt`, `..._cpc2.txt`: 숫자 Field 행과 대표 ID를 직접 대조. 출력은 DCGM 설치의 알려진 Field catalog이며 runtime sample이 아니다.
+- CPC별 `dcgmi dmon --list` 출력: [CPC-1](evidence/dcgm/cpc-1-dcgm-dmon-field-catalog.txt), [CPC-2](evidence/dcgm/cpc-2-dcgm-dmon-field-catalog.txt). 숫자 Field 행과 대표 ID를 직접 대조했다. 이는 조회한 DCGM의 Field catalog이며, 실제 수집된 runtime sample이나 Mimir 시계열 목록은 아니다.
 - [Fleet Intelligence Agent 고정 소스의 GPU 온도 Field 정의](https://github.com/NVIDIA/fleet-intelligence-agent/blob/8dd8826b7604386ad667125298156ddb1d1a7865/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/thermal/metrics.go), [DCGM Exporter 4.4.2-4.7.0 기본 CSV](https://github.com/NVIDIA/dcgm-exporter/blob/4.4.2-4.7.0/etc/default-counters.csv), [NVIDIA DCGM Field ID 문서](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-field-ids.html). 이 정적 소스의 배포 버전 일치는 아직 확인되지 않았다.
