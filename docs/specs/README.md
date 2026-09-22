@@ -16,13 +16,18 @@ GUI → Backend에서 RCA 결과를 조회하고 보고서를 요청한다. Graf
 
 확정된 상세 보완 명세가 필요하면 해당 모듈 폴더에 추가하고 이 목차에서 연결한다. 공통 데이터·산식·결과 형식을 복사해 별도 기준을 만들지 않는다. 아직 합의되지 않은 내용은 초안임을 표시한다.
 
-### RCA 설계 초안
+### RCA workflow·runbook 통합 기준
 
-`rca-agent/drafts/`는 검토용 제안이다. 현행 명세를 자동으로 대체하지 않으며, 해당 제안을 구현 대상으로 지정한 작업에서 참고한다. 일부 검색 코드의 구현·검증 기록은 전체 파이프라인의 통합·운영 검수 완료와 구분한다.
+2026-09-22에 [11. RCA Agent 모듈 설계서](rca-agent/11_RCA_Agent_모듈_설계서.md)를 기준으로 아래 초안을 대조·통합했다. **현재 구현과 추가 개발 목표를 구분**하고, Runbook-first workflow, D-쿼리 재사용·선결 조건, runbook 작성/발행 계약, 구현 순서와 검수 기준을 11번 문서에서 관리한다. D01~D13·Observation·evidence 저장을 재사용하며 검색 모듈의 구현을 전체 파이프라인 통합 완료로 해석하지 않는다.
+
+`rca-agent/drafts/`는 제안 출처·당시 검증 기록으로 보존한다. 미채택 제안과 과거 실행 명령을 현행 요구사항으로 자동 적용하지 않는다. 상세 병합 결정과 evidence 해석 보정도 11번 문서에 기록했다.
+
+후속 코드 검토를 반영해 11번 문서 §3에 fact·health 입력 계약, §5.3에 요청 출처별 query 허용 정책, §6.2에 compatibility 컨텍스트·발행 검증·Backend 코드 검색 호환성을 구체화했다. 개발은 P0a 데이터 계약과 P0b 관측 정합부터 진행한다. 이 데이터 구조와 validator는 추가 개발 목표이며 현재 runtime/API에 모두 구현됐다는 의미는 아니다.
 
 - [GPU 노드 RCA Runbook 설계 초안](rca-agent/drafts/gpu-node-rca-runbook-design.md)
 - [Runbook-first 검색·조사 파이프라인 초안](rca-agent/drafts/gpu-node-rca-runbook-first-pipeline.md)
 - [Knowledge DB 참고 설계](rca-agent/drafts/knowledge-db-reference.md)
+- RCA evidence 조사 검토 — [11번 문서](rca-agent/11_RCA_Agent_모듈_설계서.md) §8에 해석과 점검 순서를 정리했다. 사용자 제공 운영 원문은 로컬에 보존하며 저장소에 포함하지 않는다.
 
 ## 개발 문서
 
@@ -38,7 +43,7 @@ GUI → Backend에서 RCA 결과를 조회하고 보고서를 요청한다. Graf
 | 08 | [GUI](frontend/08_GUI_화면설계서.md) | 화면별 필드·행동·빈 상태 |
 | 09 | [개정·정리 내역](09_통합검토_반영내역.md) | 변경 이유·삭제 범위·추적·검증 |
 | 10 | [Job Controller](job-controller/10_Job_Controller_모듈_설계서.md) | 큐·배분·용량 제한·상태 전이 |
-| 11 | [RCA Agent](rca-agent/11_RCA_Agent_모듈_설계서.md) | NAT·Runbook·MCP 조사, R01~R09 |
+| 11 | [RCA Agent](rca-agent/11_RCA_Agent_모듈_설계서.md) | R01~R09, workflow·runbook 계약, D-쿼리 선결 조건, 개발·검수 순서 |
 | 12 | [보고서 Agent](ops-agent/12_보고서_Agent_모듈_설계서.md) | NAT·RCA DB/기간 관측 집계, O01~O11 |
 | 13 | [Incident](incident/13_Incident_모듈_설계서.md) | Grafana 알람·사건·RCA 접수 |
 | 14 | [모듈 간 계약](common/14_모듈간_호출과_공통실행_계약.md) | DTO·멱등·lease·완료·오류 |
@@ -49,7 +54,7 @@ Backend, Incident, Job Controller, RCA Agent, 보고서 Agent의 5개 서버 모
 
 Chatbot/Assistant·직접 RCA 요청 화면·독립 Scheduler·HPA/자동 증설·제품 인증/RBAC/사용자 tenant는 이번 개발 범위에서 제외한다. 기존 Mimir/Loki 연결에 필요한 기술 설정은 유지한다. 과거 문서의 같은 번호·시험 ID를 현행 문서와 혼용하지 않는다.
 
-문서 버전은 1.3, 모듈 계약은 1.3이다. 계산 기준(criteria_version)과 결과 스키마(result_schema_version)는 기존 1.1을 유지하며 RCA의 incident_id는 필수다. 2026-09-18 내용 반영은 당시 버전과 코드 동작을 기록한다. 2026-09-22에는 문서를 `docs/specs/`의 공통·모듈별 경로로 재배치했으며 기능 요구사항과 제품 계약 버전은 변경하지 않았다.
+문서 버전은 1.3, 모듈 계약은 1.3이다. 계산 기준(criteria_version)과 결과 스키마(result_schema_version)는 기존 1.1을 유지하며 RCA의 incident_id는 필수다. 2026-09-18 내용 반영은 당시 버전과 코드 동작을 기록한다. 2026-09-22에는 문서를 `docs/specs/`의 공통·모듈별 경로로 재배치했다. 같은 날 RCA 초안을 11번 문서의 추가 개발 목표로 통합했으며 제품 계약 버전과 런타임 코드는 변경하지 않았다.
 
 ## 현재 구현과 검증 기록
 
