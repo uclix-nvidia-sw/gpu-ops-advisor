@@ -59,16 +59,7 @@
 
 Fleet와 GPUd의 component, XID·SXID 정적 정의와 기본 action을 찾을 때는 저장소 안의 [Fleet·GPUd component·오류 카탈로그](fleet-gpud-error-catalog.md)를 사용한다. 이 카탈로그의 action은 분석 commit의 정적 기본값이며 현재 상태 평가 결과나 즉시 실행 지시가 아니다.
 
-## 5. 그대로 적재하거나 push하지 않을 항목
-
-- 첨부 ZIP 자체와 원본 export Markdown: 중복·잘린 URL·검증 수준이 섞여 있어 참고 원본으로만 보관한다.
-- URL 끝이 `…` 또는 `%E2%80%A6`인 링크: 실제 문서 URL이 아니라 화면에서 잘린 문자열이다.
-- `nvidia.github.io/.../review/pr-*`: 임시 PR preview URL이므로 근거 URL로 저장하지 않는다.
-- Red Hat 구독 문서: 접근 권한과 본문 revision을 팀이 확인하기 전에는 링크 후보로만 둔다.
-- GitHub issue 한 건: 재현 가능한 환경·버전·공식 결론이 없는 경우 runbook rule의 단독 근거로 사용하지 않는다.
-- `latest` 문서의 본문 전체 또는 외부 글의 명령을 복사한 seed: 출처 변경과 환경 차이를 추적할 수 없다.
-
-## 6. 런북 한 건으로 변환할 때 필요한 정보
+## 5. 런북 한 건으로 변환할 때 필요한 정보
 
 다음 구조는 작성용 worksheet 예시다. 그대로 API payload로 적재하지 않는다. 새 DB 테이블을 요구하지 않으며, 검토가 끝난 값만 현재 프로젝트의 versioned runbook content와 `source_refs` 계약에 맞춰 옮긴다. 현재 UI·API의 `source_refs`는 문자열 배열로 다루므로 고정된 URL 또는 revision 식별자를 문자열로 저장하고, 상세한 적용 버전·조회일·원문 위치는 검토 기록에 함께 남긴다.
 
@@ -103,7 +94,7 @@ source_review:
   location: 근거가 있는 section 또는 code 위치
 ```
 
-## 7. 우선 작성할 런북 순서
+## 6. 우선 작성할 런북 순서
 
 1. `GPU_ACCESS_LOST` / Xid 79: Fleet·gpud catalog, Loki 원문, PCI BDF, 장치 마지막 관측을 묶기 쉽다.
 2. `ECC_DBE`: counter 증가, Xid, UUID binding과 human action 경계를 명확히 검증할 수 있다.

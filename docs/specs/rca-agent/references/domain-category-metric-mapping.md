@@ -16,7 +16,7 @@
 
 - 소문자 `dcgm_fi_*`는 Fleet Intelligence naming이다. 표에서 별도 주의 문구가 없는 이름은 제공된 CPC-1 Mimir catalog에 있으며, `후보`로 표시한 이름은 참고 소스에는 있지만 CPC-1 실노출이 확인되지 않은 것이다.
 - 대문자 `DCGM_FI_*`는 `nvidia-dcgm-exporter`의 대응 DCGM field 이름이다. 기본 CSV에서 활성·주석·미포함 여부가 서로 다르므로 실제 Mimir 노출 여부를 별도로 검증해야 한다.
-- Fleet와 Exporter가 같은 DCGM Field ID를 읽는 쌍은 하나의 canonical metric으로 연결할 수 있다. 다만 source별 시계열은 유지하고 합산하지 않는다. `producer_contract`와 `metric_definition`에 source, unit, type, label mapping을 따로 등록한 뒤 우선 source와 failover source를 정한다.
+- Fleet와 Exporter가 같은 DCGM Field ID를 읽는 쌍은 하나의 **canonical meaning**으로 연결할 수 있다. canonical meaning은 `gpu.temperature.celsius`처럼 사람이 읽고 code가 참조하는 의미 키이며, DCGM Field ID는 각 producer binding의 원천 필드 식별자다. source별 시계열은 유지하고 합산하지 않는다. `producer_contract`와 `metric_definition`에 source, unit, type, label mapping을 따로 등록한 뒤 우선 source와 failover source를 정한다.
 - `counter`는 현재 누적값보다 사건 전후의 reset-aware 증가량을 우선한다. `gauge`는 시점 값과 지속시간을 함께 본다.
 - “직접 메트릭 없음”은 조사할 수 없다는 뜻이 아니다. 현재 Agent에 연결된 Mimir·Loki 조회와 정규화된 fact를 우선 사용한다. Fleet `/v1/states`, `/v1/events`, `/machine-info`는 원천 후보이며, Agent가 직접 조회한다고 가정하지 말고 producer 계약과 수집 파이프라인 연결이 확인된 경우에만 런북 입력으로 사용한다.
 - 아래 이름은 catalog·참고 소스 기준이다. 운영 적용 전 `cluster_id`, `machine_id`, `node`, `uuid`/`UUID`, `pci_bus_id`, `model_name` label과 단위·TYPE·수집 주기를 실환경에서 확정해야 한다.
@@ -69,14 +69,14 @@
 | unsupported/sentinel 처리 | collector 구현과 버전에 따라 누락 처리 시점이 달라질 수 있음 |
 | 실제 CPC 값 일치 | 아직 미검증. 제공 자료에서 Fleet 표본은 있으나 로컬 Prometheus의 `DCGM_FI_DEV_GPU_UTIL` 조회는 0건이어서 동일 GPU·동일 시간 비교 표본이 없음 |
 
-따라서 Knowledge DB에는 두 이름을 다음처럼 등록하는 것이 적합하다.
+따라서 Knowledge DB에는 두 이름을 다음처럼 등록하는 것이 적합하다. 이 원칙의 상세 설명은 [Knowledge DB reference](../drafts/knowledge-db-reference.md)를 따른다.
 
 ```text
-canonical_metric: gpu.temperature.celsius
-  ├─ fleet-intelligence / dcgm_fi_dev_gpu_temp / labels: uuid,gpu,component
-  └─ dcgm-exporter     / DCGM_FI_DEV_GPU_TEMP / labels: UUID,gpu,pci_bus_id,...
+canonical_meaning_key: gpu.temperature.celsius
+  ├─ fleet-intelligence / dcgm_fi_dev_gpu_temp / field_namespace: dcgm / field_id: 150 / labels: uuid,gpu,component
+  └─ dcgm-exporter     / DCGM_FI_DEV_GPU_TEMP / field_namespace: dcgm / field_id: 150 / labels: UUID,gpu,pci_bus_id,...
 
-equivalence_basis: same_dcgm_field_id
+equivalence_basis: same_dcgm_field_id_and_semantic_contract
 equivalence_status: source_verified
 runtime_value_validation: pending
 merge_policy: prefer_primary_then_failover
@@ -193,9 +193,11 @@ incident_domain
             └─ required
 
 metric_definition
-  ├─ canonical_metric_key
+  ├─ canonical_meaning_key
   ├─ producer
   ├─ source_metric_name
+  ├─ field_namespace
+  ├─ field_id
   ├─ metric_type
   ├─ unit
   ├─ target_label_mapping
