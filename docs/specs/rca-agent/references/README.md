@@ -6,6 +6,7 @@
 
 - [Domain·Category·메트릭 매핑](domain-category-metric-mapping.md): 검색된 runbook 후보를 검증할 때 Domain·Category별로 조회할 metric·event·log 후보와 관측 순서를 정리한다.
 - [런북 근거자료 카탈로그](runbook-source-catalog.md): 공식 문서, 조건부 자료, 보조 자료와 제외할 출처를 구분한다.
+- [Fleet·GPUd component·오류 카탈로그](fleet-gpud-error-catalog.md): 두 저장소의 component와 XID·SXID 정적 정의, 기본 repair action, 조건 기반 action 코드 위치를 조회한다.
 
 ## 적용 범위
 

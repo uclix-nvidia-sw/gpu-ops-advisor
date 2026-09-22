@@ -57,6 +57,8 @@
 | [USE Method](https://www.brendangregg.com/usemethod.html) | CPU·memory·disk·network 가설을 utilization·saturation·errors로 분해 | GPU 오류 코드나 조치의 직접 근거가 아님 |
 | [Percona NVMe health 글](https://www.percona.com/blog/using-nvme-command-line-tools-to-check-nvme-flash-health/) | NVMe 관측 항목을 찾는 보조 자료 | 장비 제조사와 nvme-cli·smartmontools 공식 문서로 명령·threshold 재검증 |
 
+Fleet와 GPUd의 component, XID·SXID 정적 정의와 기본 action을 찾을 때는 저장소 안의 [Fleet·GPUd component·오류 카탈로그](fleet-gpud-error-catalog.md)를 사용한다. 이 카탈로그의 action은 분석 commit의 정적 기본값이며 현재 상태 평가 결과나 즉시 실행 지시가 아니다.
+
 ## 5. 그대로 적재하거나 push하지 않을 항목
 
 - 첨부 ZIP 자체와 원본 export Markdown: 중복·잘린 URL·검증 수준이 섞여 있어 참고 원본으로만 보관한다.
