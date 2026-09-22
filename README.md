@@ -11,9 +11,9 @@ GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고�
 
 위 링크는 **실행된 다이어그램을 보여주는 ChatGPT Sites**로 연결됩니다. 로그인 없이 링크를 가진 누구나 볼 수 있습니다. 새 탭으로 보려면 Ctrl/Cmd를 누른 채 링크를 클릭하세요.
 
-로컬에서는 저장소를 내려받아 `output/archify/gpu-ops-advisor.html`을 브라우저에서 열 수 있습니다. 같은 폴더의 다이어그램 HTML 파일들도 함께 유지해야 합니다. [HTML 원본](output/archify/gpu-ops-advisor.html) · [뷰어 안내·검증 기록](output/archify/README.md) · [Sequence 코드 근거](output/archify/sequence-evidence.md)
+로컬에서는 저장소를 내려받아 `docs/architecture/archify/gpu-ops-advisor.html`을 브라우저에서 열 수 있습니다. 같은 폴더의 다이어그램 HTML 파일들도 함께 유지해야 합니다. [HTML 원본](docs/architecture/archify/gpu-ops-advisor.html) · [뷰어 안내·검증 기록](docs/architecture/archify/README.md) · [Sequence 코드 근거](docs/architecture/archify/sequence-evidence.md)
 
-[개발 문서 15종](output/deliverables-20260917-v1.3/00_산출물_안내.md) · [전체 구조도](output/architecture-modules-20260917-v1.3/README.md) · [문서 탐색](docs/README.md) · [변경·정리 내역](output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)
+[개발 문서 15종](docs/specs/README.md) · [전체 구조도](docs/architecture/architecture-modules-20260917-v1.3/README.md) · [문서 탐색](docs/README.md) · [변경·정리 내역](docs/specs/09_통합검토_반영내역.md)
 
 [CI·릴리스 파이프라인](docs/ci-release.md) · [Helm 설치 안내 — 기본 8개 Pod](charts/gpu-ops-advisor/README.md) · [RCA·보고서 Agent](agents/README.md)
 
@@ -46,17 +46,17 @@ Chatbot/Assistant, GUI 직접 RCA 실행, 독립 Scheduler, HPA/자동 확장, �
 |---|---|---|
 | Backend·클러스터 등록 | 데모 seed 없이 필수 API 한도 초기화, 빈 클러스터 상태 기동, API/GUI 등록 | [Backend](backend/README.md) · [QA](backend/QA.md) |
 | 사건·잡·Agent | Incident 기원의 RCA, JC 큐·claim·완료, NAT/MCP 조회 및 결과 저장 | [Incident](incident/README.md) · [JC](job-controller/README.md) · [Agent QA](agents/QA.md) |
-| 보고서 수집·계산 | 대용량 응답 분할, GPU–Pod 연결 관측 수·시간과 독점 할당 구분, 부분 결과 보존 | [보고서 명세](output/deliverables-20260917-v1.3/12_보고서_Agent_모듈_설계서.md) |
+| 보고서 수집·계산 | 대용량 응답 분할, GPU–Pod 연결 관측 수·시간과 독점 할당 구분, 부분 결과 보존 | [보고서 명세](docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md) |
 | GUI·다운로드 | 서버 기반 일정·작업·결과 조회, 보고서 수치·부족 사유·수집 상태, HTML/CSV 출력 | [Frontend](frontend/README.md) · [QA](frontend/QA.md) |
-| 배포 설정 | probe 분리, MCP Host 허용, 현재 실행/조회/LLM 예산 및 시작 시 설정 적용 | [운영 인계](output/deliverables-20260917-v1.3/06_배포_운영_인계서.md) · [설치](docs/helm-install.md) |
+| 배포 설정 | probe 분리, MCP Host 허용, 현재 실행/조회/LLM 예산 및 시작 시 설정 적용 | [운영 인계](docs/specs/06_배포_운영_인계서.md) · [설치](docs/helm-install.md) |
 
 수집 데이터·할당 계약·조회 예산이 부족하면 결과는 partial/blocked가 될 수 있습니다. 잡의 succeeded와 분석 근거 충분함, LLM 설명 성공은 별개입니다. 시험 실행일·환경·범위는 각 QA를 따르며 문서 갱신이나 테스트 코드 추가를 새 시험 PASS로 간주하지 않습니다.
 
 ## 처음 읽는 순서
 
-1. [요구사항·개발 범위](output/deliverables-20260917-v1.3/01_요구사항_개발범위_정의서.md)에서 기능과 단계별 종료 조건을 확인합니다.
-2. [API](output/deliverables-20260917-v1.3/02_백엔드_API_작업명세서.md), [데이터](output/deliverables-20260917-v1.3/03_데이터_설계서.md), [모듈 간 계약](output/deliverables-20260917-v1.3/14_모듈간_호출과_공통실행_계약.md)을 맞춰 구현합니다.
-3. [시험 기준](output/deliverables-20260917-v1.3/05_테스트_검수_기준서.md)과 [운영 인계](output/deliverables-20260917-v1.3/06_배포_운영_인계서.md)에 실행 증거를 남깁니다.
+1. [요구사항·개발 범위](docs/specs/01_요구사항_개발범위_정의서.md)에서 기능과 단계별 종료 조건을 확인합니다.
+2. [API](docs/specs/backend/02_백엔드_API_작업명세서.md), [데이터](docs/specs/common/03_데이터_설계서.md), [모듈 간 계약](docs/specs/common/14_모듈간_호출과_공통실행_계약.md)을 맞춰 구현합니다.
+3. [시험 기준](docs/specs/05_테스트_검수_기준서.md)과 [운영 인계](docs/specs/06_배포_운영_인계서.md)에 실행 증거를 남깁니다.
 
 R01~R09/O01~O11의 업무와 기존 계산·품질 기준은 유지합니다. 수치는 코드로 계산하고 LLM은 근거 해석·설명을 맡습니다. 현재/과거 관계, 0/null, 작업 성공/분석 근거 부족/설명 실패를 구분합니다. 실제 장비 조치는 사람이 수행합니다.
 
@@ -84,7 +84,7 @@ npm run dev
 
 ## 저장소와 검증
 
-`output/deliverables-20260917-v1.3/`는 현행 개발 문서, `output/architecture-modules-20260917-v1.3/`는 확정 구조도, [docs/evidence](docs/evidence/README.md)는 수집 환경의 원문 근거입니다. 구버전 명세·중간 구조도·중복 시안·배포본은 정리했으며 Git 이력에서 확인할 수 있습니다.
+`docs/specs/`는 공통·모듈별 개발 명세, `docs/architecture/`는 구조도, [docs/evidence](docs/evidence/README.md)는 수집 환경의 원문 근거입니다. `docs/specs/rca-agent/drafts/`의 제안은 검토용 초안이며 현행 명세와 구분합니다. 구버전 명세·중간 구조도·중복 시안·배포본은 정리했으며 Git 이력에서 확인할 수 있습니다.
 
 ```sh
 python tools/check_links.py

@@ -1,6 +1,6 @@
 # Backend API v1.3
 
-기준: `output/deliverables-20260917-v1.3/02_백엔드_API_작업명세서.md`, 03·10·14 공통 계약.
+기준: `docs/specs/backend/02_백엔드_API_작업명세서.md`, 03·10·14 공통 계약.
 
 접두사 `/api/v1`, JSON UTF-8, UTC timestamp, `[start,end)`. 사용자·Agent 인증 및 권한 DTO 없음. scope는 등록된 CPC의 분석 필터다. 개발 seed는 cpc-1/cpc-2이며 운영 등록은 `cluster_registry`로 관리한다.
 

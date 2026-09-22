@@ -6,7 +6,7 @@
 - 메트릭 대조 목록: Exporter/Fleet 필드의 이름·출처·표본 등장 여부. 현재 활성 지표 전체 목록을 뜻하지 않는다.
 - [CPC-1](dcgm/cpc-1-dcgm-dmon-field-catalog.txt)·[CPC-2](dcgm/cpc-2-dcgm-dmon-field-catalog.txt) DCGM Field catalog: `dcgmi dmon --list` 출력. 실제 수집된 sample이나 Mimir 시계열 목록을 뜻하지 않는다.
 
-내용은 당시 기록이며 최신 환경 상태를 보장하지 않는다. v1.3에서 사용할 값·기간·CPC·단위는 [데이터 설계](../../output/deliverables-20260917-v1.3/03_데이터_설계서.md)와 [배포 원장](../../output/deliverables-20260917-v1.3/06_배포_운영_인계서.md)에서 재확인한다.
+내용은 당시 기록이며 최신 환경 상태를 보장하지 않는다. v1.3에서 사용할 값·기간·CPC·단위는 [데이터 설계](../specs/common/03_데이터_설계서.md)와 [배포 원장](../specs/06_배포_운영_인계서.md)에서 재확인한다.
 
 출처 기준 Git 커밋: `84c01c023f8b307fa6e8af41d891d52ec8d25730`. 아래 SHA-256은 이동 전 원문 바이트의 지문이다. 현 열람본은 이 안내와 현행 상대 링크를 추가했으므로 지문이 다르다.
 

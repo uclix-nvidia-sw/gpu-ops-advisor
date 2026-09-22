@@ -33,4 +33,4 @@ RCA input에는 incident_id·evidence_version·analysis_profile_revision·target
 
 자동 재시도는 JC가 같은 RCA job으로 처리한다. 새 RCA 업무 요청은 Incident의 새 증거·분석 정책에서만 생성한다. GUI의 직접 RCA 재시도/재분석 버튼은 없다.
 
-[RCA](11_RCA_Agent_모듈_설계서.md) · [DB](03_데이터_설계서.md) · [멱등 전달](14_모듈간_호출과_공통실행_계약.md)
+[RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md) · [DB](../common/03_데이터_설계서.md) · [멱등 전달](../common/14_모듈간_호출과_공통실행_계약.md)

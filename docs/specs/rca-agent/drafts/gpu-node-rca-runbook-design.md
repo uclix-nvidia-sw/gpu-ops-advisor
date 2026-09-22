@@ -61,7 +61,7 @@
 
 ## 5. 기존 코드와 맞추는 방법
 
-현행 코드는 `knowledge_revisions`의 `runbook`을 읽으며, claim에 고정된 revision/hash, scope와 `compatibility`, 검토된 content hash를 확인한다. `required_evidence`, equality 형태의 `applicability_conditions`/`exclusion_conditions`, 등록된 `required_queries`, `recommendations[].preconditions`를 사용한다. Agent가 실행할 조회는 등록된 query ID로 제한되며, 권고의 `execution`은 `not_performed`다. [RCA workflow](../rcca-agent/src/rcca_agent/workflow.py), [조회 레지스트리](../agents/config.example.json)
+현행 코드는 `knowledge_revisions`의 `runbook`을 읽으며, claim에 고정된 revision/hash, scope와 `compatibility`, 검토된 content hash를 확인한다. `required_evidence`, equality 형태의 `applicability_conditions`/`exclusion_conditions`, 등록된 `required_queries`, `recommendations[].preconditions`를 사용한다. Agent가 실행할 조회는 등록된 query ID로 제한되며, 권고의 `execution`은 `not_performed`다. [RCA workflow](../../../../rcca-agent/src/rcca_agent/workflow.py), [조회 레지스트리](../../../../agents/config.example.json)
 
 따라서 위 표의 코드별 우선순위·시간 순서 판단·counter 변화량·source fallback은 **아직 실행 기능이 아니다**. 특히 현행 조건 검사는 필드의 `equals`만 지원하며, “Xid 48 다음에 63”이나 임계값·연속 상승을 표현하지 못한다. 또한 현재 등록된 `D01`~`D13` 조회는 GPU 기본 수치와 Loki 등에 한정되고 ECC·NVLink·IB용 query ID가 없다. GPU 노드용 런북을 발행하기 전에 query registry, 이벤트 파서, 조건 평가, 결과 근거 검증을 작은 단위로 추가해야 한다. 단순한 Alert 일치만으로 `causal_status=supported`를 내지 않도록 검토한다.
 

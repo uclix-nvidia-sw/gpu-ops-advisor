@@ -63,7 +63,7 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 | `SCHEMA_NOT_READY` | 스키마 version 2 기록 없음 |
 | `LIMITS_NOT_CONFIGURED` | C07 누락·비활성 또는 필수 한도가 양수가 아님 |
 
-오류 응답은 모두 503이다. 기본 설정 초기화와 실제 기본값은 [06 배포·운영](06_배포_운영_인계서.md)에 둔다. 구현: [클러스터 등록](../../backend/internal/api/clusters.go), [readiness](../../backend/internal/api/readiness.go).
+오류 응답은 모두 503이다. 기본 설정 초기화와 실제 기본값은 [06 배포·운영](../06_배포_운영_인계서.md)에 둔다. 구현: [클러스터 등록](../../../backend/internal/api/clusters.go), [readiness](../../../backend/internal/api/readiness.go).
 
 ## 보고서 접수와 응답
 
@@ -105,6 +105,6 @@ Backend는 `source_module=backend,source_key=manual:<Idempotency-Key>`로 JC의 
 
 ### 보고서 다운로드의 현재 구현
 
-Backend는 발행된 `result_candidates.body`의 `measurements`와 `topics[].metrics`를 읽어 출력하며 새 분석을 실행하지 않는다. 수치가 있으면 HTML은 항목·대상·값·단위·제한 사유 표를, CSV는 `id,target,value,unit,method,reason,evidence_refs` 열을 생성한다. null 값은 ‘산출 불가’로 표시한다. HTML은 원본 결과와 해석 제한을 포함하고 텍스트를 escape하며 CSV는 수식 문자를 방어한다. 수치 배열이 비어 있으면 기존 JSON 기반 HTML/필드별 CSV 출력을 사용한다. Agent의 저장 파일을 그대로 전송하는 경로와는 구분한다. 구현: [export](../../backend/internal/api/export.go), [수치 출력](../../backend/internal/api/report_export.go).
+Backend는 발행된 `result_candidates.body`의 `measurements`와 `topics[].metrics`를 읽어 출력하며 새 분석을 실행하지 않는다. 수치가 있으면 HTML은 항목·대상·값·단위·제한 사유 표를, CSV는 `id,target,value,unit,method,reason,evidence_refs` 열을 생성한다. null 값은 ‘산출 불가’로 표시한다. HTML은 원본 결과와 해석 제한을 포함하고 텍스트를 escape하며 CSV는 수식 문자를 방어한다. 수치 배열이 비어 있으면 기존 JSON 기반 HTML/필드별 CSV 출력을 사용한다. Agent의 저장 파일을 그대로 전송하는 경로와는 구분한다. 구현: [export](../../../backend/internal/api/export.go), [수치 출력](../../../backend/internal/api/report_export.go).
 
-[DB](03_데이터_설계서.md) · [큐](10_Job_Controller_모듈_설계서.md) · [공통 계약](14_모듈간_호출과_공통실행_계약.md)
+[DB](../common/03_데이터_설계서.md) · [큐](../job-controller/10_Job_Controller_모듈_설계서.md) · [공통 계약](../common/14_모듈간_호출과_공통실행_계약.md)
