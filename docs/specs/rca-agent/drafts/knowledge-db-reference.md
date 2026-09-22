@@ -1,5 +1,7 @@
 # GPU 노드 RCA Agent Knowledge DB 참고 설계
 
+> 2026-09-22 통합 안내: meaning/binding/query 정합과 단계별 개발 기준을 [11. RCA Agent 모듈 설계서](../11_RCA_Agent_모듈_설계서.md)에 반영했다. 이 문서는 제안 출처·당시 대조 기록으로 보존한다. 정적 필드 대응을 운영 수집 확인으로 해석하지 않으며 새 DB 계층 구축을 선결 조건으로 삼지 않는다.
+
 검토일: 2026-09-21 · 상태: 팀 검토용 제안, 운영 DB 반영 전
 
 이 문서는 첨부된 `knowledge-db-reference.md`를 2026-09-21 제공 ZIP의 코드 및 CPC-1/CPC-2 `dcgmi dmon --list` 출력과 대조해 정정한 것이다. **기존 스키마의 확정 명세나 이미 구현된 기능을 뜻하지 않는다.** GPU 노드 RCA 범위에 한정하며 Kubernetes scheduling·Pod 원인 분석은 다루지 않는다.
