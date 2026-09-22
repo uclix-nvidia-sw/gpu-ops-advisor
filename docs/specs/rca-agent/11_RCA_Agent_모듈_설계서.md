@@ -6,10 +6,11 @@
 
 2026-09-22 · 코드 대조 기준 `2e269b7`. 이 문서는 기존 RCA 설계와 `drafts/`의 Runbook-first·지식 매핑 제안을 통합한 **RCA workflow·runbook 개발 기준**이다. 기존 R01~R09 범위를 유지하며 GPU 노드 runbook을 그 안의 조사 지식으로 추가한다. 초안의 GPU 노드 중심 범위를 이유로 GPU–Pod 관계·업무 영향 조사를 제거하지 않는다.
 
-**현재 구현**은 코드로 확인한 동작, **통합 목표**는 이번에 정의한 추가 개발 사항이다. 문서 병합은 기능 구현·운영 검증 완료를 뜻하지 않는다. 모듈 계약 1.3과 결과 본문 `result_schema_version=1.1`은 유지한다.
+**현재 구현**은 코드로 확인한 동작, **통합 목표**는 이번에 정의한 추가 개발 사항이다. 문서 병합은 기능 구현·운영 검증 완료를 뜻하지 않는다. 현행 모듈 계약은 1.3이다. Incident 중복 제거·전달과 Agent 판단의 역할 분리는 **RCA 접수 계약 1.4의 추가 개발 목표**이며 결과 본문 `result_schema_version=1.1`은 유지한다. 기존 1.3 입력을 조용히 재해석하지 않는다.
 
 | 구성 | 현재 구현 | 통합 목표·남은 일 |
 |---|---|---|
+| 알람 전달·조사 선택 | Incident의 alertname 정책이 purpose_ids 지정, 증거 변화로 새 job 생성 가능 | Incident는 생명주기별 최초 1회 전달; Agent가 파싱 후 목적·workflow 선택 |
 | 실행·저장 | Incident snapshot → JC claim → RCA Worker/NAT → evidence·candidate 저장 → JC 발행 | 기존 경로·소유권 재사용 |
 | Runbook 로딩 | scope·고정 revision으로 DB 조회, reviewed hash 검사, source 상위 필드와 compatibility 비교 | scope·무결성 검사와 미확정 장비 호환성 평가를 분리 |
 | 검색 | `retrieval.py`의 필드별 BM25 가중 합·Xid/SXid exact boost·결정적 정렬 구현 | workflow 연결, 검색 corpus/설정 고정, 미일치 기준 평가 |
@@ -24,13 +25,13 @@
 
 Incident가 생성하고 Job Controller가 배분한 RCA 잡만 실행한다. Backend·GUI·보고서에서 RCA를 직접 접수하는 API는 없다. 자체 업무 큐·달력·레플리카 제어도 없다. 잡 실행 관리는 JC의 register/claim/heartbeat/complete/fail을 사용하는 Worker가 담당하고, 조사 중에는 Runbook·사건 DB, Grafana MCP, 추론 endpoint를 호출한다.
 
-입력은 incident_id, evidence_version, analysis_profile_revision, scope, target 또는 사건 범위, incident_time, time_range, purpose_ids다. 알람 증거 snapshot과 일치해야 한다. Pod/GPU 신원 일부가 미확정이면 확인된 사실과 부족 필드를 보존한다. incident_id가 없는 임의 증상 요청은 거절한다.
+신규 1.4 입력은 incident_id, evidence_version, scope, target 또는 사건 범위, incident_time, time_range와 최초 알람 snapshot 연결이다. Incident는 purpose_ids·analysis_profile_revision을 지정하지 않는다. 실행 profile은 envelope/claim versions에 고정한다. Agent가 알람을 파싱하고 조사 목적과 내부 경로를 정한다. snapshot/hash는 변경하지 않으며 Pod/GPU 신원이 부족하면 확인된 범위와 부족 필드를 보존한다. incident_id가 없는 임의 증상 요청은 거절한다. 기존 1.3 입력은 기존 purpose_ids·analysis_profile_revision 검증과 해석을 유지한다.
 
-R01~R09는 독립 GUI 실행 메뉴가 아니라 Incident RCA의 조사 목적이다. 새 조사 목적·증거로 재분석할 필요가 있으면 Incident 정책이 새 job을 생성한다. 자동 기술 재시도는 동일 job의 새 attempt다.
+R01~R09는 Agent 내부의 조사·평가 항목이다. 신규 경로에서는 Agent가 원문 단서·확인된 대상·관측 근거로 필요한 목적을 선택하고 같은 job 안에서 보완한다. Incident의 alertname→R 매핑과 R01/R02 고정 요청은 제거한다. 반복 알람이나 목적 변경으로 새 job을 만들지 않으며 자동 기술 재시도만 동일 job의 새 attempt로 처리한다. 중복 생명주기는 [13](../incident/13_Incident_모듈_설계서.md)을 따른다.
 
 ## 2. 처리·저장
 
-여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 호환 Runbook 검색·적용 조건 확인 → 부족한 증거를 Grafana MCP로 조회 → 원인 후보·지지/반박 분석 → 검증된 candidate 저장 → JC complete 순서다. 이미 충분한 증거가 있으면 추가 관측 조회를 생략할 수 있다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
+여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 알람 파싱·조사 목적/경로 선택 → 호환 Runbook 검색·적용 조건 확인 → 부족한 증거를 Grafana MCP로 조회 → 원인 후보·지지/반박 분석 → 검증된 candidate 저장 → JC complete 순서다. 이미 충분한 증거가 있으면 추가 관측 조회를 생략할 수 있다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
 
 04의 공통 결과에 incident_id·incident_time·current_checked_at·pod_relations·assessments·cause_candidates·recommendations·missing_inputs·termination_reason을 더한다. 숫자는 measurements 레지스트리에 저장하고 문장에서는 value_refs로 참조한다.
 
@@ -41,7 +42,8 @@ Worker 프로세스 안에서 NAT 사용자 정의 워크플로를 실행한다.
 | 내부 구성 | 책임 | 사용하는 자료/연결 |
 |---|---|---|
 | Worker 실행부 | claim·heartbeat·취소·deadline·후보 저장·완료 보고 | JC API, 자기 결과·근거 저장소 |
-| 사고 입력 확인 | 불변 Incident snapshot, 사고 대상·시각 검증 | incident_evidence_versions |
+| 사고 입력 확인·파싱 | 불변 최초 snapshot, 대상·시각 검증, 코드 namespace·증상 단서 추출 | incident_evidence_versions·고정 parser 계약 |
+| 목적·경로 선택 | R01~R09 관련성 판정, Runbook·일반 조사·보완 조회 선택과 재평가 | 파싱 근거·등록 선택 규칙·procedure·실행 예산 |
 | Runbook 검색·검사 | 호환 발행본 검색, 필수 증거·적용/배제 조건 확인 | knowledge_revisions; 04의 지식 계약 |
 | 조사 진행 | 등록 procedure 선택, 부족한 증거에 대한 다음 조사 결정 | NAT 워크플로·LLM·허용된 조회 함수 |
 | 관측 조회 | 제한된 로그·지표·당시/현재 관계 확보와 품질 정규화 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
@@ -87,9 +89,11 @@ Grafana 입력을 `incident_source()`로 읽으면 `{alert: ...}` 형태가 된�
 아래 단계는 같은 Worker/NAT 프로세스에 통합한다. 별도 검색 서버·관측 서비스·지식 DB를 신설하지 않는다.
 
 ```text
-Incident → JC → RCA claim / immutable snapshot / 고정 지식 로딩
-  → scope·revision·hash 검사 → 알람 검색 단서 정규화 → BM25 후보 검색
-  → 후보별 호환성·필수 증거·적용/배제 조건 검사
+Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable snapshot / 고정 지식 로딩
+  → scope·revision·hash 검사 → 알람 파싱·검색 단서 정규화
+  → Agent 내부 목적·경로 선택
+      ├─ 등록 일반 조사: 로그·지표·관계 조회 → 단서 보완 → 필요 시 후보 검색
+      └─ BM25 후보 검색 → 후보별 호환성·필수 증거·적용/배제 조건 검사
       ├─ 적용 가능: 검증된 근거와 권고 구성
       ├─ 증거 부족: 등록 query 계획 → Observation/Grafana MCP → fact 정규화 → 재검사
       │              └─ 여전히 부족·상충·한도 종료: 해당 한계를 보존
@@ -100,8 +104,9 @@ Incident → JC → RCA claim / immutable snapshot / 고정 지식 로딩
 
 | 단계 | 입력 → 출력 | 진행·중단 기준 |
 |---|---|---|
-| 입력 고정 | snapshot·scope·target·기간·purpose·versions → 조사 컨텍스트 | hash 불일치·허용 scope 위반은 가설 탐색으로 우회하지 않음 |
+| 입력 고정 | snapshot·scope·target·기간·versions → 조사 컨텍스트 | hash 불일치·허용 scope 위반은 가설 탐색으로 우회하지 않음 |
 | 단서 정규화 | 해당 사건의 alertname/summary/message/오류 코드·event → 검색어 | 묶음 alert는 사건 신원별로 분리. 원문·출처 유지; UUID·시각·임의 verified_facts를 검색어에 넣지 않음 |
+| 목적·경로 선택 | 파싱 단서·대상·관계 → 내부 목적 목록·procedure·근거 | Incident의 목적 지정 없음. 코드 유무만으로 Runbook/로그를 배타 분기하지 않음; §3.1.2 |
 | 후보 검색 | 허용된 pinned runbook corpus → 순위·점수 구성·후보 revision | Xid/SXid 구분. 점수는 관련도이며 진단 확률·원인 근거가 아님 |
 | 적용 검사 | 후보·호환성·typed facts → 적용/반박/증거 부족 | 미확정 producer/model은 관측으로 확인할 후보로 보류. 명백한 불일치는 반박 사유 기록 |
 | 관측 계획 | 후보의 부족 조건 → 실제 query ID·대상·기간·우선순위 | §5의 선결 조건과 §5.3의 요청 출처별 허용 규칙을 충족해야 실행 |
@@ -168,9 +173,29 @@ Incident → JC → RCA claim / immutable snapshot / 고정 지식 로딩
 | `device_recovery_evidence` · object | 실제 조치 + D05/D09의 유효 health + C08 정상 관측 정책 → 추가할 회복 판정기 | `action_record_id`, `window`, `policy_revision_ref`, `assessment`, `health_evidence_refs`. assessment는 recovery_observed/abnormal_observed/not_established. 정책을 충족한 정상 또는 유효한 비정상 재관측이면 판단 근거 충족; not_established는 미충족. `up=1`, stale Healthy, 공백은 회복 증거가 아님 |
 | `workload_evidence` · workload event 배열 | D13/검증된 D09 + 당시 매핑 → 추가할 workload parser | 항목은 `subject`(Pod UID/workload ID), `event`(running/stalled/stopped/resumed/completed), `observed_at`, refs. R04는 당시 관련 workload의 관측, R09는 조치 이후 회복/비회복 판단 근거가 필요. GPU 정상만으로 대체하지 않음 |
 
-배열 항목의 target·기간은 fact 봉투 범위 안이어야 한다. workload 상태나 오류 namespace의 원천 매핑은 parser 계약으로 검토하며 임의 로그 문구를 enum으로 추정하지 않는다. 현재 매핑을 요구하는 R08이나 조치 후 관측을 요구하는 R09의 기간이 job 입력 범위 밖이면 새 조회를 임의 확장하지 않고 부족 입력으로 남긴다. Incident 정책이 적절한 증거·기간으로 새 job을 접수해야 한다.
+배열 항목의 target·기간은 fact 봉투 범위 안이어야 한다. workload 상태나 오류 namespace의 원천 매핑은 parser 계약으로 검토하며 임의 로그 문구를 enum으로 추정하지 않는다. 현재 매핑을 요구하는 R08이나 조치 후 관측을 요구하는 R09의 기간이 job 입력 범위 밖이면 새 조회를 임의 확장하지 않고 부족 입력으로 남긴다. 동일 생명주기의 반복 알람으로 새 job을 만들지 않으므로 해당 후속 시점은 이번 결과의 미평가 범위로 남긴다. 지속적인 조치 후 확인이나 수동 재분석은 별도 요구사항으로 정의해야 한다.
 
 `normalized_health`, `component`, `severity`는 §3.4의 보조 fact로 같은 봉투를 사용한다. 기존 equals 조건에는 known인 scalar value만 전달한다. 오류 배열에는 §6.2.2의 등록 `error_code` 조건 해석을 적용하고, 다른 배열/object 전체의 equals나 임의 경로식은 허용하지 않는다. legacy `verified_facts`는 기존 형식용 adapter로 처리하며 신규 알람에서 같은 이름의 필드를 가져와 신뢰하지 않는다. fact 생성기·adapter·assessment 변경을 함께 회귀 검수한다.
+
+### 3.1.2 Agent의 목적·workflow 선택 목표
+
+신규 입력은 R01/R02 목록으로 조사 범위를 제한하지 않는다. Agent가 원문을 파싱하고 R01~R09의 관련성을 검토한 뒤 필요한 조사를 같은 job 안에서 수행한다. 모든 R을 무조건 실행하거나 모든 로그를 조회한다는 뜻은 아니다.
+
+| 입력·관측 단서 | Agent가 선택할 조사 |
+|---|---|
+| Xid/SXid 등 오류 코드 후보 또는 알려진 증상 | namespace·producer·대상·시각을 구분해 Runbook 검색/R01 검토. 원문 코드만으로 적용 확정하지 않음 |
+| GPU 중심 사건 | GPU의 관련 Pod 조사 R02; 관계·영향 단서에 따라 R04 보완 |
+| Pod 중심 사건 | Pod에 연결된 GPU 조사 R03; GPU 신원 미확정도 부족 정보를 남기며 조사 |
+| 코드 없음·알 수 없는 코드·Runbook 미일치 | 설명 기반 후보 검색 및 등록 로그·지표 일반 조사/R05. 코드 부재만으로 Runbook 검색 금지하지 않음 |
+| 재발·동시 다중 장치 단서 | 사건 이력 R06·공통 범위 R07 검토; 반복 webhook 수를 재발 횟수로 사용하지 않음 |
+| 구체적 조치 권고 검토 | R08의 현재 관계·조치 전제 확인; 자동 조치 없음 |
+| 실제 조치 기록과 범위 안의 후속 관측 | R09 검토; 조치가 없거나 이후 기간이 범위 밖이면 수행 사실·회복을 추정하지 않음 |
+
+선택은 등록된 parser/규칙과 관측 근거로 설명 가능해야 한다. LLM의 제안은 등록 목적·procedure·query·scope·시간창·예산 검사 후에만 실행한다. 단서가 부족하면 일반 조사로 시작하며, 최초 알람의 모호함 때문에 R01/R02로 고정하지 않는다. GPU 외 fault도 접수하되 미지원 producer/대상은 `unsupported_source`와 부족 근거를 남긴다.
+
+Runbook과 로그 분석은 결합할 수 있다. Runbook 적용 조건을 확인하기 위해 로그를 조회하거나 일반 조사 중 새 코드/증상을 확인해 후보 검색으로 돌아갈 수 있다. 같은 대상·기간의 query는 재사용하고 기존 C07 예산 안에서 종료한다. 검색 실패와 “후보 없음”은 구분한다.
+
+목적·procedure의 최초 선택, 추가/변경, 미선택 사유와 parser/선택 규칙 revision을 기존 evidence snapshot에 남긴다. 공개 assessments에는 선택한 목적과 적용되지 않는 것으로 확인한 목적을 기록한다. 미확정 관련성·근거 부족은 partial/blocked로 남기며 not_applicable로 숨기지 않는다. 선택 trace에 R01~R09별 검토 결과를 보존해 누락과 미적용을 구분한다. 신규 결과 validator는 Incident 입력 목록이 아니라 이 trace와 assessments의 일치를 검사한다. 기존 1.3 결과 검사는 요청 purpose_ids 기준을 유지한다.
 
 ### 3.2 등록 조사와 종료
 
@@ -185,7 +210,7 @@ Incident → JC → RCA claim / immutable snapshot / 고정 지식 로딩
 | work_progress | D09, D08, D06 | D02, D13 |
 | multi_device | D01, D09 | D08, D06, D05 |
 
-현재 상위 `symptom` 매칭은 legacy `snapshot.evidence.symptom` 경로다. Grafana `snapshot.alert` 경로는 상위 symptom을 만들지 않으므로 R07 → R02/R03/R08 → R04 → 기본 gpu_access 순서로 purpose를 보고 선택한다. 초기 통합에서도 이 선택 규칙을 유지한다. `incidents.symptom`이나 자유 알람 문구를 별도 검증 없이 끌어오지 않는다. 목적별 별도 조회도 유지하므로 “R01 runbook 적용 성공”만으로 함께 요청된 R02 매핑 조사를 생략하지 않는다.
+현재 상위 `symptom` 매칭은 legacy `snapshot.evidence.symptom` 경로다. Grafana `snapshot.alert` 경로는 상위 symptom을 만들지 않으므로 R07 → R02/R03/R08 → R04 → 기본 gpu_access 순서로 purpose를 보고 선택한다. 이 규칙은 기존 1.3 입력의 호환 경로에만 유지한다. 신규 1.4 경로는 §3.1.2의 파싱·관측 근거로 목적과 procedure를 선택하도록 변경한다. `incidents.symptom`이나 자유 알람 문구를 별도 검증 없이 끌어오지 않는다. 목적별 별도 조회도 유지하므로 “R01 runbook 적용 성공”만으로 기존 입력에서 요청됐거나 신규 경로에서 선택된 R02 매핑 조사를 생략하지 않는다.
 
 현재와 초기 통합의 관측 기간은 claim 입력의 `time_range` 전체다. C07 limits의 `max_range_seconds`는 허용 길이, `chunk_seconds`는 응답 분할 단위이며 초기 조사 폭·확대 배수가 아니다. `collect(period=...)`는 부분 구간을 받을 수 있으나 현재 RCA workflow는 이를 사용하지 않는다. 단계적 확대는 후속 요구가 확인될 때 입력 범위 내부의 계획으로 정의한다. 전후 10분·최대 전후 60분 같은 초안 값이나 새 확대 설정을 이번 기본값으로 추가하지 않는다. 후속 조사 횟수·조회 건수·응답 크기·deadline은 기존 C07 예산을 따른다.
 
@@ -451,6 +476,7 @@ source가 여러 개면 runbook에 검토된 선택 조건을 두고 실제 선�
 
 | 순서 | 변경 지점·책임 | 완료 조건 |
 |---|---|---|
+| P0 접수·역할 전환 | Incident/JC/shared 계약·Python validator·Backend/Ops 소비자·Helm 설정 | 13/14의 신규 접수 계약, 생명주기당 최초 1회, 기존 1.3 불변/호환 처리. Agent 목적 선택 trace·assessment 검증 및 05 전환 시험 |
 | P0a 데이터 계약 정의 | §3.1.1·3.4.1·5.3·6.2.1의 RCA/공통 Python/지식 담당 | fact·health 입력·호환성 컨텍스트·출처별 query 정책을 연결. 초기 runbook마다 실제 생성기/지원 조건/보류 조건을 지정하고 새 저장 계층 없이 구현 범위를 확정 |
 | P0b 관측 정합 | `agents/config.example.json`, 배포용 `charts/gpu-ops-advisor/files/agents.json`, 실제 C02/C07 설정·관측 운영 담당 | §5 ID/allowlist·datasource·label·rule·표본·parser gap 목록과 query별 검증 evidence. 필요한 source/health 계약 변경은 원본/Helm 미러 동시 반영 |
 | P1 content·참조 검증 | RCA content validator, Backend `internal/api/knowledge.go`의 발행·목록 조회 연계, shared Store | §6.2.2 발행 조건과 legacy/new schema 검사; §6.2.3 scalar code/search.codes 필터 호환; pinned dependency 읽기 |
@@ -480,6 +506,7 @@ MCP 실패에 과거 DB evidence를 현재 관측처럼 대입하는 fallback은
 
 | 시험 | 기대 결과·검증 위치 |
 |---|---|
+| 최초/반복/재발 + 목적 없는 신규 입력 | Incident 최초 1회, Agent의 GPU/Pod/코드 없음·알 수 없는 코드 경로 선택; R03~R09가 R01/R02 기본값으로 배제되지 않음 |
 | 실제 Incident 입력 + 기존 legacy 입력 | 원본 snapshot/hash 불변, 직접 GUI RCA 접수 없음; Incident/Worker 회귀 시험 |
 | scope 밖·hash 변조·미고정 runbook | 검색 corpus에 넣지 않음. 가설로 우회하지 않음; Store/workflow 시험 |
 | 정상 pin 후 retired / 같은 key 복수 revision | 고정 revision으로 재현; 범위 안의 호환 revision 선택; 실행 중 최신본 교체 없음 |

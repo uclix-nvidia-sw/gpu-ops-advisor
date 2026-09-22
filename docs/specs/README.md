@@ -16,13 +16,19 @@ GUI → Backend에서 RCA 결과를 조회하고 보고서를 요청한다. Graf
 
 확정된 상세 보완 명세가 필요하면 해당 모듈 폴더에 추가하고 이 목차에서 연결한다. 공통 데이터·산식·결과 형식을 복사해 별도 기준을 만들지 않는다. 아직 합의되지 않은 내용은 초안임을 표시한다.
 
+### Incident 중복 제거·Agent 판단 역할 변경
+
+2026-09-22에 [13 Incident](incident/13_Incident_모듈_설계서.md)와 [11 RCA](rca-agent/11_RCA_Agent_모듈_설계서.md)를 변경했다. 목표는 **Incident의 생명주기별 최초 알람 전달과 반복 억제**, **RCA Agent의 파싱·목적·Runbook/일반 조사 선택**이다. Incident의 alertname→R 매핑과 증거 변경 시 재분석은 신규 경로에서 제거한다.
+
+이는 문서상 개발 목표다. 런타임·Helm은 여전히 1.3이며 신규 RCA 접수는 [14](common/14_모듈간_호출과_공통실행_계약.md)의 1.4 이행 계약으로 구분한다. 결과 스키마 1.1과 보고서 접수 계약은 유지한다. 01/02/03/04/05/06/10도 역할·입력·소비·검수·배포 영향을 반영했다. 기존 아키텍처 그림은 실행 경로 참고용이며 변경 상세는 11/13/14가 우선한다.
+
 ### RCA workflow·runbook 통합 기준
 
 2026-09-22에 [11. RCA Agent 모듈 설계서](rca-agent/11_RCA_Agent_모듈_설계서.md)를 기준으로 아래 초안을 대조·통합했다. **현재 구현과 추가 개발 목표를 구분**하고, Runbook-first workflow, D-쿼리 재사용·선결 조건, runbook 작성/발행 계약, 구현 순서와 검수 기준을 11번 문서에서 관리한다. D01~D13·Observation·evidence 저장을 재사용하며 검색 모듈의 구현을 전체 파이프라인 통합 완료로 해석하지 않는다.
 
 `rca-agent/drafts/`는 제안 출처·당시 검증 기록으로 보존한다. 미채택 제안과 과거 실행 명령을 현행 요구사항으로 자동 적용하지 않는다. 상세 병합 결정과 evidence 해석 보정도 11번 문서에 기록했다.
 
-후속 코드 검토를 반영해 11번 문서 §3에 fact·health 입력 계약, §5.3에 요청 출처별 query 허용 정책, §6.2에 compatibility 컨텍스트·발행 검증·Backend 코드 검색 호환성을 구체화했다. 개발은 P0a 데이터 계약과 P0b 관측 정합부터 진행한다. 이 데이터 구조와 validator는 추가 개발 목표이며 현재 runtime/API에 모두 구현됐다는 의미는 아니다.
+후속 코드 검토를 반영해 11번 문서 §3에 fact·health 입력 계약, §5.3에 요청 출처별 query 허용 정책, §6.2에 compatibility 컨텍스트·발행 검증·Backend 코드 검색 호환성을 구체화했다. 개발은 접수·역할 전환 P0와 P0a 데이터 계약·P0b 관측 정합부터 진행한다. 이 데이터 구조와 validator는 추가 개발 목표이며 현재 runtime/API에 모두 구현됐다는 의미는 아니다.
 
 - [GPU 노드 RCA Runbook 설계 초안](rca-agent/drafts/gpu-node-rca-runbook-design.md)
 - [Runbook-first 검색·조사 파이프라인 초안](rca-agent/drafts/gpu-node-rca-runbook-first-pipeline.md)
@@ -54,7 +60,7 @@ Backend, Incident, Job Controller, RCA Agent, 보고서 Agent의 5개 서버 모
 
 Chatbot/Assistant·직접 RCA 요청 화면·독립 Scheduler·HPA/자동 증설·제품 인증/RBAC/사용자 tenant는 이번 개발 범위에서 제외한다. 기존 Mimir/Loki 연결에 필요한 기술 설정은 유지한다. 과거 문서의 같은 번호·시험 ID를 현행 문서와 혼용하지 않는다.
 
-문서 버전은 1.3, 모듈 계약은 1.3이다. 계산 기준(criteria_version)과 결과 스키마(result_schema_version)는 기존 1.1을 유지하며 RCA의 incident_id는 필수다. 2026-09-18 내용 반영은 당시 버전과 코드 동작을 기록한다. 2026-09-22에는 문서를 `docs/specs/`의 공통·모듈별 경로로 재배치했다. 같은 날 RCA 초안을 11번 문서의 추가 개발 목표로 통합했으며 제품 계약 버전과 런타임 코드는 변경하지 않았다.
+기존 명세 묶음과 현행 모듈 계약은 1.3이다. 이번 Incident 역할 변경의 신규 RCA 접수 목표만 1.4로 구분한다. 계산 기준(criteria_version)과 결과 스키마(result_schema_version)는 기존 1.1을 유지하며 RCA의 incident_id는 필수다. 2026-09-18 내용 반영은 당시 버전과 코드 동작을 기록한다. 2026-09-22에는 문서를 `docs/specs/`의 공통·모듈별 경로로 재배치했다. 같은 날 RCA 초안을 11번 문서의 추가 개발 목표로 통합했으며 제품 계약 버전과 런타임 코드는 변경하지 않았다.
 
 ## 현재 구현과 검증 기록
 

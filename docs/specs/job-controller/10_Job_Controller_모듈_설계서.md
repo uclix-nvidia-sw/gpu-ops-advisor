@@ -29,6 +29,8 @@ PostgreSQL의 종류별 논리 큐를 사용한다. 별도 브로커/분산 Sche
 
 제품 인증은 제외한다. source_module/worker_id는 업무 추적과 타입 검증용이며 신원 인증을 대신하지 않는다. GUI가 내부 API에 직접 연결되지 않게 배치한다.
 
+신규 RCA 접수 1.4의 **추가 개발 목표**는 [14](../common/14_모듈간_호출과_공통실행_계약.md)을 따른다. JC는 최초 Incident snapshot의 신원·hash·멱등 키를 검증하고 전달하며, purpose_ids를 요구하거나 R01/R02를 채우지 않는다. 목적 선택은 RCA Agent 책임이다. 기존 1.3 요청의 필수 필드 검사는 유지하고 지원하지 않는 Worker에 1.4 job이 배정되지 않도록 전환을 검증한다.
+
 ## 잡 배분
 
 Agent가 여유 슬롯이 있을 때 pull하고 Job Controller가 claim 응답으로 잡을 배분한다. Agent는 DB에서 jobs를 직접 점유하거나 다른 유형 잡을 실행하지 않는다.

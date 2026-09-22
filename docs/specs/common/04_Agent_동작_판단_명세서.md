@@ -31,7 +31,7 @@ RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT To
 
 ## 3. RCA
 
-[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 Incident 입력·R01~R09 계약을 따른다. incident_id는 필수다.
+[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 입력·R01~R09 계약을 따른다. incident_id는 필수다. 2026-09-22 변경 목표는 Incident의 생명주기별 최초 알람 전달 후 **Agent가 파싱·목적 선택·Runbook 적용/로그·지표 일반 조사를 결정**하는 구조다. Runbook과 로그 조회는 같은 workflow에서 결합할 수 있다. Incident가 목적을 정하는 기존 1.3과 목적 없는 신규 1.4 입력은 14의 이행 계약으로 구분하며 현재 구현 완료를 뜻하지 않는다.
 
 ## 4. 보고서
 
@@ -151,7 +151,7 @@ LLM 입력에는 요청 scope·시간, 구조화 사실/수치·품질·evidence
 
 facts는 `id,text,evidence_refs,value_refs`를 갖는다. 수치가 없으면 value_refs는 빈 배열이다. 수치 원본은 RCA·공통 도구의 measurements 또는 보고서 topics[].metrics 중 한 곳에만 두며 각 value의 id는 결과 전체에서 유일하다. value_refs는 그 id들의 배열이다. value는 `id,value,value_type,unit,target,period,method,quality,evidence_refs`를 포함한다. value_type은 number/integer/ratio/percentage이고 null은 quality.reason이 필수다. 백분율 값 3과 비율 0.03은 서로 다른 단위로 유지한다. measurements와 metrics를 수치 레지스트리로 해석하며 문장·HTML/CSV는 그 값을 참조해 렌더링한다.
 
-RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,cause_candidates,recommendations,missing_inputs,termination_reason`을 추가한다. assessments는 요청한 purpose_id별 status·missing_inputs·evidence_refs이며 결과 상단 산출 상태 계산에 사용한다. 후보는 `id,claim,causal_status,supporting_refs,contradicting_refs,value_refs,missing_inputs,confirmation_rule_ref?`, 권고는 `text,preconditions,eligibility=eligible|withheld,reason,evidence_refs,value_refs,execution=not_performed`를 가진다.
+RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,cause_candidates,recommendations,missing_inputs,termination_reason`을 추가한다. assessments는 purpose_id별 status·missing_inputs·evidence_refs이며 결과 상단 산출 상태 계산에 사용한다. 현행 1.3은 요청한 목적, 신규 1.4 목표는 11 §3.1.2의 Agent 선택·관련성 평가와 trace를 기준으로 검증한다. 확인된 미적용은 not_applicable이며 미확정·근거 부족을 미적용으로 숨기지 않는다. 후보는 `id,claim,causal_status,supporting_refs,contradicting_refs,value_refs,missing_inputs,confirmation_rule_ref?`, 권고는 `text,preconditions,eligibility=eligible|withheld,reason,evidence_refs,value_refs,execution=not_performed`를 가진다.
 
 보고서는 `topics[]`를 추가한다. 각 주제는 `topic_id,status,metrics,facts,findings,missing_inputs,quality,evidence_refs,recommendations`를 가진다. metric은 공통 value 필드에 denominator를 추가하며 값이 null이면 이유가 필수다. O10에는 입력 action_record_ids와 비교 기간, O07에는 실제 resource/단위를 결과에 보존한다.
 

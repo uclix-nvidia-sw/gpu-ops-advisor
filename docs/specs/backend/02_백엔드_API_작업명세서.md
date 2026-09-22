@@ -6,6 +6,8 @@
 
 Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응답·설정과 정기 보고서 일정을 소유한다. RCA를 접수하거나 Agent를 직접 호출해 실행하지 않는다. Grafana Webhook은 Incident로 직접 연결한다. 보고서 집계와 LLM 실행은 보고서 Agent에 둔다.
 
+2026-09-22 역할 변경 목표: Incident는 최초 알람 중복 제거·전달, RCA Agent는 파싱·목적·Runbook/일반 조사 선택을 맡는다. Backend는 새 R 매핑 API를 추가하지 않는다. 신규 결과의 목적은 Agent assessments/선택 evidence에서 읽으며 Incident 입력에 purpose_ids가 없다고 R01/R02를 기본 표시하지 않는다. 기존 1.3 결과 조회는 유지한다. 상세 입력 이행은 [14](../common/14_모듈간_호출과_공통실행_계약.md)을 따르며 아직 런타임 변경은 아니다.
+
 ## API 공통 계약
 
 외부 접두사는 `/api/v1`. JSON UTF-8, UUID 문자열, UTC timestamp, `[start,end)` 기간을 사용한다. 제품 인증·`/me`·권한 DTO는 없다. `scope={clusters:[{cluster_id,namespaces:null|[name,...]}]}`는 분석 필터다. 빈 배열·중복 cluster·미등록 cluster·범위 밖 target·역전 기간은 422다. namespaces=null은 해당 CPC 전체를 뜻한다.
