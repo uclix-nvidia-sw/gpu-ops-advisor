@@ -286,7 +286,7 @@ BM25 `min_score`, field boost, top-k는 이 평가 결과로 고정하고 revisi
 - `search.codes`에 선언된 Xid/SXid만 exact boost 대상으로 삼는다. 실제 `Xid (PCI:…): 79` 형식을 처리하고 두 코드 namespace를 구분한다.
 - 점수 구성요소와 tokenizer revision을 반환한다. 잘못된 top-k와 음수·NaN·무한대 boost는 거부한다.
 
-이 동작은 [검색 모듈](../rcca-agent/src/rcca_agent/retrieval.py)에 구현되어 있다. [example YAML](../rcca-agent/configs/runbook-first-pipeline.example.yml)은 전체 흐름에 대한 설계용 명세이며, 이 파일을 놓는 것만으로 운영 Agent가 새 흐름을 실행하지 않는다.
+이 동작은 [검색 모듈](../../../../rcca-agent/src/rcca_agent/retrieval.py)에 구현되어 있다. [example YAML](../../../../rcca-agent/configs/runbook-first-pipeline.example.yml)은 전체 흐름에 대한 설계용 명세이며, 이 파일을 놓는 것만으로 운영 Agent가 새 흐름을 실행하지 않는다.
 
 ### 통합할 부분
 
@@ -301,7 +301,7 @@ BM25 `min_score`, field boost, top-k는 이 평가 결과로 고정하고 revisi
 | 검색 품질 | 임계값·한글/동의어·복합 오류·동점 처리 평가 필요 |
 | 운영 경계 | GPU 노드용 query/purpose 제한, 운영 표본을 이용한 E2E 필요 |
 
-관련 계약은 [workflow](../rcca-agent/src/rcca_agent/workflow.py), [Incident/결과 모델](../shared/python/src/agent_common/contracts.py), [health parser](../shared/python/src/agent_common/parsers.py), [고정 지식 조회](../shared/python/src/agent_common/store.py), [query registry](../agents/config.example.json)를 따른다. 6절의 구현 순서로 진행한다.
+관련 계약은 [workflow](../../../../rcca-agent/src/rcca_agent/workflow.py), [Incident/결과 모델](../../../../shared/python/src/agent_common/contracts.py), [health parser](../../../../shared/python/src/agent_common/parsers.py), [고정 지식 조회](../../../../shared/python/src/agent_common/store.py), [query registry](../../../../agents/config.example.json)를 따른다. 6절의 구현 순서로 진행한다.
 
 ### 저장소와의 호환성
 
@@ -339,7 +339,7 @@ python -c "import yaml,pathlib; yaml.safe_load(pathlib.Path('rcca-agent/configs/
 git merge-tree --write-tree 886ed8e43fadd35a4387dfceb6ebb3bccf8aba40 18553d2c60ff57f389f15a27810ffc68a846c14e
 ```
 
-통합 후 전체 테스트는 기존 설치 절차를 마친 환경에서 `python -m pytest -c agents/pytest.ini agents/tests -q`로 실행한다. 실제 프로세스 E2E는 `RUN_AGENT_E2E=1`과 전용 테스트 DB/JC/Incident/Grafana MCP를 준비하고 [CI 테스트 절차](../.github/workflows/tests.yml)를 따른다.
+통합 후 전체 테스트는 기존 설치 절차를 마친 환경에서 `python -m pytest -c agents/pytest.ini agents/tests -q`로 실행한다. 실제 프로세스 E2E는 `RUN_AGENT_E2E=1`과 전용 테스트 DB/JC/Incident/Grafana MCP를 준비하고 [CI 테스트 절차](../../../../.github/workflows/tests.yml)를 따른다.
 
 공유 파일은 본 문서·런북 작성 기준·example YAML·검색 모듈·테스트의 5개다. 제공 patch의 기준은 reference commit `18553d2`이며 main에 적용할 때는 먼저 reference 문서 변경을 병합한다.
 

@@ -1,6 +1,6 @@
 # Incident 모듈 · Go · 계약 1.3
 
-[13번 설계서](../output/deliverables-20260917-v1.3/13_Incident_모듈_설계서.md)를 구현한 독립 프로세스입니다.
+[13번 설계서](../docs/specs/incident/13_Incident_모듈_설계서.md)를 구현한 독립 프로세스입니다.
 
 **Grafana → Incident → PostgreSQL outbox → Job Controller → RCA Agent** 흐름을 사용합니다. Backend는 같은 DB에서 사건과 연결된 RCA job을 읽고, 메모·검토·사건 상태 변경만 Incident로 전달합니다. 인증은 현재 범위에서 제외했습니다.
 

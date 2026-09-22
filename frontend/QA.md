@@ -15,7 +15,7 @@
 # 프론트엔드 API 연결 검증
 
 
-> 과거 데모의 실행 기록입니다. 아래 직접 RCA·Assistant·역할 선택은 [v1.3](../output/deliverables-20260917-v1.3/07_프론트엔드_개발명세서.md)에서 제거할 대상이며 PASS를 현행 제품에 승계하지 않습니다. v1.3 통합 시험은 NOT RUN입니다.
+> 과거 데모의 실행 기록입니다. 아래 직접 RCA·Assistant·역할 선택은 [v1.3](../docs/specs/frontend/07_프론트엔드_개발명세서.md)에서 제거할 대상이며 PASS를 현행 제품에 승계하지 않습니다. v1.3 통합 시험은 NOT RUN입니다.
 
 검증일: 2026-09-17 · 기준: DSX FE/GUI v1.1 · 실행 환경: Windows, Node 24, Codex 내장 Chromium 브라우저.
 

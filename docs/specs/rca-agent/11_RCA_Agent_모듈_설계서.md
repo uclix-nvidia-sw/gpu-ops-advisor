@@ -119,4 +119,4 @@ Agent가 없으면 JC는 RCA 잡을 queued로 보존한다. 데이터 부족은 
 
 등록된 procedure만 실행하며 임의 쉘·SQL·PromQL·장비 제어는 허용하지 않는다. 결과의 권고는 수행 사실이 아니다. Grafana resolved·Healthy·로그 부재만으로 업무 복구를 확정하지 않는다.
 
-[공통 판단](04_Agent_동작_판단_명세서.md) · [Incident](13_Incident_모듈_설계서.md) · [실행 계약](14_모듈간_호출과_공통실행_계약.md)
+[공통 판단](../common/04_Agent_동작_판단_명세서.md) · [Incident](../incident/13_Incident_모듈_설계서.md) · [실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)

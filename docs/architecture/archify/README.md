@@ -4,6 +4,8 @@
 
 2026-09-21 재구성. 기준 revision: `5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac`.
 
+2026-09-22 문서 정리에서 이 묶음을 `docs/architecture/archify/`로 이동했다. 원본 JSON·생성 HTML·이미지·검증 기록은 그대로 보존했다. JSON과 HTML 안의 `output/` 근거 경로는 위 고정 revision의 파일을 가리키며 현재 checkout의 경로가 아니다. 당시 생성·검증 기록은 이번 이동의 새 실행 결과로 취급하지 않는다.
+
 ## Architecture: 두 Agent와 공통 의존성
 
 GPU RCA Agent와 GPU Ops 보고서 Agent를 **독립 실행 모듈**로 분리했다. Incident → Job Controller의 RCA 접수와 Backend → Job Controller의 보고서 접수를 각각 표시했다. 두 Agent 각각의 Job Controller·Grafana MCP·LLM endpoint·PostgreSQL 연결을 모두 선으로 표현했다. PostgreSQL은 보고서 파일과 분리된 명시적 DB 노드다.
@@ -20,17 +22,17 @@ Job Controller가 Agent의 HTTP endpoint를 직접 호출하는 구조가 아니
 
 | 연결 | 동작과 근거 |
 |---|---|
-| CPC → 관측 수신·저장 | [hall architecture](../architecture-modules-20260917-v1.3/hall%20architecture.svg), [CPC-2 수집 검증](../../docs/evidence/CPC-2_수집검증_20260915.md). 현장 GPU/Fleet/Exporter/KSM → Alloy → CSC 전송 |
+| CPC → 관측 수신·저장 | [hall architecture](../architecture-modules-20260917-v1.3/hall%20architecture.svg), [CPC-2 수집 검증](../../evidence/CPC-2_수집검증_20260915.md). 현장 GPU/Fleet/Exporter/KSM → Alloy → CSC 전송 |
 | Grafana → 관측 저장소 | [전체 환경 설명](../architecture-modules-20260917-v1.3/README.md). 등록 Mimir/Loki 데이터소스 조회 방향 |
-| Grafana → Incident → JC | [Webhook ingest](../../incident/service/ingest.go), [outbox 전달](../../incident/service/delivery.go). 사건·snapshot 저장 후 RCA 접수 |
-| Frontend → Backend → JC | [Frontend API](../../frontend/src/lib/api.ts), [즉시 보고서 접수](../../backend/internal/api/proxy.go), [정기 일정/outbox](../../backend/internal/api/schedules.go). Backend에서 /jobs/report 호출 |
-| 각 Agent → JC | [공통 Worker](../../shared/python/src/agent_common/worker.py), [claim](../../job-controller/controller/claim.go), [complete](../../job-controller/controller/attempt.go). 두 Worker가 각각 pull하며 완료를 요청 |
-| 각 Agent → Grafana MCP → Grafana | [RCA NAT 설정](../../rcca-agent/configs/workflow.yml), [보고서 NAT 설정](../../ops-agent/configs/workflow.yml), [MCP 배포 설명](../../grafana-mcp/README.md). streamable HTTP /mcp와 읽기 전용 데이터소스 도구 |
-| 각 Agent → LLM endpoint | [RCA workflow](../../rcca-agent/src/rcca_agent/workflow.py), [보고서 workflow](../../ops-agent/src/ops_agent/workflow.py), [공통 LLM 클라이언트](../../shared/python/src/agent_common/llm.py). OpenAI 호환 /chat/completions |
-| Incident → PostgreSQL | [ingest](../../incident/service/ingest.go), [delivery](../../incident/service/delivery.go). 사건·receipt·snapshot·outbox |
-| Backend → PostgreSQL | [Backend 서버](../../backend/internal/api/server.go), [일정](../../backend/internal/api/schedules.go). 공개 결과 조회, 설정·일정 저장 |
-| JC → PostgreSQL | [작업 접수](../../job-controller/controller/submit.go), [claim](../../job-controller/controller/claim.go), [완료](../../job-controller/controller/attempt.go). 작업·attempt·lease·공개 참조 |
-| 두 Agent → PostgreSQL | [read_context / save](../../shared/python/src/agent_common/store.py). 입력 읽기와 후보·근거 저장 |
+| Grafana → Incident → JC | [Webhook ingest](../../../incident/service/ingest.go), [outbox 전달](../../../incident/service/delivery.go). 사건·snapshot 저장 후 RCA 접수 |
+| Frontend → Backend → JC | [Frontend API](../../../frontend/src/lib/api.ts), [즉시 보고서 접수](../../../backend/internal/api/proxy.go), [정기 일정/outbox](../../../backend/internal/api/schedules.go). Backend에서 /jobs/report 호출 |
+| 각 Agent → JC | [공통 Worker](../../../shared/python/src/agent_common/worker.py), [claim](../../../job-controller/controller/claim.go), [complete](../../../job-controller/controller/attempt.go). 두 Worker가 각각 pull하며 완료를 요청 |
+| 각 Agent → Grafana MCP → Grafana | [RCA NAT 설정](../../../rcca-agent/configs/workflow.yml), [보고서 NAT 설정](../../../ops-agent/configs/workflow.yml), [MCP 배포 설명](../../../grafana-mcp/README.md). streamable HTTP /mcp와 읽기 전용 데이터소스 도구 |
+| 각 Agent → LLM endpoint | [RCA workflow](../../../rcca-agent/src/rcca_agent/workflow.py), [보고서 workflow](../../../ops-agent/src/ops_agent/workflow.py), [공통 LLM 클라이언트](../../../shared/python/src/agent_common/llm.py). OpenAI 호환 /chat/completions |
+| Incident → PostgreSQL | [ingest](../../../incident/service/ingest.go), [delivery](../../../incident/service/delivery.go). 사건·receipt·snapshot·outbox |
+| Backend → PostgreSQL | [Backend 서버](../../../backend/internal/api/server.go), [일정](../../../backend/internal/api/schedules.go). 공개 결과 조회, 설정·일정 저장 |
+| JC → PostgreSQL | [작업 접수](../../../job-controller/controller/submit.go), [claim](../../../job-controller/controller/claim.go), [완료](../../../job-controller/controller/attempt.go). 작업·attempt·lease·공개 참조 |
+| 두 Agent → PostgreSQL | [read_context / save](../../../shared/python/src/agent_common/store.py). 입력 읽기와 후보·근거 저장 |
 
 LLM 연결은 구성된 endpoint를 사용하는 의존성이다. 매 실행에서 반드시 추론을 호출한다는 의미는 아니다. LLM 설정과 가용 근거·예산에 따라 호출을 생략할 수 있다. RCA는 등록된 추가 조사 선택과 근거 해석에 사용하고, 보고서는 코드로 계산한 사실의 설명에 사용한다.
 
@@ -40,8 +42,8 @@ RCA는 호환 발행 Runbook과 사건 snapshot을 읽는다. 보고서는 기�
 
 - **CPC-1 … CPC-N:** 기존 현장 수집. 이번 개발 범위 밖이지만 전체 데이터 출처로 표시했다. CPC-2 직접 scrape 근거를 CPC-1/N의 동일 배포 증거로 확대 해석하지 않는다.
 - **CSC:** 기존 관측·추론 기반과 이 레포의 Backend·Incident·JC·두 Agent·MCP·PostgreSQL을 포함한다. 역할 경계이며 단일 Kubernetes 클러스터나 조직 소유권·보안 격리를 확정하지 않는다.
-- **Client:** 브라우저에서 실행되는 Frontend. 정적 파일 제공과 API 중계는 [CSC의 Frontend 배포](../../frontend/nginx.conf)가 담당한다.
-- **보고서 HTML/CSV:** [Worker](../../shared/python/src/agent_common/worker.py)가 [별도 파일 경로](../../shared/python/src/agent_common/artifacts.py)에 저장한다. PostgreSQL과 별개이며 카드에 명시했다.
+- **Client:** 브라우저에서 실행되는 Frontend. 정적 파일 제공과 API 중계는 [CSC의 Frontend 배포](../../../frontend/nginx.conf)가 담당한다.
+- **보고서 HTML/CSV:** [Worker](../../../shared/python/src/agent_common/worker.py)가 [별도 파일 경로](../../../shared/python/src/agent_common/artifacts.py)에 저장한다. PostgreSQL과 별개이며 카드에 명시했다.
 - **관측 Object Storage:** 업무 PostgreSQL과 별개의 관측 장기 저장 계층이다. 실제 연결·보존 정책은 배포 확인 대상이다.
 - 제품 로그인·인증은 개발 범위에서 제외한다. 외부 서비스의 API 자격 증명과 제품 사용자 인증을 혼동하지 않는다.
 - 관측 tenant와 CPC 필터는 별개다. hall 문서의 Mimir tenant `cpc-1` + `cluster_id`, CPC-2 Loki tenant `cpc2` + `cluster=cpc2` 기록은 실제 배포에서 재확인해야 한다.
@@ -52,7 +54,7 @@ RCA는 호환 발행 Runbook과 사건 snapshot을 읽는다. 보고서는 기�
 
 CPC 수집을 한 상자로 묶지 않고 **Fleet Intelligence Agent, DCGM Exporter, Host Exporter, kube-state-metrics, Grafana Alloy**로 분리했다. CSC에서도 **Envoy Ingest Gateway, Grafana Mimir, Grafana Loki, Object Storage, Grafana**를 각각 표시했다. 기존 Incident·Backend·JC·두 Agent·MCP·LLM·PostgreSQL·Client의 역할과 기능 연결은 유지한다.
 
-CPC 경계는 사이트마다 반복되는 수집 모듈 구성이다. 모든 CPC의 실제 설치가 같다는 뜻이 아니다. [hall architecture](../architecture-modules-20260917-v1.3/hall%20architecture.svg)를 구성 기준으로 사용하고, [CPC-2 검증 기록](../../docs/evidence/CPC-2_수집검증_20260915.md)으로 확인 수준을 구분했다.
+CPC 경계는 사이트마다 반복되는 수집 모듈 구성이다. 모든 CPC의 실제 설치가 같다는 뜻이 아니다. [hall architecture](../architecture-modules-20260917-v1.3/hall%20architecture.svg)를 구성 기준으로 사용하고, [CPC-2 검증 기록](../../evidence/CPC-2_수집검증_20260915.md)으로 확인 수준을 구분했다.
 
 | 시작 → 도착 | 화살표 의미 |
 |---|---|
@@ -109,4 +111,4 @@ Sequence 탭 안의 선택 메뉴에서 아래 다섯 화면을 전환한다. �
 
 Architecture는 Archify `validate architecture`와 `deliver architecture`에 `--quality standard --repo-root <repo>`를 지정한다. Sequence는 `--quality showcase`를 사용한다. 생성 HTML에 `visual-check --json`을 실행한다. 생성 HTML 자체는 수정하지 않는다.
 
-탭 재검증: `node output/archify/check-tabs.mjs`. 설치된 Archify의 Chrome 도구를 재사용하며 필요 시 `ARCHIFY_SKILL_DIR`과 `CHROME_PATH`로 경로를 지정한다. 검사용 루프백 서버는 실행 중에만 열린다.
+탭 재검증: `node docs/architecture/archify/check-tabs.mjs`. 설치된 Archify의 Chrome 도구를 재사용하며 필요 시 `ARCHIFY_SKILL_DIR`과 `CHROME_PATH`로 경로를 지정한다. 검사용 루프백 서버는 실행 중에만 열린다.

@@ -48,7 +48,7 @@ RCA 결과 DB는 이번 보고서를 위해 새 RCA를 실행하는 경로가 �
 
 응답이 바이트 또는 표본 수 한도를 넘으면 같은 시작 시각에서 시간 구간을 줄여 다시 조회한다. 최소 구간은 1초이며 재조회도 기존 호출 횟수·deadline을 소모한다. 1초 구간에서도 한도를 넘거나 원본 경고가 있으면 partial로 남긴다. Loki는 이 시간 구간 축소 처리의 대상이 아니며 행 한도 도달 시 partial이다. 원본 경고·부분 응답은 정상 계산 표본으로 사용하지 않는다.
 
-호출 한도 또는 실행시간을 소진하면 `budget_exhausted` 근거를 남기며 이미 확보한 유효 구간은 보존한다. 기본값은 [06](06_배포_운영_인계서.md)의 설정 원본을 따른다. 수집 품질 필드는 [03 §5.1](03_데이터_설계서.md), 구현은 [관측 조회](../../shared/python/src/agent_common/observation.py)에 있다.
+호출 한도 또는 실행시간을 소진하면 `budget_exhausted` 근거를 남기며 이미 확보한 유효 구간은 보존한다. 기본값은 [06](../06_배포_운영_인계서.md)의 설정 원본을 따른다. 수집 품질 필드는 [03 §5.1](../common/03_데이터_설계서.md), 구현은 [관측 조회](../../../shared/python/src/agent_common/observation.py)에 있다.
 
 ## 3. 보고서 업무
 
@@ -77,8 +77,8 @@ O04는 v1에서 장치별 값·최대/최소·차이를 제공한다. 별도 ‘
 
 topics[].metrics에 값을 한 번 저장하고 facts/findings/recommendations에서 value_refs로 연결한다. O10은 실제 조치 기록과 전후 기간, O07은 resource 단위를 보존한다. 관측 감소와 인과적 개선 효과를 구분한다.
 
-Worker는 결과의 수치 레지스트리로 HTML/CSV 파일과 checksum을 생성한다. 현재 GUI 다운로드 API는 저장된 발행 결과를 Backend에서 다시 렌더링하며 Agent 파일을 그대로 전송하지 않는다. 두 경로 모두 저장 수치를 사용하고 escape·CSV 수식 방어·서버 파일명을 적용하며 재다운로드 때문에 새 분석을 수행하지 않는다. API 출력은 [02](02_백엔드_API_작업명세서.md), GUI는 [07](07_프론트엔드_개발명세서.md)을 따른다. PDF/DOCX 생성 엔진은 범위 밖이다.
+Worker는 결과의 수치 레지스트리로 HTML/CSV 파일과 checksum을 생성한다. 현재 GUI 다운로드 API는 저장된 발행 결과를 Backend에서 다시 렌더링하며 Agent 파일을 그대로 전송하지 않는다. 두 경로 모두 저장 수치를 사용하고 escape·CSV 수식 방어·서버 파일명을 적용하며 재다운로드 때문에 새 분석을 수행하지 않는다. API 출력은 [02](../backend/02_백엔드_API_작업명세서.md), GUI는 [07](../frontend/07_프론트엔드_개발명세서.md)을 따른다. PDF/DOCX 생성 엔진은 범위 밖이다.
 
 보고서 Agent가 내려가도 Backend의 일정·요청은 JC 큐에 보존된다. JC가 내려가면 정기 발생은 Backend outbox에서 대기한다. LLM 실패 시 유효 수치·근거를 보존하고 narrative_status=failed/omitted로 final을 낼 수 있다. 결과 저장 실패는 succeeded가 아니다.
 
-[Backend 일정](02_백엔드_API_작업명세서.md) · [공통 판단](04_Agent_동작_판단_명세서.md) · [실행 계약](14_모듈간_호출과_공통실행_계약.md)
+[Backend 일정](../backend/02_백엔드_API_작업명세서.md) · [공통 판단](../common/04_Agent_동작_판단_명세서.md) · [실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)

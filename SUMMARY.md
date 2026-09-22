@@ -2,9 +2,9 @@
 
 - [서비스 안내](README.md)
 - [개발 문서](docs/README.md)
-- [현재 구현·검증 안내](output/deliverables-20260917-v1.3/00_산출물_안내.md)
-- [문서 반영·정리 내역](output/deliverables-20260917-v1.3/09_통합검토_반영내역.md)
-- [구조도](output/architecture-modules-20260917-v1.3/README.md)
+- [현재 구현·검증 안내](docs/specs/README.md)
+- [문서 반영·정리 내역](docs/specs/09_통합검토_반영내역.md)
+- [구조도](docs/architecture/architecture-modules-20260917-v1.3/README.md)
 - [환경 근거](docs/evidence/README.md)
 - [Frontend](frontend/README.md)
 - [Backend](backend/README.md)

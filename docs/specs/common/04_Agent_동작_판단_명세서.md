@@ -31,11 +31,11 @@ RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT To
 
 ## 3. RCA
 
-[11 RCA](11_RCA_Agent_모듈_설계서.md)의 Incident 입력·R01~R09 계약을 따른다. incident_id는 필수다.
+[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 Incident 입력·R01~R09 계약을 따른다. incident_id는 필수다.
 
 ## 4. 보고서
 
-[12 보고서](12_보고서_Agent_모듈_설계서.md)의 O01~O11을 따른다. 즉시·정기 보고서는 같은 계산과 결과 형식을 사용한다.
+[12 보고서](../ops-agent/12_보고서_Agent_모듈_설계서.md)의 O01~O11을 따른다. 즉시·정기 보고서는 같은 계산과 결과 형식을 사용한다.
 
 ## 5. 계산 기준 v1.0
 
@@ -61,7 +61,7 @@ DCGM 활동값 0도 GPU–Pod 연결의 관측 근거가 될 수 있다. 반면 
 
 관측 연결은 mode=unknown, episode 없음으로 처리한다. `mapped_gpu_hours`는 cluster_id+GPU UUID별 유효 연결 구간 합집합 초를 3,600으로 나눈 값이다. O08의 Namespace별 값은 각 Namespace 안에서 같은 계산을 하므로 공유 GPU가 여러 Namespace에 나타나면 Namespace 합계가 전체 GPU 관측 시간을 넘을 수 있다.
 
-관측 연결만으로 독점·MIG 할당량, 실사용률, 과금량이나 60분 저활동 후보를 확정하지 않는다. 현재 구현은 독점 할당 근거가 없으면 `current_allocated_gpu`, `allocated_gpu_hours`, O08의 독점 할당 그룹 값을 null로 유지한다. 가능한 관측 지표는 보존하고 해당 주제에 부족 사유를 남긴다. 필드 원본은 [03 §5.1](03_데이터_설계서.md), 구현은 [정규화](../../shared/python/src/agent_common/normalize.py)와 [보고서 계산](../../ops-agent/src/ops_agent/workflow.py)이다.
+관측 연결만으로 독점·MIG 할당량, 실사용률, 과금량이나 60분 저활동 후보를 확정하지 않는다. 현재 구현은 독점 할당 근거가 없으면 `current_allocated_gpu`, `allocated_gpu_hours`, O08의 독점 할당 그룹 값을 null로 유지한다. 가능한 관측 지표는 보존하고 해당 주제에 부족 사유를 남긴다. 필드 원본은 [03 §5.1](03_데이터_설계서.md), 구현은 [정규화](../../../shared/python/src/agent_common/normalize.py)와 [보고서 계산](../../../ops-agent/src/ops_agent/workflow.py)이다.
 
 ### 5.2 산식
 
@@ -194,7 +194,7 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 ## 9. 검수
 
-수치 고정 사례·근거 연결·설명 실패·버전 재현은 [05](05_테스트_검수_기준서.md), 큐 수명주기는 [14](14_모듈간_호출과_공통실행_계약.md)를 따른다. 시험 환경과 실행 결과는 각 모듈 QA를 참조하며 고정 사례 시험을 운영 데이터·모델 품질 검수로 확대 해석하지 않는다.
+수치 고정 사례·근거 연결·설명 실패·버전 재현은 [05](../05_테스트_검수_기준서.md), 큐 수명주기는 [14](14_모듈간_호출과_공통실행_계약.md)를 따른다. 시험 환경과 실행 결과는 각 모듈 QA를 참조하며 고정 사례 시험을 운영 데이터·모델 품질 검수로 확대 해석하지 않는다.
 
 ## 10. NAT 적용 근거
 

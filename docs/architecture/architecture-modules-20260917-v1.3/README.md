@@ -1,6 +1,6 @@
 # DSX 전체 개발 구조 v1.3 · NAT Agent 개정
 
-2026-09-17 · [개발 산출물](../deliverables-20260917-v1.3/00_산출물_안내.md) 기준 · NAT/Grafana MCP 실환경 연동 전 목표 구조
+2026-09-17 · [개발 산출물](../../specs/README.md) 기준 · NAT/Grafana MCP 실환경 연동 전 목표 구조
 
 ## CPC·CSC 전체 환경 — hall architecture
 
@@ -10,9 +10,9 @@
 
 2026-09-18 작성. CPC별 Fleet·KSM·Exporter·Alloy 수집부터 CSC의 Ingest Gateway·Mimir·Loki·Object Storage·Grafana, Incident·Job Controller·Backend·두 NAT Agent, GUI·업무 DB·Runbook·보고서 파일·공유 추론까지 한 장에 표시했다. 녹색 경계는 이 레포의 CSC 서비스 범위다. Frontend와 업무 저장·설정도 레포 범위에 포함된다. CPC/CSC는 역할 경계이며 실제 Kubernetes 클러스터나 노드 배치를 확정한 그림은 아니다.
 
-관측 저장소의 기술적인 tenant와 CPC 조회 필터를 포함하되 로그인·인증·권한 흐름은 제외했다. [데이터 설계서](../deliverables-20260917-v1.3/03_데이터_설계서.md)에 기록된 Mimir 공통 tenant `cpc-1` + 대상 `cluster_id` 필터, CPC-2 Loki tenant `cpc2` + `cluster=cpc2`를 구분했다. CPC-1 Loki 값과 정확한 datasource UID·CPC selector는 C02 연결 설정에서 확인한다. 이 값들은 수집 환경 기록으로 현 배포에서 재확인해야 하며, 라벨 필터를 사용자 접근 권한이나 보안 격리로 취급하지 않는다.
+관측 저장소의 기술적인 tenant와 CPC 조회 필터를 포함하되 로그인·인증·권한 흐름은 제외했다. [데이터 설계서](../../specs/common/03_데이터_설계서.md)에 기록된 Mimir 공통 tenant `cpc-1` + 대상 `cluster_id` 필터, CPC-2 Loki tenant `cpc2` + `cluster=cpc2`를 구분했다. CPC-1 Loki 값과 정확한 datasource UID·CPC selector는 C02 연결 설정에서 확인한다. 이 값들은 수집 환경 기록으로 현 배포에서 재확인해야 하며, 라벨 필터를 사용자 접근 권한이나 보안 격리로 취급하지 않는다.
 
-CPC-2 직접 scrape 경로의 근거는 [수집 검증 기록](../../docs/evidence/CPC-2_수집검증_20260915.md)이다. CPC-1의 배포 구성을 동일하다고 단정하지 않았다. 첨부된 과거 전체 구조도는 CPC·CSC 관측 환경의 범위를 참고했고, 업무 모듈은 현재 v1.3의 독립 모듈·NAT/MCP 구조로 표시했다. Object Storage의 연결·보존 정책과 추론 모델·자원은 배포 검증 대상이다.
+CPC-2 직접 scrape 경로의 근거는 [수집 검증 기록](../../evidence/CPC-2_수집검증_20260915.md)이다. CPC-1의 배포 구성을 동일하다고 단정하지 않았다. 첨부된 과거 전체 구조도는 CPC·CSC 관측 환경의 범위를 참고했고, 업무 모듈은 현재 v1.3의 독립 모듈·NAT/MCP 구조로 표시했다. Object Storage의 연결·보존 정책과 추론 모델·자원은 배포 검증 대상이다.
 
 HTML/SVG는 **6624×3504**, PNG는 **13248×7008**이다. 한 장의 그림이며 브라우저에서 확대하거나 SVG 원본으로 확인할 수 있다. 글자 경계·비대상 노드 관통·SVG/HTML 접근성·파일 링크를 검사하고 PNG를 육안 확인했다. PNG는 시스템 대체 글꼴로 렌더링했다. 개발 명세나 구현을 변경한 것이 아니며, NAT/MCP 실환경 통합 시험은 수행하지 않았다.
 
@@ -71,6 +71,6 @@ Grafana MCP는 각 Agent의 NAT MCP 클라이언트와 Grafana 등록 데이터�
 
 한 장에서 Agent 내부를 읽기 쉽게 보여주기 위해 Worker의 heartbeat·취소·완료 왕복선, 반복 DB 의존선, GUI 조회 응답선은 생략했다. 실행부 상자와 아래 공개 경로 설명이 해당 계약을 표시한다. RCA 입력의 사건 증거는 [D1]에서 읽고 Runbook은 [K]에서 읽는다. LLM [L]은 RCA 조사 선택과 분석 단계에서 사용한다. 자동 증설 없이 기존 자원 안에서 claim하는 정책은 유지한다.
 
-[Backend·일정](../deliverables-20260917-v1.3/02_백엔드_API_작업명세서.md) · [Job Controller](../deliverables-20260917-v1.3/10_Job_Controller_모듈_설계서.md) · [RCA](../deliverables-20260917-v1.3/11_RCA_Agent_모듈_설계서.md) · [보고서](../deliverables-20260917-v1.3/12_보고서_Agent_모듈_설계서.md) · [Incident](../deliverables-20260917-v1.3/13_Incident_모듈_설계서.md) · [공통 계약](../deliverables-20260917-v1.3/14_모듈간_호출과_공통실행_계약.md)
+[Backend·일정](../../specs/backend/02_백엔드_API_작업명세서.md) · [Job Controller](../../specs/job-controller/10_Job_Controller_모듈_설계서.md) · [RCA](../../specs/rca-agent/11_RCA_Agent_모듈_설계서.md) · [보고서](../../specs/ops-agent/12_보고서_Agent_모듈_설계서.md) · [Incident](../../specs/incident/13_Incident_모듈_설계서.md) · [공통 계약](../../specs/common/14_모듈간_호출과_공통실행_계약.md)
 
 HTML/SVG는 2640×2480, PNG는 5280×4960이다. 접근성·자체 포함 검사, 브라우저 글자 경계 및 PNG 육안 검사를 수행했다. 이번 PNG 렌더링에서는 원격 웹폰트가 로드되지 않아 시스템 대체 글꼴을 사용했다. 동일 외형으로 공유할 때는 PNG를 사용한다. NAT/MCP·모델·DB 제품 통합 시험은 NOT RUN이다.

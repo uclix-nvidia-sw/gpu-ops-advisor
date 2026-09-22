@@ -79,7 +79,7 @@ Claude 문서의 “19개 활성 + 13개 선택 = 32개 대응”은 고정된 *
 }
 ```
 
-실제 운영 binding에는 `source_version`/image digest, `cluster_id`, `supported_models`, `query_id`, `original_period`, `max_age`, `invalid_values`, `valid_from/to`, `verification_scope`, `evidence_refs`도 필요하다. 이것들은 [03 데이터 설계서](../output/deliverables-20260917-v1.3/03_데이터_설계서.md)에 적힌 데이터 사전 revision 필드와 맞춘다. 표준 의미와 원본 binding을 **서로 다른 revision 또는 정규화된 자식 행으로 둘지**는 데이터 설계 담당자와 정한다. JSON 한 행에 모든 binding을 넣는 것은 초기 제안일 뿐이다.
+실제 운영 binding에는 `source_version`/image digest, `cluster_id`, `supported_models`, `query_id`, `original_period`, `max_age`, `invalid_values`, `valid_from/to`, `verification_scope`, `evidence_refs`도 필요하다. 이것들은 [03 데이터 설계서](../../common/03_데이터_설계서.md)에 적힌 데이터 사전 revision 필드와 맞춘다. 표준 의미와 원본 binding을 **서로 다른 revision 또는 정규화된 자식 행으로 둘지**는 데이터 설계 담당자와 정한다. JSON 한 행에 모든 binding을 넣는 것은 초기 제안일 뿐이다.
 
 Field ID의 역할은 다음처럼 제한한다.
 
@@ -127,5 +127,5 @@ RCA에서는 Incident의 cluster/GPU UUID/사고 시각으로 Category에 연결
 ## 7. 검토 근거
 
 - 사용자 제공 `gpu-ops-advisor-main (1).zip`: `rcca-agent/configs/workflow.yml`, `rcca-agent/README.md`, `backend/internal/api/knowledge.go`, `shared/migrations/001_backend.sql`, `output/deliverables-20260917-v1.3/03_데이터_설계서.md`, `11_RCA_Agent_모듈_설계서.md`.
-- CPC별 `dcgmi dmon --list` 출력: [CPC-1](evidence/dcgm/cpc-1-dcgm-dmon-field-catalog.txt), [CPC-2](evidence/dcgm/cpc-2-dcgm-dmon-field-catalog.txt). 숫자 Field 행과 대표 ID를 직접 대조했다. 이는 조회한 DCGM의 Field catalog이며, 실제 수집된 runtime sample이나 Mimir 시계열 목록은 아니다.
+- CPC별 `dcgmi dmon --list` 출력: [CPC-1](../../../evidence/dcgm/cpc-1-dcgm-dmon-field-catalog.txt), [CPC-2](../../../evidence/dcgm/cpc-2-dcgm-dmon-field-catalog.txt). 숫자 Field 행과 대표 ID를 직접 대조했다. 이는 조회한 DCGM의 Field catalog이며, 실제 수집된 runtime sample이나 Mimir 시계열 목록은 아니다.
 - [Fleet Intelligence Agent 고정 소스의 GPU 온도 Field 정의](https://github.com/NVIDIA/fleet-intelligence-agent/blob/8dd8826b7604386ad667125298156ddb1d1a7865/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/thermal/metrics.go), [DCGM Exporter 4.4.2-4.7.0 기본 CSV](https://github.com/NVIDIA/dcgm-exporter/blob/4.4.2-4.7.0/etc/default-counters.csv), [NVIDIA DCGM Field ID 문서](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-field-ids.html). 이 정적 소스의 배포 버전 일치는 아직 확인되지 않았다.
