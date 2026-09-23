@@ -2,6 +2,22 @@
 
 버전 1.3 · 모듈 backend · 독립 실행·배포
 
+## 0. 현재 구현 분석과 업그레이드 작업
+
+2026-09-23 · 코드 대조 기준 `d391f3d`. 아래는 코드 정적 대조 결과이며 신규 동작의 실행 검증이 아니다. 본문의 API·일정 계약은 유지하고, 다음 차이를 후속 개발 대상으로 관리한다. 공통 입력·DB 정의는 03/14, Runbook 실행 가능 조건은 11이 원본이다.
+
+| 작업 | 현재 구현·코드 근거 | 문제·영향 | 업그레이드 목표·완료 조건 |
+|---|---|---|---|
+| BE-01 사건 조회·소비 | [proxy.go](../../../backend/internal/api/proxy.go)의 목록은 `COALESCE(state,status)`로 필터링하고 DB 행을 반환한다. 상세는 RCA job 목록을 추가한다. PATCH는 `state`, `review_status`, `memo`를 Incident에 전달한다 | Frontend는 현재 `status`를 배지에 사용한다. 신규 Incident 행의 `state`와 legacy `status`가 달라 필터·표시가 어긋난다. 에피소드·분석 생략 사유의 전용 표시도 필요하다 | 사건의 기준 상태는 `state`로 소비하고 `alarm_status`·검토·분석 상태를 분리한다. legacy fallback과 13의 에피소드/이전 사건/생략 사유 응답을 Frontend와 확정한다. 종결 PATCH 후 재조회와 새 사건 연결을 확인한다 |
+| BE-02 RCA 목적·결과 조회 | [read.go](../../../backend/internal/api/read.go)의 `jobDTO()`는 입력 `purpose_ids`를 복사하고, 공개 candidate 본문만 결과로 반환한다 | 1.4에는 입력 목적이 없으므로 기존 필드만 보면 목적이 사라진다. 미공개 결과를 추정해 채울 수도 없다 | 기존 1.3 목적 표시를 유지하고 1.4는 공개 assessments·선택 근거를 소비한다. 아직 선택/발행되지 않은 목적은 미확정으로 표시한다. 14의 input_contract 전달을 선행 구현하고 두 버전의 목록·상세를 검사한다 |
+| BE-03 Runbook 작성·발행·검색 | [knowledge.go](../../../backend/internal/api/knowledge.go)는 content가 비어 있지 않은 객체인지, scope·근거 참조·검토 hash를 검사한다. code 필터는 `content.code`만 비교한다 | 검토 hash 일치만으로 query/fact/조건의 실행 가능성이 입증되지 않는다. 새 `search.codes`만 가진 Runbook은 기존 code 필터로 찾을 수 없다 | [11 §6.2](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 신규/legacy content 검증 및 선언 코드 검색을 연결한다. 미지원 query·조건·미해석 참조는 실행 가능한 신규 발행을 막고, 기존 발행본은 수정하지 않는다. 관리 화면과 RCA가 같은 revision을 읽는지 확인한다 |
+
+BE-01/02는 Incident·JC·Frontend와 접수 전환 전에 연결하고, BE-03은 RCA의 P1과 함께 진행한다. 새 Agent 실행 API·별도 스케줄러를 추가하지 않는다. 즉시 요청의 intent, 정기 occurrence/outbox, 공개 결과만 내보내는 기존 경로는 회귀 보존 대상이다.
+
+BE-01의 1.4 사건 응답은 `state`, `alarm_status`, `review_status`, `episode_started_at`, `last_observed_at`, `observation_count`, `ended_at`, `ended_reason`, `closed_at`, `prior_incident_id`, `rca_eligibility_reason`을 구분해 제공한다. last_observed_at/count는 재시도를 포함한 수신 기준이다. legacy의 에피소드 전용 값은 null이며 추정하지 않는다. state가 있는 경우 status로 덮어쓰지 않고, legacy state 부재일 때만 기존 status를 표시한다. 신규 state는 open/acknowledged/closed이며 resolved는 알람 상태다. 1.4 job/결과의 입력 버전은 14의 input_contract로 전달한다.
+
+검수 연결: [05](../05_테스트_검수_기준서.md)의 T28/T29(상태 표시), T30(지식), T48(구·신규 소비), T49~T52(에피소드). [기존 Backend E2E](../../../backend/tests/e2e_test.go)와 [실제 JC 연결 시험](../../../backend/tests/job_controller_test.go)은 기존 경로의 출발점이며 위 신규 조건 전체를 검증한 기록은 아니다. **이번 상태: 정적 대조 완료, 신규 구현·제품 테스트·실환경 검수 미실행.**
+
 ## 책임
 
 Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응답·설정과 정기 보고서 일정을 소유한다. RCA를 접수하거나 Agent를 직접 호출해 실행하지 않는다. Grafana Webhook은 Incident로 직접 연결한다. 보고서 집계와 LLM 실행은 보고서 Agent에 둔다.
@@ -69,7 +85,7 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 
 ## 보고서 접수와 응답
 
-입력: `scope,time_range,timezone,topic_ids,group_by,comparison_range?,action_record_ids?,resource_selectors?,parent_job_id?`. topic은 O01~O11, group_by는 cluster/model/node/namespace/pod/workload다. O10은 time_range=조치 후, comparison_range=비교 전이며 조치 기록이 없으면 단순 비교로 표시한다. O07의 resource_selectors는 등록된 이름·단위만 받는다.
+입력: `scope,time_range,timezone,topic_ids,group_by,comparison_range?,action_record_ids?,resource_selectors?,parent_job_id?`. topic은 O01~O11, group_by는 cluster/model/node/namespace/pod/workload다. 추가 개발의 주제별 지원 조합은 04 §5.5를 따른다. 잘못된 enum은 422, 유효하지만 미지원 조합은 접수 후 해당 topic의 blocked/unsupported_group_by로 표시한다. O10은 time_range=조치 후, comparison_range=비교 전이며 조치 기록이 없으면 단순 비교로 표시한다. O07의 resource_selectors는 등록된 이름·단위만 받는다.
 
 ```json
 {

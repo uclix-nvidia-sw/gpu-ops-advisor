@@ -1,6 +1,6 @@
 # 04. Agent 공통 동작·판단 명세서
 
-문서 버전 1.3 · criteria_version=1.1 · result_schema_version=1.1
+문서 버전 1.3 · 현행 criteria_version=1.1 · 보고서 집계 변경 목표 criteria_version=1.2 · result_schema_version=1.1
 
 ## 1. 공통 역할
 
@@ -31,7 +31,7 @@ RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT To
 
 ## 3. RCA
 
-[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 입력·R01~R09 계약을 따른다. incident_id는 필수다. 2026-09-22 변경 목표는 Incident의 생명주기별 최초 알람 전달 후 **Agent가 파싱·목적 선택·Runbook 적용/로그·지표 일반 조사를 결정**하는 구조다. Runbook과 로그 조회는 같은 workflow에서 결합할 수 있다. Incident가 목적을 정하는 기존 1.3과 목적 없는 신규 1.4 입력은 14의 이행 계약으로 구분하며 현재 구현 완료를 뜻하지 않는다.
+[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 입력·R01~R09 계약을 따른다. incident_id는 필수다. 변경 목표는 Incident의 에피소드별 최초 알람 전달 후 **Agent가 파싱·목적 선택·Runbook 적용/로그·지표 일반 조사를 결정**하는 구조다. Runbook과 로그 조회는 같은 workflow에서 결합할 수 있다. Incident가 목적을 정하는 기존 1.3과 목적 없는 신규 1.4 입력은 14의 이행 계약으로 구분하며 현재 구현 완료를 뜻하지 않는다.
 
 ## 4. 보고서
 
@@ -114,6 +114,35 @@ DCGM 활동값 0도 GPU–Pod 연결의 관측 근거가 될 수 있다. 반면 
 | 공유 G1에 A·B, G1 활동 80% | 물리 GPU 1, 공유 관계 2. A/B 실사용률 각각 null |
 | 60분 중 한 Pod가 5분만 전용 할당, 그 5분은 모두 저활동 | 관측 저활동 1/12 GPU-hours. 장시간 후보 보류, short_allocation_window |
 | 전용 G1이 같은 60분에 A 30분→B 30분, 각각 모두 저활동 | A/B 각각 0.5 관측 저활동 GPU-hours. 둘을 합친 장시간 후보 금지 |
+
+### 5.5 보고서 그룹과 사건 통계 — 추가 개발 목표 1.2
+
+이번 그룹·사건 정의 변경은 보고서 `versions.criteria=1.2`의 새 실행 프로필로 구분한다. 기존 1.1 결과·진행 중 job은 재해석하지 않고, 결과 스키마 1.1과 보고서 접수 계약 1.3은 유지한다. 숫자가 같아도 서로 다른 산식 버전의 발생률을 직접 비교하지 않는다.
+
+`group_by`는 아래 지원 축의 조합이다. 요청 축 전체를 적용하고 cluster_id는 항상 내부 신원에 포함한다. 그룹은 표시 이름이 아닌 확인된 UID·장비 신원과 해당 시각 매핑을 사용한다. 각 metric.target과 topic.quality에 요청 축·적용 축·집계 단위를 기록한다. 유효 enum이지만 미지원 조합이면 해당 주제는 blocked, `missing_inputs=unsupported_group_by`이며 다른 주제는 계속한다. 임의 축 삭제나 cluster 집계로의 조용한 대체는 없다.
+
+| 주제 | 지원 group_by 축 | 유지해야 할 계산 단위 |
+|---|---|---|
+| O01 | cluster, model, node | 장비/Node 신원, 현재 수량과 기간 변화 분리 |
+| O02/O03 | cluster, model, node, namespace, pod, workload | 검증된 할당/관측 관계, 물리·MIG·공유 분리 |
+| O04 | cluster, model, node, namespace, pod, workload | 같은 workload·동시 구간 안에서만 GPU 편차 계산; 서로 다른 작업을 합쳐 편차를 만들지 않음 |
+| O05 | cluster, model, node | source/component/사건 정의별 구분, 재발은 같은 dedup_group 안에서만 |
+| O06 | cluster, model, node, namespace, pod, workload | 사건 당시 검증된 관계. 복수 작업에 연결된 사건 수는 그룹 간 비가산임을 표시 |
+| O07 | cluster, namespace, pod, workload | unbound Pod를 누락시키지 않음; node/model별 미배치 귀속은 미지원 |
+| O08 | cluster, namespace, pod, workload | Namespace·Pod·소유 workload의 당시 관계, 프로젝트는 확인된 별도 근거만 |
+| O09 | cluster, model, node | 물리 GPU 에너지. workload별 임의 균등 분배 없음 |
+| O10 | cluster, model, node, namespace, pod, workload | 조치 ID·동일 대상·비교 가능한 전후 구간을 계속 구분 |
+| O11 | cluster, model, node, namespace, pod, workload | 해당 그룹의 기대 대상·주기 분모가 있을 때만 커버리지 계산 |
+
+지원 축도 신원/관측이 부족하면 해당 값은 null·사유, 주제는 partial/blocked다. 미확인 대상을 빈 문자열로 합쳐 정상 그룹을 만들지 않고 미귀속 건수·근거를 별도 표시한다. 고유 수는 해당 그룹에서 재중복 제거하고, 시간은 유효 구간 합집합, 평균은 유효시간 가중, 비율은 분자/분모 재계산, P95는 원본 유효시간 분포에서 다시 계산한다. 그룹 평균·P95·발생률의 단순 평균은 금지한다. 공유 관계의 그룹 합계가 물리 전체와 다를 수 있는 이유도 보존한다.
+
+O05의 기준은 다음과 같다.
+
+- 1.4 건수는 `episode_started_at ∈ [start,end)`인 고유 incident ID다. RCA 생략 사건도 포함하고 raw 알림·job 수는 포함하지 않는다. `analysis_excluded` 수집 장애는 별도 건수다. legacy는 occurred_at 기준 건수를 별도로 표시하며 새 에피소드 건수·발생률에 합치지 않는다.
+- 재발 간격은 같은 완전한 `dedup_group`에서 연속 에피소드 시작 시각의 차이다. 모델·node 표시 그룹이 같아도 서로 다른 장비/component/source 간 간격을 만들지 않는다. 시작 시각은 수신 기준이므로 장비 고장 간격/MTBF라고 부르지 않는다. 기간 안 사건의 직전 사건 한 건은 기간 밖에서도 cutoff 안에서 읽어 간격만 계산하며 건수에는 더하지 않는다.
+- 직전 사건 부재·신원 부족·시각 역전·legacy 혼합이면 그 간격은 null·사유다. 충분한 쌍이 없으면 평균도 null이며 0으로 채우지 않는다. 비교 기간은 각 `[start,end)`에 동일 규칙을 적용한다.
+- 발생률은 같은 source/component·사건 정의·모델·대상 집합의 유효 관측 구간에 속한 사건 수 / 그 구간의 검증된 GPU-hours × 1,000이다. 분자와 분모가 쓰는 대상·기간을 evidence에 남긴다. 전체 사건 수와 발생률용 분자는 따로 표시하며 관측 공백의 사건을 분자에만 넣지 않는다.
+- GPU 귀속·기대 대상·알람 관측 완전성이나 분모가 없으면 발생률은 null이다. machine/component 사건을 GPU별로 복제하거나 수집 장애에 GPU 분모를 붙이지 않는다. 비교·순위에는 §5.3 품질 기준도 적용한다. 검증된 분모가 있으면 §5.4의 40·10건 예처럼 계산하고 항상 null로 두지 않는다.
 
 ## 6. Knowledge 계약
 
