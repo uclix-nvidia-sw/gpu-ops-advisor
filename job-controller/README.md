@@ -14,7 +14,7 @@ Backend와 같은 PostgreSQL을 사용하는 독립 프로세스입니다. 보�
 
 기본 주소: PostgreSQL `127.0.0.1:55432`, JC `127.0.0.1:8090`, Backend `127.0.0.1:8080`. Backend 개발 스크립트가 `DSX_JOB_CONTROLLER_URL=http://127.0.0.1:8090`을 설정합니다. Frontend는 Backend에만 연결합니다. `.env.example`은 예시이며 자동으로 읽지 않습니다.
 
-`DATABASE_URL`은 두 서버가 같은 DB를 가리켜야 합니다. JC가 공통 001/002와 큐 003 마이그레이션을 적용합니다. Backend가 registry/설정 초기화를 담당하므로 신규 개발 DB에는 Backend seed도 실행해야 합니다. 별도 Agent나 LLM을 가짜로 띄우지 않습니다. Worker 0개라도 보고서는 202로 영속 접수되고 `worker_unavailable` 상태로 대기합니다.
+`DATABASE_URL`은 두 서버가 같은 DB를 가리켜야 합니다. JC가 공통 001/002와 큐 003, Worker 계약 006 마이그레이션을 적용합니다. Backend가 registry/설정 초기화를 담당하므로 신규 개발 DB에는 Backend seed도 실행해야 합니다. 별도 Agent나 LLM을 가짜로 띄우지 않습니다. Worker 0개라도 보고서는 202로 영속 접수되고 `worker_unavailable` 상태로 대기합니다.
 
 ## 구성과 동작
 
@@ -28,6 +28,18 @@ capacity → job → attempt 순서로 DB 트랜잭션을 잠그며, 인수·결
 작업마다 입력, deadline, execution/query/parser/criteria/result schema/knowledge/model 참조를 고정합니다. 기존 작업의 프로필과 예산은 재시도나 설정 변경으로 초기화하지 않습니다. Worker 재등록에는 시작별 새 boot UUID를 사용합니다. 이전 boot는 retired이며 재사용하지 못합니다.
 
 ## 운영 설정
+
+### RCA 입력 계약 전환 준비
+
+RCA 접수는 1.3/1.4를 구분하고, 보고서는 1.3을 유지합니다. 새 job은 `versions.input_contract`를 고정하며 Worker가 등록한 `supported_contract_versions`에 맞게 배분합니다. 생략한 구 Worker는 1.3만 지원합니다. 호환 Worker 없는 1.4 job은 `queued/worker_unavailable`로 보존하며 다른 실행 가능한 작업을 막지 않습니다. 결과 공개 때도 job과 후보의 입력 계약 일치를 검사합니다. 상세 입력·오류는 [API](API.md)를 따릅니다.
+
+**현재 제품 RCA Worker의 1.4 목적 선택·이력·의미 검증은 후속 작업입니다.** 이 변경은 JC-01/02와 JC-03의 JC 공개 경계이며, 1.4 생산자 전환이나 전체 실행 완료를 뜻하지 않습니다.
+
+006은 `workers.supported_contract_versions`에 기본 `["1.3"]`인 열과 제약만 추가하고 `jc_migrations=2`를 기록합니다. 기존 job·snapshot·hash·예산은 변경하지 않습니다. JC `Prepare()`가 적용하며 readiness가 새 migration을 확인합니다. Incident 004/005 migration과 별개로 적용할 수 있습니다.
+
+공유 DB 적용은 담당자가 승인된 배포에서 수행합니다. 모든 JC 복제본을 호환 버전으로 교체한 뒤 Worker·결과 소비자 검증을 완료하고 신규 생산자를 전환합니다. 롤백은 신규 1.4 접수를 먼저 멈추고 pending/queued/running을 지원 소비자로 처리하거나 보존합니다. 1.4 입력을 1.3으로 변환하거나 열·PVC를 삭제하지 않습니다. 구 JC가 1.4를 배분하지 않도록 1.4 작업이 남은 동안 호환 JC를 유지합니다.
+
+### 실행 한도
 
 `JC_CONFIG_FILE`에 `config.example.json` 형식의 파일 경로를 지정합니다. 기본 개발 프로필은 종류별 슬롯 1, 공유 슬롯 1, Worker 슬롯 1, lease 30초, heartbeat 5초, 최대 3회, 총 토큰 예산 3,000, attempt 예산 1,000입니다. 재시도는 지수 backoff(최대 300초) + 1초 미만 jitter를 적용합니다.
 

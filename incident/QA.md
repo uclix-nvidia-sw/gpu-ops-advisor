@@ -1,5 +1,49 @@
 # Incident 검증 기록
 
+## 2026-09-23 Incident·JC 통합 PR 최종 검사
+
+Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops-incident-jc-pr`에서 재검사했다. 아래 결과는 앞선 기록의 CGo/race 미검증 항목을 보완한다.
+
+- **통과:** `shared`, `incident`, `job-controller`, `backend` 각각 `go vet ./...`, `go test -race ./...`, `go build ./...`. Go 1.26.2, `CGO_ENABLED=1`, 임시 폴더의 SHA256 검증된 w64devkit GCC를 사용했다.
+- **통과:** Incident와 Backend 각각 `go test -tags=e2e ./tests -v -count=1 -timeout=5m`. 새 PostgreSQL 16.9의 `127.0.0.1:51009/incident_test`와 테스트별 임시 schema만 사용하고 종료했다. 이 작업 트리에는 검증 복사본 전용 `TestReviewIncident14`가 없으며 저장소에 포함된 검사만 실행했다.
+- **통과:** 문서 링크 검사와 변경 diff 공백 검사.
+- **미검증:** 실제 Grafana 발송·운영 시각 계약, 제품 RCA Worker의 1.4 실행·목적 선택·결과 의미 검증, 운영 배포. 에피소드 1.4 전달 검사는 계약 수신 fixture, JC 배분·공개 검사는 실제 JC와 Worker 프로토콜 드라이버를 사용한다.
+
+## 2026-09-23 종결 후 resolved 반영 수정
+
+종결한 에피소드를 알람 집계 갱신에서 제외하던 조건을 제거했다. `closed_by_operator`와 `observation_gap` 각각에 대해 일부 생명주기만 해제되면 firing 유지, 모두 해제되면 resolved 반영, 기존 state/closed_at/ended_at/ended_reason/관측 횟수·시각/snapshot/outbox 보존, 이후 늦은 firing의 재활성화 방지를 확인했다.
+
+- **통과:** 검증 복사본의 Incident에서 `go vet ./...`, `go test ./...`, `go build ./...`.
+- **통과:** 새 격리 PostgreSQL 16.9에서 `go test -tags=e2e ./tests -v -run='TestReviewIncident14|TestIncidentEpisodes' -count=1 -timeout=5m`. 저장소의 에피소드 회귀 검사와 검증 복사본에만 둔 직전 실패 재현 검사 모두 성공했다. 실제 Incident → 실제 JC의 1.4 접수도 다시 확인했다. 검사 후 DB를 종료했다.
+- 실제 Agent 실행·운영 Grafana·`-race`는 이번 수정에서 미검증이다. DB 구조·설정 변경은 없다.
+
+## 2026-09-23 에피소드 생산자 업그레이드
+
+로컬 파일 구현·검증 단계다. 커밋/push/배포 및 운영 Grafana 검수는 수행하지 않았다. Windows / Go 1.26.2 / 새 PostgreSQL 16.9 프로세스의 임시 DB·schema를 사용하고 종료했다. 사용자 경로의 한글과 저장소 경로의 대괄호가 PostgreSQL 초기화/Go embed를 방해해 `C:/Temp/gpu-ops-incident-01a0cbd5`의 검증용 소스 복사본에서 실행했다. 운영 DB 환경변수는 재사용하지 않았다.
+
+| 항목 | 결과와 범위 |
+| --- | --- |
+| `shared`, `incident`, `job-controller`, `backend` 각각 `go vet ./...`, `go test ./...`, `go build ./...` | 통과. Incident 경계 판정 단위 검사 포함 |
+| `incident`: `go test -tags=e2e ./tests -v -count=1 -timeout=5m` | 통과. 기존 실제 JC/Backend 연동과 신규 에피소드·이행 충돌 검사 |
+| `backend`: 같은 E2E 명령 | 통과. 기존 Backend/실제 JC 회귀 검사 |
+| DB 새 스키마·기존 1.3 행에서 전환·반복 Prepare | 통과. snapshot/hash 보존, 기존 pending의 실제 JC 전달, 다중 사건 귀속 거절, 신규 에피소드 이후 1.3 생산자 재시작 차단 |
+| `go test -race ./...` | 실행 시도 차단·미검증: `-race requires cgo`; 이 환경에는 C 컴파일러가 없음. CI/Linux에서 확인 필요 |
+| 문서 링크 검사 | 저장소 루트의 `python tools/check_links.py` 통과 |
+| 설정/Helm 기본 전환 | 해당 없음: 기존 1.3 기본값·설정 미러를 유지함 |
+| 실제 1.4 JC/Worker 전체 실행·결과 공개, 운영 Grafana·K·시각 계약, DB 백업 복원 | 미검증. 통합 배포 전 별도 검수 필요 |
+
+추가한 검사는 `service/episodes_test.go`의 결정 경계 검사와 `tests/episodes_test.go`의 DB/HTTP 시나리오에 집중했다. [05 검수 기준](../docs/specs/05_테스트_검수_기준서.md)의 아래 **해당 입력 사례**를 확인했으며 전체 T 항목이나 운영 적합성의 통과를 뜻하지 않는다.
+
+- T41/T42/T49/T52: 같은 bytes 4회 → 관측 count=4, 원문·최초 snapshot 중복 없음. 두 Incident 인스턴스의 동시 최초 8회 → 사건/outbox 각 1개·count=8. reason storm·부분/순서 변경·annotation 변경도 최초 snapshot/revision 유지. 순수 함수에서 gap=K 유지, gap=K+1 종료 확인.
+- T43/T53: 일부 resolved는 그룹 firing 유지, 전체 resolved도 검토 state=open 유지. late firing은 카운트 증가 없음. resolved 선접수는 사건 없음. 수집 장애는 excluded 사건·outbox 없음. 신원 누락은 생명주기별 분리, 신원 변경은 identity_conflict, NUL 자식과 정상 형제 격리, 잘못된 truncatedAlerts는 422 receipt.
+- T50/T51/T54: gap 후 새 startsAt은 새 사건/prior 연결·prior_analysis_open. closed 후 과거 원문·문구 변경은 재발 보류. 동일 미해제 생명주기의 새 검수된 occurred_at은 새 사건/outbox. 늦은 closed는 기존 관측 종료 시각·사유 보존.
+- T45/T59: 이름 정책 없는 입력·목적 필드 없는 1.4 envelope, 원문과 절대 창 고정. 발생 시각 계약 미검수 시 startsAt, 검수 후 occurred_at 선택·미래 오류 거절. Agent의 실제 목적/Runbook 선택은 미검증.
+- T42/T48: 1.4 전달의 응답 유실은 계약 검사용 HTTP 수신기의 receipt로 같은 키를 복구한다. 이 수신기는 실제 JC/Worker가 아니다. 실제 JC 검사는 기존 1.3 pending 전달·회귀 경로이며, 신규 Worker 배분(T55) 검증으로 승계하지 않는다.
+
+에피소드 설정 revision 재사용 시 내용 변경도 시작 단계에서 거절한다. 작업 중 별도로 들어온 JC/Worker 계약 변경은 보존했으며 이 기록을 그 개발의 완료 판정으로 사용하지 않는다. 1.4 운영 활성화 조건은 [README](README.md)의 적용 순서에 있다.
+
+## 2026-09-17 기존 1.3 검증
+
 검증일: 2026-09-17. Go 1.26.2 / Windows / PostgreSQL 16 개발 인스턴스. 사용자·Agent 인증 제외.
 
 - Incident `go test ./...`, `go vet ./...`, 서버 바이너리 빌드 통과.

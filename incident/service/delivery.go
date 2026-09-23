@@ -26,7 +26,11 @@ func (s *Server) request(ctx context.Context, method, path string, body Object) 
 		return nil, 0, e
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-DSX-Contract-Version", "1.3")
+	version := String(body, "contract_version")
+	if version == "" {
+		version = "1.3" // Receipt lookup retains the existing internal API contract.
+	}
+	req.Header.Set("X-DSX-Contract-Version", version)
 	resp, e := s.Client.Do(req)
 	if e != nil {
 		return nil, 0, e

@@ -229,7 +229,7 @@ func (c *Controller) attempt(ctx context.Context, id, op string, b Object) (Obje
 				}
 				return err
 			}
-			if candidate["job_id"] != id || Number(candidate, "attempt_no") != n || candidate["kind"] != j["kind"] || candidate["schema_version"] != execution(j).Schema || candidate["validation_status"] != "valid" || candidate["content_hash"] != b["content_hash"] || Hash(candidate["body"]) != b["content_hash"] {
+			if candidate["job_id"] != id || Number(candidate, "attempt_no") != n || candidate["kind"] != j["kind"] || candidate["schema_version"] != execution(j).Schema || candidate["validation_status"] != "valid" || candidate["content_hash"] != b["content_hash"] || Hash(candidate["body"]) != b["content_hash"] || !candidateContractMatches(j, candidate) {
 				return Fail(422, "invalid_candidate", "후보의 attempt·스키마·검증·해시가 일치하지 않습니다.")
 			}
 			_, err = tx.Exec(ctx, "UPDATE jobs SET status='succeeded',stage='succeeded',published_result_id=$2,termination_reason=NULL,retryable=false,queue_reason=NULL,version=version+1 WHERE id=$1", id, b["candidate_id"])

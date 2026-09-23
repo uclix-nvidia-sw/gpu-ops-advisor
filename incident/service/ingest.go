@@ -112,13 +112,14 @@ func (s *Server) parse(raw any, now time.Time) (alert, string) {
 func (s *Server) ingest(ctx context.Context, b Object, raw []byte) (Object, int, error) {
 	children, ok := b["alerts"].([]any)
 	bad := !ok || len(children) == 0
+	batchReason := "alerts"
 	if len(children) > s.Config.MaxAlerts {
 		return nil, 0, Fail(413, "too_many_alerts", "알람 배열 한도를 초과했습니다.")
 	}
 	if v, exists := b["truncatedAlerts"]; exists {
 		n, ok := v.(float64)
 		if !ok || n < 0 || n != float64(int(n)) {
-			return nil, 0, Invalid("truncatedAlerts")
+			bad, batchReason = true, "truncatedAlerts"
 		}
 	}
 	sum := sha256.Sum256(raw)
@@ -128,27 +129,44 @@ func (s *Server) ingest(ctx context.Context, b Object, raw []byte) (Object, int,
 	e := s.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
 		var old Object
 		var oldStatus int
-		e := tx.QueryRow(ctx, "SELECT response,http_status FROM incident_webhook_receipts WHERE source=$1 AND body_hash=$2", s.Config.Source, hash).Scan(&old, &oldStatus)
+		var receipt string
+		e := tx.QueryRow(ctx, "SELECT id,response,http_status FROM incident_webhook_receipts WHERE source=$1 AND body_hash=$2", s.Config.Source, hash).Scan(&receipt, &old, &oldStatus)
 		if e == nil {
 			result, status = old, oldStatus
-			return nil
+			if s.Config.Episodes == nil || bad || oldStatus != 202 {
+				return nil
+			}
 		}
-		if e != pgx.ErrNoRows {
+		if e != nil && e != pgx.ErrNoRows {
 			return e
 		}
-		receipt := ID()
-		_, e = tx.Exec(ctx, "INSERT INTO incident_webhook_receipts(id,source,body_hash,raw_payload,received_at,response,http_status,raw_body) VALUES($1,$2,$3,$4,$5,'{}',202,$6)", receipt, s.Config.Source, hash, safeJSON(b), now, raw)
-		if e != nil {
-			return e
+		replay := e == nil
+		if !replay {
+			receipt = ID()
+			_, e = tx.Exec(ctx, "INSERT INTO incident_webhook_receipts(id,source,body_hash,raw_payload,received_at,response,http_status,raw_body) VALUES($1,$2,$3,$4,$5,'{}',202,$6)", receipt, s.Config.Source, hash, safeJSON(b), now, raw)
+			if e != nil {
+				return e
+			}
 		}
 		if bad {
 			status = 422
-			result = Object{"receipt_id": receipt, "error": Invalid("alerts")}
+			result = Object{"receipt_id": receipt, "error": Invalid(batchReason)}
 		} else {
+			if s.Config.Episodes != nil {
+				if e = s.lockEpisodeGroups(ctx, tx, children, now); e != nil {
+					return e
+				}
+			}
+			counted := map[string]bool{}
 			items := []Object{}
 			accepted, rejected := 0, 0
 			for i, rawAlert := range children {
-				item, e := s.child(ctx, tx, now, receipt, i, rawAlert)
+				var item Object
+				if s.Config.Episodes != nil {
+					item, e = s.episodeChild(ctx, tx, now, receipt, i, rawAlert, counted)
+				} else {
+					item, e = s.child(ctx, tx, now, receipt, i, rawAlert)
+				}
 				if e != nil {
 					return e
 				}
@@ -158,6 +176,9 @@ func (s *Server) ingest(ctx context.Context, b Object, raw []byte) (Object, int,
 				} else {
 					accepted++
 				}
+			}
+			if replay {
+				return nil // Continuity is committed, but the original receipt stays immutable.
 			}
 			warnings := []string{}
 			if Number(b, "truncatedAlerts") > 0 {

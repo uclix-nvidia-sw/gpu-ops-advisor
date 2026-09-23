@@ -48,7 +48,7 @@ func (c *Controller) Prepare(ctx context.Context, apply bool) error {
 			return e
 		}
 	}
-	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue} {
+	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue, migrations.WorkerContracts} {
 		if _, e = tx.Exec(ctx, sql); e != nil {
 			return e
 		}
@@ -215,7 +215,7 @@ func (c *Controller) route(r *http.Request, path string, b Object) (Object, int,
 	if r.Method == "GET" && (path == "/health/live" || path == "/health/ready") {
 		if path == "/health/ready" {
 			var ready bool
-			e := c.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jc_migrations WHERE version=1) AND EXISTS(SELECT 1 FROM capacity_state WHERE config_revision=$1)", c.Revision).Scan(&ready)
+			e := c.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jc_migrations WHERE version=2) AND EXISTS(SELECT 1 FROM capacity_state WHERE config_revision=$1)", c.Revision).Scan(&ready)
 			if e != nil {
 				return nil, 0, e
 			}

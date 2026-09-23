@@ -116,7 +116,7 @@ func (c *Controller) queueStatus(ctx context.Context) (Object, error) {
 			}
 			v["capacity_limit"] = c.Config.KindLimits[kind]
 			v["reserved_slots"] = a.kind[kind]
-			v["worker_available"] = a.workers[kind]
+			v["worker_available"] = len(a.workers[kind]) > 0
 			kinds[kind] = v
 		}
 		out = Object{"kinds": kinds, "shared": Object{"limit": c.Config.SharedLimit, "reserved_slots": a.used, "quarantined_slots": a.quarantine}, "config_revision": c.Revision, "observed_at": now}

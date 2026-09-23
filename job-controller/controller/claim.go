@@ -4,12 +4,13 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5"
 	. "gpu-ops-advisor/shared/contract"
+	"slices"
 	"strings"
 	"time"
 )
 
 func (c *Controller) register(ctx context.Context, b Object) (Object, error) {
-	if e := only(b, "worker_id", "boot_id", "kind", "capacity_profile_id"); e != nil {
+	if e := only(b, "worker_id", "boot_id", "kind", "capacity_profile_id", "supported_contract_versions"); e != nil {
 		return nil, e
 	}
 	id, boot, kind := String(b, "worker_id"), String(b, "boot_id"), String(b, "kind")
@@ -17,11 +18,27 @@ func (c *Controller) register(ctx context.Context, b Object) (Object, error) {
 	if id == "" || len(id) > 200 || strings.TrimSpace(id) != id || !uuid(boot) || !ok || profile.Kind != kind {
 		return nil, Invalid("worker")
 	}
+	contracts := []string{"1.3"}
+	if value, exists := b["supported_contract_versions"]; exists {
+		var err error
+		contracts, err = Decode[[]string](value)
+		if err != nil || len(contracts) == 0 {
+			return nil, Invalid("supported_contract_versions")
+		}
+		for _, version := range contracts {
+			if !supportedContract(kind, version) {
+				return nil, Invalid("supported_contract_versions")
+			}
+		}
+		slices.Sort(contracts)
+		contracts = slices.Compact(contracts)
+	}
 	e := c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
 		var retired bool
 		var oldKind, oldProfile string
-		err := tx.QueryRow(ctx, "SELECT retired,kind,profile_id FROM workers WHERE worker_id=$1 AND boot_id=$2", id, boot).Scan(&retired, &oldKind, &oldProfile)
-		if err == nil && (retired || oldKind != kind || oldProfile != b["capacity_profile_id"]) {
+		var oldContracts []string
+		err := tx.QueryRow(ctx, "SELECT retired,kind,profile_id,supported_contract_versions FROM workers WHERE worker_id=$1 AND boot_id=$2", id, boot).Scan(&retired, &oldKind, &oldProfile, &oldContracts)
+		if err == nil && (retired || oldKind != kind || oldProfile != b["capacity_profile_id"] || !slices.Equal(oldContracts, contracts)) {
 			return Fail(409, "worker_conflict", "이 boot 또는 프로필을 재사용할 수 없습니다.")
 		}
 		if err != nil && err != pgx.ErrNoRows {
@@ -31,23 +48,24 @@ func (c *Controller) register(ctx context.Context, b Object) (Object, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, "INSERT INTO workers(worker_id,boot_id,kind,profile_id,last_seen_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(worker_id,boot_id) DO UPDATE SET last_seen_at=EXCLUDED.last_seen_at", id, boot, kind, b["capacity_profile_id"], now)
+		_, err = tx.Exec(ctx, "INSERT INTO workers(worker_id,boot_id,kind,profile_id,last_seen_at,supported_contract_versions) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(worker_id,boot_id) DO UPDATE SET last_seen_at=EXCLUDED.last_seen_at", id, boot, kind, b["capacity_profile_id"], now, contracts)
 		if err != nil {
 			return err
 		}
 		return c.reasons(ctx, tx, now)
 	})
-	return Object{"worker_id": id, "boot_id": boot, "kind": kind, "slots": profile.Slots, "config_revision": c.Revision}, e
+	return Object{"worker_id": id, "boot_id": boot, "kind": kind, "slots": profile.Slots, "config_revision": c.Revision, "supported_contract_versions": contracts}, e
 }
 
 type availability struct {
 	used, quarantine int
 	kind             map[string]int
-	workers          map[string]bool
+	workers          map[string][]string
+	present          map[string][]string
 }
 
 func (c *Controller) available(ctx context.Context, tx pgx.Tx, now time.Time) (availability, error) {
-	a := availability{kind: map[string]int{}, workers: map[string]bool{}}
+	a := availability{kind: map[string]int{}, workers: map[string][]string{}, present: map[string][]string{}}
 	rows, e := tx.Query(ctx, "SELECT kind,state,count(*) FROM slot_reservations WHERE state<>'released' GROUP BY kind,state")
 	if e != nil {
 		return a, e
@@ -70,7 +88,7 @@ func (c *Controller) available(ctx context.Context, tx pgx.Tx, now time.Time) (a
 	if e != nil {
 		return a, e
 	}
-	rows, e = tx.Query(ctx, "SELECT w.kind,w.profile_id,(SELECT count(*) FROM slot_reservations s WHERE s.worker_id=w.worker_id AND s.state<>'released') FROM workers w WHERE NOT retired AND NOT draining AND last_seen_at>$1", now.Add(-time.Duration(c.Config.FreshSeconds)*time.Second))
+	rows, e = tx.Query(ctx, "SELECT w.kind,w.profile_id,w.supported_contract_versions,(SELECT count(*) FROM slot_reservations s WHERE s.worker_id=w.worker_id AND s.state<>'released') FROM workers w WHERE NOT retired AND NOT draining AND last_seen_at>$1", now.Add(-time.Duration(c.Config.FreshSeconds)*time.Second))
 	if e != nil {
 		return a, e
 	}
@@ -78,12 +96,16 @@ func (c *Controller) available(ctx context.Context, tx pgx.Tx, now time.Time) (a
 	for rows.Next() {
 		var kind, p string
 		var used int
-		if e = rows.Scan(&kind, &p, &used); e != nil {
+		var contracts []string
+		if e = rows.Scan(&kind, &p, &contracts, &used); e != nil {
 			return a, e
 		}
 		profile, ok := c.Config.Workers[p]
-		if ok && profile.Kind == kind && used < profile.Slots {
-			a.workers[kind] = true
+		if ok && profile.Kind == kind {
+			a.present[kind] = append(a.present[kind], contracts...)
+			if used < profile.Slots {
+				a.workers[kind] = append(a.workers[kind], contracts...)
+			}
 		}
 	}
 	return a, rows.Err()
@@ -95,16 +117,18 @@ func (c *Controller) reasons(ctx context.Context, tx pgx.Tx, now time.Time) erro
 	}
 	for _, kind := range []string{"rca", "report"} {
 		var reason any
-		if !a.workers[kind] {
-			reason = "worker_unavailable"
-		}
 		if a.used >= c.Config.SharedLimit || a.kind[kind] >= c.Config.KindLimits[kind] {
 			reason = "capacity_wait"
 			if a.quarantine > 0 {
 				reason = "inference_quarantined"
 			}
 		}
-		_, e = tx.Exec(ctx, `UPDATE jobs j SET queue_reason=CASE WHEN EXISTS(SELECT 1 FROM slot_reservations s WHERE s.job_id=j.id AND s.state='quarantined') THEN 'inference_quarantined' ELSE $2 END WHERE kind=$1 AND source_module IS NOT NULL AND status IN ('queued','retry_wait')`, kind, reason)
+		_, e = tx.Exec(ctx, `UPDATE jobs j SET queue_reason=CASE
+ WHEN EXISTS(SELECT 1 FROM slot_reservations s WHERE s.job_id=j.id AND s.state='quarantined') THEN 'inference_quarantined'
+ WHEN NOT COALESCE(`+jobContractSQL+`=ANY($3::text[]),false) THEN 'worker_unavailable'
+ WHEN $2::text IS NOT NULL THEN $2
+ WHEN NOT COALESCE(`+jobContractSQL+`=ANY($4::text[]),false) THEN 'capacity_wait'
+ ELSE NULL END WHERE kind=$1 AND source_module IS NOT NULL AND status IN ('queued','retry_wait')`, kind, reason, a.present[kind], a.workers[kind])
 		if e != nil {
 			return e
 		}
@@ -158,22 +182,32 @@ func (c *Controller) claim(ctx context.Context, b Object) (Object, error) {
 			return err
 		}
 		eligible := `source_module IS NOT NULL AND status IN ('queued','retry_wait') AND eligible_at<=$2 AND deadline_at>$2 AND attempt_no<max_attempts AND budget_used+COALESCE((versions->'execution'->>'attempt_budget')::bigint,token_budget+1)<=token_budget AND NOT EXISTS(SELECT 1 FROM slot_reservations s WHERE s.job_id=j.id AND s.state<>'released')`
-		if last != nil && *last == kind && a.workers[other] && a.kind[other] < c.Config.KindLimits[other] {
+		if last != nil && *last == kind && len(a.workers[other]) > 0 && a.kind[other] < c.Config.KindLimits[other] {
 			var waiting bool
-			if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jobs j WHERE kind=$1 AND "+eligible+")", other, now).Scan(&waiting); err != nil {
+			if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jobs j WHERE kind=$1 AND "+eligible+" AND "+jobContractSQL+"=ANY($3::text[]))", other, now, a.workers[other]).Scan(&waiting); err != nil {
 				return err
 			}
 			if waiting {
 				return c.reasons(ctx, tx, now)
 			}
 		}
-		job, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE kind=$1 AND "+eligible+" ORDER BY eligible_at,created_at,id LIMIT 1 FOR UPDATE", kind, now)
+		contracts, err := Decode[[]string](w["supported_contract_versions"])
+		if err != nil {
+			return err
+		}
+		job, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE kind=$1 AND "+eligible+" AND "+jobContractSQL+"=ANY($3::text[]) ORDER BY eligible_at,created_at,id LIMIT 1 FOR UPDATE", kind, now, contracts)
 		if err != nil {
 			if p, ok := err.(*Problem); ok && p.Status == 404 {
 				return c.reasons(ctx, tx, now)
 			}
 			return err
 		}
+		versions, _ := job["versions"].(map[string]any)
+		version, err := inputContract(kind, versions)
+		if err != nil {
+			return err
+		}
+		versions["input_contract"] = version
 		ex := execution(job)
 		n := Number(job, "attempt_no") + 1
 		token := ID() + ID()
