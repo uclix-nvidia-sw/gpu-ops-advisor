@@ -2,6 +2,20 @@
 
 버전 1.3 · 모듈 job-controller · 독립 실행·배포 · F06/F07/F11
 
+## 0. 현재 구현 분석과 업그레이드 작업
+
+2026-09-23 · 코드 대조 기준 `d391f3d`. 영속 큐·lease·슬롯·재시도·발행 경로는 유지한다. 다음 항목은 신규 RCA 1.4를 받아들이기 위한 변경이며, 현재 1.3 동작의 실패를 뜻하지 않는다.
+
+| 작업 | 현재 구현·코드 근거 | 문제·영향 | 업그레이드 목표·완료 조건 |
+|---|---|---|---|
+| JC-01 버전별 접수 | [submit.go](../../../job-controller/controller/submit.go)의 `normalize()`는 1.3만 허용하며 `normalizeRCA()`는 `purpose_ids`·`analysis_profile_revision`을 요구한다 | Incident만 1.4로 바꾸면 접수 단계에서 거절된다 | [14](../common/14_모듈간_호출과_공통실행_계약.md)의 1.3/1.4별 입력 검증을 분리하고 최초 snapshot/hash/source_key 검증을 유지한다. 1.3 필수값 누락과 1.4 제거 필드 주입을 각각 거절한다. 동일 요청 재전송과 본문 충돌도 검사한다 |
+| JC-02 계약 전달·Worker 호환 | [claim.go](../../../job-controller/controller/claim.go)의 등록은 worker/boot/kind/profile, claim은 kind·슬롯·실행 가능 상태로 배분한다. 지원 접수 계약을 협상하는 필드는 없다 | 신규 입력을 구 Worker가 인수하면 입력 검증에서 실패한다. 결과 스키마 1.1만으로 접수 계약을 구분할 수 없다 | 14의 jobs.versions.input_contract와 worker/boot별 supported_contract_versions를 구현한다. 미지정 기존 Worker는 1.3만, 지원 Worker 부재는 queued/worker_unavailable. T55에서 등록·claim·후보 공개·혼합/롤백을 검수한다 |
+| JC-03 결과 검증 경계 | [attempt.go](../../../job-controller/controller/attempt.go)는 candidate의 소유 job/attempt·schema version·validation_status·hash와 실행 유효성을 확인한다. 본문의 목적 선택 의미를 직접 검사하지 않는다 | 1.4 목적 선택 trace·assessments 검증을 기존 complete만으로 충족한다고 볼 수 없다 | Worker의 [공통 결과 validator](../../../shared/python/src/agent_common/contracts.py)와 JC 공개 검증의 책임을 구분한다. 계약별 의미 검증을 통과한 후보만 공개하고, 불일치 후보·stale 완료·중복 complete를 검사한다. 정상 1.3/report 및 partial/blocked 공개를 유지한다 |
+
+이행 순서는 03의 추가 migration·기존 행 점검 → JC/shared·두 Worker 및 조회 소비자 호환 → Incident 생산자 전환이다. 새 큐나 재스케줄러를 만들지 않고 기존 pending outbox·잡의 키/입력/hash/예산을 보존한다. JC-02의 필드·차단 방식은 14에서 정의했으며 아직 구현되지 않았다. 신규 접수 전에 모든 JC 복제본에 호환 배분을 적용한다.
+
+검수 연결: [05](../05_테스트_검수_기준서.md)의 실행·복구 시험 및 T42/T47/T48. [실제 JC 통합 시험](../../../backend/tests/job_controller_test.go)과 [Worker E2E](../../../agents/tests/test_e2e.py)의 1.3 경로를 유지하면서 신규 계약·혼합 Worker 사례를 추가한다. **이번 상태: 정적 대조 완료, 1.4 접수·배분·발행 검수 미실행.**
+
 ## 역할과 경계
 
 영속 큐에 요청을 접수하고 **현재 배포된 Agent와 설정된 처리 한도 안에서만 잡을 배분**한다. jobs·attempts·queue receipt·실행 점유·용량 예약을 소유한다. Agent 배포·레플리카·노드·GPU 생성, 자동 확장, 달력 일정, RCA/보고서 계산·추론은 하지 않는다.
@@ -37,7 +51,7 @@ Agent가 여유 슬롯이 있을 때 pull하고 Job Controller가 claim 응답�
 
 1. DB 시간과 Worker 등록/배포 프로필을 확인한다. 시작마다 새 boot_id를 사용한다.
 2. 현재 Worker 점유 < worker_slots, 유형별 점유 < kind_limit, 공유 점유 < shared_limit 조건을 검사한다. 값은 서버 운영 설정이며 Agent가 임의 상향하지 못한다.
-3. 공통 capacity 행을 잠그고, 오래된 실행 가능 요청부터 jobs 행 잠금으로 선택한다. 동일 트랜잭션에서 attempt 증가·claim_token·lease·슬롯 예약을 확정한다.
+3. 공통 capacity 행을 잠그고, 등록 Worker의 kind·지원 입력 계약에 맞는 오래된 실행 가능 요청부터 jobs 행 잠금으로 선택한다(추가 개발 계약은 14). 동일 트랜잭션에서 attempt 증가·claim_token·lease·슬롯 예약을 확정한다.
 4. 반환 전 커밋한다. 적격 잡이나 슬롯이 없으면 204이며 잡은 queued/retry_wait로 유지한다. Agent는 backoff+jitter로 다시 인수한다.
 
 초기 배분 정책은 종류별 `(eligible_at,created_at,id)` FIFO다. 공유 슬롯 경합은 두 종류에 실행 가능한 잡과 최근 유효 Worker가 있으면 번갈아 기회를 주며, 상대 종류가 실행 불가하면 현재 종류를 막지 않는다. `last_granted_kind`와 Worker freshness를 같은 capacity 잠금에서 평가한다. 긴급 우선순위·선점·동적 용량 산정은 추가하지 않는다.

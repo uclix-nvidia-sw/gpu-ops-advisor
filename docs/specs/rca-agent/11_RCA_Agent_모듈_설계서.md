@@ -4,13 +4,15 @@
 
 ## 0. 통합 기준과 구현 상태
 
-2026-09-22 · 코드 대조 기준 `2e269b7`. 이 문서는 기존 RCA 설계와 `drafts/`의 Runbook-first·지식 매핑 제안을 통합한 **RCA workflow·runbook 개발 기준**이다. 기존 R01~R09 범위를 유지하며 GPU 노드 runbook을 그 안의 조사 지식으로 추가한다. 초안의 GPU 노드 중심 범위를 이유로 GPU–Pod 관계·업무 영향 조사를 제거하지 않는다.
+2026-09-22 · 코드 대조 기준 `2e269b7`. 2026-09-23에 알람 소스 계약과 사건 단위 확정을 반영하고 `references/`의 runbook 작성 자료를 §6.4.1로 연결했다. 이 문서는 기존 RCA 설계와 `drafts/`의 Runbook-first·지식 매핑 제안을 통합한 **RCA workflow·runbook 개발 기준**이다. 기존 R01~R09 범위를 유지하며 GPU 노드 runbook을 그 안의 조사 지식으로 추가한다. 초안의 GPU 노드 중심 범위를 이유로 GPU–Pod 관계·업무 영향 조사를 제거하지 않는다.
 
 **현재 구현**은 코드로 확인한 동작, **통합 목표**는 이번에 정의한 추가 개발 사항이다. 문서 병합은 기능 구현·운영 검증 완료를 뜻하지 않는다. 현행 모듈 계약은 1.3이다. Incident 중복 제거·전달과 Agent 판단의 역할 분리는 **RCA 접수 계약 1.4의 추가 개발 목표**이며 결과 본문 `result_schema_version=1.1`은 유지한다. 기존 1.3 입력을 조용히 재해석하지 않는다.
 
 | 구성 | 현재 구현 | 통합 목표·남은 일 |
 |---|---|---|
-| 알람 전달·조사 선택 | Incident의 alertname 정책이 purpose_ids 지정, 증거 변화로 새 job 생성 가능 | Incident는 생명주기별 최초 1회 전달; Agent가 파싱 후 목적·workflow 선택 |
+| 알람 전달·조사 선택 | Incident의 alertname 정책이 purpose_ids 지정, 증거 변화로 새 job 생성 가능 | Incident는 관측 에피소드당 최초 1회 전달; Agent가 파싱 후 목적·workflow 선택 |
+| 알람 입력 신원 | alertname·labels 기반 target 조립 | Fleet component 로그 기반 `cluster_id`/`machine_id`/`component` 라벨 계약; GPU UUID는 Agent가 관측으로 binding(§1.1) |
+| runbook 작성 근거 | drafts의 제안 범위 | `references/` 3종을 작성 자료로 사용하고 검증 상태로 승격(§6.4.1) |
 | 실행·저장 | Incident snapshot → JC claim → RCA Worker/NAT → evidence·candidate 저장 → JC 발행 | 기존 경로·소유권 재사용 |
 | Runbook 로딩 | scope·고정 revision으로 DB 조회, reviewed hash 검사, source 상위 필드와 compatibility 비교 | scope·무결성 검사와 미확정 장비 호환성 평가를 분리 |
 | 검색 | `retrieval.py`의 필드별 BM25 가중 합·Xid/SXid exact boost·결정적 정렬 구현 | workflow 연결, 검색 corpus/설정 고정, 미일치 기준 평가 |
@@ -21,13 +23,44 @@
 
 근거: [workflow](../../../rcca-agent/src/rcca_agent/workflow.py), [검색 모듈](../../../rcca-agent/src/rcca_agent/retrieval.py), [관측 실행](../../../shared/python/src/agent_common/observation.py), [저장](../../../shared/python/src/agent_common/store.py). 초안의 example YAML은 `runtime_loadable: false`인 설계 예시이며 배포 설정으로 읽히지 않는다.
 
+### 0.1 후속 개발을 위한 코드 대조
+
+2026-09-23 · 코드 대조 기준 `d391f3d`. 기존 §2.4의 한계와 §7의 P0~P6 순서는 유지한다. 아래는 해당 작업에서 놓치면 안 되는 생산자·공통 런타임·소비자 연결점이다. 신규 기능 실행 검증 기록이 아니다.
+
+| 작업·기존 단계 | 현재 구현·문제 | 업그레이드 목표·완료 조건 |
+|---|---|---|
+| RCA-01 / P0 접수·목적 선택 | [contracts.py](../../../shared/python/src/agent_common/contracts.py)의 `validate_input()`과 [workflow.py](../../../rcca-agent/src/rcca_agent/workflow.py)는 입력 `purpose_ids`에 의존한다. 입력에서 이 필드만 없애면 신규 경로를 실행할 수 없다 | JC가 전달하는 접수 계약별로 1.3의 입력 목적과 1.4의 Agent 선택 목적을 분리한다. 원본 snapshot을 덮어쓰지 않으며 선택/보류/미적용 근거와 assessments 일치를 검증한다. T45/T47/T48의 양쪽 입력을 Worker 저장·JC 공개까지 확인한다 |
+| RCA-02 / P0·P2 이력 확보 | [Store.read_context()](../../../shared/python/src/agent_common/store.py)는 workflow 전에 실행되며 RCA 이력 조회를 입력 R06/R07/R09 유무로 결정한다 | 03 §6의 1.4 단일 DB snapshot을 목적 선택 전에 읽는다. 기간 이력과 검증된 직전 사건 한 건을 상한 내 확보하고 cutoff·ID/hash·잘림을 고정한다. 목적 추가 뒤 DB 재조회나 가짜 입력 목적 주입은 하지 않는다. T56과 Ops의 기존 snapshot 일관성을 검사한다 |
+| RCA-03 / P1~P4 Runbook·fact 연결 | 검색 함수는 별도 구현됐지만 workflow에서 호출하지 않는다. 호환성은 source 상위 필드와 비교하고 초기 탈락 후보를 이후 재평가하지 않는다. 실제 조회는 query ID를 set에 모아 정렬한다 | §3/§5/§6의 fact·producer binding·query 계약을 먼저 충족하고 검색·pending 재평가·관측 우선순위를 연결한다. [검색 단위 시험](../../../agents/tests/test_runbook_retrieval.py) 성공과 실제 Grafana alert→Runbook 적용 성공을 별도로 검수한다 |
+| RCA-04 / P5·P6 결과 소비 | 공통 `validate_result()`는 결과 필드·근거/수치 참조·상태 등을 검사하지만 새 목적 선택 trace와 계약별 목적 일치 검사는 없다. Backend는 입력 목적을 복사하고 Ops는 공개 원인 후보를 인용한다 | JC-03과 검증 책임을 맞추고 1.4 trace·assessments 불일치의 저장/공개를 차단한다. BE-02·FE-03·OP-04에서 구·신규 결과, 미발행, partial/blocked, 설명 실패를 확인한다. 결과 스키마 1.1을 근거 없이 변경하지 않는다 |
+
+이력 고정 범위는 03 §6, 입력 계약 전달은 14의 추가 개발 계약을 따른다. 공통 Python 변경은 두 Worker 모두에 영향을 준다. 업무별 충분/부족/상충 사례는 [05](../05_테스트_검수_기준서.md) T24/T33~T40/T45~T48/T55/T56 및 §7.3을 따른다. **이번 상태: 위 경로 정적 대조 완료, 신규 구현·제품 테스트·실환경 품질 검수 미실행.**
+
 ## 1. 역할·입력
 
 Incident가 생성하고 Job Controller가 배분한 RCA 잡만 실행한다. Backend·GUI·보고서에서 RCA를 직접 접수하는 API는 없다. 자체 업무 큐·달력·레플리카 제어도 없다. 잡 실행 관리는 JC의 register/claim/heartbeat/complete/fail을 사용하는 Worker가 담당하고, 조사 중에는 Runbook·사건 DB, Grafana MCP, 추론 endpoint를 호출한다.
 
 신규 1.4 입력은 incident_id, evidence_version, scope, target 또는 사건 범위, incident_time, time_range와 최초 알람 snapshot 연결이다. Incident는 purpose_ids·analysis_profile_revision을 지정하지 않는다. 실행 profile은 envelope/claim versions에 고정한다. Agent가 알람을 파싱하고 조사 목적과 내부 경로를 정한다. snapshot/hash는 변경하지 않으며 Pod/GPU 신원이 부족하면 확인된 범위와 부족 필드를 보존한다. incident_id가 없는 임의 증상 요청은 거절한다. 기존 1.3 입력은 기존 purpose_ids·analysis_profile_revision 검증과 해석을 유지한다.
 
-R01~R09는 Agent 내부의 조사·평가 항목이다. 신규 경로에서는 Agent가 원문 단서·확인된 대상·관측 근거로 필요한 목적을 선택하고 같은 job 안에서 보완한다. Incident의 alertname→R 매핑과 R01/R02 고정 요청은 제거한다. 반복 알람이나 목적 변경으로 새 job을 만들지 않으며 자동 기술 재시도만 동일 job의 새 attempt로 처리한다. 중복 생명주기는 [13](../incident/13_Incident_모듈_설계서.md)을 따른다.
+R01~R09는 Agent 내부의 조사·평가 항목이다. 신규 경로에서는 Agent가 원문 단서·확인된 대상·관측 근거로 필요한 목적을 선택하고 같은 job 안에서 보완한다. Incident의 alertname→R 매핑과 R01/R02 고정 요청은 제거한다. 반복 알람이나 목적 변경으로 새 job을 만들지 않으며 자동 기술 재시도만 동일 job의 새 attempt로 처리한다. 중복 판정과 사건 단위는 [13](../incident/13_Incident_모듈_설계서.md)을 따른다.
+
+### 1.1 입력 snapshot에서 보장되는 것과 보장되지 않는 것
+
+[13 §1.1](../incident/13_Incident_모듈_설계서.md)의 알람 소스 계약에 따라 Incident는 Grafana 규칙이 라벨·annotation으로 투영한 값만 전달한다. Agent는 아래 구분을 전제로 조사를 시작한다.
+
+| 입력 | 보장 수준 | Agent의 처리 |
+|---|---|---|
+| `cluster_id` | 필수 라벨이며 Incident가 등록 여부를 검증한 값 | 고정 scope의 기준. 원문에 없는 cluster를 추정하지 않음 |
+| `machine_id`, `component` | 제공된 경우 라벨에서 복사한 값; 누락 가능 | 확인된 대상 범위와 조사 단서로 사용. component가 있을 때만 Domain·Category 좁히기에 사용(§3.1.2) |
+| `identity_incomplete` | machine/component 누락 시 생명주기별 격리 그룹의 경고·부족 필드 | RCA 접수 실패 사유로 일괄 처리하지 않음. 확인된 scope에서 조사하고 신원을 임의 보충하지 않으며, 부족 필드를 evidence·missing_inputs에 보존 |
+| `reason` 원문 | 원문 문자열. **검증된 fact가 아님** | Xid/SXid 코드·장치 식별자는 Agent가 파싱하고 관측으로 확인한다 |
+| `k8s_node_name` | 표시용 이름. 재사용·변경 가능 | 신원으로 쓰지 않고 `machine_id`와 교차 확인한다 |
+| GPU UUID·PCI BDF | **없음** | Incident가 문자열에서 추출하지 않는다. Agent가 Loki·DCGM 관측으로 binding한다 |
+| `occurred_at` / `incident_time` | 검수된 생산자 계약과 시각 검증을 통과한 경우만 발생 시각 사용; 미검수·누락·파싱 실패는 startsAt 기준(13 §3) | snapshot의 기준·선택 사유를 읽고 고정 incident_time/time_range를 사용. annotation으로 조회창 재계산 금지 |
+| 로그 본문(`extra_info`, `gpuInfo.gpus`, `suggested_actions` 전문) | snapshot에는 annotation으로 투영된 범위만 | 전체 원문은 Grafana MCP로 Loki를 직접 조회해 확보한다 |
+| `prior_incident_id` | 같은 그룹의 직전 에피소드 참조 | 존재하고 직전이 종결이면 **조치 후 재발**로 다룬다. 조치 수행은 사람이며 Agent는 조치 기록을 근거로만 사용한다 |
+
+한 에피소드에는 여러 오류 코드가 함께 귀속될 수 있다. 신원 라벨이 완비되면 Incident는 같은 source/cluster/machine/component로 묶으므로 XID storm의 첫 알람이 snapshot에 고정되고 나머지는 `alert_events`에 남는다. 신원이 부족하면 13 §2.1의 생명주기별 격리를 유지한다. Agent는 snapshot의 첫 코드만으로 원인을 확정하지 않고, 입력 `time_range` 안의 로그를 조회해 같은 기간의 다른 코드·순서를 함께 본다. 반복 webhook 수를 재발 횟수로 사용하지 않는다.
 
 ## 2. 처리·저장
 
@@ -89,7 +122,7 @@ Grafana 입력을 `incident_source()`로 읽으면 `{alert: ...}` 형태가 된�
 아래 단계는 같은 Worker/NAT 프로세스에 통합한다. 별도 검색 서버·관측 서비스·지식 DB를 신설하지 않는다.
 
 ```text
-Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable snapshot / 고정 지식 로딩
+Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable snapshot / 목적 선택 전 DB 이력·지식 고정
   → scope·revision·hash 검사 → 알람 파싱·검색 단서 정규화
   → Agent 내부 목적·경로 선택
       ├─ 등록 일반 조사: 로그·지표·관계 조회 → 단서 보완 → 필요 시 후보 검색
@@ -173,7 +206,7 @@ Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable sn
 | `device_recovery_evidence` · object | 실제 조치 + D05/D09의 유효 health + C08 정상 관측 정책 → 추가할 회복 판정기 | `action_record_id`, `window`, `policy_revision_ref`, `assessment`, `health_evidence_refs`. assessment는 recovery_observed/abnormal_observed/not_established. 정책을 충족한 정상 또는 유효한 비정상 재관측이면 판단 근거 충족; not_established는 미충족. `up=1`, stale Healthy, 공백은 회복 증거가 아님 |
 | `workload_evidence` · workload event 배열 | D13/검증된 D09 + 당시 매핑 → 추가할 workload parser | 항목은 `subject`(Pod UID/workload ID), `event`(running/stalled/stopped/resumed/completed), `observed_at`, refs. R04는 당시 관련 workload의 관측, R09는 조치 이후 회복/비회복 판단 근거가 필요. GPU 정상만으로 대체하지 않음 |
 
-배열 항목의 target·기간은 fact 봉투 범위 안이어야 한다. workload 상태나 오류 namespace의 원천 매핑은 parser 계약으로 검토하며 임의 로그 문구를 enum으로 추정하지 않는다. 현재 매핑을 요구하는 R08이나 조치 후 관측을 요구하는 R09의 기간이 job 입력 범위 밖이면 새 조회를 임의 확장하지 않고 부족 입력으로 남긴다. 동일 생명주기의 반복 알람으로 새 job을 만들지 않으므로 해당 후속 시점은 이번 결과의 미평가 범위로 남긴다. 지속적인 조치 후 확인이나 수동 재분석은 별도 요구사항으로 정의해야 한다.
+배열 항목의 target·기간은 fact 봉투 범위 안이어야 한다. workload 상태나 오류 namespace의 원천 매핑은 parser 계약으로 검토하며 임의 로그 문구를 enum으로 추정하지 않는다. 현재 매핑을 요구하는 R08이나 조치 후 관측을 요구하는 R09의 기간이 job 입력 범위 밖이면 새 조회를 임의 확장하지 않고 부족 입력으로 남긴다. 같은 에피소드의 반복 알람으로 새 job을 만들지 않으므로 해당 후속 시점은 이번 결과의 미평가 범위로 남긴다. 지속적인 조치 후 확인이나 수동 재분석은 별도 요구사항으로 정의해야 한다.
 
 `normalized_health`, `component`, `severity`는 §3.4의 보조 fact로 같은 봉투를 사용한다. 기존 equals 조건에는 known인 scalar value만 전달한다. 오류 배열에는 §6.2.2의 등록 `error_code` 조건 해석을 적용하고, 다른 배열/object 전체의 equals나 임의 경로식은 허용하지 않는다. legacy `verified_facts`는 기존 형식용 adapter로 처리하며 신규 알람에서 같은 이름의 필드를 가져와 신뢰하지 않는다. fact 생성기·adapter·assessment 변경을 함께 회귀 검수한다.
 
@@ -183,6 +216,8 @@ Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable sn
 
 | 입력·관측 단서 | Agent가 선택할 조사 |
 |---|---|
+| 입력 `component` 있음 | 담당 모듈 이름으로 Domain·Category 후보를 좁힌다. 이름 자체를 오류 확정·health 판정으로 읽지 않음 |
+| 입력 `component` 없음 | Domain·Category 좁히기를 건너뛰고 등록 일반 조사로 시작한다. 확인된 scope·대상·고정 기간·예산 안에서 허용 query만 사용하고, 부족 신원은 evidence·missing_inputs에 보존한다. 새 단서가 확인되면 기존 Runbook 검색·재평가 경로로 이어감 |
 | Xid/SXid 등 오류 코드 후보 또는 알려진 증상 | namespace·producer·대상·시각을 구분해 Runbook 검색/R01 검토. 원문 코드만으로 적용 확정하지 않음 |
 | GPU 중심 사건 | GPU의 관련 Pod 조사 R02; 관계·영향 단서에 따라 R04 보완 |
 | Pod 중심 사건 | Pod에 연결된 GPU 조사 R03; GPU 신원 미확정도 부족 정보를 남기며 조사 |
@@ -190,6 +225,12 @@ Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable sn
 | 재발·동시 다중 장치 단서 | 사건 이력 R06·공통 범위 R07 검토; 반복 webhook 수를 재발 횟수로 사용하지 않음 |
 | 구체적 조치 권고 검토 | R08의 현재 관계·조치 전제 확인; 자동 조치 없음 |
 | 실제 조치 기록과 범위 안의 후속 관측 | R09 검토; 조치가 없거나 이후 기간이 범위 밖이면 수행 사실·회복을 추정하지 않음 |
+
+입력 `component`는 조사 범위를 좁히는 첫 단서이며 결론이 아니다. component → Domain·Category → 우선 관측 후보의 대응은 [Domain·Category 메트릭 매핑](references/domain-category-metric-mapping.md)을, component와 오류 코드의 정적 정의·기본 action은 [Fleet·GPUd component·오류 카탈로그](references/fleet-gpud-error-catalog.md)를 참고 자료로 사용한다. 두 자료는 `source-verified` 정적 대조이므로 실제 조회에는 §5의 등록 query와 검증 게이트를 통과한 항목만 사용한다. 같은 component에서 정상 상태도 보고되므로 component 이름만으로 장애를 확정하지 않고, `IGNORE_NO_ACTION_REQUIRED`나 action 미정의를 오류 없음으로 해석하지 않는다.
+
+machine_id도 없으면 component만으로 장비를 특정하지 않는다. 등록 일반 조사는 모든 장비의 로그를 무제한 조회하는 경로가 아니며, 허용 query의 필수 대상 인자를 확인할 수 없으면 그 조회·목적을 partial/blocked로 남긴다. component 또는 machine_id를 추정해 채워 넣거나 신원 부족을 not_applicable로 숨기지 않는다.
+
+`prior_incident_id`가 있고 직전 에피소드가 종결됐으면 조치 후 재발 경로로 다룬다. 이 경우 R06 사건 이력과 R09 조치 후 관측을 우선 검토하고, 직전 결과의 권고와 실제 조치 기록·이번 관측을 대조해 같은 원인 재발과 다른 원인을 구분한다. 직전 결과를 그대로 재사용하지 않고 이번 에피소드의 증거로 다시 평가한다. 조치 기록이 없거나 범위 밖이면 수행 사실과 회복을 추정하지 않는다.
 
 선택은 등록된 parser/규칙과 관측 근거로 설명 가능해야 한다. LLM의 제안은 등록 목적·procedure·query·scope·시간창·예산 검사 후에만 실행한다. 단서가 부족하면 일반 조사로 시작하며, 최초 알람의 모호함 때문에 R01/R02로 고정하지 않는다. GPU 외 fault도 접수하되 미지원 producer/대상은 `unsupported_source`와 부족 근거를 남긴다.
 
@@ -462,6 +503,24 @@ source가 여러 개면 runbook에 검토된 선택 조건을 두고 실제 선�
 
 분류는 COLLECTION, GPU_DEVICE, GPU_MEMORY, GPU_THERMAL_POWER, GPU_INTERCONNECT, DRIVER_CUDA_RUNTIME, NODE_SYSTEM, NETWORK_IB, CONTAINER_RUNTIME을 초안의 도메인 어휘로 사용한다. 분류명을 먼저 골라 관련 runbook을 놓치지 않도록 **검색 후보를 얻은 뒤** 관측 계획을 좁힌다. 첫 배포에서 모든 도메인을 채울 필요는 없다. Container 영역의 GPU 접근 문제를 Kubernetes 스케줄링 원인 전체나 drain/cordon 실행으로 확대하지 않는다.
 
+### 6.4.1 작성 근거 자료와 승격 단계
+
+[references/](references/README.md)는 runbook 작성용 검토 자료이며 실행 가능한 runbook, 확정된 Knowledge DB seed, 새 DB schema가 아니다. 세 자료의 역할은 다음과 같다.
+
+| 자료 | 쓰는 단계 | 한계 |
+|---|---|---|
+| [런북 근거자료 카탈로그](references/runbook-source-catalog.md) | 증상·코드 의미, 확인할 증거, 진단 전제와 권고의 출처 확정 | 링크 유효성은 절차의 안전·유효를 뜻하지 않음. 1차 근거·조건부·보조 출처를 구분해 사용 |
+| [Domain·Category 메트릭 매핑](references/domain-category-metric-mapping.md) | Category별 우선 관측 후보와 조회 순서 설계 | 9 Domain·31 Category는 초기 운영 단위이며 고정 상한이 아님. 이름·단위·label·freshness는 실환경 확정 필요 |
+| [Fleet·GPUd component·오류 카탈로그](references/fleet-gpud-error-catalog.md) | component 목록, XID·SXID 정적 정의, 기본 repair action, 조건 기반 오류의 코드 위치 | 분석 커밋의 정적 기본값. 현재 상태 평가 결과나 실행 지시가 아님. 저장소별 172/92개는 중복을 포함한 수치 |
+
+승격 단계는 자료의 검증 상태를 그대로 사용한다. `source-verified`(소스·공식 문서 확인) → `observed`(해당 CPC에서 표본 확인) → `runbook-validated`(승인된 query·판정 조건으로 재현)이며, `candidate`는 노출·지원·판정 조건이 미확인인 후보다. `source-verified`만으로 published runbook을 발행하지 않는다. 데이터 없음은 `healthy`와 구분해 `unknown`·`unsupported`·`not-collected`·`stale` 중 무엇인지 기록한다.
+
+작성 순서는 근거·대상 binding이 확보된 것부터 진행한다. `GPU_ACCESS_LOST`/Xid 79 → `ECC_DBE` → `SXID_ERROR`·`FABRIC_MANAGER_ERROR`(NVSwitch capability 확인 노드만) → `NCCL_NETWORK_ERROR`(설치 NCCL·IB/RoCE 확인 후) → Node CPU·memory·disk(벤더·수집 metric 확인 후)다. 이 순서는 §6.4 표의 작성 후보와 같은 대상을 가리키며 별도 목록을 만들지 않는다.
+
+Fleet와 Exporter가 같은 DCGM Field ID를 읽는 쌍은 하나의 canonical meaning으로 연결하고 source별 시계열은 합산하지 않는다. 두 이름을 서로 다른 장애 증거로 중복 가산하지 않으며 primary/failover를 정해 사용한다. 상세 원칙은 [03 §2.1](../common/03_데이터_설계서.md)과 [Knowledge DB reference](drafts/knowledge-db-reference.md)를 따른다.
+
+XID·SXID 외의 조건 기반 오류(`disk`, `os`, `accelerator-nvidia-infiniband`, `accelerator-nvidia-remapped-rows` 등)도 작성 대상에 포함한다. 오류 번호가 있는 체계만 카탈로그로 다루면 Incident가 접수하는 `component` 중 상당수가 조사 경로 없이 남는다. 권고가 정의되지 않은 component도 Unhealthy를 보고할 수 있으므로 action 부재를 오류 부재로 해석하지 않는다.
+
 ### 6.5 원천 action과 가설 경로
 
 원천 action은 ID·문구/구조화 payload·순서·전제·원천 revision·원문 위치를 보존한다. gpud/Fleet의 action을 NVIDIA 공식 권고로 바꾸어 표기하지 않는다. 한국어 설명은 원문과 구분하고, 파괴적 조치의 전제를 생략하지 않는다. `source_action_ref`를 쓸 경우 고정된 reference revision/hash를 해석하고 실패하면 해당 권고를 보류한다. 현재 이 resolver는 없다. Agent는 장비 reset·재부팅·GPU/Pod 제어를 수행하지 않는다.
@@ -476,7 +535,7 @@ source가 여러 개면 runbook에 검토된 선택 조건을 두고 실제 선�
 
 | 순서 | 변경 지점·책임 | 완료 조건 |
 |---|---|---|
-| P0 접수·역할 전환 | Incident/JC/shared 계약·Python validator·Backend/Ops 소비자·Helm 설정 | 13/14의 신규 접수 계약, 생명주기당 최초 1회, 기존 1.3 불변/호환 처리. Agent 목적 선택 trace·assessment 검증 및 05 전환 시험 |
+| P0 접수·역할 전환 | Incident/JC/shared 계약·Python validator·Backend/Ops 소비자·Helm 설정 | 13/14의 신규 접수 계약, 적격 에피소드당 최초 1회, 기존 1.3 불변/호환 처리. Agent 목적 선택 trace·assessment 검증 및 05 전환 시험 |
 | P0a 데이터 계약 정의 | §3.1.1·3.4.1·5.3·6.2.1의 RCA/공통 Python/지식 담당 | fact·health 입력·호환성 컨텍스트·출처별 query 정책을 연결. 초기 runbook마다 실제 생성기/지원 조건/보류 조건을 지정하고 새 저장 계층 없이 구현 범위를 확정 |
 | P0b 관측 정합 | `agents/config.example.json`, 배포용 `charts/gpu-ops-advisor/files/agents.json`, 실제 C02/C07 설정·관측 운영 담당 | §5 ID/allowlist·datasource·label·rule·표본·parser gap 목록과 query별 검증 evidence. 필요한 source/health 계약 변경은 원본/Helm 미러 동시 반영 |
 | P1 content·참조 검증 | RCA content validator, Backend `internal/api/knowledge.go`의 발행·목록 조회 연계, shared Store | §6.2.2 발행 조건과 legacy/new schema 검사; §6.2.3 scalar code/search.codes 필터 호환; pinned dependency 읽기 |
