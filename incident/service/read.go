@@ -14,8 +14,18 @@ import (
 
 func publicIncident(o Object) Object {
 	out := Object{}
-	for _, k := range []string{"id", "cluster_id", "occurred_at", "target", "scope", "state", "evidence_version", "analysis_profile_revision", "version", "memo", "review_status", "alarm_status", "alarm_resolved_at", "rca_eligibility_reason", "created_at", "updated_at"} {
+	for _, k := range []string{"id", "cluster_id", "occurred_at", "target", "scope", "state", "evidence_version", "analysis_profile_revision", "version", "memo", "review_status", "alarm_status", "alarm_resolved_at", "rca_eligibility_reason", "created_at", "updated_at", "source", "fingerprint", "starts_at", "dedup_group", "episode_started_at", "last_observed_at", "observation_count", "observation_gap_seconds", "ended_at", "ended_reason", "closed_at", "prior_incident_id"} {
 		out[k] = o[k]
+	}
+	if o["dedup_group"] != nil {
+		out["observation_status"] = "observing"
+		at, reason := episodeEnd(o, time.Now().UTC())
+		if o["ended_at"] != nil || reason != "" {
+			out["observation_status"] = "ended"
+			if reason != "" {
+				out["ended_at"], out["ended_reason"] = at.Format(time.RFC3339Nano), reason
+			}
+		}
 	}
 	return out
 }
@@ -159,6 +169,18 @@ func (s *Server) patch(ctx context.Context, id string, b Object, h http.Header) 
 		if !missing(e) {
 			return e
 		}
+		identity, e := one(ctx, tx, "SELECT jsonb_build_object('dedup_group',dedup_group) FROM incidents WHERE id=$1", id)
+		if e != nil {
+			return e
+		}
+		if group := String(identity, "dedup_group"); group != "" {
+			if e = lockEpisode(ctx, tx, group); e != nil {
+				return e
+			}
+			if _, e = tx.Exec(ctx, "SELECT 1 FROM incident_alert_lifecycles WHERE dedup_group=$1 ORDER BY source,cluster_id,fingerprint,starts_at FOR UPDATE", group); e != nil {
+				return e
+			}
+		}
 		j, e := one(ctx, tx, "SELECT to_jsonb(i) FROM incidents i WHERE id=$1 FOR UPDATE", id)
 		if e != nil {
 			return e
@@ -175,6 +197,20 @@ func (s *Server) patch(ctx context.Context, id string, b Object, h http.Header) 
 		}
 		if v, ok := input["state"]; ok {
 			state = v.(string)
+		}
+		if j["dedup_group"] != nil {
+			if j["state"] == "closed" && state != "closed" {
+				return Fail(409, "episode_closed", "종결한 에피소드는 다시 열 수 없습니다.")
+			}
+			if e = endEpisode(ctx, tx, j, now); e != nil {
+				return e
+			}
+			if state == "closed" {
+				_, e = tx.Exec(ctx, "UPDATE incidents SET closed_at=COALESCE(closed_at,$2),ended_reason=CASE WHEN ended_at IS NULL THEN 'closed_by_operator' ELSE ended_reason END,ended_at=COALESCE(ended_at,$2) WHERE id=$1", id, now)
+				if e != nil {
+					return e
+				}
+			}
 		}
 		_, e = tx.Exec(ctx, "UPDATE incidents SET memo=$2,review_status=$3,state=$4,version=version+1,updated_at=$5 WHERE id=$1", id, memo, review, state, now)
 		if e != nil {

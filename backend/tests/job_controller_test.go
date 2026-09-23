@@ -87,7 +87,7 @@ func TestRealJobController(t *testing.T) {
 	exec := func(sql string, args ...any) {
 		activeTest.Helper()
 		_, err := db.Pool.Exec(ctx, sql, args...)
-		must(t, err)
+		must(activeTest, err)
 	}
 	reset := func() {
 		exec("TRUNCATE jobs,workers RESTART IDENTITY CASCADE")
@@ -313,6 +313,135 @@ func TestRealJobController(t *testing.T) {
 		finish(cl)
 		cl = call("/claims", rw, 200)
 		finish(cl)
+	})
+	t.Run("input_contract_intake_mixed_workers_and_publication", func(t *testing.T) {
+		activeTest = t
+		reset()
+		rcaEnvelope := func(version string) Object {
+			id := ID()
+			exec("INSERT INTO incidents(id,cluster_id,scope) VALUES($1,'cpc-1',$2)", id, scope)
+			data := Object{"scope": scope, "incident_id": id, "evidence_version": 1, "incident_time": "2026-09-15T12:00:00Z", "time_range": Object{"start": "2026-09-15T00:00:00Z", "end": "2026-09-16T00:00:00Z"}}
+			if version == "1.3" {
+				data["purpose_ids"] = []string{"R01"}
+				data["analysis_profile_revision"] = "legacy-v1"
+			}
+			snapshot := Object{"input": data, "alert": Object{"status": "firing", "labels": Object{"cluster_id": "cpc-1"}}}
+			exec("INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES($1,1,$2,$3)", id, snapshot, Hash(snapshot))
+			return Object{"contract_version": version, "source_module": "incident", "source_key": "incident:" + id + ":first", "kind": "rca", "input": data, "deadline_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), "dispatch_deadline": time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano), "snapshot_ref": Object{"incident_id": id, "revision": 1}, "execution_profile_revision": "local-v1"}
+		}
+		newEnvelope := rcaEnvelope("1.4")
+		newInput := newEnvelope["input"].(Object)
+		newInput["incident_time"] = "2026-09-15T13:00:00Z"
+		call("/jobs/rca", newEnvelope, 422)
+		newInput["incident_time"] = "2026-09-15T12:00:00Z"
+		newJob := call("/jobs/rca", newEnvelope, 202)
+		id := String(newJob, "job_id")
+		if call("/jobs/rca", newEnvelope, 202)["job_id"] != id {
+			t.Fatal("duplicate intake")
+		}
+		newEnvelope["deadline_at"] = time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339Nano)
+		call("/jobs/rca", newEnvelope, 409)
+		legacy := call("/jobs/rca", rcaEnvelope("1.3"), 202)
+		oldWorker := worker("rca")
+		cl := call("/claims", oldWorker, 200)
+		if cl["job_id"] != legacy["job_id"] || cl["versions"].(Object)["input_contract"] != "1.3" {
+			t.Fatal("legacy worker claimed incompatible head", cl)
+		}
+		finish(cl)
+		call("/claims", oldWorker, 204)
+		if call("/jobs/"+id, nil, 200)["queue_reason"] != "worker_unavailable" {
+			t.Fatal("missing compatible worker reason")
+		}
+		rw := worker("report")
+		for range 2 {
+			rid := submit()
+			cl = call("/claims", rw, 200)
+			if cl["job_id"] != rid {
+				t.Fatal("incompatible RCA blocked report fairness")
+			}
+			finish(cl)
+		}
+		registration := Object{"worker_id": ID(), "boot_id": ID(), "kind": "rca", "capacity_profile_id": "rca-v1", "supported_contract_versions": []string{"1.4", "1.3"}}
+		call("/workers/register", registration, 200)
+		registration["supported_contract_versions"] = []string{"1.3", "1.4"}
+		call("/workers/register", registration, 200)
+		registration["supported_contract_versions"] = []string{"1.3"}
+		call("/workers/register", registration, 409)
+		registration["supported_contract_versions"] = []string{"1.4"}
+		call("/claims", registration, 422)
+		w := Object{"worker_id": registration["worker_id"], "boot_id": registration["boot_id"], "kind": "rca"}
+		for _, value := range []any{nil, []string{}, []string{"2.0"}, []any{1.4}, "1.4"} {
+			registration["supported_contract_versions"] = value
+			call("/workers/register", registration, 422)
+		}
+		call("/workers/register", Object{"worker_id": ID(), "boot_id": ID(), "kind": "report", "capacity_profile_id": "report-v1", "supported_contract_versions": []string{"1.4"}}, 422)
+		submit() // Both kinds now have runnable work; report must yield its last turn.
+		call("/claims", rw, 204)
+		cl = call("/claims", w, 200)
+		if cl["job_id"] != id || cl["versions"].(Object)["input_contract"] != "1.4" {
+			t.Fatal("version not pinned", cl)
+		}
+		if _, exists := cl["input"].(Object)["purpose_ids"]; exists {
+			t.Fatal("purposes injected")
+		}
+		cid := ID()
+		for _, version := range []any{nil, "1.3", "2.0", "1.4"} {
+			body := Object{"result_status": "blocked"}
+			if version != nil {
+				body["versions"] = Object{"input_contract": version}
+			}
+			hash := Hash(body)
+			exec("INSERT INTO result_candidates(id,job_id,attempt_no,kind,schema_version,body,content_hash,validation_status) VALUES($1,$2,$3,'rca','1.3',$4,$5,'valid') ON CONFLICT(id) DO UPDATE SET body=EXCLUDED.body,content_hash=EXCLUDED.content_hash", cid, id, cl["attempt_no"], body, hash)
+			done := Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "candidate_id": cid, "content_hash": hash}
+			if version != "1.4" {
+				call("/jobs/"+id+"/complete", done, 422)
+			} else {
+				call("/jobs/"+id+"/complete", done, 200)
+				call("/jobs/"+id+"/complete", done, 200)
+			}
+		}
+		// A new boot may roll back capabilities; pending 1.4 is preserved, not downgraded.
+		pending := call("/jobs/rca", rcaEnvelope("1.4"), 202)
+		registration["boot_id"] = ID()
+		registration["supported_contract_versions"] = []string{"1.3"}
+		call("/workers/register", registration, 200)
+		call("/claims", w, 409)
+		call("/claims", Object{"worker_id": registration["worker_id"], "boot_id": registration["boot_id"], "kind": "rca"}, 204)
+		if call("/jobs/"+String(pending, "job_id"), nil, 200)["queue_reason"] != "worker_unavailable" {
+			t.Fatal("rollback lost queued job")
+		}
+		exec("UPDATE jobs SET deadline_at=clock_timestamp()-interval '1 second' WHERE id=$1", pending["job_id"])
+		if call("/jobs/"+String(pending, "job_id"), nil, 200)["status"] != "expired" {
+			t.Fatal("unsupported jobs must still expire")
+		}
+	})
+	t.Run("worker_contract_upgrade_preserves_legacy_jobs", func(t *testing.T) {
+		activeTest = t
+		reset()
+		id := submit()
+		w := worker("report")
+		// Simulate the exact pre-upgrade schema and a job without the new JSON key.
+		exec("ALTER TABLE workers DROP COLUMN supported_contract_versions")
+		exec("DELETE FROM jc_migrations WHERE version=2")
+		exec("UPDATE jobs SET versions=versions-'input_contract' WHERE id=$1", id)
+		var before, after Object
+		must(t, db.Pool.QueryRow(ctx, "SELECT jsonb_build_object('input',input_snapshot,'hash',request_hash,'versions',versions) FROM jobs WHERE id=$1", id).Scan(&before))
+		must(t, controller.Prepare(ctx, false))
+		must(t, controller.Prepare(ctx, false))
+		cl := call("/claims", w, 200)
+		if cl["versions"].(Object)["input_contract"] != "1.3" {
+			t.Fatal("legacy interpretation")
+		}
+		must(t, db.Pool.QueryRow(ctx, "SELECT jsonb_build_object('input',input_snapshot,'hash',request_hash,'versions',versions) FROM jobs WHERE id=$1", id).Scan(&after))
+		if Hash(before) != Hash(after) {
+			t.Fatal("legacy snapshot/hash/versions rewritten")
+		}
+		call("/jobs/"+id+"/complete", candidate(cl), 200)
+		id = submit()
+		for _, value := range []string{`"2.0"`, `null`, `""`} {
+			exec("UPDATE jobs SET versions=jsonb_set(versions,'{input_contract}',$2::jsonb) WHERE id=$1", id, value)
+			call("/claims", w, 204)
+		}
 	})
 	t.Run("scheduler_outbox_lost_response_receipt_recovery", func(t *testing.T) {
 		activeTest = t

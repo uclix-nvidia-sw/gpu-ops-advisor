@@ -10,3 +10,6 @@ var Upgrade string
 
 //go:embed 003_job_controller.sql
 var Queue string
+
+//go:embed 006_worker_contracts.sql
+var WorkerContracts string

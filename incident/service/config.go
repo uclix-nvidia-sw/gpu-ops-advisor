@@ -20,25 +20,46 @@ type Policy struct {
 	EvidenceAnnotations []string `json:"evidence_annotations"`
 }
 type Config struct {
-	Source            string   `json:"grafana_source"`
-	ClusterLabel      string   `json:"cluster_label"`
-	MaxBodyBytes      int      `json:"max_body_bytes"`
-	MaxAlerts         int      `json:"max_alerts"`
-	MaxAgeSeconds     int      `json:"max_alert_age_seconds"`
-	FutureSeconds     int      `json:"max_future_seconds"`
-	BeforeSeconds     int      `json:"window_before_seconds"`
-	AfterSeconds      int      `json:"window_after_seconds"`
-	DispatchSeconds   int      `json:"dispatch_seconds"`
-	DeadlineSeconds   int      `json:"deadline_seconds"`
-	ExecutionRevision string   `json:"execution_profile_revision"`
-	Policies          []Policy `json:"analysis_policies"`
-	JCURL             string   `json:"job_controller_url"`
+	Episodes          *EpisodePolicy `json:"episode_policy,omitempty"`
+	Source            string         `json:"grafana_source"`
+	ClusterLabel      string         `json:"cluster_label"`
+	MaxBodyBytes      int            `json:"max_body_bytes"`
+	MaxAlerts         int            `json:"max_alerts"`
+	MaxAgeSeconds     int            `json:"max_alert_age_seconds"`
+	FutureSeconds     int            `json:"max_future_seconds"`
+	BeforeSeconds     int            `json:"window_before_seconds"`
+	AfterSeconds      int            `json:"window_after_seconds"`
+	DispatchSeconds   int            `json:"dispatch_seconds"`
+	DeadlineSeconds   int            `json:"deadline_seconds"`
+	ExecutionRevision string         `json:"execution_profile_revision"`
+	Policies          []Policy       `json:"analysis_policies"`
+	JCURL             string         `json:"job_controller_url"`
+}
+
+// A nil policy keeps the deployed 1.3 producer until its consumers are upgraded.
+type EpisodePolicy struct {
+	Revision                   string `json:"revision"`
+	RepeatIntervalSeconds      int    `json:"repeat_interval_seconds"`
+	ObservationGapSeconds      int    `json:"observation_gap_seconds"`
+	OccurredAtContractRevision string `json:"occurred_at_contract_revision,omitempty"`
+}
+
+func (c Config) inputContract() string {
+	if c.Episodes != nil {
+		return "1.4"
+	}
+	return "1.3"
 }
 
 func DefaultConfig() Config {
 	return Config{Source: "local-grafana", ClusterLabel: "cluster_id", MaxBodyBytes: 1024 * 1024, MaxAlerts: 200, MaxAgeSeconds: 86400, FutureSeconds: 300, BeforeSeconds: 1800, AfterSeconds: 300, DispatchSeconds: 86400, DeadlineSeconds: 172800, ExecutionRevision: "local-v1", Policies: []Policy{{AlertName: "GPUAlert", Revision: "gpu-alert-v1", PurposeIDs: []string{"R01", "R02"}, EvidenceLabels: []string{"severity"}, EvidenceAnnotations: []string{"error_code"}}}, JCURL: "http://127.0.0.1:8090"}
 }
 func (c Config) Validate() error {
+	if p := c.Episodes; p != nil {
+		if strings.TrimSpace(p.Revision) == "" || len(p.Revision) > 100 || p.RepeatIntervalSeconds < 1 || p.RepeatIntervalSeconds > 366*86400 || p.ObservationGapSeconds < 2*p.RepeatIntervalSeconds || p.ObservationGapSeconds > 366*86400 || len(p.OccurredAtContractRevision) > 100 || strings.TrimSpace(p.OccurredAtContractRevision) != p.OccurredAtContractRevision {
+			return errors.New("episode policy requires a revision and verified gap >= 2 * repeat interval")
+		}
+	}
 	if strings.TrimSpace(c.Source) == "" || len(c.Source) > 200 || c.ClusterLabel == "" || c.MaxBodyBytes < 1024 || c.MaxBodyBytes > 8*1024*1024 || c.MaxAlerts < 1 || c.MaxAlerts > 1000 || c.MaxAgeSeconds < 1 || c.FutureSeconds < 0 || c.BeforeSeconds < 1 || c.AfterSeconds < 1 || c.BeforeSeconds+c.AfterSeconds > 366*86400 || c.DispatchSeconds < 1 || c.DeadlineSeconds <= c.DispatchSeconds || c.ExecutionRevision == "" {
 		return errors.New("invalid Incident limits/configuration")
 	}

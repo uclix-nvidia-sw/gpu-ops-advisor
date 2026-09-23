@@ -41,10 +41,13 @@ func (s *Server) Prepare(ctx context.Context, apply ...bool) error {
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(72931022)"); e != nil {
 		return e
 	}
-	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Incident} {
+	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Incident, migrations.IncidentEpisodes} {
 		if _, e = tx.Exec(ctx, sql); e != nil {
 			return e
 		}
+	}
+	if e = s.prepareEpisodes(ctx, tx); e != nil {
+		return e
 	}
 	_, e = tx.Exec(ctx, "INSERT INTO incident_sources(source,config_revision,snapshot) VALUES($1,$2,$3) ON CONFLICT DO NOTHING", s.Config.Source, Hash(s.Config), s.Config)
 	if e != nil {
@@ -79,6 +82,7 @@ func (s *Server) transaction(ctx context.Context, fn func(pgx.Tx, time.Time) err
 		return e
 	}
 	defer tx.Rollback(ctx)
+	// ponytail: serialize Incident writes globally; use per-source/group locks if intake throughput requires it.
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(72931022)"); e != nil {
 		return e
 	}
@@ -179,13 +183,13 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) (Object, int, err
 	path := r.URL.Path
 	ctx := r.Context()
 	if r.Method == "GET" && (path == "/internal/v1/health/live" || path == "/internal/v1/health/ready") {
-		out := Object{"status": "ok", "contract_version": "1.3"}
+		out := Object{"status": "ok", "contract_version": "1.3", "input_contract_version": s.Config.inputContract()}
 		if strings.HasSuffix(path, "ready") {
 			if e := s.configuration(ctx, s.DB); e != nil {
 				return nil, 0, e
 			}
 			var ready bool
-			if e := s.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM incident_migrations WHERE version=1)").Scan(&ready); e != nil {
+			if e := s.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM incident_migrations WHERE version=2)").Scan(&ready); e != nil {
 				return nil, 0, e
 			}
 			if !ready {

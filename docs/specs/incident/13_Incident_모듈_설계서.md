@@ -4,7 +4,9 @@
 
 ## 0. 변경 기준과 구현 상태
 
-2026-09-22 설계 변경, 2026-09-23 알람 소스와 사건 단위 확정. **Incident는 입력의 구조 파싱, 알람 중복 제거, 최초 증거의 영속 전달을 담당하고, RCA Agent가 값의 의미 해석·조사 목적·Runbook/일반 로그 분석 경로를 결정한다.** 아래는 추가 개발 기준이며 이번 변경은 문서에만 적용한다.
+2026-09-22 설계 변경, 2026-09-23 알람 소스와 사건 단위 확정. **Incident는 입력의 구조 파싱, 알람 중복 제거, 최초 증거의 영속 전달을 담당하고, RCA Agent가 값의 의미 해석·조사 목적·Runbook/일반 로그 분석 경로를 결정한다.** 아래는 목표 계약이며, 현재 구현 단계는 다음 기록으로 구분한다.
+
+2026-09-23 구현: [episodes.go](../../../incident/service/episodes.go)와 [005 migration](../../../shared/migrations/005_incident_episodes.sql)에 IN-01/02의 에피소드·최초 snapshot/outbox 생산 및 IN-03의 Incident 내부 조회·종결 처리를 추가했다. `episode_policy`를 명시해야 1.4 경로를 사용하며 기본 1.3 연동은 유지한다. 기존 원장 다중 귀속은 전환 시 거절하고 snapshot/hash를 보존한다. JC·Worker 1.4 지원과 Backend/Frontend/Ops 소비자 전환은 후속 개발이며 아직 운영 전환할 수 없다. 설정·적용 순서는 [Incident README](../../../incident/README.md), 실행 증거와 미검증 항목은 [QA](../../../incident/QA.md)를 따른다. 아래 §0.1의 정적 대조표는 구현 착수 당시 기록으로 보존한다.
 
 현재 코드는 `alertname`에 `analysis_policies`를 매칭하고 기본 `GPUAlert`에 R01/R02를 지정한다. Xid/SXid 코드 의미를 분석하는 로직은 현재도 Incident에 없다. 정책 미등록 시 RCA 미생성, 의미 있는 증거/정책 revision 변경 시 새 RCA 생성 동작은 목표에서 제거한다. 실제 전환은 [14 실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)을 따른다.
 

@@ -13,7 +13,8 @@ func normalize(kind string, b Object) error {
 	if e := only(b, "contract_version", "source_module", "source_key", "kind", "input", "deadline_at", "execution_profile_revision", "dispatch_deadline", "snapshot_ref"); e != nil {
 		return e
 	}
-	if b["contract_version"] != "1.3" || b["kind"] != kind {
+	version := String(b, "contract_version")
+	if !supportedContract(kind, version) || b["kind"] != kind {
 		return Invalid("contract_version/kind")
 	}
 	if kind == "report" && b["source_module"] != "backend" || kind == "rca" && b["source_module"] != "incident" {
@@ -88,19 +89,31 @@ func normalize(kind string, b Object) error {
 			input[k] = values
 		}
 	} else {
-		if e := normalizeRCA(input); e != nil {
+		if e := normalizeRCA(input, version); e != nil {
 			return e
+		}
+		if version == "1.4" {
+			ref, ok := b["snapshot_ref"].(map[string]any)
+			if key != "incident:"+String(input, "incident_id")+":first" || !ok || len(ref) != 2 || ref["incident_id"] != input["incident_id"] || !integer(ref, "revision") || Number(ref, "revision") != 1 {
+				return Invalid("source_key/snapshot_ref")
+			}
 		}
 	}
 	return nil
 }
 
 // RCA execution inputs must remain tied to the Incident module's immutable evidence revision.
-func normalizeRCA(input Object) error {
-	if e := only(input, "scope", "incident_id", "evidence_version", "analysis_profile_revision", "target", "incident_time", "time_range", "purpose_ids"); e != nil {
+func normalizeRCA(input Object, version string) error {
+	keys := []string{"scope", "incident_id", "evidence_version", "target", "incident_time", "time_range"}
+	if version == "1.3" {
+		keys = append(keys, "analysis_profile_revision", "purpose_ids")
+	} else {
+		keys = append(keys, "prior_incident_id")
+	}
+	if e := only(input, keys...); e != nil {
 		return e
 	}
-	if !uuid(String(input, "incident_id")) || !integer(input, "evidence_version") || String(input, "analysis_profile_revision") == "" {
+	if !uuid(String(input, "incident_id")) || !integer(input, "evidence_version") || version == "1.3" && String(input, "analysis_profile_revision") == "" {
 		return Invalid("incident_snapshot")
 	}
 	if e := TimeRange(input["time_range"], 366*24*time.Hour); e != nil {
@@ -116,6 +129,15 @@ func normalizeRCA(input Object) error {
 		if !ok || len(m) == 0 {
 			return Invalid("target")
 		}
+	}
+	if version == "1.4" {
+		if Number(input, "evidence_version") != 1 {
+			return Invalid("evidence_version")
+		}
+		if _, exists := input["prior_incident_id"]; exists && (!uuid(String(input, "prior_incident_id")) || input["prior_incident_id"] == input["incident_id"]) {
+			return Invalid("prior_incident_id")
+		}
+		return nil
 	}
 	purposes, e := Decode[[]string](input["purpose_ids"])
 	if e != nil || len(purposes) == 0 {
@@ -197,7 +219,7 @@ func (c *Controller) submit(ctx context.Context, kind string, b Object) (Object,
 				return err
 			}
 			frozen["scope"] = frozenScope
-			if err = normalizeRCA(frozen); err != nil {
+			if err = normalizeRCA(frozen, String(b, "contract_version")); err != nil {
 				return err
 			}
 			if Hash(frozen) != Hash(input) {
@@ -229,6 +251,7 @@ func (c *Controller) submit(ctx context.Context, kind string, b Object) (Object,
 			versions[k] = v
 		}
 		versions["execution"] = profile
+		versions["input_contract"] = b["contract_version"]
 		versions["execution_profile_revision"] = b["execution_profile_revision"]
 		versions["result_schema"] = profile.Schema
 		versions["source_snapshot_ref"] = b["snapshot_ref"]
