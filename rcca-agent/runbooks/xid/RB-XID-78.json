@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-XID-78",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L1652",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 78 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 78 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 78; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 78 vGPU·가상화 조사",
+    "description": "XID 78: vGPU Start Error.",
+    "claim": "XID 78 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_SOFTWARE",
+      "category": "virtualization"
+    },
+    "search": {
+      "codes": [
+        "xid:78"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "vGPU Start Error"
+      ],
+      "symptoms": [
+        "vGPU·가상화"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: 호스트/게스트 드라이버 버전, vGPU 프로필·GPU 모델·게스트 OS, 소유 VM과 passthrough/MIG 관계, VM 시작/종료 및 호스트 원본 로그를 모은다.",
+      "판단: 호스트/게스트 호환성 표와 지원 프로필을 대조한다. 특정 VM 문제와 호스트 공통 장애를 구분하고 VM 재시작·GPU reset·호스트 재부팅의 범위를 서로 대체하지 않는다.",
+      "Fleet 고정 카탈로그: vGPU Start Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM.",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=UPDATE_SWFW; investigatory=UPDATE_SWFW; Xid154 linkage=미기재.",
+      "게스트-호스트 드라이버 불일치와 vGPU 유형/게스트 OS/GPU 조합 미지원을 원문 오류 문자열로 구분한다. 호환성 확인 없는 일괄 업데이트는 권고하지 않는다.",
+      "조건부 권고: 설치 조합·호환성·복구 계획을 확인한 뒤 승인된 소프트웨어/펌웨어 업데이트를 운영자가 검토한다."
+    ],
+    "recommendations": [
+      {
+        "text": "설치 조합·호환성·복구 계획을 확인한 뒤 승인된 소프트웨어/펌웨어 업데이트를 운영자가 검토한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:78"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:78"
+      }
+    ],
+    "investigation_only": true
+  }
+}

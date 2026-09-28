@@ -1,5 +1,15 @@
 # Backend v1.3 검증 기록
 
+## 2026-09-28 전체 Runbook 콘텐츠·일괄 등록
+
+- **통과:** Backend에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 분리한 xid/sxid 폴더와 일반 Runbook을 합친 267건의 v1 구조·빈 호환성 발행 거부·잘못된 조건/계획/출처를 검사했다.
+- **통과:** 새 격리 PostgreSQL에서 `go test -tags=e2e ./tests -v -count=1`. `TestFreshBackendWithoutDemoSeed`, `TestBackendE2E`, `TestRealJobController`와 기존 SXID 등록·검토·발행·회수 경로를 재검증했다.
+- **통과:** [Agent E2E](../agents/QA.md)의 실제 일괄 등록 CLI로 신규 263건의 draft 저장·코드별 조회/hash·재실행 중복 등록 방지를 확인했다. Backend 기본 요청 한도를 유지하고 429의 Retry-After를 따랐다.
+- **해당 없음:** Backend 실행 로직·DB 스키마 변경. 기존 Knowledge API를 그대로 사용하고 테스트 파일 검색 경로만 갱신했다.
+- **미수행:** 운영 DB 등록·발행·배포. 실제 Grafana/Fleet/LLM 검증은 별도다.
+
+Windows 대괄호 경로의 Go embed 문제 때문에 임시 소스 복사본에서 검사했으며 DB는 새 data directory와 localhost 포트로 시작한 뒤 종료했다. 등록 절차와 기존 ID의 새 revision 처리 방법은 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)에 기록했다.
+
 ## 2026-09-28 Runbook v1 DB 연계
 
 - **통과:** Backend에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 실제 JSON 4건의 초안 형식·빈 호환성 발행 거부·잘못된 필드/조건/관측 계획/출처·legacy 호환을 검사했다.

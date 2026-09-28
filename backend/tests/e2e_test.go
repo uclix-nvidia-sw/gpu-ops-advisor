@@ -184,7 +184,7 @@ func TestBackendE2E(t *testing.T) {
 		call("PATCH", path, Object{"content": Object{"text": "replace"}}, 409, "Idempotency-Key", "edit", "If-Match", "4")
 	})
 	t.Run("v1_runbook_draft_binding_publish_search_and_retire", func(t *testing.T) {
-		raw, err := os.ReadFile("../../rcca-agent/runbooks/RB-SXID-11001.json")
+		raw, err := os.ReadFile("../../rcca-agent/runbooks/sxid/RB-SXID-11001.json")
 		must(t, err)
 		var b Object
 		must(t, json.Unmarshal(raw, &b))

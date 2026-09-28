@@ -1,18 +1,18 @@
 # XID·SXID Runbook 작성과 Knowledge DB 등록
 
-2026-09-28. 다른 PC에서 대화 기록 없이 이어가기 위한 문서다. 현재 범위는 XID 79, XID 48 및 동반 63/64, SXID 11001의 조사 초안과 기존 Backend API를 통한 DB 등록·검토·발행·조회다. 이번 PR은 대표 사례 3건과 DB 연계 경로까지다. 사용자가 제공한 자료의 전체 XID/SXID 코드에 대한 콘텐츠 작성은 미완료이며 후속 작업으로 남는다. 문헌 기반 콘텐츠 작성과 실제 환경의 parser/query/compatibility 연결을 구분하여 진행한다.
+2026-09-28. 다른 PC에서 대화 기록 없이 이어가기 위한 문서다. **XID 173건·SXID 93건과 일반 1건, 총 267건이며 [전체 코드 목록](CATALOG.md)을 따른다.** 기존 Backend API로 초안을 등록하고 검토·발행한다. 문헌 미정의·출처 차이는 개별 항목에 보존했다. 운영 적용에는 환경별 parser/query/compatibility 검증이 필요하다.
 
 ## 1. 완료된 단계와 남은 경계
 
-- 콘텐츠: 기존 세 JSON에 출처별 권고, 조사 단계, 부족·반박·조치 후 확인 지침을 보강했다. 일반 조사까지 파일은 4건이다.
-- 실행 의미: 세 오류별 초안도 `investigation_only: true`다. 조건이 맞더라도 원인 supported 판정이나 기존 증거만으로 조기 종료하는 근거로 쓰지 않는다. 조사 지침은 최종 Synthesis에 전달한다. 현재 workflow는 조사용 콘텐츠의 recommendations를 최종 eligible 조치 목록으로 발행하지 않는다.
+- 콘텐츠: 최초 세 JSON의 지침 보강 후 코드별 263건을 추가했다. 일반 조사까지 파일은 267건이다.
+- 실행 의미: 모든 초안은 `investigation_only: true`다. 조건이 맞더라도 원인 supported 판정이나 기존 증거만으로 조기 종료하는 근거로 쓰지 않는다. 조사 지침은 최종 Synthesis에 전달한다. 현재 workflow는 조사용 콘텐츠의 recommendations를 최종 eligible 조치 목록으로 발행하지 않는다.
 - DB 경로: JSON은 작성 원본이다. 실행 원본은 기존 `knowledge_revisions`의 승인·발행된 revision이다. Backend가 생성·갱신·상태 전이를 소유한다. 직접 SQL 적재, 새 테이블, migration, 자동 seed는 추가하지 않았다.
 - 실제 검증: 격리 PostgreSQL에서 Backend 등록·검토·발행, JC revision 고정, 실제 RCA Worker/NAT/MCP 수집·Synthesis·결과 공개를 확인했다. 그래프 데이터와 모델 응답은 fixture다. 테스트 DB는 실행 후 정리하며 운영 DB에는 등록하지 않았다.
 - 저장소 JSON의 compatibility는 여전히 비어 있다. 실제 배포 조건을 만들거나 검증했다고 주장하지 않으며 초안 저장은 가능하지만 승인·발행은 차단한다.
 
 ### 기존 DB와의 대응
 
-오류별 Runbook 3건은 테이블 3개가 아니라 기존 `knowledge_revisions`에 저장하는 논리 지식 3건이다. 일반 조사까지 포함하면 4건이며, 수정 이력이 쌓이면 각 지식의 revision 행이 늘어난다. [기존 migration](../../shared/migrations/001_backend.sql)의 테이블·컬럼·제약은 변경하지 않았다.
+Runbook 267건은 기존 `knowledge_revisions`에 저장하는 논리 지식 267건이다. 수정 이력이 쌓이면 각 지식의 revision 행이 늘어난다. [기존 migration](../../shared/migrations/001_backend.sql)의 테이블·컬럼·제약은 변경하지 않았다.
 
 | 기존 필드 | 저장하는 값 |
 |---|---|
@@ -23,7 +23,7 @@
 | `compatibility` JSONB | 검수한 환경별 적용 조건. 현재 저장소 초안은 `{}` |
 | `content_hash`, `reviewed_content_hash` | 기존 본문 무결성·검토 후 변경 방지 계약 |
 
-R코드·D코드도 기존 콘텐츠/실행 프로필의 식별자이며 테이블을 추가하지 않는다. 이번 변경은 JSON 내용을 검사하는 API 로직과 `search.codes` 조회 지원이다. DB 스키마 호환성과 운영 적용 가능성은 별개이며, 빈 compatibility 초안은 저장할 수 있어도 승인·발행할 수 없다.
+R코드·D코드도 기존 콘텐츠/실행 프로필의 식별자이며 테이블을 추가하지 않는다. Backend의 기존 JSON 검증과 `search.codes` 조회를 사용한다. DB 스키마 호환성과 운영 적용 가능성은 별개이며, 빈 compatibility 초안은 저장할 수 있어도 승인·발행할 수 없다.
 
 ## 2. 출처를 사용하는 기준
 
@@ -50,7 +50,7 @@ XID 79는 PCIe·장치·드라이버 후보를 구분할 근거를 요청한다.
 | 분석 | 코드 충분성, 제한된 재조사, 지침/한계를 Synthesis에 전달 | 실제 LLM endpoint·분석 품질 검수 |
 | 결과 | 근거·후보 저장과 JC 공개; 조사용 콘텐츠의 원인 승격 금지 | 오류 확인·원인·조치 적합성·회복의 의미 검증 확대 |
 
-`analysis_guidance`는 실행된 검사 결과가 아니다. 로그를 못 읽었으면 해당 오류가 없다고 판단하지 않는다. 기존 parser는 검증된 `error_code` fact를 생성하지 않으며 지금의 세 초안은 그 공백을 숨기지 않는다. R코드는 조사 목적, D코드는 등록 쿼리다. 세부 지표가 필요하다고 임의의 D코드를 생성하지 않는다.
+`analysis_guidance`는 실행된 검사 결과가 아니다. 로그를 못 읽었으면 해당 오류가 없다고 판단하지 않는다. 기존 parser는 검증된 `error_code` fact를 생성하지 않으며 현재 초안은 그 공백을 숨기지 않는다. R코드는 조사 목적, D코드는 등록 쿼리다. 세부 지표가 필요하다고 임의의 D코드를 생성하지 않는다.
 
 ## 4. 검증 책임
 
@@ -67,11 +67,37 @@ Backend는 Worker별 query registry를 소유하지 않으므로 등록 여부�
 
 Python 3.12 환경과 설치 방법은 [Agent 안내](../../agents/README.md)를 따른다. 저장소 루트에서 아래 명령을 실행한다. Backend 주소는 실제 승인된 대상의 `/api/v1`까지 명시하며 자동 선택하지 않는다. 아래 `127.0.0.1:8080`은 사용자가 준비한 개발 Backend 예시다. 운영 환경에 개발 seed 스크립트를 실행하지 않는다.
 
+### 폴더별 일괄 초안 등록
+
+폴더는 `xid/`(173건), `sxid/`(93건), 상위의 일반 조사 JSON(1건)으로 구분한다. [일괄 등록 Python](../src/rcca_agent/runbook_import.py)은 하위 폴더의 `RB-*.json`을 모두 읽는다. 전체 검증이 끝난 뒤 기존 Backend API로 draft만 등록한다. DB 직접 SQL·자동 승인·발행은 없다.
+
+```sh
+# 전체 267건 형식 검사. 서버 접속/쓰기 없음.
+python -m rcca_agent.runbook_import rcca-agent/runbooks --profile agents/config.example.json --dry-run
+
+# 승인된 개발 Backend에 전체 초안 등록. 주소는 실제 대상에 맞게 지정.
+python -m rcca_agent.runbook_import rcca-agent/runbooks --profile agents/config.example.json --backend http://127.0.0.1:8080/api/v1 --batch-key xid-sxid-20260928 --receipts .local/runbook-import-20260928
+```
+
+XID만 등록하려면 입력 폴더를 `rcca-agent/runbooks/xid`, SXID만이면 `rcca-agent/runbooks/sxid`로 바꾼다. 파일마다 `<batch-key>:<knowledge_key>`를 멱등 키로 사용한다. 성공 응답은 receipts 폴더에 파일별로 저장하며 개별 관리 CLI의 검토 명령 입력으로도 사용할 수 있다.
+
+중단 후에는 **같은 대상·입력·batch key·receipts 경로**로 재실행한다. 기록된 성공 항목은 API 재호출 없이 건너뛴다. `resumed`는 저장된 응답 재사용 건수이며 현재 DB 상태를 다시 검사했다는 뜻은 아니다. 본문뿐 아니라 compatibility·대상 URL·revision 대상이 달라져도 receipt 불일치로 중단한다. 응답 유실 때에는 같은 요청 키로 재전송해 Backend receipt를 복구한다.
+
+429 응답은 `Retry-After`를 따라 최대 3회 대기·재시도한다. 그 외 HTTP/통신/저장 오류는 중단하며 이미 등록한 초안을 삭제하지 않는다. Backend 기본 변경 요청 한도는 분당 120건이므로 전체 등록에 수 분이 걸릴 수 있다.
+
+기존 knowledge_key는 다른 ID로 중복 생성하지 않는다. 새 revision이 필요하면 아래와 같은 JSON 파일을 작성해 `--knowledge-ids .local/existing-runbook-ids.json`을 추가하고 **새 batch key와 새 receipts 폴더**를 사용한다. 매핑에 없는 키는 신규 지식으로 생성한다. 기존 ID는 해당 Backend의 Knowledge API에서 확인한다.
+
+```json
+{"RB-XID-79": "기존 knowledge_id UUID"}
+```
+
+receipts는 입력 폴더 밖에 둔다. 폴더 이동은 작성 파일 정리일 뿐 knowledge_key와 DB ID를 바꾸지 않는다. 전체 코드·출처별 제한은 [CATALOG](CATALOG.md)를 따른다.
+
 ### 초안 검사와 등록
 
 ```sh
-python -m rcca_agent.runbook_admin check rcca-agent/runbooks/RB-XID-79.json --profile agents/config.example.json
-python -m rcca_agent.runbook_admin draft rcca-agent/runbooks/RB-XID-79.json --profile agents/config.example.json --backend http://127.0.0.1:8080/api/v1 --request-key xid79-draft-20260928 --output .local/xid79-draft.json
+python -m rcca_agent.runbook_admin check rcca-agent/runbooks/xid/RB-XID-79.json --profile agents/config.example.json
+python -m rcca_agent.runbook_admin draft rcca-agent/runbooks/xid/RB-XID-79.json --profile agents/config.example.json --backend http://127.0.0.1:8080/api/v1 --request-key xid79-draft-20260928 --output .local/xid79-draft.json
 ```
 
 `.local`을 먼저 만든다. 다른 두 오류 파일에도 별도 request key를 사용한다. 응답 파일에는 knowledge ID·revision ID·revision·version·state·content hash를 저장한다. HTTP 오류/통신 실패 시 성공으로 처리하지 않는다. 응답 유실 시 같은 입력과 같은 key로 재전송한다. 같은 key에 다른 본문을 보내면 충돌한다.

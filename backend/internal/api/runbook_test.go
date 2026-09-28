@@ -10,8 +10,9 @@ import (
 )
 
 func TestRunbookAuthoringAndPublication(t *testing.T) {
-	files, err := filepath.Glob("../../../rcca-agent/runbooks/RB-*.json")
-	if err != nil || len(files) != 4 {
+	files, err := filepath.Glob("../../../rcca-agent/runbooks/*/RB-*.json")
+	files = append(files, "../../../rcca-agent/runbooks/RB-GENERAL-GPU-NODE.json")
+	if err != nil || len(files) != 267 {
 		t.Fatalf("missing shipped runbooks: %v", err)
 	}
 	for _, path := range files {

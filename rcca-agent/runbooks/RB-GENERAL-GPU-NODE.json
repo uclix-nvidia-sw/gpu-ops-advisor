@@ -23,7 +23,7 @@
         "fact_names": [
           "observations"
         ],
-        "purpose": "같은 사건 대상·기간의 원본 로그를 보존하고 검증 가능한 관측을 찾는다.",
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -36,7 +36,7 @@
           "producer_contract",
           "normalized_health"
         ],
-        "purpose": "검증된 producer 상태 이벤트가 있으면 같은 대상의 상태 변화를 확인한다.",
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -48,7 +48,7 @@
         "fact_names": [
           "observations"
         ],
-        "purpose": "GPU 사용률을 보조 관측으로 비교한다. 값 소실이나 0만으로 고장·회복을 판단하지 않는다.",
+        "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -63,9 +63,7 @@
       }
     ],
     "limitations": [
-      "작성 초안이다. 검수한 cluster 및 producer/query 범위를 compatibility에 명시하고 검토·발행해야 한다.",
-      "일반 계획은 근본 원인을 supported/confirmed로 승격하거나 조치를 실행하지 않는다.",
-      "D09/D05의 실제 로그·producer 의미와 D02의 라벨·단위·대상·freshness는 배포 계약으로 확인해야 한다."
+      "전용 Runbook이 없을 때 사용한다. 대상 식별·원본 로그·상태가 부족하면 원인을 보류한다."
     ],
     "title": "GPU 노드 일반 조사",
     "description": "전용 Runbook이 없을 때 고정된 사건 범위의 로그·상태·보조 지표를 수집하는 조사 계획.",

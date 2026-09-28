@@ -1,21 +1,25 @@
 # Runbook 개발 및 RCA 연계
 
-2026-09-28: 로컬 작성 초안 4건과 v1 콘텐츠 검증기를 구현했다. XID/SXID 3건의 지침·출처를 보강하고 기존 Backend API 등록·검토·발행·RCA 소비를 격리 DB에서 검증했다. 저장 구조와 다른 PC의 재현 절차는 [DB 등록 안내](DB-WORKFLOW.md)를 따른다. 운영 DB 등록 및 실제 Grafana/LLM 검증은 수행하지 않았다.
+2026-09-28 후속: XID 173건·SXID 93건과 일반 조사 1건, 총 267건의 문헌 기반 조사 초안을 작성했다. 기존 대표 3건을 보강하고 263건을 추가했다. 전체 파일·근거 상태·검토 절차는 [전체 코드 목록](CATALOG.md)을 따른다. 기존 Backend 등록·검토·발행·RCA 소비 경로를 사용한다. 저장 구조와 다른 PC의 재현 절차는 [DB 등록 안내](DB-WORKFLOW.md)를 따른다. 운영 DB 등록 및 실제 Grafana/LLM 검증은 수행하지 않았다.
+
+아래는 기존 대표 사례이며 전체 범위는 CATALOG를 따른다.
 
 | 파일 | 진입 단서 | 구현한 범위 |
 |---|---|---|
 | [RB-GENERAL-GPU-NODE.json](RB-GENERAL-GPU-NODE.json) | 전용 Runbook 미일치 | 일반 로그·상태·보조 사용률 조사. 원인 판정은 하지 않음 |
-| [RB-XID-79.json](RB-XID-79.json) | Xid 79 | 원본 오류·producer 상태 확인, 추가 조사 권고 |
-| [RB-XID-48-63-64.json](RB-XID-48-63-64.json) | Xid 48 | ECC 이벤트 조사, 동반 Xid 63·64와 모델별 증거 확인 안내 |
-| [RB-SXID-11001.json](RB-SXID-11001.json) | SXid 11001 | NVSwitch·FM 원본과 포트·플랫폼 맥락 확인. 영향·fatality는 미확정 |
+| [RB-XID-79.json](xid/RB-XID-79.json) | Xid 79 | 원본 오류·producer 상태 확인, 추가 조사 권고 |
+| [RB-XID-48-63-64.json](xid/RB-XID-48-63-64.json) | Xid 48 | ECC 이벤트 조사, 동반 Xid 63·64와 모델별 증거 확인 안내 |
+| [RB-SXID-11001.json](sxid/RB-SXID-11001.json) | SXid 11001 | NVSwitch·FM 원본과 포트·플랫폼 맥락 확인. 영향·fatality는 미확정 |
 
-Xid 48 Runbook에서 63·64는 추가 확인 대상이다. 해당 코드만으로 검색·적용하거나 시간 순서를 판정하지 않는다. 모든 초안은 원인 확정이나 reset·재부팅·교체를 실행하지 않는다. 기술 출처는 [NVIDIA GPU Node Triage](https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html)와 [Fabric Manager 가이드](https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html)다. sources에 페이지 표시 개정일·절·확인 날짜를 기록했다. 변경 가능한 원문이므로 운영 검토 때 해당 버전을 다시 대조한다.
+Xid 48 Runbook에서 63·64는 추가 확인 대상이다. 해당 코드만으로 검색·적용하거나 시간 순서를 판정하지 않는다. 모든 초안은 원인 확정이나 reset·재부팅·교체를 실행하지 않는다. 기술 출처는 [NVIDIA GPU Node Triage](https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html)와 [Fabric Manager 가이드](https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html)다. sources에 페이지 표시 개정일·절·확인 날짜를 기록했다. 참조 코드와 공식 표의 정의 차이는 CATALOG와 개별 콘텐츠에 기록했다. 변경 가능한 원문이므로 운영 검토 때 해당 버전을 다시 대조한다.
+
+JSON은 `xid/`, `sxid/`에 종류별로 보관하며 일반 조사는 상위 폴더에 둔다. 전체 검사·DB 초안 일괄 등록은 `python -m rcca_agent.runbook_import`를 사용한다. [일괄 등록 절차](DB-WORKFLOW.md)를 따른다. JSON의 반복 개발 설명은 문서로 옮기고 코드별 조사 내용만 유지한다.
 
 ## 저장과 실행 경계
 
 JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성 API는 draft를 만들며, 별도 테이블·서비스·자동 seed를 추가하지 않았다. 파일을 놓았다고 Worker가 읽는 구조가 아니다. Worker는 기존 DB의 공개·고정된 revision/hash를 읽는다.
 
-네 파일의 compatibility는 의도적으로 빈 객체다. 실제 producer와 장비 범위를 확인한 뒤 정확한 값을 채워야 한다. 검증기의 authoring=True는 초안 구조 점검에만 사용하고, RCA 실행에서는 사용하지 않는다. 빈 호환성으로 운영 적용되는 것을 기본 검증기가 차단한다. 일반 조사도 검수한 cluster와 query 범위를 명시해야 한다. SXid 초안은 해당 오류 체계를 쓰는 플랫폼 및 FM 버전이 확인된 환경에만 바인딩하며 B200/B300에 포괄 적용하지 않는다.
+267개 파일의 compatibility는 의도적으로 빈 객체다. 실제 producer와 장비 범위를 확인한 뒤 정확한 값을 채워야 한다. 검증기의 authoring=True는 초안 구조 점검에만 사용하고, RCA 실행에서는 사용하지 않는다. 빈 호환성으로 운영 적용되는 것을 기본 검증기가 차단한다. 일반 조사도 검수한 cluster와 query 범위를 명시해야 한다. SXid 초안은 해당 오류 체계를 쓰는 플랫폼 및 FM 버전이 확인된 환경에만 바인딩하며 B200/B300에 포괄 적용하지 않는다.
 
 최상위 source_refs는 **DB evidence ID**다. 문헌 URL을 넣지 않는다. 현재 common Knowledge는 사건 evidence를 연결할 수 없으므로 초안은 빈 배열이며 문헌 메타데이터는 content.sources에 둔다. 문헌 출처는 사건의 관측·실행 증거를 대신하지 않는다.
 
@@ -29,7 +33,7 @@ JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성
 
 v1 조건식은 기존 {field, equals} 형태다. 적용 조건은 AND이며 exclusion의 결합 의미는 RCA 평가기를 따른다. 임계값·정규식·시간 순서·미등록 연산자를 추가하지 않았다. error_code는 xid:79 또는 sxid:값처럼 정규화된 문자열이어야 한다. 현재는 producer_contract, error_code, normalized_health, component, severity의 문자열 조건만 허용한다.
 
-현재 네 콘텐츠 모두 `investigation_only: true`를 명시한다. 조사용 콘텐츠의 recommendations도 현재 workflow의 최종 eligible 조치 목록에는 포함하지 않는다. 이 경우에만 빈 applicability_conditions를 허용하며, 원인 supported 판정·기존 근거만으로 조기 완료하는 근거로 사용하지 않는다. `rca.general_runbook_key`에 지정한 v1 콘텐츠에 이 표시가 없으면 실행 계획에서 제외한다. 일반 조사도 schema·scope·hash·호환성 검증을 통과해야 한다.
+현재 모든 콘텐츠는 `investigation_only: true`를 명시한다. 조사용 콘텐츠의 recommendations도 현재 workflow의 최종 eligible 조치 목록에는 포함하지 않는다. 이 경우에만 빈 applicability_conditions를 허용하며, 원인 supported 판정·기존 근거만으로 조기 완료하는 근거로 사용하지 않는다. `rca.general_runbook_key`에 지정한 v1 콘텐츠에 이 표시가 없으면 실행 계획에서 제외한다. 일반 조사도 schema·scope·hash·호환성 검증을 통과해야 한다.
 
 선택된 계획의 `analysis_guidance`와 `limitations`는 revision·적용 상태와 함께 도구 없는 Synthesis 입력으로 전달한다. pending 계획의 조건은 미확인 상태이며 지침은 관측 사실이 아니다. LLM이 지침을 받았다고 parser 없는 오류 코드가 검증되지는 않는다.
 
@@ -46,7 +50,7 @@ observation_plan은 다음 필드를 갖는다:
 | time_range | incident만 지원. 실제 범위는 claim·query 계약에서 결정 |
 | freshness | query_contract만 지원. 콘텐츠가 자체 임계값을 만들지 않음 |
 
-required_queries를 함께 쓰면 plan의 required=true인 ID 집합과 일치해야 한다. plan을 생략하면 required_queries의 원래 순서를 사용하며 fact_names를 추측하지 않는다. 네 초안은 D09·D05를 필수 관측, D02를 선택 관측으로 제시한다. priority는 예산 배정 순서이며 필수 관측은 병렬 실행되므로 선행 완료 의존성을 뜻하지 않는다. 이미 유효한 증거로 목적과 원인 판정용 Runbook이 충족됐으면 RCA가 수집을 생략한다.
+required_queries를 함께 쓰면 plan의 required=true인 ID 집합과 일치해야 한다. plan을 생략하면 required_queries의 원래 순서를 사용하며 fact_names를 추측하지 않는다. 모든 초안은 D09·D05를 필수 관측, D02를 선택 관측으로 제시한다. priority는 예산 배정 순서이며 필수 관측은 병렬 실행되므로 선행 완료 의존성을 뜻하지 않는다. 이미 유효한 증거로 목적과 원인 판정용 Runbook이 충족됐으면 RCA가 수집을 생략한다.
 
 R코드는 RCA의 조사 목적이고, D코드는 등록 조회 ID다. Runbook마다 R01~R09 필드를 요구하지 않는다. 현재 D코드만으로 ECC·NVLink·IB 세부 수치나 복구를 입증할 수 없다.
 

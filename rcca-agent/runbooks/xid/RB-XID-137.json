@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-XID-137",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2541",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 137 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 137 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 137; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 137 NVLink·연결 상대 조사",
+    "description": "XID 137: NVLink Privilege Error.",
+    "claim": "XID 137 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "nvlink"
+    },
+    "search": {
+      "codes": [
+        "xid:137"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "NVLink Privilege Error"
+      ],
+      "symptoms": [
+        "NVLink·연결 상대"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: GPU/NVSwitch 양쪽 원본 로그, link 번호·remote endpoint·포트 역할·partition 토폴로지, 링크 상태/대역폭·재전송/CRC/ECC 카운터의 같은 기간 변화를 수집한다.",
+      "판단: 장치 양쪽의 사건 시간과 링크 상태를 맞추고 reset·shutdown·소프트웨어 변경·열 사건을 대조한다. 상대 장치에서 전파된 오류와 로컬 원인을 구분하며 단일 GPU의 로그만으로 영향 범위를 넓히지 않는다.",
+      "Fleet 고정 카탈로그: NVLink FLA privilege error; event_type=Warning; 기본 action=CHECK_USER_APP_AND_GPU.",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=IGNORE; investigatory=XID_137_FLOW; Xid154 linkage=미기재.",
+      "원격 GPU 메모리 접근 권한과 P2P 매핑, 접근한 앱/PID를 조사한다. Compute Sanitizer/cuda-gdb 결과를 확인하고 앱·드라이버·장비 후보를 구분한다.",
+      "조건부 권고: 이 이벤트의 즉시 조치가 불필요하다는 문헌 분류다. 동반 오류와 실제 서비스 상태 조사까지 생략하라는 의미는 아니다."
+    ],
+    "recommendations": [
+      {
+        "text": "이 이벤트의 즉시 조치가 불필요하다는 문헌 분류다. 동반 오류와 실제 서비스 상태 조사까지 생략하라는 의미는 아니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:137"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:137"
+      }
+    ],
+    "investigation_only": true
+  }
+}

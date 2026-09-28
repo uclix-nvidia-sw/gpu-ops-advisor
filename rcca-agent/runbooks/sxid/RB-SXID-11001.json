@@ -25,7 +25,7 @@
           "producer_contract",
           "error_code"
         ],
-        "purpose": "NVSwitch 사건의 원본 SXid 이벤트를 찾고 대상·시각·동반 오류를 보존한다.",
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -38,7 +38,7 @@
           "producer_contract",
           "normalized_health"
         ],
-        "purpose": "검증된 producer 상태 이벤트가 있으면 같은 대상의 상태 변화를 확인한다.",
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -50,7 +50,7 @@
         "fact_names": [
           "observations"
         ],
-        "purpose": "GPU 사용률을 보조 관측으로 비교한다. 값 소실이나 0만으로 고장·회복을 판단하지 않는다.",
+        "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -64,29 +64,30 @@
         "checked_at": "2026-09-28"
       },
       {
-        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/sxid/sxid.go",
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/sxid/sxid.go#L615",
         "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
-        "section": "Static details; repository fleet-gpud-error-catalog baseline; deployed revision unverified",
+        "section": "SXID 11001 static definition",
         "checked_at": "2026-09-28"
       },
       {
         "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/sxid/sxid.go",
         "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
-        "section": "Static details and action comments; not the deployed Fleet evaluator",
+        "section": "SXID 11001 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+        "revision": "Page last updated 2025-11-14; mutable upstream",
+        "section": "Table 22 Potential Fatal NVSwitch SXid Errors",
         "checked_at": "2026-09-28"
       }
     ],
     "limitations": [
-      "작성 초안이며 compatibility가 비어 있어 런타임에 적용할 수 없다.",
-      "SXid를 사용하는 플랫폼·FM/producer 버전을 검수해야 한다. NVIDIA 가이드의 DGX/HGX B200/B300은 SXid 대상이 아니며 이 초안을 적용하지 않는다.",
-      "기본 D09/D05가 FM 원본과 switch/port 신원을 제공하는지 미검증이다. D02는 보조 GPU 사용률이며 fabric 상태나 장애 영향 증거가 아니다.",
-      "현재 parser는 error_code를 생성하지 않는다. 토폴로지·전파·fatality·복구 판단은 구현 범위 밖이다.",
-      "investigation_only=true: 조사 지침이다. 적용 조건이 일치해도 이 콘텐츠로 supported 원인을 생성하거나 조기 완료하지 않는다.",
-      "수집 가능 범위는 현재 등록된 D09/D05/D02다. PCIe/AER·ECC·FM 포트/토폴로지·재발 이력의 전용 query/parser와 시간 조건 평가는 미구현이다. 아래 지침은 이 관측을 확보했다는 뜻이 아니다."
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다."
     ],
     "title": "SXid 11001 NVSwitch 이벤트 조사",
     "description": "SXid 11001 단서에서 NVSwitch 원본 이벤트와 포트·장비·Fabric Manager 맥락을 확인하는 초기 조사.",
-    "claim": "검증된 동일 대상에서 SXid 11001 이벤트가 관측되어 NVSwitch 관련 조사가 필요하다. 근본 원인과 영향 범위는 미확정이다.",
+    "claim": "SXID 11001 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "GPU_INTERCONNECT",
       "category": "nvswitch_sxid"
@@ -106,16 +107,15 @@
       ]
     },
     "analysis_guidance": [
-      "검증 1 — 사건 식별: cluster·machine/node·PCI BDF·발생 시각을 원본과 대조한다. PCI BDF를 GPU UUID로 추측하지 않는다.",
-      "검증 2 — 적용 환경: 실제 GPU 모델·드라이버·Fleet image/source revision과 문헌의 적용 범위를 확인한다. 정적 소스 commit은 배포 버전 증거가 아니다.",
-      "검증 3 — 관측 품질: 같은 대상·기간, producer 의미, freshness, 누락·잘림을 확인한다. 쿼리 성공과 증거 충분성을 구분한다.",
-      "고정 GPUd 정의는 EventType=Fatal, PotentialFatal=true, AlwaysFatal=false다. 제공자 이벤트 분류와 전체 시스템 영향 확정을 구분한다.",
-      "GPUd/Fleet 정적 기본 action은 REBOOT_SYSTEM 및 HARDWARE_INSPECTION이다. GPUd 주석은 재부팅 후 같은 SXid 재발 시 NVSwitch 점검/수리를 설명한다. 두 action을 무조건 동시 권고하지 않는다.",
       "FM 문헌의 공통 Recovery에는 guest VM 복구가 포함된다. GPUd 시스템 재부팅 권고와 구분하고 bare metal/VM 모드·플랫폼·FM 버전을 확인한 뒤 적용한다.",
       "D09에서 원본 NVSwitch/FM 이벤트의 switch PCI·source port·시각을 보존한다. access/trunk와 연결 GPU·partition 정보가 확인될 때만 영향 범위를 설명한다.",
+      "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "동반 Xid 74 및 다른 SXid는 대상·시간·연결 관계가 확인된 경우에만 연관 증거로 사용한다. 코드 동시 발생만으로 전파 방향이나 근본 원인을 확정하지 않는다.",
-      "검증 4 — 판단: 오류 관측·원인 후보·조치 적합성·복구 확인을 구분한다. 코드 일치만으로 부품 고장이나 복구를 확정하지 않는다.",
-      "검증 5 — 조치/재발: 실제 조치 시각·대상·수행 기록과 이후 원본을 대조한다. suggested_actions는 실행 증거가 아니며 알림 소멸만으로 회복을 선언하지 않는다."
+      "Fleet 고정 카탈로그: ingress invalid command; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+      "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
+      "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
+      "Potential Fatal 분류다. access port이면 연결 guest VM 범위, trunk port이면 그 연결을 사용하는 partition 범위를 확인한다. 관련 VM/partition의 종료·재시작 전제와 영향을 운영자가 검토한다.",
+      "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다."
     ],
     "recommendations": [
       {

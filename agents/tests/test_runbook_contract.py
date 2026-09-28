@@ -20,14 +20,14 @@ QUERIES = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
 ALLOWED = PROCEDURES["gpu_access"].allowed_next_steps
 ROWS = [
     json.loads(path.read_text("utf-8"))
-    for path in sorted((ROOT / "rcca-agent/runbooks").glob("RB-*.json"))
+    for path in sorted((ROOT / "rcca-agent/runbooks").rglob("RB-*.json"))
 ]
 XID = next(row for row in ROWS if row["knowledge_key"] == "RB-XID-79")
 
 
 class RunbookContractTests(unittest.TestCase):
     def test_content_retrieval_plan_and_unbound_runtime(self):
-        self.assertEqual(len(ROWS), 4)
+        self.assertEqual(len(ROWS), 267)
         for row in ROWS:
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])

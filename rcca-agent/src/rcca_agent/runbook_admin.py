@@ -20,6 +20,21 @@ def check(row, profile, *, runtime=False):
     return validate_runbook(row, profile["queries"], allowed, authoring=not runtime)
 
 
+def backend_url(value):
+    u = urlsplit(value or "")
+    if (
+        u.scheme not in ("http", "https")
+        or not u.hostname
+        or u.username
+        or u.password
+        or u.query
+        or u.fragment
+        or u.path.rstrip("/") != "/api/v1"
+    ):
+        raise ValueError("provide a credential-free Backend URL ending /api/v1")
+    return value.rstrip("/")
+
+
 def reference(row):
     return {
         key: row[key]
@@ -129,23 +144,13 @@ def main(argv=None):
                 "plan": check(row, profile, runtime=args.runtime),
             }
         else:
-            u = urlsplit(args.backend or "")
-            if (
-                u.scheme not in ("http", "https")
-                or not u.hostname
-                or u.username
-                or u.password
-                or u.query
-                or u.fragment
-                or u.path.rstrip("/") != "/api/v1"
-            ):
-                raise ValueError("provide a credential-free Backend URL ending /api/v1")
+            url = backend_url(args.backend)
             if not args.request_key:
                 raise ValueError("--request-key required; preserve it when retrying")
             if args.action not in ("draft", "publish") and not args.comment.strip():
                 raise ValueError("--comment required")
             with httpx.Client(
-                base_url=args.backend.rstrip("/"), timeout=30, follow_redirects=False
+                base_url=url, timeout=30, follow_redirects=False
             ) as client:
                 if args.action == "draft":
                     result = draft(

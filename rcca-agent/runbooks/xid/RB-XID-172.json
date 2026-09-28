@@ -1,0 +1,132 @@
+{
+  "knowledge_key": "RB-XID-172",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2937",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 172 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 172 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 172; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 172 ECC·메모리 조사",
+    "description": "XID 172: Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM.",
+    "claim": "XID 172 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_MEMORY",
+      "category": "ecc_memory"
+    },
+    "search": {
+      "codes": [
+        "xid:172"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM"
+      ],
+      "symptoms": [
+        "ECC·메모리"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: GPU UUID와 PCI BDF를 검증하고 휘발성/누적 ECC의 교정·비교정 카운터, DRAM/SRAM 구분, ECC 모드, page retirement/row remap pending·failure·가용 상태 및 동반 오류 시각을 수집한다.",
+      "판단: 같은 장치의 카운터 변화와 초기화 시각을 함께 비교한다. 누적값을 이번 사건의 증가량으로 보지 않으며 ECC·row-remap 지원 모델별 의미와 SRAM threshold 플래그를 확인한다.",
+      "Fleet 고정 카탈로그: Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM; event_type=Warning; 기본 action=REBOOT_SYSTEM.",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=미기재; investigatory=미기재; Xid154 linkage=미기재.",
+      "동일 GPU·시간의 48 및 SRAM threshold 플래그를 확인한다. SRAM 추가 정보와 DRAM 오류를 혼합하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "XID 172의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:172"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:172"
+      }
+    ],
+    "investigation_only": true
+  }
+}

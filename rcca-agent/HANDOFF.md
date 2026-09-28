@@ -10,6 +10,10 @@
 
 후속 XID/SXID 작업: 오류별 3건의 지침·출처, Backend v1 구조 검증/코드 검색, 등록 CLI를 추가했다. 기존 `knowledge_revisions` 구조로 격리 DB 등록·검토·발행·RCA 소비를 검증했다. [DB 등록 안내](runbooks/DB-WORKFLOW.md)에 필드 대응·명령·검토 책임을 기록했다. 이전 RCA PR과 별개로 이 후속 작업은 로컬 변경 단계이며 운영 DB에는 적재하지 않았다. 다른 세션과의 조율은 사용자 지시로 중단했다.
 
+최신 콘텐츠 확장: 기존 대표 3건에서 **XID 173건·SXID 93건 + 일반 1건 = 267건**으로 늘렸다. 자료 범위의 코드별 작성은 완료했으며 미정의/Unused·정의 충돌·소스만 있는 항목은 명시적으로 구분했다. [전체 목록](runbooks/CATALOG.md)과 manifest를 먼저 확인한다. 실제 환경 query/parser·compatibility 및 운영 DB 발행은 남아 있다.
+
+최신 파일 정리: XID/SXID JSON을 각각 runbooks/xid, runbooks/sxid로 이동했다. knowledge_key와 DB 계약은 유지한다. [일괄 등록 CLI](src/rcca_agent/runbook_import.py)가 전체 사전 검사·API draft 등록·응답 저장·중단 후 재개·429 대기를 제공한다. 공통 개발 설명은 JSON에서 문서로 옮겼다.
+
 ## 먼저 읽을 문서
 
 | 순서 | 문서 | 확인할 내용 |
@@ -43,9 +47,9 @@
 
 ## Runbook 현재 상태
 
-[일반 조사](runbooks/RB-GENERAL-GPU-NODE.json), [Xid 79](runbooks/RB-XID-79.json), [Xid 48 및 동반 코드](runbooks/RB-XID-48-63-64.json), [SXid 11001](runbooks/RB-SXID-11001.json) 총 4건이다. **모두 compatibility가 빈 작성 초안이며 운영 실행·발행 완료 상태가 아니다.**
+[일반 조사](runbooks/RB-GENERAL-GPU-NODE.json), [Xid 79](runbooks/xid/RB-XID-79.json), [Xid 48 및 동반 코드](runbooks/xid/RB-XID-48-63-64.json), [SXid 11001](runbooks/sxid/RB-SXID-11001.json) 등 기존 4건에 코드별 263건을 추가해 총 267건이다. **모두 compatibility가 빈 작성 초안이며 운영 실행·발행 완료 상태가 아니다.**
 
-- 현재 네 초안은 모두 `investigation_only: true`다. 원인 supported/조기 완료의 근거로 쓰지 않고 콘텐츠 recommendations를 최종 eligible 조치로 발행하지 않는다. 승인된 전용·일반 Runbook이 모두 없으면 `approved_runbook` 부족을 기록하고 조회하지 않는다.
+- 현재 모든 초안은 `investigation_only: true`다. 원인 supported/조기 완료의 근거로 쓰지 않고 콘텐츠 recommendations를 최종 eligible 조치로 발행하지 않는다. 승인된 전용·일반 Runbook이 모두 없으면 `approved_runbook` 부족을 기록하고 조회하지 않는다.
 - 위 보류는 RCA 작업 접수·시작을 막는다는 뜻이 아니다. JC claim과 사건/Runbook 검토는 수행하며, 승인 계획이 없을 때 MCP 수집·LLM 분석을 생략하고 blocked 결과를 저장·공개한다. 전용 Runbook 미일치는 승인된 일반 계획으로 조사한다.
 - Worker는 파일 디렉터리를 자동 읽지 않고 DB의 scope·고정 revision/hash·검토 상태를 검사한다. Helm upgrade는 이 JSON을 DB에 발행하지 않는다.
 - 현재 조건식은 등록 문자열 fact의 `field/equals`다. D09/D05는 로그·상태, D02는 보조 사용률 계획이며 `fact_names` 자체가 fact 생성기를 제공하지 않는다.
@@ -78,7 +82,7 @@ E2E는 위 단위 명령에 포함되지 않는다. 별도 테스트 전용 Post
 
 이 PC의 Windows 검증에서는 경로의 대괄호가 Go embed를, 한글이 PostgreSQL initdb를 방해해 임시 소스 복사본·ASCII 테스트 scratch 경로를 사용했다. 다른 PC에서는 ASCII·대괄호 없는 checkout 경로를 권장한다. `.local`의 venv·바이너리·로그·임시 runner와 개인 환경변수는 Git으로 전달되지 않는다. 기존 로컬 경로를 복사하는 대신 고정 의존성을 새로 준비한다.
 
-XID/SXID DB 연계 후 최신 검증은 **전체 103건(일반 94 + E2E 9) 통과**다. 이전 RCA PR의 102건에 세 오류 콘텐츠의 실제 Backend API 생명주기·Worker 소비 검사를 추가했다. Backend의 vet/race test/build와 DB E2E도 통과했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료로 승계하지 않는다.
+최신 검증은 **전체 106건(일반 97 + E2E 9) 통과**다. 신규 263건을 실제 일괄 CLI로 격리 DB에 등록하고, 재실행 시 중복 쓰기 없이 재개되는지 확인했다. 기존 대표 3건의 검토·발행·RCA 소비도 통과했다. Backend vet/race test/build와 DB E2E도 통과했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료를 의미하지 않는다. 자세한 실행 범위는 [Agent QA](../agents/QA.md)를 따른다.
 
 ## 원격 반영과 CSC 적용
 

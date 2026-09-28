@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-XID-155",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2803",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 155 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 155 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 155; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 155 NVLink·연결 상대 조사",
+    "description": "XID 155: NVLINK: SW Defined Error.",
+    "claim": "XID 155 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "nvlink"
+    },
+    "search": {
+      "codes": [
+        "xid:155"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "NVLINK: SW Defined Error"
+      ],
+      "symptoms": [
+        "NVLink·연결 상대"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: GPU/NVSwitch 양쪽 원본 로그, link 번호·remote endpoint·포트 역할·partition 토폴로지, 링크 상태/대역폭·재전송/CRC/ECC 카운터의 같은 기간 변화를 수집한다.",
+      "판단: 장치 양쪽의 사건 시간과 링크 상태를 맞추고 reset·shutdown·소프트웨어 변경·열 사건을 대조한다. 상대 장치에서 전파된 오류와 로컬 원인을 구분하며 단일 GPU의 로그만으로 영향 범위를 넓히지 않는다.",
+      "Fleet 고정 카탈로그: NVLINK: SW Defined Error; event_type=Warning; 기본 action=REBOOT_SYSTEM.",
+      "NVIDIA 적용: B100, GB200; 제외: A100, H100.",
+      "NVIDIA 조치 분류: immediate=RESET_GPU; investigatory=INVESTIGATE_SW_USER; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+      "의도된 link down/SLEEP 전환인지 사용자·소프트웨어 이력과 대조한다. 계획된 전환과 예기치 않은 연결 상실을 구분한다.",
+      "조건부 권고: 활성 작업·공유 GPU/NVLink 의존성 및 모델별 reset 가능 범위를 확인한 뒤 운영자가 GPU reset을 검토한다. 호스트 재부팅으로 자동 확대하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "활성 작업·공유 GPU/NVLink 의존성 및 모델별 reset 가능 범위를 확인한 뒤 운영자가 GPU reset을 검토한다. 호스트 재부팅으로 자동 확대하지 않는다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:155"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:155"
+      }
+    ],
+    "investigation_only": true
+  }
+}

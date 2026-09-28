@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-XID-143",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2677",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 143 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 143 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 143; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 143 드라이버·펌웨어 조사",
+    "description": "XID 143: GPU Initialization Error.",
+    "claim": "XID 143 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_SOFTWARE",
+      "category": "driver_firmware"
+    },
+    "search": {
+      "codes": [
+        "xid:143"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "GPU Initialization Error"
+      ],
+      "symptoms": [
+        "드라이버·펌웨어"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: 드라이버·펌웨어/GSP 버전, 부팅·모듈 로드 시각, RPC/마이크로컨트롤러 원문·타임아웃, 최근 업데이트와 이전 정상 실행 기록을 모은다.",
+      "판단: 버전 변경과 오류 시작의 관계, 같은 장치의 반복, 다른 장치/노드의 동시 발생을 비교한다. 시간적 근접만으로 업데이트를 원인으로 확정하지 않고 원본과 재현 자료를 벤더에 전달한다.",
+      "Fleet 고정 카탈로그: GPU Initialization Failure; event_type=Fatal; 기본 action=HARDWARE_INSPECTION.",
+      "NVIDIA 적용: H100, B100, GB200; 제외: A100.",
+      "NVIDIA 조치 분류: immediate=RESET_GPU; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.9; GPU driver R575.",
+      "GPU 초기화 실패의 부팅·드라이버 로드·장치 접근 기록을 확보한다. 초기화 미완료와 운영 중 접근 상실을 구분한다.",
+      "조건부 권고: 활성 작업·공유 GPU/NVLink 의존성 및 모델별 reset 가능 범위를 확인한 뒤 운영자가 GPU reset을 검토한다. 호스트 재부팅으로 자동 확대하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "활성 작업·공유 GPU/NVLink 의존성 및 모델별 reset 가능 범위를 확인한 뒤 운영자가 GPU reset을 검토한다. 호스트 재부팅으로 자동 확대하지 않는다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:143"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:143"
+      }
+    ],
+    "investigation_only": true
+  }
+}
