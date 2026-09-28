@@ -147,9 +147,28 @@ func (s *Server) profiles(w http.ResponseWriter, q *Request, parts []string) err
 				return e
 			}
 			config["name"] = profileName
-			for _, k := range []string{"name", "endpoint_url", "model_name", "artifact_revision", "engine_revision", "precision", "limits_profile_id"} {
+			if creating {
+				if profileName == "" {
+					profileName = String(config, "model_name")
+					config["name"] = profileName
+				}
+				if _, ok := config["limits_profile_id"]; !ok {
+					config["limits_profile_id"] = "C07"
+				}
+				if _, ok := config["capabilities"]; !ok {
+					config["capabilities"] = Object{}
+				}
+			}
+			for _, k := range []string{"name", "endpoint_url", "model_name", "limits_profile_id"} {
 				if String(config, k) == "" {
 					return Invalid(k)
+				}
+			}
+			for _, k := range []string{"name", "artifact_revision", "engine_revision", "precision"} {
+				if raw, exists := q.Body[k]; exists {
+					if _, ok := raw.(string); !ok {
+						return Invalid(k)
+					}
 				}
 			}
 			if _, e = s.modelURL(String(config, "endpoint_url")); e != nil {

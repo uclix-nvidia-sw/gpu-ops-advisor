@@ -109,12 +109,19 @@ function Models() {
         </QueryState>
         <More query={q} />
         <div className="live-padding">
+          <Notice>
+            여기는 모델 프로필을 저장하는 화면입니다. 현재 Agent의 실제 호출에는 별도의 배포 환경
+            설정(API 주소·모델명·인증 키)이 필요합니다.
+          </Notice>
           <CommandError error={cmd.error} />
           {test && (
             <>
               <h3>연결 검사 결과</h3>
               <DataView value={test} />
-              <Notice>전송·응답 형식 검사 결과입니다. 추론 품질은 별도로 검증해야 합니다.</Notice>
+              <Notice>
+                인증 없이 모델 목록을 조회한 결과입니다. 인증이 필요한 서버는 실패할 수 있으며, 실제
+                추론 호출과 Agent 연결은 별도로 확인해야 합니다.
+              </Notice>
             </>
           )}
         </div>
@@ -123,7 +130,7 @@ function Models() {
     </>
   );
 }
-function ModelForm({ initial, onClose }: { initial: Row; onClose: () => void }) {
+export function ModelForm({ initial, onClose }: { initial: Row; onClose: () => void }) {
   const cmd = useCommand(),
     app = useApp();
   const [draft, setDraft] = useState<Row>({
@@ -149,6 +156,7 @@ function ModelForm({ initial, onClose }: { initial: Row; onClose: () => void }) 
         'precision',
         'limits_profile_id',
       ].forEach((k) => (body[k] = str(draft[k]).trim()));
+      body.name = body.name || body.model_name;
       if (secret.trim()) body.secret_ref = secret.trim();
       if (
         await cmd.run(initial.id ? `/models/${str(initial.id)}` : '/models', body, {
@@ -173,47 +181,81 @@ function ModelForm({ initial, onClose }: { initial: Row; onClose: () => void }) 
       confirmClose="입력 중인 변경을 버리고 닫을까요?"
     >
       <form className="stack" onSubmit={save}>
+        <p className="muted">OpenAI 호환 API의 기본 주소와 요청에 사용할 모델명을 입력하세요.</p>
         <div className="form-grid">
           {[
-            ['name', '표시 이름'],
-            ['endpoint_url', '모델 API 주소'],
-            ['model_name', '모델 이름'],
-            ['artifact_revision', '모델 아티팩트 revision'],
-            ['engine_revision', '추론 엔진 revision'],
-            ['precision', '정밀도'],
-            ['limits_profile_id', '운영 한도 프로필'],
-          ].map(([k, l]) => (
-            <Field key={k} label={l}>
+            [
+              'endpoint_url',
+              'API 기본 주소',
+              '예: https://llm.example.com/v1',
+              '/chat/completions를 제외한 기본 주소입니다.',
+            ],
+            [
+              'model_name',
+              '모델 이름',
+              '예: internal-model',
+              'API 요청의 model 값과 같아야 합니다.',
+            ],
+          ].map(([k, l, placeholder, hint]) => (
+            <Field key={k} label={l} hint={hint}>
               <input
                 required
                 type={k === 'endpoint_url' ? 'url' : 'text'}
+                placeholder={placeholder}
                 value={str(draft[k])}
                 onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
               />
             </Field>
           ))}
         </div>
-        <Field
-          label="Secret 참조"
-          hint="비밀 값 자체가 아닌 서버의 Secret 참조를 입력합니다. 비워 두면 기존 참조를 유지합니다."
-        >
-          <input value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" />
-        </Field>
-        <Field label="모델 기능 (JSON)">
-          <textarea
-            rows={3}
-            value={capabilities}
-            onChange={(e) => setCapabilities(e.target.value)}
-          />
-        </Field>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={draft.enabled === true}
-            onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
-          />
-          사용
-        </label>
+        <details>
+          <summary>추가 설정 (선택)</summary>
+          <div className="stack">
+            <div className="form-grid">
+              {[
+                ['name', '표시 이름'],
+                ['artifact_revision', '모델 아티팩트 revision'],
+                ['engine_revision', '추론 엔진 revision'],
+                ['precision', '정밀도'],
+                ['limits_profile_id', '운영 한도 프로필'],
+              ].map(([k, l]) => (
+                <Field key={k} label={l}>
+                  <input
+                    required={k === 'limits_profile_id'}
+                    value={str(draft[k])}
+                    placeholder={k === 'name' ? '비워 두면 모델 이름 사용' : undefined}
+                    onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                  />
+                </Field>
+              ))}
+            </div>
+            <Field
+              label="인증 Secret 참조"
+              hint="API 키 원문은 입력하지 마세요. 참조만 저장하며 Agent 인증 키는 배포 환경에서 별도로 설정합니다. 비워 두면 기존 참조를 유지합니다."
+            >
+              <input
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="모델 기능 (JSON)">
+              <textarea
+                rows={3}
+                value={capabilities}
+                onChange={(e) => setCapabilities(e.target.value)}
+              />
+            </Field>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={draft.enabled === true}
+                onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+              />
+              사용
+            </label>
+          </div>
+        </details>
         <Notice>연결 주소는 백엔드에 등록된 허용 호스트여야 합니다.</Notice>
         <CommandError error={cmd.error} />
         <button className="button primary" disabled={cmd.busy || !app.canManage}>

@@ -26,6 +26,7 @@ npm run dev
 - 보고서: JC 접수 응답 후 job 이동, 저장된 final의 주제별 수치·산출 불가 이유·수집 상태 표시, HTML/CSV 다운로드. GPU–Pod 연결 관측 시간과 독점 할당량을 구분합니다.
 - 일정: Backend의 평탄한 calendar 입력·report_spec, revision 수정·일시 정지·occurrence 조회.
 - 지식/모델: 불변 revision·검토/발행, rca/report 모델 라우팅, secret_ref만 저장.
+- 모델 등록: API 기본 주소(`/v1` 등, `/chat/completions` 제외)와 모델명만 필수입니다. 표시 이름은 모델명, 운영 한도는 C07로 시작하며 revision·정밀도·인증 참조·기능은 접힌 추가 설정에서 입력합니다. 등록값은 프로필 저장용이며 현재 Agent 호출은 배포 환경의 `LLM_BASE_URL`·`LLM_MODEL`·`LLM_API_KEY`를 따릅니다. 연결 검사는 인증 없는 `GET /models`이며 실제 추론 성공을 뜻하지 않습니다.
 - 변경 요청: 멱등 키를 생성하고 응답 유실 시 같은 본문/키/최초 버전을 재사용합니다.
 - HTTP NodePort 접속: 요청 fingerprint는 브라우저 SHA-256 구현으로, UUID는 `crypto.getRandomValues`로 생성합니다. HTTPS 전용 `crypto.subtle`·`crypto.randomUUID`에 의존하지 않습니다. 기존 SHA-256 fingerprint와 재시도 키는 유지합니다.
 
