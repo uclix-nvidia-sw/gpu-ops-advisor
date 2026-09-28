@@ -15,3 +15,7 @@
 *.pptx -text
 *.woff -text
 *.woff2 -text
+
+# Preserve generated diagram bytes for the recorded SHA-256 receipts.
+docs/architecture/report-agent-workflow/*.html -text whitespace=cr-at-eol
+docs/architecture/report-agent-workflow/report-agent.workflow.json -text whitespace=cr-at-eol

@@ -52,6 +52,8 @@ Claude Code에서는 새 세션을 열어 `/context`에서 공통 규칙을 확�
 - [Runbook-first 검색·조사 파이프라인 초안](specs/rca-agent/drafts/gpu-node-rca-runbook-first-pipeline.md)
 - [GPU 노드 RCA Knowledge DB 참고 설계](specs/rca-agent/drafts/knowledge-db-reference.md)
 
+보고서 Agent의 후속 개발 제안은 [워크플로우 검토안·도식](architecture/report-agent-workflow/README.md)에 별도로 보관합니다. 현재 통계·공개 RCA 소비 경로와 향후 개선 후보·LLM 조언·보완 조회를 구분한 설계 초안이며, 현행 12번 명세나 구현 완료 상태를 대체하지 않습니다.
+
 ## 구현 상태
 
 2026-09-28 RCA·Runbook 후속 개발 상태는 [인수인계 문서](../rcca-agent/HANDOFF.md)에서 확인합니다. 아래의 이전 제품 전체 기준과 구분하며, 로컬 구현·fixture 검증을 운영 배포 완료로 해석하지 않습니다.

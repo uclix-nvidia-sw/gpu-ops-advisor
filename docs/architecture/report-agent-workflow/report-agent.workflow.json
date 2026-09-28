@@ -1,0 +1,237 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "보고서 Agent · 통계에서 운영 개선 조언까지",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "request",
+      "label": "접수 · 예약 · 배분"
+    },
+    {
+      "id": "analysis",
+      "label": "Ops Agent · 수집과 분석"
+    },
+    {
+      "id": "publication",
+      "label": "검증 · 저장 · 공개"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "request",
+      "col": 0,
+      "type": "frontend",
+      "label": "① 보고서 의뢰",
+      "sublabel": "범위 · 기간 · 주제 · 주기",
+      "tag": "Frontend",
+      "width": 154
+    },
+    {
+      "id": "schedule",
+      "lane": "request",
+      "col": 1,
+      "type": "backend",
+      "label": "② 일정 · 발생 저장",
+      "sublabel": "절대 기간 고정 · outbox",
+      "tag": "Backend",
+      "width": 154
+    },
+    {
+      "id": "queue",
+      "lane": "request",
+      "col": 2,
+      "type": "messagebus",
+      "label": "③ 보고서 작업 접수",
+      "sublabel": "큐 · 슬롯 · lease 관리",
+      "tag": "Job Controller",
+      "width": 154
+    },
+    {
+      "id": "claim",
+      "lane": "request",
+      "col": 3,
+      "type": "backend",
+      "label": "④ 작업 인수",
+      "sublabel": "상시 Worker의 claim",
+      "tag": "Ops Agent",
+      "width": 154
+    },
+    {
+      "id": "evidence",
+      "lane": "analysis",
+      "col": 3,
+      "type": "database",
+      "label": "⑤ 근거 확보",
+      "sublabel": "공개 RCA · 사건 · MCP 관측",
+      "tag": "현행 기반",
+      "width": 154
+    },
+    {
+      "id": "statistics",
+      "lane": "analysis",
+      "col": 2,
+      "type": "backend",
+      "label": "⑥ 통계 계산",
+      "sublabel": "신원 · 단위 · 유효 구간 검증",
+      "tag": "현행 + 보완",
+      "width": 154
+    },
+    {
+      "id": "opportunities",
+      "lane": "analysis",
+      "col": 1,
+      "type": "backend",
+      "label": "⑦ 개선 후보 도출",
+      "sublabel": "저활동 · 배치 · 정비 · 에너지",
+      "tag": "확장 제안",
+      "width": 154
+    },
+    {
+      "id": "advice",
+      "lane": "analysis",
+      "col": 0,
+      "type": "cloud",
+      "label": "⑧ 근거 기반 조언",
+      "sublabel": "LLM 해석 · 전제 · 다음 행동",
+      "tag": "확장 제안",
+      "width": 154
+    },
+    {
+      "id": "validate",
+      "lane": "publication",
+      "col": 0,
+      "type": "security",
+      "label": "⑨ 결과 검증",
+      "sublabel": "수치 참조 · 주장 · 권고 자격",
+      "tag": "의미 검증 보완",
+      "width": 154
+    },
+    {
+      "id": "save",
+      "lane": "publication",
+      "col": 1,
+      "type": "database",
+      "label": "⑩ 후보 · 근거 저장",
+      "sublabel": "저장 수치로 HTML/CSV 생성",
+      "tag": "Ops Agent",
+      "width": 154
+    },
+    {
+      "id": "publish",
+      "lane": "publication",
+      "col": 2,
+      "type": "messagebus",
+      "label": "⑪ 완료 검증 · 공개",
+      "sublabel": "complete · 공개 결과 확정",
+      "tag": "Job Controller",
+      "width": 154
+    },
+    {
+      "id": "view",
+      "lane": "publication",
+      "col": 3,
+      "type": "frontend",
+      "label": "⑫ 조회 · 운영 검토",
+      "sublabel": "Backend 조회 · 사람이 조치",
+      "tag": "Frontend",
+      "width": 154
+    }
+  ],
+  "edges": [
+    {
+      "from": "request",
+      "to": "schedule",
+      "label": "정기 등록"
+    },
+    {
+      "from": "schedule",
+      "to": "queue",
+      "label": "예약 시점 도래"
+    },
+    {
+      "from": "queue",
+      "to": "claim",
+      "label": "claim 응답"
+    },
+    {
+      "from": "claim",
+      "to": "evidence",
+      "label": "범위 · 기간 고정"
+    },
+    {
+      "from": "evidence",
+      "to": "statistics"
+    },
+    {
+      "from": "statistics",
+      "to": "opportunities"
+    },
+    {
+      "from": "opportunities",
+      "to": "advice"
+    },
+    {
+      "from": "advice",
+      "to": "validate"
+    },
+    {
+      "from": "validate",
+      "to": "save",
+      "label": "유효 결과 보존"
+    },
+    {
+      "from": "save",
+      "to": "publish",
+      "label": "complete 요청"
+    },
+    {
+      "from": "publish",
+      "to": "view",
+      "label": "공개 결과 조회"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "기존 실행 구조 유지",
+      "items": [
+        "즉시 요청은 일정 등록 없이 Backend → JC 접수",
+        "⑤에서 DB cutoff·RCA ID/hash와 관측 응답을 보존"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "개선 조언은 확장 목표",
+      "items": [
+        "현재 LLM은 사실 선택 · O03은 확인 권고를 보류 상태로 제공",
+        "⑦~⑨에서 근거·전제·우선순위·확인 지표를 연결"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "부족한 근거는 드러내기",
+      "items": [
+        "보완 조회는 허용 범위·예산 안에서만 수행하는 제안",
+        "주제별 partial/blocked · 유효 통계 보존 · 조치는 사람"
+      ]
+    }
+  ],
+  "semanticChecks": {
+    "requiredPaths": [
+      {
+        "to": "view",
+        "from": "request"
+      }
+    ],
+    "allowedTerminals": [
+      "view"
+    ],
+    "allowedRoots": [
+      "request"
+    ]
+  }
+}
