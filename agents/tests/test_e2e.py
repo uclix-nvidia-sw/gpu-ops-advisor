@@ -45,6 +45,7 @@ def port():
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
+    api_key = "fixture-only"
     logs_fail = False
 
     def log_message(self, *args):
@@ -66,6 +67,10 @@ class Upstream(BaseHTTPRequestHandler):
         body = json.loads(raw or "{}")
         self.requests.append((self.path, body))
         if self.path == "/v1/chat/completions":
+            if self.headers.get("Authorization") != "Bearer " + self.api_key:
+                return self.send({"error": "unauthorized"}, 401)
+            if len(body.get("messages", [])) == 1:
+                return self.send({"choices": [{"message": {"content": "OK"}}]})
             if self.llm_fail:
                 return self.send({"error": "fixture unavailable"}, 503)
             if body.get("tools"):
@@ -528,7 +533,9 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack):
     synthesis_requests = [
         json.loads(body["messages"][1]["content"])
         for path, body in Upstream.requests
-        if path == "/v1/chat/completions" and "tools" not in body
+        if path == "/v1/chat/completions"
+        and "tools" not in body
+        and len(body.get("messages", [])) > 1
     ]
     plans = next(
         p["runbook_plans"] for p in synthesis_requests if "observation_refs" in p
@@ -790,6 +797,145 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
     assert not any(
         p == "/v1/chat/completions" for p, _ in Upstream.requests[request_start:]
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("kind", ["rca", "report"])
+def test_gui_model_auth_and_pinned_revision_reach_real_worker(stack, kind, monkeypatch):
+    key = "model-authentication-secret-fixture"
+    monkeypatch.setattr(Upstream, "api_key", key)
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    )
+    assert binary.is_file(), "Build Backend for model authentication E2E"
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    endpoint = stack["env"]["LLM_BASE_URL"]
+    host = urlparse(endpoint).netloc
+    process = stack["spawn"](
+        [str(binary)],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "true",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+            "DSX_MODEL_HOSTS": host,
+            "LLM_API_KEY": key,
+        },
+        "model-backend-" + kind,
+    )
+    wait_http(backend + "/health/ready", process)
+    with httpx.Client(base_url=backend, timeout=40) as client:
+
+        def command(path, body, version=None, method="POST"):
+            headers = {"Idempotency-Key": uuid4().hex}
+            if version is not None:
+                headers["If-Match"] = str(version)
+            response = client.request(method, path, json=body, headers=headers)
+            assert response.is_success, response.status_code
+            assert key not in response.text
+            return response.json()
+
+        model = command(
+            "/models",
+            {
+                "endpoint_url": endpoint,
+                "model_name": "saved-model-" + kind,
+                "secret_ref": "env:LLM_API_KEY",
+            },
+        )
+        path = "/models/" + model["id"]
+        checked = command(path + "/test-connection", {"revision": 1}, 1)
+        assert checked["transport"]["http_status"] == 200
+        assert checked["schema"]["status"] == "ok"
+        # This is a real 401 from the authenticated upstream fixture, not bad JSON.
+        anonymous = command(
+            "/models", {"endpoint_url": endpoint, "model_name": "anonymous-" + kind}
+        )
+        failed = command(
+            "/models/" + anonymous["id"] + "/test-connection", {"revision": 1}, 1
+        )
+        assert failed["schema"]["reason"] == "authentication_failed"
+        routes = client.get("/model-routes").json()
+        command(
+            "/model-routes",
+            {kind: {"model_id": model["id"], "model_revision": 1}},
+            routes["version"],
+            "PATCH",
+        )
+        try:
+            data = dict(
+                scope=SCOPE,
+                time_range=PERIOD,
+                timezone="UTC",
+                topic_ids=["O09"],
+                group_by=["cluster"],
+            )
+            if kind == "rca":
+                iid = str(uuid4())
+                data = dict(
+                    scope=SCOPE,
+                    incident_id=iid,
+                    evidence_version=1,
+                    analysis_profile_revision="fixture-v1",
+                    incident_time="2026-09-15T00:15:00Z",
+                    time_range=PERIOD,
+                    purpose_ids=["R05"],
+                )
+                snapshot = {"input": data, "evidence": {"symptom": "gpu_access"}}
+                with psycopg.connect(stack["url"]) as conn:
+                    conn.execute(
+                        "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+                        (iid, Jsonb(SCOPE), data["incident_time"]),
+                    )
+                    conn.execute(
+                        "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+                        (iid, Jsonb(snapshot), content_hash(snapshot)),
+                    )
+            routed = {
+                **stack,
+                "env": {
+                    **stack["env"],
+                    "LLM_BASE_URL": "http://must-not-be-used.invalid/v1",
+                    "LLM_MODEL": "must-not-be-used",
+                    "LLM_API_KEY": key,
+                    "DSX_MODEL_HOSTS": host,
+                },
+            }
+            jid = submit(routed, kind, data)
+            command(path, {"model_name": "later-revision"}, 1, "PATCH")
+            start = len(Upstream.requests)
+            result, _ = worker_result(routed, kind, jid, "-routed")
+            calls = [
+                body
+                for path, body in Upstream.requests[start:]
+                if path == "/v1/chat/completions"
+            ]
+            assert calls and all(
+                body["model"] == "saved-model-" + kind for body in calls
+            )
+            if kind == "report":
+                assert result["narrative_status"] == "complete"
+            else:
+                assert result["quality"]["analysis"]["status"] == "complete"
+            with psycopg.connect(stack["url"]) as conn:
+                for table in [
+                    "service_profiles",
+                    "profile_revisions",
+                    "jobs",
+                    "audit_events",
+                ]:
+                    rows = conn.execute(
+                        sql.SQL("SELECT to_jsonb(t)::text FROM {} t").format(
+                            sql.Identifier(table)
+                        )
+                    ).fetchall()
+                    assert all(key not in row[0] for row in rows)
+        finally:
+            routes = client.get("/model-routes").json()
+            command("/model-routes", {kind: None}, routes["version"], "PATCH")
 
 
 @pytest.mark.e2e

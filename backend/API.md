@@ -50,7 +50,11 @@
 
 `POST /models`의 최소 본문은 `{"endpoint_url":"https://llm.example.com/v1","model_name":"internal-model"}`이다. 기존 Idempotency-Key와 목적지 허용 목록 검사는 유지한다. 표시 이름은 생략하거나 빈 문자열이면 model_name을 사용하고, limits_profile_id·capabilities를 생략하면 각각 C07·빈 객체를 사용한다. C07은 실제 활성 프로필이어야 한다. artifact_revision·engine_revision·precision은 선택 문자열이며 미입력 값을 만들어 채우지 않는다. PATCH에서 생략한 값과 secret_ref, 과거 불변 revision은 보존한다.
 
-프로필·라우팅 저장과 Worker 호출 설정은 현재 별개다. Agent는 배포 환경의 LLM_BASE_URL·LLM_MODEL·LLM_API_KEY를 사용한다. test-connection은 기본 주소에 `/models`를 붙여 인증 없이 GET하고 모델 ID를 확인한다. 저장된 secret_ref를 인증 헤더로 해석하지 않으며 실제 추론 호출·인증·Agent 연결 성공을 검증하지 않는다.
+인증은 `secret_ref="env:LLM_API_KEY"`로 배포된 키를 선택하거나 빈 문자열로 해제한다. API 키 원문과 다른 환경변수 참조는 422로 거부한다. 참조를 생략한 PATCH는 기존 값을 유지한다. 키는 프로필·revision·감사·작업 본문에 저장하지 않는다. 신규 설치에서도 빈 model-routes 행을 생성하며 기존 라우팅은 덮어쓰지 않는다.
+
+test-connection은 선택한 인증으로 `/chat/completions`에 짧은 요청(최대 출력 128토큰, 대기 30초)을 보낸다. `transport`는 HTTP 도달 여부, `schema`는 비어 있지 않은 답변 수신 여부다. 401은 authentication_failed, 403은 permission_denied, 404는 model_or_endpoint_not_found로 구분한다. 응답 본문은 반환·감사 기록에 남기지 않는다. 키 미구성은 MODEL_AUTH_NOT_CONFIGURED로 실패한다. 호스트·사설 CIDR·DNS 고정·redirect 차단은 유지한다.
+
+RCA/보고서 모델 지정 후 새로 접수된 작업은 JC가 고정한 모델 ID·revision의 스냅샷을 두 Worker가 읽어 호출한다. 과거 작업은 고정 revision을 유지하며 키는 실행 환경에서 해석한다. 지정된 모델/키가 없으면 다른 모델로 대체하지 않는다. 모델 지정이 없는 작업만 기존 LLM_BASE_URL·LLM_MODEL·단계별 모델 설정을 사용한다. 배포·확인 절차는 [모델 인증 연결](../docs/model-connection.md)을 따른다.
 
 ## Runbook 지식 검증과 검색
 

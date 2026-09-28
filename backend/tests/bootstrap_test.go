@@ -85,9 +85,10 @@ func TestFreshBackendWithoutDemoSeed(t *testing.T) {
 	var clusters, profiles int
 	must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM cluster_registry").Scan(&clusters))
 	must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM service_profiles").Scan(&profiles))
-	if clusters != 0 || profiles != 1 {
-		t.Fatalf("expected only runtime limits, got %d clusters and %d profiles", clusters, profiles)
+	if clusters != 0 || profiles != 2 {
+		t.Fatalf("expected runtime limits and empty routing, got %d clusters and %d profiles", clusters, profiles)
 	}
+	request(t, base+"/model-routes", "GET", nil, 200)
 	request(t, base+"/clusters", "GET", nil, 200)
 	request(t, base+"/reports", "POST", Object{
 		"scope":      Object{"clusters": []any{Object{"cluster_id": "unregistered", "namespaces": nil}}},

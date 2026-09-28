@@ -10,6 +10,7 @@ import httpx
 
 from .contracts import timestamp, validate_input
 from .llm import LLM, RemoteUncertain
+from .model import model_settings
 from .runtime import attempt_context
 from .store import Store
 from .artifacts import save_artifacts
@@ -91,8 +92,11 @@ class Worker:
                 raise TimeoutError()
             async with asyncio.timeout_at(deadline):
                 context = await self.store.read_context(claim)
+                settings = model_settings(
+                    self.settings, context.pop("model_profile", None)
+                )
                 llm = LLM(
-                    self.settings,
+                    settings,
                     deadline,
                     int(claim["budget"]["attempt_limit"]),
                     lambda value: state.update(remote_call_state=value),
@@ -104,7 +108,7 @@ class Worker:
                         context=context,
                         llm=llm,
                         deadline=deadline,
-                        settings=self.settings,
+                        settings=settings,
                     )
                 )
                 state["stage"] = "workflow"

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -139,6 +140,9 @@ func (s *Server) profiles(w http.ResponseWriter, q *Request, parts []string) err
 			v, ok := raw.(string)
 			if !ok {
 				return Invalid("secret_ref")
+			}
+			if category == "model" && v != "" && v != "env:LLM_API_KEY" {
+				return Fail(422, "MODEL_AUTH_REF_UNSUPPORTED", "지원하는 인증 참조는 env:LLM_API_KEY입니다. API 키 원문을 입력하지 마세요.")
 			}
 			secretRef = v
 		}
@@ -284,12 +288,38 @@ func (s *Server) connection(w http.ResponseWriter, q *Request, v Object) error {
 	if Number(q.Body, "revision") != Number(v, "version") {
 		return Fail(409, "version_conflict", "검사할 모델 revision이 일치하지 않습니다.")
 	}
-	config, _ := v["config"].(map[string]any)
-	u, e := s.modelURL(String(config, "endpoint_url"))
+	out, e := s.probeModel(q.R.Context(), v)
 	if e != nil {
 		return e
 	}
-	ctx, cancel := context.WithTimeout(q.R.Context(), 3*time.Second)
+	e = s.DB.Transaction(q.R.Context(), func(tx pgx.Tx) error {
+		return store.Audit(q.R.Context(), tx, "unverified", "test_connection", "service_profiles", String(v, "id"), q.ID, nil, out)
+	})
+	if e != nil {
+		return e
+	}
+	s.write(w, q.ID, 200, out)
+	return nil
+}
+
+func (s *Server) probeModel(parent context.Context, v Object) (Object, error) {
+	key := ""
+	switch String(v, "secret_ref") {
+	case "":
+	case "env:LLM_API_KEY":
+		key = s.Config.ModelAPIKey
+		if key == "" {
+			return nil, Fail(422, "MODEL_AUTH_NOT_CONFIGURED", "배포된 LLM_API_KEY가 없습니다. llm.existingSecret 설정을 확인해 주세요.")
+		}
+	default:
+		return nil, Fail(422, "MODEL_AUTH_REF_UNSUPPORTED", "지원하는 인증 참조는 env:LLM_API_KEY입니다. API 키 원문을 입력하지 마세요.")
+	}
+	config, _ := v["config"].(map[string]any)
+	u, e := s.modelURL(String(config, "endpoint_url"))
+	if e != nil {
+		return nil, e
+	}
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	out := Object{"revision": v["version"], "checked_at": time.Now().UTC(), "transport": Object{"status": "failed", "reason": "connection_failed"}, "schema": Object{"status": "not_checked"}}
 	ips, lookupErr := net.DefaultResolver.LookupIPAddr(ctx, u.Hostname())
@@ -320,20 +350,37 @@ func (s *Server) connection(w http.ResponseWriter, q *Request, v Object) error {
 				return (&net.Dialer{Timeout: 2 * time.Second}).DialContext(ctx, network, address)
 			}}
 			defer transport.CloseIdleConnections()
-			client := &http.Client{Transport: transport, Timeout: 3 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-			u.Path = strings.TrimRight(u.Path, "/") + "/models"
-			request, _ := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+			client := &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+			u.Path = strings.TrimRight(u.Path, "/") + "/chat/completions"
+			payload, _ := json.Marshal(Object{"model": String(config, "model_name"), "messages": []Object{{"role": "user", "content": "Reply exactly OK."}}, "max_tokens": 128, "stream": false})
+			request, _ := http.NewRequestWithContext(ctx, "POST", u.String(), bytes.NewReader(payload))
+			request.Header.Set("Content-Type", "application/json")
+			if key != "" {
+				request.Header.Set("Authorization", "Bearer "+key)
+			}
 			resp, err := client.Do(request)
 			if err == nil {
 				defer resp.Body.Close()
 				out["transport"] = Object{"status": "ok", "http_status": resp.StatusCode}
-				out["schema"] = Object{"status": "failed", "reason": "invalid_model_list"}
+				reason := "invalid_completion"
+				switch resp.StatusCode {
+				case 200:
+				case 401:
+					reason = "authentication_failed"
+				case 403:
+					reason = "permission_denied"
+				case 404:
+					reason = "model_or_endpoint_not_found"
+				default:
+					reason = "upstream_error"
+				}
+				out["schema"] = Object{"status": "failed", "reason": reason}
 				data, readErr := io.ReadAll(io.LimitReader(resp.Body, 65537))
 				var body Object
 				if readErr == nil && len(data) <= 65536 && resp.StatusCode == 200 && json.Unmarshal(data, &body) == nil {
-					if list, ok := body["data"].([]any); ok {
-						for _, item := range list {
-							if m, ok := item.(map[string]any); ok && String(m, "id") == String(config, "model_name") {
+					if list, ok := body["choices"].([]any); ok && len(list) > 0 {
+						if choice, ok := list[0].(map[string]any); ok {
+							if message, ok := choice["message"].(map[string]any); ok && strings.TrimSpace(String(message, "content")) != "" {
 								out["schema"] = Object{"status": "ok"}
 							}
 						}
@@ -344,12 +391,5 @@ func (s *Server) connection(w http.ResponseWriter, q *Request, v Object) error {
 			out["transport"] = Object{"status": "failed", "reason": "destination_not_allowed"}
 		}
 	}
-	e = s.DB.Transaction(q.R.Context(), func(tx pgx.Tx) error {
-		return store.Audit(q.R.Context(), tx, "unverified", "test_connection", "service_profiles", String(v, "id"), q.ID, nil, out)
-	})
-	if e != nil {
-		return e
-	}
-	s.write(w, q.ID, 200, out)
-	return nil
+	return out, nil
 }

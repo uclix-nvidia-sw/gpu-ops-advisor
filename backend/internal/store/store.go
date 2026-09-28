@@ -102,7 +102,7 @@ func Audit(ctx context.Context, tx pgx.Tx, actor, action, kind, id, requestID st
 	return e
 }
 
-// EnsureDefaults creates required runtime limits on a fresh database without
+// EnsureDefaults creates runtime limits and empty model routing without
 // registering example clusters or overwriting operator-managed configuration.
 func (s *Store) EnsureDefaults(ctx context.Context) error {
 	return s.Transaction(ctx, func(tx pgx.Tx) error {
@@ -111,6 +111,10 @@ func (s *Store) EnsureDefaults(ctx context.Context) error {
 			"max_requests_per_minute": 120, "max_text_length": 16000,
 			"max_inflight_requests": 16, "module_timeout_seconds": 10,
 		})
+		if e != nil {
+			return e
+		}
+		_, e = tx.Exec(ctx, "INSERT INTO service_profiles(id,kind,name,config) VALUES($1,'routing','model-routes','{}') ON CONFLICT(kind,name) DO NOTHING", contract.ID())
 		return e
 	})
 }

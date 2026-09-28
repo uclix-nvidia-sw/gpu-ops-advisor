@@ -8,6 +8,8 @@ import time
 
 import httpx
 
+from .model import model_destination
+
 log = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ class LLM:
         return bool(
             self.settings.llm_base_url
             and self.settings.llm_model
-            and self.settings.llm_api_key
+            and (self.settings.llm_api_key or self.settings.llm_routed)
         )
 
     async def complete(self, system, data, stage="synthesis", tools=None):
@@ -76,7 +78,15 @@ class LLM:
             payload.update(
                 tools=tools, tool_choice="required", parallel_tool_calls=False
             )
-        async with httpx.AsyncClient() as client:
+        url = self.settings.llm_base_url + "/chat/completions"
+        headers = {}
+        extensions = {}
+        if self.settings.llm_routed:
+            async with asyncio.timeout_at(self.deadline):
+                url, headers, extensions = await model_destination(url)
+        if self.settings.llm_api_key:
+            headers["Authorization"] = "Bearer " + self.settings.llm_api_key
+        async with httpx.AsyncClient(trust_env=not self.settings.llm_routed) as client:
             client = self.http or client
             for attempt in range(3):
                 timeout = min(
@@ -89,11 +99,10 @@ class LLM:
                 started = time.monotonic()
                 try:
                     response = await client.post(
-                        self.settings.llm_base_url + "/chat/completions",
+                        url,
                         json=payload,
-                        headers={
-                            "Authorization": "Bearer " + self.settings.llm_api_key
-                        },
+                        headers=headers,
+                        extensions=extensions,
                         timeout=timeout,
                     )
                 except (

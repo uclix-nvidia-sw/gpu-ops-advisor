@@ -18,12 +18,14 @@ type Config struct {
 	MaxCatchup                                 int
 	Modules                                    map[string]string
 	ModelHosts                                 []string
+	ModelAPIKey                                string
 	ModelNetworks                              []*net.IPNet
 	Migrate, Seed                              bool
 }
 
 func Load() (Config, error) {
 	c := Config{Address: env("DSX_ADDRESS", "127.0.0.1:8080"), DatabaseURL: os.Getenv("DATABASE_URL"), Modules: map[string]string{}, ModelHosts: strings.FieldsFunc(os.Getenv("DSX_MODEL_HOSTS"), func(r rune) bool { return r == ',' }), Migrate: os.Getenv("DSX_MIGRATE") == "true", Seed: os.Getenv("DSX_SEED") == "true"}
+	c.ModelAPIKey = os.Getenv("LLM_API_KEY")
 	host, _, e := net.SplitHostPort(c.Address)
 	if e != nil {
 		return c, e
