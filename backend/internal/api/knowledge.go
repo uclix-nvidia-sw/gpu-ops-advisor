@@ -43,7 +43,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 		if !Has([]string{"draft", "in_review", "reviewed", "published", "retired"}, state) {
 			return Invalid("state")
 		}
-		return s.page(w, q, "knowledge_revisions", "(visibility='common' OR dsx_scope_contains($1,scope)) AND state=$2 AND ($3='' OR kind=$3) AND ($4='' OR content->>'code'=$4) AND ($5='' OR content::text ILIKE '%'||$5||'%')", []any{scope, state, v.Get("kind"), v.Get("code"), v.Get("symptom")}, knowledgeDTO)
+		return s.page(w, q, "knowledge_revisions", "(visibility='common' OR dsx_scope_contains($1,scope)) AND state=$2 AND ($3='' OR kind=$3) AND ($4='' OR content->>'code'=$4 OR (content->'search'->'codes') ? $4) AND ($5='' OR content::text ILIKE '%'||$5||'%')", []any{scope, state, v.Get("kind"), v.Get("code"), v.Get("symptom")}, knowledgeDTO)
 	}
 	if len(parts) == 4 && parts[2] == "revisions" && method == "GET" {
 		v, e := s.knowledgeRecord(q, s.DB.Pool, parts[1], parts[3])
@@ -80,7 +80,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 			if key == "" || !Has([]string{"runbook", "policy", "data_dictionary", "reference", "case"}, kind) {
 				return Invalid("knowledge_key/kind")
 			}
-			if e := s.validateKnowledge(q, q.Body); e != nil {
+			if e := s.validateKnowledge(q, q.Body, kind); e != nil {
 				return e
 			}
 			revisionID := ID()
@@ -129,7 +129,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 			for k, v := range q.Body {
 				merged[k] = v
 			}
-			if e = s.validateKnowledge(q, merged); e != nil {
+			if e = s.validateKnowledge(q, merged, String(old, "kind")); e != nil {
 				return e
 			}
 			content, compatibility, refs, scope, visibility = merged["content"], merged["compatibility"], merged["source_refs"], merged["scope"], merged["visibility"]
@@ -162,6 +162,11 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 					if state != "in_review" {
 						return Fail(409, "INVALID_STATE", "검토 중인 지식만 승인할 수 있습니다.")
 					}
+					if String(old, "kind") == "runbook" {
+						if err := validateRunbook(content, compatibility, true); err != nil {
+							return err
+						}
+					}
 					next = "reviewed"
 					reviewedHash = Hash(content)
 					reviewer = "unverified"
@@ -186,6 +191,11 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 				}
 				if e = s.evidenceRefs(q, refs, scope, visibility == "common"); e != nil {
 					return e
+				}
+				if String(old, "kind") == "runbook" {
+					if err := validateRunbook(content, compatibility, true); err != nil {
+						return err
+					}
 				}
 				next = "published"
 				published = time.Now().UTC()
@@ -232,7 +242,7 @@ func defaultArray(v any) any {
 	}
 	return v
 }
-func (s *Server) validateKnowledge(q *Request, b Object) error {
+func (s *Server) validateKnowledge(q *Request, b Object, kind string) error {
 	visibility := String(b, "visibility")
 	if !Has([]string{"common", "scoped"}, visibility) {
 		return Invalid("visibility")
@@ -240,6 +250,11 @@ func (s *Server) validateKnowledge(q *Request, b Object) error {
 	content, ok := b["content"].(map[string]any)
 	if !ok || len(content) == 0 {
 		return Invalid("content")
+	}
+	if kind == "runbook" {
+		if err := validateRunbook(content, b["compatibility"], false); err != nil {
+			return err
+		}
 	}
 	if visibility == "scoped" {
 		sc, e := s.scope(q, b["scope"], false)

@@ -1,6 +1,6 @@
 # Runbook 개발 및 RCA 연계
 
-2026-09-28: 로컬 작성 초안 4건과 v1 콘텐츠 검증기를 구현했다. 일반 조사 계획과 Synthesis 지침 전달을 RCA에 연결했다. 운영 DB 등록·검토·발행 및 실제 Grafana/LLM 검증은 수행하지 않았다.
+2026-09-28: 로컬 작성 초안 4건과 v1 콘텐츠 검증기를 구현했다. XID/SXID 3건의 지침·출처를 보강하고 기존 Backend API 등록·검토·발행·RCA 소비를 격리 DB에서 검증했다. 저장 구조와 다른 PC의 재현 절차는 [DB 등록 안내](DB-WORKFLOW.md)를 따른다. 운영 DB 등록 및 실제 Grafana/LLM 검증은 수행하지 않았다.
 
 | 파일 | 진입 단서 | 구현한 범위 |
 |---|---|---|
@@ -29,7 +29,7 @@ JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성
 
 v1 조건식은 기존 {field, equals} 형태다. 적용 조건은 AND이며 exclusion의 결합 의미는 RCA 평가기를 따른다. 임계값·정규식·시간 순서·미등록 연산자를 추가하지 않았다. error_code는 xid:79 또는 sxid:값처럼 정규화된 문자열이어야 한다. 현재는 producer_contract, error_code, normalized_health, component, severity의 문자열 조건만 허용한다.
 
-일반 조사 콘텐츠에는 `investigation_only: true`를 명시한다. 이 경우에만 빈 applicability_conditions를 허용하며, 원인 supported 판정·기존 근거만으로 조기 완료하는 근거로 사용하지 않는다. `rca.general_runbook_key`에 지정한 v1 콘텐츠에 이 표시가 없으면 실행 계획에서 제외한다. 일반 조사도 schema·scope·hash·호환성 검증을 통과해야 한다.
+현재 네 콘텐츠 모두 `investigation_only: true`를 명시한다. 조사용 콘텐츠의 recommendations도 현재 workflow의 최종 eligible 조치 목록에는 포함하지 않는다. 이 경우에만 빈 applicability_conditions를 허용하며, 원인 supported 판정·기존 근거만으로 조기 완료하는 근거로 사용하지 않는다. `rca.general_runbook_key`에 지정한 v1 콘텐츠에 이 표시가 없으면 실행 계획에서 제외한다. 일반 조사도 schema·scope·hash·호환성 검증을 통과해야 한다.
 
 선택된 계획의 `analysis_guidance`와 `limitations`는 revision·적용 상태와 함께 도구 없는 Synthesis 입력으로 전달한다. pending 계획의 조건은 미확인 상태이며 지침은 관측 사실이 아니다. LLM이 지침을 받았다고 parser 없는 오류 코드가 검증되지는 않는다.
 
@@ -86,6 +86,6 @@ python -c "import sys; sys.path[:0]=['rcca-agent/src','shared/python/src','ops-a
 3. ECC 동반 코드의 순서·모델별 수치 판단은 별도 query/parser/조건 기능이 마련된 후 확장한다.
 4. 부족·충돌·수집 실패·잘못된 대상 사건으로 RCA 통합 검증 후 기존 draft → in_review → reviewed → published 절차를 거친다.
 
-현재 Backend의 일반 Knowledge 검증은 이 v1 콘텐츠 검증기를 실행하지 않으며 code 검색 필터도 search.codes의 전용 인덱스가 아니다. 운영 authoring/publish 검증 및 검색 API 확장은 후속 연계 항목이다. 초안을 그대로 발행하는 것으로 이 조건을 충족할 수 없다.
+Backend는 생성/PATCH 시 v1 구조를 검사하고 approve/publish 시 빈 compatibility를 거부한다. `code` 필터는 legacy `content.code`와 v1 `search.codes`를 정확히 조회한다. 테이블·컬럼·인덱스 추가는 없다. 동적 query registry/procedure 허용 목록은 관리 CLI와 Worker에서 검증하며, 형식 검사만으로 운영 호환성을 승인하지 않는다. [등록 절차와 검증 책임](DB-WORKFLOW.md)을 따른다.
 
 설계 기준: [RCA 모듈 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md), [Runbook 설계 초안](../../docs/specs/rca-agent/drafts/gpu-node-rca-runbook-design.md).

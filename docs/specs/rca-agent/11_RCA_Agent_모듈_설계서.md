@@ -462,7 +462,7 @@ GPU 접근 조사의 첫 연결은 기존 `gpu_access`의 D09/D05로 시작할 �
 
 통합 목표에서도 scope·knowledge ID/revision·reviewed content hash 검사를 먼저 수행한다. 호환성 미확정 revision을 삭제하지 않고 후보로 보존하며, 동일 key의 알려진 호환 revision 중 최신본을 적용 대상으로 선택한다. 더 최신인 미확정 revision은 필요한 관측 후 재평가하고 그 선택/보류 사유를 남긴다. **scope 위반·hash 불일치를 unknown 호환성으로 완화할 수 없다**.
 
-현재 Backend 지식 API가 content를 저장·검토한다고 runbook 내부 필드와 query 의미까지 검증한 것은 아니다. 아래 content validator, query 연결 검사, 원천 참조 해석을 개발하고 검토 기록과 연결해야 한다. 발행된 content는 수정하지 않고 새 revision을 만든다.
+2026-09-28 후속 구현에서 Backend는 v1 콘텐츠 구조·계획·출처·호환성 형식을 검사하며 approve/publish 시 빈 compatibility를 거부한다. 코드 검색은 legacy scalar와 search.codes를 지원한다. 기존 knowledge_revisions 스키마를 유지한다. query registry·procedure 허용 여부는 CLI/Worker가 검사하며 운영 데이터 의미·원천 조건 검수는 남아 있다. 발행된 content는 수정하지 않고 새 revision을 만든다. 오류별 조사 초안 3건의 실제 등록 절차와 검증 경계는 [DB 등록 안내](../../../rcca-agent/runbooks/DB-WORKFLOW.md)를 따른다.
 
 ### 6.2 작성 필드와 검증 책임
 
@@ -472,7 +472,7 @@ R01~R09는 Agent의 조사 목적이며 모든 Runbook에 필수 R코드 필드�
 |---|---|---|
 | 외부 봉투 | `knowledge_key`, `kind`, `scope`, `visibility`, `revision`, `compatibility`, `source_refs`, content/reviewed hash | 기존 DB/API 계약 유지. 발행/검토 상태를 content 안에 중복 소유하지 않음 |
 | 내용 식별 | `title`, `description`, `claim`; 제안 `schema: gpu-rca-runbook/1.0` | schema는 추가 validator의 content 버전이며 결과 스키마 1.1과 별개. 기존 runbook은 명시적 legacy 경로 유지 |
-| 검색 | `search.codes`, `producer_events`, `aliases`, `symptoms`, `classification.category` | 검색 모듈은 읽을 수 있으나 workflow 미연결. code는 Xid/SXid namespace 구분 |
+| 검색 | `search.codes`, `producer_events`, `aliases`, `symptoms`, `classification.category` | 입력 1.3 workflow와 Backend code 필터에 연결. code는 Xid/SXid namespace 구분 |
 | 호환성 | producer 계약·CPC/GPU 모델·driver/DCGM/Fleet/MIG/NVSwitch 조건 | 확인된 배포/장비 값만 사용. 미확정은 조건 통과가 아니라 추가 확인 대상 |
 | 필수 사실·조건 | `required_evidence`, `applicability_conditions`, `exclusion_conditions` | 현재 `required_evidence`는 fact 이름 목록, 조건은 `{field, equals}` AND. 빈 applicability_conditions를 무조건 적용으로 해석하지 않음 |
 | 관측 | 기존 `required_queries`; 제안 `observation_plan` | plan은 실제 query ID, priority, 필수/선택, 필요한 fact/meaning, binding, 기간·freshness 요구를 명시. 두 표현이 공존하면 불일치 거부 |

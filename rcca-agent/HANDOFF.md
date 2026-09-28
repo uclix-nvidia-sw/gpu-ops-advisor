@@ -8,6 +8,8 @@
 
 이번 범위는 기존 **입력 1.3** RCA 실행부와 Runbook 작성 초안이다. 결과 본문 스키마 1.1과 기존 Worker/JC 저장·공개 계약을 유지한다. 운영 DB migration·자동 Runbook seed·하드웨어 조치 기능은 추가하지 않았다.
 
+후속 XID/SXID 작업: 오류별 3건의 지침·출처, Backend v1 구조 검증/코드 검색, 등록 CLI를 추가했다. 기존 `knowledge_revisions` 구조로 격리 DB 등록·검토·발행·RCA 소비를 검증했다. [DB 등록 안내](runbooks/DB-WORKFLOW.md)에 필드 대응·명령·검토 책임을 기록했다. 이전 RCA PR과 별개로 이 후속 작업은 로컬 변경 단계이며 운영 DB에는 적재하지 않았다. 다른 세션과의 조율은 사용자 지시로 중단했다.
+
 ## 먼저 읽을 문서
 
 | 순서 | 문서 | 확인할 내용 |
@@ -29,6 +31,7 @@
 | 최종 LLM 해석·참조 검증, 계획 지침 전달 | [synthesis.py](src/rcca_agent/synthesis.py), [prompts.py](src/rcca_agent/prompts.py), [분석 테스트](../agents/tests/test_rca_analysis.py) |
 | reason/component·Xid/SXid·suggested_actions 단서 | [incident.py](src/rcca_agent/incident.py). 원문 보존, 검색 단서와 검증된 사실 분리, 권고 미수행 |
 | Runbook v1 검증·호환성 | [runbook_contract.py](src/rcca_agent/runbook_contract.py), [계약 테스트](../agents/tests/test_runbook_contract.py) |
+| DB 등록·검토·발행 및 검색 | [관리 CLI](src/rcca_agent/runbook_admin.py), [Backend 검증기](../backend/internal/api/runbook.go), [Knowledge API](../backend/internal/api/knowledge.go) |
 | 실제 Worker/NAT/MCP·DB·JC·보고서 연결 | [E2E 테스트](../agents/tests/test_e2e.py) |
 | Loki/Prometheus 요청 시각 변환 | [grafana_time.py](../shared/python/src/agent_common/grafana_time.py), 공통 discovery/observation. 두 Worker에 영향. 원문 시각 보존·조회 범위 확장 금지·Loki 정밀도 손실은 partial |
 | Incident 1.4 node 라벨/annotation 수신·충돌 거부 | [episodes.go](../incident/service/episodes.go), service/tests의 회귀 검사. RCA Worker의 1.4 지원을 의미하지 않음 |
@@ -42,7 +45,7 @@
 
 [일반 조사](runbooks/RB-GENERAL-GPU-NODE.json), [Xid 79](runbooks/RB-XID-79.json), [Xid 48 및 동반 코드](runbooks/RB-XID-48-63-64.json), [SXid 11001](runbooks/RB-SXID-11001.json) 총 4건이다. **모두 compatibility가 빈 작성 초안이며 운영 실행·발행 완료 상태가 아니다.**
 
-- 일반 계획은 v1의 `investigation_only: true`를 요구한다. 원인 supported/조기 완료의 근거로 쓰지 않는다. 승인된 전용·일반 Runbook이 모두 없으면 `approved_runbook` 부족을 기록하고 조회하지 않는다.
+- 현재 네 초안은 모두 `investigation_only: true`다. 원인 supported/조기 완료의 근거로 쓰지 않고 콘텐츠 recommendations를 최종 eligible 조치로 발행하지 않는다. 승인된 전용·일반 Runbook이 모두 없으면 `approved_runbook` 부족을 기록하고 조회하지 않는다.
 - 위 보류는 RCA 작업 접수·시작을 막는다는 뜻이 아니다. JC claim과 사건/Runbook 검토는 수행하며, 승인 계획이 없을 때 MCP 수집·LLM 분석을 생략하고 blocked 결과를 저장·공개한다. 전용 Runbook 미일치는 승인된 일반 계획으로 조사한다.
 - Worker는 파일 디렉터리를 자동 읽지 않고 DB의 scope·고정 revision/hash·검토 상태를 검사한다. Helm upgrade는 이 JSON을 DB에 발행하지 않는다.
 - 현재 조건식은 등록 문자열 fact의 `field/equals`다. D09/D05는 로그·상태, D02는 보조 사용률 계획이며 `fact_names` 자체가 fact 생성기를 제공하지 않는다.
@@ -53,7 +56,7 @@
 
 1. 실제 Fleet image/source revision과 비밀을 제거한 원본 로그 표본, 대상 식별자·시각·상태 의미를 확보한다. `Fleet 1.5.0-rc.1` 언급만으로 upstream commit이나 로그 계약을 확정하지 않는다.
 2. 등록 D-query가 필요한 로그를 수집하는지 확인하고 producer별 parser·대상 binding·freshness를 구현/검증한다. 다른 대상·오래된 시각·미등록 producer·상충·partial/빈 결과의 부정 사례도 검사한다.
-3. 환경별 compatibility와 필요한 query를 채워 일반 조사 및 Xid/SXid를 통합 검수한다. 현재 Backend는 v1 콘텐츠 validator를 발행 단계에서 실행하지 않으므로 이 연결도 남은 작업이다. 기존 draft → in_review → reviewed → published 절차를 따른다.
+3. 환경별 compatibility와 필요한 query를 채워 일반 조사 및 Xid/SXid를 통합 검수한다. Backend 구조 검증·빈 호환성 승인/발행 차단은 구현했다. CLI와 Worker가 실행 프로필의 query를 검사하며 실제 환경 적합성은 운영 검토로 확인한다. 기존 draft → in_review → reviewed → published 절차를 따른다.
 4. 사용자가 나중에 제공하기로 한 로컬 LLM endpoint를 연결하고 실제 Grafana 관측으로 분석 품질을 검수한다. endpoint 미구성은 유효 근거를 보존하면서 `synthesis_unconfigured`로 남는다.
 5. 입력 1.4의 목적 자동 선택·선택 전 bounded DB 이력·purpose trace·소비자 계약을 구현/검증한다. 그 전에는 RCA Worker가 1.4 지원을 광고하거나 Incident 운영 설정을 전환하지 않는다.
 
@@ -71,11 +74,11 @@ python -m pytest -c agents/pytest.ini agents/tests -m "not e2e" -q
 python tools/check_links.py
 ```
 
-E2E는 위 단위 명령에 포함되지 않는다. 별도 테스트 전용 PostgreSQL, Go 1.26.2로 빌드한 JC/Incident, 공식 Grafana MCP 1.4.2와 Helm 3.17.3을 준비하고 `RUN_AGENT_E2E=1`로 전체 검사를 실행한다. Windows는 [test.ps1](../agents/scripts/test.ps1)의 `-E2E -PgBin` 경로를 사용할 수 있다. `AGENT_E2E_DATABASE_URL`이 설정됐다면 운영/공유 DB가 아닌 격리 테스트 대상인지 먼저 확인한다. Linux의 재현 가능한 구성은 CI workflow를 따른다.
+E2E는 위 단위 명령에 포함되지 않는다. 별도 테스트 전용 PostgreSQL, Go 1.26.2로 빌드한 Backend/JC/Incident, 공식 Grafana MCP 1.4.2와 Helm 3.17.3을 준비하고 `RUN_AGENT_E2E=1`로 전체 검사를 실행한다. Windows는 [test.ps1](../agents/scripts/test.ps1)의 `-E2E -PgBin` 경로를 사용할 수 있다. `AGENT_E2E_DATABASE_URL`이 설정됐다면 운영/공유 DB가 아닌 격리 테스트 대상인지 먼저 확인한다. Linux의 재현 가능한 구성은 CI workflow를 따른다.
 
 이 PC의 Windows 검증에서는 경로의 대괄호가 Go embed를, 한글이 PostgreSQL initdb를 방해해 임시 소스 복사본·ASCII 테스트 scratch 경로를 사용했다. 다른 PC에서는 ASCII·대괄호 없는 checkout 경로를 권장한다. `.local`의 venv·바이너리·로그·임시 runner와 개인 환경변수는 Git으로 전달되지 않는다. 기존 로컬 경로를 복사하는 대신 고정 의존성을 새로 준비한다.
 
-PR 준비 최종 재검증은 **전체 102건(일반 94 + E2E 8) 통과**다. 이전의 101건 전체 실행 및 94건 분리 실행 이후 다시 전체를 실행했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료로 승계하지 않는다.
+XID/SXID DB 연계 후 최신 검증은 **전체 103건(일반 94 + E2E 9) 통과**다. 이전 RCA PR의 102건에 세 오류 콘텐츠의 실제 Backend API 생명주기·Worker 소비 검사를 추가했다. Backend의 vet/race test/build와 DB E2E도 통과했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료로 승계하지 않는다.
 
 ## 원격 반영과 CSC 적용
 

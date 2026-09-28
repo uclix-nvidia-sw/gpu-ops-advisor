@@ -27,6 +27,7 @@ from psycopg.conninfo import conninfo_to_dict
 import pytest
 
 from agent_common.contracts import content_hash
+from rcca_agent.runbook_admin import draft, transition
 from test_rca_analysis import general_runbook, analysis_reply
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -789,3 +790,171 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
     assert not any(
         p == "/v1/chat/completions" for p, _ in Upstream.requests[request_start:]
     )
+
+
+@pytest.mark.e2e
+def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    )
+    assert binary.is_file(), "Build Backend for Runbook API E2E"
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    process = stack["spawn"](
+        [str(binary)],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "true",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+        },
+        "runbook-backend",
+    )
+    wait_http(backend + "/health/ready", process)
+    with httpx.Client(base_url=backend, timeout=30) as client:
+        for key, code in [
+            ("RB-XID-79", "xid:79"),
+            ("RB-XID-48-63-64", "xid:48"),
+            ("RB-SXID-11001", "sxid:11001"),
+        ]:
+            row = json.loads(
+                (ROOT / f"rcca-agent/runbooks/{key}.json").read_text(encoding="utf-8")
+            )
+            imported = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "rcca_agent.runbook_admin",
+                    "draft",
+                    str(ROOT / f"rcca-agent/runbooks/{key}.json"),
+                    "--profile",
+                    stack["env"]["AGENT_CONFIG_FILE"],
+                    "--backend",
+                    backend,
+                    "--request-key",
+                    key + "-draft",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=30,
+                env={**os.environ, "PYTHONUTF8": "1"},
+                creationflags=subprocess.CREATE_NO_WINDOW
+                if sys.platform == "win32"
+                else 0,
+            )
+            assert imported.returncode == 0, imported.stderr
+            first = json.loads(imported.stdout)
+            assert first == draft(client, row, stack["profile"], key + "-draft")
+            requested = transition(
+                client,
+                first,
+                stack["profile"],
+                "request",
+                key + "-request",
+                "fixture draft",
+            )
+            with pytest.raises(ValueError, match="unbound"):
+                transition(
+                    client,
+                    requested,
+                    stack["profile"],
+                    "approve",
+                    key + "-bad-approve",
+                    "unbound must fail",
+                )
+            # Binding is ONLY for the isolated fixture cluster, never a shipped default.
+            row["compatibility"] = {"cluster_id": "cpc-2"}
+            bound = draft(
+                client, row, stack["profile"], key + "-bound", first["knowledge_id"]
+            )
+            assert bound["revision"] == 2
+            for action in ("request", "approve", "publish"):
+                prior = bound
+                bound = transition(
+                    client,
+                    prior,
+                    stack["profile"],
+                    action,
+                    key + "-" + action + "-bound",
+                    "fixture-only validation",
+                )
+                assert bound == transition(
+                    client,
+                    prior,
+                    stack["profile"],
+                    action,
+                    key + "-" + action + "-bound",
+                    "fixture-only validation",
+                )
+            assert bound["state"] == "published"
+            found = client.get(
+                "/knowledge", params={"kind": "runbook", "code": code}
+            ).json()["items"]
+            assert len(found) == 1 and found[0]["content_hash"] == content_hash(
+                row["content"]
+            )
+            iid = str(uuid4())
+            data = dict(
+                scope=SCOPE,
+                incident_id=iid,
+                evidence_version=1,
+                analysis_profile_revision="fixture-v1",
+                incident_time="2026-09-15T00:15:00Z",
+                time_range=PERIOD,
+                purpose_ids=["R01"],
+                target={"gpu_uuid": "GPU-1"},
+            )
+            snapshot = {
+                "input": data,
+                "alert": {"labels": {"reason": code.replace(":", " ")}},
+            }
+            with psycopg.connect(stack["url"]) as conn:
+                conn.execute(
+                    "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+                    (iid, Jsonb(SCOPE), data["incident_time"]),
+                )
+                conn.execute(
+                    "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+                    (iid, Jsonb(snapshot), content_hash(snapshot)),
+                )
+            jid = submit(stack, "rca", data)
+            before = len(Upstream.requests)
+            result, evidence = worker_result(stack, "rca", jid, "-" + key)
+            assert any(q.startswith("D") for q, _ in evidence)
+            assert all(
+                c["causal_status"] == "candidate" for c in result["cause_candidates"]
+            )
+            payloads = [
+                json.loads(b["messages"][1]["content"])
+                for path, b in Upstream.requests[before:]
+                if path == "/v1/chat/completions" and not b.get("tools")
+            ]
+            plans = [
+                plan
+                for payload in payloads
+                for plan in payload.get("runbook_plans", [])
+            ]
+            assert any(
+                plan["id"] == bound["revision_id"]
+                and plan["revision"] == 2
+                and plan["analysis_guidance"] == row["content"]["analysis_guidance"]
+                for plan in plans
+            )
+            retired = transition(
+                client,
+                bound,
+                stack["profile"],
+                "retire",
+                key + "-retire",
+                "fixture complete",
+            )
+            assert retired["state"] == "retired"
+            assert (
+                client.get(
+                    "/knowledge", params={"kind": "runbook", "code": code}
+                ).json()["items"]
+                == []
+            )

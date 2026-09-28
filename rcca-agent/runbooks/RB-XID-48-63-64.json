@@ -62,13 +62,34 @@
         "revision": "Page last updated 2026-09-09; mutable upstream document",
         "section": "GPU Node Triage",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Static details; repository fleet-gpud-error-catalog baseline; deployed revision unverified",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "Static details and action comments; not the deployed Fleet evaluator",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream document",
+        "section": "Xids; Resolution Buckets; Steps 1-4",
+        "checked_at": "2026-09-28"
       }
     ],
     "limitations": [
       "작성 초안이다. compatibility가 비어 있어 런타임 검증을 통과하지 못하며 운영 발행 대상이 아니다.",
       "실제 CPC producer·라벨·parser·단위·freshness 및 대상 식별 연결은 검증하지 않았다. fact_names는 수집 의도이며 fact 생성이나 충족을 보증하지 않는다.",
       "이 Runbook은 오류 이벤트 조사 절차다. 하드웨어 고장 확정 규칙이나 자동 복구 기능을 제공하지 않는다.",
-      "선택된 R코드의 증거 충족·종료 판단, 결과 저장과 JC 공개는 RCA workflow가 담당한다."
+      "선택된 R코드의 증거 충족·종료 판단, 결과 저장과 JC 공개는 RCA workflow가 담당한다.",
+      "최신 Xid Catalog는 Ampere 이상 경로다. Volta 이하에는 별도 구세대 문헌을 확인해야 하며 이 초안으로 같은 조치 규칙을 적용하지 않는다.",
+      "investigation_only=true: 조사 지침이다. 적용 조건이 일치해도 이 콘텐츠로 supported 원인을 생성하거나 조기 완료하지 않는다.",
+      "수집 가능 범위는 현재 등록된 D09/D05/D02다. PCIe/AER·ECC·FM 포트/토폴로지·재발 이력의 전용 query/parser와 시간 조건 평가는 미구현이다. 아래 지침은 이 관측을 확보했다는 뜻이 아니다."
     ],
     "title": "Xid 48 및 동반 ECC 이벤트 조사",
     "description": "Xid 48 단서에서 동일 GPU의 Xid 63·64 동반 여부와 모델별 추가 증거를 확인하는 초기 조사 Runbook.",
@@ -87,12 +108,21 @@
       "symptoms": [
         "ECC 오류",
         "GPU 메모리 오류"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
       ]
     },
     "analysis_guidance": [
-      "동일 GPU의 Xid 48과 63·64의 발생 시각 및 순서를 원본 증거로 확인한다. 검색 문구의 코드 나열을 시간 순서로 해석하지 않는다.",
-      "GPU 모델과 ECC·row-remap·page-retirement 증거가 없으면 모델별 조치를 선택하지 않는다.",
-      "현재 조건식은 단일 문자열 equals만 지원한다. 동반 코드의 시간 순서와 ECC 수치 판정은 추가 구현 전까지 미확정으로 남긴다."
+      "검증 1 — 사건 식별: cluster·machine/node·PCI BDF·발생 시각을 원본과 대조한다. PCI BDF를 GPU UUID로 추측하지 않는다.",
+      "검증 2 — 적용 환경: 실제 GPU 모델·드라이버·Fleet image/source revision과 문헌의 적용 범위를 확인한다. 정적 소스 commit은 배포 버전 증거가 아니다.",
+      "검증 3 — 관측 품질: 같은 대상·기간, producer 의미, freshness, 누락·잘림을 확인한다. 쿼리 성공과 증거 충분성을 구분한다.",
+      "NVIDIA WORKFLOW_XID_48은 단독 48과 63/64 동반을 구분한다. 단독의 RESET_GPU/RUN_FIELDDIAG, 동반의 DRAIN_AND_RESET 등은 원문 조건을 확인한 운영자 검토 대상이다.",
+      "원본 오류의 영향 영역(FB/SRAM), GPU 모델, ECC/row-remap 정보와 SRAM 임계 플래그를 확인한다. 플래그 값과 제품별 의미를 확보하지 못하면 상세 조치 분기를 보류한다.",
+      "Fleet/GPUd의 48·63·64 정적 목록은 재부팅/점검을 포함하나 NVIDIA 63의 일반 분류와 동일하지 않다. 모델·동반 오류·상태 평가를 확인하며 목록을 일괄 실행 지시로 변환하지 않는다.",
+      "D09에서 같은 GPU의 48·63·64 시각을 확인한다. 조회 누락이 있으면 단독 발생이라고 단정하지 않는다. 63/64만 있는 사건에는 이 Xid 48 조사 계획을 매칭하지 않는다.",
+      "검증 4 — 판단: 오류 관측·원인 후보·조치 적합성·복구 확인을 구분한다. 코드 일치만으로 부품 고장이나 복구를 확정하지 않는다.",
+      "검증 5 — 조치/재발: 실제 조치 시각·대상·수행 기록과 이후 원본을 대조한다. suggested_actions는 실행 증거가 아니며 알림 소멸만으로 회복을 선언하지 않는다."
     ],
     "recommendations": [
       {
@@ -111,6 +141,7 @@
         "field": "error_code",
         "equals": "xid:48"
       }
-    ]
+    ],
+    "investigation_only": true
   }
 }
