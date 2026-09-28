@@ -1,0 +1,135 @@
+{
+  "knowledge_key": "RB-XID-147",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2734",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 147 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 147 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 147; Table 3 Resolution Buckets; Table 2 Xid 144-150 Decode",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 147 NVLink·연결 상대 조사",
+    "description": "XID 147: NVLINK: TREX Error.",
+    "claim": "XID 147 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "nvlink"
+    },
+    "search": {
+      "codes": [
+        "xid:147"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "NVLINK: TREX Error"
+      ],
+      "symptoms": [
+        "NVLink·연결 상대"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: GPU/NVSwitch 양쪽 원본 로그, link 번호·remote endpoint·포트 역할·partition 토폴로지, 링크 상태/대역폭·재전송/CRC/ECC 카운터의 같은 기간 변화를 수집한다.",
+      "판단: 장치 양쪽의 사건 시간과 링크 상태를 맞추고 reset·shutdown·소프트웨어 변경·열 사건을 대조한다. 상대 장치에서 전파된 오류와 로컬 원인을 구분하며 단일 GPU의 로그만으로 영향 범위를 넓히지 않는다.",
+      "Fleet 고정 카탈로그: NVLINK: TREX Error; event_type=Warning; 기본 action=REBOOT_SYSTEM.",
+      "NVIDIA 적용: B100, GB200; 제외: A100, H100.",
+      "NVIDIA 조치 분류: immediate=WORKFLOW_NVLINK5_ERR; investigatory=WORKFLOW_NVLINK5_ERR; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+      "NVLink5는 코드 번호만으로 조치를 선택하지 않는다. 원문의 subcomponent·fatal/nonfatal·crosscontain·injected·link·intrInfo·errorStatus·debugData를 보존한다. R575 이전 V1과 R575 이상 V2의 decoder를 구분한다.",
+      "다음 행은 NVIDIA 표의 discrete decoder 값이다. 일치 행과 문헌의 조건·동반 Xid154를 확인한 뒤 운영자가 판단한다. XID_154_EVAL은 동반154 확인, CHECK_NVLINK_FAILURE_FLOW는 같은 partition의 직전 30초 link-down 기록 검토가 필요하다. 재발 횟수·전파·원격 영향은 별도 관측 없이 확정하지 않는다.",
+      "decode: subcode=TREX; V1=——000000———-0110000100; V2=——000000————-0001110; errorStatus=0x00000001; recovery=IGNORE; action2-V1=-; action2-V2=-; action2=-; investigation=CONTACT_SUPPORT; severity=Non-fatal; HW/SW=SW.",
+      "decode: subcode=TREX; V1=——000000———-0110000100; V2=——000000————-0001110; errorStatus=0x80000000; recovery=IGNORE; action2-V1=-; action2-V2=-; action2=-; investigation=CONTACT_SUPPORT; severity=Non-fatal; HW/SW=SW."
+    ],
+    "recommendations": [
+      {
+        "text": "XID 147의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:147"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:147"
+      }
+    ],
+    "investigation_only": true
+  }
+}

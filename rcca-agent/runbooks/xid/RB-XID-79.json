@@ -25,7 +25,7 @@
           "producer_contract",
           "error_code"
         ],
-        "purpose": "사건 대상과 시간 범위에서 원본 오류 이벤트와 동반 코드를 확인한다.",
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -38,7 +38,7 @@
           "producer_contract",
           "normalized_health"
         ],
-        "purpose": "검증된 producer 상태 이벤트가 있으면 같은 대상의 상태 변화를 확인한다.",
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -50,7 +50,7 @@
         "fact_names": [
           "observations"
         ],
-        "purpose": "GPU 사용률을 보조 관측으로 비교한다. 값 소실이나 0만으로 고장·회복을 판단하지 않는다.",
+        "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -64,15 +64,15 @@
         "checked_at": "2026-09-28"
       },
       {
-        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go",
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L1671",
         "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
-        "section": "Static details; repository fleet-gpud-error-catalog baseline; deployed revision unverified",
+        "section": "XID 79 static definition",
         "checked_at": "2026-09-28"
       },
       {
         "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
         "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
-        "section": "Static details and action comments; not the deployed Fleet evaluator",
+        "section": "XID 79 details and conditional action comments",
         "checked_at": "2026-09-28"
       },
       {
@@ -80,20 +80,21 @@
         "revision": "Page last updated 2026-09-09; mutable upstream document",
         "section": "Xids; Resolution Buckets; Steps 1-4",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 79; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
       }
     ],
     "limitations": [
-      "작성 초안이다. compatibility가 비어 있어 런타임 검증을 통과하지 못하며 운영 발행 대상이 아니다.",
-      "실제 CPC producer·라벨·parser·단위·freshness 및 대상 식별 연결은 검증하지 않았다. fact_names는 수집 의도이며 fact 생성이나 충족을 보증하지 않는다.",
-      "이 Runbook은 오류 이벤트 조사 절차다. 하드웨어 고장 확정 규칙이나 자동 복구 기능을 제공하지 않는다.",
-      "선택된 R코드의 증거 충족·종료 판단, 결과 저장과 JC 공개는 RCA workflow가 담당한다.",
-      "최신 Xid Catalog는 Ampere 이상 경로다. Volta 이하에는 별도 구세대 문헌을 확인해야 하며 이 초안으로 같은 조치 규칙을 적용하지 않는다.",
-      "investigation_only=true: 조사 지침이다. 적용 조건이 일치해도 이 콘텐츠로 supported 원인을 생성하거나 조기 완료하지 않는다.",
-      "수집 가능 범위는 현재 등록된 D09/D05/D02다. PCIe/AER·ECC·FM 포트/토폴로지·재발 이력의 전용 query/parser와 시간 조건 평가는 미구현이다. 아래 지침은 이 관측을 확보했다는 뜻이 아니다."
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
     ],
     "title": "Xid 79 GPU 접근 상실 조사",
     "description": "Xid 79 단서에서 원본 이벤트, 장치 식별 및 동시 발생 오류를 확인하는 초기 조사 Runbook.",
-    "claim": "검증된 동일 대상 이벤트에 Xid 79가 관측되어 GPU 접근 상실 관련 조사가 필요하다. 근본 원인과 복구 여부는 미확정이다.",
+    "claim": "XID 79 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "GPU_DEVICE",
       "category": "gpu_access_loss"
@@ -114,16 +115,13 @@
       ]
     },
     "analysis_guidance": [
-      "검증 1 — 사건 식별: cluster·machine/node·PCI BDF·발생 시각을 원본과 대조한다. PCI BDF를 GPU UUID로 추측하지 않는다.",
-      "검증 2 — 적용 환경: 실제 GPU 모델·드라이버·Fleet image/source revision과 문헌의 적용 범위를 확인한다. 정적 소스 commit은 배포 버전 증거가 아니다.",
-      "검증 3 — 관측 품질: 같은 대상·기간, producer 의미, freshness, 누락·잘림을 확인한다. 쿼리 성공과 증거 충분성을 구분한다.",
-      "NVIDIA Xid Catalog의 즉시 조치 분류는 RESTART_BM, 추가 조사 분류는 CONTACT_SUPPORT다. GPUd/Fleet의 repair action enum과 별도 체계로 보존한다.",
-      "Fleet 카탈로그와 고정 GPUd 소스의 정적 기본 권고는 REBOOT_SYSTEM 및 HARDWARE_INSPECTION이다. 실제 reason/suggested_actions는 버전·상태 평가·재부팅 이력에 따라 달라질 수 있으므로 기본 목록으로 덮어쓰지 않는다.",
       "D09에서 원본 Xid와 시스템·커널 PCI/PCIe 이벤트의 대상·시각을 확인한다. PCIe 경로, GPU, 드라이버 후보를 구분하되 AER 로그가 수집되지 않았음을 오류 부재로 해석하지 않는다.",
       "GPU의 현재 접근 상태와 사건 당시 장치 매핑이 없으면 접근 회복을 판정하지 않는다. D02 사용률은 접근 가능성의 대체 증거가 아니다.",
       "Xid 154 연계가 지원되는 드라이버에서는 같은 장치·시간의 복구 action 이벤트를 추가 확인한다. 동반 이벤트 부재는 지원 버전·수집 완전성 확인 전에는 부정 근거가 아니다.",
-      "검증 4 — 판단: 오류 관측·원인 후보·조치 적합성·복구 확인을 구분한다. 코드 일치만으로 부품 고장이나 복구를 확정하지 않는다.",
-      "검증 5 — 조치/재발: 실제 조치 시각·대상·수행 기록과 이후 원본을 대조한다. suggested_actions는 실행 증거가 아니며 알림 소멸만으로 회복을 선언하지 않는다."
+      "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=RESTART_BM; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+      "조건부 권고: 작업 배출·유지보수 승인·노드 범위를 확인한 뒤 운영자가 bare-metal 재시작을 검토한다."
     ],
     "recommendations": [
       {

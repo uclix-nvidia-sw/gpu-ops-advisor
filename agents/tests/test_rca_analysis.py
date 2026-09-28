@@ -207,7 +207,8 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         )
         row = json.loads(
             (
-                Path(__file__).resolve().parents[2] / f"rcca-agent/runbooks/{key}.json"
+                Path(__file__).resolve().parents[2]
+                / f"rcca-agent/runbooks/{mode}/{key}.json"
             ).read_text(encoding="utf-8")
         )
         books[0].update(

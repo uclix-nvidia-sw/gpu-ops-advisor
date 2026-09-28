@@ -814,13 +814,75 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
     )
     wait_http(backend + "/health/ready", process)
     with httpx.Client(base_url=backend, timeout=30) as client:
+        # The complete corpus must fit the existing API and schema without publication.
+        pilots = {"RB-XID-79", "RB-XID-48-63-64", "RB-SXID-11001"}
+        bulk = LOCAL / ("catalog-" + uuid4().hex)
+        folder, receipts = bulk / "input", bulk / "receipts"
+        rows = []
+        for path in sorted((ROOT / "rcca-agent/runbooks").rglob("RB-*.json")):
+            row = json.loads(path.read_text(encoding="utf-8"))
+            if (
+                row["knowledge_key"] in pilots
+                or row["knowledge_key"] == "RB-GENERAL-GPU-NODE"
+            ):
+                continue
+            code = row["content"]["search"]["codes"][0]
+            target = folder / code.split(":")[0] / path.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(row), encoding="utf-8")
+            rows.append(row)
+        command = [
+            sys.executable,
+            "-m",
+            "rcca_agent.runbook_import",
+            str(folder),
+            "--profile",
+            stack["env"]["AGENT_CONFIG_FILE"],
+            "--backend",
+            backend,
+            "--batch-key",
+            "catalog-fixture",
+            "--receipts",
+            str(receipts),
+        ]
+        for expected in (263, 0):
+            imported = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=240,
+                env={**os.environ, "PYTHONUTF8": "1"},
+                creationflags=subprocess.CREATE_NO_WINDOW
+                if sys.platform == "win32"
+                else 0,
+            )
+            assert imported.returncode == 0, imported.stderr
+            assert json.loads(imported.stdout) == {
+                "total": 263,
+                "registered": expected,
+                "resumed": 263 - expected,
+            }
+        imported_codes = set()
+        for row in rows:
+            code = row["content"]["search"]["codes"][0]
+            found = client.get(
+                "/knowledge", params={"kind": "runbook", "state": "draft", "code": code}
+            ).json()["items"]
+            assert len(found) == 1 and found[0]["knowledge_key"] == row["knowledge_key"]
+            assert found[0]["content_hash"] == content_hash(row["content"])
+            imported_codes.add(code)
+        assert len(imported_codes) == 263
+        assert "xid:133" in imported_codes and "sxid:22012" in imported_codes
         for key, code in [
             ("RB-XID-79", "xid:79"),
             ("RB-XID-48-63-64", "xid:48"),
             ("RB-SXID-11001", "sxid:11001"),
         ]:
             row = json.loads(
-                (ROOT / f"rcca-agent/runbooks/{key}.json").read_text(encoding="utf-8")
+                (
+                    ROOT / f"rcca-agent/runbooks/{code.split(':')[0]}/{key}.json"
+                ).read_text(encoding="utf-8")
             )
             imported = subprocess.run(
                 [
@@ -828,7 +890,7 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
                     "-m",
                     "rcca_agent.runbook_admin",
                     "draft",
-                    str(ROOT / f"rcca-agent/runbooks/{key}.json"),
+                    str(ROOT / f"rcca-agent/runbooks/{code.split(':')[0]}/{key}.json"),
                     "--profile",
                     stack["env"]["AGENT_CONFIG_FILE"],
                     "--backend",

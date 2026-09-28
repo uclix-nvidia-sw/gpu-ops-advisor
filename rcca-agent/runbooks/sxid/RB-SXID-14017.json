@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-SXID-14017",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/sxid/sxid.go#L1024",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "SXID 14017 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/sxid/sxid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "SXID 14017 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+        "revision": "Page last updated 2025-11-14; mutable upstream",
+        "section": "Table 22 Potential Fatal NVSwitch SXid Errors",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다."
+    ],
+    "title": "SXID 14017 NVSwitch·Fabric Manager 조사",
+    "description": "SXID 14017: TS ATO timeout.",
+    "claim": "SXID 14017 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "nvswitch"
+    },
+    "search": {
+      "codes": [
+        "sxid:14017"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-sxid"
+      ],
+      "aliases": [
+        "TS ATO timeout"
+      ],
+      "symptoms": [
+        "NVSwitch·Fabric Manager"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: FM 서비스/커널의 원본 SXid, NVSwitch PCI·source port·link 번호, access/trunk 역할, GPU/VM/partition 연결, FM/드라이버 버전과 FM 시작/설정 변경 이력을 수집한다.",
+      "판단: 포트와 partition이 확인된 범위에서만 영향 대상을 정한다. 스위치/양쪽 GPU의 동반 오류, 링크 상태·재전송·ECC·throughput과 재발 시각을 대조한다. Xid 74가 같이 있어도 전파 방향은 별도 증거가 필요하다.",
+      "Fleet 고정 카탈로그: TS ATO timeout; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+      "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+      "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
+      "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
+      "Potential Fatal 분류다. access port이면 연결 guest VM 범위, trunk port이면 그 연결을 사용하는 partition 범위를 확인한다. 관련 VM/partition의 종료·재시작 전제와 영향을 운영자가 검토한다.",
+      "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "SXID 14017의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "sxid:14017"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "sxid:14017"
+      }
+    ],
+    "investigation_only": true
+  }
+}

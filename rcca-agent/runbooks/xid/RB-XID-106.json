@@ -1,0 +1,133 @@
+{
+  "knowledge_key": "RB-XID-106",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률 비교.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L2095",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 106 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 106 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream",
+        "section": "Table 1 Xids: 106; Table 3 Resolution Buckets",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+    ],
+    "title": "XID 106 정보·후속 이벤트 조사",
+    "description": "XID 106: SMBPBI Test Message.",
+    "claim": "XID 106 관측에 따른 조사. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_DEVICE",
+      "category": "informational"
+    },
+    "search": {
+      "codes": [
+        "xid:106"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ],
+      "aliases": [
+        "SMBPBI Test Message"
+      ],
+      "symptoms": [
+        "정보·후속 이벤트"
+      ]
+    },
+    "analysis_guidance": [
+      "수집: 원본 이벤트의 세부 상태·동반 Xid·테스트/주입 표시, 작업 종료·reset·사용자 조치 이력과 같은 장치의 이전/이후 상태를 수집한다.",
+      "판단: 이벤트 자체가 원인인지 선행 오류의 결과인지 구분한다. 명시적 조치 불필요와 조치 미정의를 구분하고, 동반 오류가 없다는 판단에는 수집 기간과 완전성 근거를 요구한다.",
+      "Fleet 고정 카탈로그: SMBPBI Test Message; event_type=Warning; 기본 action=nil (미정의).",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=IGNORE; investigatory=IGNORE; Xid154 linkage=미기재.",
+      "SMBPBI 테스트 메시지의 발신·주입 이력을 확인한다. 별도 장애 근거 없이 하드웨어 결함을 만들지 않는다.",
+      "조건부 권고: 이 이벤트의 즉시 조치가 불필요하다는 문헌 분류다. 동반 오류와 실제 서비스 상태 조사까지 생략하라는 의미는 아니다."
+    ],
+    "recommendations": [
+      {
+        "text": "이 이벤트의 즉시 조치가 불필요하다는 문헌 분류다. 동반 오류와 실제 서비스 상태 조사까지 생략하라는 의미는 아니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:106"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:106"
+      }
+    ],
+    "investigation_only": true
+  }
+}

@@ -52,7 +52,7 @@
 
 `GET /knowledge?kind=runbook&code=xid%3A79`는 legacy `content.code` 또는 v1 `content.search.codes`의 정확한 값을 조회한다. `xid:79`와 `sxid:79`는 별개다. 기존 상태·scope·cursor 필터와 revision/hash·멱등 처리·발행본 불변 규칙을 유지한다.
 
-기존 `knowledge_revisions`의 JSONB 필드를 사용하며 테이블·컬럼·migration을 추가하지 않았다. 오류별 3건은 서로 다른 knowledge_key이며 변경 이력은 같은 knowledge_id의 새 revision이다. CLI 명령·초안/발행 경계는 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따른다.
+기존 `knowledge_revisions`의 JSONB 필드를 사용하며 테이블·컬럼·migration을 추가하지 않았다. 오류별 Runbook은 서로 다른 knowledge_key이며 변경 이력은 같은 knowledge_id의 새 revision이다. CLI 명령·초안/발행 경계는 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따른다.
 
 ## 보고서/일정
 
