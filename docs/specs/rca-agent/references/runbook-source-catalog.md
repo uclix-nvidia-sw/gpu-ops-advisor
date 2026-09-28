@@ -61,7 +61,7 @@ Fleet와 GPUd의 component, XID·SXID 정적 정의와 기본 action을 찾을 �
 
 ## 5. 런북 한 건으로 변환할 때 필요한 정보
 
-다음 구조는 작성용 worksheet 예시다. 그대로 API payload로 적재하지 않는다. 새 DB 테이블을 요구하지 않으며, 검토가 끝난 값만 현재 프로젝트의 versioned runbook content와 `source_refs` 계약에 맞춰 옮긴다. 현재 UI·API의 `source_refs`는 문자열 배열로 다루므로 고정된 URL 또는 revision 식별자를 문자열로 저장하고, 상세한 적용 버전·조회일·원문 위치는 검토 기록에 함께 남긴다.
+다음 구조는 작성용 worksheet 예시다. 그대로 API payload로 적재하지 않는다. 새 DB 테이블을 요구하지 않으며, 검토가 끝난 값만 현재 프로젝트의 versioned runbook content와 `source_refs` 계약에 맞춰 옮긴다. 현재 Backend의 최상위 `source_refs`는 DB evidence ID를 검증하므로 URL이나 문헌 revision 문자열을 넣지 않는다. 특히 common Knowledge는 사건 evidence를 연결하지 않는다. 문헌 URL·버전·확인일·원문 위치는 `content.sources`에 기록한다. 구현 예시는 [Runbook 개발 및 RCA 연계](../../../../rcca-agent/runbooks/README.md)를 따른다.
 
 ```yaml
 title: 사람이 이해할 수 있는 증상 이름
@@ -86,7 +86,7 @@ recommendation:
   action: 사람이 검토할 권고
   prerequisites: []
   remediation_performed: false
-source_refs:
+document_sources:
   - 버전 또는 revision을 확인할 수 있는 URL이나 pinned source 식별자
 source_review:
   checked_at: 2026-09-22

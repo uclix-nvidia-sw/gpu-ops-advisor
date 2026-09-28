@@ -17,6 +17,8 @@ GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고�
 
 [CI·릴리스 파이프라인](docs/ci-release.md) · [Helm 설치 안내 — 기본 8개 Pod](charts/gpu-ops-advisor/README.md) · [RCA·보고서 Agent](agents/README.md)
 
+RCA·Runbook 개발을 다른 PC나 새 세션에서 이어받을 때: [현재 구현·검증·남은 작업 인수인계](rcca-agent/HANDOFF.md).
+
 ## 구조와 사용자 흐름
 
 Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모듈이며 Job Controller에서 작업을 인수합니다.

@@ -7,6 +7,28 @@ import (
 	. "gpu-ops-advisor/shared/contract"
 )
 
+func TestEpisodeNodeLabelAndAnnotation(t *testing.T) {
+	now := time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
+	cfg := DefaultConfig()
+	cfg.Episodes = &EpisodePolicy{Revision: "test-v1", RepeatIntervalSeconds: 60, ObservationGapSeconds: 120}
+	s := &Server{Config: cfg}
+	for _, tc := range []struct{ label, annotation, want, reason string }{
+		{"node-1", "", "node-1", ""},
+		{"", "node-2", "node-2", ""},
+		{"node-1", "node-1", "node-1", ""},
+		{"node-1", "node-2", "", "conflicting_node_name"},
+	} {
+		raw := Object{"fingerprint": "f", "status": "firing", "startsAt": now.Format(time.RFC3339Nano),
+			"labels":      Object{"cluster_id": "c", "alertname": "GPUAlert", "machine_id": "machine", "component": "accelerator-nvidia-error-xid", "k8s_node_name": tc.label},
+			"annotations": Object{"k8s_node_name": tc.annotation}}
+		before := Hash(raw)
+		got, reason := s.parseEpisode(raw, now)
+		if reason != tc.reason || (reason == "" && String(got.target, "k8s_node_name") != tc.want) || before != Hash(raw) {
+			t.Fatalf("node projection: target=%v reason=%s", got.target, reason)
+		}
+	}
+}
+
 func TestEpisodeDecisions(t *testing.T) {
 	now := time.Date(2026, 9, 23, 10, 0, 0, 0, time.UTC)
 	cfg := DefaultConfig()

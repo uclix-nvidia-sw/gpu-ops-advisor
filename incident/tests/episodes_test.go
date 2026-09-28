@@ -123,11 +123,18 @@ func TestIncidentEpisodes(t *testing.T) {
 		}
 	})
 	a, b := fault("a", "gpu"), fault("b", "gpu")
+	a["labels"].(map[string]any)["k8s_node_name"] = "fixture-node"
 	b["labels"].(map[string]any)["reason"] = "different reason"
 	first := post(a, b, nil)
 	id := String(item(first, 0), "incident_id")
 	if id == "" || item(first, 1)["incident_id"] != id || Number(first, "invalid_alerts") != 1 {
 		t.Fatal("storm grouping", first)
+	}
+	var storedNode, queuedNode string
+	check(t, r.db.QueryRow(ctx, "SELECT target->>'k8s_node_name' FROM incidents WHERE id=$1", id).Scan(&storedNode))
+	check(t, r.db.QueryRow(ctx, "SELECT input_snapshot->'input'->'target'->>'k8s_node_name' FROM enqueue_outbox WHERE source_key=$1", "incident:"+id+":first").Scan(&queuedNode))
+	if storedNode != "fixture-node" || queuedNode != storedNode {
+		t.Fatal("node label missing from stored incident or JC envelope", storedNode, queuedNode)
 	}
 	t.Run("receipt_continuity_concurrency_and_snapshot", func(t *testing.T) {
 		replica, err := service.New(r.db, cfg)

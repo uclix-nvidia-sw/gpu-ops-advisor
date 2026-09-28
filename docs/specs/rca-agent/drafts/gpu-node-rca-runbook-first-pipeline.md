@@ -4,43 +4,33 @@
 
 상태: 팀 검토용 설계 · 운영 코드/DB 미반영 · 작성일: 2026-09-21
 
+2026-09-23 후속 합의: 전체 workflow와 종료·LLM·저장 계약은 [11번 문서 §2](../11_RCA_Agent_모듈_설계서.md#2-처리저장)를 따른다. 아래 조사 흐름은 그 합의에 맞춰 보완했으며 §6·§9의 과거 구현·검증 기록을 새 실행 결과로 바꾸지 않는다.
+
 검증 범위: 사용자 제공 main (4) ZIP과 knowledge-db-reference 브랜치 ZIP. 검증에서 확인한 수정사항을 본문과 검색 코드에 반영했다. 현재 실행 가능한 부분은 독립 `retrieval.py`의 검색과 테스트이며, 전체 workflow 연결은 추가 구현 대상이다. example YAML은 NAT에서 로드하는 실행 설정이 아니다. 구현 범위와 검증 결과는 이 문서의 9절에 정리했다.
 
 ## 요약
 
-GPU 노드 RCA Agent는 Incident를 받자마자 자유롭게 조사 계획을 만들지 않는다. 먼저 검토·발행된 런북을 **BM25로 검색**하고, 검색된 런북의 적용 조건을 실제 Mimir/Loki 증거로 검증한다. 적용 가능한 런북이 있으면 그 런북이 허용한 관측과 권고를 따른다. 충분한 후보가 없거나 후보가 증거 검증에서 탈락하면 그때 **가설 기반 조사**로 전환한다.
+GPU 노드 RCA Agent는 JC에서 작업을 claim하고 고정된 사건·증거·지식으로 조사를 시작한다. 먼저 DB 조회·결정적 검색(BM25 포함)으로 Runbook을 찾고 코드로 적용 조건을 검사한다. **기존 증거가 조사 목적까지 충족하면 MCP·LLM을 생략**한다. 부족하면 Runbook의 필요한 D코드 또는 등록 일반 조사로 수집 계획을 만들고, **수집 → 증거 정리 → LLM 분석 → 코드 검증·재평가 → 필요 시 재조사**한다. LLM 분석은 Runbook이 있는 추가 수집 경로에도 적용하며, 새로운 가설 조사의 진입 조건과 구분한다.
 
 ```text
-Grafana Alert / UI / Fault Injection
-              │
-              ▼
-     Incident Evidence Snapshot
-              │  원문·시각·대상·입력 경로 보존
-              ▼
-       검색 문서 정규화
-              │  코드·핵심어·GPU/노드·producer 추출
-              ▼
-    Published Runbook BM25 검색
-              │
-       ┌──────┴──────┐
-       │ 후보 있음    │ 후보 없음/낮은 점수
-       ▼             ▼
-  적용조건 검증     가설 후보 생성
-       │             │
-  런북 지정 관측     가설별 식별 관측
-       │             │
-       └──────┬──────┘
-              ▼
-       Mimir/Loki 증거 수집
-              ▼
-  원인 후보·반증·누락·권고 작성
-              ▼
-         사람 검토/보고
+Incident snapshot → JC claim → 목적·범위·기존 증거·지식 고정
+  → Runbook DB 조회·결정적 검색 → 코드로 적용/증거 조건 검사
+      ├─ 기존 증거 충분: 코드로 원인 후보·근거·권고 작성 (MCP·LLM 0회)
+      └─ 부족 / 미일치: Runbook D코드 또는 등록 일반 조사로 계획
+          → Grafana MCP → 정규화·품질 확인
+          → 유효 증거가 있으면 LLM 분석 → 코드 검증·Runbook 재평가
+              ├─ 목적 충족: 분석 결과 작성
+              ├─ 추가 조회·예산 있음: 계획 보완 → 수집·분석 반복
+              └─ 더 조사 불가: 부족·상충·종료 사유를 담은 미확정 결과
+  → 공통 최종 검증 → evidence·candidate 저장 → JC complete·공개
+  → Backend 이력 조회 / Report Agent가 공개 결과 참조
 ```
 
 여기서 “런북이 매칭됐다”는 BM25 점수가 높다는 뜻이 아니다. **검색 후보가 됐고 적용 조건을 증거로 통과했다**는 뜻이다. BM25는 텍스트 검색 결과만 제공하며 원인 확률이나 조치 안전성을 의미하지 않는다.
 
 모든 후보가 반증되면 가설 경로로 이동한다. 관측 실패·stale·식별자 누락 때문에 확인하지 못한 경우는 `insufficient_evidence`로 보류한다. 데이터 부족을 원인 가설의 근거로 사용하지 않는다. 한 webhook의 여러 Alert는 Incident에서 대상·시각별로 분리해야 한다. 검증과 관측은 후보별로 반복하며, 검색 앞에 전체 조사 계획 생성 단계를 두지 않는다.
+
+유효한 기존·신규 증거가 전혀 없으면 근거 없는 LLM 분석 대신 추가 조회 가능성을 확인하고 불가능하면 미확정 종료한다. 모델 오류·검증 실패 시 분석 완료로 표시하지 않는다. 모든 정상 결과 경로는 저장·공개까지 수행하고 저장 실패·취소·lease 만료·원격 추론 종료 불명은 14의 실행 계약으로 처리한다.
 
 ## 1. 온톨로지에서 차용하는 것과 제외하는 것
 
@@ -134,7 +124,7 @@ Incident snapshot의 hash, incident time, 허용된 cluster/time range를 고정
 
 ### 4.4 런북 경로
 
-적용 가능한 런북이 있으면 런북의 `observation_plan` 순서대로 등록된 query ID만 실행한다. 첫 묶음으로 원인 후보를 구분할 수 있으면 확장 조회를 멈춘다. NVIDIA/gpud/Fleet action은 원문·버전·전제조건을 유지하며, Agent 결과에서는 `execution='not_performed'`로 남긴다.
+기존 증거가 Runbook 조건·품질과 선택된 조사 목적을 충족하면 추가 관측·LLM 없이 결과를 작성한다. 부족하면 `required_queries` 또는 추가 구현할 `observation_plan`에서 필요한 query를 계획하고 허용 범위·예산을 검사한다. 수집 후 유효 증거는 LLM 분석으로 이어지고, 코드가 근거 참조·원인 수준·Runbook 조건을 재검증한다. 첫 묶음의 분석으로 목적을 충족하면 확장 조회를 멈추고, 부족하면 유효한 추가 조회·예산이 있을 때만 반복한다. NVIDIA/gpud/Fleet action은 원문·버전·전제조건을 유지하며 `execution='not_performed'`로 남긴다.
 
 #### 원천 suggested/repair action을 우선 재사용한다
 
@@ -156,7 +146,8 @@ BM25 런북 후보
   → 후보의 Category
   → Category별 우선 관측 + 런북 고유의 필수 증거
   → meaning_id → 해당 CPC의 source binding → 등록된 query_id
-  → Mimir/Loki 조회 → 적용 조건·원인 후보 검증
+  → Grafana MCP로 Mimir/Loki 조회 → 증거 정리 → LLM 분석
+  → 코드로 적용 조건·원인 후보 검증 → 종료 또는 계획 보완
 ```
 
 관측 항목에는 `priority`, `meaning_id`, `query_id`, 조회 대상·기간, 단위, freshness, 판정 목적과 누락 시 동작을 기록한다. GPU 온도처럼 같은 의미의 Fleet/Exporter 메트릭이 있으면 검증된 primary binding을 사용하고, 허용된 조건에서만 fallback한다. Field ID는 binding 검증 근거이며 Agent가 Mimir 값에서 추측하지 않는다.
@@ -168,6 +159,8 @@ Category 공통 관측은 기본 순서를 제공하고 런북 고유의 필수 
 현재 구현 상태는 **Category별 우선 조회 관계를 설계한 단계**다. 전체 Category→메트릭/query 매핑의 적재·검증과 순서 실행은 아직 구현하지 않았다.
 
 ### 4.5 가설 경로
+
+이 절의 진입 조건은 **새로운 가설 조사**에 관한 것이다. Runbook이 있으나 증거가 부족한 경로도 수집 후 §4.4의 LLM 분석을 거친다. Runbook이 없으면 등록 일반 조사로 기본 증거를 먼저 확보하고, 유효 증거 안에서 후보와 구분용 query를 제안한다. 검색 점수 임계값은 검수·설정되기 전까지 실행 분기로 사용하지 않는다.
 
 다음 중 하나면 가설 경로로 전환한다.
 
@@ -198,11 +191,15 @@ Agent는 장애 Domain/Category와 현재 증거를 이용해 최대 N개의 가
 
 ### 4.6 종료
 
-결과에는 선택한 경로(`runbook`/`hypothesis`), 검색 후보와 탈락 이유, 실행한 query revision, 증거·반증, missing input, 권고 출처를 기록한다. 종료 사유는 evidence sufficient, missing data, conflicting evidence, unsupported source, budget exhausted, query failed 등을 유지한다.
+결과에는 원인 후보·판단 수준·지지/반박 refs·목적별 평가·부족 입력·권고·종료 사유를 기록한다. 검색 후보와 탈락 이유, Runbook/query/model revision, LLM 사용/생략/실패, 계획 보완과 종료 결정은 기존 evidence snapshot/quality와 실행 기록에 연결한다. Runbook 단독·추가 수집/LLM·미확정 모두 최종 검증 → evidence·candidate 저장 → JC complete·공개를 거친다. 공개 결과만 Backend·보고서가 사용하며 미확정 원인을 확정으로 바꾸지 않는다.
+
+종료 사유는 evidence_sufficient, missing_data, conflicting_evidence, unsupported_source, budget_exhausted, query_failed 등 기존 값을 유지한다. 데이터 부족의 유효한 부분/보류 결과와 저장 실패·취소·lease 만료 같은 실행 실패를 구분한다. 모든 실패 직전 중간 증거의 영속화를 보장하지 않으며, 유효 lease 없이 저장·공개하지 않는다.
 
 ## 5. 런북 content 최소 계약
 
 초기에는 새 테이블보다 `knowledge_revisions(kind='runbook')`의 versioned `content`를 사용한다.
+
+R코드는 Agent의 조사 목적이며 아래 Runbook의 필수 필드가 아니다. 필요한 fact는 `required_evidence`, 실행 관측은 실제 등록 D코드인 `required_queries`/`observation_plan`으로 연결한다. LLM 입력·출력과 충분 판정·재조사 기준은 11 §2를 따르며 Runbook마다 별도 실행 엔진이나 자유 SQL을 두지 않는다.
 
 ```json
 {
@@ -253,7 +250,7 @@ Agent는 장애 Domain/Category와 현재 증거를 이용해 최대 N개의 가
 3. exact code boost와 top-k 결과를 evidence에 저장한다.
 4. retrieval과 applicability를 분리하고 탈락 사유를 저장한다.
 5. ECC·Xid·NVLink·IB 등 등록 query와 parser를 추가한다.
-6. 런북 미매칭에만 bounded hypothesis planner를 호출한다.
+6. 새로운 가설 조사는 런북 미매칭/유효 반박 조건에서 제한한다. 2026-09-23 보완 기준에서는 런북이 있는 추가 수집 경로에도 LLM 분석·검증·재조사를 연결하고, 기존 증거 충분 경로에는 MCP·LLM 0회와 공통 저장을 구현한다.
 7. golden incident 세트로 recall@k, wrong-runbook rate, abstention, evidence completeness를 평가한다.
 
 ## 7. 평가와 운영 기준
@@ -300,10 +297,11 @@ BM25 `min_score`, field boost, top-k는 이 평가 결과로 고정하고 revisi
 | 우선 관측 | 미등록 query 추가, `observation_plan` 변환과 순서 보존 필요 |
 | 원천 action 재사용 | gpud/Fleet 원문 추출·버전 고정·적재·참조 해결 및 권고 연결 필요 |
 | 가설 경로 | 생성기, query 제한, 현행 결과 계약으로의 adapter 필요 |
+| 분석·종료·저장 | 기존 증거 충분 시 LLM 0회; 수집 증거 기반 LLM 분석·검증·재조사; 세 결과 경로의 공통 저장·JC 공개. 기존 설명용 fact ID 선택과 구분 |
 | 검색 품질 | 임계값·한글/동의어·복합 오류·동점 처리 평가 필요 |
 | 운영 경계 | GPU 노드용 query/purpose 제한, 운영 표본을 이용한 E2E 필요 |
 
-관련 계약은 [workflow](../../../../rcca-agent/src/rcca_agent/workflow.py), [Incident/결과 모델](../../../../shared/python/src/agent_common/contracts.py), [health parser](../../../../shared/python/src/agent_common/parsers.py), [고정 지식 조회](../../../../shared/python/src/agent_common/store.py), [query registry](../../../../agents/config.example.json)를 따른다. 6절의 구현 순서로 진행한다.
+관련 구현은 [workflow](../../../../rcca-agent/src/rcca_agent/workflow.py), [Incident/결과 모델](../../../../shared/python/src/agent_common/contracts.py), [health parser](../../../../shared/python/src/agent_common/parsers.py), [고정 지식 조회](../../../../shared/python/src/agent_common/store.py), [query registry](../../../../agents/config.example.json)를 따른다. 현행 개발 순서는 [11번 문서 §7](../11_RCA_Agent_모듈_설계서.md#7-개발-상세와-검수-순서)이 우선이며 아래 검증 기록은 당시 검색 모듈의 검증 범위다.
 
 ### 저장소와의 호환성
 

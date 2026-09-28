@@ -61,7 +61,13 @@ func (s *Server) parseEpisode(raw any, now time.Time) (episodeAlert, string) {
 			v.target[key] = a.labels[key]
 		}
 	}
-	if node := a.annotations["k8s_node_name"]; node != "" {
+	node := a.labels["k8s_node_name"]
+	if annotation := a.annotations["k8s_node_name"]; node != "" && annotation != "" && node != annotation {
+		return v, "conflicting_node_name"
+	} else if node == "" {
+		node = annotation
+	}
+	if node != "" {
 		v.target["k8s_node_name"] = node
 	}
 	// PostgreSQL timestamptz stores microseconds; use that same precision in fallback keys.

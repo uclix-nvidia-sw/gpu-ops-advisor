@@ -27,6 +27,7 @@ from psycopg.conninfo import conninfo_to_dict
 import pytest
 
 from agent_common.contracts import content_hash
+from test_rca_analysis import general_runbook, analysis_reply
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCAL = ROOT / ".local" / "agent-e2e"
@@ -89,7 +90,9 @@ class Upstream(BaseHTTPRequestHandler):
                 message = {
                     "role": "assistant",
                     "content": json.dumps(
-                        {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
+                        analysis_reply(data["observation_refs"])
+                        if "observation_refs" in data
+                        else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
                     ),
                 }
             return self.send(
@@ -342,6 +345,19 @@ def stack():
             conn.execute(
                 "INSERT INTO cluster_registry(id) VALUES('cpc-2') ON CONFLICT DO NOTHING"
             )
+            book = general_runbook("cpc-2")
+            conn.execute(
+                "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,1,'runbook','published','common',%s,%s,%s,%s)",
+                (
+                    book["id"],
+                    book["knowledge_id"],
+                    book["knowledge_key"],
+                    Jsonb(book["content"]),
+                    book["content_hash"],
+                    book["reviewed_content_hash"],
+                    Jsonb(book["compatibility"]),
+                ),
+            )
         incident_url = f"http://127.0.0.1:{port()}"
         ip = spawn(
             [str(incident)],
@@ -505,6 +521,19 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack):
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
     assert rca["device_observations"] and rca["cause_candidates"]
+    assert rca["quality"]["analysis"]["status"] == "complete"
+    assert rca["quality"]["analysis"]["followups"] == 1
+    assert any(q == "rca_synthesis" for q, s in evidence)
+    synthesis_requests = [
+        json.loads(body["messages"][1]["content"])
+        for path, body in Upstream.requests
+        if path == "/v1/chat/completions" and "tools" not in body
+    ]
+    plans = next(
+        p["runbook_plans"] for p in synthesis_requests if "observation_refs" in p
+    )
+    assert plans[0]["investigation_only"] and plans[0]["analysis_guidance"]
+    assert all(c["causal_status"] == "candidate" for c in rca["cause_candidates"])
     report_input = dict(
         scope=SCOPE,
         time_range=PERIOD,
@@ -541,6 +570,12 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
             "node": "node-1",
             "gpu_uuid": "GPU-1",
             "severity": "warning",
+            "k8s_node_name": "node-1",
+            "component": "accelerator-nvidia-error-xid",
+            "reason": "XID 79 on fixture device",
+            "suggested_actions": json.dumps(
+                {"description": "Fixture only", "repair_actions": ["inspect"]}
+            ),
         },
         "annotations": {
             "summary": "GPU alert from real Incident path",
@@ -578,9 +613,24 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
     assert any(query.startswith("D") for query, _ in evidence)
     # A published blocked result must not hide MCP rejecting fractional times.
     assert all(
-        status in {"ok", "empty"} for query, status in evidence if query.startswith("D")
+        status in {"ok", "empty", "partial"}
+        for query, status in evidence
+        if query.startswith("D")
     ), evidence
     with psycopg.connect(stack["url"]) as conn:
+        partial = conn.execute(
+            "SELECT quality FROM evidence WHERE job_id=%s AND tool_status='partial'",
+            (jid,),
+        ).fetchall()
+        assert partial and all(
+            q[0]["reason"] == "time_precision_reduced" for q in partial
+        )
+        clues = conn.execute(
+            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='alert_clues'",
+            (jid,),
+        ).fetchone()[0]
+        assert clues["error_codes"] == ["xid:79"]
+        assert clues["provider_actions"]["execution"] == "not_performed"
         saved_snapshot, checksum = conn.execute(
             "SELECT snapshot,checksum FROM evidence WHERE job_id=%s AND query_id='incident_snapshot'",
             (jid,),
@@ -731,7 +781,11 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
             (iid, Jsonb(snapshot), content_hash(snapshot)),
         )
     rid = submit(stack, "rca", data)
+    request_start = len(Upstream.requests)
     result, evidence = worker_result(stack, "rca", rid, "-runbook")
     assert result["termination_reason"] == "evidence_sufficient"
     assert result["cause_candidates"][0]["causal_status"] == "supported"
     assert not any(q.startswith("D") for q, s in evidence)
+    assert not any(
+        p == "/v1/chat/completions" for p, _ in Upstream.requests[request_start:]
+    )

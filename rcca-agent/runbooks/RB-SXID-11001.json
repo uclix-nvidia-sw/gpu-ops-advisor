@@ -1,0 +1,118 @@
+{
+  "knowledge_key": "RB-SXID-11001",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "NVSwitch 사건의 원본 SXid 이벤트를 찾고 대상·시각·동반 오류를 보존한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "검증된 producer 상태 이벤트가 있으면 같은 대상의 상태 변화를 확인한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "GPU 사용률을 보조 관측으로 비교한다. 값 소실이나 0만으로 고장·회복을 판단하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+        "revision": "Page last updated 2025-11-14; mutable upstream document",
+        "section": "Runtime NVSwitch Errors / Fatal NVSwitch SXid Errors (Table 22) / NVSwitch Errors On DGX B200/B300 and NVIDIA HGX B200/B300 Systems",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "작성 초안이며 compatibility가 비어 있어 런타임에 적용할 수 없다.",
+      "SXid를 사용하는 플랫폼·FM/producer 버전을 검수해야 한다. NVIDIA 가이드의 DGX/HGX B200/B300은 SXid 대상이 아니며 이 초안을 적용하지 않는다.",
+      "기본 D09/D05가 FM 원본과 switch/port 신원을 제공하는지 미검증이다. D02는 보조 GPU 사용률이며 fabric 상태나 장애 영향 증거가 아니다.",
+      "현재 parser는 error_code를 생성하지 않는다. 토폴로지·전파·fatality·복구 판단은 구현 범위 밖이다."
+    ],
+    "title": "SXid 11001 NVSwitch 이벤트 조사",
+    "description": "SXid 11001 단서에서 NVSwitch 원본 이벤트와 포트·장비·Fabric Manager 맥락을 확인하는 초기 조사.",
+    "claim": "검증된 동일 대상에서 SXid 11001 이벤트가 관측되어 NVSwitch 관련 조사가 필요하다. 근본 원인과 영향 범위는 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "nvswitch_sxid"
+    },
+    "search": {
+      "codes": [
+        "sxid:11001"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-sxid"
+      ],
+      "aliases": [
+        "NVSwitch ingress invalid command"
+      ],
+      "symptoms": [
+        "NVSwitch SXid 이벤트"
+      ]
+    },
+    "analysis_guidance": [
+      "동일 NVSwitch·노드의 원본 이벤트와 Fabric Manager 기록, 플랫폼·버전·발생 시각을 확인한다.",
+      "source port와 access/trunk 연결, GPU·partition 관계가 확인될 때만 영향 범위를 논의한다. PCI 주소만으로 GPU UUID를 만들지 않는다.",
+      "동반 Xid 이벤트는 별도 namespace로 보존하고 동일 대상·시각 관계가 없으면 인과나 전파를 추정하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "운영자가 원본 NVSwitch·Fabric Manager 로그와 플랫폼·버전·포트 정보를 보존하고 적용되는 벤더 조사 절차를 검토한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "sxid:11001"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "sxid:11001"
+      }
+    ]
+  }
+}

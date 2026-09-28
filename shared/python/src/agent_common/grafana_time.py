@@ -1,15 +1,15 @@
-"""Time formatting for Grafana MCP's Prometheus datemath parser."""
+"""Time formatting for Grafana MCP's datemath parser."""
 
 from datetime import datetime, timedelta, timezone
 
 
-def prometheus_time(value, *, ceiling=False):
+def mcp_time(value, *, ceiling=False):
     """Use UTC milliseconds at the MCP boundary; never change stored evidence.
 
     MCP 1.4.2 uses Grafana datemath, which rejects RFC3339 microseconds.
     Prometheus samples have millisecond precision. Round a discovery start up
     and an end down so the request does not expand the authorized interval.
-    Loki uses a different parser and keeps its original precision.
+    Loki tools use the same parser; log boundary precision loss is explicit quality.
     """
     dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if dt.tzinfo is None:

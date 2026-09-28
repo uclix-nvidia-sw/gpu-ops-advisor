@@ -39,6 +39,7 @@ Go 1.26와 PostgreSQL을 사용합니다. Docker가 없어도 저장소 루트�
 
 - `episode_policy` 생략/null: 기존 1.3 정책·증거 revision·source_key 유지. 객체 지정: 1.4 에피소드 경로. `revision`과 실제 Grafana 반복 주기를 명시하며 K ≥ 2 × repeat_interval이어야 시작합니다. 정책 내용을 바꾸면 새 revision을 사용합니다. 기존 에피소드의 K와 최초 snapshot은 유지합니다.
 - 완전한 신원은 source/cluster_id/machine_id/component로 묶습니다. reason·fingerprint가 다른 알람도 같은 연속 구간에서는 사건과 최초 RCA가 하나입니다. machine_id/component가 부족하면 생명주기별로 격리하고 `identity_incomplete`를 보존합니다. 그룹 키는 2,000바이트 이하입니다.
+- 1.4의 `k8s_node_name`은 labels에서 읽고 없으면 annotations를 사용합니다. 양쪽 값이 다르면 `conflicting_node_name`으로 거부합니다. 이 표시 이름으로 machine/GPU 신원을 추정하지 않으며 원문·hash와 기존 1.3 dedup은 유지합니다.
 - snapshot은 revision=1, 요청 키는 `incident:<id>:first`입니다. 신규 입력에는 `purpose_ids`, `analysis_profile_revision`을 넣지 않습니다. GPUAlert 외 이름도 접수하며 DatasourceNoData/DatasourceError는 별도 사건으로 기록하고 `analysis_excluded`로 분석을 생략합니다.
 - 동일 bytes의 반복 수신도 그룹당 요청 1회씩 관측 카운트를 늘립니다. 원문·receipt·snapshot은 중복 생성하지 않습니다. `last_observed_at`은 서버 수신 시각이며 원천 로그 건수나 장비 정상 여부를 뜻하지 않습니다.
 - gap > K일 때 관측 종료를 판정합니다. 조회는 경과 시간을 반영하고 수신/PATCH에서 종료를 영속화합니다. 일부 생명주기의 resolved는 전체 사건 해제가 아니며, resolved 선접수와 이미 해제된 생명주기의 늦은 firing은 사건/RCA를 만들지 않습니다.

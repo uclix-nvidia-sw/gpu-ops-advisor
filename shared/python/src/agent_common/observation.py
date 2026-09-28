@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from .contracts import timestamp, now
 from .discovery import Discovery, DiscoveryError
-from .grafana_time import prometheus_time
+from .grafana_time import mcp_time
 
 log = logging.getLogger(__name__)
 
@@ -173,8 +173,8 @@ class Observation:
                     args = dict(
                         datasourceUid=uid,
                         logql=base,
-                        startRfc3339=window["start"],
-                        endRfc3339=window["end"],
+                        startRfc3339=mcp_time(window["start"], ceiling=True),
+                        endRfc3339=mcp_time(window["end"]),
                         limit=limits["max_rows"],
                         direction="forward",
                     )
@@ -189,8 +189,23 @@ class Observation:
                         datasourceUid=uid,
                         expr=expr,
                         queryType="instant",
-                        endTime=prometheus_time(window["end"]),
+                        endTime=mcp_time(window["end"]),
                     )
+                if source == "loki" and timestamp(args["startRfc3339"]) > timestamp(
+                    args["endRfc3339"]
+                ):
+                    out.append(
+                        self._evidence(
+                            query_id,
+                            scope["cluster_id"],
+                            window,
+                            {},
+                            "unavailable",
+                            {"reason": "time_range_below_millisecond_resolution"},
+                        )
+                    )
+                    cursor = stop
+                    continue
                 self.calls += 1
                 quality = {
                     "complete": True,
@@ -201,6 +216,18 @@ class Observation:
                     "query_revision": definition["revision"],
                     "metric": definition.get("metric"),
                 }
+                if source == "loki" and (
+                    timestamp(args["startRfc3339"]) != cursor
+                    or timestamp(args["endRfc3339"]) != stop
+                ):
+                    quality.update(
+                        complete=False,
+                        reason="time_precision_reduced",
+                        request_time_range={
+                            "start": args["startRfc3339"],
+                            "end": args["endRfc3339"],
+                        },
+                    )
                 try:
                     async with asyncio.timeout(
                         min(

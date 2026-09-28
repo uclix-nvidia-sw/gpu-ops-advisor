@@ -20,7 +20,7 @@
 
 ## Grafana 시간 형식과 LLM 오류 진단
 
-Grafana MCP 1.4.2의 Prometheus 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. Worker는 Prometheus 탐색·조회 요청에서만 UTC 밀리초로 변환합니다. 탐색 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며, 원본 Incident snapshot·해시·증거 시각과 Loki 요청의 정밀도는 유지합니다.
+Grafana MCP 1.4.2의 Prometheus·Loki 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. 두 Worker의 공통 수집기는 MCP 탐색·조회 요청 시각을 UTC 밀리초로 변환합니다. 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며 원본 Incident snapshot·해시·증거 시각을 유지합니다. Loki 조회 경계의 정밀도가 줄면 `quality.reason=time_precision_reduced`, `complete=false`, 실제 `request_time_range`를 기록하고 부분 근거로 처리합니다. 밀리초 단위 조회창이 남지 않으면 조회하지 않습니다.
 
 LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사가 성공해도 기존 `inference_quarantined`는 자동 해제되지 않습니다. 원격 추론 종료를 확인한 뒤 [Job Controller 운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따릅니다.
 
@@ -102,7 +102,8 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 - 지표는 instant range-vector query로 원본 표본 시각을 보존합니다. 기간을 chunk로 나누고 계산에서 경계 중복·공백·최대 유효시간을 처리합니다. Loki는 행 제한 도달 시 `partial`, 실패는 `unavailable`, 빈 결과는 `empty`입니다.
 - scope/namespace/대상/기간은 코드가 조립·검사합니다. LLM에는 쿼리 ID만 전달하며 임의 PromQL/LogQL/SQL/쉘이나 저장·완료 함수는 노출하지 않습니다.
 - 보고서는 REPEATABLE READ에서 data cutoff, Incident, 공개된 RCA ID/hash, 실제 조치 기록을 고정합니다. RCA 원인 수준은 인용한 결과 수준을 유지합니다.
-- LLM 설명은 검증된 사실 ID 선택으로 제한하고 저장된 `value_refs`로 렌더링합니다. 자유 문장의 새 수치·인과 주장은 허용하지 않습니다.
+- 보고서 LLM 설명은 검증된 사실 ID 선택으로 제한하고 저장된 `value_refs`로 렌더링합니다. RCA Synthesis는 수집이 끝난 뒤 도구 없이 근거 참조가 있는 원인 후보·한계를 생성합니다. 자유 문장의 숫자는 거부하고 모델의 인과 수준은 candidate로 제한합니다. 참조·형식 검증이 모델 문장 의미의 진실성을 보장하지는 않습니다.
+- RCA는 승인 Runbook 계획의 query를 병렬 실행하며 `limits.max_concurrency` 기본값은 3입니다. 최대 1회 재조사 후 Synthesis하고, 조회 실패·부분 수집은 degraded로 남깁니다. 전용 Runbook 미일치는 `rca.general_runbook_key`의 승인 발행본으로 대체하며 일반 발행본까지 없으면 조사하지 않습니다. [RCA 실행 안내](../rcca-agent/README.md)와 [보완 계획](../docs/specs/rca-agent/implementation-plan-20260928.md)을 따릅니다.
 - timeout/cancel 이후 추론 종료가 확인되지 않으면 `remote_call_state=unknown`으로 fail을 보내 JC의 격리 정책에 맡깁니다. 저장 실패는 succeeded가 아닙니다.
 - Agent는 HTML·CSV 파일과 checksum을 저장합니다. Backend 다운로드 API는 발행된 결과에서 HTML 표와 항목별 CSV를 렌더링하며 새 조회·분석은 하지 않습니다. HTML escape와 CSV 수식 방어를 적용합니다. 화면 상단의 HTML·CSV 다운로드 버튼으로 받을 수 있습니다.
 

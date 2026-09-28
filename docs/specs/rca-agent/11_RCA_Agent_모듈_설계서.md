@@ -8,6 +8,10 @@
 
 **현재 구현**은 코드로 확인한 동작, **통합 목표**는 이번에 정의한 추가 개발 사항이다. 문서 병합은 기능 구현·운영 검증 완료를 뜻하지 않는다. 현행 모듈 계약은 1.3이다. Incident 중복 제거·전달과 Agent 판단의 역할 분리는 **RCA 접수 계약 1.4의 추가 개발 목표**이며 결과 본문 `result_schema_version=1.1`은 유지한다. 기존 1.3 입력을 조용히 재해석하지 않는다.
 
+2026-09-23 workflow 합의: **Runbook 검색·적용 검사는 DB 조회와 코드로 처리**한다. 기존 증거로 조사 목적을 충족하면 MCP·LLM 없이 결과를 작성한다. 부족하면 **수집 계획 → Grafana MCP → 증거 정리 → LLM 분석 → 검증·재평가 → 필요 시 재조사**를 수행한다. 모든 유효한 분석 결과는 원인 미확정을 포함해 공통 검증·저장·JC 공개를 거친다. 아래 §2의 도식과 계약은 개발 목표이며 현재 코드의 동작과 구분한다.
+
+2026-09-28 보완: [입력·병렬 조사·Synthesis 구현 계획](implementation-plan-20260928.md)을 적용한다. 한 NAT workflow 안에서 Orchestrator가 query별 Observation Sub-agent를 병렬 실행·회수하고, 코드 충분성 판정 후 최대 한 번 재조사한다. 마지막 Synthesis Agent가 근거를 해석한다. 기존 증거 충분 시 MCP·LLM 0회 원칙은 유지한다. Runbook 미일치는 승인·고정된 일반 조사 Runbook으로 대체하며, 그것도 없으면 조사 보류를 결과로 남긴다. 아래 표와 §0.1은 이전 기준 시점의 gap 기록이고 최신 로컬 구현은 §2.4 및 Agent QA를 따른다.
+
 | 구성 | 현재 구현 | 통합 목표·남은 일 |
 |---|---|---|
 | 알람 전달·조사 선택 | Incident의 alertname 정책이 purpose_ids 지정, 증거 변화로 새 job 생성 가능 | Incident는 관측 에피소드당 최초 1회 전달; Agent가 파싱 후 목적·workflow 선택 |
@@ -19,6 +23,7 @@
 | 적용 검사 | `{field, equals}` 조건의 AND, 필수 fact 존재, 배제·권고 전제 검사 | 증거 품질을 포함한 적용/반박/보류 구분; 필요한 조건만 검토 후 확장 |
 | 추가 관측 | D01~D13, 네 procedure, Grafana MCP, attempt 내 캐시·예산·evidence 저장 | runbook의 query ID 연결, 의미·producer binding, 우선순위와 재평가 |
 | 가설 | 등록 후속 조회와 일반 증상 후보 작성 | 명시적 bounded hypothesis 검증과 기존 결과 형식으로의 변환 |
+| LLM 분석·생략 | 후속 query ID 선택과 마지막 설명용 fact ID 선택 | 충분한 기존 증거에는 LLM 0회; 추가 수집 후 근거 기반 분석·검증·재조사 연결 |
 | 원천 action | runbook 권고를 수행하지 않은 제안으로 출력 | 버전 고정 원문·전제·참조 해석; 자동 조치 없음 |
 
 근거: [workflow](../../../rcca-agent/src/rcca_agent/workflow.py), [검색 모듈](../../../rcca-agent/src/rcca_agent/retrieval.py), [관측 실행](../../../shared/python/src/agent_common/observation.py), [저장](../../../shared/python/src/agent_common/store.py). 초안의 example YAML은 `runtime_loadable: false`인 설계 예시이며 배포 설정으로 읽히지 않는다.
@@ -64,13 +69,15 @@ R01~R09는 Agent 내부의 조사·평가 항목이다. 신규 경로에서는 A
 
 ## 2. 처리·저장
 
-여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 알람 파싱·조사 목적/경로 선택 → 호환 Runbook 검색·적용 조건 확인 → 부족한 증거를 Grafana MCP로 조회 → 원인 후보·지지/반박 분석 → 검증된 candidate 저장 → JC complete 순서다. 이미 충분한 증거가 있으면 추가 관측 조회를 생략할 수 있다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
+여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 알람 파싱·조사 목적 선택 → DB 조회·코드로 Runbook 검색/적용 검사 순서다. 기존 증거가 충분하면 MCP·LLM 없이 결과를 작성한다. 부족하면 수집 계획 → Grafana MCP → 정규화·품질 확인 → LLM 분석 → 검증·재평가를 거쳐, 유효한 추가 조회와 예산이 있을 때만 반복한다. 두 경로 모두 결과 검증 → evidence·candidate 저장 → JC complete·공개로 끝난다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
 
 04의 공통 결과에 incident_id·incident_time·current_checked_at·pod_relations·assessments·cause_candidates·recommendations·missing_inputs·termination_reason을 더한다. 숫자는 measurements 레지스트리에 저장하고 문장에서는 value_refs로 참조한다.
 
 ### 2.1 모듈 내부 구성
 
 Worker 프로세스 안에서 NAT 사용자 정의 워크플로를 실행한다. 워크플로는 다음 업무 함수로 구성하며, 단계마다 별도 서비스나 하위 Agent를 배포하지 않는다.
+
+내부 오케스트레이터는 이 단계의 순서·분기·예산을 코드로 조율한다. Runbook을 찾거나 정해진 관측 계획을 구성하기 위해 LLM을 호출하지 않는다. 관측 sub-agent는 같은 프로세스의 asyncio task로 실행하고 Synthesis는 도구 없는 별도 역할로 둔다. 별도 JC job·큐를 만들지 않는다.
 
 | 내부 구성 | 책임 | 사용하는 자료/연결 |
 |---|---|---|
@@ -79,23 +86,42 @@ Worker 프로세스 안에서 NAT 사용자 정의 워크플로를 실행한다.
 | 목적·경로 선택 | R01~R09 관련성 판정, Runbook·일반 조사·보완 조회 선택과 재평가 | 파싱 근거·등록 선택 규칙·procedure·실행 예산 |
 | Runbook 검색·검사 | 호환 발행본 검색, 필수 증거·적용/배제 조건 확인 | knowledge_revisions; 04의 지식 계약 |
 | 조사 진행 | 등록 procedure 선택, 부족한 증거에 대한 다음 조사 결정 | NAT 워크플로·LLM·허용된 조회 함수 |
-| 관측 조회 | 제한된 로그·지표·당시/현재 관계 확보와 품질 정규화 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
-| 원인 분석·검증 | 사실·후보·지지/반박·권고·한계 작성 및 검증 | 확보한 증거, 규칙, LLM |
+| Observation Sub-agent | 배정된 등록 query의 로그·지표 수집과 품질 기록; 병렬 실행·회수 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
+| Synthesis / Orchestrator 검증 | Synthesis가 후보·근거·한계를 해석하고 Orchestrator 코드가 결과를 검증 | 확보한 증거, 규칙, LLM |
 
-LLM에는 등록된 다음 조사 선택만 허용한다. 도구 호출을 지원하는 모델을 검증한 뒤 NAT Tool Calling 단계를 조사 진행에 연결한다. 호출 가능한 절차, 대상, 시간창, 횟수와 종료 조건은 Python 코드가 검사한다. 저장·완료·취소 처리는 LLM 도구로 노출하지 않는다.
+LLM은 수집한 근거를 해석해 원인 후보·지지/반박·추가 확인을 제안한다. 실행 도구 선택은 등록된 다음 조사로 제한한다. 도구 호출을 지원하는 모델을 검증한 뒤 NAT Tool Calling 단계를 조사 진행에 연결한다. 호출 가능한 절차, 대상, 시간창, 횟수와 종료 조건은 Python 코드가 검사한다. 저장·완료·취소 처리는 LLM 도구로 노출하지 않는다.
 
 ### 2.2 Runbook 우선 조사와 추가 조회
 
 | 상황 | 처리 |
 |---|---|
-| 호환 Runbook과 필수 증거가 모두 있음 | 실제 적용·배제 조건을 검사한 뒤 근거와 권고 작성. 불필요한 추가 조회 생략 |
-| Runbook은 있으나 증거 부족 | Runbook이 요구하는 로그·지표를 Grafana MCP로 조회하고 적용 여부 재검사 |
-| 맞는 Runbook이 없음 | 3.2의 등록 일반 조사 procedure로 사고 전후 로그·지표·관계를 조회하고 원인 후보 분석 |
-| 반박 증거·상충·데이터 부족 | 양쪽 증거를 보존하고 결론 수준을 낮추거나 미확정 종료. 다음 확인 항목 제공 |
+| 호환 Runbook과 기존 증거로 조사 목적 충족 | 적용·배제 조건과 품질을 코드로 검사한 뒤 근거와 권고 작성. MCP·LLM 0회로 공통 저장 진행 |
+| Runbook은 있으나 증거 부족 | 필수 query를 sub-agent에 병렬 배정 → 코드 충분성 검사 → 필요 시 최대 1회 재조사 → Synthesis LLM 해석·검증 |
+| 맞는 Runbook이 없음 | 명시한 승인·고정 일반 조사 Runbook을 선택. 일반 Runbook도 없으면 부족 입력을 기록하고 조회를 시작하지 않음 |
+| 반박 증거·상충·데이터 부족 | 지지·반박·부족을 보존. 유효한 추가 조회와 예산이 있으면 재조사하고, 없으면 미확정 결과 작성 |
+| 유효한 증거가 전혀 없음 | 근거 없는 LLM 분석은 생략. 추가 조회 가능성을 확인하고 불가능하면 부족·실패 사유를 결과에 기록 |
 
 Runbook 검색 성공은 원인 확정이나 장애 복구를 의미하지 않는다. Grafana MCP는 Runbook 실패 시에만 쓰는 보조 경로가 아니라 적용 조건을 확인하는 관측 경로이기도 하다. 알람에 충분한 증거가 있는지 먼저 검사하고, 필요한 범위만 조회한다. 조사의 반복은 procedure의 허용 단계·C07 예산 안에서만 수행한다.
 
 관측은 Loki 로그와 Mimir의 Prometheus 호환 지표를 함께 사용한다. 실제 datasource UID·CPC 필터·원본 시각·조회 제한은 03/14 계약을 따른다. 이번 범위에서 '해결'은 원인 분석과 권고 제시까지이며 GPU reset·Pod 종료 등 실제 조치는 수행하지 않는다.
+
+#### 추가 조사 없는 종료 기준
+
+Runbook 검색 결과나 fact 키의 존재만으로 충분하다고 판정하지 않는다. 아래 조건을 코드로 확인한다.
+
+1. 고정 revision/hash·scope·호환성이 검증되고, 필수 fact의 대상·기간·단위·freshness·품질이 해당 판단에 유효하다.
+2. 적용 조건이 충족되며 배제 조건의 미확정이나 상충 증거가 결론을 막지 않는다. 원인 수준과 권고 자격은 각각 근거에 맞게 제한한다.
+3. §3.1.2의 목적 선택·관련성 trace와 assessments가 일치하고 필요한 조사가 남지 않는다. R01 Runbook 적용만으로 R02 관계나 R04 영향 조사를 생략하지 않는다.
+
+이 경로에서는 코드로 결과를 구성하고 `narrative_status=omitted`와 LLM 미사용을 실제 실행 기록에 남긴다. `evidence_sufficient`는 해당 평가의 근거 충족이며 `confirmed`·장애 복구·사건 종결과 다르다. 조기 종료도 §2.3의 저장·공개를 생략하지 않는다.
+
+#### 추가 수집 후 충분성 판정과 Synthesis
+
+MCP 수집은 중간 단계다. Orchestrator 코드가 정규화·품질·적용 조건을 검사하고 `sufficient`, `insufficient_actionable`, `insufficient_blocked`, `degraded`, `conflicted`로 내부 진행을 판정한다. 조회 실패·부분 수집을 Runbook 미일치로 바꾸지 않는다. 부족·상충을 좁힐 승인 계획의 미실행 query가 있을 때만 최대 1회 재조사한다. LLM이 후속 query를 고르는 경우에도 허용 목록·중복·예산을 코드로 검사한다.
+
+관측 라운드가 끝나면 유효한 증거에 대해 Synthesis Agent를 한 번 호출한다. 충분한 경우뿐 아니라 부분 근거가 있는 미확정 종료도 대상이다. 관측 자체가 없으면 추론을 생략한다. Synthesis에는 도구를 주지 않으며 추가 query·완료 선언·권고 실행·confirmed 승격을 허용하지 않는다. 모델 출력은 후보와 근거 참조·부족 입력·한계로 제한한다. 숫자는 코드의 검증된 값 레지스트리에서만 사용하고 모델 자유 문장의 숫자 측정값은 거부한다.
+
+LLM 응답 성공만으로 ready가 되지 않는다. 적용 Runbook·목적별 입력·품질·상충·합성 상태를 코드가 검사한다. 모델이 제안한 원인은 candidate이며 문장 의미의 진실성까지 기계적으로 검증됐다고 주장하지 않는다. 모델 미구성·실패·출력 오류는 `quality.analysis`와 부족 입력으로 기록하고 코드가 확인한 사실을 보존한다. 원격 추론 종료 불명·취소·deadline·lease 만료는 기존 14의 fail/격리 계약을 따른다.
 
 ### 2.3 결과와 재현 근거
 
@@ -103,51 +129,68 @@ Runbook 검색 성공은 원인 확정이나 장애 복구를 의미하지 않�
 
 RCA 후보는 JC가 published_result_id를 확정한 뒤 Backend와 보고서 Agent가 읽는다. 분석 결과를 Runbook으로 자동 발행하거나 Incident를 자동 종결하지 않는다.
 
+Runbook 단독 판단·LLM 분석·미확정 종료 모두 같은 결과 계약과 저장 경로를 사용한다. 사건/대상/기간·job/attempt, 목적별 평가, 원인 후보와 수준, 지지/반박 근거, 권고와 미수행 상태, 부족 입력·종료 사유를 보관한다. 검색/수집/분석 경로·재조사 결정·LLM 사용/실패 사유는 기존 evidence snapshot/quality와 실행 기록에 남긴다. 별도 이력 테이블이나 저장 서비스를 추가하지 않는다.
+
+유효한 결과는 evidence와 candidate를 같은 트랜잭션으로 저장하고, JC가 공개를 확정한 뒤 Backend의 기록 조회와 보고서가 사용한다. Ops는 공개 ID/hash를 고정하고 미확정·부분 분석의 수준을 유지한다. 저장 실패·최종 결과 검증 실패·취소·lease 만료는 정상 분석 결과와 구분해 JC 실행 기록으로 남긴다. 모든 실패 직전의 중간 증거가 자동 영속화된다고 보장하지 않으며 유효 lease 없이 저장·공개하지 않는다.
+
 ### 2.4 현재 실행 순서와 확인된 한계
 
-1. Worker가 claim 입력을 검증하고 DB의 불변 snapshot과 비교한다. `incident_snapshot.alert`와 기존 `evidence` 형식을 지원한다. 원본 알람을 `verified_facts`로 승격하지 않는다.
-2. `Store.read_context()`가 고정된 지식 ID/revision/hash와 scope에 맞는 runbook을 읽는다. 이미 pin된 revision은 이후 retired 상태여도 재현에 사용할 수 있다. workflow의 `compatible_runbooks()`가 reviewed hash·내용 hash와 compatibility를 검사한다.
-3. `select_procedure()`로 절차를 고르고 호환 runbook의 필수 fact와 적용·배제 조건을 검사한다. 부족하면 `required_queries` 중 procedure allowlist에 있는 것을 모은다. 적용 runbook이 없으면 procedure 기본 조회를 추가한다. 목적별 조회는 별도로 추가될 수 있다.
-4. query ID를 **set에 모아 정렬한 순서**로 관측한다. health fact를 만들고 runbook을 재평가한다. 필요하면 LLM이 허용된 optional query를 고르되 코드가 검사하고 후속 조사 예산을 적용한다.
-5. 관계·목적별 assessment·원인 후보·권고·설명을 구성한다. Worker가 결과를 검증하고 유효 lease/attempt 안에서 evidence와 candidate를 같은 DB transaction으로 저장한다. 같은 candidate/hash로 JC complete를 재시도하며 JC가 공개 참조를 확정한다.
+2026-09-28 로컬 개발 상태. 실행 검증 범위는 [Agent QA](../../../agents/QA.md)를 따른다.
 
-현재 `workflow.py`는 `retrieve_runbooks()`를 호출하지 않는다. `observation_plan`, 이벤트 시간 순서 조건, source action 참조 해석, 명시적 복수 가설 검증도 실행하지 않는다. 따라서 새 content를 DB에 넣는 것만으로 아래 통합 목표가 동작하지 않는다.
+1. 기존 1.3 claim 입력과 DB snapshot/hash를 검사한다. alert 원문은 보존하며 reason/component/action은 검색·표시 단서로만 파싱한다.
+2. pinned corpus를 읽고 reviewed hash·content hash를 확인한다. schema 없는 legacy와 `gpu-rca-runbook/1.0`을 명시 분리한다. v1은 validator·BM25 검색·pending compatibility·관측 계획을 연결한다.
+3. 기존 증거로 모든 요청 목적과 적용 Runbook이 충족되면 MCP·LLM을 생략한다. 부족하면 승인된 계획을 실행하며, 전용 Runbook 미일치는 profile의 `rca.general_runbook_key`에 지정된 일반 Runbook으로 대체한다. 미발행·미고정·invalid content를 하드코딩 조사로 우회하지 않는다.
+4. `observation_agents.py`가 query별 독립 Observation task에 예산을 예약·분배한다. 기본 동시성 3, 결과는 완료 순서와 무관하게 정렬한다. 형제 실패를 격리하고 취소 시 task를 모두 회수한다.
+5. Orchestrator가 충분성·상충을 검사하고 최대 한 번 재조사한다. 이후 `synthesis.py`가 도구 없이 유효 관측을 해석한다. 모델 후보·추가 필드·참조를 검사하고 모델을 통한 인과 수준 승격을 막는다.
+6. Worker가 유효 lease에서 evidence/candidate를 저장하고 JC complete로 공개를 확정한다. Ops의 공개 결과 ID/hash 참조 경로는 유지한다.
 
-Grafana 입력을 `incident_source()`로 읽으면 `{alert: ...}` 형태가 된다. 따라서 source 상위의 producer/model에 알려진 값을 요구하는 일반적인 compatibility 조건은 통과하지 못한다. 최초 탈락한 runbook은 관측 후 재검사 목록에도 포함되지 않는다. 이를 해결하려면 §6.2.1의 호환성 컨텍스트를 구성하고 미확정 후보를 보류·재평가해야 한다. 모든 가능한 compatibility 객체나 legacy 입력까지 예외 없이 탈락한다는 뜻은 아니다.
+v1 fact 승격은 완전한 관측·동일 대상·단일 cluster·등록 freshness에 제한한다. 기본 `health_facts()`는 error_code를 만들지 않고 기본 설정에는 운영 health 계약이 없다. 따라서 Xid/SXid를 reason에서 찾았다는 이유만으로 원인을 supported/confirmed로 만들지 않는다. 실제 Fleet parser·binding·운영 Runbook 발행은 남은 데이터 계약 작업이다. 기본 프로필에 일반 Runbook key를 지정해도 콘텐츠를 자동 생성·발행하지 않는다.
 
-`health_facts()`는 유효한 health 계약·관측·대상이 있을 때 `producer_contract` 등 일부 상태 fact를 만들지만 **`error_code`는 만들지 않는다**. 저장소 기본 Agent 설정과 Helm 미러에는 `health_contracts`가 없다. 이 기본 설정과 Grafana 입력 경로에서는 health fact도 생성되지 않는다. 별도 배포 설정의 주입 여부는 운영 확인 대상이다. R01에는 producer 계약과 오류 코드가 모두 필요하므로 Loki 연결만 복구해도 R01이 자동 충족된다고 볼 수 없다.
+이번 실행부는 **입력 1.3**을 유지한다. 1.4 목적 자동 선택, 목적 선택 전 bounded 이력 snapshot, purpose trace/소비자 검증은 후속 단계다. 새 DB 테이블, Fleet REST 직접 adapter, 시계열 임계값·인과 confirmation rule, 운영 LLM/Grafana 분석 품질 검수는 완료 범위가 아니다.
 
 ### 2.5 통합 목표 workflow
 
 아래 단계는 같은 Worker/NAT 프로세스에 통합한다. 별도 검색 서버·관측 서비스·지식 DB를 신설하지 않는다.
 
-```text
-Incident 최초 알람 중복 제거·전달 → JC → RCA claim / immutable snapshot / 목적 선택 전 DB 이력·지식 고정
-  → scope·revision·hash 검사 → 알람 파싱·검색 단서 정규화
-  → Agent 내부 목적·경로 선택
-      ├─ 등록 일반 조사: 로그·지표·관계 조회 → 단서 보완 → 필요 시 후보 검색
-      └─ BM25 후보 검색 → 후보별 호환성·필수 증거·적용/배제 조건 검사
-      ├─ 적용 가능: 검증된 근거와 권고 구성
-      ├─ 증거 부족: 등록 query 계획 → Observation/Grafana MCP → fact 정규화 → 재검사
-      │              └─ 여전히 부족·상충·한도 종료: 해당 한계를 보존
-      └─ 검색 미일치 / 모든 후보가 증거로 반박됨: 등록 procedure 안의 가설 조사
-  → 목적별 assessment / 원인 후보 / 미수행 권고 / 결과 검증
-  → evidence·candidate 저장 → JC complete·발행 → Backend·보고서가 조회
+```mermaid
+flowchart TD
+    A["JC claim · snapshot와 scope 고정"] --> B["Orchestrator: Runbook 조회·조건 검사"]
+    B --> C{"기존 근거로 충분?"}
+    C -- "예" --> F["코드로 결과 구성 · MCP/LLM 생략"]
+    C -- "아니요" --> D["전용 Runbook 또는 승인된 일반 Runbook 계획"]
+    D -- "승인 계획 없음" --> U["미확정 결과 · 부족 사유"]
+    D --> E["예산 예약 · 관측 task 배정"]
+    E --> L["Observation Sub-agent: 로그"]
+    E --> M["Observation Sub-agent: 메트릭"]
+    L --> G["취합·정렬·정규화 · 코드 충분성 판정"]
+    M --> G
+    G -- "부족/상충 · 유효 query와 예산 · 재조사 1회 이내" --> E
+    G -- "관측 종료 · 유효 근거 있음" --> S["Synthesis Agent: LLM 해석 · 도구 없음"]
+    G -- "유효 근거 없음" --> U
+    S --> V["Orchestrator: 후보·참조·품질 검증"]
+    F --> V
+    U --> V
+    V --> H[("DB: evidence + candidate 동일 transaction")]
+    H --> J["JC complete · 공개 확정"]
+    J --> R["이력 조회 · Report Agent가 공개 ID/hash 활용"]
 ```
+
+
+정상 분석 흐름의 도식이다. 각 호출·저장 전 취소·lease·deadline을 확인한다. 입력/검색 저장소 오류를 Runbook 미일치로 우회하지 않는다. LLM 오류·출력 검증 실패는 §2.2의 유효 부분 보존 규칙을 따르고, 기술 실패·원격 추론 종료 불명은 §4와 14에 따른다. JC complete가 확인되기 전에는 공개 완료로 표시하지 않는다.
 
 | 단계 | 입력 → 출력 | 진행·중단 기준 |
 |---|---|---|
 | 입력 고정 | snapshot·scope·target·기간·versions → 조사 컨텍스트 | hash 불일치·허용 scope 위반은 가설 탐색으로 우회하지 않음 |
 | 단서 정규화 | 해당 사건의 alertname/summary/message/오류 코드·event → 검색어 | 묶음 alert는 사건 신원별로 분리. 원문·출처 유지; UUID·시각·임의 verified_facts를 검색어에 넣지 않음 |
 | 목적·경로 선택 | 파싱 단서·대상·관계 → 내부 목적 목록·procedure·근거 | Incident의 목적 지정 없음. 코드 유무만으로 Runbook/로그를 배타 분기하지 않음; §3.1.2 |
-| 후보 검색 | 허용된 pinned runbook corpus → 순위·점수 구성·후보 revision | Xid/SXid 구분. 점수는 관련도이며 진단 확률·원인 근거가 아님 |
+| 후보 검색 | DB의 허용된 pinned runbook corpus → 결정적 검색·후보 revision | LLM 미사용. Xid/SXid 구분. 점수는 관련도이며 진단 확률·원인 근거가 아님 |
 | 적용 검사 | 후보·호환성·typed facts → 적용/반박/증거 부족 | 미확정 producer/model은 관측으로 확인할 후보로 보류. 명백한 불일치는 반박 사유 기록 |
 | 관측 계획 | 후보의 부족 조건 → 실제 query ID·대상·기간·우선순위 | §5의 선결 조건과 §5.3의 요청 출처별 허용 규칙을 충족해야 실행 |
-| 재평가 | 원본 observation·parser/binding revision → 검증된 fact·지지/반박 | 동일 대상·시각·단위·freshness 확인. 충족하면 중단; 부족하면 남은 예산 안에서만 반복 |
+| 충분성·Synthesis | 정규화 증거·품질·Runbook → 코드 충분성·최대 1회 재조사 → Synthesis 후보·지지/반박 → 코드 검증 | 수집만으로 완료 금지. degraded는 부분 상태 유지, 도구 없는 Synthesis는 관측 라운드 종료 후 1회 |
 | 가설 조사 | 검색 미일치 또는 모든 후보의 유효 반박 → 제한된 가설·구분용 조회 | 검색 장애·stale·조회 실패를 runbook 미일치로 취급하지 않음 |
 | 결과·발행 | 기존 04 결과 + 추적 evidence → candidate·공개 결과 | 원인 수준·권고 자격·작업 성공은 별도 평가. 저장 실패 시 complete 금지 |
 
-`retrieved`, `applicable`, `rejected`, `insufficient_evidence`는 **추가 개발할 후보 내부 상태**다. 기존 job 상태, `result_status`, `termination_reason`을 대체하지 않는다. 여러 후보 중 하나라도 증거 부족으로 남으면 “모두 반박됨”으로 기록하지 않는다. 기존 등록 일반 조사는 계속할 수 있지만 이 부족을 근거 없는 새 원인으로 채우지 않는다.
+`retrieved`, `applicable`, `rejected`, `insufficient_evidence`는 **추가 개발할 후보 내부 상태**다. 기존 job 상태, `result_status`, `termination_reason`을 대체하지 않는다. 여러 후보 중 하나라도 증거 부족으로 남으면 “모두 반박됨”으로 기록하지 않는다. 승인된 일반 조사 Runbook의 범위에서는 조사할 수 있지만 이 부족을 근거 없는 새 원인으로 채우지 않는다.
 
 현재 검색 함수는 양수 점수의 top-k를 반환하고 동점은 key/revision/id로 정렬한다. 기본 top-k=5·exact boost=12·tokenizer `gpu-lexical-v2`는 구현된 실험값이다. 운영 `min_score`·동점 확대·한국어 검색 품질은 미검증이다. 임계값 없는 현재 함수를 임계값 보정 완료 검색으로 설명하지 않는다.
 
@@ -423,6 +466,8 @@ GPU 접근 조사의 첫 연결은 기존 `gpu_access`의 D09/D05로 시작할 �
 
 ### 6.2 작성 필드와 검증 책임
 
+R01~R09는 Agent의 조사 목적이며 모든 Runbook에 필수 R코드 필드가 있다는 뜻이 아니다. D01~D13은 실제 관측 조회 ID다. `required_evidence`의 필요한 fact와 `required_queries`/`observation_plan`의 D코드를 연결해 코드가 수집 계획을 구성한다. D14는 DB 이력이며 MCP 조회 ID가 아니다. 오류·증상 검색어와 실행할 D코드를 혼동하지 않는다.
+
 | 영역 | 유지·정의할 필드 | 현재 지원 / 통합 규칙 |
 |---|---|---|
 | 외부 봉투 | `knowledge_key`, `kind`, `scope`, `visibility`, `revision`, `compatibility`, `source_refs`, content/reviewed hash | 기존 DB/API 계약 유지. 발행/검토 상태를 content 안에 중복 소유하지 않음 |
@@ -541,8 +586,8 @@ XID·SXID 외의 조건 기반 오류(`disk`, `os`, `accelerator-nvidia-infiniba
 | P1 content·참조 검증 | RCA content validator, Backend `internal/api/knowledge.go`의 발행·목록 조회 연계, shared Store | §6.2.2 발행 조건과 legacy/new schema 검사; §6.2.3 scalar code/search.codes 필터 호환; pinned dependency 읽기 |
 | P2 fact·호환성 | `contracts.py`의 Incident 입력, `parsers.py`, RCA `compatible_runbooks()` | snapshot 불변; typed fact→기존 결과 adapter·REQUIRED 충족 판정; health 계약·error_code event 정규화; 최초 corpus의 pending 후보 재평가. scope/hash 검사는 항상 선행 |
 | P3 검색 연결 | `rcca-agent/src/rcca_agent/retrieval.py`, `workflow.py` | 기존 BM25 재사용; pin된 corpus에서 검색; query hash·tokenizer/검색 설정·corpus 지문·rank·점수·선택/탈락 사유 기록 |
-| P4 순서 있는 관측 | `workflow.py`, `procedures.py`, 공통 `Observation` 재사용 | §5.3 출처별 validator와 거부 trace; 입력 time_range 안에서 priority·중복 제거·필수/선택·예산·재평가. set 정렬에 priority가 사라지지 않음 |
-| P5 결과·원천 권고 | RCA workflow·프롬프트, 공통 `contracts.py`/`store.py` | 가설을 기존 cause_candidates로 변환; ref 무결성·권고 전제 검사; JC 발행·Ops 인용 유지 |
+| P4 순서 있는 관측·분석 | `workflow.py`, `procedures.py`, 공통 `Observation` 재사용 | §5.3 출처별 validator와 거부 trace; priority·중복 제거·예산 준수. §2.2의 수집→LLM 분석→코드 검증·재평가→재조사 연결과 증거 없음/모델 실패 처리 |
+| P5 결과·원천 권고 | RCA workflow·프롬프트, 공통 `contracts.py`/`store.py` | 기존 증거 충분 시 MCP·LLM 0회; 가설을 기존 cause_candidates로 변환; 모든 유효 경로의 공통 검증·저장·JC 발행·Ops 인용. 분석 생략/실패를 완료로 위장하지 않음 |
 | P6 검수·배포 인계 | `agents/tests`, 담당 모듈 QA, 운영 담당 | 아래 시험과 실제 CPC별 query 검증을 분리 기록. 통과한 runbook revision만 검토·발행 |
 
 검색은 현재의 작은 in-process 모듈로 시작한다. 별도 검색 엔진·벡터 DB·BM25 서비스는 요구하지 않는다. time-aware predicate도 실제 초기 runbook에 필요한 것부터 추가한다. 공통 Python/Observation 변경은 보고서 Agent의 수집·계산에 영향을 주므로 RCA만 시험하고 완료하지 않는다. 결과/API 확장은 Backend·Frontend·Ops 소비자와 03/04/14 계약을 같이 검토한다.
@@ -565,6 +610,10 @@ MCP 실패에 과거 DB evidence를 현재 관측처럼 대입하는 fallback은
 
 | 시험 | 기대 결과·검증 위치 |
 |---|---|
+| 기존 증거 충분 / R01 충족이나 R02 부족 | 전자는 MCP·LLM 0회여도 candidate 저장·JC 공개·Ops 인용 완료; 후자는 독립 목적 조사 계속. T33/T36 |
+| MCP 유효 증거 확보 / 기존·신규 증거 모두 없음 | 전자는 LLM에 증거·Runbook을 전달하고 분석·검증·재평가 수행; 후자는 근거 없는 LLM 호출 없이 추가 조회 또는 미확정 종료. T34/T35 |
+| 추가 조사 필요 / 더 조사할 query·예산 없음 | 등록 query만 계획 보완하고 재수집→분석 반복; 불가능하면 근거·부족·종료 사유 저장. 수집만으로 완료 금지. T34/T46 |
+| LLM 미설정·오류·잘못된 refs·원격 종료 불명 | 유효 사실 보존·잘못된 후보 배제·미완료 평가 유지; 한도 내 재생성, 강제 ready 금지. 원격 종료 불명은 14의 fail·격리. T26/T34/T39 |
 | 최초/반복/재발 + 목적 없는 신규 입력 | Incident 최초 1회, Agent의 GPU/Pod/코드 없음·알 수 없는 코드 경로 선택; R03~R09가 R01/R02 기본값으로 배제되지 않음 |
 | 실제 Incident 입력 + 기존 legacy 입력 | 원본 snapshot/hash 불변, 직접 GUI RCA 접수 없음; Incident/Worker 회귀 시험 |
 | scope 밖·hash 변조·미고정 runbook | 검색 corpus에 넣지 않음. 가설로 우회하지 않음; Store/workflow 시험 |

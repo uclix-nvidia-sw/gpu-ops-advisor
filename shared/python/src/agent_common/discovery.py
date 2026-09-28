@@ -2,7 +2,7 @@
 
 import json
 
-from .grafana_time import prometheus_time
+from .grafana_time import mcp_time
 from .contracts import timestamp
 
 
@@ -78,14 +78,11 @@ class Discovery:
                     startRfc3339=period["start"],
                     endRfc3339=period["end"],
                 )
+                args["startRfc3339"] = mcp_time(period["start"], ceiling=True)
+                args["endRfc3339"] = mcp_time(period["end"])
+                if timestamp(args["startRfc3339"]) > timestamp(args["endRfc3339"]):
+                    raise DiscoveryError("time_range_below_millisecond_resolution")
                 if source_type == "prometheus":
-                    args["startRfc3339"] = prometheus_time(
-                        period["start"], ceiling=True
-                    )
-                    args["endRfc3339"] = prometheus_time(period["end"])
-                    if timestamp(args["startRfc3339"]) > timestamp(args["endRfc3339"]):
-                        # No millisecond sample can exist inside this interval.
-                        raise DiscoveryError("time_range_below_millisecond_resolution")
                     args["limit"] = 5001
                 values = await self._cached(f"list_{source_type}_label_values", args)
                 if not isinstance(values, list) or any(

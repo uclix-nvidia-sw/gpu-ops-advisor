@@ -1,0 +1,116 @@
+{
+  "knowledge_key": "RB-XID-48-63-64",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.0",
+    "required_evidence": [
+      "producer_contract",
+      "error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09",
+      "D05"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "error_code"
+        ],
+        "purpose": "사건 대상과 시간 범위에서 원본 오류 이벤트와 동반 코드를 확인한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D05",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "producer_contract",
+          "normalized_health"
+        ],
+        "purpose": "검증된 producer 상태 이벤트가 있으면 같은 대상의 상태 변화를 확인한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "GPU 사용률을 보조 관측으로 비교한다. 값 소실이나 0만으로 고장·회복을 판단하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream document",
+        "section": "GPU Node Triage",
+        "checked_at": "2026-09-28"
+      }
+    ],
+    "limitations": [
+      "작성 초안이다. compatibility가 비어 있어 런타임 검증을 통과하지 못하며 운영 발행 대상이 아니다.",
+      "실제 CPC producer·라벨·parser·단위·freshness 및 대상 식별 연결은 검증하지 않았다. fact_names는 수집 의도이며 fact 생성이나 충족을 보증하지 않는다.",
+      "이 Runbook은 오류 이벤트 조사 절차다. 하드웨어 고장 확정 규칙이나 자동 복구 기능을 제공하지 않는다.",
+      "선택된 R코드의 증거 충족·종료 판단, 결과 저장과 JC 공개는 RCA workflow가 담당한다."
+    ],
+    "title": "Xid 48 및 동반 ECC 이벤트 조사",
+    "description": "Xid 48 단서에서 동일 GPU의 Xid 63·64 동반 여부와 모델별 추가 증거를 확인하는 초기 조사 Runbook.",
+    "claim": "검증된 동일 대상 이벤트에 Xid 48이 관측되어 ECC 오류 관련 조사가 필요하다. 조치 조건과 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_MEMORY",
+      "category": "ecc_event"
+    },
+    "search": {
+      "codes": [
+        "xid:48"
+      ],
+      "aliases": [
+        "double bit ECC"
+      ],
+      "symptoms": [
+        "ECC 오류",
+        "GPU 메모리 오류"
+      ]
+    },
+    "analysis_guidance": [
+      "동일 GPU의 Xid 48과 63·64의 발생 시각 및 순서를 원본 증거로 확인한다. 검색 문구의 코드 나열을 시간 순서로 해석하지 않는다.",
+      "GPU 모델과 ECC·row-remap·page-retirement 증거가 없으면 모델별 조치를 선택하지 않는다.",
+      "현재 조건식은 단일 문자열 equals만 지원한다. 동반 코드의 시간 순서와 ECC 수치 판정은 추가 구현 전까지 미확정으로 남긴다."
+    ],
+    "recommendations": [
+      {
+        "text": "운영자가 GPU 모델과 원본 ECC 이벤트를 확인하고, 동일 장치의 Xid 63·64 동반 여부를 보존한다. reset·재부팅·교체 판단은 추가 증거와 모델별 지침 검토 후 수행한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:48"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:48"
+      }
+    ]
+  }
+}

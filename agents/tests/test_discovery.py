@@ -5,7 +5,7 @@ import time
 import pytest
 
 from agent_common.observation import Observation
-from agent_common.grafana_time import prometheus_time
+from agent_common.grafana_time import mcp_time
 
 
 PERIOD = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T01:00:00Z"}
@@ -32,16 +32,14 @@ PERIOD = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T01:00:00Z"}
         ("2026-09-21T02:34:41Z", "2026-09-21T02:34:41Z", "2026-09-21T02:34:41Z"),
     ],
 )
-def test_prometheus_time_supports_fractional_alert_times(
-    value, expected, rounded_start
-):
-    assert prometheus_time(value) == expected
-    assert prometheus_time(value, ceiling=True) == rounded_start
+def test_mcp_time_supports_fractional_alert_times(value, expected, rounded_start):
+    assert mcp_time(value) == expected
+    assert mcp_time(value, ceiling=True) == rounded_start
 
 
-def test_prometheus_time_requires_timezone():
+def test_mcp_time_requires_timezone():
     with pytest.raises(ValueError, match="timezone required"):
-        prometheus_time("2026-09-21T02:34:41.713295")
+        mcp_time("2026-09-21T02:34:41.713295")
 
 
 def profile():
@@ -126,7 +124,7 @@ async def test_builtin_profile_discovers_both_sources_and_preserves_scope():
 
 
 @pytest.mark.asyncio
-async def test_fractional_times_normalized_only_for_prometheus_requests():
+async def test_fractional_times_normalized_at_both_mcp_boundaries():
     grafana = Grafana()
     obs = observation(grafana)
     period = {
@@ -144,9 +142,13 @@ async def test_fractional_times_normalized_only_for_prometheus_requests():
         elif name == "query_prometheus":
             assert args["endTime"] == "2026-09-21T02:34:41.713Z"
         elif name in {"list_loki_label_values", "query_loki_logs"}:
-            assert args["startRfc3339"] == period["start"]
-            assert args["endRfc3339"] == period["end"]
+            assert args["startRfc3339"] == "2026-09-21T02:04:10.124Z"
+            assert args["endRfc3339"] == "2026-09-21T02:34:41.713Z"
     assert all(e["time_range"] == period for e in obs.evidence)
+    assert (
+        next(e for e in obs.evidence if e["query_id"] == "D09")["quality"]["reason"]
+        == "time_precision_reduced"
+    )
 
 
 @pytest.mark.asyncio
