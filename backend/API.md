@@ -46,6 +46,12 @@
 제거: `/me`, 권한 설정, 대화, dispatches, Grafana webhook 중계, POST /analyses, GUI 용량/C07 변경. Grafana는 Incident에 직접 연결한다.
 기존 화면의 저장 관측 조회를 위해 POST `/observations/query`, `/mappings/query`, `/dashboard/query`만 읽기 전용 호환 경로로 남긴다. 이 경로는 잡을 만들지 않는다.
 
+## 모델 등록
+
+`POST /models`의 최소 본문은 `{"endpoint_url":"https://llm.example.com/v1","model_name":"internal-model"}`이다. 기존 Idempotency-Key와 목적지 허용 목록 검사는 유지한다. 표시 이름은 생략하거나 빈 문자열이면 model_name을 사용하고, limits_profile_id·capabilities를 생략하면 각각 C07·빈 객체를 사용한다. C07은 실제 활성 프로필이어야 한다. artifact_revision·engine_revision·precision은 선택 문자열이며 미입력 값을 만들어 채우지 않는다. PATCH에서 생략한 값과 secret_ref, 과거 불변 revision은 보존한다.
+
+프로필·라우팅 저장과 Worker 호출 설정은 현재 별개다. Agent는 배포 환경의 LLM_BASE_URL·LLM_MODEL·LLM_API_KEY를 사용한다. test-connection은 기본 주소에 `/models`를 붙여 인증 없이 GET하고 모델 ID를 확인한다. 저장된 secret_ref를 인증 헤더로 해석하지 않으며 실제 추론 호출·인증·Agent 연결 성공을 검증하지 않는다.
+
 ## Runbook 지식 검증과 검색
 
 `kind=runbook`, `content.schema=gpu-rca-runbook/1.0`은 생성/PATCH에서 허용 필드·조건·출처·관측 계획·호환성 형식을 검사한다. 승인(approve)과 발행(publish)은 빈 `compatibility`를 422로 거부한다. schema 없는 legacy 콘텐츠의 기존 처리는 유지하며, 미지원 schema는 거부한다. query 등록·procedure 허용 여부는 관리 CLI와 RCA Worker의 실행 프로필로 검증한다. Backend 형식 검사가 실제 환경 검수를 대신하지 않는다.

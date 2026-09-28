@@ -309,6 +309,28 @@ func TestBackendE2E(t *testing.T) {
 		cfg.ModelHosts = []string{"127.0.0.1:19999"}
 		server.Close()
 		server = httptest.NewServer(api.New(db, cfg))
+		minimal := Object{"endpoint_url": "http://127.0.0.1:19999/v1", "model_name": "minimal-model"}
+		created := call("POST", "/models", minimal, 201, "Idempotency-Key", "minimal-model")
+		if created["name"] != "minimal-model" || created["limits_profile_id"] != "C07" || created["enabled"] != true {
+			t.Fatal("minimal model defaults missing", created)
+		}
+		if caps, ok := created["capabilities"].(map[string]any); !ok || len(caps) != 0 {
+			t.Fatal("default capabilities must be empty")
+		}
+		for _, key := range []string{"artifact_revision", "engine_revision", "precision"} {
+			if _, exists := created[key]; exists {
+				t.Fatal("unspecified model metadata fabricated", key)
+			}
+		}
+		if again := call("POST", "/models", minimal, 201, "Idempotency-Key", "minimal-model"); again["id"] != created["id"] {
+			t.Fatal("minimal registration is not idempotent")
+		}
+		invalidValues := Object{"endpoint_url": "https://unapproved.example/v1", "model_name": "", "artifact_revision": 12, "capabilities": nil, "limits_profile_id": "missing"}
+		for key, invalid := range invalidValues {
+			body := Object{"endpoint_url": minimal["endpoint_url"], "model_name": minimal["model_name"]}
+			body[key] = invalid
+			call("POST", "/models", body, 422, "Idempotency-Key", ID())
+		}
 		profile := Object{"name": "model-e2e", "endpoint_url": "http://127.0.0.1:19999/v1", "model_name": "test", "artifact_revision": "r1", "engine_revision": "e1", "precision": "fp16", "secret_ref": "env:MODEL_TOKEN", "capabilities": Object{}, "limits_profile_id": "C07"}
 		model := call("POST", "/models", profile, 201, "Idempotency-Key", "model-create")
 		id := String(model, "id")
@@ -318,7 +340,10 @@ func TestBackendE2E(t *testing.T) {
 		routes := call("GET", "/model-routes", nil, 200)
 		call("PATCH", "/model-routes", Object{"report": Object{"model_id": id, "model_revision": 1}}, 200, "Idempotency-Key", "route", "If-Match", fmt.Sprint(Number(routes, "version")))
 		call("PATCH", "/models/"+id, Object{"enabled": false}, 409, "Idempotency-Key", "disable", "If-Match", "1")
-		call("PATCH", "/models/"+id, Object{"artifact_revision": "r2"}, 200, "Idempotency-Key", "model-revision", "If-Match", "1")
+		updated := call("PATCH", "/models/"+id, Object{"artifact_revision": "r2"}, 200, "Idempotency-Key", "model-revision", "If-Match", "1")
+		if updated["engine_revision"] != "e1" || updated["precision"] != "fp16" || updated["secret_ref"] != "env:MODEL_TOKEN" {
+			t.Fatal("optional metadata or secret reference lost on edit")
+		}
 		var revisions int
 		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM profile_revisions WHERE profile_id=$1", id).Scan(&revisions))
 		if revisions != 2 {
