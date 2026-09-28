@@ -183,6 +183,37 @@ func TestBackendE2E(t *testing.T) {
 		call("POST", path+"/publish", Object{}, 200, "Idempotency-Key", "publish", "If-Match", "3")
 		call("PATCH", path, Object{"content": Object{"text": "replace"}}, 409, "Idempotency-Key", "edit", "If-Match", "4")
 	})
+	t.Run("v1_runbook_draft_binding_publish_search_and_retire", func(t *testing.T) {
+		raw, err := os.ReadFile("../../rcca-agent/runbooks/RB-SXID-11001.json")
+		must(t, err)
+		var b Object
+		must(t, json.Unmarshal(raw, &b))
+		first := call("POST", "/knowledge", b, 201, "Idempotency-Key", "sxid-draft")
+		path := "/knowledge/" + String(first, "knowledge_id") + "/revisions/1"
+		call("POST", path+"/review", Object{"action": "request", "comment": "fixture review"}, 200, "Idempotency-Key", "sxid-request", "If-Match", "1")
+		call("POST", path+"/review", Object{"action": "approve", "comment": "unbound"}, 422, "Idempotency-Key", "sxid-reject", "If-Match", "2")
+		call("PATCH", path, Object{"compatibility": Object{"cluster_id": "cpc-1"}}, 200, "Idempotency-Key", "sxid-bind", "If-Match", "2")
+		call("POST", path+"/review", Object{"action": "request", "comment": "fixture binding"}, 200, "Idempotency-Key", "sxid-request-bound", "If-Match", "3")
+		call("POST", path+"/review", Object{"action": "approve", "comment": "fixture-only verification"}, 200, "Idempotency-Key", "sxid-approve", "If-Match", "4")
+		published := call("POST", path+"/publish", Object{}, 200, "Idempotency-Key", "sxid-publish", "If-Match", "5")
+		if String(published, "state") != "published" || String(published, "content_hash") != String(published, "reviewed_content_hash") {
+			t.Fatal("invalid publication")
+		}
+		found := call("GET", "/knowledge?kind=runbook&code=sxid%3A11001", nil, 200)
+		if len(found["items"].([]any)) != 1 {
+			t.Fatal("v1 code lookup failed")
+		}
+		wrong := call("GET", "/knowledge?kind=runbook&code=xid%3A11001", nil, 200)
+		if len(wrong["items"].([]any)) != 0 {
+			t.Fatal("code namespaces mixed")
+		}
+		call("PATCH", path, Object{"content": Object{"schema": "bad"}}, 409, "Idempotency-Key", "sxid-immutable", "If-Match", "6")
+		call("POST", path+"/retire", Object{"reason": "fixture complete"}, 200, "Idempotency-Key", "sxid-retire", "If-Match", "6")
+		next := call("POST", "/knowledge/"+String(first, "knowledge_id")+"/revisions", b, 201, "Idempotency-Key", "sxid-next")
+		if Number(next, "revision") != 2 || String(next, "state") != "draft" {
+			t.Fatal("new revision did not preserve draft lifecycle")
+		}
+	})
 	t.Run("replica_safe_schedule_outbox_recovery_and_revision", func(t *testing.T) {
 		template := report()
 		delete(template, "time_range")

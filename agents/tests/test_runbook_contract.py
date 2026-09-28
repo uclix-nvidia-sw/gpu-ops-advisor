@@ -36,7 +36,7 @@ class RunbookContractTests(unittest.TestCase):
                     [step["query_id"] for step in plan], ["D09", "D05", "D02"]
                 )
                 self.assertFalse(plan[-1]["required"])
-                if row["content"].get("investigation_only"):
+                if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(row["content"]["applicability_conditions"], [])
                     with self.assertRaisesRegex(ValueError, "unbound draft"):
                         validate_runbook(row, QUERIES, ALLOWED)
@@ -96,6 +96,8 @@ class RunbookContractTests(unittest.TestCase):
         for path, value in cases:
             with self.subTest(path=path, value=value):
                 row = deepcopy(XID)
+                if path == ("applicability_conditions",):
+                    row["content"]["investigation_only"] = False
                 target = row["content"]
                 for key in path[:-1]:
                     target = target[key]

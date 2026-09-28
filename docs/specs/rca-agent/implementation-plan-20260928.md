@@ -6,6 +6,8 @@
 
 사용자가 제공한 `rca-orchestrator-synthesis-pipeline.md`, `GPU_노드_RCA_장애_Domain_Category_메트릭_매핑(수정).md`, `GPU_노드_RCA_Agent의_Knowledge_DB_설계.md`를 현행 코드 및 11번 설계서와 대조했다. 아래 결정이 첨부 초안의 미정 항목과 과거 구현 설명보다 우선한다. 원본 파일의 운영 접속 정보·fault injection 명령은 실행하거나 저장소에 복사하지 않는다.
 
+2026-09-28 후속: 오류별 XID/SXID 3건을 조사용 콘텐츠로 보강하고 Backend v1 구조 검증·코드 검색·관리 CLI를 연결했다. 기존 DB 스키마로 등록·검토·발행·RCA 소비를 격리 환경에서 검증했다. [DB 등록 안내](../../../rcca-agent/runbooks/DB-WORKFLOW.md)의 현재 범위·운영 미검증 경계를 따른다.
+
 ## 1. 채택·보완 사항
 
 | 첨부 제안 | 반영 결정 |
@@ -45,7 +47,7 @@
 | 판단·합성 | 코드 충분성, 최대 2라운드, 도구 없는 Synthesis, 안전한 결과 변환 | 수집만으로 완료 금지; 위조 참조/숫자/causal status/추가 조회 출력 거부; LLM 미구성·원격 종료 불명 구분 |
 | 저장·소비 | 기존 Worker/Store/JC 및 Ops 경로 재사용 | 같은 transaction의 근거·candidate 저장, JC publication, Report의 공개 ID/hash 참조 회귀 |
 | 후속 1.4 | **이번 실행부는 기존 1.3 입력에서 구현** | Agent 목적 자동 선택·선택 trace, 목적 선택 전 bounded DB 이력, 1.4 소비자 검증이 끝나기 전 Worker가 1.4 지원을 광고하거나 Incident 운영 설정을 전환하지 않음 |
-| 후속 데이터 의미 | Fleet 1.5.0-rc.1과 실제 image/source 일치, component별 parser·binding·freshness | Runbook 담당 세션의 콘텐츠 검토와 운영 fixture 필요. 기본 health parser는 오류 코드 fact를 생성하지 않는다 |
+| 후속 데이터 의미 | Fleet 1.5.0-rc.1과 실제 image/source 일치, component별 parser·binding·freshness | 콘텐츠 검토와 운영 fixture 필요. 다른 세션과의 조율은 사용자 지시로 중단했다. 기본 health parser는 오류 코드 fact를 생성하지 않는다 |
 | 후속 운영 검수 | 로컬 LLM endpoint, 실제 Grafana 데이터, 승인 Runbook publication | 사용자가 endpoint를 나중에 제공하기로 함. fixture 검증과 구분하여 기록 |
 
 일반 Runbook 콘텐츠를 `investigation_only: true`인 초안으로 추가했다. RCA는 이 콘텐츠의 관측 계획과 분석 지침을 소비하며 원인 판정용으로 승격하지 않는다. 테스트에서는 실제 JSON에 fixture cluster 호환성만 바인딩하며 운영 지식으로 발행하지 않는다. 초기 Runbook 초안과 검토 항목은 [Runbook README](../../../rcca-agent/runbooks/README.md), 실행 검증 결과는 [Agent QA](../../../agents/QA.md)에 기록한다.

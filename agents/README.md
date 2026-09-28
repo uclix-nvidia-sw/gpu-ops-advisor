@@ -126,6 +126,6 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 ./agents/scripts/test.ps1 -E2E -PgBin ./backend/.local/postgres/bin/bin
 ```
 
-E2E는 Windows PostgreSQL 바이너리와 Go가 필요합니다. 스크립트는 JC와 Incident를 빌드합니다. `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `GRAFANA_MCP_BINARY`로 경로를 변경할 수 있습니다. 실제 Incident 웹훅 → outbox → JC → RCA Worker → 결과 발행 경로를 포함하며, 이 테스트는 snapshot을 DB에 직접 삽입하지 않습니다. 별도 legacy snapshot/Runbook 사례도 유지합니다. 테스트마다 별도 PostgreSQL data directory/포트를 만들고, 생성한 서비스만 종료합니다. 로그·출력은 gitignore 대상 `.local/agent-e2e/`에 남깁니다. 자세한 검증 결과는 [QA.md](QA.md)입니다.
+E2E는 Windows PostgreSQL 바이너리와 Go가 필요합니다. 스크립트는 Backend·JC·Incident를 빌드합니다. `PG_BIN`, `BACKEND_BINARY`, `JC_BINARY`, `INCIDENT_BINARY`, `GRAFANA_MCP_BINARY`로 경로를 변경할 수 있습니다. 실제 Incident 웹훅 → outbox → JC → RCA Worker → 결과 발행 경로를 포함하며, 이 테스트는 snapshot을 DB에 직접 삽입하지 않습니다. 별도 legacy snapshot/Runbook 사례도 유지합니다. 오류별 Runbook 3건의 Backend 등록·검토·발행·RCA 소비 사례도 포함합니다. 등록 절차는 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따릅니다. 테스트마다 별도 PostgreSQL data directory/포트를 만들고, 생성한 서비스만 종료합니다. 로그·출력은 gitignore 대상 `.local/agent-e2e/`에 남깁니다. 자세한 검증 결과는 [QA.md](QA.md)입니다.
 
 기술 확인 근거: [NAT MCP client](https://docs.nvidia.com/nemo/agent-toolkit/1.5/build-workflows/mcp-client.html), [NAT custom functions](https://docs.nvidia.com/nemo/agent-toolkit/1.5/extend/custom-components/custom-functions/functions.html), [공식 Grafana MCP](https://github.com/grafana/mcp-grafana/tree/v1.4.2).

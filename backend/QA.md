@@ -1,5 +1,14 @@
 # Backend v1.3 검증 기록
 
+## 2026-09-28 Runbook v1 DB 연계
+
+- **통과:** Backend에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 실제 JSON 4건의 초안 형식·빈 호환성 발행 거부·잘못된 필드/조건/관측 계획/출처·legacy 호환을 검사했다.
+- **통과:** 격리 PostgreSQL 16.9에서 `go test -tags=e2e ./tests -v -count=1`, `TestFreshBackendWithoutDemoSeed`, `TestBackendE2E`, `TestRealJobController`. 신규 Runbook 사례는 실제 SXID JSON의 등록·검토·빈 호환성 승인 거부·수정 후 재검토·발행·코드 namespace 검색·발행본 불변·회수·새 revision을 확인했다.
+- **통과:** 별도 [Agent E2E](../agents/QA.md)에서 오류별 JSON 3건의 CLI/API 생명주기·멱등 재전송과 RCA 소비까지 검사했다. 기존 migration만 사용하며 DB 구조 변경은 없다.
+- **미수행:** 운영 DB 적재·운영 Fleet/Grafana/LLM 검증·배포. fixture compatibility는 운영 적용 승인이 아니다.
+
+Windows의 대괄호 포함 checkout 경로는 Go embed를 방해해 소스를 임시 경로로 복사해 빌드했다. 새 PostgreSQL data directory와 localhost 포트에서 검사하고 종료했다. 재현 설정은 [CI](../.github/workflows/tests.yml), 등록 절차는 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따른다.
+
 ## 2026-09-18 운영 초기화 회귀 검사
 
 실제 PostgreSQL의 빈 schema와 실제 Backend 실행 파일을 `DSX_MIGRATE=true`, `DSX_SEED=false`로 기동했다. 필수 C07 한도만 생성되고 예제 클러스터 없이 readiness 200이 되는 것을 확인했다. 미등록 클러스터 보고서 요청은 422로 거부하며, 이후 HTTP 등록 → 목록·범위 조회를 검증했다. 등록의 입력 검증, 멱등 재전송, 중복 충돌, 감사 기록 1건, 기존 비활성 클러스터 보존을 확인했다. 기존 C07 config/enabled/version은 재초기화해도 유지한다. 누락·비활성·유효하지 않은 한도와 미적용 스키마는 readiness 503을 유지한다.

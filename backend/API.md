@@ -46,6 +46,14 @@
 제거: `/me`, 권한 설정, 대화, dispatches, Grafana webhook 중계, POST /analyses, GUI 용량/C07 변경. Grafana는 Incident에 직접 연결한다.
 기존 화면의 저장 관측 조회를 위해 POST `/observations/query`, `/mappings/query`, `/dashboard/query`만 읽기 전용 호환 경로로 남긴다. 이 경로는 잡을 만들지 않는다.
 
+## Runbook 지식 검증과 검색
+
+`kind=runbook`, `content.schema=gpu-rca-runbook/1.0`은 생성/PATCH에서 허용 필드·조건·출처·관측 계획·호환성 형식을 검사한다. 승인(approve)과 발행(publish)은 빈 `compatibility`를 422로 거부한다. schema 없는 legacy 콘텐츠의 기존 처리는 유지하며, 미지원 schema는 거부한다. query 등록·procedure 허용 여부는 관리 CLI와 RCA Worker의 실행 프로필로 검증한다. Backend 형식 검사가 실제 환경 검수를 대신하지 않는다.
+
+`GET /knowledge?kind=runbook&code=xid%3A79`는 legacy `content.code` 또는 v1 `content.search.codes`의 정확한 값을 조회한다. `xid:79`와 `sxid:79`는 별개다. 기존 상태·scope·cursor 필터와 revision/hash·멱등 처리·발행본 불변 규칙을 유지한다.
+
+기존 `knowledge_revisions`의 JSONB 필드를 사용하며 테이블·컬럼·migration을 추가하지 않았다. 오류별 3건은 서로 다른 knowledge_key이며 변경 이력은 같은 knowledge_id의 새 revision이다. CLI 명령·초안/발행 경계는 [DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따른다.
+
 ## 보고서/일정
 
 보고서 입력은 scope/time_range/timezone/topic_ids(O01~O11)/group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id다. O07 자원 이름·단위는 저장된 resource_catalog와 대조한다. O10 조치 전후 계산/단순 비교 판정은 Report Agent 입력으로 전달한다.

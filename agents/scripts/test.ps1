@@ -10,6 +10,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'JC build failed' }
         go -C incident build -o ../.local/incident.exe ./cmd/server
         if ($LASTEXITCODE -ne 0) { throw 'Incident build failed' }
+        go -C backend build -o ../.local/backend-e2e.exe ./cmd/server
+        if ($LASTEXITCODE -ne 0) { throw 'Backend build failed' }
         if ($PgBin) { $env:PG_BIN = (Resolve-Path -LiteralPath $PgBin).Path }
         $env:RUN_AGENT_E2E = '1'
         .venv/Scripts/python.exe -m pytest -c agents/pytest.ini agents/tests -q

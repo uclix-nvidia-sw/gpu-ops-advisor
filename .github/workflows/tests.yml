@@ -93,6 +93,7 @@ jobs:
           mkdir -p .local/mcp-grafana
           go -C job-controller build -o ../.local/job-controller ./cmd/server
           go -C incident build -o ../.local/incident ./cmd/server
+          go -C backend build -o ../.local/backend-e2e ./cmd/server
           cd .local/mcp-grafana
           release=https://github.com/grafana/mcp-grafana/releases/download/v1.4.2
           curl --fail --location --retry 3 "$release/mcp-grafana_Linux_x86_64.tar.gz" -o mcp-grafana_Linux_x86_64.tar.gz

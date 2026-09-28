@@ -56,7 +56,7 @@ Claude Code에서는 새 세션을 열어 `/context`에서 공통 규칙을 확�
 
 ## 구현 상태
 
-2026-09-28 RCA·Runbook 후속 개발 상태는 [인수인계 문서](../rcca-agent/HANDOFF.md)에서 확인합니다. 아래의 이전 제품 전체 기준과 구분하며, 로컬 구현·fixture 검증을 운영 배포 완료로 해석하지 않습니다.
+2026-09-28 RCA·Runbook 후속 개발 상태는 [인수인계 문서](../rcca-agent/HANDOFF.md)에서 확인합니다. XID/SXID 초안의 기존 DB 필드 대응·등록/검토/발행·재현 명령은 [Runbook DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따릅니다. 아래의 이전 제품 전체 기준과 구분하며, 로컬 구현·fixture 검증을 운영 배포 완료로 해석하지 않습니다.
 
 현재 문서는 제품 코드 `775ab2f`의 Backend 초기화·클러스터 등록, 보고서 관측 집계·분할 조회·화면/다운로드, 운영 설정 변경을 반영했습니다. [산출물 안내](specs/README.md)에서 구현 범위와 QA를, [반영내역](specs/09_통합검토_반영내역.md)에서 변경·삭제 근거를 확인합니다.
 
