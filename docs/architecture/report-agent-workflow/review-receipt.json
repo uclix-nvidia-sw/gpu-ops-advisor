@@ -1,0 +1,20 @@
+{
+  "diagram_type": "workflow",
+  "specification_sha256": "139eccb3f1be9cf9bda00aa62b255a180da072be6f1c2ee3f03568563d57d3d2",
+  "artifact_sha256": "a457dd8770fdccfe9e2312e4be254b8220660d32151190b501263304489248eb",
+  "validation": "9/9 showcase, 0 errors, 0 warnings",
+  "browser_evidence": "passed",
+  "visual_review": "passed",
+  "correction_rounds": 0,
+  "reviewed_images": [
+    "report-agent.workflow.visual-check.1440x900.light.png",
+    "report-agent.workflow.visual-check.2048x1320.dark.png"
+  ],
+  "observations": [
+    "Numbered path, labels, nodes and cards readable with no occlusion in reviewed captures."
+  ],
+  "unverified": [
+    "Manual search, focus and export interactions.",
+    "Product runtime, database/E2E and live analysis quality."
+  ]
+}

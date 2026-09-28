@@ -20,6 +20,9 @@ node_modules/
 dist/
 coverage/
 
+# Personal coding-assistant settings
+.claude/settings.local.json
+
 # Local env
 .env
 .env.*

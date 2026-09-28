@@ -4,7 +4,7 @@
 
 상태: 팀 검토용 · 범위: CPC-1(A100), CPC-2(V100) GPU **노드** 장애 · 운영 DB 미반영
 
-후속 결정: 조사 순서는 [Runbook-first BM25 파이프라인](gpu-node-rca-runbook-first-pipeline.md)을 우선한다. 아래 런북 항목과 관측 목록은 콘텐츠 작성 참고이며, 전체 관측 계획을 런북 검색 앞에 실행하라는 의미가 아니다.
+2026-09-23 후속 합의: 실행 기준과 전체 도식은 [11번 문서 §2](../11_RCA_Agent_모듈_설계서.md#2-처리저장)를 따른다. Runbook 검색·적용 검사는 DB 조회와 코드로 수행한다. 기존 증거가 충분하면 MCP·LLM 없이 결과를 작성하고, 부족하면 수집 → 증거 정리 → LLM 분석 → 검증·재평가 → 필요 시 재조사한다. 두 경로와 미확정 종료 모두 결과·근거 저장 및 JC 공개를 거친다. 이 문서는 작성 참고 초안이며 현재 런타임의 구현 완료를 뜻하지 않는다.
 
 ## 요약
 
@@ -16,9 +16,10 @@
 
 1. Grafana Alert가 Incident snapshot으로 저장된다. 사람이 웹 UI에서 요청하거나 fault injection으로 만든 사건도 **동일한 Incident 계약**을 통과한다면 조사할 수 있지만, 현재 RCA Worker는 `incident_id`가 없는 임의 증상 요청을 받지 않는다. 입력 경로와 주입 표시를 증거에 남긴다.
 2. Alert의 cluster, node, GPU UUID, 시각, 오류 코드와 원본 메시지를 보존한다. 누락된 식별자는 추측하지 않고 `missing`으로 기록한다. Alert 라벨·본문은 **조사 단서**이며 검증된 사실과 구분한다.
-3. 코드(Xid/SXid), 핵심 단어, producer의 상태/이벤트 종류로 후보 런북을 찾는다. 도메인 → 상세 장애 유형 → 해당 하드웨어/버전의 순서로 좁힌다. 오류 코드만으로 단일 원인을 확정하지 않는다.
-4. **첫 조회 묶음**은 수집 정상 여부·동일 GPU 식별·사고 전후 이벤트를 확인한다. 다음에 런북별 2~4개의 우선 관측을 조회하고, 결과에 따라 확장한다. `no series`, stale, unsupported, query failed를 서로 다르게 남긴다.
-5. 동반 Xid/SXid와 모델·Fabric Manager 상태 등을 확인해 분기한다. 확인된 증거, 반증, 빈틈, 출처를 붙인 원인 후보와 권고를 작성한다. 조치 후 상태 확인은 운영자 작업으로 분리한다.
+3. 코드(Xid/SXid), 핵심 단어, producer의 상태/이벤트 종류로 후보 런북을 DB 조회·결정적 검색으로 찾고, 코드로 호환성·적용/배제 조건을 검사한다. 검색은 LLM 없이 수행하며 오류 코드만으로 단일 원인을 확정하지 않는다.
+4. 기존 증거가 필수 조건·품질·선택된 조사 목적을 충족하면 MCP·LLM을 생략하고 결과를 작성한다. 부족하면 런북의 필요한 fact와 D코드로 수집 계획을 만들며, 런북이 없으면 등록 일반 조사를 사용한다. 이미 충족한 증거를 무조건 다시 수집하지 않는다.
+5. Grafana MCP 수집 후 정규화·품질 확인을 거쳐 유효한 증거를 LLM에 전달한다. 동반 코드·메트릭·시간 관계를 분석해 원인 후보와 지지/반박·추가 확인을 제안하고, 코드로 근거와 런북 조건을 재검증한다. 유효한 추가 조회와 예산이 있을 때만 반복한다.
+6. 충분한 결론 또는 미확정 결과에 사실·후보·권고·부족 근거·종료 사유를 기록한다. 최종 검증 → evidence·candidate 저장 → JC 공개 후 Backend·보고서 Agent가 활용한다. 저장 실패·취소·lease 만료는 정상 공개와 구분한다. 실제 조치와 사건 종결은 사람이 수행한다.
 
 관측 원본은 현재 Grafana MCP를 통한 **Mimir/Loki**다. Fleet Intelligence의 `/state`·`/event` 직접 API 조회는 현행 RCA 조회 경로가 아니므로, 직접 연동은 별도 설계가 필요하다. Fleet가 전송한 상태·이벤트가 Loki/Mimir에 있다면 실제 라벨·형식을 검증한 query ID를 통해 사용할 수 있다. `dcgmi dmon --list`는 Field catalog이지 활성 메트릭이나 시계열 표본이 아니다.
 
@@ -31,7 +32,9 @@
 | 적용 범위 | CPC, GPU 모델/세대, 관련 장치, 드라이버/DCGM/Fleet 버전, MIG·NVSwitch·Fabric Manager 조건 |
 | 진입 단서 | Xid/SXid 번호, Alert label, Loki 이벤트 패턴, Fleet 상태/이벤트 코드. 문자열은 정규화하되 원문 보존 |
 | 첫 관측 | query ID, `meaning_id`, source binding, 조회 기간, GPU/node identity, 우선순위, freshness, 기대 단위 |
+| fact와 조회 연결 | `required_evidence`의 fact를 어떤 등록 D코드·parser/binding으로 확보하는지 명시. R코드는 Agent 조사 목적이며 Runbook 필수 필드로 가정하지 않음 |
 | 판단 분기 | 반드시 필요한 증거, 동반 코드, 반증·제외 조건, 정보 부족 시 다음 조회, 멈춤 조건 |
+| 분석·종료 근거 | 기존 증거로 충분한 조건, 수집 후 LLM이 검토할 관계·가설, 지지/반박 기준, 추가 조회/미확정 종료 조건. 확정은 검토된 confirmation rule 필요 |
 | 권고 | 출처별 suggested/repair action 원문, 적용 전제, 영향 범위, 실행 주체, 검증 방법, 벤더 상향 조건 |
 | 검수 | reviewer, 검증 환경·근거, published revision, 후속 재검토 조건 |
 
@@ -39,7 +42,7 @@
 
 ## 3. 우선 조회 원칙
 
-모든 런북의 공통 관측은 ① Alert 시각과 대상 확인 ② 수집기/시계열 freshness ③ 동일 GPU UUID의 사고 전후 Loki 이벤트 ④ 해당 producer의 상태 변화다. 장애 단서별 **첫 추가 조회**는 다음과 같다. 실제 Mimir 메트릭명은 CPC별 수신 확인을 거쳐 binding에 등록하며, 아래 이름만으로 수집 중이라고 판단하지 않는다.
+런북 적용에 필요한 공통 확인 항목은 ① Alert 시각과 대상 ② 수집기/시계열 freshness ③ 동일 GPU UUID의 사고 전후 Loki 이벤트 ④ 해당 producer의 상태 변화다. 필요한 증거가 이미 유효하게 확보됐으면 조회를 반복하지 않는다. 아래는 증거가 부족할 때 사용하는 **첫 추가 조회** 참고이며, 실제 Mimir 메트릭명은 CPC별 수신 확인을 거쳐 binding에 등록한다. 이름만으로 수집 중이라고 판단하지 않는다.
 
 | 단서/도메인 | 먼저 확인할 데이터 | 그다음 분기 |
 |---|---|---|
@@ -67,7 +70,7 @@
 
 따라서 위 표의 코드별 우선순위·시간 순서 판단·counter 변화량·source fallback은 **아직 실행 기능이 아니다**. 특히 현행 조건 검사는 필드의 `equals`만 지원하며, “Xid 48 다음에 63”이나 임계값·연속 상승을 표현하지 못한다. 또한 현재 등록된 `D01`~`D13` 조회는 GPU 기본 수치와 Loki 등에 한정되고 ECC·NVLink·IB용 query ID가 없다. GPU 노드용 런북을 발행하기 전에 query registry, 이벤트 파서, 조건 평가, 결과 근거 검증을 작은 단위로 추가해야 한다. 단순한 Alert 일치만으로 `causal_status=supported`를 내지 않도록 검토한다.
 
-저장은 우선 기존 `runbook` revision을 이용하고, `content.schema_version`을 정의한다. 새 DB kind나 별도 테이블은 지금 필요성이 입증되지 않았다. 이후 조회 성능·제약 검증이 필요한 경우에만 `incident_category`·`observation_plan`을 정규화한다. 운영자 조치 기록과 사건별 RCA 결과는 런북 revision에 덮어쓰지 않는다.
+저장은 기존 `runbook` revision을 이용한다. 2026-09-28 초기 구현은 `content.schema = "gpu-rca-runbook/1.0"`을 사용하며, 검증기·Xid 79/48 작성 초안·RCA 연계 계약은 [Runbook 개발 문서](../../../../rcca-agent/runbooks/README.md)에 정리했다. 초안의 운영 발행·실제 수집 검증은 완료하지 않았다. 새 DB kind나 별도 테이블은 지금 필요성이 입증되지 않았다. 이후 조회 성능·제약 검증이 필요한 경우에만 `incident_category`·`observation_plan`을 정규화한다. 운영자 조치 기록과 사건별 RCA 결과는 런북 revision에 덮어쓰지 않는다.
 
 ## 6. 팀 검토 항목과 다음 단계
 

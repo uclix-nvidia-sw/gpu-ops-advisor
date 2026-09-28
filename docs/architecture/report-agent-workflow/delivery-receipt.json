@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "workflow",
+  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\report-agent-workflow\\report-agent.workflow.json",
+  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\report-agent-workflow\\report-agent.workflow.html",
+  "specification": {
+    "sha256": "139eccb3f1be9cf9bda00aa62b255a180da072be6f1c2ee3f03568563d57d3d2",
+    "bytes": 5664
+  },
+  "artifact": {
+    "sha256": "a457dd8770fdccfe9e2312e4be254b8220660d32151190b501263304489248eb",
+    "bytes": 818528
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

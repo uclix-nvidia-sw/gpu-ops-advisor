@@ -26,6 +26,8 @@ TEXT_FIELDS = (
     "event_names",
     "producer_events",
     "error_codes",
+    "reason",
+    "component",
 )
 SEARCH_WEIGHTS = {
     "codes": 8,

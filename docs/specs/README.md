@@ -51,11 +51,15 @@ Incident는 알람 생명주기 상태와 사건 ID를 분리하고, source를 �
 
 ### RCA workflow·runbook 통합 기준
 
+2026-09-28의 첨부 문서 검토와 로컬 구현은 [RCA 입력·병렬 조사·Synthesis 보완 계획](rca-agent/implementation-plan-20260928.md), [11 §2.4](rca-agent/11_RCA_Agent_모듈_설계서.md#24-현재-실행-순서와-확인된-한계), [Agent QA](../../agents/QA.md)를 따른다. 이번 구현은 입력 1.3에서 Orchestrator·병렬 관측·최대 1회 재조사·최종 Synthesis를 연결한다. 아래 9월 23일의 분석 후 반복 흐름은 이 순서로 보완했다. 1.4 목적 선택과 운영 데이터 의미 검수는 후속 단계다.
+
 2026-09-22에 [11. RCA Agent 모듈 설계서](rca-agent/11_RCA_Agent_모듈_설계서.md)를 기준으로 아래 초안을 대조·통합했다. **현재 구현과 추가 개발 목표를 구분**하고, Runbook-first workflow, D-쿼리 재사용·선결 조건, runbook 작성/발행 계약, 구현 순서와 검수 기준을 11번 문서에서 관리한다. D01~D13·Observation·evidence 저장을 재사용하며 검색 모듈의 구현을 전체 파이프라인 통합 완료로 해석하지 않는다.
 
 `rca-agent/drafts/`는 제안 출처·당시 검증 기록으로 보존한다. 미채택 제안과 과거 실행 명령을 현행 요구사항으로 자동 적용하지 않는다. 상세 병합 결정과 evidence 해석 보정도 11번 문서에 기록했다.
 
 후속 코드 검토를 반영해 11번 문서 §3에 fact·health 입력 계약, §5.3에 요청 출처별 query 허용 정책, §6.2에 compatibility 컨텍스트·발행 검증·Backend 코드 검색 호환성을 구체화했다. 개발은 접수·역할 전환 P0와 P0a 데이터 계약·P0b 관측 정합부터 진행한다. 이 데이터 구조와 validator는 추가 개발 목표이며 현재 runtime/API에 모두 구현됐다는 의미는 아니다.
+
+2026-09-23 workflow 합의를 11 §2의 Mermaid 도식·종료/LLM 계약과 Runbook 작성 문서에 반영했다. Runbook 검색·적용 검사는 DB 조회·코드로 처리하며, 기존 증거로 충분하면 MCP·LLM을 생략한다. 부족하면 **MCP 수집 → 증거 정리 → LLM 분석 → 검증·재평가 → 필요 시 재조사**하고, 단독 판단·LLM 분석·미확정 결과 모두 기존 DB 저장·JC 공개를 거쳐 이력/보고서에 사용한다. 공통 04와 검수 T33~T36도 맞췄다. 제품 코드·DB·배포 변경이나 실행 검증 완료를 뜻하지 않는다.
 
 2026-09-23에 추가한 [rca-agent/references/](rca-agent/references/README.md)는 runbook 작성용 검토 자료다. 근거자료 카탈로그, Domain·Category 메트릭 매핑, Fleet·GPUd component·오류 카탈로그로 구성하며 실행 가능한 runbook이나 확정된 Knowledge DB seed가 아니다. 사용 단계와 `source-verified → observed → runbook-validated` 승격 기준은 11번 문서 §6.4.1에서 관리한다.
 

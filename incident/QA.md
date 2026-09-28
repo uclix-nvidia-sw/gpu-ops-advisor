@@ -1,5 +1,14 @@
 # Incident 검증 기록
 
+## 2026-09-28 node 라벨 전달 보완
+
+1.4 `k8s_node_name`을 labels에서 우선 읽고 annotations를 fallback으로 사용한다. 서로 다른 두 값은 `conflicting_node_name`으로 거부한다. DB 구조나 에피소드 정책 설정은 변경하지 않았다.
+
+- **통과:** 라벨만/annotation만/같은 값/충돌 값의 단위 검사, 원문 hash 불변 확인. Incident `go vet ./...`, `go test -race ./...`, `go build ./...`.
+- **통과:** `go test -tags=e2e ./tests -v -count=1 -timeout=5m`의 3개 최상위 테스트 및 하위 사례. 실제 PostgreSQL에서 node label이 incidents.target과 JC outbox input에 함께 저장됨을 추가 검증했다. 기존 에피소드·snapshot·중복 억제·migration 충돌 검사를 유지한다.
+- **환경:** Windows, Go 1.26.2, CGO/GCC, 격리 PostgreSQL 16.9. 저장소 경로의 대괄호에 따른 Go embed 오류를 피하려고 동일 소스의 임시 검증 복사본에서 실행했다. 실제 Backend 바이너리와 JC를 사용하고 테스트별 schema 및 DB를 종료했다. 로그는 로컬 `.local/rca-incident-e2e.log`.
+- **미검증:** 제품 RCA Worker의 입력 1.4 의미 처리·목적 선택, 실제 Grafana 발송·운영 parser·배포. 1.4 전달 수신기는 기존 계약 fixture이며, 제품 Worker의 1.3 실행은 [Agent QA](../agents/QA.md)에 별도로 기록했다.
+
 ## 2026-09-23 Incident·JC 통합 PR 최종 검사
 
 Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops-incident-jc-pr`에서 재검사했다. 아래 결과는 앞선 기록의 CGo/race 미검증 항목을 보완한다.

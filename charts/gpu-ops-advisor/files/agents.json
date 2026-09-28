@@ -1,5 +1,6 @@
 {
   "revision": "builtin-grafana-v1",
+  "rca": {"general_runbook_key": "RB-GENERAL-GPU-NODE"},
   "limits": {
     "max_queries": 48,
     "max_rows": 5000,
@@ -7,6 +8,7 @@
     "max_range_seconds": 2678400,
     "chunk_seconds": 3600,
     "max_followups": 2,
+    "max_concurrency": 3,
     "deadline_seconds": 900,
     "query_timeout_seconds": 30,
     "max_discovery_calls": 64
