@@ -157,9 +157,19 @@ class Observation:
             target = (
                 self.data.get("target") or self.data.get("resource_selectors") or {}
             )
+            # Collection clues are not device identity or verified health facts.
+            log_target = self.data.get("log_query_target") or {}
+            json_filters = {
+                field: (path, log_target[field])
+                for field, path in definition.get("json_target_fields", {}).items()
+                if source == "loki"
+                and re.fullmatch("[a-zA-Z_][a-zA-Z0-9_]*", field)
+                and isinstance(log_target.get(field), str)
+                and log_target[field]
+            }
             if isinstance(target, dict):
                 for field, label in definition.get("target_labels", {}).items():
-                    if target.get(field):
+                    if target.get(field) and field not in json_filters:
                         selector[label] = str(target[field])
             filters = [
                 f"{k}={json.dumps(v)}"
@@ -173,6 +183,22 @@ class Observation:
                 )
             # Query strings come only from reviewed configuration and escaped scope labels.
             base = "{" + ",".join(filters) + "}"
+            if json_filters:
+                # Loki suffixes extracted names that collide with original labels.
+                # Clear both names first so only the JSON value can satisfy a filter.
+                fields = list(sorted(json_filters.items()))
+                aliases = [f"dsx_json_{i}" for i in range(len(fields))]
+                base += " | drop " + ", ".join(
+                    name for alias in aliases for name in (alias, alias + "_extracted")
+                )
+                base += " | json " + ", ".join(
+                    f"{alias}={json.dumps(path)}"
+                    for alias, (_, (path, _)) in zip(aliases, fields)
+                )
+                base += ' | __error__=""'
+                for alias, (_, (_, value)) in zip(aliases, fields):
+                    value = json.dumps(value)
+                    base += f" | ({alias}={value} or {alias}_extracted={value})"
             cursor = start
             chunk_seconds = limits.get("chunk_seconds", 3600)
             while cursor < end:
@@ -186,7 +212,7 @@ class Observation:
                         self._evidence(
                             query_id,
                             scope["cluster_id"],
-                            window,
+                            {"start": iso(cursor), "end": iso(end)},
                             {},
                             "unavailable",
                             {"reason": "budget_exhausted"},
@@ -283,14 +309,12 @@ class Observation:
                         sample_count=count,
                         series_count=len(rows) if isinstance(rows, list) else 0,
                     )
-                    # Range vectors contain many samples per series. Re-query a smaller
-                    # time window instead of throwing away a successfully fetched hour.
+                    # Re-query a smaller window before discarding an oversized response.
                     # Every retry still consumes the same query/deadline budget.
                     if (
-                        source != "loki"
-                        and (size > limits["max_bytes"] or count > limits["max_rows"])
-                        and stop - cursor > 1
-                    ):
+                        size > limits["max_bytes"]
+                        or (source != "loki" and count > limits["max_rows"])
+                    ) and stop - cursor > 1:
                         ratio = min(
                             limits["max_bytes"] / max(size, 1),
                             limits["max_rows"] / max(count, 1),

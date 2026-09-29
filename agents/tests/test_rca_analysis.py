@@ -9,6 +9,7 @@ import pytest
 from agent_common.contracts import content_hash, validate_result
 from agent_common.llm import RemoteUncertain
 from agent_common.runtime import attempt_context
+from rcca_agent import workflow
 from rcca_agent.synthesis import validate_synthesis
 from rcca_agent.workflow import run
 from rcca_agent.incident import alert_clues
@@ -325,3 +326,145 @@ def test_alert_clues_preserve_namespace_actions_and_conflicts():
     assert clues["conflicts"] == ["k8s_node_name"] and "k8s_node_name" not in clues
     source["alert"]["labels"]["suggested_actions"] = "broken JSON"
     assert alert_clues(source)["provider_actions_status"] == "invalid"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mode",
+    ["fallback_node", "explicit_node", "component_only", "conflicting", "native"],
+)
+async def test_fleet_query_clues_preserve_claim_and_semantic_health_target(
+    monkeypatch, mode
+):
+    period = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T00:01:00Z"}
+    labels = {"k8s_node_name": "fleet-node", "component": "alert-component"}
+    annotations = {}
+    if mode == "component_only":
+        labels.pop("k8s_node_name")
+    elif mode == "conflicting":
+        annotations = {"k8s_node_name": "other-node", "component": "other-component"}
+    elif mode == "native":
+        labels = {}
+    target = {} if mode == "fallback_node" else {"node": "claimed-node"}
+    effective_target = target or {"node": "fleet-node"}
+    query_target = (
+        {"node": effective_target["node"], "component": "alert-component"}
+        if mode in ("fallback_node", "explicit_node")
+        else {"component": "alert-component"}
+        if mode == "component_only"
+        else {}
+    )
+    data = dict(
+        incident_id=str(uuid4()),
+        evidence_version=1,
+        incident_time=period["start"],
+        scope={"clusters": [{"cluster_id": "c", "namespaces": None}]},
+        target=target,
+        time_range=period,
+        purpose_ids=["R05"],
+        incident_snapshot={
+            "evidence": {
+                "producer_contract": "fixture",
+                "alert": {"labels": labels, "annotations": annotations},
+            }
+        },
+    )
+    profile = json.loads(
+        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text()
+    )
+    profile["clusters"] = {"c": {"loki_uid": "logs", "loki_selector": {}}}
+    profile["queries"]["D09"]["max_hold_seconds"] = 30
+    profile["health_contracts"] = {
+        "fixture": {
+            "producer_contract": "fixture",
+            "revision": "v1",
+            "checks": {"valid": "valid"},
+            "health": {"Degraded": {"normalized_health": "degraded"}},
+        }
+    }
+    content = {
+        "required_queries": ["D09"],
+        "required_evidence": ["component", "normalized_health"],
+        "applicability_conditions": [{"field": "component", "equals": "gpu"}],
+    }
+    book = dict(
+        id=str(uuid4()),
+        knowledge_key="fixture",
+        revision=1,
+        content=content,
+        compatibility={"producer_contract": "fixture"},
+        content_hash=content_hash(content),
+        reviewed_content_hash=content_hash(content),
+    )
+    observed_inputs = []
+
+    class CapturingObservation(workflow.Observation):
+        def __init__(self, *args):
+            super().__init__(*args)
+            observed_inputs.append(copy.deepcopy(self.data))
+
+    monkeypatch.setattr(workflow, "Observation", CapturingObservation)
+
+    async def logs(args):
+        return {
+            "data": {
+                "result": [
+                    {
+                        "stream": {},
+                        "values": [
+                            [
+                                "1",
+                                json.dumps(
+                                    {
+                                        "producer_contract": "fixture",
+                                        "health": "Degraded",
+                                        "check_status": "valid",
+                                        "target": effective_target,
+                                        "component": "gpu",
+                                        "observed_at": period["start"],
+                                    }
+                                ),
+                            ]
+                        ],
+                    }
+                ]
+            }
+        }
+
+    class LLM:
+        configured = False
+        usage = {}
+
+    claim = {"job_id": str(uuid4()), "kind": "rca", "input": data, "versions": {}}
+    original = copy.deepcopy(claim)
+    token = attempt_context.set(
+        dict(
+            claim=claim,
+            profile=profile,
+            context={
+                "data_cutoff_at": period["end"],
+                "runbooks": [book],
+                "incidents": [],
+            },
+            deadline=time.monotonic() + 30,
+            llm=LLM(),
+        )
+    )
+    try:
+        output = await run({"query_loki_logs": logs})
+    finally:
+        attempt_context.reset(token)
+    assert claim == original
+    assert observed_inputs[0]["target"] == effective_target
+    assert observed_inputs[0]["log_query_target"] == query_target
+    snapshot = next(
+        e for e in output["evidence"] if e["query_id"] == "incident_snapshot"
+    )
+    assert snapshot["snapshot"] == original["input"]["incident_snapshot"]
+    # The actual producer component still selects this runbook. Adding the alert
+    # component to target, or promoting it as a fact, would withhold this match.
+    assert any(
+        candidate["id"] == book["id"] and candidate["causal_status"] == "supported"
+        for candidate in output["result"]["cause_candidates"]
+    )
+    validate_result(output["result"], output["evidence"])

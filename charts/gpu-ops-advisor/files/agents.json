@@ -1,5 +1,5 @@
 {
-  "revision": "builtin-grafana-v1",
+  "revision": "builtin-grafana-v2",
   "rca": {"general_runbook_key": "RB-GENERAL-GPU-NODE"},
   "limits": {
     "max_queries": 48,
@@ -53,7 +53,11 @@
     },
     "D05": {
       "source": "loki",
-      "revision": "builtin-v1",
+      "revision": "builtin-v2",
+      "json_target_fields": {
+        "node": "resources[\"k8s.node.name\"]",
+        "component": "attributes[\"component\"]"
+      },
       "validated": true
     },
     "D06": {
@@ -82,7 +86,11 @@
     },
     "D09": {
       "source": "loki",
-      "revision": "builtin-v1",
+      "revision": "builtin-v2",
+      "json_target_fields": {
+        "node": "resources[\"k8s.node.name\"]",
+        "component": "attributes[\"component\"]"
+      },
       "validated": true,
       "target_labels": {
         "node": "node"
