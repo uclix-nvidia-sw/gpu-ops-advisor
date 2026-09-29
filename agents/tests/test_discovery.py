@@ -6,6 +6,8 @@ import pytest
 
 from agent_common.observation import MCPResponseError, Observation, unwrap
 from agent_common.grafana_time import mcp_time
+from agent_common.contracts import timestamp
+from agent_common.parsers import log_lines
 
 
 PERIOD = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T01:00:00Z"}
@@ -370,3 +372,135 @@ def test_mcp_success_and_error_envelopes():
     assert unwrap({"structuredContent": {}, "content": []}) == {}
     with pytest.raises(MCPResponseError, match="mcp_tool_error"):
         unwrap({"isError": True, "structuredContent": {"data": []}, "content": []})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D05", "D09"])
+async def test_fleet_json_filters_keep_scope_and_escape_clues(query):
+    grafana = Grafana()
+    obs = observation(grafana)
+    node = 'node"|~".*'
+    component = "xid\\test\nvalue"
+    obs.data["target"] = {"node": node}
+    obs.data["log_query_target"] = {"node": node, "component": component}
+    obs.profile["queries"][query]["json_target_fields"] = {
+        "node": 'resources["k8s.node.name"]',
+        "component": 'attributes["component"]',
+    }
+    original = copy.deepcopy(obs.data)
+    await obs.collect(query)
+    args = next(a for n, a in grafana.calls if n == "query_loki_logs")
+    selector, pipeline = args["logql"].split(" | drop ", 1)
+    assert selector == '{cluster="cluster-a",namespace=~"dev\\"\\\\|\\\\.\\\\*"}'
+    assert "node=" not in selector and "component=" not in selector
+    assert pipeline.startswith(
+        "dsx_json_0, dsx_json_0_extracted, dsx_json_1, dsx_json_1_extracted | json "
+    )
+    assert 'dsx_json_1="resources[\\"k8s.node.name\\"]"' in pipeline
+    assert 'dsx_json_0="attributes[\\"component\\"]"' in pipeline
+    assert ' | __error__=""' in pipeline
+    assert (
+        f" | (dsx_json_1={json.dumps(node)} or dsx_json_1_extracted={json.dumps(node)})"
+        in pipeline
+    )
+    assert (
+        f" | (dsx_json_0={json.dumps(component)} or dsx_json_0_extracted={json.dumps(component)})"
+        in pipeline
+    )
+    assert obs.data == original
+
+
+@pytest.mark.asyncio
+async def test_native_node_selector_and_prometheus_ignore_json_clues():
+    grafana = Grafana()
+    obs = observation(grafana)
+    obs.data["target"] = {"node": "native-node"}
+    await obs.collect("D09")
+    args = next(a for n, a in grafana.calls if n == "query_loki_logs")
+    assert 'node="native-node"' in args["logql"] and " | json " not in args["logql"]
+    obs.data["log_query_target"] = {"node": "other-node", "component": "xid"}
+    await obs.collect("D02")
+    args = next(a for n, a in grafana.calls if n == "query_prometheus")
+    assert 'node="native-node"' in args["expr"]
+    assert "other-node" not in args["expr"] and "component" not in args["expr"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D05", "D09", "D13"])
+async def test_loki_byte_limit_splits_and_retains_all_log_entries(query):
+    obs = observation(Grafana())
+    obs.profile["limits"]["max_bytes"] = 2500
+    start = int(timestamp(PERIOD["start"]))
+    events = [
+        (start + offset, str(offset) + "x" * 400) for offset in range(1, 3600, 180)
+    ]
+    calls = []
+
+    async def logs(args):
+        calls.append(args.copy())
+        return {
+            "data": [
+                {"line": line}
+                for at, line in events
+                if timestamp(args["startRfc3339"])
+                <= at
+                <= timestamp(args["endRfc3339"])
+            ]
+        }
+
+    obs.tools["query_loki_logs"] = logs
+    result = await obs.collect(query)
+    assert 1 < len(calls) == obs.calls <= obs.profile["limits"]["max_queries"]
+    assert all(
+        e["tool_status"] in {"ok", "empty"} and e["quality"]["complete"] for e in result
+    )
+    assert {line for e in result for line in log_lines(e["snapshot"])} == {
+        line for _, line in events
+    }
+    assert timestamp(result[0]["time_range"]["start"]) == start
+    assert timestamp(result[-1]["time_range"]["end"]) == timestamp(PERIOD["end"])
+    assert all(
+        left["time_range"]["end"] == right["time_range"]["start"]
+        for left, right in zip(result, result[1:])
+    )
+    assert all(
+        args["logql"] == calls[0]["logql"] and args["limit"] <= 4999 for args in calls
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exhaust", ["queries", "deadline"])
+async def test_oversized_loki_retry_keeps_unqueried_tail_unknown(exhaust):
+    obs = observation(Grafana())
+    obs.profile["limits"].update(
+        max_bytes=2000, max_queries=1 if exhaust == "queries" else 48
+    )
+
+    async def huge(args):
+        if exhaust == "deadline":
+            obs.deadline = time.monotonic() - 1
+        return {"data": [{"line": "x" * 3000}]}
+
+    obs.tools["query_loki_logs"] = huge
+    result = await obs.collect("D09")
+    assert obs.calls == 1 and len(result) == 1
+    assert result[0]["tool_status"] == "unavailable"
+    assert result[0]["quality"]["reason"] == "budget_exhausted"
+    assert timestamp(result[0]["time_range"]["start"]) == timestamp(PERIOD["start"])
+    assert timestamp(result[0]["time_range"]["end"]) == timestamp(PERIOD["end"])
+
+
+@pytest.mark.asyncio
+async def test_single_oversized_loki_entry_remains_partial():
+    obs = observation(Grafana())
+    obs.data["time_range"] = {"start": PERIOD["start"], "end": "2026-09-15T00:00:01Z"}
+    obs.profile["limits"]["max_bytes"] = 2000
+
+    async def huge(args):
+        return {"data": [{"line": "x" * 3000}]}
+
+    obs.tools["query_loki_logs"] = huge
+    result = await obs.collect("D09")
+    assert obs.calls == 1
+    assert result[0]["tool_status"] == "partial" and result[0]["snapshot"] == {}
+    assert result[0]["quality"]["reason"] == "response_byte_limit"

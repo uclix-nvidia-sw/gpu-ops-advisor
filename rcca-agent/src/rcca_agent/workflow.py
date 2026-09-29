@@ -291,12 +291,17 @@ async def run(tools):
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
     source = incident_source(data["incident_snapshot"])
     clues = alert_clues(source)
-    # The raw snapshot stays immutable. A display name narrows collection only;
-    # it does not prove a machine/GPU binding or become a verified fact.
+    # The raw snapshot stays immutable. Display names narrow collection only;
+    # they do not prove a machine/GPU binding or become verified facts.
     target = dict(data.get("target", {}))
     if clues.get("k8s_node_name") and not target.get("node"):
         target["node"] = clues["k8s_node_name"]
-    data = {**data, "target": target}
+    log_query_target = {}
+    if clues.get("k8s_node_name"):
+        log_query_target["node"] = target["node"]
+    if clues.get("component"):
+        log_query_target["component"] = clues["component"]
+    data = {**data, "target": target, "log_query_target": log_query_target}
     obs = Observation(tools, profile, data, ctx["deadline"])
     eid = str(uuid4())
     obs.evidence.append(

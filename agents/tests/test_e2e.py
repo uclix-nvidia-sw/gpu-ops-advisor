@@ -48,6 +48,8 @@ class Upstream(BaseHTTPRequestHandler):
     api_key = "fixture-only"
     logs_fail = False
     logs_max_limit = None
+    logs_json_target = None
+    logs_max_seconds = None
 
     def log_message(self, *args):
         pass
@@ -189,16 +191,62 @@ class Upstream(BaseHTTPRequestHandler):
                 ).timestamp()
                 * 1e9
             )
-            line = json.dumps(
-                {
-                    "health": "Degraded",
-                    "check_status": "valid",
-                    "component": "gpu",
-                    "producer_contract": "fixture-v1",
-                    "target": {"gpu_uuid": "GPU-1"},
-                    "observed_at": PERIOD["start"],
-                }
-            )
+            if self.logs_json_target is not None:
+                expr = query["query"][0]
+                selector = expr.split("}", 1)[0]
+                drop = (
+                    " | drop dsx_json_0, dsx_json_0_extracted, "
+                    "dsx_json_1, dsx_json_1_extracted | json "
+                )
+                for index, (field, path) in enumerate(
+                    sorted(
+                        {
+                            "node": 'resources["k8s.node.name"]',
+                            "component": 'attributes["component"]',
+                        }.items()
+                    )
+                ):
+                    alias = f"dsx_json_{index}"
+                    value = json.dumps(self.logs_json_target[field])
+                    if (
+                        not expr.split("}", 1)[1].startswith(drop)
+                        or f"{alias}={json.dumps(path)}" not in expr
+                        or '| __error__="" | (' not in expr
+                        or f"| ({alias}={value} or {alias}_extracted={value})"
+                        not in expr
+                        or f"{field}=" in selector
+                    ):
+                        return self.send({"error": "Fleet JSON filter required"}, 400)
+                start = int(query["start"][0])
+                seconds = (int(query["end"][0]) - start) / 1e9
+                padding = (
+                    "fixture " * 2048
+                    if self.logs_max_seconds is not None
+                    and seconds > self.logs_max_seconds
+                    else "fixture"
+                )
+                line = json.dumps(
+                    {
+                        "resources": {"k8s.node.name": self.logs_json_target["node"]},
+                        "attributes": {
+                            "component": self.logs_json_target["component"],
+                            "health": "healthy",
+                            "check_status": "valid",
+                        },
+                        "body": padding,
+                    }
+                )
+            else:
+                line = json.dumps(
+                    {
+                        "health": "Degraded",
+                        "check_status": "valid",
+                        "component": "gpu",
+                        "producer_contract": "fixture-v1",
+                        "target": {"gpu_uuid": "GPU-1"},
+                        "observed_at": PERIOD["start"],
+                    }
+                )
             return self.send(
                 {
                     "status": "success",
@@ -560,6 +608,75 @@ async def test_loki_limit_through_nat_and_official_mcp(stack, monkeypatch):
 
 
 @pytest.mark.e2e
+async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeypatch):
+    from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
+
+    from agent_common.observation import Observation
+    from agent_common.parsers import log_lines, parse_health
+
+    target = {"node": 'node-"fixture\\1', "component": "accelerator-nvidia-error-xid"}
+    monkeypatch.setattr(Upstream, "logs_json_target", target)
+    monkeypatch.setattr(Upstream, "logs_max_seconds", 900)
+    profile = json.loads(json.dumps(stack["profile"]))
+    profile["limits"].update(max_bytes=4096, max_queries=40)
+    for query_id in ("D05", "D09"):
+        profile["queries"][query_id]["target_labels"] = {
+            "node": "node",
+            "component": "component",
+        }
+    data = {
+        "scope": SCOPE,
+        "time_range": PERIOD,
+        "target": {"node": target["node"]},
+        "log_query_target": target,
+    }
+    request_start = len(Upstream.requests)
+    async with MCPStreamableHTTPClient(
+        stack["env"]["GRAFANA_MCP_URL"], reconnect_enabled=False
+    ) as client:
+        tools = {}
+        for name in ("query_loki_logs", "list_datasources", "list_loki_label_values"):
+            tools[name] = (await client.get_tool(name)).acall
+        observation = Observation(tools, profile, data, time.monotonic() + 60)
+        for query_id in ("D05", "D09"):
+            evidence = await observation.collect(query_id)
+            assert len(evidence) > 1 and all(
+                row["tool_status"] == "ok" and row["snapshot"] for row in evidence
+            ), evidence
+            assert evidence[0]["time_range"]["start"] == PERIOD["start"]
+            assert evidence[-1]["time_range"]["end"] == PERIOD["end"]
+            assert all(
+                left["time_range"]["end"] == right["time_range"]["start"]
+                for left, right in zip(evidence, evidence[1:])
+            )
+            logs = [
+                json.loads(line) for e in evidence for line in log_lines(e["snapshot"])
+            ]
+            assert logs and all(
+                row["resources"]["k8s.node.name"] == target["node"]
+                and row["attributes"]["component"] == target["component"]
+                and row["attributes"]["health"] == "healthy"
+                for row in logs
+            )
+            health = parse_health(evidence, profile["health_contracts"])
+            assert health and all(
+                row["check_status"] == row["normalized_health"] == "unknown"
+                for row in health
+            )
+    requests = [
+        args
+        for path, args in Upstream.requests[request_start:]
+        if path.endswith("/loki/api/v1/query_range")
+    ]
+    durations = [(int(q["end"][0]) - int(q["start"][0])) / 1e9 for q in requests]
+    assert max(durations) > 900 and min(durations) <= 900
+    assert all(
+        'cluster="cpc-2"' in q["query"][0] and 'namespace=~"dev"' in q["query"][0]
+        for q in requests
+    )
+
+
+@pytest.mark.e2e
 def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     monkeypatch.setattr(Upstream, "logs_max_limit", 5000)
     iid = str(uuid4())
@@ -627,7 +744,7 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
 
 
 @pytest.mark.e2e
-def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
+def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack, monkeypatch):
     alert = {
         "status": "firing",
         "fingerprint": uuid4().hex,
@@ -675,7 +792,28 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack):
             time.sleep(0.1)
         else:
             pytest.fail("Incident did not dispatch RCA through its outbox")
+    monkeypatch.setattr(
+        Upstream,
+        "logs_json_target",
+        {"node": "node-1", "component": alert["labels"]["component"]},
+    )
+    request_start = len(Upstream.requests)
     result, evidence = worker_result(stack, "rca", str(jid), "-incident-webhook")
+    assert "component" not in snapshot["input"]["target"]
+    log_requests = [
+        args
+        for path, args in Upstream.requests[request_start:]
+        if path.endswith("/loki/api/v1/query_range")
+    ]
+    assert log_requests and all(
+        '| (dsx_json_0="accelerator-nvidia-error-xid" or '
+        'dsx_json_0_extracted="accelerator-nvidia-error-xid")' in args["query"][0]
+        for args in log_requests
+    )
+    assert all(
+        row["check_status"] == row["normalized_health"] == "unknown"
+        for row in result["device_observations"]
+    )
     assert result["incident_id"] == item["incident_id"]
     assert {a["purpose_id"] for a in result["assessments"]} == {"R01", "R02"}
     assert ("incident_snapshot", "ok") in evidence
