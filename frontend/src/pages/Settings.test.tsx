@@ -16,6 +16,8 @@ describe('model registration', () => {
     expect(basic.match(/required=""/g)).toHaveLength(2);
     expect(basic).toContain('API 기본 주소');
     expect(basic).toContain('모델 이름');
+    expect(basic).toContain('인증');
+    expect(basic).toContain('value="env:LLM_API_KEY" selected=""');
     expect(html).toContain('<details><summary>추가 설정 (선택)</summary>');
     expect(html).toContain('value="C07"');
     expect(html).toContain('서버 연결을 확인해 주세요.');
@@ -33,7 +35,7 @@ describe('model registration', () => {
           artifact_revision: 'artifact-7',
           engine_revision: 'engine-3',
           precision: 'bf16',
-          secret_ref: 'env:PRIVATE_TOKEN',
+          secret_ref: 'env:LLM_API_KEY',
           capabilities: { tools: true },
         }}
         onClose={() => {}}
@@ -42,7 +44,7 @@ describe('model registration', () => {
     for (const value of ['사내 모델', 'artifact-7', 'engine-3', 'bf16']) {
       expect(html).toContain(`value="${value}"`);
     }
-    expect(html).not.toContain('env:PRIVATE_TOKEN');
-    expect(html).toContain('비워 두면 기존 참조를 유지합니다.');
+    expect(html).toContain('value="env:LLM_API_KEY" selected=""');
+    expect(html).toContain('키 원문은 이 화면에 저장하지 않습니다.');
   });
 });

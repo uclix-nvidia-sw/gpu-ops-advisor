@@ -70,7 +70,7 @@ artifacts:
     storageClass: your-storage-class
 ```
 
-LLM 모델·주소·토큰 한도는 [Agent 설정](../../agents/README.md)의 동일한 설정을 사용합니다. 단계별 모델은 `components.rcca-agent.env.LLM_MODEL_PLANNER` 등 `components.<name>.env`에 문자열로 설정할 수 있습니다. 비밀값은 위 Secret 참조를 사용합니다.
+`llm.existingSecret`의 키는 Backend 연결 검사와 두 Worker에 함께 전달됩니다. GUI에서 모델을 지정한 작업은 고정된 프로필의 주소·모델명·인증을 사용합니다. 위 `llm.baseUrl`·`llm.model`과 단계별 환경변수는 GUI 모델 지정이 없는 작업의 대체 설정입니다. `components.backend.env.DSX_MODEL_HOSTS`·`DSX_MODEL_CIDRS`는 두 Worker에도 기본 전달됩니다. [모델 인증 연결 절차](../../docs/model-connection.md)와 [Agent 설정](../../agents/README.md)을 따릅니다.
 
 기본 실행 프로필은 `local-v1` 하나이며, 입력·출력을 포함해 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. `llm.synthesisMaxTokens`만 바꿔서는 실행 예산이 늘어나지 않습니다. 기존 설치는 [토큰 예산 업데이트](../../docs/helm-install.md#기존-설치의-llm-토큰-예산-업데이트)에 따라 업그레이드하고 새 보고서를 요청합니다.
 

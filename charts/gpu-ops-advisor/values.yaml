@@ -34,7 +34,8 @@ grafana:
   tokenKey: GRAFANA_SERVICE_ACCOUNT_TOKEN
 
 llm:
-  # Optional Secret containing LLM_API_KEY; model/base URL are deployment values.
+  # Inject LLM_API_KEY into Backend and both workers. Never put the key in values.
+  # Model/base URL below are fallback settings when no GUI model route is assigned.
   existingSecret: ""
   apiKeyKey: LLM_API_KEY
   baseUrl: ""

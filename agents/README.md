@@ -59,7 +59,9 @@ timeout은 모델에 보낸 요청의 통신 대기 제한, deadline은 분석 �
 Copy-Item agents/.env.example agents/.env
 ```
 
-`.env`에 기존 `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` 등을 설정합니다. `/chat/completions`를 호출하며 단계별 모델 설정, 300초 요청 상한, 기본 4096/설명 16384/insight 1024 토큰 설정을 지원합니다. 실제 호출은 JC attempt budget과 deadline으로 추가 제한합니다. 키는 코드·이미지에 넣지 않습니다. 모델/주소/키가 없으면 LLM 설명을 생략하고 유효한 결정적 결과는 유지합니다.
+모델 라우팅이 없는 작업은 기존 `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`와 단계별 모델 환경변수를 사용합니다. GUI에서 RCA/보고서 모델을 지정하면 두 Worker는 작업에 고정된 모델 revision의 주소·모델명·인증 참조를 사용하며 단계별 환경변수로 덮어쓰지 않습니다. `env:LLM_API_KEY`는 실행 환경의 키를 읽고 빈 참조는 인증 없는 서버용입니다. 지정된 revision·키가 없으면 작업을 실패시키며 다른 모델로 대체하지 않습니다. GUI 경로에는 `DSX_MODEL_HOSTS`·`DSX_MODEL_CIDRS` 검증, DNS IP 고정, 원래 Host/TLS SNI 및 redirect 차단을 적용합니다. Helm은 백엔드의 허용 설정을 두 Worker에 전달합니다.
+
+`/chat/completions`의 300초 요청 상한, 기본 4096/설명 16384/insight 1024 토큰 설정과 JC attempt budget·deadline 제한은 유지합니다. 키는 코드·이미지·작업 본문에 넣지 않습니다. 모델 라우팅이 없고 환경의 모델/주소/키도 없으면 기존처럼 LLM 설명을 생략하고 유효한 결정적 결과는 유지합니다. [키 배포와 검증](../docs/model-connection.md).
 
 기본 실행은 포함된 `agents/config.example.json` 프로필을 그대로 사용하며 별도 파일 작성이 필요 없습니다. 기본 쿼리는 모두 `validated: true`이고 이 필드는 수집 차단 스위치로 사용하지 않습니다. Grafana MCP로 datasource 목록과 클러스터 label 값을 탐색해 UID/selector를 자동으로 결정합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
 

@@ -30,6 +30,17 @@ class Store:
                     actions=[],
                     runbooks=[],
                 )
+                model = claim["versions"].get("model")
+                if model is not None:
+                    row = await (
+                        await conn.execute(
+                            "SELECT snapshot FROM profile_revisions WHERE profile_id::text=%s AND revision=%s",
+                            (model["model_id"], model["model_revision"]),
+                        )
+                    ).fetchone()
+                    if not row or row["snapshot"].get("kind") != "model":
+                        raise ValueError("pinned model revision is unavailable")
+                    context["model_profile"] = row["snapshot"]
                 if claim["kind"] == "rca":
                     row = await (
                         await conn.execute(

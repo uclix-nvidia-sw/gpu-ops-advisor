@@ -110,8 +110,8 @@ function Models() {
         <More query={q} />
         <div className="live-padding">
           <Notice>
-            여기는 모델 프로필을 저장하는 화면입니다. 현재 Agent의 실제 호출에는 별도의 배포 환경
-            설정(API 주소·모델명·인증 키)이 필요합니다.
+            인증 키는 배포된 Secret을 사용합니다. 등록 후 연결 검사를 하고, 질의·Agent별 모델
+            지정에서 사용할 모델을 선택하세요. 변경한 설정은 새로 접수하는 작업부터 적용됩니다.
           </Notice>
           <CommandError error={cmd.error} />
           {test && (
@@ -119,8 +119,9 @@ function Models() {
               <h3>연결 검사 결과</h3>
               <DataView value={test} />
               <Notice>
-                인증 없이 모델 목록을 조회한 결과입니다. 인증이 필요한 서버는 실패할 수 있으며, 실제
-                추론 호출과 Agent 연결은 별도로 확인해야 합니다.
+                선택한 인증으로 짧은 추론 요청을 보낸 결과입니다. schema가 ok이면 답변을 수신한
+                것입니다. 401은 인증 실패, 403은 권한 부족입니다. 분석 품질은 별도로 확인해야
+                합니다.
               </Notice>
             </>
           )}
@@ -138,7 +139,7 @@ export function ModelForm({ initial, onClose }: { initial: Row; onClose: () => v
       limits_profile_id: initial.limits_profile_id || 'C07',
       enabled: initial.enabled ?? true,
     }),
-    [secret, setSecret] = useState(''),
+    [secret, setSecret] = useState(str(initial.secret_ref, initial.id ? '' : 'env:LLM_API_KEY')),
     [capabilities, setCapabilities] = useState(JSON.stringify(initial.capabilities || {}, null, 2));
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -157,7 +158,7 @@ export function ModelForm({ initial, onClose }: { initial: Row; onClose: () => v
         'limits_profile_id',
       ].forEach((k) => (body[k] = str(draft[k]).trim()));
       body.name = body.name || body.model_name;
-      if (secret.trim()) body.secret_ref = secret.trim();
+      body.secret_ref = secret;
       if (
         await cmd.run(initial.id ? `/models/${str(initial.id)}` : '/models', body, {
           method: initial.id ? 'PATCH' : 'POST',
@@ -208,6 +209,18 @@ export function ModelForm({ initial, onClose }: { initial: Row; onClose: () => v
             </Field>
           ))}
         </div>
+        <Field
+          label="인증"
+          hint="발급받은 API 키를 Kubernetes Secret의 LLM_API_KEY 항목에 저장하고 llm.existingSecret으로 지정하세요. 키 원문은 이 화면에 저장하지 않습니다."
+        >
+          <select value={secret} onChange={(e) => setSecret(e.target.value)}>
+            <option value="env:LLM_API_KEY">배포된 API 키 사용 (LLM_API_KEY)</option>
+            <option value="">인증 없음</option>
+            {secret && secret !== 'env:LLM_API_KEY' && (
+              <option value={secret}>기존 참조: {secret} · 배포된 API 키로 변경 필요</option>
+            )}
+          </select>
+        </Field>
         <details>
           <summary>추가 설정 (선택)</summary>
           <div className="stack">
@@ -229,16 +242,6 @@ export function ModelForm({ initial, onClose }: { initial: Row; onClose: () => v
                 </Field>
               ))}
             </div>
-            <Field
-              label="인증 Secret 참조"
-              hint="API 키 원문은 입력하지 마세요. 참조만 저장하며 Agent 인증 키는 배포 환경에서 별도로 설정합니다. 비워 두면 기존 참조를 유지합니다."
-            >
-              <input
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
-                autoComplete="off"
-              />
-            </Field>
             <Field label="모델 기능 (JSON)">
               <textarea
                 rows={3}

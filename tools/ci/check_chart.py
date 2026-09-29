@@ -230,7 +230,7 @@ def main():
     )
     external = render(
         "--set",
-        "postgres.enabled=false,artifacts.persistence.enabled=false,ingress.enabled=true,llm.existingSecret=test-llm",
+        "postgres.enabled=false,artifacts.persistence.enabled=false,ingress.enabled=true,llm.existingSecret=test-llm,components.backend.env.DSX_MODEL_HOSTS=model.internal,components.backend.env.DSX_MODEL_CIDRS=10.20.30.40/32",
     )
     assert not any(
         d["kind"] in ("StatefulSet", "PersistentVolumeClaim") for d in external
@@ -239,8 +239,13 @@ def main():
     for d in external:
         if d["kind"] == "Deployment" and d["metadata"]["labels"][
             "app.kubernetes.io/component"
-        ] in ("rcca-agent", "ops-agent"):
+        ] in ("backend", "rcca-agent", "ops-agent"):
             env = d["spec"]["template"]["spec"]["containers"][0]["env"]
+            for name, value in (
+                ("DSX_MODEL_HOSTS", "model.internal"),
+                ("DSX_MODEL_CIDRS", "10.20.30.40/32"),
+            ):
+                assert next(e["value"] for e in env if e["name"] == name) == value
             assert (
                 next(e for e in env if e["name"] == "LLM_API_KEY")["valueFrom"][
                     "secretKeyRef"

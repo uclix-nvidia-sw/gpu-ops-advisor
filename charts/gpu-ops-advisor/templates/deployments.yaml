@@ -29,6 +29,8 @@
 {{- else if eq $name "grafana-mcp" }}
 {{- $_ := set $env "GRAFANA_URL" $root.Values.grafana.url }}
 {{- else if $worker }}
+{{- $_ := set $env "DSX_MODEL_HOSTS" ($root.Values.components.backend.env.DSX_MODEL_HOSTS | default "") }}
+{{- $_ := set $env "DSX_MODEL_CIDRS" ($root.Values.components.backend.env.DSX_MODEL_CIDRS | default "") }}
 {{- $_ := set $env "JC_URL" (printf "http://%s-job-controller:8090/internal/v1" $base) }}
 {{- $_ := set $env "GRAFANA_MCP_URL" (printf "http://%s-grafana-mcp:8000/mcp" $base) }}
 {{- $_ := set $env "AGENT_CONFIG_FILE" "/etc/gpu-ops/agents.json" }}
@@ -158,7 +160,7 @@ spec:
                   name: {{ $root.Values.grafana.existingSecret }}
                   key: {{ $root.Values.grafana.tokenKey }}
             {{- end }}
-            {{- if and $worker $root.Values.llm.existingSecret }}
+            {{- if and (or $worker (eq $name "backend")) $root.Values.llm.existingSecret }}
             - name: LLM_API_KEY
               valueFrom:
                 secretKeyRef:

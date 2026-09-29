@@ -17,6 +17,7 @@ class Settings:
     )
     llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", ""))
     llm_api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", ""))
+    llm_routed: bool = False
     llm_request_timeout_seconds: int = field(
         default_factory=lambda: int(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "300"))
     )
@@ -45,6 +46,8 @@ class Settings:
     )
 
     def model_for(self, stage):
+        if self.llm_routed:
+            return self.llm_model
         return os.getenv("LLM_MODEL_" + stage.upper(), "") or self.llm_model
 
     def profile(self):
