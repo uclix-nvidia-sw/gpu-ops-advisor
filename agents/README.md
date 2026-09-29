@@ -18,7 +18,15 @@
 
 각 Worker는 독립 프로세스/이미지이고 공유 코드는 패키지입니다. 별도 업무 큐·접수 API·일정 루프·장비 조작·RCA 직접 요청은 없습니다. JC register → claim → heartbeat → candidate/evidence 저장 → complete로 실행합니다. 한 프로세스에서 한 작업씩 처리하며 JC가 전역 슬롯을 제어합니다.
 
-## Grafana 시간 형식과 LLM 오류 진단
+## Grafana 조회와 LLM 오류 진단
+
+Grafana MCP 1.4.2는 Loki 결과의 잘림 여부를 확인하려고 요청한 `limit`보다 한 건 더 조회합니다. Agent의 기본 `limits.max_rows=5000`을 그대로 보내면 Loki의 기본 `max_entries_limit_per_query=5000`을 넘습니다. 공통 수집기는 한 건을 예약해 기본 요청을 4999건으로 보내며, MCP가 Loki에 요청하는 수는 5000건입니다. 저장소의 MCP 서버 상한도 5000건이므로 `max_rows`를 늘려도 MCP에 보내는 `limit`은 최대 4999건으로 제한합니다. 최소 요청은 1건이고 Prometheus 표본 예산은 변경하지 않습니다. 운영 Loki의 한도가 더 작으면 Agent의 `max_rows`도 그 한도 이하로 맞춰야 하며, MCP 서버의 별도 상한도 함께 확인합니다.
+
+요청한 행 수에 도달하거나 MCP의 `metadata.resultsTruncated=true`이면 `partial`, `quality.complete=false`, `reason=sample_limit_exceeded`로 보존합니다. 조회 한도를 줄여 받은 일부 로그를 완전한 근거로 취급하지 않습니다.
+
+NAT 1.5.0은 MCP 조회 오류를 문자열로 반환할 수 있습니다. 수집기는 이 문자열을 정상 JSON으로 파싱하지 않고 `query_failed`와 안전한 `quality.error_code`를 기록합니다. `loki_entry_limit_exceeded`는 Loki 행 제한 초과, `mcp_tool_error`는 그 밖의 MCP 실패, `invalid_mcp_response`는 JSON으로 읽을 수 없는 응답입니다. Worker의 `Grafana query unavailable` 로그에도 query ID·source·오류 종류/코드를 남깁니다. 이 수집기 진단에는 원본 응답·예외 메시지·인증 값을 넣지 않습니다. `mcp_tool_error`만으로 인증/권한/timeout 등 상위 원인을 확정할 수는 없습니다.
+
+수정 후에도 등록된 상태 해석 규칙이나 유효한 관측이 없으면 `no_usable_evidence`로 LLM을 생략할 수 있습니다. 로그 조회 성공과 장애 원인 분석 성공은 따로 확인합니다.
 
 Grafana MCP 1.4.2의 Prometheus·Loki 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. 두 Worker의 공통 수집기는 MCP 탐색·조회 요청 시각을 UTC 밀리초로 변환합니다. 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며 원본 Incident snapshot·해시·증거 시각을 유지합니다. Loki 조회 경계의 정밀도가 줄면 `quality.reason=time_precision_reduced`, `complete=false`, 실제 `request_time_range`를 기록하고 부분 근거로 처리합니다. 밀리초 단위 조회창이 남지 않으면 조회하지 않습니다.
 
