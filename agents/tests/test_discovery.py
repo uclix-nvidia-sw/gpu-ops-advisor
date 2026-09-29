@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from agent_common.observation import Observation
+from agent_common.observation import MCPResponseError, Observation, unwrap
 from agent_common.grafana_time import mcp_time
 
 
@@ -281,3 +281,92 @@ async def test_expert_profile_override_still_works_without_discovery_tools():
     obs.tools = {"query_prometheus": grafana.tools()["query_prometheus"]}
     assert (await obs.collect("D02"))[0]["quality"]["datasource_uid"] == "custom"
     assert obs.discovery_calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D05", "D09", "D13"])
+async def test_loki_reserves_mcp_probe_and_preserves_truncation(query):
+    grafana = Grafana()
+    config = profile()
+    config["limits"]["max_rows"] = 3
+    obs = observation(grafana, config)
+
+    async def truncated(args):
+        assert args["limit"] == 2  # MCP asks Loki for one additional entry.
+        return {"data": [{"line": "retained"}], "metadata": {"resultsTruncated": True}}
+
+    obs.tools["query_loki_logs"] = truncated
+    result = (await obs.collect(query))[0]
+    assert result["tool_status"] == "partial"
+    assert result["quality"]["reason"] == "sample_limit_exceeded"
+    assert result["quality"]["complete"] is False
+    assert result["snapshot"]["data"] == [{"line": "retained"}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("max_rows", [1, 3, 5000, 5001, 10000])
+async def test_loki_requested_limit_is_positive_and_enforced(max_rows):
+    obs = observation(Grafana())
+    obs.profile["limits"]["max_rows"] = max_rows
+
+    async def full(args):
+        assert args["limit"] == min(4999, max(1, max_rows - 1))
+        return [{"line": "fixture"}] * args["limit"]
+
+    obs.tools["query_loki_logs"] = full
+    result = (await obs.collect("D09"))[0]
+    assert result["tool_status"] == "partial"
+    assert result["quality"]["reason"] == "sample_limit_exceeded"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D05", "D09", "D02"])
+@pytest.mark.parametrize(
+    "response,code",
+    [
+        (
+            "MCPToolClient tool call failed: max entries limit per query exceeded; private-test-token",
+            "loki_entry_limit_exceeded",
+        ),
+        (
+            "MCPToolClient tool call failed: Forbidden private-test-token",
+            "mcp_tool_error",
+        ),
+        (
+            {
+                "isError": True,
+                "content": [{"type": "text", "text": "private-test-token"}],
+            },
+            "mcp_tool_error",
+        ),
+        ("<html>private-test-token</html>", "invalid_mcp_response"),
+    ],
+)
+async def test_mcp_failures_keep_safe_codes_instead_of_json_errors(
+    query, response, code, caplog
+):
+    obs = observation(Grafana())
+
+    async def failed(args):
+        return response
+
+    obs.tools["query_prometheus" if query == "D02" else "query_loki_logs"] = failed
+    result = (await obs.collect(query))[0]
+    assert result["tool_status"] == "unavailable"
+    assert result["snapshot"] == {}
+    assert result["quality"]["reason"] == "query_failed"
+    assert result["quality"]["error_type"] == "MCPResponseError"
+    assert result["quality"]["error_code"] == code
+    assert f"error_code={code}" in caplog.text
+    assert "private-test-token" not in json.dumps(result) + caplog.text
+
+
+def test_mcp_success_and_error_envelopes():
+    from mcp.types import CallToolResult, TextContent
+
+    assert unwrap(
+        CallToolResult(content=[TextContent(type="text", text='{"data": []}')])
+    ) == {"data": []}
+    assert unwrap({"structuredContent": {}, "content": []}) == {}
+    with pytest.raises(MCPResponseError, match="mcp_tool_error"):
+        unwrap({"isError": True, "structuredContent": {"data": []}, "content": []})

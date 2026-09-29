@@ -47,6 +47,7 @@ class Upstream(BaseHTTPRequestHandler):
     llm_fail = False
     api_key = "fixture-only"
     logs_fail = False
+    logs_max_limit = None
 
     def log_message(self, *args):
         pass
@@ -174,6 +175,12 @@ class Upstream(BaseHTTPRequestHandler):
                 }
             )
         if u.path.endswith("/loki/api/v1/query_range"):
+            requested_limit = int(query.get("limit", ["0"])[0])
+            if (
+                self.logs_max_limit is not None
+                and requested_limit > self.logs_max_limit
+            ):
+                return self.send({"error": "max entries limit per query exceeded"}, 400)
             if self.logs_fail:
                 return self.send({"error": "fixture query failure"}, 503)
             start = int(
@@ -500,7 +507,61 @@ def worker_result(stack, kind, jid, suffix=""):
 
 
 @pytest.mark.e2e
-def test_real_workers_nat_grafana_mcp_and_publication(stack):
+async def test_loki_limit_through_nat_and_official_mcp(stack, monkeypatch):
+    from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
+
+    from agent_common.observation import Observation, unwrap
+
+    monkeypatch.setattr(Upstream, "logs_max_limit", 5000)
+    args = dict(
+        datasourceUid="loki",
+        logql='{cluster="cpc-2",namespace="dev"}',
+        startRfc3339=PERIOD["start"],
+        endRfc3339=PERIOD["end"],
+        direction="forward",
+        limit=5000,
+    )
+    async with MCPStreamableHTTPClient(
+        stack["env"]["GRAFANA_MCP_URL"], reconnect_enabled=False
+    ) as client:
+        tool = await client.get_tool("query_loki_logs")
+        raw = await tool.acall(args)
+        assert raw.startswith("MCPToolClient tool call failed:")
+        assert "max entries limit per query exceeded" in raw
+        query_requests = [
+            request
+            for path, request in Upstream.requests
+            if path.endswith("/loki/api/v1/query_range")
+        ]
+        assert query_requests[-1]["limit"] == ["5001"]
+        raw = await tool.acall({**args, "limit": 4999})
+        assert unwrap(raw)["data"]
+
+        tools = {}
+        for name in ("query_loki_logs", "list_datasources", "list_loki_label_values"):
+            tools[name] = (await client.get_tool(name)).acall
+        observation = Observation(
+            tools,
+            stack["profile"],
+            {"scope": SCOPE, "time_range": PERIOD},
+            time.monotonic() + 30,
+        )
+        request_start = len(Upstream.requests)
+        for query_id in ("D05", "D09"):
+            evidence = await observation.collect(query_id)
+            assert evidence and all(row["tool_status"] == "ok" for row in evidence), (
+                evidence
+            )
+        assert all(
+            int(request["limit"][0]) <= 5000
+            for path, request in Upstream.requests[request_start:]
+            if path.endswith("/loki/api/v1/query_range")
+        )
+
+
+@pytest.mark.e2e
+def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
+    monkeypatch.setattr(Upstream, "logs_max_limit", 5000)
     iid = str(uuid4())
     data = dict(
         scope=SCOPE,

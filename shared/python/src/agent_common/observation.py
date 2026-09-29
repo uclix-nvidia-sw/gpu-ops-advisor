@@ -13,6 +13,19 @@ from .grafana_time import mcp_time
 log = logging.getLogger(__name__)
 
 
+class MCPResponseError(ValueError):
+    """A safe error code; never retain upstream response bodies."""
+
+
+def _tool_failure(message):
+    code = (
+        "loki_entry_limit_exceeded"
+        if "max entries limit per query exceeded" in message.lower()
+        else "mcp_tool_error"
+    )
+    return MCPResponseError(code)
+
+
 def iso(t):
     return datetime.fromtimestamp(t, timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -21,14 +34,26 @@ def unwrap(response):
     if hasattr(response, "model_dump"):
         response = response.model_dump()
     if isinstance(response, str):
-        response = json.loads(response)
+        # NAT 1.5 returns MCP failures as text, not a JSON tool result.
+        if response.startswith("MCPToolClient tool call failed:"):
+            raise _tool_failure(response)
+        try:
+            response = json.loads(response)
+        except json.JSONDecodeError:
+            raise MCPResponseError("invalid_mcp_response") from None
     if isinstance(response, dict) and response.get("isError"):
-        raise ValueError("MCP tool error")
-    if isinstance(response, dict) and response.get("structuredContent"):
+        raise _tool_failure(
+            "\n".join(
+                x["text"]
+                for x in response.get("content", [])
+                if x.get("type") == "text"
+            )
+        )
+    if isinstance(response, dict) and response.get("structuredContent") is not None:
         return response["structuredContent"]
     if isinstance(response, dict) and "content" in response:
         texts = [x["text"] for x in response["content"] if x.get("type") == "text"]
-        return json.loads("".join(texts))
+        return unwrap("".join(texts))
     return response
 
 
@@ -175,7 +200,9 @@ class Observation:
                         logql=base,
                         startRfc3339=mcp_time(window["start"], ceiling=True),
                         endRfc3339=mcp_time(window["end"]),
-                        limit=limits["max_rows"],
+                        # MCP 1.4.2 fetches limit + 1 to detect truncation.
+                        # Stay below the packaged MCP cap and Loki's default 5000 cap.
+                        limit=min(4999, max(1, limits["max_rows"] - 1)),
                         direction="forward",
                     )
                 else:
@@ -277,13 +304,19 @@ class Observation:
                         quality.update(complete=False, reason="response_byte_limit")
                         status = "partial"
                     else:
+                        metadata = (
+                            response.get("metadata", {})
+                            if isinstance(response, dict)
+                            else {}
+                        )
                         warning = (
                             bool(response.get("warnings"))
                             if isinstance(response, dict)
                             else False
                         )
                         limited = (
-                            count >= limits["max_rows"]
+                            count >= args["limit"]
+                            or bool(metadata.get("resultsTruncated"))
                             if source == "loki"
                             else count > limits["max_rows"]
                         )
@@ -311,6 +344,16 @@ class Observation:
                         )
                     )
                 except (Exception,) as exc:
+                    error = {"error_type": type(exc).__name__}
+                    if isinstance(exc, MCPResponseError):
+                        error["error_code"] = str(exc)
+                    log.warning(
+                        "Grafana query unavailable query=%s source=%s error_type=%s error_code=%s",
+                        query_id,
+                        source,
+                        type(exc).__name__,
+                        error.get("error_code", "query_failed"),
+                    )
                     out.append(
                         self._evidence(
                             query_id,
@@ -322,7 +365,7 @@ class Observation:
                                 **quality,
                                 "complete": False,
                                 "reason": "query_failed",
-                                "error_type": type(exc).__name__,
+                                **error,
                             },
                             args,
                         )
