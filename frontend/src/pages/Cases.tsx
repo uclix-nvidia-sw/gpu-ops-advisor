@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Field, PageHead, Panel } from '../components/ui';
+import { Badge, Field, PageHead, Panel } from '../components/ui';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, useList } from '../lib/live';
-import { IncidentStates } from '../components/RcaDebug';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 export function Cases() {
@@ -59,12 +58,14 @@ export function Cases() {
             <JobRows items={q.items} />
           ) : (
             <div className="table-wrap">
-              <table>
+              <table className="incident-list">
                 <thead>
                   <tr>
-                    <th>알람 · 발생 대상</th>
-                    <th>알람·사건·검토 상태</th>
-                    <th>발생 시각</th>
+                    <th scope="col">알람 · 발생 대상</th>
+                    <th scope="col">알람</th>
+                    <th scope="col">사건</th>
+                    <th scope="col">검토</th>
+                    <th scope="col">발생 시각</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -77,7 +78,22 @@ export function Cases() {
                         <small className="cell-sub">사건 ID · {str(i.id)}</small>
                       </td>
                       <td>
-                        <IncidentStates incident={i} />
+                        <Badge
+                          status={str(i.alarm_status, 'unknown')}
+                          label={
+                            i.alarm_status === 'resolved'
+                              ? '해제됨'
+                              : i.alarm_status === 'firing'
+                                ? '발생 중'
+                                : undefined
+                          }
+                        />
+                      </td>
+                      <td>
+                        <Badge status={str(i.state, str(i.status, 'unknown'))} />
+                      </td>
+                      <td>
+                        <Badge status={str(i.review_status, 'unknown')} />
                       </td>
                       <td>{formatDate(str(i.occurred_at, str(i.created_at)))}</td>
                     </tr>

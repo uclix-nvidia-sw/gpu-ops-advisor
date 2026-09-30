@@ -1,5 +1,7 @@
 # 2026-09-30 RCA 가독성 개선 로컬 검증
 
+후속 목록 정리: 상태 상자를 알람/사건/검토 개별 컬럼의 배지로 변경했다. `npm test` 21건, 포맷·빌드·문서 링크·diff 검사를 통과했다. Edge/Playwright 모의 API로 다섯 컬럼, 상태 값만 표시, 누락 상태 미확인, 390px 페이지 가로 넘침 없음을 확인했다. 운영 검증은 미수행이다.
+
 기준: main `54a7ea5`에서 분리한 `fix/rca-alarm-readability`. 기존 읽기 API의 target 필드를 사용하며 API·DB 계약 변경 없음.
 
 - **통과:** frontend의 `npm test` (21 tests), `npm run build`, `npm run format:check`.
