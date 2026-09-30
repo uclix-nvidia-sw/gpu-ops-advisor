@@ -13,6 +13,21 @@ const render = (node: ReactNode) =>
     </QueryClientProvider>,
   );
 describe('RCA diagnostics', () => {
+  it('links only published RCA and Ops reports directly from lists', () => {
+    const html = render(
+      <JobRows
+        items={[
+          { id: 'rca-ready', kind: 'rca', result_ref: 'r1' },
+          { id: 'ops-ready', kind: 'report', result_ref: 'r2' },
+          { id: 'pending', kind: 'rca', status: 'succeeded' },
+        ]}
+      />,
+    );
+    expect(html).toContain('/analyses/rca-ready#final-report');
+    expect(html).toContain('/reports/ops-ready#final-report');
+    expect(html).not.toContain('/analyses/pending#final-report');
+    expect(html).toContain('미발행');
+  });
   it('shows stored alarm names and targets with job IDs, without inventing absent names', () => {
     const job = {
       id: 'job-123',

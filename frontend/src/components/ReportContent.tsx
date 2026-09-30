@@ -52,7 +52,12 @@ export function ReportContent({
   );
   const narrative = rows(result.narrative).filter((fact) => {
     const refs = strings(fact.value_refs);
-    return !appliedNamespace || !refs.length || !refs.every((ref) => namespaceMetricIds.has(ref));
+    return (
+      !!fact.title ||
+      !appliedNamespace ||
+      !refs.length ||
+      !refs.every((ref) => namespaceMetricIds.has(ref))
+    );
   });
   const collection = obj(quality.collection);
   const limited = observations.filter((o) =>
@@ -66,6 +71,27 @@ export function ReportContent({
   const mapped = metrics.find((m) => str(m.id).split('.')[1] === 'mapped_gpu_count');
   return (
     <div className="stack">
+      {narrative.some((section) => section.title) && (
+        <section id="final-report" className="result-section" aria-label="GPU Ops 최종 보고서">
+          <h3>GPU Ops 최종 보고서</h3>
+          <p className="muted">
+            {result.narrative_status === 'complete'
+              ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
+              : 'LLM 편집을 사용하지 못해 계산 결과와 부족 사유로 기본 보고서를 작성했습니다.'}{' '}
+            보고서 작성 완료와 자료의 완전성은 별개입니다.
+          </p>
+          {narrative.map((section, index) => (
+            <section key={str(section.id, String(index))}>
+              <h4>{str(section.title)}</h4>
+              {str(section.text)
+                .split('\n\n')
+                .map((paragraph, i) => (
+                  <p key={i}>{paragraph}</p>
+                ))}
+            </section>
+          ))}
+        </section>
+      )}
       <section className="result-section">
         <h3>분석 요약</h3>
         <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
@@ -142,7 +168,7 @@ export function ReportContent({
             계산된 수치와 근거는 유지합니다.
           </p>
         )}
-        {!!narrative.length && (
+        {!!narrative.length && !narrative.some((section) => section.title) && (
           <ul>
             {narrative.map((fact, index) => (
               <li key={str(fact.id, String(index))}>

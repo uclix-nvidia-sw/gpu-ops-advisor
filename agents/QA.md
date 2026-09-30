@@ -1,5 +1,14 @@
 ## 2026-09-30 보고서 단위 설명·수집 범위 개선
 
+## RCA 접근·Ops 최종 보고서 — 2026-09-30
+
+기준 main `40b68d3`(#31), `feat/final-report-access` 로컬 작업. 기존 GPU 시간·수집 재사용/범위 축소를 유지했다.
+
+- **통과:** 루트 Python 3.12.14 `python -m pytest -c agents/pytest.ini agents/tests -q --basetemp=.local/pytest-final-access-2`: 189 passed, 17 skipped. Ops 수치 없음/실제 0, 모델 선택/무효 응답/미설정에서 다섯 섹션·부족 사유·원래 품질 보존, HTML escape 검사 포함. Ruff check/format 통과.
+- **통과:** `.local/verify-final-report-access.py`, `RUN_AGENT_E2E=1`의 실제 Worker/NAT/공식 MCP·최신 로컬 Go 바이너리·격리 PostgreSQL: 관련 8 passed, 6 deselected. RCA native/Fleet webhook, 근거 없음 보고서 2건, 두 Worker 공개/참조·Worker HTML checksum/본문, fast path, Backend Namespace 보고서 HTML, Ops HTTP 실패 후 기존 수치 보존. 선택 외 6건은 이번에 미실행이다.
+- **통과:** Backend/JC/Incident vet·race·build, `.local/verify-final-report-backend.py`의 격리 DB 전체 Backend E2E. Frontend 38 tests·format·build. 문서 링크/diff 검사.
+- **미검증:** 운영 배포·실제 Grafana/LLM 의미와 품질, 실제 브라우저 클릭/화면 검수. Frontend는 컴포넌트 렌더 fixture이며 상위 Grafana/LLM도 fixture다. 운영 DB는 사용하지 않았고 새 임시 DB 종료를 확인했다. 새 schema/migration/API는 **해당 없음**. 커밋/push/PR/배포는 이번 작업에 포함하지 않았다.
+
 기준: 원격 main `b80b8f7`(RCA PR #30 포함). 운영 보고서를 읽어 문제를 확인했으나 운영 데이터·설정은 변경하지 않았다. 과거 결과를 재계산하지 않는다.
 
 - **통과:** 위 환경과 동일한 macOS/Python 3.11.16에서 `RUN_AGENT_E2E=1` 전체 검사 **199 passed**, 기존 MCP deprecation warning 3건. `DATABASE_URL`·`AGENT_E2E_DATABASE_URL`을 제거하고 `.local/namespace-tools`의 PostgreSQL/MCP/Helm, 최신 소스로 빌드한 Backend/JC/Incident를 사용했다. 명령은 아래 Namespace 전체 검사와 같고 JUnit은 `.local/agent-e2e/report-clarity-results.xml`이다. 실제 격리 DB·Worker·NAT·공식 MCP를 사용하며 Grafana/LLM 응답은 fixture다.

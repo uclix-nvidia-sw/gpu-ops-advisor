@@ -418,7 +418,7 @@ export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: stri
             <p>{str(result.summary)}</p>
           </section>
           {!!rows(result.narrative).length && (
-            <section className="result-section" aria-label="RCA 최종 보고서">
+            <section id="final-report" className="result-section" aria-label="RCA 최종 보고서">
               <h3>RCA 최종 보고서</h3>
               <p className="muted">
                 {result.narrative_status === 'complete'

@@ -1,5 +1,13 @@
 # 12. 보고서 Agent 모듈 설계서
 
+## 최종 보고서 — 2026-09-30
+
+최신 main의 Namespace 집계·GPU 시간 설명·수집 재사용/범위 축소는 유지한다. 모든 정상 종료 경로에서 계산이 끝난 뒤 [report.py](../../../ops-agent/src/ops_agent/report.py)가 분석 범위와 결과·확인된 운영 현황·권고와 실행 조건·추가 확인·분석 한계를 구성한다. 모델이 구성돼 있으면 기존 reference-only `explain`을 한 번 사용해 문장 우선순위를 정한다. 선택되지 않은 문장도 보존하며 모델은 수치·조건·권고를 생성하거나 계산 품질을 승격하지 않는다.
+
+수치가 전혀 없거나 모델 미설정·확정 오류·무효 응답이어도 결정적 기본 보고서를 남긴다. `quality.report.status=complete`는 보고서 구성 완료이며 topic/result_status의 partial/blocked와 별개다. `narrative_status`와 `quality.narrative_reason`은 모델 편집 상태다. 실제 HTTP 호출은 token/deadline과 전송 재시도에 따르며 원격 종료 불명·취소·lease 상실은 기존 fail/격리 계약을 유지한다.
+
+기존 `narrative` 배열에 다섯 title/text/ref 섹션을 저장하고 화면·Worker HTML·Backend HTML에 표시한다. CSV 수치·단위, 공개 RCA 참조, 기존 snapshot/hash와 DB schema는 유지한다. 구 결과는 재작성하지 않고 기존 narrative 표시를 유지한다. 병렬 Observation·자유 생성형 Synthesis 등 OP-05/06 전체 구현 완료는 아니다. 실제 모델/Grafana 품질과 운영 배포는 별도 검수다.
+
 버전 1.3 · 모듈 report · 독립 실행·배포 · O01~O11 · NVIDIA NeMo Agent Toolkit(NAT) 적용 설계
 
 2026-09-30 개발 목표 갱신: **Report Orchestrator → query별 병렬 Observation Sub-agent → 결정적 통계 → 도구 없는 Report Synthesis → 검증·저장·JC 공개**를 채택한다. [상세 Mermaid 흐름도](../../architecture/report-agent-workflow/detailed-workflow.md)의 합의를 이 문서에 반영했다. 코드 `185ea2b`의 보고서 실행은 여전히 순차 수집·계산·fact_ids 선택이며, 아래 병렬 수집·종합 조언은 미구현 목표다. 접수 계약 1.3·결과 스키마 1.1은 유지하고 기존 집계 변경 목표 criteria 1.2와 구분한다. 이번 변경은 문서이며 제품 구현은 대기 중이다.

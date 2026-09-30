@@ -5,6 +5,31 @@ import { reportObservations, metricValue, metricUnit, collectionStatus } from '.
 import { QueryState } from '../components/live';
 
 describe('report presentation', () => {
+  it('shows the complete final report despite missing metrics or LLM failure', () => {
+    const html = renderToStaticMarkup(
+      <ReportContent
+        onEvidence={() => {}}
+        value={{
+          result_status: 'blocked',
+          narrative_status: 'failed',
+          topics: [],
+          narrative: [
+            {
+              id: 'scope',
+              title: '분석 범위와 결과',
+              text: '원인 미확인\n\n<script>unsafe</script>',
+              value_refs: [],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain('id="final-report"');
+    expect(html).toContain('GPU Ops 최종 보고서');
+    expect(html).toContain('기본 보고서');
+    expect(html).toContain('원인 미확인');
+    expect(html).not.toContain('<script>');
+  });
   it('shows usable observations, unknown allocation and escaped targets separately', () => {
     const html = renderToStaticMarkup(
       <ReportContent

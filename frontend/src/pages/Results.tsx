@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Badge, Field, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, EvidenceDialog, More, QueryState } from '../components/live';
 import {
@@ -24,6 +24,7 @@ import { WorkflowGuide } from '../components/WorkflowGuide';
 import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
 import { RcaEvidence } from '../components/RcaDebug';
 export function ResultPage({ kind }: { kind: string }) {
+  const { hash } = useLocation();
   const { id } = useParams(),
     app = useApp(),
     q = useResource(
@@ -41,6 +42,10 @@ export function ResultPage({ kind }: { kind: string }) {
     [downloadError, setDownloadError] = useState(''),
     [downloading, setDownloading] = useState(false);
   const r = q.data || {};
+  useEffect(() => {
+    if (hash === '#final-report' && q.data)
+      document.getElementById('final-report')?.scrollIntoView();
+  }, [hash, q.data?.result_ref]);
   const download = async (format: string) => {
     setDownloading(true);
     setDownloadError('');

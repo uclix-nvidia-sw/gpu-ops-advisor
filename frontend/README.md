@@ -1,5 +1,11 @@
 # GPU Ops Advisor Frontend
 
+## 최종 보고서 접근·표시 — 2026-09-30
+
+RCA 첫 페이지(`/cases`)의 버튼과 `최종 보고서` 탭에서 공개 RCA 결과에 접근한다. 기존·개발·운영 관점에 적용하며 실행 성공과 결과 품질은 구분한다. 공통 작업 목록은 `result_ref`가 있는 RCA/Ops에만 `최종 보고서 보기` 링크를 표시한다. 미발행은 진행 상태만 표시하고 구 결과도 기존 상세 화면으로 열린다. 보고서 hash 링크는 데이터가 로드된 뒤 해당 섹션으로 이동한다.
+
+Ops의 새 다섯 섹션 narrative를 화면 앞에 표시하고 LLM 편집과 결정적 기본 보고서를 구분한다. Namespace 요약/단위/부분 산출 표시를 유지하며 구 narrative는 기존 방식으로 읽는다. 문자열은 React로 escape한다. Worker/Backend HTML도 같은 저장 narrative를 사용하고 CSV 계산값은 유지한다.
+
 ## RCA 최종 보고서 · 2026-09-30
 
 공개 RCA 결과의 `narrative`를 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계로 표시한다. LLM 편집 complete와 failed/omitted의 기본 보고서를 구분하며, result_status와 원인 확정을 변경하지 않는다. 미발행 결과는 표시하지 않고 narrative 없는 기존 결과는 기존 화면을 유지한다. 원문 문자열은 React로 escape한다.

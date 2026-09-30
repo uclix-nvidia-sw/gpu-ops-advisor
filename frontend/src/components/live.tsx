@@ -328,6 +328,7 @@ export function JobRows({ items }: { items: Row[] }) {
             <th>접수 시각</th>
             <th>실행 상태</th>
             <th>결과 품질</th>
+            <th>최종 보고서</th>
           </tr>
         </thead>
         <tbody>
@@ -353,6 +354,18 @@ export function JobRows({ items }: { items: Row[] }) {
               </td>
               <td>
                 <Badge status={str(j.result_status) || null} />
+              </td>
+              <td>
+                {j.result_ref != null ? (
+                  <Link
+                    className="text-link"
+                    to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`}
+                  >
+                    최종 보고서 보기
+                  </Link>
+                ) : (
+                  '미발행'
+                )}
               </td>
             </tr>
           ))}

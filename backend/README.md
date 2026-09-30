@@ -1,5 +1,9 @@
 # Go Backend v1.3
 
+## Ops 최종 보고서 내보내기 — 2026-09-30
+
+기존 HTML 다운로드는 공개 결과의 `narrative` 제목·본문과 모델 편집/기본 보고서 상태를 함께 렌더링한다. HTML escape/CSP, Namespace 해석 제한, CSV 원시 값·단위를 유지한다. narrative 없는 과거 결과에는 새 설명을 만들어 넣지 않는다. DB/API 계약 변경 없음.
+
 Backend가 GUI 조회·입력 검증·지식/모델/설정·정기 보고서 발생과 outbox를 소유합니다. 보고서 실행 접수와 명령은 Job Controller에 위임하고 RCA는 Incident가 생성합니다. 사용자·Agent 인증은 제외했습니다.
 
 ## Docker 없이 실행
