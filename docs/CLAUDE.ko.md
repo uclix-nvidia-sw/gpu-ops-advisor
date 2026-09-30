@@ -17,6 +17,10 @@
 
 Claude Code는 범위가 지정되지 않은 규칙을 시작할 때 읽고, `paths`로 범위가 지정된 규칙은 해당 파일을 읽을 때 불러옵니다. 위의 규칙 선택 기준은 해당 경로의 파일을 읽지 않는 작업에도 적용됩니다. 다른 코딩 Agent는 이 링크를 명시적으로 따라야 하며, `.claude/rules/`를 자동으로 읽는다고 가정하지 않습니다. 경로별 규칙을 모두 이 파일로 가져오지 않습니다. 규칙은 행동을 안내하며 권한을 강제하는 수단은 아닙니다. [Claude Code 메모리](https://code.claude.com/docs/en/memory)와 [Codex AGENTS.md 지침](https://learn.chatgpt.com/docs/agent-configuration/agents-md)을 참고합니다.
 
+## 브랜치 명명
+
+모든 기여자와 코딩 도우미는 `feat/gui-perspectives`, `fix/report-rendering`, `docs/team-guide`처럼 작업 목적에 따른 브랜치명을 사용합니다. `codex/` 또는 다른 도구 이름의 접두사는 사용하지 않습니다. 이는 사용자가 지정한 프로젝트 규칙으로 도구의 기본 접두사를 대체합니다. 공통 [Git 규칙](../.claude/rules/workflow.md#git-and-review)을 따릅니다.
+
 ## 제품 의도와 경계
 
 - GPU Ops Advisor v1.3은 저장된 관측 근거를 바탕으로 GPU/Node/Pod 장애 원인 분석(RCA)과 운영 보고서를 만듭니다.
