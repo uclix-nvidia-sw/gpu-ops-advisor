@@ -6,6 +6,18 @@
 
 후속 개발의 기준은 [12번 보고서 설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md)의 OP-01~07·개발 순서입니다. 2026-09-30에 Orchestrator → query별 병렬 Observation Sub-agent → 통계·제한적 보완 조회 → 도구 없는 단일 Synthesis → 검증·공개 구조를 개발 목표로 반영했습니다. 같은 Worker/job/lease와 전체 예산을 사용하며 현재 구현된 기능은 아닙니다. [상세 Mermaid 흐름도](../docs/architecture/report-agent-workflow/detailed-workflow.md)는 이 기준을 설명하고, [05 T60~T65](../docs/specs/05_테스트_검수_기준서.md)는 추가 검수 기대값입니다. 제품 구현은 대기 중입니다.
 
+## Namespace 관측 보고서 초안 — 2026-09-30
+
+`versions.criteria=1.2`인 보고서의 O08에 한해 `group_by=["namespace"]` 또는 `["cluster","namespace"]`를 적용한다. D01/D02/D06/D08을 순차 조회하고, 연결 관측 시간·활동률 계산에 사용한 시간·연결 GPU의 시간 가중 평균 활동률을 기존 `topics[].metrics`에 저장한다. D12 프로젝트 연결은 이 초안의 계산 입력이 아니다.
+
+연결 GPU 활동률은 namespace 실사용률이나 독점 할당량이 아니다. 공유/MIG·신원 충돌·활동값 충돌 구간은 제외하고, 다른 시각의 충돌 없는 구간은 보존한다. 값 없음은 null·사유이며 실제 활동률 0%와 구분한다. 다른 모델 또는 복수 GPU의 모델 미확인은 평균을 보류한다. 유효시간은 관측된 연결 범위 안의 분모이며 전체 클러스터 커버리지·정책 비교 적격성을 뜻하지 않는다. 권고·회수량·저활동 후보는 추가하지 않는다.
+
+새 경로는 `namespace_usage.py`에서 namespace·Pod UID·시각 라벨을 보존하며 공통 `allocations`/`intervals`/`allocation_hours`를 재사용한다. 라벨을 제거하는 기존 `gpu_intervals()`를 사용하거나 변경하지 않는다. O01~O07/O09~O11 및 기존 criteria의 O08은 기존 동작을 유지한다. 전체 OP-01 구현 완료가 아니며 나머지 O08 지원 축은 `group_by_not_implemented`, 명세상 미지원 축은 `unsupported_group_by`로 blocked다.
+
+현재 JC/Helm의 전역 criteria는 바꾸지 않았다. 기본 `unconfigured` 실행에서 자동 활성화되지 않는다. 보고서에만 1.2를 고정하는 JC 실행 프로필과 실제 관측 의미 검수는 정식 활성화 전 선행 작업이다. RCA·공통 Python·Backend·Frontend 제품 코드 변경은 없다. 기존 화면/다운로드는 새 ID·사유를 원문으로 표시하므로 한글 이름·해석 안내 보완은 후속 작업이다.
+
+로컬 검증: `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests/test_namespace_usage.py agents/tests/test_report_observation.py -q`. [Agent QA](../agents/QA.md)의 실행 환경과 결과를 따르며, 고정 자료와 실제 Grafana 검증을 구분한다.
+
 설치·환경 설정·Docker·최소 테스트/E2E: [공통 실행 안내](../agents/README.md), [검증 기록](../agents/QA.md).
 
 ```powershell

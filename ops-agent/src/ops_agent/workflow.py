@@ -14,6 +14,7 @@ from agent_common.normalize import allocations, gpu_intervals, intervals
 from agent_common.observation import Observation
 from agent_common.runtime import attempt_context
 from .prompts import EXPLANATION
+from .namespace_usage import namespace_usage
 
 
 PLAN = {
@@ -71,7 +72,17 @@ def add(
         topic["missing_inputs"].append(reason)
 
 
-def calculate(topic_id, data, collected, context, db_evidence):
+def query_ids(topic_id, criteria_version=None):
+    return (
+        ("D01", "D02", "D06", "D08")
+        if topic_id == "O08" and criteria_version == "1.2"
+        else PLAN[topic_id]
+    )
+
+
+def calculate(
+    topic_id, data, collected, context, db_evidence, *, criteria_version=None
+):
     topic = dict(
         topic_id=topic_id,
         status="blocked",
@@ -85,9 +96,18 @@ def calculate(topic_id, data, collected, context, db_evidence):
     )
     period = data["time_range"]
     start, end = timestamp(period["start"]), timestamp(period["end"])
-    mapping = allocations(collected.get("D08", []), period, collected.get("D06", []))
-    activity = gpu_intervals(collected.get("D02", []), period)
-    all_refs = [e for q in PLAN[topic_id] for e in collected.get(q, [])]
+    namespace_draft = topic_id == "O08" and criteria_version == "1.2"
+    mapping = (
+        []
+        if namespace_draft
+        else allocations(collected.get("D08", []), period, collected.get("D06", []))
+    )
+    activity = (
+        {} if namespace_draft else gpu_intervals(collected.get("D02", []), period)
+    )
+    all_refs = [
+        e for q in query_ids(topic_id, criteria_version) for e in collected.get(q, [])
+    ]
     topic["evidence_refs"] = refs(all_refs)
     topic["quality"]["observations"] = [
         dict(
@@ -120,7 +140,83 @@ def calculate(topic_id, data, collected, context, db_evidence):
             target,
         )
 
-    if topic_id == "O01":
+    if namespace_draft:
+        requested = data.get("group_by", [])
+        topic["quality"].update(
+            requested_group_by=requested,
+            applied_group_by=[],
+            aggregation_unit="physical_gpu_seconds",
+            coverage_scope="observed_connections_only",
+            interpretation="연결된 GPU의 관측 활동이며 namespace 실사용률·독점 할당량이 아닙니다.",
+        )
+        if set(requested) not in ({"namespace"}, {"cluster", "namespace"}):
+            topic["missing_inputs"] = [
+                "group_by_not_implemented"
+                if set(requested) <= {"cluster", "namespace", "pod", "workload"}
+                else "unsupported_group_by"
+            ]
+            return topic
+        topic["quality"]["applied_group_by"] = requested
+        summaries, unattributed = namespace_usage(data, collected)
+        topic["quality"]["unattributed_series_count"] = unattributed
+        if unattributed:
+            topic["missing_inputs"].append("unattributed_gpu_observation")
+        if not summaries:
+            topic["missing_inputs"].append("gpu_pod_identity_missing")
+        for i, summary in enumerate(summaries):
+            reasons = summary["reasons"]
+            for name, field, unit, method in (
+                (
+                    "observed_namespace_hours",
+                    "connected_hours",
+                    "GPU-hours",
+                    "observed_gpu_pod_interval_union",
+                ),
+                (
+                    "namespace_activity_valid_hours",
+                    "valid_hours",
+                    "GPU-hours",
+                    "observed_mapping_activity_intersection",
+                ),
+                (
+                    "namespace_connected_gpu_util",
+                    "mean",
+                    "percent",
+                    "observed_connected_gpu_time_weighted_mean",
+                ),
+            ):
+                put(
+                    f"{name}.{i}",
+                    summary[field],
+                    unit,
+                    method,
+                    reasons[0] if reasons else "gpu_activity_missing",
+                    target=summary["target"],
+                )
+                m = topic["metrics"][-1]
+                m["quality"].update(
+                    requested_group_by=requested,
+                    applied_group_by=requested,
+                    coverage_scope="observed_connections_only",
+                    excluded_reasons=reasons,
+                )
+                if field == "mean":
+                    m["denominator"] = {
+                        "value": summary["valid_hours"] * 3600
+                        if summary["valid_hours"] is not None
+                        else None,
+                        "unit": "GPU-seconds",
+                    }
+                if summary[field] is not None:
+                    topic["facts"][-1]["text"] = {
+                        "connected_hours": "Namespace별 GPU–Pod 연결 관측 시간",
+                        "valid_hours": "연결 GPU 활동률 계산에 사용한 유효 관측 시간",
+                        "mean": "Namespace에 연결돼 관측된 GPU의 평균 활동률이며 namespace 실사용률은 아닙니다.",
+                    }[field]
+            topic["missing_inputs"].extend(reasons)
+        # Observation alone never establishes exclusive ownership, savings or reclaimability.
+        topic["missing_inputs"].append("observed_mapping_not_exclusive_allocation")
+    elif topic_id == "O01":
         rows = intervals(collected.get("D01", []), period)
         devices = {
             (r["cluster_id"], r["labels"].get("gpu_uuid", r["labels"].get("UUID")))
@@ -620,12 +716,22 @@ async def run(tools):
     )
     obs.evidence.append(db_evidence)
     collected = {}
-    for query in sorted({q for topic in data["topic_ids"] for q in PLAN[topic]}):
+    criteria_version = claim["versions"].get("criteria")
+    for query in sorted(
+        {q for topic in data["topic_ids"] for q in query_ids(topic, criteria_version)}
+    ):
         collected[query] = await obs.collect(query)
     if "O10" in data["topic_ids"] and data.get("comparison_range"):
         collected["comparison.D11"] = await obs.collect("D11", data["comparison_range"])
     topics = [
-        calculate(t, data, collected, ctx["context"], db_evidence)
+        calculate(
+            t,
+            data,
+            collected,
+            ctx["context"],
+            db_evidence,
+            criteria_version=criteria_version,
+        )
         for t in data["topic_ids"]
     ]
     result.update(
