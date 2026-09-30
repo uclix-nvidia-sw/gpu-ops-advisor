@@ -3,10 +3,31 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { WorkflowGuide } from '../components/WorkflowGuide';
 import { ReportContent } from '../components/ReportContent';
-import { rcaSteps, reportSteps, workflowValues } from './workflow';
+import { rcaSteps, reportScope, reportTitle, reportSteps, workflowValues } from './workflow';
 import { apiRequest, apiTraceSnapshot, clearApiTrace } from './api';
 
 describe('mode-independent published data and developer guides', () => {
+  it('identifies report topics and scope without guessing missing metadata', () => {
+    expect(reportTitle({ topic_ids: ['O01', 'O11', 'future-topic'] })).toBe(
+      '장비·Node 변화 · 관측 품질 · future-topic',
+    );
+    expect(reportTitle({})).toBe('분석 주제 미확인');
+    expect(reportScope({})).toBe('분석 대상 미확인');
+    expect(
+      reportScope({
+        scope: {
+          clusters: [
+            { cluster_id: 'cpc-1', namespaces: null },
+            { cluster_id: 'cpc-2', namespaces: ['a', 'b'] },
+            { cluster_id: 'cpc-3' },
+            { cluster_id: 'cpc-4', namespaces: [] },
+          ],
+        },
+      }),
+    ).toBe(
+      'cpc-1 / 전체 Namespace · cpc-2 / a, b · cpc-3 / Namespace 범위 미확인 · cpc-4 / 선택된 Namespace 없음',
+    );
+  });
   it('records bounded HTTP metadata without query values or request/response bodies', async () => {
     clearApiTrace();
     vi.stubGlobal(

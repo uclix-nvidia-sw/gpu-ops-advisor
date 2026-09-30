@@ -1,4 +1,4 @@
-import { obj, rows, strings, type Row } from './live';
+import { obj, rows, str, strings, topics, type Row } from './live';
 
 export type WorkflowStep = {
   title: string;
@@ -154,5 +154,24 @@ export function reportMetrics(result: Row) {
   return fromTopics.length ? fromTopics : rows(result.measurements);
 }
 export function reportTitle(job: Row) {
-  return strings(job.topic_ids).includes('O08') ? 'Namespace 운영 분석' : 'GPU 운영 분석';
+  return (
+    strings(job.topic_ids)
+      .map((id) => (/^O(0[1-9]|1[01])$/.test(id) ? topics[Number(id.slice(1)) - 1] : id))
+      .join(' · ') || '분석 주제 미확인'
+  );
+}
+export function reportScope(job: Row) {
+  return (
+    rows(obj(job.scope).clusters)
+      .map((cluster) => {
+        const namespaces =
+          cluster.namespaces === null
+            ? '전체 Namespace'
+            : cluster.namespaces === undefined
+              ? 'Namespace 범위 미확인'
+              : strings(cluster.namespaces).join(', ') || '선택된 Namespace 없음';
+        return `${str(cluster.cluster_id, 'CPC 미확인')} / ${namespaces}`;
+      })
+      .join(' · ') || '분석 대상 미확인'
+  );
 }
