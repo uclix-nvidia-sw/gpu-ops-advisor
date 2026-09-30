@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Badge, Field, PageHead, Panel } from '../components/ui';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, useList } from '../lib/live';
@@ -7,8 +6,14 @@ import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 export function Cases() {
   const app = useApp();
-  const [tab, setTab] = useState('incidents'),
-    [status, setStatus] = useState('');
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'analyses' ? 'analyses' : 'incidents',
+    status = params.get('status') || '';
+  const setStatus = (value: string) => {
+    const next = new URLSearchParams(params);
+    next.set('status', value);
+    setParams(next);
+  };
   const q = useList(
     app.ready ? queryPath('/' + tab, { scope: app.scope, status, limit: 30 }) : null,
     true,
@@ -29,8 +34,10 @@ export function Cases() {
             className={tab === v ? 'active' : ''}
             key={v}
             onClick={() => {
-              setTab(v);
-              setStatus('');
+              const next = new URLSearchParams(params);
+              next.set('tab', v);
+              next.delete('status');
+              setParams(next);
             }}
           >
             {l}
