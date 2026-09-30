@@ -22,6 +22,8 @@ Chart 위치: `oci://ghcr.io/<lowercase-github-owner>/charts/gpu-ops-advisor`.
 
 `frontend`만 `frontend/`를 Docker context로 쓰고, Go 서비스·Agent·MCP는 저장소 루트를 사용합니다. Linux/amd64 이미지 7개를 각각 빌드합니다. PR·수동 실행도 OCI image exporter로 실제 이미지 생성까지 검사하지만 레지스트리에 올리지는 않습니다.
 
+BuildKit의 GitHub Actions 캐시는 빌드 가속용이다. `cache-to`의 `ignore-error=true`로 캐시 업로드 실패만 허용한다. 실제 이미지 빌드·OCI 출력/레지스트리 발행·digest 기록·chart 패키징 실패는 계속 CI 실패로 처리한다. 옵션 의미는 [Docker 공식 문서](https://docs.docker.com/build/cache/backends/gha/)를 따른다.
+
 ## 검증 범위
 
 - Go: `shared`, `backend`, `job-controller`, `incident` 각각 vet·race 단위 테스트·빌드. Backend/JC/Incident는 PostgreSQL service container에 실제 DB E2E를 수행합니다.
