@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	. "gpu-ops-advisor/backend/internal/contract"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -41,5 +42,33 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 	}
 	if len(rows) != 3 || rows[1][1] != "'=CMD()" || rows[1][2] != "1.5" || rows[2][2] != "산출 불가" {
 		t.Fatalf("invalid CSV: %v", rows)
+	}
+}
+
+func TestNamespaceExportPreservesRawCSVAndFormatsHTML(t *testing.T) {
+	var body Object
+	if err := json.Unmarshal([]byte(`{"versions":{"criteria":"1.2"},"quality":{"requested_group_by":["namespace"],"narrative_reason":"llm_http_error"},"topics":[{"metrics":[{"id":"O01.vram.0","value":3145728,"unit":"bytes"},{"id":"O08.namespace_connected_gpu_util.0","value":0,"unit":"percent","target":{"cluster_id":"cpc-1","namespace":"test"}},{"id":"O08.namespace_connected_gpu_util.1","value":null,"unit":"percent","quality":{"reason":"shared_gpu_attribution_unverified"}}]}]}`), &body); err != nil {
+		t.Fatal(err)
+	}
+	html := httptest.NewRecorder()
+	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"연결 GPU 평균 활동률", "3.000", "MiB", "산출 불가", "Namespace의 실제 소비량", "모델 서버가 오류 응답", "1.2"} {
+		if !strings.Contains(html.Body.String(), expected) {
+			t.Errorf("missing %s", expected)
+		}
+	}
+	csv := httptest.NewRecorder()
+	if err := exportMetrics(csv, "fixture", "csv", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(csv.Body.String(), ",bytes,") {
+		t.Fatal("CSV raw unit changed")
+	}
+	rawValue := strings.Split(strings.Split(csv.Body.String(), "\r\n")[1], ",")[2]
+	value, err := strconv.ParseFloat(rawValue, 64)
+	if err != nil || value != 3145728 {
+		t.Fatal("CSV raw value changed", rawValue)
 	}
 }

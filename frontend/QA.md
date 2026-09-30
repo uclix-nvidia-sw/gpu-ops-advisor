@@ -1,3 +1,12 @@
+# 2026-09-30 Namespace 운영 보고서 개선
+
+- **통과:** `npm test` 26건, `npm run format:check`, `npm run build`. 0%·산출 불가·기존 결과의 미계산, 공유 제외 사유, 실행 제한/조회 실패 구분, 메모리 단위, 검토 기록 없음 문구를 검사했다.
+- **통과:** Codex in-app browser에서 로컬 Vite build와 합성 API로 보고서 목록 → Namespace GPU 현황 → O08/namespace 기본값 → 제출 → 저장 결과를 확인했다. namespace 요약·보류 권고·접힌 상세 근거·MiB, 390px 페이지 가로 넘침 없음과 브라우저 오류 없음 확인. 실제 운영 데이터는 UI fixture에 포함하지 않았다.
+- **통과:** 실제 Backend/JC/Worker 연동은 별도의 [Agent QA](../agents/QA.md) 통합 검사에서 확인했다.
+- **미수행/미검증:** 운영 화면 배포, 실제 Grafana/LLM. 기존 보고서의 수치는 변경하지 않으며 새 보고서를 실행해야 criteria 1.2가 적용된다.
+
+---
+
 # 2026-09-30 RCA 가독성 개선 로컬 검증
 
 후속 목록 정리: 상태 상자를 알람/사건/검토 개별 컬럼의 배지로 변경했다. `npm test` 21건, 포맷·빌드·문서 링크·diff 검사를 통과했다. Edge/Playwright 모의 API로 다섯 컬럼, 상태 값만 표시, 누락 상태 미확인, 390px 페이지 가로 넘침 없음을 확인했다. 운영 검증은 미수행이다.

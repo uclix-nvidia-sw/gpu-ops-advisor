@@ -292,6 +292,9 @@ func TestRealJobController(t *testing.T) {
 		rcaInput["analysis_profile_revision"] = "mismatched"
 		call("/jobs/rca", env, 422)
 		rcaInput["analysis_profile_revision"] = "incident-v1"
+		env["execution_profile_revision"] = "report-namespace-v1"
+		call("/jobs/rca", env, 422)
+		env["execution_profile_revision"] = "local-v1"
 		rca := call("/jobs/rca", env, 202)
 		cl := call("/claims", rw, 200)
 		if cl["job_id"] != r1 {
@@ -307,6 +310,9 @@ func TestRealJobController(t *testing.T) {
 		aw := worker("rca")
 		call("/claims", rw, 204)
 		cl = call("/claims", aw, 200)
+		if versions, _ := cl["versions"].(map[string]any); String(versions, "criteria") != "unconfigured" {
+			t.Fatal("report criteria leaked into RCA", versions)
+		}
 		if cl["job_id"] != rca["job_id"] {
 			t.Fatal(cl)
 		}
@@ -447,6 +453,8 @@ func TestRealJobController(t *testing.T) {
 		activeTest = t
 		reset()
 		spec := input()
+		spec["topic_ids"] = []string{"O08"}
+		spec["group_by"] = []string{"namespace"}
 		delete(spec, "time_range")
 		delete(spec, "timezone")
 		v := apiCall("POST", "/schedules", Object{"frequency": "daily", "local_time": "09:00", "timezone": "Asia/Seoul", "period": "previous_complete_day", "enabled": true, "report_spec": spec}, 201, "Idempotency-Key", ID())
@@ -459,6 +467,14 @@ func TestRealJobController(t *testing.T) {
 		var count, accepted int
 		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM jobs").Scan(&count))
 		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM schedule_occurrences WHERE status='accepted'").Scan(&accepted))
+		var criteria, profile string
+		must(t, db.Pool.QueryRow(ctx, "SELECT versions->>'criteria', versions->>'execution_profile_revision' FROM jobs WHERE source_key LIKE 'schedule:%' ORDER BY created_at DESC LIMIT 1").Scan(&criteria, &profile))
+		if criteria != "1.2" || profile != "report-namespace-v1" {
+			t.Fatal("namespace schedule used wrong profile", criteria, profile)
+		}
+		if controller.Config.Versions["criteria"] != "unconfigured" {
+			t.Fatal("global criteria changed")
+		}
 		if count != 1 || accepted != 1 {
 			t.Fatalf("jobs=%d accepted=%d", count, accepted)
 		}

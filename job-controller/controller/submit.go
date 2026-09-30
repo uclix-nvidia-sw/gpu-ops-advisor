@@ -176,7 +176,7 @@ func (c *Controller) submit(ctx context.Context, kind string, b Object) (Object,
 			return Fail(422, "deadline_exceeded", "접수 마감이 지났습니다.")
 		}
 		profile, ok := c.Config.Execution[String(b, "execution_profile_revision")]
-		if !ok {
+		if !ok || (profile.Kind != "" && profile.Kind != kind) {
 			return Invalid("execution_profile_revision")
 		}
 		input := b["input"].(map[string]any)
@@ -249,6 +249,9 @@ func (c *Controller) submit(ctx context.Context, kind string, b Object) (Object,
 		versions := Object{}
 		for k, v := range c.Config.Versions {
 			versions[k] = v
+		}
+		if profile.Criteria != "" {
+			versions["criteria"] = profile.Criteria
 		}
 		versions["execution"] = profile
 		versions["input_contract"] = b["contract_version"]

@@ -1,5 +1,9 @@
 # Job Controller 검증 기록
 
+## 2026-09-30 보고서 전용 criteria 프로필
+
+**통과:** JC/Backend/Incident Go vet/race/build, 격리 PostgreSQL Backend E2E와 두 Worker E2E. report-namespace-v1은 report만 허용하며 criteria 1.2를 새 작업에 고정한다. RCA 접수의 사용 거부·전역 unconfigured 유지·정기 보고서 재전송 멱등성을 확인했다. **미검증:** 운영 설정 반영·배포. 환경·명령·fixture 경계는 [Agent QA](../agents/QA.md)의 같은 날짜 실행·표시 개선 기록을 따른다.
+
 ## 2026-09-23 Incident·JC 통합 PR 최종 검사
 
 Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops-incident-jc-pr`에서 재검사했다. 아래 결과는 앞선 기록의 CGo/race 미검증 항목을 보완한다.

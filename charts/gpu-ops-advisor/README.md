@@ -1,5 +1,7 @@
 # GPU Ops Advisor Helm chart
 
+Namespace 보고서의 `configuration.namespaceReportProfileRevision` 기본값은 `report-namespace-v1`이다. 새 Ops Worker → JC(보고서 전용 criteria 1.2 프로필) → Backend/Frontend 순서로 반영한다. `configuration.jobController`를 직접 지정했다면 전체 객체에 새 프로필을 포함해야 한다. 전역 criteria와 RCA 프로필은 유지한다. 이전 버전으로 복구할 때는 신규 요청 생산자인 Backend/Frontend부터 되돌리고 실행 중 작업의 고정 설정과 기존 DB·PVC를 보존한다. 실제 업그레이드는 [기존 환경 업그레이드](../../docs/helm-upgrade-existing.md)를 따른다.
+
 기본 설치는 **8개 Pod**입니다. 각 모듈은 1 replica이며 자동 확장은 포함하지 않습니다.
 
 | Pod | Kubernetes workload | 역할 / 포트 |

@@ -280,7 +280,7 @@ def wait_http(url, process=None):
 
 
 @pytest.fixture(scope="module")
-def stack(request):
+def stack():
     if os.getenv("RUN_AGENT_E2E") != "1":
         pytest.skip(
             "set RUN_AGENT_E2E=1; requires official MCP and native PostgreSQL/JC binaries"
@@ -388,8 +388,6 @@ def stack(request):
                 query=urlencode(query, doseq=True, quote_via=quote)
             ).geturl()
         config = json.loads((ROOT / "job-controller/config.example.json").read_text())
-        if getattr(request, "param", None) is not None:
-            config["versions"]["criteria"] = request.param
         config["execution_profiles"]["local-v1"].update(
             attempt_budget=100000, token_budget=300000
         )
@@ -679,9 +677,28 @@ async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeyp
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("stack", ["1.2"], indirect=True)
-def test_namespace_report_draft_with_isolated_criteria_profile(stack):
-    # The parametrized stack owns a separate DB; shipped/global config stays unchanged.
+def test_namespace_report_through_backend_with_report_only_criteria(stack):
+    # Real Backend selects the report-only profile; global criteria stay unchanged.
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    )
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    process = stack["spawn"](
+        [str(binary)],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "false",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+            "DSX_JOB_CONTROLLER_URL": stack["jc"].removesuffix("/internal/v1"),
+            "DSX_NAMESPACE_REPORT_PROFILE_REVISION": "report-namespace-v1",
+        },
+        "namespace-backend",
+    )
+    wait_http(backend + "/health/ready", process)
     data = dict(
         scope=SCOPE,
         time_range=PERIOD,
@@ -689,8 +706,22 @@ def test_namespace_report_draft_with_isolated_criteria_profile(stack):
         topic_ids=["O08"],
         group_by=["namespace"],
     )
-    jid = submit(stack, "report", data)
+    response = httpx.post(
+        backend + "/reports", json=data, headers={"Idempotency-Key": str(uuid4())}
+    )
+    assert response.status_code == 202, response.text
+    jid = response.json()["job_id"]
     result, evidence = worker_result(stack, "report", jid, "-namespace")
+    assert result["versions"]["execution_profile_revision"] == "report-namespace-v1"
+    assert result["quality"]["requested_group_by"] == ["namespace"]
+    html = httpx.get(backend + f"/reports/{jid}/export?format=html")
+    assert html.status_code == 200
+    assert "연결 GPU 평균 활동률" in html.text
+    assert "Namespace의 실제 소비량" in html.text
+    with psycopg.connect(stack["url"]) as conn:
+        assert conn.execute(
+            "SELECT versions->>'criteria' FROM jobs WHERE kind='rca' LIMIT 1"
+        ).fetchone() in (None, ("unconfigured",))
     assert result["versions"]["criteria"] == "1.2"
     topic = result["topics"][0]
     metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
@@ -933,6 +964,9 @@ def test_llm_failure_preserves_metrics_and_independent_topics(stack):
         jid = submit(stack, "report", data)
         result, evidence = worker_result(stack, "report", jid, "-failure")
         assert result["narrative_status"] == "failed"
+        assert result["quality"]["narrative_reason"] == "llm_http_error"
+        assert result["llm_usage"]["request_attempts"] == 3
+        assert result["llm_usage"]["calls"] == 0
         assert (
             next(t for t in result["topics"] if t["topic_id"] == "O09")["metrics"][0][
                 "value"

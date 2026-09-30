@@ -17,6 +17,7 @@
 {{- $_ := set $env "DSX_JOB_CONTROLLER_URL" (printf "http://%s-job-controller:8090" $base) }}
 {{- $_ := set $env "DSX_INCIDENT_URL" (printf "http://%s-incident:8091" $base) }}
 {{- $_ := set $env "DSX_EXECUTION_PROFILE_REVISION" $root.Values.configuration.executionProfileRevision }}
+{{- $_ := set $env "DSX_NAMESPACE_REPORT_PROFILE_REVISION" $root.Values.configuration.namespaceReportProfileRevision }}
 {{- else if eq $name "job-controller" }}
 {{- $_ := set $env "JC_ADDRESS" "0.0.0.0:8090" }}
 {{- $_ := set $env "JC_CONFIG_FILE" "/etc/gpu-ops/job-controller.json" }}

@@ -68,6 +68,8 @@ RCA/보고서 모델 지정 후 새로 접수된 작업은 JC가 고정한 모�
 
 보고서 입력은 scope/time_range/timezone/topic_ids(O01~O11)/group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id다. O07 자원 이름·단위는 저장된 resource_catalog와 대조한다. O10 조치 전후 계산/단순 비교 판정은 Report Agent 입력으로 전달한다.
 
+O08을 포함하고 group_by가 namespace 또는 cluster+namespace이면 즉시·정기 envelope는 `DSX_NAMESPACE_REPORT_PROFILE_REVISION`(기본 report-namespace-v1)을 사용한다. 그 외는 기존 DSX_EXECUTION_PROFILE_REVISION을 쓴다. JC 프로필이 criteria 1.2와 report 전용 제한을 소유한다. API 입력에 사용자 임의 criteria 필드를 추가하지 않는다. 원본 envelope에 프로필을 고정하므로 재전송·기존 job은 변경되지 않는다.
+
 수동 접수는 `manual:<Idempotency-Key>`이고 원본 deadline·execution_profile_revision을 manual_report_intents에 먼저 고정한다. 타임스탬프 UTC, scope·topic 정렬 후 같은 입력을 JC `/internal/v1/jobs/report`에 재전송한다. Agent URL을 호출하지 않는다.
 
 ```json

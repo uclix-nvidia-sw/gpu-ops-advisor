@@ -97,7 +97,7 @@ export function ResultPage({ kind }: { kind: string }) {
               <span>{formatDate(str(r.created_at))}</span>
             </div>
             {kind === 'report' ? (
-              <ReportContent value={r.result} onEvidence={setEvidence} />
+              <ReportContent value={r.result} request={r} onEvidence={setEvidence} />
             ) : kind === 'incident' ? (
               <IncidentDebug incident={r} />
             ) : (
@@ -213,7 +213,12 @@ function Reviews({ id, subject, target }: { id: string; subject: string; target:
       description="기록은 추가 방식으로 저장되며, 정정 시 원본과 연결됩니다."
     >
       <div className="live-padding stack">
-        <QueryState query={q} empty={!q.items.length}>
+        <QueryState
+          query={q}
+          empty={!q.items.length}
+          emptyTitle="아직 작성된 검토·조치 기록이 없습니다."
+          emptyDescription="분석 결과와 별도로 검토 의견이나 수행한 조치를 기록할 수 있습니다."
+        >
           <div className="stack">
             {q.items.map((v) => (
               <article className="data-item" key={str(v.id)}>

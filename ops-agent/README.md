@@ -14,7 +14,9 @@
 
 새 경로는 `namespace_usage.py`에서 namespace·Pod UID·시각 라벨을 보존하며 공통 `allocations`/`intervals`/`allocation_hours`를 재사용한다. 라벨을 제거하는 기존 `gpu_intervals()`를 사용하거나 변경하지 않는다. O01~O07/O09~O11 및 기존 criteria의 O08은 기존 동작을 유지한다. 전체 OP-01 구현 완료가 아니며 나머지 O08 지원 축은 `group_by_not_implemented`, 명세상 미지원 축은 `unsupported_group_by`로 blocked다.
 
-현재 JC/Helm의 전역 criteria는 바꾸지 않았다. 기본 `unconfigured` 실행에서 자동 활성화되지 않는다. 보고서에만 1.2를 고정하는 JC 실행 프로필과 실제 관측 의미 검수는 정식 활성화 전 선행 작업이다. RCA·공통 Python·Backend·Frontend 제품 코드 변경은 없다. 기존 화면/다운로드는 새 ID·사유를 원문으로 표시하므로 한글 이름·해석 안내 보완은 후속 작업이다.
+후속 실행·표시 개선에서는 Backend가 O08 + namespace(또는 cluster+namespace) 요청에 report-namespace-v1을 선택하고 JC가 criteria 1.2를 고정한다. 기본 전역 criteria와 RCA 기준은 유지한다. 새 요청은 화면의 `Namespace GPU 현황` 프리셋으로 만들 수 있다. 새 프로필이 없는 JC와의 혼합 배포는 접수 실패할 수 있으므로 Worker·JC를 먼저 갱신해야 한다. 사용자 정의 JC 전체 설정에도 프로필을 추가한다. 실제 관측 의미 검수·운영 배포는 별도다.
+
+Namespace 요약을 먼저 표시하며 한글 지표/사유와 유효 관측시간을 함께 읽는다. 구 결과에는 새 수치를 소급하지 않는다. 수집 호출수·한도와 AI 설명 실패 코드는 result.quality에 기록한다. 설명용 fact 선택에서 반복 UUID는 입력에서만 생략하고 공개 참조는 유지한다. 상세 범위·검수 계획은 [12 §0.3](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#03-namespace-보고서-실행표시-개선--2026-09-30)을 따른다.
 
 로컬 검증: `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests/test_namespace_usage.py agents/tests/test_report_observation.py -q`. [Agent QA](../agents/QA.md)의 실행 환경과 결과를 따르며, 고정 자료와 실제 Grafana 검증을 구분한다.
 

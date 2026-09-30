@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Address, DatabaseURL                       string
 	ExecutionRevision                          string
+	NamespaceReportRevision                    string
 	SchedulerEnabled                           bool
 	CatchupWindow, DispatchWindow, JobDeadline time.Duration
 	MaxCatchup                                 int
@@ -59,6 +60,7 @@ func Load() (Config, error) {
 		}
 	}
 	c.ExecutionRevision = env("DSX_EXECUTION_PROFILE_REVISION", "local-v1")
+	c.NamespaceReportRevision = env("DSX_NAMESPACE_REPORT_PROFILE_REVISION", "report-namespace-v1")
 	c.SchedulerEnabled = os.Getenv("DSX_SCHEDULER_ENABLED") == "true"
 	c.MaxCatchup, _ = strconv.Atoi(env("DSX_MAX_CATCHUP", "10"))
 	c.CatchupWindow, e = time.ParseDuration(env("DSX_CATCHUP_WINDOW", "168h"))

@@ -120,7 +120,22 @@ def main():
     config = next(d for d in docs if d["kind"] == "ConfigMap")["data"]
     execution_revision = values["configuration"]["executionProfileRevision"]
     profiles = json.loads(config["job-controller.json"])["execution_profiles"]
-    assert set(profiles) == {execution_revision}, "One default execution profile"
+    namespace_revision = values["configuration"]["namespaceReportProfileRevision"]
+    assert set(profiles) == {execution_revision, namespace_revision}
+    assert profiles[namespace_revision]["kind"] == "report"
+    assert profiles[namespace_revision]["criteria"] == "1.2"
+    assert "criteria" not in profiles[execution_revision]
+    backend_env = deployments["backend"]["spec"]["template"]["spec"]["containers"][0][
+        "env"
+    ]
+    assert (
+        next(
+            e["value"]
+            for e in backend_env
+            if e["name"] == "DSX_NAMESPACE_REPORT_PROFILE_REVISION"
+        )
+        == namespace_revision
+    )
     execution = profiles[execution_revision]
     assert execution["attempt_budget"] >= 8192 + values["llm"]["synthesisMaxTokens"]
     assert (

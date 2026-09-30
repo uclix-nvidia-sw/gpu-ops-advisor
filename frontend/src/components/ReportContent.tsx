@@ -1,6 +1,10 @@
 import { obj, rows, str, strings } from '../lib/live';
-import { formatDate, labels } from '../lib/domain';
+import { formatDate } from '../lib/domain';
 import {
+  collectionStatus,
+  groupLabel,
+  namespaceRows,
+  metricUnit,
   metricName,
   metricTarget,
   metricValue,
@@ -11,16 +15,13 @@ import {
 import { Badge, Notice } from './ui';
 import { DataView } from './live';
 
-const collectionLabels: Record<string, string> = {
-  ok: '수집 완료',
-  empty: '해당 기간 데이터 없음',
-};
-
 export function ReportContent({
   value,
+  request,
   onEvidence,
 }: {
   value: unknown;
+  request?: unknown;
   onEvidence: (id: string) => void;
 }) {
   const result = obj(value),
@@ -30,6 +31,23 @@ export function ReportContent({
     return <p>아직 발행된 보고서가 없습니다. 작업 상태를 확인하세요.</p>;
   const metrics = topics.flatMap((topic) => rows(topic.metrics));
   const known = metrics.filter((metric) => metric.value != null).length;
+  const quality = obj(result.quality);
+  const namespaceTopic = topics.find((topic) => topic.topic_id === 'O08');
+  const namespaceQuality = obj(namespaceTopic?.quality);
+  const namespaceMetrics = namespaceRows(rows(namespaceTopic?.metrics));
+  const requestedGroups = quality.requested_group_by ?? obj(request).group_by;
+  const requestedNamespace = strings(requestedGroups).includes('namespace');
+  const appliedNamespace = strings(namespaceQuality.applied_group_by).includes('namespace');
+  const collection = obj(quality.collection);
+  const limited = observations.filter((o) =>
+    strings(o.reasons).some(
+      (reason) => reason.includes('budget_exhausted') || reason === 'discovery_deadline_exhausted',
+    ),
+  );
+  const observed = metrics.find((m) =>
+    ['observed_gpu_count', 'observed_devices'].includes(str(m.id).split('.')[1]),
+  );
+  const mapped = metrics.find((m) => str(m.id).split('.')[1] === 'mapped_gpu_count');
   return (
     <div className="stack">
       <section className="result-section">
@@ -46,20 +64,47 @@ export function ReportContent({
             )
             .join(' · ')}
         </p>
+        <p>
+          요청한 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
+          {str(obj(result.versions).criteria, '기록 없음')}
+        </p>
+        {(observed || mapped) && (
+          <p>
+            {observed && (
+              <>
+                관측된 GPU {metricValue(observed)}
+                {metricUnit(observed)}.{' '}
+              </>
+            )}
+            {mapped && (
+              <>
+                Pod 연결이 확인된 GPU {metricValue(mapped)}
+                {metricUnit(mapped)}.
+              </>
+            )}{' '}
+            연결이 확인되지 않은 GPU를 유휴 장비로 판단하지 않습니다.
+          </p>
+        )}
         <Notice>
           {known
             ? `${metrics.length}개 항목 중 ${known}개를 산출했습니다. 산출하지 못한 항목과 이유는 주제별로 표시합니다.`
             : '작업은 완료됐지만 계산 가능한 근거가 부족합니다. 수집 상태와 항목별 사유를 확인하세요.'}
         </Notice>
-        {result.narrative_status === 'omitted' && (
+        {!!str(quality.narrative_reason) && (
+          <p className="muted">
+            {reportReason(str(quality.narrative_reason))} 계산된 수치는 유지합니다.
+          </p>
+        )}
+        {result.narrative_status === 'omitted' && !quality.narrative_reason && (
           <p className="muted">
             AI 설명은 생성되지 않았습니다. 아래에는 원본 관측에 근거한 계산 결과만 표시합니다.
           </p>
         )}
         {str(result.summary) && <p>{str(result.summary)}</p>}
-        {result.narrative_status === 'failed' && (
+        {result.narrative_status === 'failed' && !quality.narrative_reason && (
           <p className="muted">
-            AI 설명을 생성하지 못했습니다. 계산된 수치와 근거는 아래에서 확인할 수 있습니다.
+            AI 설명을 생성하지 못했습니다. 이 결과에는 구체적인 실패 이유가 기록되지 않았습니다.
+            계산된 수치와 근거는 유지합니다.
           </p>
         )}
         {!!rows(result.narrative).length && (
@@ -70,7 +115,7 @@ export function ReportContent({
                   .map((ref) => {
                     const metric = metrics.find((item) => item.id === ref);
                     return metric
-                      ? `${metricName(ref)}: ${metricValue(metric)} ${str(metric.unit)} (${metricTarget(metric)})`
+                      ? `${metricName(ref)}: ${metricValue(metric)} ${metricUnit(metric)} (${metricTarget(metric)})`
                       : '';
                   })
                   .filter(Boolean)
@@ -80,49 +125,179 @@ export function ReportContent({
           </ul>
         )}
       </section>
-      {topics.map((topic) => (
-        <section className="result-section" key={str(topic.topic_id)}>
-          <div className="head-actions report-topic-head">
-            <h3>{topicName(str(topic.topic_id))}</h3>
-            <Badge status={str(topic.status)} />
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>항목</th>
-                  <th>대상</th>
-                  <th>값</th>
-                  <th>단위</th>
-                  <th>산출 제한</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows(topic.metrics).map((metric) => (
-                  <tr key={str(metric.id)}>
-                    <td>{metricName(str(metric.id))}</td>
-                    <td>{metricTarget(metric)}</td>
-                    <td>{metricValue(metric)}</td>
-                    <td>{str(metric.unit)}</td>
-                    <td>
-                      {metric.value == null ? reportReason(str(obj(metric.quality).reason)) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!!strings(topic.missing_inputs).length && (
-            <ul>
-              {[...new Set(strings(topic.missing_inputs))].map((reason) => (
-                <li key={reason}>{reportReason(reason)}</li>
-              ))}
-            </ul>
+      {!!limited.length && (
+        <Notice tone="warning">
+          실행 제한으로 {limited.length}개 조회 대상의 수집이 완료되지 않았습니다. 연결 장애나 해당
+          기간 데이터 없음과 구분하세요.
+          {typeof collection.query_calls === 'number' && (
+            <>
+              {' '}
+              조회 호출 {collection.query_calls} / {String(collection.query_limit)}회.
+            </>
+          )}{' '}
+          CPC·Namespace 범위 또는 분석 주제를 줄여 새 보고서를 요청할 수 있습니다.
+        </Notice>
+      )}
+      {namespaceTopic && (
+        <section className="result-section">
+          <h3>Namespace GPU 현황</h3>
+          <p>
+            적용된 집계:{' '}
+            {appliedNamespace
+              ? groupLabel(namespaceQuality.applied_group_by)
+              : '새 Namespace 활동률 집계 미적용'}
+            .
+          </p>
+          {!appliedNamespace && (
+            <Notice>
+              {requestedNamespace
+                ? 'Namespace 집계를 요청했지만 새 활동률 계산이 적용되지 않았습니다.'
+                : '이 보고서에는 새 Namespace 활동률 집계가 적용되지 않았습니다.'}{' '}
+              새 보고서에서 ‘Namespace GPU 현황’을 선택하세요. 계산 기준 1.2를 지원하는 서버가
+              필요하며 저장된 결과는 바뀌지 않습니다.
+            </Notice>
           )}
-          {!!rows(topic.findings).length && <DataView value={topic.findings} />}
-          {!!rows(topic.recommendations).length && <DataView value={topic.recommendations} />}
+          <p>
+            연결 GPU의 관측 활동이며 Namespace의 실제 소비량·독점 할당량은 아닙니다. 공유 구간은
+            Namespace 사이에 중복될 수 있습니다.
+          </p>
+          {!!namespaceMetrics.length ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>CPC</th>
+                    <th>Namespace</th>
+                    <th>연결 관측 시간</th>
+                    <th>평균에 사용한 시간</th>
+                    <th>연결 GPU 평균 활동률</th>
+                    <th>제외·보류 사유</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {namespaceMetrics.map(({ target, metrics: values }) => (
+                    <tr key={JSON.stringify(target)}>
+                      <td>{str(target.cluster_id)}</td>
+                      <td>{str(target.namespace)}</td>
+                      {[
+                        'observed_namespace_hours',
+                        'namespace_activity_valid_hours',
+                        'namespace_connected_gpu_util',
+                      ].map((name) => (
+                        <td key={name}>
+                          {values[name]
+                            ? `${metricValue(values[name])}${values[name].value == null ? '' : ` ${metricUnit(values[name])}`}`
+                            : '미계산'}
+                        </td>
+                      ))}
+                      <td>
+                        {[
+                          ...new Set(
+                            Object.values(values).flatMap((m) => [
+                              ...strings(obj(m.quality).excluded_reasons),
+                              ...(m.value == null ? [str(obj(m.quality).reason)] : []),
+                            ]),
+                          ),
+                        ]
+                          .filter(Boolean)
+                          .map(reportReason)
+                          .join(' ') || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>Namespace에 연결할 수 있는 유효 관측이 없습니다. 아래 O08 산출 제한을 확인하세요.</p>
+          )}
         </section>
-      ))}
+      )}
+      <details>
+        <summary>주제별 상세 수치 · {topics.length}개 주제</summary>
+        {topics.map((topic) => (
+          <section className="result-section" key={str(topic.topic_id)}>
+            <div className="head-actions report-topic-head">
+              <h3>{topicName(str(topic.topic_id))}</h3>
+              <Badge status={str(topic.status)} />
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>항목</th>
+                    <th>대상</th>
+                    <th>값</th>
+                    <th>단위</th>
+                    <th>산출 제한</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows(topic.metrics).map((metric) => (
+                    <tr key={str(metric.id)}>
+                      <td>{metricName(str(metric.id))}</td>
+                      <td>{metricTarget(metric)}</td>
+                      <td>{metricValue(metric)}</td>
+                      <td>{metricUnit(metric)}</td>
+                      <td>
+                        {metric.value == null
+                          ? reportReason(str(obj(metric.quality).reason))
+                          : strings(obj(metric.quality).excluded_reasons)
+                              .map(reportReason)
+                              .join(' ') || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!!strings(topic.missing_inputs).length && (
+              <ul>
+                {[...new Set(strings(topic.missing_inputs))].map((reason) => (
+                  <li key={reason}>{reportReason(reason)}</li>
+                ))}
+              </ul>
+            )}
+            {!!rows(topic.findings).length && <DataView value={topic.findings} />}
+            {rows(topic.recommendations).map((recommendation, index) => (
+              <article className="data-item" key={index}>
+                <Badge
+                  status={recommendation.eligibility === 'eligible' ? 'partial' : 'blocked'}
+                  label={
+                    recommendation.eligibility === 'eligible' ? '운영자 검토 가능' : '판단 보류'
+                  }
+                />
+                <p>{str(recommendation.text)}</p>
+                {!!str(recommendation.reason) && <p>{reportReason(str(recommendation.reason))}</p>}
+                {!!strings(recommendation.preconditions).length && (
+                  <p>
+                    확인할 조건: {strings(recommendation.preconditions).map(reportReason).join(' ')}
+                  </p>
+                )}
+                <p>
+                  {recommendation.execution === 'not_performed'
+                    ? '이 권고에 따른 조치는 수행되지 않았습니다.'
+                    : '조치 수행 여부는 확인되지 않았습니다.'}
+                </p>
+                {!!strings(recommendation.evidence_refs).length && (
+                  <details>
+                    <summary>
+                      관련 근거 {strings(recommendation.evidence_refs).length}건 보기
+                    </summary>
+                    <div className="head-actions">
+                      {strings(recommendation.evidence_refs).map((id, i) => (
+                        <button className="button" key={id} onClick={() => onEvidence(id)}>
+                          근거 {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </article>
+            ))}
+          </section>
+        ))}
+      </details>
       {!!observations.length && (
         <section className="result-section">
           <h3>데이터 수집 상태</h3>
@@ -141,12 +316,13 @@ export function ReportContent({
                 {observations.map((observation) => (
                   <tr key={`${str(observation.query_id)}:${str(observation.cluster_id)}`}>
                     <td>{str(observation.cluster_id)}</td>
-                    <td>{str(observation.metric, str(observation.query_id))}</td>
                     <td>
-                      {strings(observation.statuses)
-                        .map((status) => collectionLabels[status] || labels[status] || status)
-                        .join(', ')}
+                      {str(observation.metric, str(observation.query_id))}
+                      {observation.metric != null && (
+                        <small className="muted"> · {str(observation.query_id)}</small>
+                      )}
                     </td>
+                    <td>{collectionStatus(observation)}</td>
                     <td>{String(observation.sample_count)}</td>
                     <td>{strings(observation.reasons).map(reportReason).join(' ') || '—'}</td>
                   </tr>

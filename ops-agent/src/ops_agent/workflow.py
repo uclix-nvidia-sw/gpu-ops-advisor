@@ -717,9 +717,15 @@ async def run(tools):
     obs.evidence.append(db_evidence)
     collected = {}
     criteria_version = claim["versions"].get("criteria")
-    for query in sorted(
-        {q for topic in data["topic_ids"] for q in query_ids(topic, criteria_version)}
-    ):
+    queries = {
+        q for topic in data["topic_ids"] for q in query_ids(topic, criteria_version)
+    }
+    priority = (
+        ("D01", "D02", "D06", "D08")
+        if ("O08" in data["topic_ids"] and criteria_version == "1.2")
+        else ()
+    )
+    for query in sorted(queries, key=lambda q: (q not in priority, int(q[1:]))):
         collected[query] = await obs.collect(query)
     if "O10" in data["topic_ids"] and data.get("comparison_range"):
         collected["comparison.D11"] = await obs.collect("D11", data["comparison_range"])
@@ -743,6 +749,22 @@ async def run(tools):
             "관측 변화는 조치의 인과적 효과를 확정하지 않습니다.",
         ],
     )
+    result["quality"].update(
+        requested_group_by=data["group_by"],
+        collection=dict(
+            query_calls=obs.calls,
+            query_limit=ctx["profile"]["limits"]["max_queries"],
+            discovery_calls=obs.discovery_calls,
+        ),
+    )
     await explain(result, ctx["llm"], EXPLANATION)
+    if not ctx["llm"].configured:
+        result["quality"]["narrative_reason"] = "model_not_configured"
+    elif not any(topic["facts"] for topic in topics):
+        result["quality"]["narrative_reason"] = "no_verified_facts"
+    elif result["narrative_status"] == "failed":
+        result["quality"]["narrative_reason"] = (
+            getattr(ctx["llm"], "last_failure", None) or "llm_invalid_output"
+        )
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": obs.evidence}

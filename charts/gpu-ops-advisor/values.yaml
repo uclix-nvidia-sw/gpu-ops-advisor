@@ -57,6 +57,7 @@ configuration:
   applyIncident: true
   seedDemoData: false
   executionProfileRevision: local-v1
+  namespaceReportProfileRevision: report-namespace-v1
 
 artifacts:
   persistence:

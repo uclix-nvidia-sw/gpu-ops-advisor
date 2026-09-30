@@ -73,6 +73,10 @@ def test_shipped_budget_reaches_llm_for_multi_gpu_report():
                 output = copy.deepcopy(result)
                 await explain(output, llm, EXPLANATION)
                 assert llm.usage["calls"] == expected_calls
+                assert llm.usage["request_attempts"] == expected_calls
+                assert llm.last_failure == (
+                    None if expected_calls else "llm_token_budget_exhausted"
+                )
                 assert output["narrative_status"] == (
                     "complete" if expected_calls else "failed"
                 )
