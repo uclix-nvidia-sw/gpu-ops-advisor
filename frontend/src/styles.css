@@ -219,6 +219,7 @@ hr {
   padding: 29px 25px 25px;
 }
 .brand-icon {
+  flex-shrink: 0;
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -234,12 +235,9 @@ hr {
   gap: 1px;
 }
 .brand strong {
-  font-size: 27px;
-  letter-spacing: -1.5px;
-  line-height: 1;
-}
-.brand-period {
-  color: #278466;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 .brand > div > span {
   font-size: 8px;
@@ -3934,6 +3932,27 @@ body:has(dialog[open]) {
 }
 
 /* RCA diagnostics keep raw identifiers readable without widening the page. */
+.service-summary {
+  padding: 16px 20px;
+}
+.service-summary-heading,
+.service-summary-items,
+.service-summary-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.service-summary-heading {
+  justify-content: space-between;
+}
+.service-summary-heading h2 {
+  margin: 0;
+  font-size: 13px;
+}
+.service-summary-items {
+  gap: 12px 28px;
+}
 .rca-states {
   display: flex;
   flex-wrap: wrap;
@@ -3941,8 +3960,60 @@ body:has(dialog[open]) {
 }
 .rca-states > span {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
+  min-width: 90px;
+  padding: 10px 12px;
+  border: 1px solid #cbd8d3;
+  border-radius: 8px;
+  background: #f5f8f6;
+  color: #344d43;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rca-states .badge {
+  font-size: 13px;
+  padding: 5px 9px;
+  font-weight: 700;
+}
+.rca-states .badge-firing {
+  background: #fce8e6;
+  color: #9b261e;
+}
+.rca-states .badge-reviewing,
+.rca-states .badge-acknowledged {
+  background: #e2eefc;
+  color: #24558b;
+}
+.rca-states .badge-unreviewed {
+  background: #fff0d3;
+  color: #80510a;
+}
+.alarm-identity {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.alarm-identity strong {
+  font-size: 14px;
+}
+.alarm-identity .cell-sub {
+  display: block;
+  margin-top: 5px;
+}
+.field-help summary {
+  cursor: help;
+  white-space: normal;
+}
+.field-help summary:focus-visible {
+  outline: 2px solid #23765e;
+  outline-offset: 3px;
+}
+.field-help p,
+.field-help code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 .rca-evidence td {
   vertical-align: top;

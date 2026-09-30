@@ -5,7 +5,7 @@ import { apiRequest } from '../lib/api';
 import { errorText, obj, rows, str, strings, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Notice } from './ui';
-import { DataView } from './live';
+import { AlarmIdentity, DataView } from './live';
 
 const reasons: Record<string, string> = {
   sufficient: '필수 근거를 충족했습니다.',
@@ -80,6 +80,7 @@ export function IncidentDebug({ incident }: { incident: Row }) {
   const analyses = rows(incident.analyses);
   return (
     <div className="stack">
+      <AlarmIdentity record={incident} />
       <IncidentStates incident={incident} />
       <DataView
         value={{
@@ -137,7 +138,11 @@ export function IncidentDebug({ incident }: { incident: Row }) {
       </section>
       <details>
         <summary>사건 원본 필드</summary>
-        <DataView value={incident} />
+        <p className="muted">
+          항목 이름에 마우스를 올리거나 클릭·Enter로 설명을 확인하세요. 미확인은 값이 없다는 뜻이며
+          정상이나 0을 의미하지 않습니다.
+        </p>
+        <DataView value={incident} explain />
       </details>
     </div>
   );
@@ -148,6 +153,7 @@ export function RcaJobSummary({ job }: { job: Row }) {
     result = obj(job.result);
   return (
     <div className="stack">
+      <AlarmIdentity record={job} />
       {str(job.incident_id) && (
         <Link className="text-link" to={`/incidents/${str(job.incident_id)}`}>
           원본 사건 · {str(job.incident_id)}
