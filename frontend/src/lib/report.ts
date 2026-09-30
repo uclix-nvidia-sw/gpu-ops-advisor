@@ -6,6 +6,8 @@ const names: Record<string, string> = {
   mapped_gpu_count: 'Pod 연결이 확인된 GPU',
   mapped_gpu_hours: 'GPU–Pod 연결 관측 시간',
   observed_namespace_hours: 'Namespace별 GPU–Pod 연결 관측 시간',
+  namespace_activity_valid_hours: '활동률 계산에 사용한 유효 관측 시간',
+  namespace_connected_gpu_util: '연결 GPU의 시간 가중 평균 활동률',
   current_allocated_gpu: '독점 할당 GPU (기간 종료 시점)',
   allocated_gpu_hours: '독점 할당 시간',
   allocated_instance_hours: 'MIG 인스턴스 할당 시간',
@@ -18,6 +20,19 @@ const names: Record<string, string> = {
   observed_healthy_collection_seconds: '정상 수집 관측 시간',
 };
 const reasons: Record<string, string> = {
+  group_by_not_implemented: '요청한 집계 축은 현재 계산 경로에 아직 구현되지 않았습니다.',
+  unsupported_group_by: '이 주제에서 지원하지 않는 집계 기준입니다.',
+  shared_gpu_attribution_unverified:
+    '공유·MIG 또는 여러 Pod의 연결을 구분할 수 없어 해당 구간을 제외했습니다.',
+  gpu_activity_identity_unverified:
+    'GPU 활동 지표의 Pod 신원을 확인할 수 없어 해당 구간을 제외했습니다.',
+  gpu_activity_missing: '연결 GPU의 활동 관측값이 부족합니다.',
+  source_unit_unverified: '원본 활동 지표의 단위를 확인할 수 없습니다.',
+  invalid_gpu_activity: '활동 지표가 유효한 범위를 벗어났습니다.',
+  conflicting_gpu_activity: '같은 구간의 활동 관측값이 상충해 제외했습니다.',
+  gpu_model_comparison_unverified:
+    'GPU 모델이 다르거나 복수 GPU의 모델이 미확인이라 평균을 보류했습니다.',
+  unattributed_gpu_observation: '일부 GPU 관측을 Namespace·Pod 신원에 연결하지 못했습니다.',
   allocation_contract_missing: '독점·공유·MIG 할당 이력이 없어 정확한 할당량을 확정할 수 없습니다.',
   allocation_mode_unverified: '독점·공유·MIG 할당 방식을 확인할 수 없습니다.',
   gpu_pod_identity_missing: 'GPU는 관측됐지만 같은 시점의 Pod 고유 ID를 연결하지 못했습니다.',

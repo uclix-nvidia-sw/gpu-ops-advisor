@@ -1,15 +1,24 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
+import { WorkflowGuide } from '../components/WorkflowGuide';
 export function Jobs() {
   const app = useApp();
-  const [kind, setKind] = useState(''),
-    [status, setStatus] = useState('');
+  const [params, setParams] = useSearchParams();
+  const kind = params.get('kind') || '',
+    status = params.get('status') || '';
+  const filter = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    next.set(key, value);
+    setParams(next);
+  };
+  const setKind = (value: string) => filter('kind', value),
+    setStatus = (value: string) => filter('status', value);
   const q = useList(
     app.ready ? queryPath('/jobs', { scope: app.scope, kind, status, limit: 30 }) : null,
     true,
@@ -94,6 +103,7 @@ export function JobDetail() {
         }
       />
       <QueryState query={q}>
+        {app.mode === 'developer' && <WorkflowGuide job={j} />}
         <Panel title="실행 상태">
           <div className="live-padding stack">
             <div className="head-actions">

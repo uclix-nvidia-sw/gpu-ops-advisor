@@ -19,6 +19,8 @@ import { scopeLabel } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
 import { Empty, Field, Modal, PageHead } from './ui';
+import { ViewMode } from './ViewMode';
+import { ApiInspector, DeveloperContext } from './DeveloperContext';
 const nav = [
   { to: '/dashboard', label: '운영 대시보드', icon: LayoutDashboard },
   { to: '/fleet/assets', label: '자산·관측', icon: Server },
@@ -32,6 +34,29 @@ export function Shell() {
   const app = useApp(),
     location = useLocation(),
     me = app.connection;
+  const names =
+    app.mode === 'operations'
+      ? [
+          '오늘의 운영',
+          '자산 탐색',
+          '사건 대응',
+          '분석 서재',
+          '요청 진행',
+          '운영 지식',
+          '환경 관리',
+        ]
+      : app.mode === 'developer'
+        ? [
+            '처리 흐름·검증',
+            '관측·신원',
+            'RCA 추적',
+            '보고서 추적',
+            '실행·시도',
+            'Runbook·revision',
+            '연결·구성',
+          ]
+        : nav.map((n) => n.label);
+  const menus = nav.map((n, i) => ({ ...n, label: names[i] }));
   const [mobile, setMobile] = useState(false),
     [scopeOpen, setScopeOpen] = useState(false),
     [draft, setDraft] = useState(app.scope),
@@ -63,9 +88,9 @@ export function Shell() {
           <small>Infrastructure operations</small>
         </div>
       </div>
-      <div className="nav-label">WORKSPACE</div>
+      <div className="nav-label">{app.mode === 'developer' ? 'INSPECT' : 'WORKSPACE'}</div>
       <nav className="main-nav" aria-label="주 메뉴">
-        {nav.map((n) => (
+        {menus.map((n) => (
           <NavLink key={n.to} to={n.to} className={`nav-item ${active(n.to) ? 'active' : ''}`}>
             <n.icon size={19} />
             <span>{n.label}</span>
@@ -89,7 +114,7 @@ export function Shell() {
     </>
   );
   return (
-    <div className="app-shell">
+    <div className={`app-shell view-${app.mode}`}>
       <a href="#main-content" className="skip-link">
         본문으로 이동
       </a>
@@ -112,10 +137,10 @@ export function Shell() {
             <Layers size={17} />
             <span>Workspace</span>
             <span>/</span>
-            <b>{nav.find((n) => active(n.to))?.label || '업무 상세'}</b>
+            <b>{menus.find((n) => active(n.to))?.label || '업무 상세'}</b>
           </div>
           <div className="top-actions">
-            <span className="environment-tag">LOCAL API</span>
+            <ViewMode />
           </div>
         </header>
         <div className="scopebar">
@@ -158,6 +183,40 @@ export function Shell() {
           </div>
         </div>
         <main id="main-content">
+          {app.mode === 'developer' && <DeveloperContext />}
+          {app.mode !== 'classic' && (
+            <nav className="context-links" aria-label="관련 기능">
+              {(location.pathname.startsWith('/settings') ||
+              location.pathname.startsWith('/knowledge')
+                ? [
+                    ['/settings/data', '클러스터·수집'],
+                    ['/settings/models', '모델 프로필'],
+                    ['/settings/routing', 'Agent 모델 지정'],
+                    ['/settings/backend', 'Backend·운영 설정'],
+                    ['/knowledge', '지식·Runbook'],
+                  ]
+                : location.pathname.startsWith('/reports') ||
+                    location.pathname.startsWith('/schedules')
+                  ? [
+                      ['/reports', '보고서'],
+                      ['/reports/new', '분석 요청'],
+                      ['/schedules', '정기 일정'],
+                      ['/jobs?kind=report', '보고서 실행 이력'],
+                    ]
+                  : location.pathname.startsWith('/fleet')
+                    ? [
+                        ['/fleet/assets', 'GPU·Node'],
+                        ['/fleet/workloads', 'Pod·작업 연결'],
+                        ['/fleet/quality', '관측 품질'],
+                      ]
+                    : []
+              ).map(([to, label]) => (
+                <Link key={to} to={to}>
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
           <QueryState query={me}>
             {!app.registeredScope.clusters.length &&
             !location.pathname.startsWith('/settings') &&
@@ -182,6 +241,7 @@ export function Shell() {
               <Outlet />
             )}
           </QueryState>
+          {app.mode === 'developer' && <ApiInspector />}
         </main>
         <footer className="app-footer">
           <span>GPU Ops Advisor · Go API · PostgreSQL</span>

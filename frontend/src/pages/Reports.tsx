@@ -12,7 +12,13 @@ export const reportTabs = [
 ];
 export function Reports() {
   const app = useApp();
-  const [topic, setTopic] = useState('');
+  const [filterParams, setFilterParams] = useSearchParams();
+  const topic = filterParams.get('topic') || '';
+  const setTopic = (value: string) => {
+    const next = new URLSearchParams(filterParams);
+    next.set('topic', value);
+    setFilterParams(next);
+  };
   const q = useList(
     app.ready ? queryPath('/reports', { scope: app.scope, topic_id: topic, limit: 30 }) : null,
     true,

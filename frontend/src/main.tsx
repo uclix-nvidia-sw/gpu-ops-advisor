@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { Empty } from './components/ui';
-import { AppProvider } from './lib/store';
+import { AppProvider, useApp } from './lib/store';
 import { Cases } from './pages/Cases';
 import { Dashboard } from './pages/Dashboard';
 import { Fleet } from './pages/Fleet';
@@ -15,7 +15,26 @@ import { ResultPage } from './pages/Results';
 import { Schedules } from './pages/Schedules';
 import { Settings } from './pages/Settings';
 import { Backend } from './pages/Backend';
+import { OperationsHome, OperationsCases, OperationsReports } from './pages/Operations';
+import { DeveloperHome } from './pages/Developer';
 import './styles.css';
+import './perspectives.css';
+function HomeView() {
+  const { mode } = useApp();
+  return mode === 'operations' ? (
+    <OperationsHome />
+  ) : mode === 'developer' ? (
+    <DeveloperHome />
+  ) : (
+    <Dashboard />
+  );
+}
+function CasesView() {
+  return useApp().mode === 'operations' ? <OperationsCases /> : <Cases />;
+}
+function ReportsView() {
+  return useApp().mode === 'operations' ? <OperationsReports /> : <Reports />;
+}
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
   state = { error: false };
   static getDerivedStateFromError() {
@@ -49,7 +68,7 @@ root.render(
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="dashboard" element={<HomeView />} />
                 <Route path="fleet" element={<Navigate to="/fleet/assets" replace />} />
                 <Route path="fleet/assets" element={<Fleet key="assets" view="assets" />} />
                 <Route
@@ -57,11 +76,11 @@ root.render(
                   element={<Fleet key="workloads" view="workloads" />}
                 />
                 <Route path="fleet/quality" element={<Fleet key="quality" view="quality" />} />
-                <Route path="cases" element={<Cases />} />
+                <Route path="cases" element={<CasesView />} />
                 <Route path="analyses/new" element={<Navigate to="/cases" replace />} />
                 <Route path="analyses/:id" element={<ResultPage kind="analysis" />} />
                 <Route path="incidents/:id" element={<ResultPage kind="incident" />} />
-                <Route path="reports" element={<Reports />} />
+                <Route path="reports" element={<ReportsView />} />
                 <Route path="reports/new" element={<ReportForm />} />
                 <Route path="reports/:id" element={<ResultPage kind="report" />} />
                 <Route path="schedules" element={<Schedules />} />
