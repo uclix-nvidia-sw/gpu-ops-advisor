@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Field, PageHead, Panel } from '../components/ui';
-import { JobRows, More, QueryState } from '../components/live';
+import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, useList } from '../lib/live';
 import { IncidentStates } from '../components/RcaDebug';
 import { formatDate, labels } from '../lib/domain';
@@ -62,7 +62,7 @@ export function Cases() {
               <table>
                 <thead>
                   <tr>
-                    <th>사건</th>
+                    <th>알람 · 발생 대상</th>
                     <th>알람·사건·검토 상태</th>
                     <th>발생 시각</th>
                   </tr>
@@ -72,8 +72,9 @@ export function Cases() {
                     <tr key={str(i.id)}>
                       <td>
                         <Link className="text-link" to={`/incidents/${str(i.id)}`}>
-                          {str(i.title, str(i.id))}
+                          <AlarmIdentity record={i} />
                         </Link>
+                        <small className="cell-sub">사건 ID · {str(i.id)}</small>
                       </td>
                       <td>
                         <IncidentStates incident={i} />

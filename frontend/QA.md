@@ -1,3 +1,15 @@
+# 2026-09-30 RCA 가독성 개선 로컬 검증
+
+기준: main `54a7ea5`에서 분리한 `fix/rca-alarm-readability`. 기존 읽기 API의 target 필드를 사용하며 API·DB 계약 변경 없음.
+
+- **통과:** frontend의 `npm test` (21 tests), `npm run build`, `npm run format:check`.
+- **통과:** Edge/Playwright에서 모든 API를 fixture로 대체하여 알람 이름·대상·ID, 이름 없는 사건, 세 상태 상자, 제품명/탭 제목, 원본 필드 설명의 Enter 펼치기, 390px 상세 화면 가로 넘침 없음, pageerror 0건을 확인했다.
+- **통과:** 대시보드 내부 서비스 요약의 응답 정상·응답 확인 실패·누락 시 미확인, 상세 링크, 1440px에서 높이 220px 미만, 390px에서 가로 넘침 없음, pageerror 0건을 Edge/Playwright 모의 API로 확인했다. 변경 후 위 테스트·빌드·포맷 검사를 다시 통과했다.
+- **미수행/미검증:** 운영 알람·실제 Backend/DB·Grafana/LLM 연동, CI·배포.
+- **해당 없음:** Go/Worker/DB 검증 — 변경 없음.
+
+---
+
 # 2026-09-30 RCA 디버깅 GUI 로컬 검증
 
 기준: main `185ea2b`에서 분리한 `fix/rca-debugging-ui`의 로컬 변경. 기존 Backend 읽기 API만 사용하며 DB·Worker·RCA 실행 계약은 변경하지 않았다.

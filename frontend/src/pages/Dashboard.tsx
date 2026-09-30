@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Activity, ArrowUpRight, Database, ScanSearch } from 'lucide-react';
 import { Badge, PageHead, Panel } from '../components/ui';
 import { DataView, JobRows, QueryState } from '../components/live';
-import { obj, queryPath, rows, str, useList, useResource } from '../lib/live';
+import { queryPath, rows, str, useList, useResource } from '../lib/live';
 import { useApp } from '../lib/store';
 export function Dashboard() {
   const app = useApp();
@@ -61,7 +61,7 @@ export function Dashboard() {
           </div>
         </Panel>
       </QueryState>
-      <div className="live-two-columns">
+      <div className="stack">
         <Panel
           title="최근 작업"
           action={
@@ -75,35 +75,55 @@ export function Dashboard() {
             <JobRows items={jobs.items} />
           </QueryState>
         </Panel>
-        <Panel
-          title="서비스 연결"
-          action={
+        <section className="panel service-summary" aria-label="내부 서비스 상태">
+          <div className="service-summary-heading">
+            <h2>내부 서비스 상태</h2>
             <Link className="text-link" to="/settings/backend">
-              연결 상세
+              상태 상세
             </Link>
-          }
-        >
+          </div>
+          <p className="muted">
+            Backend 기준 준비 상태입니다. 실제 작업 처리 결과는 별도로 확인하세요.
+          </p>
           <QueryState query={modules}>
-            <div className="backend-modules">
-              {rows(modules.data?.items).map((m) => (
-                <div className="backend-module" key={str(m.module)}>
-                  <strong>
-                    {(
+            <div className="service-summary-items">
+              {['job_controller', 'incident'].map((module) => {
+                const m = rows(modules.data?.items).find((item) => item.module === module);
+                const status = str(m?.status);
+                return (
+                  <div className="service-summary-item" key={module}>
+                    <strong>
                       {
-                        job_controller: 'Job Controller',
-                        incident: '사건·알림',
-                      } as Record<string, string>
-                    )[str(m.module)] || str(m.module)}
-                  </strong>
-                  <Badge status={str(m.status)} />
-                </div>
-              ))}
+                        (
+                          {
+                            job_controller: 'Job Controller',
+                            incident: '사건·알림',
+                          } as Record<string, string>
+                        )[module]
+                      }
+                    </strong>
+                    <Badge
+                      status={
+                        status === 'available'
+                          ? 'healthy'
+                          : status === 'unavailable'
+                            ? 'failed'
+                            : 'unknown'
+                      }
+                      label={
+                        status === 'available'
+                          ? '응답 정상'
+                          : status === 'unavailable'
+                            ? '응답 확인 실패'
+                            : '미확인'
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
-            {obj(modules.data?.database).status != null && (
-              <DataView value={modules.data?.database} />
-            )}
           </QueryState>
-        </Panel>
+        </section>
       </div>
     </div>
   );

@@ -52,16 +52,14 @@ export function Shell() {
           <ArrowUpRight size={25} />
         </span>
         <div>
-          <strong>
-            DSX<span className="brand-period">.</span>
-          </strong>
+          <strong>GPU Ops Advisor</strong>
           <span>GPU OPERATIONS</span>
         </div>
       </Link>
       <div className="workspace-label">
-        <span className="workspace-logo">D</span>
+        <span className="workspace-logo">G</span>
         <div>
-          <b>DSX Workspace</b>
+          <b>GPU Ops Advisor</b>
           <small>Infrastructure operations</small>
         </div>
       </div>
@@ -186,7 +184,7 @@ export function Shell() {
           </QueryState>
         </main>
         <footer className="app-footer">
-          <span>DSX Operations · Go API · PostgreSQL</span>
+          <span>GPU Ops Advisor · Go API · PostgreSQL</span>
           <span>관측에서 근거로, 근거에서 판단으로.</span>
         </footer>
       </div>

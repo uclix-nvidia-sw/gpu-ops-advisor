@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { EvidenceRows, IncidentDebug, IncidentStates, RcaJobSummary, RcaResult } from './RcaDebug';
+import { AlarmIdentity, DataView, JobRows } from './live';
 
 const render = (node: ReactNode) =>
   renderToStaticMarkup(
@@ -12,6 +13,37 @@ const render = (node: ReactNode) =>
     </QueryClientProvider>,
   );
 describe('RCA diagnostics', () => {
+  it('shows stored alarm names and targets with job IDs, without inventing absent names', () => {
+    const job = {
+      id: 'job-123',
+      kind: 'rca',
+      target: { alertname: 'GPUHighTemperature', node: 'gpu-node-1', cluster_id: 'cpc-2' },
+    };
+    const html = render(<JobRows items={[job]} />);
+    expect(html).toContain('GPUHighTemperature');
+    expect(html).toContain('노드: gpu-node-1');
+    expect(html).toContain('작업 ID · job-123');
+    expect(render(<AlarmIdentity record={{}} />)).toContain('알람 이름 미확인');
+    expect(
+      render(<AlarmIdentity record={{ target: { alertname: '<script>bad</script>' } }} />),
+    ).not.toContain('<script>');
+  });
+  it('explains raw fields using keyboard-accessible disclosure and separates alarm resolution', () => {
+    const html = render(
+      <DataView
+        value={{ alarm_status: 'resolved', observation_count: 0, asset_key: null }}
+        explain
+      />,
+    );
+    expect(html).toContain('<summary');
+    expect(html).toContain('알람 상태');
+    expect(html).toContain('사건 종결과는 별개');
+    expect(html).toContain('<code>alarm_status</code>');
+    expect(html).toContain('해제됨');
+    expect(html).not.toContain('해결됨');
+    expect(html).toContain('>0</span>');
+    expect(html).toContain('미확인');
+  });
   it('keeps resolved alarms separate from open incidents and human review', () => {
     const html = render(
       <IncidentStates
