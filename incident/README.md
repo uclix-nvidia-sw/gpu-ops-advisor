@@ -1,5 +1,11 @@
 # Incident 모듈 · Go · 기본 접수 1.3 / 선택적 에피소드 접수 1.4
 
+## Fleet target 투영 호환 (2026-09-30)
+
+새 RCA 입력 target에 label의 `machine_id/component/k8s_node_name`을 보존하고 노드명은 annotation fallback도 지원한다. 노드 label/annotation 충돌은 `conflicting_node_name`으로 거부한다. 기존 1.3 event key와 의미 evidence hash는 추가 target 필드를 제외한 기존 식별 기준을 유지한다. 정책의 evidence label 비교는 유지한다. 투영만 추가된 반복 alert는 새 incident/outbox/snapshot을 만들지 않으며 기존 snapshot/hash/target을 소급 변경하지 않는다. episode 모드도 공통 parse 투영을 재사용한다. DB migration은 없다.
+
+이 target은 수신 단서다. RCA에서 관측의 동일 대상·시각 의미·freshness를 검증해야 fact로 쓸 수 있다. [RCA 실행 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따른다.
+
 [13번 설계서](../docs/specs/incident/13_Incident_모듈_설계서.md)를 기준으로 개발하는 독립 프로세스입니다. 기존 1.3 연동은 기본으로 유지하며, 1.4 에피소드 생산 경로는 소비자 업그레이드 후 설정으로 전환합니다.
 
 **Grafana → Incident → PostgreSQL outbox → Job Controller → RCA Agent** 흐름을 사용합니다. Backend는 같은 DB에서 사건과 연결된 RCA job을 읽고, 메모·검토·사건 상태 변경만 Incident로 전달합니다. 인증은 현재 범위에서 제외했습니다.

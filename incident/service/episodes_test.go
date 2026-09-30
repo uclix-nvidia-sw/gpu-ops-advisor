@@ -29,6 +29,28 @@ func TestEpisodeNodeLabelAndAnnotation(t *testing.T) {
 	}
 }
 
+func TestFleetProjectionPreservesLegacyIdentity(t *testing.T) {
+	now := time.Now().UTC()
+	s := &Server{Config: DefaultConfig()}
+	labels := Object{"cluster_id": "c", "alertname": "GPUAlert"}
+	raw := Object{"fingerprint": "f", "status": "firing", "startsAt": now.Format(time.RFC3339Nano), "labels": labels}
+	old, reason := s.parse(raw, now)
+	if reason != "" {
+		t.Fatal(reason)
+	}
+	labels["machine_id"], labels["component"], labels["k8s_node_name"] = "machine", "accelerator-nvidia-error-sxid", "node"
+	before := Hash(raw)
+	got, reason := s.parse(raw, now)
+	if reason != "" || old.eventKey != got.eventKey || before != Hash(raw) {
+		t.Fatalf("projection changed identity or raw: %s", reason)
+	}
+	for _, key := range []string{"machine_id", "component", "k8s_node_name"} {
+		if got.target[key] != labels[key] {
+			t.Fatalf("missing %s", key)
+		}
+	}
+}
+
 func TestEpisodeDecisions(t *testing.T) {
 	now := time.Date(2026, 9, 23, 10, 0, 0, 0, time.UTC)
 	cfg := DefaultConfig()

@@ -113,6 +113,38 @@ describe('RCA diagnostics', () => {
     expect(html).not.toContain('candidate-must-stay-hidden');
     expect(html).toContain('공개 결과 없음');
   });
+  it.each(['complete', 'failed', 'omitted'])(
+    'renders the final report with narrative status %s',
+    (status) => {
+      const html = render(
+        <RcaResult
+          job={{
+            status: 'succeeded',
+            result_ref: 'published',
+            result: {
+              result_status: 'blocked',
+              narrative_status: status,
+              narrative: [
+                {
+                  id: 'problem',
+                  title: '감지된 문제',
+                  text: 'XID 79 <script>bad</script>\n\n원인 미확정',
+                },
+                { id: 'action', title: '권고 조치와 조건', text: '실행 보류·미수행' },
+              ],
+            },
+          }}
+          onEvidence={() => {}}
+        />,
+      );
+      expect(html).toContain('RCA 최종 보고서');
+      expect(html).toContain('권고 조치와 조건');
+      expect(html).toContain('원인 미확정');
+      expect(html).toContain('실행 보류·미수행');
+      expect(html).not.toContain('<script>');
+      expect(html).toContain(status === 'complete' ? 'LLM이 우선순위' : '기본 보고서');
+    },
+  );
   it('prioritizes failed collection and preserves empty, partial, zero and unknown', () => {
     const items = [
       {

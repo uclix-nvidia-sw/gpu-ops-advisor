@@ -50,6 +50,7 @@ class Upstream(BaseHTTPRequestHandler):
     logs_max_limit = None
     logs_json_target = None
     logs_max_seconds = None
+    fleet_reports = False
 
     def log_message(self, *args):
         pass
@@ -247,6 +248,22 @@ class Upstream(BaseHTTPRequestHandler):
                         "observed_at": PERIOD["start"],
                     }
                 )
+            if self.fleet_reports:
+                start = int(query["start"][0]) + 1_000_000_000
+                line = json.dumps(
+                    {
+                        "attributes": {
+                            "component": "accelerator-nvidia-error-sxid",
+                            "health": "Unhealthy",
+                            "log_type": "component_data",
+                            "reason": "SXID 11001(ingress invalid command)",
+                        },
+                        "resources": {
+                            "machine.id": "fixture-machine",
+                            "k8s.node.name": "node-1",
+                        },
+                    }
+                )
             return self.send(
                 {
                     "status": "success",
@@ -255,7 +272,10 @@ class Upstream(BaseHTTPRequestHandler):
                         "result": [
                             {
                                 "stream": {"cluster": "cpc-2", "namespace": "dev"},
-                                "values": [[str(start), line]],
+                                "values": [
+                                    [str(start + i), line]
+                                    for i in range(31 if self.fleet_reports else 1)
+                                ],
                             }
                         ],
                     },
@@ -769,6 +789,8 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(q == "D09" and s == "ok" for q, s in evidence), evidence
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
+    assert rca["narrative_status"] == "complete"
+    assert len(rca["narrative"]) == 5
     assert rca["device_observations"] and rca["cause_candidates"]
     assert rca["quality"]["analysis"]["status"] == "complete"
     assert rca["quality"]["analysis"]["followups"] == 1
@@ -809,7 +831,10 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
 
 
 @pytest.mark.e2e
-def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack, monkeypatch):
+@pytest.mark.parametrize("fleet_reports", [False, True])
+def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
+    stack, monkeypatch, fleet_reports
+):
     alert = {
         "status": "firing",
         "fingerprint": uuid4().hex,
@@ -833,6 +858,19 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack, monkeypa
             "error_code": "Xid 79",
         },
     }
+    if fleet_reports:
+        alert["labels"].update(
+            component="accelerator-nvidia-error-sxid",
+            reason="SXID 11001",
+            machine_id="fixture-machine",
+        )
+        alert["labels"].pop("gpu_uuid")
+        alert["annotations"]["error_code"] = "SXID 11001"
+        profile = json.loads((ROOT / "agents/config.example.json").read_text())
+        path = LOCAL / "fleet-profile.json"
+        path.write_text(json.dumps(profile))
+        stack = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
+        monkeypatch.setattr(Upstream, "fleet_reports", True)
     response = httpx.post(
         stack["incident"] + "/webhooks/grafana", json={"alerts": [alert]}, timeout=10
     )
@@ -864,21 +902,32 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack, monkeypa
     )
     request_start = len(Upstream.requests)
     result, evidence = worker_result(stack, "rca", str(jid), "-incident-webhook")
-    assert "component" not in snapshot["input"]["target"]
+    assert snapshot["input"]["target"]["component"] == alert["labels"]["component"]
     log_requests = [
         args
         for path, args in Upstream.requests[request_start:]
         if path.endswith("/loki/api/v1/query_range")
     ]
     assert log_requests and all(
-        '| (dsx_json_0="accelerator-nvidia-error-xid" or '
-        'dsx_json_0_extracted="accelerator-nvidia-error-xid")' in args["query"][0]
+        f'| (dsx_json_0="{alert["labels"]["component"]}" or '
+        f'dsx_json_0_extracted="{alert["labels"]["component"]}")' in args["query"][0]
         for args in log_requests
     )
-    assert all(
-        row["check_status"] == row["normalized_health"] == "unknown"
-        for row in result["device_observations"]
-    )
+    if fleet_reports:
+        assert len(result["device_observations"]) == 62
+        assert all(
+            h["error_code"] == "sxid:11001" and not h["fact_eligible"]
+            for h in result["device_observations"]
+        )
+        assert result["quality"]["analysis"]["status"] == "complete"
+        assert {"D05", "D09", "D02", "D08", "D06"} <= {q for q, _ in evidence}
+        assert "mapping_target_unverified" in result["missing_inputs"]
+        assert result["narrative_status"] == "complete"
+    else:
+        assert all(
+            row["check_status"] == row["normalized_health"] == "unknown"
+            for row in result["device_observations"]
+        )
     assert result["incident_id"] == item["incident_id"]
     assert {a["purpose_id"] for a in result["assessments"]} == {"R01", "R02"}
     assert ("incident_snapshot", "ok") in evidence
@@ -901,7 +950,7 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(stack, monkeypa
             "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='alert_clues'",
             (jid,),
         ).fetchone()[0]
-        assert clues["error_codes"] == ["xid:79"]
+        assert clues["error_codes"] == (["sxid:11001"] if fleet_reports else ["xid:79"])
         assert clues["provider_actions"]["execution"] == "not_performed"
         saved_snapshot, checksum = conn.execute(
             "SELECT snapshot,checksum FROM evidence WHERE job_id=%s AND query_id='incident_snapshot'",
@@ -947,6 +996,70 @@ def test_builtin_profile_without_datasource_configuration(stack):
             assert 'cluster_id="cpc-2"' in args["query"][0]
         if path.endswith("/loki/api/v1/query_range"):
             assert 'cluster="cpc-2"' in args["query"][0]
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("llm_failed", [False, True])
+def test_rca_without_observations_publishes_final_report(
+    stack, monkeypatch, llm_failed
+):
+    monkeypatch.setattr(Upstream, "llm_fail", llm_failed)
+    iid = str(uuid4())
+    data = dict(
+        scope=SCOPE,
+        incident_id=iid,
+        evidence_version=1,
+        analysis_profile_revision="fixture-v1",
+        incident_time=PERIOD["start"],
+        time_range=PERIOD,
+        purpose_ids=["R05"],
+    )
+    snapshot = {
+        "input": data,
+        "alert": {
+            "labels": {
+                "reason": "XID 79",
+                "k8s_node_name": "fixture-node",
+                "suggested_actions": json.dumps(
+                    {"description": "", "repair_actions": ["REBOOT_SYSTEM"]}
+                ),
+            }
+        },
+    }
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+            (iid, Jsonb(SCOPE), data["incident_time"]),
+        )
+        conn.execute(
+            "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+            (iid, Jsonb(snapshot), content_hash(snapshot)),
+        )
+    profile = {
+        **stack["profile"],
+        "rca": {"general_runbook_key": "UNPUBLISHED-FIXTURE"},
+    }
+    path = LOCAL / "no-runbook-profile.json"
+    path.write_text(json.dumps(profile))
+    isolated = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
+    start = len(Upstream.requests)
+    jid = submit(stack, "rca", data)
+    result, evidence = worker_result(isolated, "rca", jid, "-final-report")
+    assert result["result_status"] == "blocked"
+    assert result["quality"]["analysis"]["status"] == "no_usable_evidence"
+    assert result["narrative_status"] == ("failed" if llm_failed else "complete")
+    assert len(result["narrative"]) == 5
+    assert not any(q.startswith("D") for q, _ in evidence)
+    assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
+    text = "\n".join(section["text"] for section in result["narrative"])
+    assert "XID 79" in text and "원인은 미확정" in text
+    assert "실행 적격성 미검증" in text and "REBOOT_SYSTEM" in text
+    with psycopg.connect(stack["url"]) as conn:
+        saved = conn.execute(
+            "SELECT snapshot,content_hash FROM incident_evidence_versions WHERE incident_id=%s",
+            (iid,),
+        ).fetchone()
+        assert saved == (snapshot, content_hash(snapshot))
 
 
 @pytest.mark.e2e
@@ -1061,9 +1174,13 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
     assert result["termination_reason"] == "evidence_sufficient"
     assert result["cause_candidates"][0]["causal_status"] == "supported"
     assert not any(q.startswith("D") for q, s in evidence)
-    assert not any(
-        p == "/v1/chat/completions" for p, _ in Upstream.requests[request_start:]
-    )
+    model_requests = [
+        json.loads(body["messages"][1]["content"])
+        for path, body in Upstream.requests[request_start:]
+        if path == "/v1/chat/completions"
+    ]
+    assert len(model_requests) == 1 and "facts" in model_requests[0]
+    assert result["narrative_status"] == "complete"
 
 
 @pytest.mark.e2e

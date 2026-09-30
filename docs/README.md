@@ -1,5 +1,9 @@
 # GPU Ops Advisor 개발 문서 안내
 
+## 2026-09-30 RCA evidence 보완
+
+[현재 실행 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완): 정밀도 partial 개별 관측 사용, degraded 후속 조사, Fleet JSON 정규화, target 투영의 중복 호환, R02/R03 매핑 조사와 최종 보고서. [Agent QA](../agents/QA.md)와 [Incident QA](../incident/QA.md)는 로컬 검증 범위를 기록한다. 기존 DB schema와 snapshot/hash를 유지하며 운영 배포/시각 의미/LLM 품질은 별도 검수한다.
+
 현재 기준은 **GPU Ops Advisor v1.3**입니다. Job Controller는 큐와 기존 자원 내 배분을 맡고, 정기 보고서 일정·요청 생성은 Backend, 보고서 실행은 보고서 Agent가 담당합니다. RCA 요청은 Incident에서만 시작합니다. 두 Agent 내부에는 NAT 워크플로를 적용합니다. RCA는 Runbook·사고 증거·Grafana MCP를, 보고서는 Incident·공개 RCA 결과 DB와 MCP 기간 관측을 사용합니다. 상세 연결·운영·검수 기준은 03/04/05/06/11/12/14에 있습니다.
 
 [저장소 README](../README.md) · [전체 구조도](architecture/architecture-modules-20260917-v1.3/README.md) · [보존한 환경 근거](evidence/README.md)
@@ -55,6 +59,8 @@ Claude Code에서는 새 세션을 열어 `/context`에서 공통 규칙을 확�
 보고서 Agent의 후속 개발 제안은 [워크플로우 검토안·도식](architecture/report-agent-workflow/README.md)에 별도로 보관합니다. 현재 통계·공개 RCA 소비 경로와 향후 개선 후보·LLM 조언·보완 조회를 구분한 설계 초안이며, 현행 12번 명세나 구현 완료 상태를 대체하지 않습니다.
 
 ## 구현 상태
+
+2026-09-30 RCA 최종 보고서 보완: 근거 부족·결정적 판단 경로도 다섯 섹션을 구성하고 모델 편집을 시도한다. 미설정·확정 실패에는 기본 보고서를 제공한다. [RCA 안내](../rcca-agent/README.md), [실행 계약](specs/rca-agent/11_RCA_Agent_모듈_설계서.md), [Agent QA](../agents/QA.md), [Frontend QA](../frontend/QA.md)를 따른다. 로컬 변경이며 운영 배포·실제 Fleet/LLM 품질 검수와 구분한다.
 
 2026-09-28 RCA·Runbook 후속 개발 상태는 [인수인계 문서](../rcca-agent/HANDOFF.md)에서 확인합니다. XID 173건·SXID 93건의 [전체 Runbook 목록](../rcca-agent/runbooks/CATALOG.md)과 근거별 제한을 확인할 수 있습니다. XID/SXID 초안의 기존 DB 필드 대응·등록/검토/발행·재현 명령은 [Runbook DB 등록 안내](../rcca-agent/runbooks/DB-WORKFLOW.md)를 따릅니다. 아래의 이전 제품 전체 기준과 구분하며, 로컬 구현·fixture 검증을 운영 배포 완료로 해석하지 않습니다.
 

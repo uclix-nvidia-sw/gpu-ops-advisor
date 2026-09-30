@@ -1,5 +1,19 @@
 # 11. RCA Agent 모듈 설계서
 
+## 2026-09-30 수집 계약 보완
+
+현재 구현은 [RCA README](../../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)를 따른다. 밀리초 정밀도 축소만 있는 로그는 원본 기간 `complete=false`를 유지하면서 실제 `request_time_range` 안의 관측만 `observation_usable=true`로 사용할 수 있다. `degraded`는 예산 내 미실행 독립 query의 후속 실행을 막지 않는다. Fleet adapter의 query `health_contract` binding, 로그 기록 시각, 기본 `fact_eligible=false`와 별도 freshness 검증을 구분한다. R02/R03는 GPU UUID/Pod UID 없이 같은 노드 관계를 직접 GPU 사용자로 승격하지 않는다.
+
+## 2026-09-30 최종 보고서 실행 계약
+
+원인 Synthesis와 최종 보고서 편집을 분리한다. 정상적인 workflow 결과 구성까지 도달한 모든 경로에서 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계를 출력한다. `observation_refs=[]`, 승인 Runbook 없음, 충분한 기존 근거의 fast path도 보고서 구성 대상이다.
+
+`report.py`는 사건 단서, 코드 판단, 원인 후보의 인과 수준, 권고 적격성, 실제 조회 상태·누락 사유로 문장을 구성한다. 모델은 도구 없이 기존 문장 ID의 우선순위만 선택한다. 선택되지 않은 문장은 삭제하지 않고, 알람·원천 권고는 미검증 입력임을 보존한다. 원인 후보나 조치의 새로운 생성·승격은 이 편집 단계에서 허용하지 않는다.
+
+기존 결과 1.1의 `narrative`는 `id,title,text,evidence_refs,value_refs`를 가진 다섯 섹션이다. `narrative_status`는 LLM 편집의 complete/failed/omitted, `quality.report`는 `{status:"complete",method:"llm_prioritized"|"deterministic_fallback"}`다. 기존 `quality.analysis`, `result_status`, assessment, 권고 자격은 별개이며 보고서 작성으로 ready/confirmed를 만들지 않는다. 모델 미구성·확정 실패·무효 응답·남은 예산 부족은 기본 보고서로 대체한다. 원격 종료 불명·취소·실행권 상실은 14의 fail/격리를 유지한다.
+
+아래 과거 설계의 LLM 생략은 원인 분석에 한정한다. 최종 보고서 편집은 같은 job/attempt의 예산 안에서 직렬 수행하며 호출 자체가 항상 성공함을 보장하지 않는다. Frontend는 공개된 narrative만 표시하고 원문을 escape해 렌더링한다. DB migration, 입력 snapshot/hash 변경, 기존 공개 결과 덮어쓰기는 없다.
+
 버전 1.3 · 모듈 rca · 독립 실행·배포 · R01~R09 · NVIDIA NeMo Agent Toolkit(NAT) 적용 설계
 
 ## 0. 통합 기준과 구현 상태
@@ -8,9 +22,9 @@
 
 **현재 구현**은 코드로 확인한 동작, **통합 목표**는 이번에 정의한 추가 개발 사항이다. 문서 병합은 기능 구현·운영 검증 완료를 뜻하지 않는다. 현행 모듈 계약은 1.3이다. Incident 중복 제거·전달과 Agent 판단의 역할 분리는 **RCA 접수 계약 1.4의 추가 개발 목표**이며 결과 본문 `result_schema_version=1.1`은 유지한다. 기존 1.3 입력을 조용히 재해석하지 않는다.
 
-2026-09-23 workflow 합의: **Runbook 검색·적용 검사는 DB 조회와 코드로 처리**한다. 기존 증거로 조사 목적을 충족하면 MCP·LLM 없이 결과를 작성한다. 부족하면 **수집 계획 → Grafana MCP → 증거 정리 → LLM 분석 → 검증·재평가 → 필요 시 재조사**를 수행한다. 모든 유효한 분석 결과는 원인 미확정을 포함해 공통 검증·저장·JC 공개를 거친다. 아래 §2의 도식과 계약은 개발 목표이며 현재 코드의 동작과 구분한다.
+2026-09-23 workflow 합의: **Runbook 검색·적용 검사는 DB 조회와 코드로 처리**한다. 기존 증거로 조사 목적을 충족하면 MCP·원인 Synthesis 없이 판단 결과를 작성한다. 부족하면 **수집 계획 → Grafana MCP → 증거 정리 → LLM 분석 → 검증·재평가 → 필요 시 재조사**를 수행한다. 모든 유효한 분석 결과는 원인 미확정을 포함해 공통 검증·저장·JC 공개를 거친다. 아래 §2의 도식과 계약은 개발 목표이며 현재 코드의 동작과 구분한다.
 
-2026-09-28 보완: [입력·병렬 조사·Synthesis 구현 계획](implementation-plan-20260928.md)을 적용한다. 한 NAT workflow 안에서 Orchestrator가 query별 Observation Sub-agent를 병렬 실행·회수하고, 코드 충분성 판정 후 최대 한 번 재조사한다. 마지막 Synthesis Agent가 근거를 해석한다. 기존 증거 충분 시 MCP·LLM 0회 원칙은 유지한다. Runbook 미일치는 승인·고정된 일반 조사 Runbook으로 대체하며, 그것도 없으면 조사 보류를 결과로 남긴다. 아래 표와 §0.1은 이전 기준 시점의 gap 기록이고 최신 로컬 구현은 §2.4 및 Agent QA를 따른다.
+2026-09-28 보완: [입력·병렬 조사·Synthesis 구현 계획](implementation-plan-20260928.md)을 적용한다. 한 NAT workflow 안에서 Orchestrator가 query별 Observation Sub-agent를 병렬 실행·회수하고, 코드 충분성 판정 후 최대 한 번 재조사한다. 마지막 Synthesis Agent가 근거를 해석한다. 기존 증거 충분 시 MCP·원인 Synthesis 0회, 최종 보고서 편집 별도 수행 원칙은 유지한다. Runbook 미일치는 승인·고정된 일반 조사 Runbook으로 대체하며, 그것도 없으면 조사 보류를 결과로 남긴다. 아래 표와 §0.1은 이전 기준 시점의 gap 기록이고 최신 로컬 구현은 §2.4 및 Agent QA를 따른다.
 
 | 구성 | 현재 구현 | 통합 목표·남은 일 |
 |---|---|---|
@@ -69,7 +83,7 @@ R01~R09는 Agent 내부의 조사·평가 항목이다. 신규 경로에서는 A
 
 ## 2. 처리·저장
 
-여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 알람 파싱·조사 목적 선택 → DB 조회·코드로 Runbook 검색/적용 검사 순서다. 기존 증거가 충분하면 MCP·LLM 없이 결과를 작성한다. 부족하면 수집 계획 → Grafana MCP → 정규화·품질 확인 → LLM 분석 → 검증·재평가를 거쳐, 유효한 추가 조회와 예산이 있을 때만 반복한다. 두 경로 모두 결과 검증 → evidence·candidate 저장 → JC complete·공개로 끝난다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
+여유 슬롯에서 claim → 사건 증거·대상/시각 확인 → 알람 파싱·조사 목적 선택 → DB 조회·코드로 Runbook 검색/적용 검사 순서다. 기존 증거가 충분하면 MCP·원인 Synthesis 없이 판단 결과를 작성한다. 부족하면 수집 계획 → Grafana MCP → 정규화·품질 확인 → LLM 분석 → 검증·재평가를 거쳐, 유효한 추가 조회와 예산이 있을 때만 반복한다. 두 경로 모두 결과 검증 → evidence·candidate 저장 → JC complete·공개로 끝난다. evidence와 result_candidates는 RCA 소유이며 jobs·사건 상태는 직접 변경하지 않는다.
 
 04의 공통 결과에 incident_id·incident_time·current_checked_at·pod_relations·assessments·cause_candidates·recommendations·missing_inputs·termination_reason을 더한다. 숫자는 measurements 레지스트리에 저장하고 문장에서는 value_refs로 참조한다.
 
@@ -95,7 +109,7 @@ LLM은 수집한 근거를 해석해 원인 후보·지지/반박·추가 확인
 
 | 상황 | 처리 |
 |---|---|
-| 호환 Runbook과 기존 증거로 조사 목적 충족 | 적용·배제 조건과 품질을 코드로 검사한 뒤 근거와 권고 작성. MCP·LLM 0회로 공통 저장 진행 |
+| 호환 Runbook과 기존 증거로 조사 목적 충족 | 적용·배제 조건과 품질을 코드로 검사한 뒤 근거와 권고 작성. MCP·원인 Synthesis 0회, 최종 보고서 편집 별도 수행로 공통 저장 진행 |
 | Runbook은 있으나 증거 부족 | 필수 query를 sub-agent에 병렬 배정 → 코드 충분성 검사 → 필요 시 최대 1회 재조사 → Synthesis LLM 해석·검증 |
 | 맞는 Runbook이 없음 | 명시한 승인·고정 일반 조사 Runbook을 선택. 일반 Runbook도 없으면 부족 입력을 기록하고 조회를 시작하지 않음 |
 | 반박 증거·상충·데이터 부족 | 지지·반박·부족을 보존. 유효한 추가 조회와 예산이 있으면 재조사하고, 없으면 미확정 결과 작성 |
@@ -113,7 +127,7 @@ Runbook 검색 결과나 fact 키의 존재만으로 충분하다고 판정하�
 2. 적용 조건이 충족되며 배제 조건의 미확정이나 상충 증거가 결론을 막지 않는다. 원인 수준과 권고 자격은 각각 근거에 맞게 제한한다.
 3. §3.1.2의 목적 선택·관련성 trace와 assessments가 일치하고 필요한 조사가 남지 않는다. R01 Runbook 적용만으로 R02 관계나 R04 영향 조사를 생략하지 않는다.
 
-이 경로에서는 코드로 결과를 구성하고 `narrative_status=omitted`와 LLM 미사용을 실제 실행 기록에 남긴다. `evidence_sufficient`는 해당 평가의 근거 충족이며 `confirmed`·장애 복구·사건 종결과 다르다. 조기 종료도 §2.3의 저장·공개를 생략하지 않는다.
+이 경로에서는 코드로 판단 결과를 구성한 뒤 최종 보고서 편집을 시도한다. `narrative_status`는 편집 성공/실패/미설정을 나타내며 원인 분석 상태와 구분한다. `evidence_sufficient`는 해당 평가의 근거 충족이며 `confirmed`·장애 복구·사건 종결과 다르다. 조기 종료도 §2.3의 저장·공개를 생략하지 않는다.
 
 #### 추가 수집 후 충분성 판정과 Synthesis
 
@@ -139,12 +153,12 @@ Runbook 단독 판단·LLM 분석·미확정 종료 모두 같은 결과 계약�
 
 1. 기존 1.3 claim 입력과 DB snapshot/hash를 검사한다. alert 원문은 보존하며 reason/component/action은 검색·표시 단서로만 파싱한다.
 2. pinned corpus를 읽고 reviewed hash·content hash를 확인한다. schema 없는 legacy와 `gpu-rca-runbook/1.0`을 명시 분리한다. v1은 validator·BM25 검색·pending compatibility·관측 계획을 연결한다.
-3. 기존 증거로 모든 요청 목적과 적용 Runbook이 충족되면 MCP·LLM을 생략한다. 부족하면 승인된 계획을 실행하며, 전용 Runbook 미일치는 profile의 `rca.general_runbook_key`에 지정된 일반 Runbook으로 대체한다. 미발행·미고정·invalid content를 하드코딩 조사로 우회하지 않는다.
+3. 기존 증거로 모든 요청 목적과 적용 Runbook이 충족되면 MCP·원인 Synthesis는 생략하되 최종 보고서 편집은 수행한다. 부족하면 승인된 계획을 실행하며, 전용 Runbook 미일치는 profile의 `rca.general_runbook_key`에 지정된 일반 Runbook으로 대체한다. 미발행·미고정·invalid content를 하드코딩 조사로 우회하지 않는다.
 4. `observation_agents.py`가 query별 독립 Observation task에 예산을 예약·분배한다. 기본 동시성 3, 결과는 완료 순서와 무관하게 정렬한다. 형제 실패를 격리하고 취소 시 task를 모두 회수한다.
 5. Orchestrator가 충분성·상충을 검사하고 최대 한 번 재조사한다. 이후 `synthesis.py`가 도구 없이 유효 관측을 해석한다. 모델 후보·추가 필드·참조를 검사하고 모델을 통한 인과 수준 승격을 막는다.
-6. Worker가 유효 lease에서 evidence/candidate를 저장하고 JC complete로 공개를 확정한다. Ops의 공개 결과 ID/hash 참조 경로는 유지한다.
+6. 최종 보고서를 구성하고 모델 편집을 시도한다. 기본 보고서와 원인 판단 상태를 분리한다. Worker가 유효 lease에서 evidence/candidate를 저장하고 JC complete로 공개를 확정한다. Ops의 공개 결과 ID/hash 참조 경로는 유지한다.
 
-v1 fact 승격은 완전한 관측·동일 대상·단일 cluster·등록 freshness에 제한한다. 기본 `health_facts()`는 error_code를 만들지 않고 기본 설정에는 운영 health 계약이 없다. 따라서 Xid/SXid를 reason에서 찾았다는 이유만으로 원인을 supported/confirmed로 만들지 않는다. 실제 Fleet parser·binding·운영 Runbook 발행은 남은 데이터 계약 작업이다. 기본 프로필에 일반 Runbook key를 지정해도 콘텐츠를 자동 생성·발행하지 않는다.
+v1 fact 승격은 사용 가능한 개별 관측·동일 대상·단일 cluster·등록 시각 의미와 freshness에 제한한다. Fleet adapter는 중첩 JSON과 XID/SXID 코드를 정규화하지만 기본 `loki_timestamp_is_observed_at=false`로 로그 보고만 제공한다. 실제 장비 관측 시각 계약과 `max_hold_seconds`를 검증·등록해야 health/error_code fact 승격이 가능하다. alert reason의 검색 코드만으로 supported/confirmed 원인을 만들지 않는다. 운영 binding·시각 계약·Runbook 발행 검수는 남아 있다. 기본 프로필에 일반 Runbook key를 지정해도 콘텐츠를 자동 생성·발행하지 않는다.
 
 이번 실행부는 **입력 1.3**을 유지한다. 1.4 목적 자동 선택, 목적 선택 전 bounded 이력 snapshot, purpose trace/소비자 검증은 후속 단계다. 새 DB 테이블, Fleet REST 직접 adapter, 시계열 임계값·인과 confirmation rule, 운영 LLM/Grafana 분석 품질 검수는 완료 범위가 아니다.
 
@@ -156,7 +170,7 @@ v1 fact 승격은 완전한 관측·동일 대상·단일 cluster·등록 freshn
 flowchart TD
     A["JC claim · snapshot와 scope 고정"] --> B["Orchestrator: Runbook 조회·조건 검사"]
     B --> C{"기존 근거로 충분?"}
-    C -- "예" --> F["코드로 결과 구성 · MCP/LLM 생략"]
+    C -- "예" --> F["코드로 결과 구성 · MCP/원인 Synthesis 생략"]
     C -- "아니요" --> D["전용 Runbook 또는 승인된 일반 Runbook 계획"]
     D -- "승인 계획 없음" --> U["미확정 결과 · 부족 사유"]
     D --> E["예산 예약 · 관측 task 배정"]
@@ -170,7 +184,8 @@ flowchart TD
     S --> V["Orchestrator: 후보·참조·품질 검증"]
     F --> V
     U --> V
-    V --> H[("DB: evidence + candidate 동일 transaction")]
+    V --> N["최종 보고서: 문장 ID 편집 · 실패 시 코드 기본 보고서"]
+    N --> H[("DB: evidence + candidate 동일 transaction")]
     H --> J["JC complete · 공개 확정"]
     J --> R["이력 조회 · Report Agent가 공개 ID/hash 활용"]
 ```
@@ -225,7 +240,7 @@ flowchart TD
 | R08 | `current_mapping`, `action_policy` |
 | R09 | `action_records`, `device_recovery_evidence`, `workload_evidence` |
 
-현재 추가되는 것은 계약 있는 health fact, 당시 관계가 있을 때의 `incident_mapping`, 성공 관측이 있을 때의 `observations`, 조회된 사건이 있을 때의 `incident_history` 등이다. DB에서 actions를 읽거나 D13을 조회했다고 나머지 fact가 자동 생성되지는 않는다. 현재 Grafana 경로에는 `error_code`, `topology`, `current_mapping`, `action_policy`, `action_records`, `device_recovery_evidence`, `workload_evidence` 생성이 연결되어 있지 않아 R01/R04/R07/R08/R09의 ready 조건을 충족하지 못한다. legacy `verified_facts`를 포함한 모든 입력에서 영구적으로 불가능하다는 의미는 아니다.
+현재 추가되는 것은 계약 있는 health fact, 당시 관계가 있을 때의 `incident_mapping`, 성공 관측이 있을 때의 `observations`, 조회된 사건이 있을 때의 `incident_history` 등이다. DB에서 actions를 읽거나 D13을 조회했다고 나머지 fact가 자동 생성되지는 않는다. 기본 Grafana 설정에서는 `error_code` fact 승격이 비활성이고, `topology`, `current_mapping`, `action_policy`, `action_records`, `device_recovery_evidence`, `workload_evidence` 생성이 연결되어 있지 않아 R01/R04/R07/R08/R09의 ready 조건을 충족하지 못한다. legacy `verified_facts`를 포함한 모든 입력에서 영구적으로 불가능하다는 의미는 아니다.
 
 ### 3.1.1 추가 개발할 fact 데이터 계약
 
@@ -435,7 +450,7 @@ Agent가 없으면 JC는 RCA 잡을 queued로 보존한다. 데이터 부족은 
 | 목적별 필수 조회 | 부족한 목적 fact를 보완하는 코드 등록 P ∩ R. 해당 purpose가 job에 없으면 실행하지 않음 |
 | LLM 후속 조사·가설 | 아직 실행하지 않은 optional_queries ∩ R ∩ A. LLM은 P나 allowlist를 변경할 수 없음 |
 
-현재 목적별 등록은 R02=D08/D06, R03=D08/D06/D02, R04=D08/D06/D13, R07=D01/D08/D06, R09=D05/D09/D13이다. 그 외 목적은 자동 추가 목록이 없다. 예를 들어 gpu_pod와 R09가 함께 선택되면 **코드의 R09 조사**는 D05/D13을 호출할 수 있지만 runbook이나 LLM이 같은 이유로 D13을 임의 선택할 수는 없다. 새 fact용 query를 연결할 때는 목적/절차 등록과 검수를 명시적으로 변경한다.
+2026-09-30 현재 자동 목적별 등록은 R02=D08/D06, R03=D08/D06이다. 승인 Runbook이 선택된 경우에만 추가하고 `purpose_plan` evidence로 기록한다. R04/R07/R09 등의 추가 목적별 query 연결은 설계 목표이며 아직 자동 실행하지 않는다. runbook/LLM이 이를 근거로 허용 목록 밖의 D13 등을 임의 선택할 수 없다. 새 fact용 query를 연결할 때는 목적/절차 등록과 검수를 명시적으로 변경한다.
 
 모든 출처에 등록 ID·대상·CPC/namespace·기간·예산·query/parser 계약 검사를 적용한다. 잘못된 ID를 교집합 연산으로 조용히 삭제하지 않고 거부 사유를 §7.2의 검증 evidence로 남긴다. runbook에서 허용하지 않은 query를 발견하면 해당 관측 계획의 적용을 보류하고 독립적으로 가능한 목적 조사는 보존한다.
 
@@ -587,7 +602,7 @@ XID·SXID 외의 조건 기반 오류(`disk`, `os`, `accelerator-nvidia-infiniba
 | P2 fact·호환성 | `contracts.py`의 Incident 입력, `parsers.py`, RCA `compatible_runbooks()` | snapshot 불변; typed fact→기존 결과 adapter·REQUIRED 충족 판정; health 계약·error_code event 정규화; 최초 corpus의 pending 후보 재평가. scope/hash 검사는 항상 선행 |
 | P3 검색 연결 | `rcca-agent/src/rcca_agent/retrieval.py`, `workflow.py` | 기존 BM25 재사용; pin된 corpus에서 검색; query hash·tokenizer/검색 설정·corpus 지문·rank·점수·선택/탈락 사유 기록 |
 | P4 순서 있는 관측·분석 | `workflow.py`, `procedures.py`, 공통 `Observation` 재사용 | §5.3 출처별 validator와 거부 trace; priority·중복 제거·예산 준수. §2.2의 수집→LLM 분석→코드 검증·재평가→재조사 연결과 증거 없음/모델 실패 처리 |
-| P5 결과·원천 권고 | RCA workflow·프롬프트, 공통 `contracts.py`/`store.py` | 기존 증거 충분 시 MCP·LLM 0회; 가설을 기존 cause_candidates로 변환; 모든 유효 경로의 공통 검증·저장·JC 발행·Ops 인용. 분석 생략/실패를 완료로 위장하지 않음 |
+| P5 결과·원천 권고 | RCA workflow·프롬프트, 공통 `contracts.py`/`store.py` | 기존 증거 충분 시 MCP·원인 Synthesis 0회, 최종 보고서 편집 별도 수행; 가설을 기존 cause_candidates로 변환; 모든 유효 경로의 공통 검증·저장·JC 발행·Ops 인용. 분석 생략/실패를 완료로 위장하지 않음 |
 | P6 검수·배포 인계 | `agents/tests`, 담당 모듈 QA, 운영 담당 | 아래 시험과 실제 CPC별 query 검증을 분리 기록. 통과한 runbook revision만 검토·발행 |
 
 검색은 현재의 작은 in-process 모듈로 시작한다. 별도 검색 엔진·벡터 DB·BM25 서비스는 요구하지 않는다. time-aware predicate도 실제 초기 runbook에 필요한 것부터 추가한다. 공통 Python/Observation 변경은 보고서 Agent의 수집·계산에 영향을 주므로 RCA만 시험하고 완료하지 않는다. 결과/API 확장은 Backend·Frontend·Ops 소비자와 03/04/14 계약을 같이 검토한다.
@@ -610,8 +625,8 @@ MCP 실패에 과거 DB evidence를 현재 관측처럼 대입하는 fallback은
 
 | 시험 | 기대 결과·검증 위치 |
 |---|---|
-| 기존 증거 충분 / R01 충족이나 R02 부족 | 전자는 MCP·LLM 0회여도 candidate 저장·JC 공개·Ops 인용 완료; 후자는 독립 목적 조사 계속. T33/T36 |
-| MCP 유효 증거 확보 / 기존·신규 증거 모두 없음 | 전자는 LLM에 증거·Runbook을 전달하고 분석·검증·재평가 수행; 후자는 근거 없는 LLM 호출 없이 추가 조회 또는 미확정 종료. T34/T35 |
+| 기존 증거 충분 / R01 충족이나 R02 부족 | 전자는 MCP·원인 Synthesis 0회, 최종 보고서 편집 별도 수행여도 candidate 저장·JC 공개·Ops 인용 완료; 후자는 독립 목적 조사 계속. T33/T36 |
+| MCP 유효 증거 확보 / 기존·신규 증거 모두 없음 | 전자는 LLM에 증거·Runbook을 전달하고 분석·검증·재평가 수행; 후자는 근거 없는 원인 Synthesis 없이 추가 조회 또는 미확정 종료. T34/T35 |
 | 추가 조사 필요 / 더 조사할 query·예산 없음 | 등록 query만 계획 보완하고 재수집→분석 반복; 불가능하면 근거·부족·종료 사유 저장. 수집만으로 완료 금지. T34/T46 |
 | LLM 미설정·오류·잘못된 refs·원격 종료 불명 | 유효 사실 보존·잘못된 후보 배제·미완료 평가 유지; 한도 내 재생성, 강제 ready 금지. 원격 종료 불명은 14의 fail·격리. T26/T34/T39 |
 | 최초/반복/재발 + 목적 없는 신규 입력 | Incident 최초 1회, Agent의 GPU/Pod/코드 없음·알 수 없는 코드 경로 선택; R03~R09가 R01/R02 기본값으로 배제되지 않음 |
@@ -624,7 +639,7 @@ MCP 실패에 과거 DB evidence를 현재 관측처럼 대입하는 fallback은
 | 대상/시각 다른 compatibility 값·상충 버전 | 서로 섞어 known을 만들지 않음; pending 후보를 관측 후 다시 평가; null을 wildcard로 사용하지 않음 |
 | fact 키만 있음·stale·빈 배열·완전한 빈 이력 | 키 존재만으로 REQUIRED 충족 금지; fact별 known/충족 규칙과 missing_inputs 검증; legacy adapter 회귀 |
 | Xid/SXid 복수 event와 error_code equals | namespace·대상·시간이 맞는 event만 지지; 불완전 로그의 부재는 unknown; legacy scalar 비교 유지 |
-| gpu_pod + R09의 D13 / 같은 query를 runbook·LLM이 요청 | 코드의 목적별 조회만 허용; runbook/LLM 경로는 거부 진단 evidence, 모든 요청에 scope·기간·예산 적용 |
+| R02/R03 + 승인 Runbook의 좁은 계획 | D08/D06 목적 조회를 추가하고 실행·식별·당시 관계 부족을 구분. R09/D13 자동 추가는 미구현 |
 | 빈 compatibility/적용 조건 / 새 search.codes의 Backend 조회 | 추가 발행 validator가 거부; draft 저장과 구분; legacy scalar·신규 선언 코드 조회 유지, 본문 코드·Xid/SXid 오매칭 금지 |
 | query ID 오타·procedure 밖 query·plan 불일치 | 발행/실행 validator가 설정 문제를 명시. 빈 데이터나 조사 완료로 위장하지 않음 |
 | D09 성공이나 error_code 미생성 | R01 부족 유지. 조회 성공과 의미 fact 충족을 분리 |

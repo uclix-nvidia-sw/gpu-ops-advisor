@@ -101,6 +101,22 @@ func (s *Server) parse(raw any, now time.Time) (alert, string) {
 	}
 	// Fingerprint+start identify the alarm lifecycle; target is explicit, never invented.
 	a.eventKey = Hash(Object{"source": s.Config.Source, "cluster": a.cluster, "fingerprint": a.fingerprint, "starts_at": a.starts, "target": a.target})
+	// Keep the deployed 1.3 identity stable; Fleet fields enrich new snapshots only.
+	for _, key := range []string{"machine_id", "component", "k8s_node_name"} {
+		value := a.labels[key]
+		if key == "k8s_node_name" {
+			annotation := a.annotations[key]
+			if value != "" && annotation != "" && value != annotation {
+				return a, "conflicting_node_name"
+			}
+			if value == "" {
+				value = annotation
+			}
+		}
+		if value != "" {
+			a.target[key] = value
+		}
+	}
 	for i := range s.Config.Policies {
 		if s.Config.Policies[i].AlertName == a.labels["alertname"] {
 			a.policy = &s.Config.Policies[i]
@@ -252,7 +268,14 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 		reason = "future_timestamp"
 	}
 	eligible := reason == ""
-	meaningful := Object{"target": a.target}
+	// Projection-only upgrades must not enqueue another RCA for a legacy lifecycle.
+	identityTarget := Object{}
+	for key, value := range a.target {
+		if !Has([]string{"machine_id", "component", "k8s_node_name"}, key) {
+			identityTarget[key] = value
+		}
+	}
+	meaningful := Object{"target": identityTarget}
 	if a.policy != nil {
 		meaningful["policy_revision"] = a.policy.Revision
 		fields := Object{}

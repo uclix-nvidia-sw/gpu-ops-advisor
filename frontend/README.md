@@ -1,5 +1,9 @@
 # GPU Ops Advisor Frontend
 
+## RCA 최종 보고서 · 2026-09-30
+
+공개 RCA 결과의 `narrative`를 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계로 표시한다. LLM 편집 complete와 failed/omitted의 기본 보고서를 구분하며, result_status와 원인 확정을 변경하지 않는다. 미발행 결과는 표시하지 않고 narrative 없는 기존 결과는 기존 화면을 유지한다. 원문 문자열은 React로 escape한다.
+
 React + TypeScript + Vite. [v1.3 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)의 Backend 계약 변경에 맞춰 실제 Go API 연결을 갱신했습니다. 사용자/권한 DTO, Assistant, 직접 RCA 실행, GUI 용량 변경은 제외했습니다.
 
 ## Namespace 보고서 실행·표시

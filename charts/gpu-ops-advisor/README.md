@@ -1,5 +1,11 @@
 # GPU Ops Advisor Helm chart
 
+## Fleet RCA profile v3 (2026-09-30)
+
+내장 Agent 프로필은 `builtin-grafana-v3`이며 D05/D09 `builtin-v3`의 JSON 필터·`health_contract`와 `health_contracts.fleet-component-log-v1`을 포함한다. `configuration.agents` 전체 override를 쓰는 설치는 새 설정을 직접 병합해야 한다. 기본 계약은 로그 기록 관측만 제공하며 실제 장비 시각/freshness fact 승격은 비활성이다. [RCA 설정 계약](../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 확인한다.
+
+공통 Python 변경으로 RCA/Ops 이미지를 모두 재빌드하고 target 투영에는 Incident, 최종 보고서 표시에는 Frontend의 새 이미지가 필요하다. DB migration·기존 snapshot 재작성은 없다. 배포 승인 후 새 작업의 수집·분석·보고서 공개를 검수하고 기존 PVC를 보존한다. 로컬 검사는 운영 배포 검증이 아니다.
+
 Namespace 보고서의 `configuration.namespaceReportProfileRevision` 기본값은 `report-namespace-v1`이다. 새 Ops Worker → JC(보고서 전용 criteria 1.2 프로필) → Backend/Frontend 순서로 반영한다. `configuration.jobController`를 직접 지정했다면 전체 객체에 새 프로필을 포함해야 한다. 전역 criteria와 RCA 프로필은 유지한다. 이전 버전으로 복구할 때는 신규 요청 생산자인 Backend/Frontend부터 되돌리고 실행 중 작업의 고정 설정과 기존 DB·PVC를 보존한다. 실제 업그레이드는 [기존 환경 업그레이드](../../docs/helm-upgrade-existing.md)를 따른다.
 
 기본 설치는 **8개 Pod**입니다. 각 모듈은 1 replica이며 자동 확장은 포함하지 않습니다.

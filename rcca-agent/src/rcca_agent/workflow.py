@@ -11,11 +11,12 @@ from agent_common.contracts import (
     incident_source,
 )
 from agent_common.normalize import allocations
-from agent_common.observation import Observation
+from agent_common.observation import Observation, usable_observation
 from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from .procedures import select_procedure
 from .synthesis import synthesis_input, synthesize
+from .report import write_report
 from .observation_agents import collect_round
 from .incident import alert_clues
 from .retrieval import retrieve_runbooks
@@ -33,6 +34,9 @@ REQUIRED = {
     "R08": ["current_mapping", "action_policy"],
     "R09": ["action_records", "device_recovery_evidence", "workload_evidence"],
 }
+
+# Purpose obligations are independent of the selected runbook's narrow plan.
+PURPOSE_QUERIES = {"R02": ("D08", "D06"), "R03": ("D08", "D06")}
 
 
 def compatible_runbooks(rows, source):
@@ -170,12 +174,10 @@ def matching_runbooks(books, legacy_facts, verified, data):
 
 
 def normalized_state(obs, collected, data, profile, initial_facts):
-    health = parse_health(obs.evidence, profile.get("health_contracts", {}))
-    complete = {
-        e["id"]: e
-        for e in obs.evidence
-        if e["tool_status"] == "ok" and e["quality"].get("complete")
-    }
+    health = parse_health(
+        obs.evidence, profile.get("health_contracts", {}), profile["queries"]
+    )
+    complete = {e["id"]: e for e in obs.evidence if usable_observation(e)}
     valid = [h for h in health if set(h["evidence_refs"]) <= complete.keys()]
     # Scope-local health is usable only for the same target. A missing freshness
     # contract cannot authorize a v1 runbook, even if the transport succeeded.
@@ -194,14 +196,27 @@ def normalized_state(obs, collected, data, profile, initial_facts):
     ]
     verified = (
         health_facts(fresh, data.get("target", {}))
-        if len(data["scope"]["clusters"]) == 1
+        if len(data["scope"]["clusters"]) == 1 and not data.get("identity_conflicts")
         else {}
     )
     facts = {**initial_facts, **verified}
     mapping = allocations(
-        collected.get("D08", []), data["time_range"], collected.get("D06", [])
+        [
+            e
+            for e in collected.get("D08", [])
+            if e["tool_status"] == "ok" and e["quality"].get("complete")
+        ],
+        data["time_range"],
+        [
+            e
+            for e in collected.get("D06", [])
+            if e["tool_status"] == "ok" and e["quality"].get("complete")
+        ],
     )
     incident_at = timestamp(data["incident_time"])
+    mapping_identity = {
+        k: v for k, v in data.get("target", {}).items() if k in {"gpu_uuid", "pod_uid"}
+    }
     relations = [
         dict(
             cluster_id=m["cluster_id"],
@@ -214,6 +229,14 @@ def normalized_state(obs, collected, data, profile, initial_facts):
         )
         for m in mapping
         if m["start"] <= incident_at < m["end"]
+        and not data.get("identity_conflicts")
+        and mapping_identity
+        and all(m.get(k) == v for k, v in mapping_identity.items())
+        and all(
+            m.get(k) == v
+            for k, v in data.get("target", {}).items()
+            if k in {"node", "namespace"}
+        )
     ]
     available = set(facts)
     if relations:
@@ -294,6 +317,20 @@ async def run(tools):
     # The raw snapshot stays immutable. Display names narrow collection only;
     # they do not prove a machine/GPU binding or become verified facts.
     target = dict(data.get("target", {}))
+    conflicts = list(clues["conflicts"])
+    for key in ("machine_id", "component", "k8s_node_name"):
+        if clues.get(key):
+            if target.get(key) and target[key] != clues[key]:
+                conflicts.append(key)
+            else:
+                target[key] = clues[key]
+    if (
+        target.get("node")
+        and target.get("k8s_node_name")
+        and target["node"] != target["k8s_node_name"]
+    ):
+        conflicts.append("node")
+    clues["conflicts"] = sorted(set(conflicts))
     if clues.get("k8s_node_name") and not target.get("node"):
         target["node"] = clues["k8s_node_name"]
     log_query_target = {}
@@ -301,7 +338,12 @@ async def run(tools):
         log_query_target["node"] = target["node"]
     if clues.get("component"):
         log_query_target["component"] = clues["component"]
-    data = {**data, "target": target, "log_query_target": log_query_target}
+    data = {
+        **data,
+        "target": target,
+        "log_query_target": log_query_target,
+        "identity_conflicts": clues["conflicts"],
+    }
     obs = Observation(tools, profile, data, ctx["deadline"])
     eid = str(uuid4())
     obs.evidence.append(
@@ -368,6 +410,38 @@ async def run(tools):
             ]
         )
     )
+    purpose_queries = (
+        list(
+            dict.fromkeys(
+                q
+                for purpose in data["purpose_ids"]
+                for q in PURPOSE_QUERIES.get(purpose, ())
+            )
+        )
+        if selected
+        else []
+    )
+    # These queries are registered code obligations, not model/runbook expansion.
+    for query in purpose_queries:
+        if query not in queries:
+            queries.append(query)
+        if query not in approved:
+            approved.append(query)
+    obs._evidence(
+        "purpose_plan",
+        None,
+        data["time_range"],
+        {
+            "purpose_ids": data["purpose_ids"],
+            "required_queries": purpose_queries,
+            "mapping_target_known": bool(
+                target.get("gpu_uuid") or target.get("pod_uid")
+            ),
+            "blocked_reason": None if selected else "approved_runbook",
+        },
+        "ok",
+        {"deterministic": True},
+    )
     collected = {}
     budget = {
         "queries": profile["limits"]["max_queries"],
@@ -405,6 +479,21 @@ async def run(tools):
             gaps.append("causal_confirmation_evidence")
         if not selected:
             gaps.append("approved_runbook")
+        if any(p in PURPOSE_QUERIES for p in data["purpose_ids"]) and not relations:
+            gaps.append(
+                "mapping_target_unverified"
+                if not (target.get("gpu_uuid") or target.get("pod_uid"))
+                else "mapping_not_observed_at_incident"
+            )
+            if not all(q in collected for q in ("D08", "D06")):
+                gaps.append("mapping_queries_not_executed")
+            elif not any(
+                e["tool_status"] == "ok" and e["quality"].get("complete")
+                for e in collected["D08"]
+            ):
+                gaps.append("mapping_source_unavailable")
+        if data["identity_conflicts"]:
+            gaps.append("target_identity_conflict")
         degraded = any(
             e["tool_status"] in ("unavailable", "partial")
             for es in collected.values()
@@ -441,13 +530,17 @@ async def run(tools):
         if (
             fast_path
             or round_no == 1
-            or gate not in ("insufficient_actionable", "conflicted")
+            or gate not in ("insufficient_actionable", "conflicted", "degraded")
             or not remaining
             or budget["queries"] <= 0
             or time.monotonic() >= ctx["deadline"]
         ):
             break
-        queries = await choose_followup(ctx["llm"], remaining, gaps)
+        queries = (
+            remaining[:1]
+            if gate == "degraded"
+            else await choose_followup(ctx["llm"], remaining, gaps)
+        )
         if not queries:
             break
         followups += 1
@@ -485,6 +578,18 @@ async def run(tools):
         analysis_missing.append("approved_runbook")
     if gate in ("degraded", "conflicted"):
         analysis_missing.append("observation_" + gate)
+    analysis_missing.extend(
+        g
+        for g in gaps
+        if g
+        in {
+            "mapping_target_unverified",
+            "mapping_not_observed_at_incident",
+            "target_identity_conflict",
+            "mapping_queries_not_executed",
+            "mapping_source_unavailable",
+        }
+    )
     candidates = list(model_candidates)
     recommendations = []
     for book in applicable:
@@ -572,10 +677,16 @@ async def run(tools):
     ]
     conflicting = conflicting_health(health)
     if not candidates and health:
+        usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
+        candidate_health = [
+            h
+            for h in health
+            if h["check_status"] == "valid" and set(h["evidence_refs"]) <= usable_ids
+        ]
         supporting = list(
             dict.fromkeys(
                 r
-                for h in health
+                for h in candidate_health
                 if h["normalized_health"] in ("degraded", "unhealthy")
                 for r in h["evidence_refs"]
             )
@@ -583,7 +694,7 @@ async def run(tools):
         contradicting = list(
             dict.fromkeys(
                 r
-                for h in health
+                for h in candidate_health
                 if h["normalized_health"] == "healthy"
                 for r in h["evidence_refs"]
             )
@@ -592,7 +703,7 @@ async def run(tools):
             candidates.append(
                 dict(
                     id="observed_device_symptom",
-                    claim="장비 검사에서 이상 상태가 관측됐으나 근본 원인은 추가 확인이 필요합니다.",
+                    claim="수집 로그에 이상 상태가 보고됐으나 근본 원인과 현재 장비 상태는 추가 확인이 필요합니다.",
                     causal_status="candidate",
                     supporting_refs=supporting,
                     contradicting_refs=contradicting,
@@ -651,5 +762,6 @@ async def run(tools):
         "remaining_budget": budget,
     }
     result["limitations"].extend(analysis_limits)
+    await write_report(result, data, clues, obs.evidence, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": obs.evidence}

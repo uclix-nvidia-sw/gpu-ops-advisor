@@ -1,5 +1,15 @@
 # RCA·Runbook 개발 인수인계
 
+## 2026-09-30 후속 반영
+
+시간 정밀도 partial의 개별 관측 사용, degraded 후속 query, Fleet JSON adapter, Incident target 투영/중복 호환, R02/R03 D08/D06 계획을 함께 반영했다. 구현 계약과 남은 운영 검수는 [RCA README](README.md#2026-09-30-fleet-rca-수집분석-보완), 검증 결과는 [Agent QA](../agents/QA.md)를 따른다. 기본 Fleet 설정은 로그 보고만 해석하며 현재 장비 상태/조치 조건을 확정하지 않는다. 기존 결과 재작성과 운영 배포는 포함하지 않는다.
+
+## 2026-09-30 추가 인수인계: 최종 보고서
+
+`report.py`와 workflow 마지막 단계에 다섯 섹션의 최종 보고서를 추가했다. 원인 Synthesis와 별개로 모델 편집을 시도하며, 기존 `explain()`의 문장 ID 선택을 사용한다. 모델 미설정/확정 실패에도 기본 보고서를 남기고 원격 종료 불명은 격리한다. `narrative`/`narrative_status`와 `quality.report`로 표시하며 assessment·원인 수준·권고 적격성은 그대로다. RCA 화면도 이 보고서를 표시한다.
+
+아래 2026-09-28 검증 수치는 당시 기록이다. 이번 변경의 명령·검증 범위·미검증 항목은 [Agent QA](../agents/QA.md)와 [Frontend QA](../frontend/QA.md)를 따른다. 운영 배포·실제 Fleet/LLM 품질 검수·기존 작업 재분석은 별도이며 이 변경으로 완료됐다고 해석하지 않는다.
+
 기록일: 2026-09-28. 이 문서는 다른 PC의 개발자·Codex·Claude가 대화 기록 없이 작업을 이어가기 위한 진입점이다. 저장소 루트의 [AGENTS.md](../AGENTS.md), [CLAUDE.md](../CLAUDE.md)와 해당 scoped rule을 먼저 따른다.
 
 ## 현재 단계
@@ -41,7 +51,7 @@
 | Incident 1.4 node 라벨/annotation 수신·충돌 거부 | [episodes.go](../incident/service/episodes.go), service/tests의 회귀 검사. RCA Worker의 1.4 지원을 의미하지 않음 |
 | 설정 | [원본 프로필](../agents/config.example.json), [Helm 미러](../charts/gpu-ops-advisor/files/agents.json). `rca.general_runbook_key`, `limits.max_concurrency` |
 
-실행은 **JC claim → Runbook 조회·코드 검사 → 기존 근거 충분 시 수집·LLM 생략 / 부족 시 승인 계획의 병렬 수집 → 코드 충분성·최대 1회 재조사 → 도구 없는 Synthesis → 코드 검증 → DB evidence/candidate → JC 공개**다.
+실행은 **JC claim → Runbook 조회·코드 검사 → 기존 근거 충분 시 수집·원인 Synthesis 생략 / 부족 시 승인 계획의 병렬 수집 → 코드 충분성·최대 1회 재조사 → 도구 없는 Synthesis → 코드 검증 → DB evidence/candidate → JC 공개**다.
 
 멀티 에이전트는 하나의 NAT workflow·프로세스·JC lease 안의 역할 분리다. Observation은 query별 수집 작업이다. GPU·네트워크·워크로드별 독립 LLM 전문 에이전트나 분산 서비스는 아직 없다. Synthesis의 모델 후보는 candidate이며 참조 검증이 문장 의미의 진실성을 보장하지 않는다.
 
@@ -53,7 +63,7 @@
 - 위 보류는 RCA 작업 접수·시작을 막는다는 뜻이 아니다. JC claim과 사건/Runbook 검토는 수행하며, 승인 계획이 없을 때 MCP 수집·LLM 분석을 생략하고 blocked 결과를 저장·공개한다. 전용 Runbook 미일치는 승인된 일반 계획으로 조사한다.
 - Worker는 파일 디렉터리를 자동 읽지 않고 DB의 scope·고정 revision/hash·검토 상태를 검사한다. Helm upgrade는 이 JSON을 DB에 발행하지 않는다.
 - 현재 조건식은 등록 문자열 fact의 `field/equals`다. D09/D05는 로그·상태, D02는 보조 사용률 계획이며 `fact_names` 자체가 fact 생성기를 제공하지 않는다.
-- 기본 health parser는 error_code fact를 생성하지 않는다. reason의 Xid/SXid 추출은 검색 단서다. 빈 compatibility를 임의 값으로 채우거나 parser 없이 verified_facts로 승격해서 실행을 통과시키지 않는다.
+- Fleet adapter는 Xid/SXid를 관측에 추출한다. 기본 time 계약과 freshness 미등록 상태에서는 error_code fact로 승격하지 않는다. alert reason의 코드는 계속 검색 단서다. 빈 compatibility를 임의 값으로 채우거나 parser 없이 verified_facts로 승격해서 실행을 통과시키지 않는다.
 - 선택된 계획의 지침·한계는 pending/applicable 상태와 함께 Synthesis에 전달한다. 일반 조사 또는 조건 미확인의 지침을 원인 근거로 간주하지 않는다.
 
 ## 다음 개발 순서와 필요한 입력
@@ -82,7 +92,7 @@ E2E는 위 단위 명령에 포함되지 않는다. 별도 테스트 전용 Post
 
 이 PC의 Windows 검증에서는 경로의 대괄호가 Go embed를, 한글이 PostgreSQL initdb를 방해해 임시 소스 복사본·ASCII 테스트 scratch 경로를 사용했다. 다른 PC에서는 ASCII·대괄호 없는 checkout 경로를 권장한다. `.local`의 venv·바이너리·로그·임시 runner와 개인 환경변수는 Git으로 전달되지 않는다. 기존 로컬 경로를 복사하는 대신 고정 의존성을 새로 준비한다.
 
-최신 검증은 **전체 106건(일반 97 + E2E 9) 통과**다. 신규 263건을 실제 일괄 CLI로 격리 DB에 등록하고, 재실행 시 중복 쓰기 없이 재개되는지 확인했다. 기존 대표 3건의 검토·발행·RCA 소비도 통과했다. Backend vet/race test/build와 DB E2E도 통과했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료를 의미하지 않는다. 자세한 실행 범위는 [Agent QA](../agents/QA.md)를 따른다.
+2026-09-28 당시 검증은 **전체 106건(일반 97 + E2E 9) 통과**다. 신규 263건을 실제 일괄 CLI로 격리 DB에 등록하고, 재실행 시 중복 쓰기 없이 재개되는지 확인했다. 기존 대표 3건의 검토·발행·RCA 소비도 통과했다. Backend vet/race test/build와 DB E2E도 통과했다. 실제 DB/JC/Worker/NAT/MCP를 사용했지만 Grafana 데이터·LLM 응답은 fixture다. 원격 CI·운영 품질 검수 완료를 의미하지 않는다. 자세한 실행 범위는 [Agent QA](../agents/QA.md)를 따른다.
 
 ## 원격 반영과 CSC 적용
 
