@@ -1,0 +1,120 @@
+import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { EvidenceRows, IncidentDebug, IncidentStates, RcaJobSummary, RcaResult } from './RcaDebug';
+
+const render = (node: ReactNode) =>
+  renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>,
+  );
+describe('RCA diagnostics', () => {
+  it('keeps resolved alarms separate from open incidents and human review', () => {
+    const html = render(
+      <IncidentStates
+        incident={{
+          alarm_status: 'resolved',
+          state: 'open',
+          status: 'critical',
+          review_status: 'reviewing',
+        }}
+      />,
+    );
+    expect(html).toContain('해제됨');
+    expect(html).toContain('열림');
+    expect(html).toContain('검토 중');
+    expect(html).not.toContain('해결됨');
+    expect(html).not.toContain('긴급');
+  });
+  it('links each job from the incident and explains absent jobs', () => {
+    expect(
+      render(<IncidentDebug incident={{ analyses: [{ job_id: 'job-a', status: 'running' }] }} />),
+    ).toContain('href="/jobs/job-a"');
+    const empty = render(<IncidentDebug incident={{ rca_eligibility_reason: 'stale_alert' }} />);
+    expect(empty).toContain('연결된 RCA 작업이 없습니다');
+    expect(empty).toContain('stale_alert');
+  });
+  it('does not invent a publication or a completed collection while running', () => {
+    const html = render(
+      <RcaJobSummary
+        job={{ status: 'running', stage: 'workflow', attempt_no: 2, incident_id: 'incident-a' }}
+      />,
+    );
+    expect(html).toContain('아직 공개된 결과가 없습니다');
+    expect(html).toContain('워크플로우 종료 후 일괄 저장');
+    expect(html).toContain('href="/incidents/incident-a"');
+    expect(html).not.toContain('결과 공개 완료');
+  });
+  it('shows succeeded + blocked + zero LLM records without claiming connection failure', () => {
+    const html = render(
+      <RcaResult
+        job={{
+          id: 'job-a',
+          status: 'succeeded',
+          result_ref: 'candidate-a',
+          result: {
+            result_status: 'blocked',
+            termination_reason: 'query_failed',
+            llm_usage: { calls: 0 },
+            quality: { analysis: { status: 'no_usable_evidence' } },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('결과 공개 완료');
+    expect(html).toContain('근거 부족');
+    expect(html).toContain('관측 조회가 실패');
+    expect(html).toContain('연결 실패를 판단하지 않습니다');
+    expect(html).toContain('공개 결과에 근거 참조가 없습니다');
+  });
+  it('hides unpublished result bodies', () => {
+    const html = render(
+      <RcaResult
+        job={{ status: 'failed', result: { summary: 'candidate-must-stay-hidden' } }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).not.toContain('candidate-must-stay-hidden');
+    expect(html).toContain('공개 결과 없음');
+  });
+  it('prioritizes failed collection and preserves empty, partial, zero and unknown', () => {
+    const items = [
+      {
+        id: 'ok',
+        query_id: 'D01',
+        tool_status: 'ok',
+        quality: { complete: true, sample_count: 4 },
+      },
+      {
+        id: 'empty',
+        query_id: 'D02',
+        tool_status: 'empty',
+        quality: { complete: true, sample_count: 0 },
+      },
+      { id: 'partial', query_id: 'D03', tool_status: 'partial', quality: { complete: false } },
+      {
+        id: 'failed',
+        query_id: 'D09',
+        tool_status: 'unavailable',
+        quality: { error_code: 'loki_entry_limit_exceeded' },
+      },
+    ];
+    const html = render(<EvidenceRows items={items} onEvidence={() => {}} />);
+    expect(html.indexOf('D09')).toBeLessThan(html.indexOf('D03'));
+    expect(html.indexOf('D03')).toBeLessThan(html.indexOf('D02'));
+    for (const text of [
+      '빈 결과',
+      '부분 수집',
+      '완전성: 미확인',
+      '응답 표본: 0',
+      '응답 표본: 미확인',
+      'loki_entry_limit_exceeded',
+    ])
+      expect(html).toContain(text);
+    expect(items[0].id).toBe('ok');
+  });
+});

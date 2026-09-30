@@ -1,14 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Field, Notice, PageHead, Panel } from '../components/ui';
-import {
-  CommandError,
-  DataView,
-  EvidenceDialog,
-  More,
-  QueryState,
-  ResultContent,
-} from '../components/live';
+import { CommandError, DataView, EvidenceDialog, More, QueryState } from '../components/live';
 import {
   errorText,
   localInput,
@@ -23,6 +16,7 @@ import {
 } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import { useApp } from '../lib/store';
+import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
 export function ResultPage({ kind }: { kind: string }) {
   const { id } = useParams(),
@@ -98,14 +92,16 @@ export function ResultPage({ kind }: { kind: string }) {
         <Panel title={str(r.title, kind === 'incident' ? '사건 관측' : '저장된 결과')}>
           <div className="live-padding stack">
             <div className="head-actions">
-              <Badge status={str(r.status)} />
+              {kind !== 'incident' && <Badge status={str(r.status)} />}
               {kind !== 'incident' && <Badge status={str(r.result_status) || null} />}
               <span>{formatDate(str(r.created_at))}</span>
             </div>
             {kind === 'report' ? (
               <ReportContent value={r.result} onEvidence={setEvidence} />
+            ) : kind === 'incident' ? (
+              <IncidentDebug incident={r} />
             ) : (
-              <ResultContent value={kind === 'incident' ? r : r.result} onEvidence={setEvidence} />
+              <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
             )}
             <div className="head-actions">
               {kind !== 'incident' && (
