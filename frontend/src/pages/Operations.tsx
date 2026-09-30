@@ -283,8 +283,16 @@ export function OperationsReports() {
   const app = useApp(),
     [params, setParams] = useSearchParams();
   const topic = params.get('topic') || '';
+  const finalOnly = params.get('tab') === 'final';
   const q = useList(
-    app.canOperate ? queryPath('/reports', { scope: app.scope, topic_id: topic, limit: 30 }) : null,
+    app.canOperate
+      ? queryPath('/reports', {
+          scope: app.scope,
+          topic_id: topic,
+          status: finalOnly ? 'succeeded' : '',
+          limit: 30,
+        })
+      : null,
     true,
   );
   return (
@@ -295,10 +303,44 @@ export function OperationsReports() {
           <h1 tabIndex={-1}>수치에서 운영 판단으로.</h1>
           <p>무엇이 관측되었는지, 무엇을 아직 판단할 수 없는지 함께 확인하세요.</p>
         </div>
-        <Link className="button primary" to="/reports/new">
-          새 운영 분석 요청 <ArrowRight size={16} />
-        </Link>
+        <div className="head-actions">
+          <Link className="button primary" to="/reports?tab=final">
+            최종 보고서 <ArrowRight size={16} />
+          </Link>
+          <Link className="button" to="/reports/new">
+            새 운영 분석 요청 <ArrowRight size={16} />
+          </Link>
+        </div>
       </header>
+      <div className="tabs" aria-label="보고서 보기">
+        {[
+          [false, '전체 이력'],
+          [true, '최종 보고서'],
+        ].map(([final, label]) => (
+          <button
+            key={String(label)}
+            className={finalOnly === final ? 'active' : ''}
+            aria-pressed={finalOnly === final}
+            onClick={() => {
+              const next = new URLSearchParams(params);
+              if (final) next.set('tab', 'final');
+              else next.delete('tab');
+              setParams(next);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {finalOnly && (
+        <section className="ops-section">
+          <h2>공개된 Ops 최종 보고서</h2>
+          <p>
+            완료된 보고서를 바로 읽을 수 있습니다. 자료 부족·부분 분석 여부는 결과 품질에서
+            확인하세요.
+          </p>
+        </section>
+      )}
       <div className="ops-report-tools">
         <Field label="궁금한 분석 주제">
           <select
@@ -322,7 +364,11 @@ export function OperationsReports() {
       <QueryState query={q} empty={!q.items.length}>
         <div className="ops-library">
           {q.items.map((r, i) => (
-            <Link className="ops-report-book" key={str(r.id)} to={`/reports/${str(r.id)}`}>
+            <Link
+              className="ops-report-book"
+              key={str(r.id)}
+              to={`/reports/${str(r.id)}${r.result_ref != null ? '#final-report' : ''}`}
+            >
               <div className="ops-book-spine">
                 <FileChartColumn size={32} />
                 <span>{String(i + 1).padStart(2, '0')}</span>

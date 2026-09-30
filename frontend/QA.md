@@ -1,5 +1,7 @@
 # 2026-09-30 보고서 GPU·시간과 부분 산출 안내
 
+Ops 첫 화면 후속 개선: Frontend `npm test` **42 passed**, `npm run format:check`와 `npm run build` **통과**. 두 화면의 강조 버튼/탭, 완료 필터와 주제 보존, 공개 보고서 hash 바로가기를 렌더 fixture로 확인했다. API/LLM 변경 없음. 실제 브라우저 검수는 미수행이다.
+
 ## RCA 첫 화면·Ops 최종 보고서 — 2026-09-30
 
 main `40b68d3` 기반. Frontend에서 `npm run format:check`, `npm test`(**38 passed**), `npm run build` **통과**. 공개 참조가 있는 RCA/Ops의 hash 바로가기, 미발행 링크 미노출, Ops 제목/본문/기본 보고서·HTML escape 및 기존 Namespace/수치 표시 회귀를 확인했다. 실제 브라우저 상호작용과 운영 API 화면은 **미검증**이며 컴포넌트 렌더 fixture다. 별도 실제 프로세스 8건은 [Agent QA](../agents/QA.md)에 기록했다.

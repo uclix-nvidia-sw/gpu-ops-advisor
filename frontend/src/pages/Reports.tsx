@@ -14,13 +14,21 @@ export function Reports() {
   const app = useApp();
   const [filterParams, setFilterParams] = useSearchParams();
   const topic = filterParams.get('topic') || '';
+  const finalOnly = filterParams.get('tab') === 'final';
   const setTopic = (value: string) => {
     const next = new URLSearchParams(filterParams);
     next.set('topic', value);
     setFilterParams(next);
   };
   const q = useList(
-    app.ready ? queryPath('/reports', { scope: app.scope, topic_id: topic, limit: 30 }) : null,
+    app.ready
+      ? queryPath('/reports', {
+          scope: app.scope,
+          topic_id: topic,
+          status: finalOnly ? 'succeeded' : '',
+          limit: 30,
+        })
+      : null,
     true,
   );
   return (
@@ -31,7 +39,10 @@ export function Reports() {
         description="저장된 근거를 바탕으로 운영 분석을 요청하고 결과를 확인합니다."
         actions={
           <>
-            <Link className="button primary" to="/reports/new?preset=namespace">
+            <Link className="button primary" to="/reports?tab=final">
+              최종 보고서
+            </Link>
+            <Link className="button" to="/reports/new?preset=namespace">
               Namespace GPU 현황
             </Link>
             <Link className="button" to="/reports/new">
@@ -41,7 +52,33 @@ export function Reports() {
         }
       />
       <NavTabs items={reportTabs} />
-      <Panel title="보고서 목록">
+      <div className="tabs" aria-label="보고서 보기">
+        {[
+          [false, '전체 이력'],
+          [true, '최종 보고서'],
+        ].map(([final, label]) => (
+          <button
+            key={String(label)}
+            className={finalOnly === final ? 'active' : ''}
+            aria-pressed={finalOnly === final}
+            onClick={() => {
+              const next = new URLSearchParams(filterParams);
+              if (final) next.set('tab', 'final');
+              else next.delete('tab');
+              setFilterParams(next);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <Panel title={finalOnly ? '공개된 Ops 최종 보고서' : '보고서 목록'}>
+        {finalOnly && (
+          <p>
+            완료된 보고서를 바로 읽을 수 있습니다. 자료 부족·부분 분석 여부는 결과 품질에서
+            확인하세요.
+          </p>
+        )}
         <div className="live-toolbar">
           <Field label="분석 주제">
             <select value={topic} onChange={(e) => setTopic(e.target.value)}>
