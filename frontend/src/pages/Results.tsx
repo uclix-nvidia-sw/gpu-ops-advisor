@@ -8,6 +8,7 @@ import {
   num,
   obj,
   queryPath,
+  rows,
   str,
   useCommand,
   useList,
@@ -15,9 +16,13 @@ import {
   type Row,
 } from '../lib/live';
 import { formatDate } from '../lib/domain';
+import { topicName } from '../lib/report';
 import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
+import { WorkflowGuide } from '../components/WorkflowGuide';
+import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
+import { RcaEvidence } from '../components/RcaDebug';
 export function ResultPage({ kind }: { kind: string }) {
   const { id } = useParams(),
     app = useApp(),
@@ -30,6 +35,7 @@ export function ResultPage({ kind }: { kind: string }) {
     ),
     cmd = useCommand();
   const [evidence, setEvidence] = useState(''),
+    [incidentState, setIncidentState] = useState(''),
     [status, setStatus] = useState(''),
     [reason, setReason] = useState(''),
     [downloadError, setDownloadError] = useState(''),
@@ -89,6 +95,19 @@ export function ResultPage({ kind }: { kind: string }) {
       />
       <CommandError error={downloadError} />
       <QueryState query={q}>
+        {app.mode === 'developer' && kind !== 'incident' && (
+          <WorkflowGuide key={id} job={r} kind={kind === 'report' ? 'report' : 'rca'} />
+        )}
+        {app.mode === 'developer' && kind === 'incident' && (
+          <Notice>
+            <strong>이 화면의 검증 지점: Incident → RCA 작업 연결</strong>
+            <p>
+              target·evidence_version·rca_eligibility_reason을 확인한 뒤 연결된 작업을 여세요. 각
+              작업에서 실행 → 근거 → 판단 → 공개의 데이터를 단계별로 확인할 수 있습니다.
+              Webhook/outbox 원문은 현재 API에 없습니다.
+            </p>
+          </Notice>
+        )}
         <Panel title={str(r.title, kind === 'incident' ? '사건 관측' : '저장된 결과')}>
           <div className="live-padding stack">
             <div className="head-actions">
@@ -97,11 +116,55 @@ export function ResultPage({ kind }: { kind: string }) {
               <span>{formatDate(str(r.created_at))}</span>
             </div>
             {kind === 'report' ? (
-              <ReportContent value={r.result} request={r} onEvidence={setEvidence} />
+              <>
+                <div className={app.mode === 'operations' ? 'ops-report-reader' : undefined}>
+                  {app.mode === 'operations' && r.result_ref != null && (
+                    <nav className="ops-report-index" aria-label="보고서 읽기 순서">
+                      <span className="ops-overline">이 보고서 읽기</span>
+                      <strong>수치 → 해석 → 근거</strong>
+                      {rows(obj(r.result).topics).map((topic) => (
+                        <a
+                          key={str(topic.topic_id)}
+                          href={`#topic-${str(topic.topic_id)}`}
+                          onClick={() => {
+                            const details = document.getElementById('report-topic-details');
+                            if (details instanceof HTMLDetailsElement) details.open = true;
+                          }}
+                        >
+                          {topicName(str(topic.topic_id))}
+                        </a>
+                      ))}
+                      <p>산출 제한을 먼저 확인하고, 권고의 전제와 근거를 읽으세요.</p>
+                    </nav>
+                  )}
+                  <ReportContent
+                    value={r.result_ref != null ? r.result : undefined}
+                    request={r}
+                    onEvidence={setEvidence}
+                  />
+                </div>
+                {app.mode === 'developer' && r.result_ref != null && (
+                  <RcaEvidence
+                    key={str(r.result_ref)}
+                    result={obj(r.result)}
+                    job={r}
+                    onEvidence={setEvidence}
+                  />
+                )}
+              </>
             ) : kind === 'incident' ? (
-              <IncidentDebug incident={r} />
+              app.mode === 'operations' ? (
+                <OperationsIncident incident={r} />
+              ) : (
+                <IncidentDebug incident={r} />
+              )
             ) : (
-              <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
+              <>
+                {app.mode === 'operations' && <OperationsRca job={r} />}
+                <div className={app.mode === 'operations' ? 'ops-supporting-result' : ''}>
+                  <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
+                </div>
+              </>
             )}
             <div className="head-actions">
               {kind !== 'incident' && (
@@ -123,20 +186,36 @@ export function ResultPage({ kind }: { kind: string }) {
                   if (
                     await cmd.run(
                       `/incidents/${id}`,
-                      { review_status: status, memo: reason.trim() },
+                      {
+                        ...(status ? { review_status: status } : {}),
+                        ...(incidentState ? { state: incidentState } : {}),
+                        memo: reason.trim(),
+                      },
                       { method: 'PATCH', version: num(r.version) },
                     )
                   ) {
                     setReason('');
                     setStatus('');
+                    setIncidentState('');
                     app.notify('사건 상태 변경을 저장했습니다.');
                   }
                 }}
               >
                 <div className="form-grid">
+                  <Field label="사건 처리" hint="종결은 장비 복구나 RCA 재실행이 아닙니다.">
+                    <select
+                      value={incidentState}
+                      onChange={(e) => setIncidentState(e.target.value)}
+                    >
+                      <option value="">현재 상태 유지</option>
+                      <option value="open">열림</option>
+                      <option value="acknowledged">확인</option>
+                      <option value="closed">종결</option>
+                    </select>
+                  </Field>
                   <Field label="검토 상태">
-                    <select required value={status} onChange={(e) => setStatus(e.target.value)}>
-                      <option value="">선택</option>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                      <option value="">현재 상태 유지</option>
                       {['unreviewed', 'reviewing', 'reviewed'].map((v) => (
                         <option key={v}>{v}</option>
                       ))}
@@ -147,7 +226,10 @@ export function ResultPage({ kind }: { kind: string }) {
                   </Field>
                 </div>
                 <CommandError error={cmd.error} />
-                <button className="button primary" disabled={cmd.busy || !status}>
+                <button
+                  className="button primary"
+                  disabled={cmd.busy || (!status && !incidentState)}
+                >
                   상태 변경
                 </button>
               </form>

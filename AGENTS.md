@@ -2,6 +2,8 @@
 
 The canonical project-wide team instructions are maintained in [CLAUDE.md](CLAUDE.md) and the English files in [.claude/rules/](.claude/rules/).
 
+Project branch naming: all coding assistants must use task-based prefixes such as `feat/`, `fix/` or `docs/`; do not use `codex/`. See the shared [Git rules](.claude/rules/workflow.md#git-and-review).
+
 Before inspecting, changing, testing, documenting, or running operational commands:
 
 1. Read and follow [CLAUDE.md](CLAUDE.md), including its scope and any deeper `CLAUDE.md` overrides.

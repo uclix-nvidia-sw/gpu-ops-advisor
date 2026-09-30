@@ -4,6 +4,8 @@ import { apiRequest } from './api';
 import { currentRange } from './live';
 import type { Scope, TimeRange } from './types';
 type AppState = {
+  mode: 'classic' | 'operations' | 'developer';
+  setMode: (mode: 'classic' | 'operations' | 'developer') => void;
   scope: Scope;
   registeredScope: Scope;
   setScope: (s: Scope) => void;
@@ -21,6 +23,14 @@ type AppState = {
 };
 const AppContext = createContext<AppState>(null!);
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [mode, updateMode] = useState<AppState['mode']>(() => {
+    try {
+      const saved = localStorage.getItem('gpu-advisor-view');
+      return saved === 'operations' || saved === 'developer' ? saved : 'classic';
+    } catch {
+      return 'classic';
+    }
+  });
   const client = useQueryClient();
   const connection = useQuery({
     queryKey: ['api', 'clusters'],
@@ -43,6 +53,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
+        mode,
+        setMode: (next) => {
+          updateMode(next);
+          try {
+            localStorage.setItem('gpu-advisor-view', next);
+          } catch {
+            /* View selection still works without browser storage. */
+          }
+        },
         scope,
         registeredScope,
         setScope,

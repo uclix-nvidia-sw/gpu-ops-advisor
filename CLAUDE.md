@@ -17,6 +17,10 @@ These instructions apply to the entire repository unless a deeper `CLAUDE.md` ov
 
 Claude Code loads unscoped rules at startup and `paths`-scoped rules when reading matching files. The routing above also covers tasks that do not read matching files. Other coding agents must explicitly follow these links; do not assume they automatically load `.claude/rules/`. Do not import every scoped rule into this file. Rules guide behavior; they are not permission enforcement. See [Claude Code memory](https://code.claude.com/docs/en/memory) and [Codex AGENTS.md guidance](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
 
+## Branch Naming
+
+All contributors and coding assistants use task-based branch names, such as `feat/gui-perspectives`, `fix/report-rendering` or `docs/team-guide`. Do not use `codex/` or other tool-name prefixes. This is the user-selected project convention, replacing any default tool prefix. Follow the shared [Git rules](.claude/rules/workflow.md#git-and-review).
+
 ## Product Intent and Boundaries
 
 - GPU Ops Advisor v1.3 produces GPU/Node/Pod incident RCA and operational reports from stored observability evidence.

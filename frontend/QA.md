@@ -1,3 +1,14 @@
+# 2026-09-30 PR #28과 GUI 관점 전환 병합 검증
+
+main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 함께 유지했다. ReportContent·report 지표/사유·Results의 충돌을 해결하고 운영측 목차 선택 시 접힌 주제 상세를 펼치도록 연결했다.
+
+- **통과:** frontend `npm test` 30건, `npm run build`, `npm run format:check`. 기존/새 결과·0/null·분모·권고 보류·근거·실패 표시 회귀를 포함한다.
+- **통과:** 로컬 합성 API와 in-app browser에서 세 모드 전환 후 같은 namespace 수치·운영측 목차 이동/펼침·개발측 workflow/evidence 안내, 390px 개발측 페이지 가로 넘침 없음·브라우저 오류 없음 확인.
+- **통과:** 문서 링크와 diff 검사. Backend·JC·Worker 제품 코드는 이전 PR 커밋과 동일하므로 로컬 서비스 E2E는 재실행하지 않았다. 이전 커밋의 원격 Go/Python/Frontend/Helm 검사 통과를 확인했다.
+- **미검증:** 이 병합 커밋의 원격 CI·운영 배포·실제 Grafana/LLM. 운영 화면과 DB는 변경하지 않았다.
+
+---
+
 # 2026-09-30 Namespace 운영 보고서 개선
 
 - **통과:** `npm test` 26건, `npm run format:check`, `npm run build`. 0%·산출 불가·기존 결과의 미계산, 공유 제외 사유, 실행 제한/조회 실패 구분, 메모리 단위, 검토 기록 없음 문구를 검사했다.
@@ -91,3 +102,13 @@
 일반 HTTP origin에서 `isSecureContext=false`, `crypto.subtle`/`crypto.randomUUID`가 undefined인 조건으로 기존 digest 오류를 재현했다. 기존 localhost 검증은 secure context 예외 때문에 이 실패를 찾지 못했다.
 
 수정 후 동일 HTTP 조건에서 클러스터 등록, 응답 유실(503) 후 새로고침·동일 멱등 키 재전송, 중복 등록 오류, 백엔드 연결 화면 렌더링을 Headless Edge로 확인했다. 브라우저 API는 격리 fixture를 사용했다. Vitest 9개와 TypeScript·프로덕션 빌드·Prettier 검사 통과. SHA-256 결과와 저장소 키는 기존 Web Crypto 결과와 동일하며, UUID는 HTTP에서도 사용 가능한 getRandomValues로 생성한다. 운영 클러스터의 수정 이미지 배포 검증은 아직 수행하지 않았다.
+
+# 2026-09-30 Three GUI perspectives / 세 관점 GUI
+
+변경 범위는 Frontend다. 기존/운영측/개발측 전환, 운영 홈·사건 목록·보고서 서재 및 읽기 화면, RCA·보고서 개발 가이드, 현재 API 요청 메타데이터를 추가했다. 보고서 표시를 현재 Ops Agent의 criteria 1.2 계약에 맞췄다. Backend·Agent 실행 코드는 변경하지 않았다.
+
+- **Passed — static and unit checks**: frontend에서 npm run format:check, npm test(25 tests), npm run build를 통과했다.
+- **Passed — UI/contract checks (mocked)**: Headless Edge, 1440px 및 390/320px. 같은 보고서의 세 관점 전환, 목록 탭·필터와 요청 폼 값 유지, 관점의 새로고침 유지, 보고서 criteria/산출 불가/권고 보류, 개발 단계 선택과 데이터 표시, 사건 PATCH의 If-Match·멱등 키, 보고서 POST의 멱등 키·202 이후 queued 작업 이동을 확인했다. 모바일 홈 가로 넘침 없음, 메뉴 열기·Escape 닫기를 확인했다.
+- **Passed — failure/missing states (mocked)**: 빈 보고서 목록, 503와 요청 ID, failed 작업, 미공개 후보 비노출, 설명 생성 실패와 부분 산출을 확인했다. 추가 단위 검사는 0과 null, 분모와 제외 사유, 공개 참조, API 메타데이터의 최대 50건 및 본문·쿼리 값 제외를 검사한다.
+- **Not run / unverified**: 실제 Backend·PostgreSQL·Grafana·LLM·Worker 연결, 실환경 Agent 완료와 보고서 다운로드 내용. 브라우저 응답은 격리된 모의 API이며 운영 데이터는 수정하지 않았다. 서버가 제공하지 않는 실시간 단계 trace와 내부 호출 원문은 구현 범위 밖이다.
+- **Not applicable**: Backend/Agent 로컬 테스트는 해당 코드·계약 변경이 없어 실행하지 않았다. 이 기록은 로컬 검증 결과이며 원격 CI 결과는 PR에서 별도로 확인한다. 배포는 수행하지 않았다.

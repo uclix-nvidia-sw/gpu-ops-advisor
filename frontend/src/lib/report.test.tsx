@@ -130,9 +130,9 @@ describe('namespace report usability', () => {
     expect(html).toContain('0 %');
     expect(html).toContain('산출 불가');
     expect(html).not.toContain('산출 불가 %');
-    expect(html).toContain('판단 보류');
+    expect(html).toContain('권고 보류');
     expect(html).toContain('관련 근거 1건 보기');
-    expect(html).not.toContain('withheld');
+    expect(html).not.toContain('class="badge badge-blocked">withheld');
     expect(html).toContain('토큰 예산을 초과');
     expect(html.indexOf('Namespace GPU 현황')).toBeLessThan(html.indexOf('주제별 상세 수치'));
   });

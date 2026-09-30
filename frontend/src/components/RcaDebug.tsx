@@ -275,7 +275,7 @@ export function EvidenceRows({
   );
 }
 
-function RcaEvidence({
+export function RcaEvidence({
   result,
   job,
   onEvidence,
