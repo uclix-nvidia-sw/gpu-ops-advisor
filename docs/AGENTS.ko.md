@@ -2,6 +2,8 @@
 
 이 저장소의 팀 공통 지침 원본은 [CLAUDE.md](../CLAUDE.md)와 [.claude/rules/](../.claude/rules/)의 영어 파일에서 관리합니다.
 
+프로젝트 브랜치 명명 규칙: 모든 코딩 도우미는 `feat/`, `fix/`, `docs/`처럼 작업 목적에 따른 접두사를 사용하며 `codex/`는 사용하지 않습니다. 공통 [Git 규칙](../.claude/rules/workflow.md#git-and-review)을 따릅니다.
+
 저장소를 살펴보거나 수정·테스트·문서 작성·운영 명령을 실행하기 전에 다음을 따릅니다.
 
 1. [CLAUDE.md](../CLAUDE.md)를 읽고 따릅니다. 해당 문서의 적용 범위와 더 하위 디렉터리의 `CLAUDE.md` 재정의도 포함합니다.

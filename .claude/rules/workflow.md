@@ -12,6 +12,8 @@ Applies to every task. Human explanations and examples: [team collaboration guid
 
 ## Git and Review
 
+- Branch naming applies to every contributor and coding assistant in this repository. Use `<type>/<short-english-description>` with `feat`, `fix`, `docs`, `test`, `refactor` or `chore`; use lowercase letters, digits and hyphens in the description. Do not use `codex/` or another tool-name prefix. This user-selected project convention replaces default tool prefixes. Honor an explicitly requested branch name. Creating a branch is not required when the task permits working on main.
+
 - Current policy permits main work and direct push after change review, relevant checks and user authorization. A development request alone does not authorize commit, push, PR creation, merge or deployment. Stop after a local commit when only a commit is requested.
 - Peer review/Approve is optional; the author remains responsible for verification, including AI-written changes. The future branch/PR workflow applies only after the team records its transition or explicitly chooses PRs for the task. Do not impose it on current main work.
 - Use English and Korean together for commit messages, PR titles and core change descriptions. Explicitly select only intended files and inspect the staged diff before an authorized commit.
