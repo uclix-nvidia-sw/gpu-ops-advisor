@@ -2,6 +2,8 @@
 
 버전 1.3 · 모듈 report · 독립 실행·배포 · O01~O11 · NVIDIA NeMo Agent Toolkit(NAT) 적용 설계
 
+2026-09-30 개발 목표 갱신: **Report Orchestrator → query별 병렬 Observation Sub-agent → 결정적 통계 → 도구 없는 Report Synthesis → 검증·저장·JC 공개**를 채택한다. [상세 Mermaid 흐름도](../../architecture/report-agent-workflow/detailed-workflow.md)의 합의를 이 문서에 반영했다. 코드 `185ea2b`의 보고서 실행은 여전히 순차 수집·계산·fact_ids 선택이며, 아래 병렬 수집·종합 조언은 미구현 목표다. 접수 계약 1.3·결과 스키마 1.1은 유지하고 기존 집계 변경 목표 criteria 1.2와 구분한다. 이번 변경은 문서이며 제품 구현은 대기 중이다.
+
 ## 0. 현재 구현 분석과 업그레이드 작업
 
 2026-09-23 · 코드 대조 기준 `d391f3d`. O01~O11 분기가 존재한다는 사실과 각 업무의 산식·그룹·실환경 입력이 충족됐다는 판단을 구분한다. 아래는 코드 정적 대조이며 운영 데이터로 재현한 결과가 아니다.
@@ -17,6 +19,16 @@ OP-02/03/04는 Incident·RCA·Backend/Frontend의 계약 소비 변경과 함께
 
 검수 연결: [05](../05_테스트_검수_기준서.md)의 T21/T22/T25/T27/T36/T37/T48/T57/T58. [관측·할당 회귀](../../../agents/tests/test_report_observation.py)와 [Worker E2E](../../../agents/tests/test_e2e.py)를 출발점으로 위 계산/혼합 사례를 추가하고, 공통 Observation 변경 시 두 Worker를 검사한다. **이번 상태: 정적 대조 완료, 신규 산식·에피소드 소비·실환경 검수 미실행.**
 
+### 0.1 재개발 추가 항목 — 2026-09-30
+
+| 작업 | 현재 구현과 차이 | 개발 목표·완료 조건 |
+|---|---|---|
+| OP-05 수집 오케스트레이션 | run은 중복 query ID를 합쳐 하나의 Observation으로 순차 조회한다 | RCA의 task별 예산 예약·동시성 제한·실패 격리·취소 회수 방식을 재사용한다. 주제별 Agent를 만들지 않고 조회 단위로 배분하며, 비교 기간을 구분한다. 고정 응답에서 순차/병렬의 수치·품질 의미 일치, 예산·동시성 상한, 취소 후 생존 task 없음 검증 |
+| OP-06 종합 조언·의미 검증 | LLM은 fact_ids 선택만 수행한다. O03은 작업 목적 확인 권고를 withheld로 제공한다 | 검증된 통계·공개 RCA·반박/한계를 단일 Synthesis에 전달한다. 수치·대상·기간·원인 수준·권고 전제를 코드로 검사하고 무효 주장만 제외한다. 도구 없는 설명·제한적 재작성·실패 시 유효 결과 보존 검증 |
+| OP-07 결과 소비·출력 | 화면/다운로드는 수치·수집 품질 표시 중심이다 | 기존 topics/facts/findings/recommendations와 value_refs로 개선 권고·보류·전제·확인 방법을 제공한다. Backend/Frontend가 eligibility·실행 사실·설명 실패를 구분하고 구 결과·HTML/CSV 수치를 보존하는지 검증 |
+
+OP-05~07은 [05](../05_테스트_검수_기준서.md)의 T60~T65와 연결한다. OP-01~04의 데이터·산식 보완도 계속 필요하며, 병렬화나 LLM 설명이 이를 대신하지 않는다. 운영 데이터 의미·실제 수집 지연과 속도 개선은 미검증이다.
+
 ## 1. 역할·경계
 
 Backend의 즉시·정기 요청을 Job Controller에서 배분받아 집계·설명·보고서를 생성한다. 별도 접수 API·일정 루프·Chatbot·RCA 호출은 없다. 일정 계산은 Backend 책임이며 Worker는 접수된 절대 기간을 사용한다.
@@ -25,22 +37,23 @@ Backend의 즉시·정기 요청을 Job Controller에서 배분받아 집계·�
 
 scope, time_range, timezone, topic_ids, group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id를 받는다. 정기 입력에는 occurrence_id·schedule_revision과 고정 기간이 포함된다. 02의 입력 계약을 재검증한다.
 
-JC claim → 주제별 수집 계획 → Incident·공개 RCA 결과 DB와 Grafana MCP 조회 → 신원/단위/시간·품질 연결 → 04의 결정적 산식 → 규칙/해석 → 저장 값에 연결된 설명 → candidate·HTML/CSV 저장 → JC complete 순서다. 주제에 필요한 출처만 조회하며 R/O 공통 산식을 복사해 별도 구현하지 않는다.
+목표 실행은 JC claim → DB 근거 고정 → Orchestrator 수집 계획·예산 배분 → query별 병렬 MCP 관측 → 취합·품질 검사·결정적 계산 → 부족 근거의 제한적 보완 → 개선 후보·Synthesis → 코드 검증 → HTML/CSV·evidence/candidate 저장 → JC complete 순서다. 주제에 필요한 출처만 조회하며 R/O 공통 산식을 복사해 별도 구현하지 않는다. 현재 순차 수집 구현과의 차이는 §0.1을 따른다.
 
 자기 job/attempt의 결과 candidate·근거·파일만 쓴다. jobs·일정·사건은 직접 변경하지 않는다. 한 주제의 입력 부족 때문에 독립적인 주제를 소거하지 않는다. 재시도·마감·동시성은 10/14를 따른다.
 
 ### 2.1 모듈 내부 구성
 
-Worker 프로세스 안에 NAT 순차 워크플로를 둔다. 기간·주제별 수집 계획과 계산은 코드가 결정하고, LLM은 검증된 수치·근거의 해석과 문장 작성을 담당한다. O01~O11을 별도 하위 Agent로 나누지 않는다.
+Worker 프로세스 안의 NAT 워크플로에 Report Orchestrator를 두고 독립 조회를 Observation Sub-agent에 배분한다. Sub-agent는 같은 job/attempt/lease를 사용하는 코드 task이며 별도 프로세스·JC Worker 등록·LLM 호출을 만들지 않는다. O01~O11은 계산 함수로 유지하며 여러 주제가 같은 수집 결과를 재사용한다. LLM은 관측 라운드 종료 후 단일 Report Synthesis 단계에서 해석·조언을 작성한다. 이는 추가 개발 목표이며 현행 run은 순차 조회다.
 
 | 내부 구성 | 책임 | 사용하는 자료/연결 |
 |---|---|---|
 | Worker 실행부 | claim·heartbeat·취소·deadline·저장·완료 보고 | JC API, 자기 후보·근거·파일 |
-| 수집 계획 | 절대 기간·주제·필수/선택 자료 결정 | 입력 snapshot, 주제별 조회 정의 |
+| Report Orchestrator | 절대 기간·주제·조회 계획, 예산 배분, 충분성·보완 조회·종료, 결과 검증 | 입력 snapshot, 주제별 조회 정의, 공통 실행 계약 |
 | 사고·분석 이력 조회 | 해당 범위 사건과 공개된 RCA 결과 읽기 | incidents, jobs.published_result_id → result_candidates |
-| 기간 관측 조회 | 지표·관련 로그·매핑 이력 수집 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
+| Observation Sub-agent | 독립 상태·할당 예산으로 query별 기간 관측, 응답 분할·조회 오류 기록 | NAT MCP 클라이언트 → Grafana MCP → Grafana 데이터소스 |
 | 집계·계산 | 시간·대상 연결, 누락·중복 검사, 주제별 수치 계산 | 04 공통 계산 함수 |
-| 설명·검증·출력 | 근거 기반 해석, 수치 참조 검증, HTML/CSV 생성 | LLM, 검증된 수치 레지스트리 |
+| Report Synthesis | 검증된 통계·공개 RCA·후보를 해석해 조언 작성, 도구 없음 | LLM, 수치 레지스트리·후보·전제·반박·한계 |
+| 검증·출력 | 설명/권고 의미 검증, 저장 수치로 HTML/CSV 생성 | Orchestrator·Worker 코드, 기존 결과 계약 |
 
 ### 2.2 자료 선택과 기간 기준
 
@@ -65,6 +78,38 @@ RCA 결과 DB는 이번 보고서를 위해 새 RCA를 실행하는 경로가 �
 
 호출 한도 또는 실행시간을 소진하면 `budget_exhausted` 근거를 남기며 이미 확보한 유효 구간은 보존한다. 기본값은 [06](../06_배포_운영_인계서.md)의 설정 원본을 따른다. 수집 품질 필드는 [03 §5.1](../common/03_데이터_설계서.md), 구현은 [관측 조회](../../../shared/python/src/agent_common/observation.py)에 있다.
 
+### 2.4 병렬 관측과 보완 조회 — 개발 목표
+
+1. Orchestrator가 query ID/revision·scope/대상·절대 기간·binding이 같은 요청을 합친다. O10의 비교 기간은 별도 작업이며 현재 기간의 관측으로 대체하지 않는다. 최초 task 경계는 query별로 두고 클러스터/시간 chunk까지 중첩 병렬화하지 않는다.
+2. 시작 전에 전체 query/discovery 예산 안에서 task 예산을 예약한다. 각 task는 독립 Observation 상태를 사용하며 프로필·고정 입력을 임의 변경하지 않는다. 전체 deadline·동시성 한도를 공유하고, 응답 분할·MCP 재연결·실제 재전송도 호출량에 포함한다.
+3. 조회 실패는 해당 근거의 unavailable/partial·사유로 보존한다. 독립 조회는 계속하되 취소·lease 상실·deadline은 전체 task의 신규 호출 중단과 회수를 요구한다. 모든 task 종료 전 미사용 예약을 다시 배분하지 않으며 이미 사용한 호출은 돌려주지 않는다.
+4. 완료 순서와 무관하게 query·대상·기간 기준으로 근거를 정렬·취합하고 기존 신원/단위/품질 검사와 산식을 적용한다. RCA task 추적 방식과 기존 evidence를 재사용하며 새 원장·결과 스키마를 만들지 않는다. 실행별 UUID/수집 시각까지 같아야 한다는 뜻은 아니다.
+5. 부족하거나 상충하는 판단에 필요한 등록 query가 있고 원래 범위·기간과 남은 예산 안에서 새 근거를 얻을 수 있을 때만 보완 라운드를 연다. 같은 조회를 무조건 반복하지 않으며 횟수 상한을 실행 프로필에 고정한다. 상한·호출 예산·deadline 중 먼저 도달한 제한을 따른다. 설명 형식 오류는 재수집 사유가 아니다.
+
+RCA의 [병렬 관측 구현](../../../rcca-agent/src/rcca_agent/observation_agents.py)에서 실제 공통인 실행·예산·취소 코드만 공유 Python으로 추출해 재사용하는 것을 우선한다. RCA의 첫 라운드 예산 분할 비율·최대 1회 재조사·Runbook 정책을 보고서에 그대로 복사하지 않는다. 공통 코드를 바꾸면 양 Worker 회귀 검수가 필요하다. 보고서 동시성·라운드 상한·라운드별 예산 배분은 구현 시 명시하고 고정 입력 검수 후 확정한다. RCA 동시성 기본값 3은 후보이며 보고서 운영 확정값이 아니다. 대표 기간의 실제 수집시간·호출량·Grafana 부하를 측정하기 전에는 속도 개선을 주장하지 않는다.
+
+### 2.5 통합 목표 workflow
+
+```mermaid
+flowchart TD
+    A["JC claim · 입력/기간/DB snapshot 고정"] --> B["Report Orchestrator: 중복 조회 제거 · 예산 예약"]
+    B --> C["Observation Sub-agent A: query A"]
+    B --> D["Observation Sub-agent B…N: 나머지 query"]
+    C --> E["task 종료 취합·정렬 · 품질 검사 · 결정적 통계"]
+    D --> E
+    E -- "부족/상충 · 유효 query · 한도 내" --> B
+    E -- "관측 종료" --> F["개선 후보·전제·반박·보류·유효 수치 구성"]
+    F -- "유효 근거·모델·예산 있음" --> G["Report Synthesis: 도구 없는 LLM 조언"]
+    F -- "설명 불가" --> H["코드 결과 유지 · 설명 omitted"]
+    G --> I["Orchestrator: 주장·수치·권고 전제 검증"]
+    I -- "무효 · 재작성 한도 내" --> G
+    I -- "유효 / 무효 부분 제외" --> J["Worker: HTML/CSV · evidence/candidate 저장"]
+    H --> J
+    J --> K["JC complete 검증 · 공개"]
+```
+
+도식은 정상 실행권 아래의 업무 흐름이다. 확정된 LLM 실패는 설명 failed와 유효 코드 결과로 종료할 수 있지만, 원격 종료 불명은 14의 fail·격리 경로가 우선한다. 최종 결과 검증·파일/DB 저장 실패, 취소·lease 만료·deadline 이후는 complete 성공으로 처리하지 않는다. 상세 분기·Backend 예약 경로는 [Mermaid 상세도](../../architecture/report-agent-workflow/detailed-workflow.md)를 참고한다.
+
 ## 3. 보고서 업무
 
 입력은 scope·기간·시간대·주제·그룹·선택 비교 기간이다. 요청을 접수할 때 실제 절대 기간과 적용 범위를 화면에 표시한다. 정기 보고서는 완료된 달력 기간을 사용한다.
@@ -88,12 +133,39 @@ RCA 결과 DB는 이번 보고서를 위해 새 RCA를 실행하는 경로가 �
 O04는 v1에서 장치별 값·최대/최소·차이를 제공한다. 별도 ‘이상 편차’ 자동 판정 임계값은 검증된 정책이 있을 때만 사용한다. O05는 동일 정의·모델·관측 범위별 발생률과 건수로 정렬하고 미검증 가중 종합 점수를 만들지 않는다.
 
 
+### 3.1 운영 개선 조언 — 개발 목표
+
+코드가 통계와 검증된 정책으로 개선 후보를 구성하고, Synthesis가 이를 공개 RCA의 원인 수준·반박·한계와 함께 설명한다. 조언은 `대상 → 관측 사실 → 해석 → 전제/반박 → 다음 행동 → 확인 지표`로 연결한다. 임의 임계값·종합 점수·절감률·금액을 만들지 않는다.
+
+| 후보 | 근거·전제 | 권고 방향 / 부족 시 |
+|---|---|---|
+| 저활동 할당 | O02/O03의 동일 할당 episode·활동·업무 예외 | 예약/대기 목적 확인 후 요청량·운영 시간 조정 검토. 목적 미확인은 withheld |
+| 배치 대기·배분 | O07/O08의 유효 요청·용량·배치 제약·소유 관계 | 요청 크기·배치 조건·배분 정책 검토. Pending만 있으면 부족량·단편화 보류 |
+| 다중 GPU 편차 | O04의 동일 작업·동시 구간·프로파일 | 입력 공급·분할·통신 확인. 편차만으로 병목·불량 확정 금지 |
+| 반복 사건·정비 | O05/O06의 같은 사건 정의·관측 분모·공개 RCA | 비교 가능한 범위에서 점검 우선순위·RCA 권고 인용. 전체 분모 없으면 전체 순위 보류 |
+| 에너지·조치 변화 | O09/O10의 실제 전력·수행 조치·동일 대상/업무량 | 운영 패턴과 변경 후 측정 계획 제안. 단순 전후 차이는 인과적 효과가 아님 |
+
+Synthesis 입력은 고정 범위/기간, 주제별 검증된 metrics/facts·품질, 공개 RCA ID/hash와 원인 수준, 코드가 평가한 후보·eligibility·전제·반박·부족 입력이다. 원시 메트릭/로그 전체를 전달하지 않는다. 출력은 기존 facts/findings/recommendations·limitations·value_refs/evidence_refs에 검증·변환하며, 새 priority/expected_savings 같은 공개 필드는 추가하지 않는다. 권고의 다음 확인 방법은 기존 text/preconditions로 표현한다.
+
+검증은 참조 ID 존재만으로 끝내지 않는다. 주장과 대상·기간·단위·산식·근거 의미의 일치, 인과 수준 유지, 권고 전제 충족을 코드로 확인한다. 자동 확인할 수 없는 새 해석은 확정 사실이나 실행 가능한 권고로 승격하지 않고 보류/추가 확인으로 제한한다. LLM이 스스로 부여한 신뢰도나 eligibility를 그대로 수용하지 않는다. 불충족 전제는 withheld와 사유를 유지하고 execution=not_performed로 기록한다. 모델 미설정·확정된 실패·재작성 한도 소진에도 유효 수치와 코드 판단을 보존한다. 수치와 권고 자격은 LLM이 계산하지 않는다. 공통 검증·결과 필드는 04 §7/8을 따른다.
+
 ## 4. 결과·출력·실패
 
 topics[].metrics에 값을 한 번 저장하고 facts/findings/recommendations에서 value_refs로 연결한다. O10은 실제 조치 기록과 전후 기간, O07은 resource 단위를 보존한다. 관측 감소와 인과적 개선 효과를 구분한다.
 
 Worker는 결과의 수치 레지스트리로 HTML/CSV 파일과 checksum을 생성한다. 현재 GUI 다운로드 API는 저장된 발행 결과를 Backend에서 다시 렌더링하며 Agent 파일을 그대로 전송하지 않는다. 두 경로 모두 저장 수치를 사용하고 escape·CSV 수식 방어·서버 파일명을 적용하며 재다운로드 때문에 새 분석을 수행하지 않는다. API 출력은 [02](../backend/02_백엔드_API_작업명세서.md), GUI는 [07](../frontend/07_프론트엔드_개발명세서.md)을 따른다. PDF/DOCX 생성 엔진은 범위 밖이다.
 
-보고서 Agent가 내려가도 Backend의 일정·요청은 JC 큐에 보존된다. JC가 내려가면 정기 발생은 Backend outbox에서 대기한다. LLM 실패 시 유효 수치·근거를 보존하고 narrative_status=failed/omitted로 final을 낼 수 있다. 결과 저장 실패는 succeeded가 아니다.
+보고서 Agent가 내려가면 접수된 작업은 JC 큐·기존 만료 정책으로 관리한다. JC가 내려가면 정기 발생은 Backend outbox에서 기존 dispatch 기한·재시도 정책을 따른다. LLM 미설정·종료가 확인된 실패는 유효 수치·근거를 보존하고 narrative_status=failed/omitted로 final을 낼 수 있다. 원격 추론 종료 불명·취소·lease 만료·deadline 이후는 14의 실패·격리 계약이 우선한다. 결과 저장 실패는 succeeded가 아니다.
+
+OP-07의 표시 목표는 요청 개요/데이터 기준시각 → 통계/비교 → 사건·공개 RCA → 개선 권고/보류·다음 확인 → 품질/한계·근거다. Backend는 기존 공개 결과 조회·HTML/CSV 경로를 유지하고, Frontend는 job 상태·topic 상태·narrative_status·eligibility·실제 조치 기록을 구분한다. CSV는 현재 수치 열 계약을 유지하며 같은 저장 수치·null/단위/기간을 사용한다. 구 보고서에 권고 필드가 없으면 생성된 조언으로 채우지 않는다. 구체 소비 기준은 02/07/08, 검수는 T65를 따른다.
+
+## 5. 개발 순서와 검수
+
+1. OP-01~04의 산식·기간/그룹·혼합 사건 소비 선결 조건을 점검하고, 구현할 범위와 criteria 버전을 고정한다. 관측 의미가 없는 값을 조언으로 메우지 않는다.
+2. OP-05를 기존 수집기에 연결한다. 고정 관측의 계산 결과와 품질을 보존하면서 병렬 예산·취소·실패 검수를 먼저 수행하고, 그 뒤 제한적 보완 계획을 연결한다.
+3. OP-06의 코드 후보·전제 검사 → 단일 Synthesis → 의미 검증·실패 처리를 연결한다. 조회 task에 LLM을 추가하지 않는다.
+4. OP-07의 Backend/Frontend/HTML/CSV 소비를 맞추고 실제 JC 공개·다운로드까지 확인한다. 대표 기간·범위의 Grafana 부하/지연과 실제 조언 품질은 fixture 시험과 별도로 검수한다.
+
+공통 실행·예산은 14, 계산·결과 의미는 04, 시나리오·기대값은 05 T60~T65를 단일 기준으로 사용한다. 해당 검수는 모두 추가 개발 목표이며 현재 PASS 기록이 아니다. 배포 전 보고서 동시성·보완/재작성 한도·예산 배분·실환경 관측 의미를 확정하고 고정 실행 프로필과 함께 기록한다. 이번 설계 반영으로 코드·DB·Helm 설정은 바꾸지 않는다.
 
 [Backend 일정](../backend/02_백엔드_API_작업명세서.md) · [공통 판단](../common/04_Agent_동작_판단_명세서.md) · [실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)
