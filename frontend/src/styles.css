@@ -3972,20 +3972,25 @@ body:has(dialog[open]) {
   font-size: 12px;
   font-weight: 600;
 }
+.incident-list .badge,
 .rca-states .badge {
   font-size: 13px;
   padding: 5px 9px;
   font-weight: 700;
 }
+.incident-list .badge-firing,
 .rca-states .badge-firing {
   background: #fce8e6;
   color: #9b261e;
 }
+.incident-list .badge-reviewing,
+.incident-list .badge-acknowledged,
 .rca-states .badge-reviewing,
 .rca-states .badge-acknowledged {
   background: #e2eefc;
   color: #24558b;
 }
+.incident-list .badge-unreviewed,
 .rca-states .badge-unreviewed {
   background: #fff0d3;
   color: #80510a;
