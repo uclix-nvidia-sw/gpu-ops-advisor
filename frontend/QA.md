@@ -1,3 +1,12 @@
+# 2026-09-30 보고서 GPU·시간과 부분 산출 안내
+
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **36 tests**, `npm run build`. 기간과 누적 GPU·시간 구분, 연결 GPU 대수, partial 사유의 상세 밖 노출, 실제 0/null/구 결과, cluster 보고서의 namespace 전용 표 숨김, 혼합 보고서에서 다른 주제 설명 보존을 검사했다.
+- **통과:** 로컬 합성 API·Vite build와 브라우저에서 기존/운영측/개발측의 동일 보고서 표시, 0%와 공유 구간 산출 불가, 기간·고유 GPU 대수·누적 시간 설명 확인. 390px viewport에서 문서 가로 넘침 없음(스크롤바 제외 clientWidth=scrollWidth=375), 브라우저 오류 없음. 검사 뒤 뷰포트·기존 관점을 복원했다.
+- **통과:** Backend HTML의 GPU·시간 설명·한계 우선 표시와 CSV의 `7.9864155557420515,GPU-hours` 원시 정밀도 보존 검사. 실제 로컬 서비스 공개 경로는 [Agent QA](../agents/QA.md)를 따른다.
+- **미수행:** 운영 배포. 합성 화면 검사는 운영 데이터·LLM 품질 검수가 아니다.
+
+---
+
 # 2026-09-30 PR #28과 GUI 관점 전환 병합 검증
 
 2026-09-30 RCA 변경을 최신 main `77fbfcf` GUI 관점 전환과 통합한 뒤 **33 tests**, `npm run format:check`, `npm run build` 통과. 공개 RCA 최종 보고서는 공통 RcaResult를 통해 기존·운영·개발 화면에 표시된다. 아래 24건 기록은 통합 전 검사다. API/LLM fixture 범위를 유지하며 운영 화면 검수는 미수행이다.

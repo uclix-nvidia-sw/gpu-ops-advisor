@@ -230,3 +230,154 @@ def test_unknown_allocation_mode_never_becomes_zero_exclusive_usage():
         for m in result["metrics"]
         if m["id"].split(".")[1] in {"current_allocated_gpu", "allocation_group"}
     )
+
+
+@pytest.mark.parametrize("reuse, expected_calls", [(False, 2), (True, 1)])
+@pytest.mark.asyncio
+async def test_identical_report_queries_reuse_samples_with_separate_evidence(
+    reuse, expected_calls
+):
+    calls = []
+
+    async def query(args):
+        calls.append(args)
+        return {"data": [row({"uuid": "gpu-1"})]}
+
+    config = profile()
+    config["limits"]["max_queries"] = expected_calls
+    obs = Observation(
+        {"query_prometheus": query},
+        config,
+        DATA,
+        time.monotonic() + 30,
+        reuse_queries=reuse,
+    )
+    first = await obs.collect("D01")
+    second = await obs.collect("D02")
+    assert obs.calls == len(calls) == expected_calls
+    assert first[0]["id"] != second[0]["id"]
+    assert second[0]["query_id"] == "D02"
+    assert second[0]["snapshot"] == first[0]["snapshot"]
+    assert ("reused_from_evidence" in second[0]["quality"]) == reuse
+
+
+@pytest.mark.asyncio
+async def test_response_reuse_does_not_cross_scope_period_or_failed_response():
+    calls = []
+
+    async def query(args):
+        calls.append(args)
+        return (
+            {"data": [row({"uuid": "gpu-1"})], "warnings": ["partial"]}
+            if len(calls) == 1
+            else {"data": []}
+        )
+
+    obs = Observation(
+        {"query_prometheus": query},
+        profile(),
+        DATA,
+        time.monotonic() + 30,
+        reuse_queries=True,
+    )
+    await obs.collect("D01")
+    await obs.collect("D02")
+    assert obs.calls == 2  # Incomplete response must not be reused.
+    narrowed = await obs.collect("D02", namespace_scope={"cpc-1": ["a.b"]})
+    assert obs.calls == 3
+    assert narrowed[0]["quality"]["queried_namespaces"] == ["a.b"]
+    assert r'namespace=~"a\\.b"' in calls[-1]["expr"]
+    await obs.collect("D02", {"start": PERIOD["start"], "end": "2026-09-18T04:27:00Z"})
+    assert obs.calls == 4
+    assert DATA["scope"]["clusters"][0]["namespaces"] is None
+    restricted = dict(
+        DATA, scope={"clusters": [{"cluster_id": "cpc-1", "namespaces": ["allowed"]}]}
+    )
+    obs = Observation(
+        {"query_prometheus": query}, profile(), restricted, time.monotonic() + 30
+    )
+    with pytest.raises(ValueError, match="authorized namespace"):
+        await obs.collect("D06", namespace_scope={"cpc-1": ["outside"]})
+
+
+@pytest.mark.asyncio
+async def test_scoped_collection_reduces_large_pod_history_without_changing_namespace_metrics():
+    from ops_agent.namespace_usage import pod_namespace_scope
+
+    gpu_rows = [
+        row(
+            {
+                "uuid": f"gpu-{i}",
+                "namespace": "training",
+                "pod": f"pod-{i}",
+                "node": "node",
+                "modelName": "fixture",
+            },
+            "10",
+        )
+        for i in range(8)
+    ]
+    pod_rows = [
+        row(
+            {
+                "namespace": "training" if i < 8 else "background",
+                "pod": f"pod-{i}",
+                "node": "node",
+                "uid": f"uid-{i}",
+            },
+            "1",
+        )
+        for i in range(286)
+    ]
+
+    async def query(args):
+        expr = args["expr"]
+        stop = timestamp(args["endTime"])
+        length = int(re.search(r"\[(\d+)s\]$", expr)[1])
+        rows = (
+            gpu_rows
+            if expr.startswith("DCGM_FI_DEV_GPU_UTIL{")
+            else pod_rows
+            if expr.startswith("kube_pod_info{")
+            else []
+        )
+        if 'namespace=~"training"' in expr:
+            rows = [r for r in rows if r["metric"]["namespace"] == "training"]
+        return {
+            "data": [
+                {
+                    "metric": r["metric"],
+                    "values": [v for v in r["values"] if stop - length < v[0] <= stop],
+                }
+                for r in rows
+            ]
+        }
+
+    outputs, calls = [], []
+    for optimized in (False, True):
+        obs = Observation(
+            {"query_prometheus": query},
+            profile(),
+            DATA,
+            time.monotonic() + 30,
+            reuse_queries=optimized,
+        )
+        collected = {}
+        for q in ("D01", "D02", "D08", "D06"):
+            scope = pod_namespace_scope(collected) if optimized and q == "D06" else None
+            collected[q] = await obs.collect(q, namespace_scope=scope)
+        topic = calculate(
+            "O08",
+            dict(DATA, group_by=["namespace"]),
+            collected,
+            {},
+            {},
+            criteria_version="1.2",
+        )
+        outputs.append(
+            [(m["id"], m["value"], m["unit"], m["quality"]) for m in topic["metrics"]]
+        )
+        calls.append(obs.calls)
+    assert outputs[0] == outputs[1]
+    assert calls[0] > 10
+    assert calls[1] == 3

@@ -57,6 +57,7 @@ def test_weighted_gpu_time_and_zero_are_not_sample_or_device_averages():
     )
     topic = report(source)
     assert values(topic, "a") == {
+        "namespace_connected_gpu_count": 2,
         "observed_namespace_hours": 1.5,
         "namespace_activity_valid_hours": 1.5,
         "namespace_connected_gpu_util": 60,
@@ -116,6 +117,7 @@ def test_duplicate_container_series_count_physical_gpu_time_once():
         duplicate["metric"]["container"] = "second"
         es[0]["snapshot"]["data"].append(duplicate)
     assert values(report(source), "a") == {
+        "namespace_connected_gpu_count": 1,
         "observed_namespace_hours": 1,
         "namespace_activity_valid_hours": 1,
         "namespace_connected_gpu_util": 20,
@@ -299,3 +301,68 @@ async def test_workflow_collects_d02_only_for_new_criteria_and_validates_result(
             "namespace_connected_gpu_util" in m["id"] for m in topic["metrics"]
         )
     assert result["topics"][1]["topic_id"] == "O09"
+
+
+def test_eight_gpus_for_one_hour_keep_unobserved_start_out_of_gpu_hours():
+    source = observations(*[("a", f"gpu-{i}", START, END, 10) for i in range(8)])
+    for es in source.values():
+        for r in es[0]["snapshot"]["data"]:
+            r["values"] = [[START + 6.113 + 15 * i, "10"] for i in range(240)]
+    v = values(report(source), "a")
+    assert v["namespace_connected_gpu_count"] == 8
+    assert v["observed_namespace_hours"] == pytest.approx(8 * (3600 - 6.113) / 3600)
+    assert v["namespace_activity_valid_hours"] == v["observed_namespace_hours"]
+    assert v["namespace_connected_gpu_util"] == 10
+
+
+def test_pod_scope_keeps_allocation_namespaces_and_falls_back_on_incomplete_inputs():
+    from ops_agent.namespace_usage import pod_namespace_scope
+
+    source = observations(("a", "gpu-1", START, END, 20))
+    source["D08"] = observations(("b", "gpu-2", START, END, 20))["D01"]
+    assert pod_namespace_scope(source) == {"cpc-1": ["a", "b"]}
+    source["D08"][0]["quality"]["complete"] = False
+    assert pod_namespace_scope(source) == {}
+    source["D08"] = []
+    assert pod_namespace_scope(source) == {}
+
+
+@pytest.mark.parametrize("topics", [["O08"], ["O08", "O07"]])
+@pytest.mark.asyncio
+async def test_namespace_only_narrows_pods_but_mixed_reports_keep_full_scope(topics):
+    source = observations(("a", "gpu-1", START, END, 20))
+    config = profile()
+    calls = []
+
+    async def query(args):
+        calls.append(args["expr"])
+        if args["expr"].startswith("DCGM_FI_DEV_GPU_UTIL{"):
+            return source["D01"][0]["snapshot"]
+        return {"data": []}
+
+    data = dict(DATA, topic_ids=topics, group_by=["namespace"], timezone="UTC")
+    token = attempt_context.set(
+        {
+            "claim": {
+                "job_id": "fixture",
+                "kind": "report",
+                "input": data,
+                "versions": {"criteria": "1.2"},
+            },
+            "context": {"data_cutoff_at": data["time_range"]["end"]},
+            "profile": config,
+            "deadline": time.monotonic() + 30,
+            "llm": SimpleNamespace(configured=False, usage={}),
+        }
+    )
+    try:
+        output = await run({"query_prometheus": query})
+    finally:
+        attempt_context.reset(token)
+    validate_result(output["result"], output["evidence"])
+    pod_query = next(expr for expr in calls if expr.startswith("kube_pod_info{"))
+    assert ('namespace=~"a"' in pod_query) == (topics == ["O08"])
+    assert sum(expr.startswith("DCGM_FI_DEV_GPU_UTIL{") for expr in calls) == 1
+    assert (
+        values(output["result"]["topics"][0], "a")["namespace_connected_gpu_util"] == 20
+    )

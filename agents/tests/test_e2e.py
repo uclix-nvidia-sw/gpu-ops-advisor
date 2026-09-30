@@ -745,6 +745,8 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     assert result["versions"]["criteria"] == "1.2"
     topic = result["topics"][0]
     metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
+    assert metrics["namespace_connected_gpu_count"]["value"] == 1
+    assert "GPU·시간" in html.text
     assert metrics["observed_namespace_hours"]["value"] == 1
     assert metrics["namespace_activity_valid_hours"]["value"] == 1
     assert metrics["namespace_connected_gpu_util"]["value"] == 2

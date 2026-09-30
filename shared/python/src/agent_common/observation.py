@@ -58,7 +58,7 @@ def unwrap(response):
 
 
 class Observation:
-    def __init__(self, tools, profile, data, deadline):
+    def __init__(self, tools, profile, data, deadline, *, reuse_queries=False):
         self.tools, self.profile, self.data, self.deadline = (
             tools,
             profile,
@@ -68,6 +68,8 @@ class Observation:
         self.evidence = []
         self.calls = 0
         self.cache = {}
+        self.reuse_queries = reuse_queries
+        self.responses = {}
         self.discovery_calls = 0
         self.discovery = Discovery(self._discover)
 
@@ -93,9 +95,14 @@ class Observation:
             # Never put upstream error bodies or credentials into evidence/logs.
             raise DiscoveryError("datasource_discovery_failed") from exc
 
-    async def collect(self, query_id, period=None):
+    async def collect(self, query_id, period=None, *, namespace_scope=None):
         period = period or self.data["time_range"]
-        key = (query_id, period["start"], period["end"])
+        key = (
+            query_id,
+            period["start"],
+            period["end"],
+            json.dumps(namespace_scope, sort_keys=True),
+        )
         if key in self.cache:
             return self.cache[key]
         definition = self.profile["queries"].get(query_id)
@@ -176,10 +183,18 @@ class Observation:
                 for k, v in sorted(selector.items())
                 if re.fullmatch("[a-zA-Z_][a-zA-Z0-9_]*", k)
             ]
-            if scope["namespaces"] is not None:
+            namespaces = scope["namespaces"]
+            narrowed = (namespace_scope or {}).get(scope["cluster_id"])
+            if narrowed is not None:
+                if not narrowed or (
+                    namespaces is not None and not set(narrowed) <= set(namespaces)
+                ):
+                    raise ValueError("query outside authorized namespace scope")
+                namespaces = narrowed
+            if namespaces is not None:
                 filters.append(
                     "namespace=~"
-                    + json.dumps("|".join(re.escape(x) for x in scope["namespaces"]))
+                    + json.dumps("|".join(re.escape(x) for x in sorted(namespaces)))
                 )
             # Query strings come only from reviewed configuration and escaped scope labels.
             base = "{" + ",".join(filters) + "}"
@@ -204,21 +219,6 @@ class Observation:
             while cursor < end:
                 stop = min(end, cursor + chunk_seconds)
                 window = {"start": iso(cursor), "end": iso(stop)}
-                if (
-                    self.calls >= limits["max_queries"]
-                    or time.monotonic() >= self.deadline
-                ):
-                    out.append(
-                        self._evidence(
-                            query_id,
-                            scope["cluster_id"],
-                            {"start": iso(cursor), "end": iso(end)},
-                            {},
-                            "unavailable",
-                            {"reason": "budget_exhausted"},
-                        )
-                    )
-                    break
                 if source == "loki":
                     name = "query_loki_logs"
                     args = dict(
@@ -259,7 +259,29 @@ class Observation:
                     )
                     cursor = stop
                     continue
-                self.calls += 1
+                response_key = (
+                    name,
+                    scope["cluster_id"],
+                    window["start"],
+                    json.dumps(args, sort_keys=True),
+                )
+                cached = (
+                    self.responses.get(response_key) if self.reuse_queries else None
+                )
+                if (
+                    cached is None and self.calls >= limits["max_queries"]
+                ) or time.monotonic() >= self.deadline:
+                    out.append(
+                        self._evidence(
+                            query_id,
+                            scope["cluster_id"],
+                            {"start": iso(cursor), "end": iso(end)},
+                            {},
+                            "unavailable",
+                            {"reason": "budget_exhausted"},
+                        )
+                    )
+                    break
                 quality = {
                     "complete": True,
                     "original_samples": source != "loki",
@@ -269,6 +291,10 @@ class Observation:
                     "query_revision": definition["revision"],
                     "metric": definition.get("metric"),
                 }
+                if narrowed is not None:
+                    quality["queried_namespaces"] = namespaces
+                if cached is not None:
+                    quality["reused_from_evidence"] = cached[1]
                 if source == "loki" and (
                     timestamp(args["startRfc3339"]) != cursor
                     or timestamp(args["endRfc3339"]) != stop
@@ -283,13 +309,17 @@ class Observation:
                         observation_usable=False,
                     )
                 try:
-                    async with asyncio.timeout(
-                        min(
-                            limits.get("query_timeout_seconds", 30),
-                            max(0.01, self.deadline - time.monotonic()),
-                        )
-                    ):
-                        response = unwrap(await self.tools[name](args))
+                    if cached is not None:
+                        response = cached[0]
+                    else:
+                        self.calls += 1
+                        async with asyncio.timeout(
+                            min(
+                                limits.get("query_timeout_seconds", 30),
+                                max(0.01, self.deadline - time.monotonic()),
+                            )
+                        ):
+                            response = unwrap(await self.tools[name](args))
                     size = len(json.dumps(response, ensure_ascii=False).encode())
                     payload = (
                         response.get("data", response)
@@ -372,6 +402,9 @@ class Observation:
                             args,
                         )
                     )
+                    # Opted-in report attempts reuse only complete, bounded Prometheus responses.
+                    if self.reuse_queries and source != "loki" and quality["complete"]:
+                        self.responses[response_key] = (response, out[-1]["id"])
                 except (Exception,) as exc:
                     error = {"error_type": type(exc).__name__}
                     if isinstance(exc, MCPResponseError):

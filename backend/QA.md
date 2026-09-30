@@ -1,3 +1,11 @@
+# 2026-09-30 보고서 단위·한계 출력
+
+- **통과:** Backend 디렉터리 기준 `go vet ./...`, `go test -race ./...`, `go build -o ../.local/backend-e2e ./cmd/server`. HTML 연결 GPU 고유 대수 이름·GPU·시간 설명·한계 우선 표시, HTML escape와 CSV 원시 단위·정밀도 보존을 검사했다.
+- **통과:** `.local/report-usability/go_e2e.py`가 새 임시 PostgreSQL·loopback 포트·최신 Backend 바이너리로 `go test -tags=e2e ./tests -count=1 -timeout=10m` 실행 후 DB를 종료했다. 기존 운영 DB는 사용하지 않았다. Backend→JC→Ops namespace 공개·다운로드는 [Agent QA](../agents/QA.md)의 전체 검사에 포함됐다.
+- **해당 없음:** API 접수·JC 계약·DB migration 변경. **미수행:** 운영 배포와 운영 다운로드 검수.
+
+---
+
 # Backend v1.3 검증 기록
 
 ## 2026-09-30 Namespace 보고서 실행·내보내기

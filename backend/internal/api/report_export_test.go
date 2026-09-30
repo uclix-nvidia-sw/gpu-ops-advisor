@@ -72,3 +72,29 @@ func TestNamespaceExportPreservesRawCSVAndFormatsHTML(t *testing.T) {
 		t.Fatal("CSV raw value changed", rawValue)
 	}
 }
+
+func TestNamespaceTimeMeaningAndRawPrecision(t *testing.T) {
+	var body Object
+	if err := json.Unmarshal([]byte(`{"result_status":"partial","topics":[{"missing_inputs":["unattributed_gpu_observation"],"metrics":[{"id":"O08.namespace_connected_gpu_count.0","value":8,"unit":"physical_gpu"},{"id":"O08.observed_namespace_hours.0","value":7.9864155557420515,"unit":"GPU-hours"}]}]}`), &body); err != nil {
+		t.Fatal(err)
+	}
+	html := httptest.NewRecorder()
+	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"기간 중 연결이 확인된 GPU", "8대가 각각 1시간", "GPU·시간", "동시 사용 대수가 아닙니다"} {
+		if !strings.Contains(html.Body.String(), want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Index(html.Body.String(), "일부 GPU 관측") > strings.Index(html.Body.String(), "<h2>주요 수치") {
+		t.Fatal("limitations hidden after metrics")
+	}
+	out := httptest.NewRecorder()
+	if err := exportMetrics(out, "fixture", "csv", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.Body.String(), ",7.9864155557420515,GPU-hours,") {
+		t.Fatal("CSV precision or raw unit changed")
+	}
+}

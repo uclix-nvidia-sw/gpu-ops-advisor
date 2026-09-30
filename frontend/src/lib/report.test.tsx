@@ -207,3 +207,100 @@ describe('namespace report usability', () => {
     expect(html).not.toContain('저장된 결과가 없습니다');
   });
 });
+
+it('explains elapsed time, cumulative GPU time and topic limitations before details', () => {
+  const target = { cluster_id: 'fixture', namespace: 'training' };
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      request={{ group_by: ['namespace'] }}
+      value={{
+        time_range: { start: '2026-09-30T06:20:00Z', end: '2026-09-30T07:20:00Z' },
+        topics: [
+          {
+            topic_id: 'O08',
+            status: 'partial',
+            quality: { applied_group_by: ['namespace'] },
+            missing_inputs: [
+              'unattributed_gpu_observation',
+              'observed_mapping_not_exclusive_allocation',
+            ],
+            metrics: [
+              { id: 'O08.namespace_connected_gpu_count.0', target, value: 8, unit: 'physical_gpu' },
+              {
+                id: 'O08.observed_namespace_hours.0',
+                target,
+                value: 7.986415555742,
+                unit: 'GPU-hours',
+              },
+              {
+                id: 'O08.namespace_activity_valid_hours.0',
+                target,
+                value: 7.986415555742,
+                unit: 'GPU-hours',
+              },
+              { id: 'O08.namespace_connected_gpu_util.0', target, value: 9.16452, unit: 'percent' },
+            ],
+          },
+        ],
+      }}
+    />,
+  ).split('<details id="report-topic-details">')[0];
+  expect(html).toContain('분석 기간: 1시간');
+  expect(html).toContain('부분 산출 1개');
+  expect(html).toContain('일부 GPU 관측을 Namespace에 연결하지 못했습니다');
+  expect(html).toContain('8 대');
+  expect(html).toContain('7.986 GPU·시간');
+  expect(html).toContain('8대가 각각 1시간');
+  expect(html).toContain('9.165 %');
+  expect(html).not.toContain('<th>평균에 사용한 시간</th>');
+  expect(html).not.toContain('4개 항목 중 4개');
+});
+
+it('keeps legacy O08 values in details without advertising namespace analysis for cluster reports', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      request={{ group_by: ['cluster'] }}
+      value={{
+        topics: [
+          {
+            topic_id: 'O08',
+            status: 'partial',
+            metrics: [{ id: 'O08.observed_namespace_hours.0', value: 7.986, unit: 'GPU-hours' }],
+          },
+        ],
+      }}
+    />,
+  ).split('<summary>원본 결과 보기')[0];
+  expect(html).not.toContain('<h3>Namespace GPU 현황</h3>');
+  expect(html).not.toContain('새 Namespace 활동률 집계 미적용');
+  expect(html).toContain('7.986');
+});
+
+it('retains other topic explanations when removing duplicate namespace metric summaries', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        topics: [
+          {
+            topic_id: 'O08',
+            quality: { applied_group_by: ['namespace'] },
+            metrics: [{ id: 'O08.observed_namespace_hours.0', value: 1, unit: 'GPU-hours' }],
+          },
+        ],
+        narrative: [
+          { id: 'other.fact', text: 'Other topic explanation', value_refs: [] },
+          {
+            id: 'O08.observed_namespace_hours.0.fact',
+            text: 'duplicate',
+            value_refs: ['O08.observed_namespace_hours.0'],
+          },
+        ],
+      }}
+    />,
+  ).split('<summary>원본 결과 보기')[0];
+  expect(html).toContain('Other topic explanation');
+  expect(html).not.toContain('duplicate');
+});
