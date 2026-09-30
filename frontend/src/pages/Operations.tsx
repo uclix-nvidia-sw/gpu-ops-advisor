@@ -1,19 +1,10 @@
 import { ArrowRight, ClipboardList, FileChartColumn, Radar, Telescope } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../lib/store';
-import {
-  obj,
-  queryPath,
-  str,
-  strings,
-  topicId,
-  topics,
-  useList,
-  useResource,
-  type Row,
-} from '../lib/live';
+import { obj, queryPath, str, topicId, topics, useList, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
-import { reportTitle } from '../lib/workflow';
+import { reportScope, reportTitle } from '../lib/workflow';
+import { groupLabel } from '../lib/report';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { Badge, Field } from '../components/ui';
 import { IncidentStates } from '../components/RcaDebug';
@@ -141,11 +132,7 @@ export function OperationsHome() {
               <Link className="ops-report-teaser" key={str(r.id)} to={`/reports/${str(r.id)}`}>
                 <Badge status={str(r.result_status, 'unpublished')} />
                 <h3>{reportTitle(r)}</h3>
-                <p>
-                  {strings(r.topic_ids)
-                    .map((t) => topics[Number(t.slice(1)) - 1] || t)
-                    .join(' / ')}
-                </p>
+                <p>대상: {reportScope(r)}</p>
                 <small>{formatDate(str(r.created_at))}</small>
                 <ArrowRight size={18} />
               </Link>
@@ -379,12 +366,10 @@ export function OperationsReports() {
                   <Badge status={str(r.result_status, 'unpublished')} />
                 </div>
                 <h2>{reportTitle(r)}</h2>
-                <p>
-                  {strings(r.topic_ids)
-                    .map((t) => topics[Number(t.slice(1)) - 1] || t)
-                    .join(' / ')}
-                </p>
+                <p>대상: {reportScope(r)}</p>
                 <dl>
+                  <dt>요청 집계</dt>
+                  <dd>{groupLabel(r.group_by)}</dd>
                   <dt>분석 기간</dt>
                   <dd>
                     {formatDate(str(obj(r.time_range).start))} —{' '}

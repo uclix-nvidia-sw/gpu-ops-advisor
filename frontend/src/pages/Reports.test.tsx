@@ -20,6 +20,10 @@ vi.mock('../lib/live', async (original) => ({
           status: 'succeeded',
           result_ref: 'r1',
           result_status: 'partial',
+          topic_ids: ['O08', 'O09'],
+          scope: { clusters: [{ cluster_id: 'cpc-2', namespaces: ['training'] }] },
+          time_range: { start: '2026-09-29T00:00:00Z', end: '2026-09-30T00:00:00Z' },
+          group_by: ['namespace'],
         },
       ],
       isPending: false,
@@ -42,6 +46,11 @@ describe('Ops report landing', () => {
       expect(html).toContain('class="button primary" href="/reports?tab=final"');
       expect(html).toContain('전체 이력');
       expect(html).toContain('/reports/published#final-report');
+      expect(html).toContain('Namespace·프로젝트 배분 · GPU 에너지');
+      expect(html).toContain('대상: cpc-2 / training');
+      expect(html).toContain('분석 기간');
+      expect(html).toContain('요청 집계');
+      expect(html).not.toContain('>published</a>');
       expect(paths.at(-1)).not.toContain('status=succeeded');
       vi.unstubAllGlobals();
     },

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { errorText, obj, str, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
+import { reportScope, reportTitle } from '../lib/workflow';
+import { groupLabel } from '../lib/report';
 export function QueryState({
   query,
   empty = false,
@@ -323,7 +325,7 @@ export function JobRows({ items }: { items: Row[] }) {
       <table>
         <thead>
           <tr>
-            <th>작업</th>
+            <th>분석 · 대상</th>
             <th>종류</th>
             <th>접수 시각</th>
             <th>실행 상태</th>
@@ -336,10 +338,31 @@ export function JobRows({ items }: { items: Row[] }) {
             <tr key={str(j.id)}>
               <td>
                 <Link className="text-link" to={`/jobs/${str(j.id)}`}>
-                  {j.kind === 'rca' ? <AlarmIdentity record={j} /> : str(j.title, str(j.id))}
+                  {j.kind === 'rca' ? (
+                    <AlarmIdentity record={j} />
+                  ) : j.kind === 'report' ? (
+                    <strong>{reportTitle(j)}</strong>
+                  ) : (
+                    str(j.title, str(j.id))
+                  )}
                 </Link>
                 {j.kind === 'rca' && <small className="cell-sub">작업 ID · {str(j.id)}</small>}
-                <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
+                {j.kind === 'report' ? (
+                  <>
+                    <div className="cell-sub">대상: {reportScope(j)}</div>
+                    <div className="cell-sub">
+                      분석 기간: {formatDate(str(obj(j.time_range).start))} –{' '}
+                      {formatDate(str(obj(j.time_range).end))}
+                    </div>
+                    <div className="cell-sub">요청 집계: {groupLabel(j.group_by)}</div>
+                    <details>
+                      <summary>작업 ID</summary>
+                      <small>{str(j.id)}</small>
+                    </details>
+                  </>
+                ) : (
+                  <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
+                )}
               </td>
               <td>
                 {str(j.kind) === 'rca'
