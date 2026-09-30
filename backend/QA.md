@@ -1,5 +1,9 @@
 # Backend v1.3 검증 기록
 
+## 2026-09-30 Namespace 보고서 실행·내보내기
+
+**통과:** Backend Go vet/race/build, 격리 PostgreSQL의 전체 `-tags=e2e` 검사, 실제 Backend→JC→Ops 공개/HTML 다운로드. 즉시·정기 보고서 프로필 선택과 CSV 원래 수치/단위 유지·HTML 단위 변환을 확인했다. **미검증:** 운영 배포·실제 Grafana/LLM. 환경·명령·fixture 경계는 [Agent QA](../agents/QA.md)의 같은 날짜 실행·표시 개선 기록을 따른다.
+
 ## 2026-09-28 전체 Runbook 콘텐츠·일괄 등록
 
 - **통과:** Backend에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 분리한 xid/sxid 폴더와 일반 Runbook을 합친 267건의 v1 구조·빈 호환성 발행 거부·잘못된 조건/계획/출처를 검사했다.

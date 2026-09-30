@@ -30,9 +30,14 @@ export function Reports() {
         title="운영 분석·보고서"
         description="저장된 근거를 바탕으로 운영 분석을 요청하고 결과를 확인합니다."
         actions={
-          <Link className="button primary" to="/reports/new">
-            새 보고서
-          </Link>
+          <>
+            <Link className="button primary" to="/reports/new?preset=namespace">
+              Namespace GPU 현황
+            </Link>
+            <Link className="button" to="/reports/new">
+              새 보고서
+            </Link>
+          </>
         }
       />
       <NavTabs items={reportTabs} />
@@ -62,8 +67,10 @@ export function ReportForm() {
     navigate = useNavigate(),
     [params] = useSearchParams(),
     cmd = useCommand();
-  const [selected, setSelected] = useState(['O01']),
-    [group, setGroup] = useState('cluster'),
+  const [selected, setSelected] = useState(
+      params.get('preset') === 'namespace' ? ['O08'] : ['O01'],
+    ),
+    [group, setGroup] = useState(params.get('preset') === 'namespace' ? 'namespace' : 'cluster'),
     [scheduled, setScheduled] = useState(params.get('schedule') === 'true'),
     [frequency, setFrequency] = useState('daily'),
     [localTime, setLocalTime] = useState('09:00'),
@@ -152,6 +159,22 @@ export function ReportForm() {
       />
       <NavTabs items={reportTabs} />
       <form className="stack" onSubmit={submit}>
+        <Notice>
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              setSelected(['O08']);
+              setGroup('namespace');
+            }}
+          >
+            Namespace GPU 현황으로 설정
+          </button>
+          <p>
+            GPU 연결 시간과 연결 GPU의 평균 활동률을 조회합니다. 먼저 관측 범위에서 CPC·Namespace와
+            데이터가 있는 기간을 선택하세요. 독점 할당량이나 회수 가능량을 뜻하지 않습니다.
+          </p>
+        </Notice>
         <Panel title="분석 주제">
           <div className="live-check-grid">
             {topics.map((t, i) => (

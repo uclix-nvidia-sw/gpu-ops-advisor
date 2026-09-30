@@ -1,3 +1,23 @@
+# 2026-09-30 PR #28과 GUI 관점 전환 병합 검증
+
+main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 함께 유지했다. ReportContent·report 지표/사유·Results의 충돌을 해결하고 운영측 목차 선택 시 접힌 주제 상세를 펼치도록 연결했다.
+
+- **통과:** frontend `npm test` 30건, `npm run build`, `npm run format:check`. 기존/새 결과·0/null·분모·권고 보류·근거·실패 표시 회귀를 포함한다.
+- **통과:** 로컬 합성 API와 in-app browser에서 세 모드 전환 후 같은 namespace 수치·운영측 목차 이동/펼침·개발측 workflow/evidence 안내, 390px 개발측 페이지 가로 넘침 없음·브라우저 오류 없음 확인.
+- **통과:** 문서 링크와 diff 검사. Backend·JC·Worker 제품 코드는 이전 PR 커밋과 동일하므로 로컬 서비스 E2E는 재실행하지 않았다. 이전 커밋의 원격 Go/Python/Frontend/Helm 검사 통과를 확인했다.
+- **미검증:** 이 병합 커밋의 원격 CI·운영 배포·실제 Grafana/LLM. 운영 화면과 DB는 변경하지 않았다.
+
+---
+
+# 2026-09-30 Namespace 운영 보고서 개선
+
+- **통과:** `npm test` 26건, `npm run format:check`, `npm run build`. 0%·산출 불가·기존 결과의 미계산, 공유 제외 사유, 실행 제한/조회 실패 구분, 메모리 단위, 검토 기록 없음 문구를 검사했다.
+- **통과:** Codex in-app browser에서 로컬 Vite build와 합성 API로 보고서 목록 → Namespace GPU 현황 → O08/namespace 기본값 → 제출 → 저장 결과를 확인했다. namespace 요약·보류 권고·접힌 상세 근거·MiB, 390px 페이지 가로 넘침 없음과 브라우저 오류 없음 확인. 실제 운영 데이터는 UI fixture에 포함하지 않았다.
+- **통과:** 실제 Backend/JC/Worker 연동은 별도의 [Agent QA](../agents/QA.md) 통합 검사에서 확인했다.
+- **미수행/미검증:** 운영 화면 배포, 실제 Grafana/LLM. 기존 보고서의 수치는 변경하지 않으며 새 보고서를 실행해야 criteria 1.2가 적용된다.
+
+---
+
 # 2026-09-30 RCA 가독성 개선 로컬 검증
 
 후속 목록 정리: 상태 상자를 알람/사건/검토 개별 컬럼의 배지로 변경했다. `npm test` 21건, 포맷·빌드·문서 링크·diff 검사를 통과했다. Edge/Playwright 모의 API로 다섯 컬럼, 상태 값만 표시, 누락 상태 미확인, 390px 페이지 가로 넘침 없음을 확인했다. 운영 검증은 미수행이다.

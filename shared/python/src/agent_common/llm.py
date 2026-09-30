@@ -32,8 +32,10 @@ class LLM:
             state,
         )
         self.http = http
+        self.last_failure = None
         self.usage = {
             "calls": 0,
+            "request_attempts": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "total_tokens": 0,
@@ -48,7 +50,9 @@ class LLM:
         )
 
     async def complete(self, system, data, stage="synthesis", tools=None):
+        self.last_failure = None
         if not self.configured:
+            self.last_failure = "model_not_configured"
             return None
         text = json.dumps(data, ensure_ascii=False)
         # Conservative UTF-8 upper bound includes prompt and output in reserved budget.
@@ -60,6 +64,7 @@ class LLM:
         )
         cap = min(cap, self.remaining - prompt_bound)
         if cap <= 0:
+            self.last_failure = "llm_token_budget_exhausted"
             return None
         payload = dict(
             model=self.settings.model_for(stage),
@@ -94,10 +99,12 @@ class LLM:
                     self.deadline - time.monotonic(),
                 )
                 if timeout <= 0:
+                    self.last_failure = "llm_deadline_exhausted"
                     return None
                 self.state("running")
                 started = time.monotonic()
                 try:
+                    self.usage["request_attempts"] += 1
                     response = await client.post(
                         url,
                         json=payload,
@@ -141,6 +148,7 @@ class LLM:
                     )
                     continue
                 if response.is_error:
+                    self.last_failure = "llm_http_error"
                     return None
                 body = response.json()
                 usage = body.get("usage", {})
@@ -157,6 +165,7 @@ class LLM:
                         cap = doubled
                         payload["max_tokens"] = cap
                         continue
+                    self.last_failure = "llm_output_truncated"
                     return None
                 message = choice.get("message", {})
                 if tools:
@@ -164,6 +173,7 @@ class LLM:
                 try:
                     return json.loads(strip_reasoning(message.get("content") or ""))
                 except (ValueError, TypeError):
+                    self.last_failure = "llm_invalid_output"
                     return None
         return None
 
@@ -180,7 +190,11 @@ async def explain(
     if not facts:
         return
     response = await llm.complete(
-        system, {"facts": facts, "limitations": result["limitations"]}
+        system,
+        {
+            "facts": [{k: f[k] for k in ("id", "text", "value_refs")} for f in facts],
+            "limitations": result["limitations"],
+        },
     )
     allowed = {f["id"]: f for f in facts}
     if (

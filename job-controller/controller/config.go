@@ -14,6 +14,8 @@ type WorkerProfile struct {
 	Slots int    `json:"slots"`
 }
 type Execution struct {
+	Kind             string `json:"kind,omitempty"`
+	Criteria         string `json:"criteria,omitempty"`
 	MaxAttempts      int    `json:"max_attempts"`
 	TokenBudget      int    `json:"token_budget"`
 	AttemptBudget    int    `json:"attempt_budget"`
@@ -32,7 +34,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	return Config{SharedLimit: 1, KindLimits: map[string]int{"rca": 1, "report": 1}, Workers: map[string]WorkerProfile{"rca-v1": {"rca", 1}, "report-v1": {"report", 1}}, Execution: map[string]Execution{"local-v1": {3, 98304, 32768, 30, 5, 5, "1.3"}}, FreshSeconds: 90, Versions: Object{"query": "unconfigured", "parser": "unconfigured", "criteria": "unconfigured", "result_schema": "1.3"}}
+	return Config{SharedLimit: 1, KindLimits: map[string]int{"rca": 1, "report": 1}, Workers: map[string]WorkerProfile{"rca-v1": {"rca", 1}, "report-v1": {"report", 1}}, Execution: map[string]Execution{"local-v1": {MaxAttempts: 3, TokenBudget: 98304, AttemptBudget: 32768, LeaseSeconds: 30, HeartbeatSeconds: 5, RetrySeconds: 5, Schema: "1.3"}, "report-namespace-v1": {Kind: "report", Criteria: "1.2", MaxAttempts: 3, TokenBudget: 98304, AttemptBudget: 32768, LeaseSeconds: 30, HeartbeatSeconds: 5, RetrySeconds: 5, Schema: "1.3"}}, FreshSeconds: 90, Versions: Object{"query": "unconfigured", "parser": "unconfigured", "criteria": "unconfigured", "result_schema": "1.3"}}
 }
 func (c Config) Validate() error {
 	if c.SharedLimit < 1 || c.FreshSeconds < 1 || len(c.Workers) == 0 || len(c.Execution) == 0 {
@@ -47,6 +49,9 @@ func (c Config) Validate() error {
 		}
 	}
 	for id, p := range c.Execution {
+		if (p.Kind != "" && p.Kind != "report") || (p.Criteria != "" && (p.Kind != "report" || p.Criteria != "1.2")) {
+			return errors.New("invalid report criteria profile")
+		}
 		if id == "" || p.MaxAttempts < 1 || p.TokenBudget < 1 || p.AttemptBudget < 1 || p.AttemptBudget > p.TokenBudget || p.HeartbeatSeconds < 1 || p.LeaseSeconds < 3*p.HeartbeatSeconds || p.LeaseSeconds > 86400 || p.RetrySeconds < 1 || p.Schema != "1.3" || c.FreshSeconds < p.LeaseSeconds {
 			return errors.New("invalid execution profile")
 		}

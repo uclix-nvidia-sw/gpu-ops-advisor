@@ -110,11 +110,11 @@ describe('mode-independent published data and developer guides', () => {
         }}
       />,
     );
-    expect(html).toContain('연결 GPU의 시간 가중 평균 활동률');
+    expect(html).toContain('연결 GPU 평균 활동률');
     expect(html).toContain('>0<');
     expect(html).toContain('산출 불가');
     expect(html).toContain('3600');
-    expect(html).toContain('상충해 제외');
+    expect(html).toContain('활동값이 충돌');
     expect(html).toContain('권고 보류');
     expect(html).toContain('조치 미수행');
     expect(html).toContain('수치 참조 미확인');

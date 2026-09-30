@@ -89,7 +89,16 @@ func sanitize(v any) {
 	}
 }
 func (s *Server) envelope(input Object, source string, now time.Time) Object {
-	return Object{"contract_version": "1.3", "source_module": "backend", "source_key": source, "kind": "report", "input": input, "deadline_at": now.Add(s.Config.JobDeadline).UTC().Format(time.RFC3339Nano), "execution_profile_revision": s.Config.ExecutionRevision}
+	revision := s.Config.ExecutionRevision
+	topics, _ := Decode[[]string](input["topic_ids"])
+	groups, _ := Decode[[]string](input["group_by"])
+	if Has(topics, "O08") && Has(groups, "namespace") && len(groups) <= 2 && (len(groups) == 1 || Has(groups, "cluster")) {
+		revision = s.Config.NamespaceReportRevision
+		if revision == "" {
+			revision = "report-namespace-v1"
+		}
+	}
+	return Object{"contract_version": "1.3", "source_module": "backend", "source_key": source, "kind": "report", "input": input, "deadline_at": now.Add(s.Config.JobDeadline).UTC().Format(time.RFC3339Nano), "execution_profile_revision": revision}
 }
 func (s *Server) submitReport(w http.ResponseWriter, q *Request) error {
 	if e := s.validateWork(q, "reports"); e != nil {

@@ -40,6 +40,19 @@ OP-05~07은 [05](../05_테스트_검수_기준서.md)의 T60~T65와 연결한다
 
 고정 사례는 [namespace 검사](../../../agents/tests/test_namespace_usage.py), 별도 테스트용 1.2 JC에서 저장·공개까지의 경로는 [Worker E2E](../../../agents/tests/test_e2e.py)의 namespace 사례로 검수한다. 실제 실행 결과는 [Agent QA](../../../agents/QA.md)에 기록한다.
 
+### 0.3 Namespace 보고서 실행·표시 개선 — 2026-09-30
+
+실제 보고서 화면 검토에서 요청이 cluster·criteria unconfigured로 실행되어 namespace 활동률이 없고, budget_exhausted가 미연결로 보이며 원시 지표·사유·UUID가 노출되는 문제를 확인했다. 다음 순서로 보완한다. 전체 OP-01/05/06 구현 완료를 뜻하지 않는다.
+
+1. **접수 연결:** Frontend의 `Namespace GPU 현황`은 O08·namespace를 선택하는 편집 가능한 프리셋이다. Backend의 공통 envelope 생성부가 즉시·정기 요청 중 O08 + namespace 또는 cluster+namespace에만 `report-namespace-v1`을 선택한다. JC는 report 전용 프로필의 criteria 1.2를 새 job에 고정한다. RCA와 다른 요청은 local-v1/global criteria를 유지하며 기존 job·재시도·멱등 재전송을 재해석하지 않는다.
+2. **관측·설명 진단:** 새 O08 경로의 D01/D02/D06/D08을 먼저 조회하며 조회/시간 한도는 늘리지 않는다. result.quality에 요청 그룹, collection(query_calls/query_limit/discovery_calls), narrative_reason을 보존한다. 수집 중단은 원본 budget_exhausted로 구분하며 서버 장애로 표시하지 않는다. 원인별 한도 튜닝·병렬화는 별도 측정 후 진행한다.
+3. **결과 소비:** namespace 연결시간·평균의 유효시간·활동률·제외 사유를 먼저 표시하고 상세 주제는 접는다. 구 결과에 활동률이 없으면 미계산, null은 산출 불가, 실제 0%는 0%다. 요청/적용 그룹을 구분하며 모든 주제에 그룹이 적용됐다고 주장하지 않는다. 권고는 검토 가능/판단 보류와 미수행 사실을 표시하고 근거 ID는 펼쳐 본다. 메모리는 읽기 쉬운 단위로 표시하되 CSV 원시 수치·단위는 유지한다.
+4. **검수:** 프리셋 입력, Backend→JC→Worker→공개 결과/다운로드, 정기 occurrence의 프로필 고정, 기존 RCA 기준 유지, 0/누락/공유/수집 중단·AI 실패·구 결과의 표시, 모바일 넘침을 확인한다. 실행 결과는 [Agent QA](../../../agents/QA.md)의 해당 날짜 기록을 따른다.
+
+기존 fact 선택 LLM 입력에서 반복되는 evidence UUID만 생략하고 공개 facts/evidence 참조는 그대로 유지한다. LLM의 calls는 성공 응답 수이고 request_attempts는 실제 HTTP 요청 시도 수다. 0 calls만으로 미호출을 단정하지 않는다. 안전한 실패 코드만 기록하며 원문 오류·인증 정보는 결과에 넣지 않는다. RemoteUncertain의 격리·종료 계약은 유지한다.
+
+운영 적용은 새 Ops Worker → 새 JC/프로필 → Backend/Frontend 순서가 필요하다. 사용자 정의 전체 JC 설정은 새 프로필을 명시적으로 포함해야 한다. 기존 결과를 바꾸지 않으며 새 보고서로 검수한다. 실제 Grafana 의미 검수·운영 배포는 별도이며 이 변경 자체는 배포하지 않는다.
+
 ## 1. 역할·경계
 
 Backend의 즉시·정기 요청을 Job Controller에서 배분받아 집계·설명·보고서를 생성한다. 별도 접수 API·일정 루프·Chatbot·RCA 호출은 없다. 일정 계산은 Backend 책임이며 Worker는 접수된 절대 기간을 사용한다.

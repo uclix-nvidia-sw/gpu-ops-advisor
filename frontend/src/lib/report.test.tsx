@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ReportContent } from '../components/ReportContent';
-import { reportObservations } from './report';
+import { reportObservations, metricValue, metricUnit, collectionStatus } from './report';
+import { QueryState } from '../components/live';
 
 describe('report presentation', () => {
   it('shows usable observations, unknown allocation and escaped targets separately', () => {
@@ -64,5 +65,145 @@ describe('report presentation', () => {
       reasons: ['source_warning'],
     });
     expect(summary[1]).toMatchObject({ sample_count: 0, statuses: ['empty'] });
+  });
+});
+
+describe('namespace report usability', () => {
+  it('shows valid zero separately from unknown and reports applied grouping before details', () => {
+    const html = renderToStaticMarkup(
+      <ReportContent
+        onEvidence={() => {}}
+        request={{ group_by: ['namespace'] }}
+        value={{
+          versions: { criteria: '1.2' },
+          quality: { narrative_reason: 'llm_token_budget_exhausted' },
+          narrative_status: 'failed',
+          topics: [
+            {
+              topic_id: 'O08',
+              status: 'partial',
+              quality: { applied_group_by: ['namespace'] },
+              metrics: [
+                {
+                  id: 'O08.observed_namespace_hours.0',
+                  target: { cluster_id: 'cpc-1', namespace: 'training' },
+                  value: 1,
+                  unit: 'GPU-hours',
+                },
+                {
+                  id: 'O08.namespace_activity_valid_hours.0',
+                  target: { cluster_id: 'cpc-1', namespace: 'training' },
+                  value: 1,
+                  unit: 'GPU-hours',
+                },
+                {
+                  id: 'O08.namespace_connected_gpu_util.0',
+                  target: { cluster_id: 'cpc-1', namespace: 'training' },
+                  value: 0,
+                  unit: 'percent',
+                },
+                {
+                  id: 'O08.namespace_connected_gpu_util.1',
+                  target: { cluster_id: 'cpc-1', namespace: 'shared' },
+                  value: null,
+                  unit: 'percent',
+                  quality: { reason: 'shared_gpu_attribution_unverified' },
+                },
+              ],
+              recommendations: [
+                {
+                  eligibility: 'withheld',
+                  execution: 'not_performed',
+                  text: '작업 목적 확인',
+                  reason: 'workload_purpose_unverified',
+                  evidence_refs: ['e1'],
+                  preconditions: ['workload_exception_review'],
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    ).split('<summary>원본 결과 보기')[0];
+    expect(html).toContain('요청한 집계: Namespace');
+    expect(html).toContain('적용된 집계: Namespace');
+    expect(html).toContain('0 %');
+    expect(html).toContain('산출 불가');
+    expect(html).not.toContain('산출 불가 %');
+    expect(html).toContain('권고 보류');
+    expect(html).toContain('관련 근거 1건 보기');
+    expect(html).not.toContain('class="badge badge-blocked">withheld');
+    expect(html).toContain('토큰 예산을 초과');
+    expect(html.indexOf('Namespace GPU 현황')).toBeLessThan(html.indexOf('주제별 상세 수치'));
+  });
+  it('does not imply that legacy reports applied the requested namespace calculation', () => {
+    const html = renderToStaticMarkup(
+      <ReportContent
+        onEvidence={() => {}}
+        request={{ group_by: ['namespace'] }}
+        value={{
+          versions: { criteria: 'unconfigured' },
+          narrative_status: 'failed',
+          topics: [
+            {
+              topic_id: 'O08',
+              metrics: [
+                {
+                  id: 'O08.observed_namespace_hours.0',
+                  target: { cluster_id: 'cpc-1', namespace: 'a' },
+                  value: 7.986,
+                  unit: 'GPU-hours',
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain('요청했지만 새 활동률 계산이 적용되지 않았습니다');
+    expect(html).toContain('미계산');
+    expect(html).toContain('구체적인 실패 이유가 기록되지 않았습니다');
+  });
+  it('separates collection limits, query failures and empty source responses', () => {
+    expect(
+      collectionStatus({
+        statuses: ['unavailable'],
+        reasons: ['budget_exhausted'],
+        sample_count: 0,
+      }),
+    ).toBe('실행 제한으로 미수집');
+    expect(
+      collectionStatus({
+        statuses: ['ok', 'unavailable'],
+        reasons: ['budget_exhausted'],
+        sample_count: 10,
+      }),
+    ).toBe('일부 수집 후 제한으로 중단');
+    expect(collectionStatus({ statuses: ['unavailable'], reasons: ['query_failed'] })).toBe(
+      '조회 실패',
+    );
+    expect(collectionStatus({ statuses: ['empty'], reasons: [] })).toBe('해당 기간 데이터 없음');
+  });
+  it('formats readable memory without changing stored values or null semantics', () => {
+    const metric = { value: 3 * 1024 * 1024, unit: 'bytes' };
+    expect(metricValue(metric)).toBe('3');
+    expect(metricUnit(metric)).toBe('MiB');
+    expect(metric.value).toBe(3145728);
+    expect(metricValue({ value: null, unit: 'bytes' })).toBe('산출 불가');
+    expect(metricUnit({ value: 80 * 1024 ** 3, unit: 'bytes' })).toBe('GiB');
+  });
+  it('uses a review-specific empty message while retaining query error handling', () => {
+    const html = renderToStaticMarkup(
+      <QueryState
+        query={{ isPending: false, isError: false, error: null, refetch: () => {} }}
+        empty
+        emptyTitle="아직 작성된 검토·조치 기록이 없습니다."
+        emptyDescription="검토 의견을 남길 수 있습니다."
+      >
+        <p>기록</p>
+      </QueryState>,
+    );
+    expect(html).toContain('아직 작성된 검토·조치 기록');
+    expect(html).not.toContain('저장된 결과가 없습니다');
   });
 });

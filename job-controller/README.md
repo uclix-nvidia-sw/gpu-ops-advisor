@@ -16,6 +16,10 @@ Backend와 같은 PostgreSQL을 사용하는 독립 프로세스입니다. 보�
 
 `DATABASE_URL`은 두 서버가 같은 DB를 가리켜야 합니다. JC가 공통 001/002와 큐 003, Worker 계약 006 마이그레이션을 적용합니다. Backend가 registry/설정 초기화를 담당하므로 신규 개발 DB에는 Backend seed도 실행해야 합니다. 별도 Agent나 LLM을 가짜로 띄우지 않습니다. Worker 0개라도 보고서는 202로 영속 접수되고 `worker_unavailable` 상태로 대기합니다.
 
+## Namespace 보고서 실행 프로필
+
+`report-namespace-v1`은 kind=report, criteria=1.2인 전용 프로필이다. Backend가 O08 namespace 요청에 선택하며 JC는 접수 시 `versions.criteria`를 해당 값으로 고정한다. local-v1과 전역 versions.criteria는 유지한다. report 전용 프로필로 RCA를 접수하면 거절한다. 기존 job·재시도에는 저장된 버전/예산을 사용한다. 사용자 정의 JC_CONFIG_FILE/Helm 전체 설정을 사용하는 경우 새 프로필과 소비자 배포를 함께 준비한다. 검사 기록은 [Agent QA](../agents/QA.md)의 보고서 실행·표시 개선 항목을 따른다.
+
 ## 구성과 동작
 
 - `controller/`: 접수, FIFO/종류 간 교대 배분, Worker/lease, 결과 발행, 취소·재시도, 격리 복구, 읽기 API.

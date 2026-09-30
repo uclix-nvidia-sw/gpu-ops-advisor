@@ -6,10 +6,14 @@ import { Badge, Empty, Modal } from './ui';
 export function QueryState({
   query,
   empty = false,
+  emptyTitle = '저장된 결과가 없습니다.',
+  emptyDescription = '선택한 범위에서 서버에 등록된 기록이 없습니다.',
   children,
 }: {
   query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown };
   empty?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
   children: ReactNode;
 }) {
   if (query.isPending)
@@ -28,13 +32,7 @@ export function QueryState({
         </button>
       </div>
     );
-  if (empty)
-    return (
-      <Empty
-        title="저장된 결과가 없습니다."
-        description="선택한 범위에서 서버에 등록된 기록이 없습니다."
-      />
-    );
+  if (empty) return <Empty title={emptyTitle} description={emptyDescription} />;
   return <>{children}</>;
 }
 export function More({

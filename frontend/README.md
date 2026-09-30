@@ -2,6 +2,10 @@
 
 React + TypeScript + Vite. [v1.3 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)의 Backend 계약 변경에 맞춰 실제 Go API 연결을 갱신했습니다. 사용자/권한 DTO, Assistant, 직접 RCA 실행, GUI 용량 변경은 제외했습니다.
 
+## Namespace 보고서 실행·표시
+
+`운영 분석·보고서 → Namespace GPU 현황`으로 O08·namespace 조건을 채운 뒤 CPC·Namespace 범위와 기간을 확인하고 요청한다. 정기 일정도 같은 프로필 선택을 따른다. 서버의 새 보고서 전용 프로필이 필요하다. 저장된 결과에는 요청 그룹·계산 기준과 O08의 적용 여부, namespace별 연결/유효시간·활동률을 먼저 표시한다. 구 결과의 미계산과 자료 부족의 null, 실제 0을 구분한다. 수집 제한은 미연결로 표시하지 않으며 권고와 근거 상세는 펼쳐 본다. 화면·HTML의 메모리는 읽기 쉬운 단위로, CSV는 원시 수치·단위로 유지한다. [검증 기록](../agents/QA.md).
+
 ## 실행
 
 저장소 루트에서 DB와 Backend를 각각 별도 터미널로 실행하고 Frontend를 실행합니다.
