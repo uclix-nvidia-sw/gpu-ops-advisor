@@ -1,5 +1,7 @@
 # 2026-09-30 PR #28과 GUI 관점 전환 병합 검증
 
+2026-09-30 RCA 변경을 최신 main `77fbfcf` GUI 관점 전환과 통합한 뒤 **33 tests**, `npm run format:check`, `npm run build` 통과. 공개 RCA 최종 보고서는 공통 RcaResult를 통해 기존·운영·개발 화면에 표시된다. 아래 24건 기록은 통합 전 검사다. API/LLM fixture 범위를 유지하며 운영 화면 검수는 미수행이다.
+
 main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 함께 유지했다. ReportContent·report 지표/사유·Results의 충돌을 해결하고 운영측 목차 선택 시 접힌 주제 상세를 펼치도록 연결했다.
 
 - **통과:** frontend `npm test` 30건, `npm run build`, `npm run format:check`. 기존/새 결과·0/null·분모·권고 보류·근거·실패 표시 회귀를 포함한다.
