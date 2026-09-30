@@ -121,6 +121,10 @@ Backend는 `source_module=backend,source_key=manual:<Idempotency-Key>`로 JC의 
 
 지식은 검토한 content_hash가 일치할 때 발행하며 발행본은 불변이다. 실제 조치 기록은 target·occurred_at·performed_by·action_summary를 받지만 장비 제어를 실행하지 않는다. performed_by는 미인증 입력임을 표시한다.
 
+### 보고서 결과 소비 보완 목표
+
+2026-09-30 소비 보완 목표: 보고서 내부 병렬 관측은 기존 `/reports`·일정·JC 접수 계약을 변경하지 않는다. [12](../ops-agent/12_보고서_Agent_모듈_설계서.md)의 OP-07에 따라 공개 결과의 facts/findings/recommendations·value_refs/evidence_refs·eligibility·preconditions·reason·execution을 기존 결과 본문으로 전달하고 HTML에서 권고/보류·근거·다음 확인을 읽을 수 있게 한다. Backend가 조언이나 eligibility를 다시 생성하지 않으며 미공개 candidate는 조회하지 않는다. 구 결과의 필드 부재·설명 실패·partial/blocked를 보존한다. CSV는 아래 기존 수치 열과 저장 값을 유지한다. 이는 개발 목표이며 현재 HTML/CSV 구현과 구분한다. 검수는 [05 T65](../05_테스트_검수_기준서.md)를 따른다.
+
 ### 보고서 다운로드의 현재 구현
 
 Backend는 발행된 `result_candidates.body`의 `measurements`와 `topics[].metrics`를 읽어 출력하며 새 분석을 실행하지 않는다. 수치가 있으면 HTML은 항목·대상·값·단위·제한 사유 표를, CSV는 `id,target,value,unit,method,reason,evidence_refs` 열을 생성한다. null 값은 ‘산출 불가’로 표시한다. HTML은 원본 결과와 해석 제한을 포함하고 텍스트를 escape하며 CSV는 수식 문자를 방어한다. 수치 배열이 비어 있으면 기존 JSON 기반 HTML/필드별 CSV 출력을 사용한다. Agent의 저장 파일을 그대로 전송하는 경로와는 구분한다. 구현: [export](../../../backend/internal/api/export.go), [수치 출력](../../../backend/internal/api/report_export.go).

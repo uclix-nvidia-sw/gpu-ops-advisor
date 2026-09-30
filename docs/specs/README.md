@@ -28,7 +28,7 @@ GUI → Backend에서 RCA 결과를 조회하고 보고서를 요청한다. Graf
 | [07 Frontend §0](frontend/07_프론트엔드_개발명세서.md#0-현재-구현-분석과-업그레이드-작업) | FE-01~03: 사건 상태 정합, 종결·재발, RCA 근거 표시 | Backend/Incident, 08 화면 기준 |
 | [10 JC §0](job-controller/10_Job_Controller_모듈_설계서.md#0-현재-구현-분석과-업그레이드-작업) | JC-01~03: 버전별 접수, Worker 호환, 공개 검증 경계 | shared/03/14, 두 Worker, 모든 결과 소비자 |
 | [11 RCA §0.1](rca-agent/11_RCA_Agent_모듈_설계서.md#01-후속-개발을-위한-코드-대조) | RCA-01~04와 기존 P0~P6: 목적 선택, 이력 확보, Runbook/fact 연결, 결과 소비 | Incident/JC, 공통 Python, Backend/Frontend/Ops |
-| [12 Ops §0](ops-agent/12_보고서_Agent_모듈_설계서.md#0-현재-구현-분석과-업그레이드-작업) | OP-01~04: 요청 그룹 반영, 재발·발생률, 사건 당시 작업, 혼합 결과 소비 | 03/04의 계산 계약, Incident/RCA, Backend/Frontend |
+| [12 Ops §0](ops-agent/12_보고서_Agent_모듈_설계서.md#0-현재-구현-분석과-업그레이드-작업) | OP-01~04: 그룹·사건·당시 작업·혼합 소비; OP-05~07: 병렬 관측·종합 조언·결과 소비 | 03/04의 계산 계약, 14 실행 계약, Incident/RCA, Backend/Frontend |
 | [13 Incident §0.1](incident/13_Incident_모듈_설계서.md#01-후속-개발을-위한-코드-대조) | IN-01~03: 사건 신원·중복, 최초 요청·역할 분리, 상태 소비 | DB migration/JC/Worker 선행, Backend/Frontend/Ops |
 
 2026-09-23 추가 검토에서 개발을 막던 계약 충돌을 보완했다. 접수 버전은 jobs.versions.input_contract로 전달하고 Worker 지원 계약으로 배분한다(14). RCA는 목적 선택 전에 단일 DB 이력을 고정한다(03 §6). 보고서의 그룹 지원·사건 기간·재발·발생률 기준은 04 §5.5에 정의했다. 서로 다른 기본값을 모듈에서 임의로 만들지 않는다.
@@ -68,6 +68,12 @@ Incident는 알람 생명주기 상태와 사건 ID를 분리하고, source를 �
 - [Knowledge DB 참고 설계](rca-agent/drafts/knowledge-db-reference.md)
 - RCA evidence 조사 검토 — [11번 문서](rca-agent/11_RCA_Agent_모듈_설계서.md) §8에 해석과 점검 순서를 정리했다. 사용자 제공 운영 원문은 로컬에 보존하며 저장소에 포함하지 않는다.
 
+### 보고서 Orchestrator·병렬 관측·조언 개발 기준
+
+2026-09-30에 [상세 Mermaid 흐름도](../architecture/report-agent-workflow/detailed-workflow.md)의 합의를 현행 설계의 **추가 개발 목표**로 반영했다. 기준은 [12 Ops](ops-agent/12_보고서_Agent_모듈_설계서.md)의 OP-05~07과 §2.4~§5다. query별 Observation Sub-agent를 한 Worker/job/lease 안에서 병렬 실행하고, 결정적 통계·제한적 보완 조회 후 도구 없는 단일 Synthesis가 개선 조언을 작성한다. O01~O11별 Agent나 별도 큐·일정 서비스는 만들지 않는다.
+
+판단/결과 의미는 [04](common/04_Agent_동작_판단_명세서.md), 공유 예산·취소·공개는 [14](common/14_모듈간_호출과_공통실행_계약.md), 추가 검수는 [05 T60~T65](05_테스트_검수_기준서.md), Backend/화면 소비는 02/07/08에 연결했다. 현재 코드는 순차 수집·fact_ids 선택이며 **병렬 수집·종합 조언은 미구현, 신규 제품 검수는 NOT RUN**이다. 보고서 접수 1.3·결과 스키마 1.1, 기존 집계 변경 목표 criteria 1.2를 유지한다. 구현·DB/배포는 이번 문서 변경에 포함하지 않는다.
+
 ## 개발 문서
 
 | 번호 | 문서 | 단일 기준으로 관리하는 내용 |
@@ -83,7 +89,7 @@ Incident는 알람 생명주기 상태와 사건 ID를 분리하고, source를 �
 | 09 | [개정·정리 내역](09_통합검토_반영내역.md) | 변경 이유·삭제 범위·추적·검증 |
 | 10 | [Job Controller](job-controller/10_Job_Controller_모듈_설계서.md) | 큐·배분·용량 제한·상태 전이 |
 | 11 | [RCA Agent](rca-agent/11_RCA_Agent_모듈_설계서.md) | R01~R09, workflow·runbook 계약, D-쿼리 선결 조건, 개발·검수 순서 |
-| 12 | [보고서 Agent](ops-agent/12_보고서_Agent_모듈_설계서.md) | NAT·RCA DB/기간 관측 집계, O01~O11 |
+| 12 | [보고서 Agent](ops-agent/12_보고서_Agent_모듈_설계서.md) | O01~O11, Orchestrator·병렬 관측·Synthesis 개발 목표·검수 순서 |
 | 13 | [Incident](incident/13_Incident_모듈_설계서.md) | Grafana 알람·사건·RCA 접수 |
 | 14 | [모듈 간 계약](common/14_모듈간_호출과_공통실행_계약.md) | DTO·멱등·lease·완료·오류 |
 

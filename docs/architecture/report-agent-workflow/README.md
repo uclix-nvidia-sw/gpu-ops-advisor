@@ -1,8 +1,12 @@
 # 보고서 Agent 워크플로우 검토안
 
-2026-09-28 · 코드 기준 `fedd2b6` 및 현재 작업 트리의 관련 문서. **설계 검토용 초안**이며 현행 명세나 실행 계약을 대체하지 않는다. 제품 코드·DB·배포는 변경하지 않았다.
+2026-09-28 최초 검토 · 코드 기준 `fedd2b6`. 2026-09-30 합의한 Orchestrator·병렬 수집·Synthesis 흐름은 [12번 설계서](../../specs/ops-agent/12_보고서_Agent_모듈_설계서.md)의 추가 개발 목표로 반영했다. 구현 기준은 12/04/14, 검수는 05를 따르며 이 문서는 검토 근거와 요약 도면을 보존한다. 제품 코드·DB·배포는 변경하지 않았다.
 
 [인터랙티브 워크플로우](report-agent.workflow.html) · [JSON 원본](report-agent.workflow.json) · [생성 검증 기록](delivery-receipt.json) · [브라우저 검증 기록](report-agent.workflow.visual-check.json)
+
+2026-09-30: [상세 Mermaid 흐름도](detailed-workflow.md)를 추가했다. 의뢰·예약·배분, 근거 수집·통계, 개선 조언·검증, 저장·공개·공통 중단의 네 흐름으로 분기와 재시도를 설명한다. 아래 기존 HTML과 검증 기록은 2026-09-28 요약 도면의 기록이다.
+
+같은 날 수집 구조 합의: 긴 Grafana 조회에 대비해 RCA와 같은 Orchestrator·query별 병렬 Observation Sub-agent 구조를 개발 목표로 채택했다. 전체 예산·동시성·취소를 공유 관리하고 통계·Synthesis로 취합한다. 실제 지연 개선은 미검증이며 구현은 대기 중이다. 상세 Mermaid의 수집 절을 최신 목표로 따른다.
 
 ## 1. 검토 결론
 
@@ -10,7 +14,7 @@
 
 일정은 Backend 내부 스케줄러에 등록한다. 예약 시점이 되면 Backend가 보고서 작업을 JC에 접수하고, 상시 실행 중인 Ops Worker가 claim하여 처리한다. 예약마다 Agent 프로세스를 새로 띄우거나 Backend가 Agent를 직접 호출하는 구조가 아니다. 즉시 보고서는 일정 등록 없이 Backend에서 JC로 접수한다.
 
-RCA의 근거 확보 → 분석 → 검증 → 필요 시 보완 조사 구조는 참고하되, 보고서는 요청한 기간·주제에 대한 결정적 집계에서 출발한다. 보고서를 위해 새 RCA를 실행하거나 Runbook 검색을 기본 단계로 추가하지 않는다. 아래 내부 단계는 한 Worker의 NAT 워크플로 함수이며 별도 하위 Agent·서비스가 아니다.
+RCA의 근거 확보 → 분석 → 검증 → 필요 시 보완 조사 구조는 참고하되, 보고서는 요청한 기간·주제에 대한 결정적 집계에서 출발한다. 보고서를 위해 새 RCA를 실행하거나 Runbook 검색을 기본 단계로 추가하지 않는다. 내부 단계와 Observation Sub-agent는 한 Worker의 NAT 워크플로 안에서 실행하며 별도 서비스나 JC 작업으로 분리하지 않는다.
 
 ## 2. 현재 구현과 확장 목표
 
@@ -18,7 +22,7 @@ RCA의 근거 확보 → 분석 → 검증 → 필요 시 보완 조사 구조�
 |---|---|---|
 | 접수·일정 | Backend의 일정 revision, occurrence, outbox와 즉시 요청 접수 | 기존 구조 유지 |
 | 실행·공개 | Worker claim/heartbeat, 후보·근거 저장, JC complete·공개 | 기존 소유권과 lease·취소·deadline 유지 |
-| 수집 | 주제별 PLAN의 query ID를 합쳐 MCP 조회, DB 사건·공개 RCA·조치 기록 고정 | 부족한 판단 근거에 한해 제한적 보완 조회 추가 |
+| 수집 | 주제별 PLAN의 query ID를 합쳐 순차 MCP 조회, DB 사건·공개 RCA·조치 기록 고정 | query별 병렬 Observation Sub-agent·전체 예산 관리, 부족한 판단 근거의 제한적 보완 조회 |
 | 통계 | O01~O11 분기와 공통 산식, 주제별 ready/partial/blocked | OP-01~04의 그룹·사건·당시 작업·혼합 결과 소비 보완 |
 | 현재 권고 | O03에 작업 목적·예외 확인 권고가 있고 eligibility=withheld | 여러 주제의 근거를 연결해 운영 개선 후보와 권고 자격을 평가 |
 | LLM | 제공된 fact_ids 선택과 유효 ID 검사 | 검증된 수치·후보를 해석하고 전제·반박·확인 방법을 설명 |
