@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from agent_common.calculations import allocation_hours
 from agent_common.normalize import allocations, intervals
+from agent_common.observation import series
 
 
 def namespace_usage(data, collected):
@@ -183,6 +184,9 @@ def namespace_usage(data, collected):
         output.append(
             dict(
                 target={"cluster_id": cluster, "namespace": namespace},
+                connected_gpu_count=len({r["gpu_uuid"] for r in summary["rows"]})
+                if summary["rows"]
+                else None,
                 connected_hours=connected / 3600 if connected is not None else None,
                 valid_hours=valid / 3600 if connected is not None else None,
                 mean=summary["weighted"] / valid if valid else None,
@@ -190,3 +194,33 @@ def namespace_usage(data, collected):
             )
         )
     return output, unattributed
+
+
+def pod_namespace_scope(collected):
+    """Narrow only complete namespace-report inputs; missing clues retain the full scope."""
+    out = {}
+    clusters = {e["cluster_id"] for e in collected.get("D01", [])}
+    for cluster in clusters:
+        sources = {
+            q: [e for e in collected.get(q, []) if e["cluster_id"] == cluster]
+            for q in ("D01", "D08")
+        }
+        if any(
+            not es
+            or any(
+                e["tool_status"] not in {"ok", "empty"}
+                or e["quality"].get("complete") is not True
+                for e in es
+            )
+            for es in sources.values()
+        ):
+            continue
+        labels = [
+            r["labels"]
+            for es in sources.values()
+            for r in series(es)
+            if r["labels"].get("pod")
+        ]
+        if labels and all(r.get("namespace") for r in labels):
+            out[cluster] = sorted({r["namespace"] for r in labels})
+    return out

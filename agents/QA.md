@@ -1,3 +1,14 @@
+## 2026-09-30 보고서 단위 설명·수집 범위 개선
+
+기준: 원격 main `b80b8f7`(RCA PR #30 포함). 운영 보고서를 읽어 문제를 확인했으나 운영 데이터·설정은 변경하지 않았다. 과거 결과를 재계산하지 않는다.
+
+- **통과:** 위 환경과 동일한 macOS/Python 3.11.16에서 `RUN_AGENT_E2E=1` 전체 검사 **199 passed**, 기존 MCP deprecation warning 3건. `DATABASE_URL`·`AGENT_E2E_DATABASE_URL`을 제거하고 `.local/namespace-tools`의 PostgreSQL/MCP/Helm, 최신 소스로 빌드한 Backend/JC/Incident를 사용했다. 명령은 아래 Namespace 전체 검사와 같고 JUnit은 `.local/agent-e2e/report-clarity-results.xml`이다. 실제 격리 DB·Worker·NAT·공식 MCP를 사용하며 Grafana/LLM 응답은 fixture다.
+- **통과:** 이후 추가한 큰 Pod 집합 비교를 포함한 `agents/tests/test_report_observation.py` **12 passed**. GPU 8대/Pod 286개 고정 입력에서 기존/개선 namespace 수치와 품질이 같고 개선 조회는 3회였다. 운영 환경 호출 감소율·속도 검증은 아니다.
+- **통과:** 8대×(1시간−6.113초) GPU-hours, 기간 중 고유 연결 대수, 기존 0/null·중복·공유/MIG·Pod UID·모델 충돌 회귀. 재사용 opt-in/기본 비활성, 기간/범위 격리, 불완전 응답 미재사용, namespace 단독 범위 축소와 혼합 보고서 전체 범위 보존을 확인했다.
+- **통과:** Backend `go vet ./...`, `go test -race ./...`, 서버 build 및 새 loopback PostgreSQL의 `go test -tags=e2e ./tests -count=1 -timeout=10m`. 별도 schema와 임시 DB만 사용했다. Frontend 36 tests·format·build 및 로컬 브라우저 검수는 [Frontend QA](../frontend/QA.md)에 기록했다. Ruff·문서 링크·diff 검사 통과.
+- **해당 없음:** RCA 제품 소스·설정 변경, JC 설정·DB migration·새 API·새 의존성. 공통 Observation에는 report opt-in 기능을 추가했으므로 두 Worker 회귀를 실행했다. 기존 Fleet 정밀도·usable_observation 처리는 보존했다.
+- **미수행/미검증:** 운영 배포, 변경 코드의 실제 Grafana 조회 성능·LLM 품질, D08 할당 계약 확보. 원격 최신 커밋 CI 상태는 PR에서 확인한다.
+
 # Agent 검증 기록
 
 ## 2026-09-30 Fleet RCA 파이프라인 후속 검증

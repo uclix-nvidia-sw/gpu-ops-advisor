@@ -14,7 +14,7 @@ from agent_common.normalize import allocations, gpu_intervals, intervals
 from agent_common.observation import Observation
 from agent_common.runtime import attempt_context
 from .prompts import EXPLANATION
-from .namespace_usage import namespace_usage
+from .namespace_usage import namespace_usage, pod_namespace_scope
 
 
 PLAN = {
@@ -167,6 +167,12 @@ def calculate(
             reasons = summary["reasons"]
             for name, field, unit, method in (
                 (
+                    "namespace_connected_gpu_count",
+                    "connected_gpu_count",
+                    "physical_gpu",
+                    "observed_connected_gpu_distinct_count",
+                ),
+                (
                     "observed_namespace_hours",
                     "connected_hours",
                     "GPU-hours",
@@ -209,6 +215,7 @@ def calculate(
                     }
                 if summary[field] is not None:
                     topic["facts"][-1]["text"] = {
+                        "connected_gpu_count": "기간 중 연결이 확인된 고유 GPU 대수이며 동시 사용 대수가 아닙니다.",
                         "connected_hours": "Namespace별 GPU–Pod 연결 관측 시간",
                         "valid_hours": "연결 GPU 활동률 계산에 사용한 유효 관측 시간",
                         "mean": "Namespace에 연결돼 관측된 GPU의 평균 활동률이며 namespace 실사용률은 아닙니다.",
@@ -700,7 +707,7 @@ async def run(tools):
     ctx = attempt_context.get()
     claim, data = ctx["claim"], ctx["claim"]["input"]
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
-    obs = Observation(tools, ctx["profile"], data, ctx["deadline"])
+    obs = Observation(tools, ctx["profile"], data, ctx["deadline"], reuse_queries=True)
     db_evidence = dict(
         id=str(uuid4()),
         query_id="report_db_snapshot",
@@ -725,8 +732,23 @@ async def run(tools):
         if ("O08" in data["topic_ids"] and criteria_version == "1.2")
         else ()
     )
-    for query in sorted(queries, key=lambda q: (q not in priority, int(q[1:]))):
-        collected[query] = await obs.collect(query)
+    namespace_only = (
+        criteria_version == "1.2"
+        and data["topic_ids"] == ["O08"]
+        and set(data["group_by"]) in ({"namespace"}, {"cluster", "namespace"})
+    )
+    order = (
+        ["D01", "D02", "D08", "D06"]
+        if namespace_only
+        else sorted(queries, key=lambda q: (q not in priority, int(q[1:])))
+    )
+    for query in order:
+        if namespace_only and query == "D06":
+            collected[query] = await obs.collect(
+                query, namespace_scope=pod_namespace_scope(collected)
+            )
+        else:
+            collected[query] = await obs.collect(query)
     if "O10" in data["topic_ids"] and data.get("comparison_range"):
         collected["comparison.D11"] = await obs.collect("D11", data["comparison_range"])
     topics = [

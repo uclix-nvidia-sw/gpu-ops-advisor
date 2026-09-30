@@ -93,7 +93,7 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 				}
 				row[2], row[3] = strconv.FormatFloat(value, 'f', 3, 64), unit
 			}
-		} else if unit := map[string]string{"physical_gpu": "대", "GPU-hours": "GPU시간", "percent": "%", "events": "건", "percentage_points": "%p"}[row[3]]; unit != "" {
+		} else if unit := map[string]string{"physical_gpu": "대", "GPU-hours": "GPU·시간", "percent": "%", "events": "건", "percentage_points": "%p"}[row[3]]; unit != "" {
 			row[3] = unit
 		}
 	}
@@ -127,7 +127,7 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'")
-	page := template.Must(template.New("report").Funcs(template.FuncMap{"label": reportMetricName, "reason": reportReason}).Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPU 운영 보고서</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;color:#182434}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}th{background:#f1f5f9}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin-top:32px}.table{overflow:auto}</style></head><body><h1>GPU 운영 보고서</h1><p>{{.ID}}</p><p>결과: <strong>{{.Status}}</strong></p><p>분석 기간: {{.Period}}</p><p>계산 기준: {{.Criteria}}</p><p>요청 집계: {{.Grouping}}</p><p>연결 GPU 활동률은 Namespace의 실제 소비량·독점 할당량이 아닙니다. 공유·누락 구간은 보류하며 유효 관측 시간만 평균에 사용합니다.</p><h2>주요 수치</h2><div class="table"><table><thead><tr><th>항목</th><th>대상</th><th>값</th><th>단위</th><th>산출 제한</th></tr></thead><tbody>{{range .Rows}}<tr><td>{{label (index . 0)}}</td><td>{{index . 1}}</td><td>{{index . 2}}</td><td>{{index . 3}}</td><td>{{reason (index . 5)}}</td></tr>{{end}}</tbody></table></div><h2>해석 시 참고사항</h2><ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul><details><summary>근거·산식 및 원본 결과</summary><pre>{{.Raw}}</pre></details></body></html>`))
+	page := template.Must(template.New("report").Funcs(template.FuncMap{"label": reportMetricName, "reason": reportReason}).Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPU 운영 보고서</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;color:#182434}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}th{background:#f1f5f9}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin-top:32px}.table{overflow:auto}</style></head><body><h1>GPU 운영 보고서</h1><p>{{.ID}}</p><p>결과: <strong>{{.Status}}</strong></p><p>분석 기간: {{.Period}}</p><p>계산 기준: {{.Criteria}}</p><p>요청 집계: {{.Grouping}}</p><p>연결 GPU 활동률은 Namespace의 실제 소비량·독점 할당량이 아닙니다. 공유·누락 구간은 보류하며 유효 관측 시간만 평균에 사용합니다.</p><p>누적 연결 시간은 GPU별 연결 시간을 더한 값입니다. GPU 8대가 각각 1시간 연결되면 8 GPU·시간이며, 실제 연산 시간은 아닙니다. 관측되지 않은 구간은 제외합니다. 연결 GPU 대수는 기간 중 고유 대수이며 동시 사용 대수가 아닙니다.</p><h2>아직 판단할 수 없는 내용·해석 제한</h2><ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul><h2>주요 수치</h2><div class="table"><table><thead><tr><th>항목</th><th>대상</th><th>값</th><th>단위</th><th>산출 제한</th></tr></thead><tbody>{{range .Rows}}<tr><td>{{label (index . 0)}}</td><td>{{index . 1}}</td><td>{{index . 2}}</td><td>{{index . 3}}</td><td>{{reason (index . 5)}}</td></tr>{{end}}</tbody></table></div><details><summary>근거·산식 및 원본 결과</summary><pre>{{.Raw}}</pre></details></body></html>`))
 	period, _ := body["time_range"].(map[string]any)
 	versions, _ := body["versions"].(map[string]any)
 	quality, _ := body["quality"].(map[string]any)
@@ -147,6 +147,7 @@ func reportMetricName(id string) string {
 		return id
 	}
 	name := map[string]string{
+		"namespace_connected_gpu_count":       "기간 중 연결이 확인된 GPU",
 		"namespace_activity_valid_hours":      "활동률 계산에 사용한 시간",
 		"namespace_connected_gpu_util":        "연결 GPU 평균 활동률",
 		"low_gpu_hours":                       "저활동 관측 시간",

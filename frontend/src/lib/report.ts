@@ -1,6 +1,7 @@
 import { obj, rows, str, strings, topics, type Row } from './live';
 
 const names: Record<string, string> = {
+  namespace_connected_gpu_count: '기간 중 연결이 확인된 GPU',
   namespace_activity_valid_hours: '활동률 계산에 사용한 시간',
   namespace_connected_gpu_util: '연결 GPU 평균 활동률',
   low_gpu_hours: '저활동 관측 시간',
@@ -155,7 +156,7 @@ export function metricUnit(metric: Row) {
     (
       {
         physical_gpu: '대',
-        'GPU-hours': 'GPU시간',
+        'GPU-hours': 'GPU·시간',
         'instance-hours': '인스턴스시간',
         percent: '%',
         percentage_points: '%p',
@@ -223,6 +224,7 @@ export function namespaceRows(metrics: Row[]) {
     const name = str(metric.id).split('.')[1];
     if (
       ![
+        'namespace_connected_gpu_count',
         'observed_namespace_hours',
         'namespace_activity_valid_hours',
         'namespace_connected_gpu_util',
