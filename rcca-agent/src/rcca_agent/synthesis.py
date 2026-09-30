@@ -2,7 +2,7 @@
 
 import re
 
-from agent_common.observation import series
+from agent_common.observation import series, usable_observation
 
 from .prompts import SYNTHESIS
 
@@ -12,7 +12,7 @@ def synthesis_input(data, evidence, health, relations, applicable, planned=()):
     complete = [
         e for e in evidence if e["tool_status"] == "ok" and e["quality"].get("complete")
     ]
-    valid_ids = {e["id"] for e in complete}
+    valid_ids = {e["id"] for e in evidence if usable_observation(e)}
     observations = [
         h
         for h in health

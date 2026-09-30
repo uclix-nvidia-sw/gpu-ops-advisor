@@ -378,3 +378,32 @@ func TestIncidentEndToEnd(t *testing.T) {
 		call(t, r.incidentURL, "GET", "/internal/v1/incidents?limit=1", nil, 200)
 	})
 }
+
+func TestFleetProjectionUpgradeDoesNotDuplicateIncident(t *testing.T) {
+	r := setup(t)
+	a := alertBody()
+	first := call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+	id := String(item(first, 0), "incident_id")
+	var hash string
+	check(t, r.db.QueryRow(context.Background(), "SELECT content_hash FROM incident_evidence_versions WHERE incident_id=$1 AND revision=1", id).Scan(&hash))
+	labels := a["labels"].(Object)
+	labels["machine_id"], labels["component"], labels["k8s_node_name"] = "machine", "accelerator-nvidia-error-sxid", "node"
+	again := call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+	if String(item(again, 0), "incident_id") != id || r.count(t, "SELECT count(*) FROM incidents") != 1 || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 1 || r.count(t, "SELECT count(*) FROM incident_evidence_versions") != 1 {
+		t.Fatal("projection-only input duplicated a legacy lifecycle", again)
+	}
+	var savedHash string
+	check(t, r.db.QueryRow(context.Background(), "SELECT content_hash FROM incident_evidence_versions WHERE incident_id=$1 AND revision=1", id).Scan(&savedHash))
+	if hash != savedHash {
+		t.Fatal("legacy snapshot rewritten")
+	}
+	a["fingerprint"] = ID()
+	fresh := call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+	var target Object
+	check(t, r.db.QueryRow(context.Background(), "SELECT target FROM incidents WHERE id=$1", item(fresh, 0)["incident_id"]).Scan(&target))
+	for _, key := range []string{"machine_id", "component", "k8s_node_name"} {
+		if target[key] != labels[key] {
+			t.Fatalf("new incident missing %s", key)
+		}
+	}
+}

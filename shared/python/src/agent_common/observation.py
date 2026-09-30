@@ -280,6 +280,7 @@ class Observation:
                             "start": args["startRfc3339"],
                             "end": args["endRfc3339"],
                         },
+                        observation_usable=False,
                     )
                 try:
                     async with asyncio.timeout(
@@ -351,6 +352,10 @@ class Observation:
                                 if warning
                                 else "sample_limit_exceeded",
                             )
+                        elif quality.get("reason") == "time_precision_reduced":
+                            # Complete only within the actual request. Keep the original
+                            # period incomplete for absence, continuity and aggregation.
+                            quality["observation_usable"] = True
                         status = (
                             "partial"
                             if not quality["complete"]
@@ -416,6 +421,16 @@ class Observation:
         )
         self.evidence.append(e)
         return e
+
+
+def usable_observation(evidence):
+    quality = evidence["quality"]
+    return (evidence["tool_status"] == "ok" and quality.get("complete", False)) or (
+        evidence["tool_status"] == "partial"
+        and quality.get("reason") == "time_precision_reduced"
+        and quality.get("observation_usable") is True
+        and bool(quality.get("request_time_range"))
+    )
 
 
 def series(evidence):

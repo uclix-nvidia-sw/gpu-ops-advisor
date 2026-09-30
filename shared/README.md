@@ -1,5 +1,9 @@
 # 공유 계약과 스키마
 
+## RCA 관측 호환 보완 (2026-09-30)
+
+공통 Python 수집기는 밀리초 정밀도 축소의 실제 요청 범위와 개별 관측 사용 가능 여부를 기록한다. 원본 기간 complete=false는 유지하고 RCA health 해석만 사용 가능 범위를 구분한다. Ops 집계/매핑 완전성 요구는 유지한다. 등록 Fleet JSON adapter와 기존 producer JSON parser를 함께 지원한다. [RCA 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따르며 DB 테이블·migration·소유권 변경은 없다.
+
 `contract`는 stdlib 기반 DTO·scope·시간 범위 정규화·해시 유틸리티다. `migrations`는 Backend(001/002)와 Job Controller(001/002/003)가 같은 스키마를 사용하게 하는 유일한 SQL 원본이다. Backend의 기존 internal/contract와 migrations 패키지는 호환 래퍼다.
 
 DB 소유권: Backend는 설정·수동 요청 원본·일정/outbox, JC는 jobs·attempts·명령 receipt·Worker·capacity·reservation을 쓴다. Agent는 evidence·result_candidates를 저장하고 JC complete로 발행을 요청한다. 공개 candidate는 DB 트리거로 수정·삭제를 금지한다. Incident가 incident_evidence_versions의 실제 증거 snapshot을 먼저 저장해야 RCA를 접수할 수 있다.

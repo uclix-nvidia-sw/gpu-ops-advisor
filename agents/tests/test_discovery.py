@@ -151,6 +151,12 @@ async def test_fractional_times_normalized_at_both_mcp_boundaries():
         next(e for e in obs.evidence if e["query_id"] == "D09")["quality"]["reason"]
         == "time_precision_reduced"
     )
+    quality = next(e for e in obs.evidence if e["query_id"] == "D09")["quality"]
+    assert quality["complete"] is False and quality["observation_usable"] is True
+    assert quality["request_time_range"] == {
+        "start": "2026-09-21T02:04:10.124Z",
+        "end": "2026-09-21T02:34:41.713Z",
+    }
 
 
 @pytest.mark.asyncio

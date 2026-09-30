@@ -1,5 +1,7 @@
 # 2026-09-30 PR #28과 GUI 관점 전환 병합 검증
 
+2026-09-30 RCA 변경을 최신 main `77fbfcf` GUI 관점 전환과 통합한 뒤 **33 tests**, `npm run format:check`, `npm run build` 통과. 공개 RCA 최종 보고서는 공통 RcaResult를 통해 기존·운영·개발 화면에 표시된다. 아래 24건 기록은 통합 전 검사다. API/LLM fixture 범위를 유지하며 운영 화면 검수는 미수행이다.
+
 main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 함께 유지했다. ReportContent·report 지표/사유·Results의 충돌을 해결하고 운영측 목차 선택 시 접힌 주제 상세를 펼치도록 연결했다.
 
 - **통과:** frontend `npm test` 30건, `npm run build`, `npm run format:check`. 기존/새 결과·0/null·분모·권고 보류·근거·실패 표시 회귀를 포함한다.
@@ -19,6 +21,13 @@ main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 �
 ---
 
 # 2026-09-30 RCA 가독성 개선 로컬 검증
+
+## 2026-09-30 RCA 최종 보고서 표시
+
+- **통과:** `frontend/`에서 `npm.cmd test` — 5 files, 24 tests. complete/failed/omitted의 narrative 표시, 기본 보고서 안내, 원인 미확정/권고 보류 유지, HTML escape, 미발행 결과 숨김 및 기존 결과 표시 회귀.
+- **통과:** 같은 디렉터리의 `npm.cmd run build`, `npm.cmd run format:check`.
+- 화면 검사는 mocked result를 React 서버 렌더링한 검사다. 실제 브라우저·운영 Backend 응답을 통한 시각 검수는 **미검증**이다. esbuild의 상위 디렉터리 sandbox 읽기 제한은 동일 명령의 허용된 실행으로 재검사해 통과했다.
+- 로컬 수정이며 배포하지 않았다. 실제 Worker/JC 결과 저장·공개 fixture 연동 범위는 [Agent QA](../agents/QA.md)를 따른다.
 
 후속 목록 정리: 상태 상자를 알람/사건/검토 개별 컬럼의 배지로 변경했다. `npm test` 21건, 포맷·빌드·문서 링크·diff 검사를 통과했다. Edge/Playwright 모의 API로 다섯 컬럼, 상태 값만 표시, 누락 상태 미확인, 390px 페이지 가로 넘침 없음을 확인했다. 운영 검증은 미수행이다.
 

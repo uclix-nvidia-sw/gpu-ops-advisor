@@ -9,12 +9,9 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
+from agent_common.parsers import ERROR_CODE as XID
 
 TOKEN = re.compile(r"[a-z0-9가-힣]+")
-XID = re.compile(
-    r"\b(s?xid)(?:\s*\([^\r\n)]{1,200}\))?\s*[:#]?\s*(\d+)\b",
-    re.IGNORECASE,
-)
 TOKENIZER_REVISION = "gpu-lexical-v2"
 TEXT_FIELDS = (
     "alertname",

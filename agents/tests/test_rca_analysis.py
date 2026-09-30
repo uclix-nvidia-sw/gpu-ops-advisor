@@ -165,6 +165,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         async def complete(self, system, payload, **kwargs):
             if mode == "uncertain":
                 raise RemoteUncertain("fixture")
+            if "facts" in payload:
+                events.append("report")
+                return {"fact_ids": [f["id"] for f in payload["facts"]]}
             if kwargs.get("tools"):
                 events.append("plan")
                 if mode == "invalid_plan":
@@ -270,6 +273,14 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         attempt_context.reset(token)
     result = output["result"]
     validate_result(result, output["evidence"])
+    assert len(result["narrative"]) == 5
+    assert all(section["text"] for section in result["narrative"])
+    assert result["quality"]["report"]["status"] == "complete"
+    if mode != "unconfigured":
+        assert events.pop() == "report"
+        assert result["narrative_status"] == "complete"
+    else:
+        assert result["narrative_status"] == "omitted"
     if mode == "fast":
         assert events == []
         assert result["result_status"] == "ready"
@@ -290,9 +301,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             assert events == []
             assert "approved_runbook" in result["missing_inputs"]
         elif mode == "query_failed":
-            assert events == ["collect", "collect", "synthesize"]
+            assert events == ["collect", "collect", "collect", "synthesize"]
             assert result["termination_reason"] == "query_failed"
-            assert result["quality"]["analysis"]["followups"] == 0
+            assert result["quality"]["analysis"]["followups"] == 1
         elif mode == "invalid_plan":
             assert events == ["collect", "collect", "plan", "synthesize"]
             assert result["quality"]["analysis"]["followups"] == 0
@@ -455,7 +466,12 @@ async def test_fleet_query_clues_preserve_claim_and_semantic_health_target(
     finally:
         attempt_context.reset(token)
     assert claim == original
-    assert observed_inputs[0]["target"] == effective_target
+    projected = dict(effective_target)
+    if mode not in ("conflicting", "native"):
+        projected["component"] = "alert-component"
+    if mode in ("fallback_node", "explicit_node"):
+        projected["k8s_node_name"] = "fleet-node"
+    assert observed_inputs[0]["target"] == projected
     assert observed_inputs[0]["log_query_target"] == query_target
     snapshot = next(
         e for e in output["evidence"] if e["query_id"] == "incident_snapshot"
@@ -466,5 +482,5 @@ async def test_fleet_query_clues_preserve_claim_and_semantic_health_target(
     assert any(
         candidate["id"] == book["id"] and candidate["causal_status"] == "supported"
         for candidate in output["result"]["cause_candidates"]
-    )
+    ) == (mode not in ("explicit_node", "conflicting"))
     validate_result(output["result"], output["evidence"])

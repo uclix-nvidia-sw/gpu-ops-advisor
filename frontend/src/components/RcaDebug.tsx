@@ -8,6 +8,13 @@ import { Badge, Notice } from './ui';
 import { AlarmIdentity, DataView } from './live';
 
 const reasons: Record<string, string> = {
+  mapping_queries_not_executed:
+    'GPU–Pod 연결에 필요한 조회가 실행되지 않았습니다. 승인 계획과 예산을 확인하세요.',
+  mapping_source_unavailable: 'GPU 할당 원천에서 완전한 연결 데이터를 확보하지 못했습니다.',
+  mapping_target_unverified:
+    '장애 대상과 GPU UUID의 관계가 검증되지 않아 직접 GPU–Pod 연결을 판단할 수 없습니다.',
+  mapping_not_observed_at_incident: '사건 시각의 GPU–Pod 연결 관측을 확보하지 못했습니다.',
+  target_identity_conflict: '사건 대상과 알람의 장비 식별 정보가 충돌합니다.',
   sufficient: '필수 근거를 충족했습니다.',
   degraded: '수집 실패 또는 불완전한 관측이 있습니다.',
   conflicted: '관측 상태가 상충합니다.',
@@ -410,6 +417,27 @@ export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: stri
             </p>
             <p>{str(result.summary)}</p>
           </section>
+          {!!rows(result.narrative).length && (
+            <section className="result-section" aria-label="RCA 최종 보고서">
+              <h3>RCA 최종 보고서</h3>
+              <p className="muted">
+                {result.narrative_status === 'complete'
+                  ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
+                  : 'LLM 설명을 사용하지 못해 저장된 근거와 판단으로 기본 보고서를 작성했습니다.'}{' '}
+                보고서 작성과 원인 확정은 별개입니다.
+              </p>
+              {rows(result.narrative).map((section, index) => (
+                <section key={str(section.id) || index}>
+                  <h4>{str(section.title) || '분석 설명'}</h4>
+                  {str(section.text)
+                    .split('\n\n')
+                    .map((paragraph, i) => (
+                      <p key={i}>{paragraph}</p>
+                    ))}
+                </section>
+              ))}
+            </section>
+          )}
           <section className="result-section">
             <h3>부족한 근거 · {strings(result.missing_inputs).length}개</h3>
             {strings(result.missing_inputs).length ? (

@@ -1,5 +1,9 @@
 # Incident 검증 기록
 
+## 2026-09-30 Fleet target 투영
+
+**통과:** Go 1.26.2에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 최신 로컬 소스의 격리 임시 복사본으로 실행했다. 별도 로컬 PostgreSQL에서 `go test -tags=e2e ./tests -v -count=1 -timeout=5m` 전체 통과: 투영만 추가된 반복 알림에서 기존 incident/outbox/snapshot/hash 유지, 새 incident에 machine/component/node 투영, 기존 episode·migration 충돌 회귀 포함. Agent 실제 프로세스 E2E의 webhook→outbox→JC→RCA 공개도 통과했다. 상위 Grafana·LLM은 fixture이며 운영 배포는 미수행이다. DB migration 변경 없음.
+
 ## 2026-09-28 node 라벨 전달 보완
 
 1.4 `k8s_node_name`을 labels에서 우선 읽고 annotations를 fallback으로 사용한다. 서로 다른 두 값은 `conflicting_node_name`으로 거부한다. DB 구조나 에피소드 정책 설정은 변경하지 않았다.
