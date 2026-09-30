@@ -1329,6 +1329,27 @@ def test_gui_model_auth_and_pinned_revision_reach_real_worker(stack, kind, monke
             command("/model-routes", {kind: None}, routes["version"], "PATCH")
 
 
+@contextlib.contextmanager
+def runbook_limits(stack):
+    # Only this test's isolated database gets a larger bulk-import allowance.
+    with psycopg.connect(stack["url"]) as conn:
+        original = conn.execute(
+            "SELECT config FROM service_profiles WHERE kind='limits' AND name='C07'"
+        ).fetchone()[0]
+        conn.execute(
+            "UPDATE service_profiles SET config=jsonb_set(config,"
+            "'{max_requests_per_minute}', '1000') WHERE kind='limits' AND name='C07'"
+        )
+    try:
+        yield
+    finally:
+        with psycopg.connect(stack["url"]) as conn:
+            conn.execute(
+                "UPDATE service_profiles SET config=%s WHERE kind='limits' AND name='C07'",
+                (Jsonb(original),),
+            )
+
+
 @pytest.mark.e2e
 def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
     extension = ".exe" if sys.platform == "win32" else ""
@@ -1350,7 +1371,7 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
         "runbook-backend",
     )
     wait_http(backend + "/health/ready", process)
-    with httpx.Client(base_url=backend, timeout=30) as client:
+    with runbook_limits(stack), httpx.Client(base_url=backend, timeout=30) as client:
         # The complete corpus must fit the existing API and schema without publication.
         pilots = {"RB-XID-79", "RB-XID-48-63-64", "RB-SXID-11001"}
         bulk = LOCAL / ("catalog-" + uuid4().hex)
@@ -1557,3 +1578,16 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
                 ).json()["items"]
                 == []
             )
+
+        # Check the real limiter without sleeping through two production windows.
+        # Retry-After handling and idempotent retry are covered in test_runbook_import.
+        with psycopg.connect(stack["url"]) as conn:
+            conn.execute(
+                "UPDATE service_profiles SET config=jsonb_set(config,"
+                "'{max_requests_per_minute}', '1') WHERE kind='limits' AND name='C07'"
+            )
+        client.post("/knowledge", json={})  # Fill a fresh window if it just reset.
+        limited = client.post("/knowledge", json={})
+        assert limited.status_code == 429
+        assert limited.json()["error"]["code"] == "rate_limited"
+        assert limited.headers["Retry-After"] == "60"

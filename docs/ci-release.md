@@ -6,7 +6,7 @@
 
 ## 실행 흐름
 
-`ci.yml` → `tests.yml` → `container-images.yml` → `helm-chart.yml` → `CI required` 순서입니다. 마지막 `CI required`는 실패·취소·건너뛴 필수 단계를 모두 실패로 처리합니다. Branch protection에서 이 check를 필수로 등록하면 됩니다. 문서 변경도 같은 검증을 거쳐 조건별 skip 때문에 필수 check가 대기하지 않습니다.
+`ci.yml`에서 PR은 테스트와 이미지 7개 빌드를 병렬 실행합니다. 둘 다 성공하면 Helm 패키징과 `CI required`가 이어집니다. main·태그·수동 실행은 기존처럼 테스트 → 이미지 → Helm 순서입니다. main·태그 이미지 발행은 테스트 통과 후에만 가능합니다. 마지막 `CI required`는 해당 이벤트에서 사용하지 않는 이미지 job 하나만 `skipped`를 허용하며, 필요한 단계의 실패·취소·건너뛰기는 모두 실패로 처리합니다. Branch protection에서 이 check를 필수로 등록하면 됩니다. 문서 변경도 같은 검증을 거쳐 조건별 skip 때문에 필수 check가 대기하지 않습니다.
 
 | 이벤트 | 테스트 / 이미지 빌드 | GHCR 이미지 | Helm artifact | OCI chart |
 | --- | --- | --- | --- | --- |
@@ -31,6 +31,8 @@ BuildKit의 GitHub Actions 캐시는 빌드 가속용이다. `cache-to`의 `igno
 - Frontend: Prettier·Vitest·TypeScript/Vite build.
 - Helm: strict lint, 실제 manifest 계약 검사, 기본/외부 DB·PVC·Ingress·Secret·digest 변형, 패키지 재렌더링, 릴리스 metadata 테스트.
 - Actions: actionlint 1.7.11. 문서: 저장소 내부 링크·파일명 대소문자 검사.
+
+런북 263개 일괄 등록 E2E는 해당 테스트의 격리 DB에서만 요청 한도를 1,000회/분으로 올리고 종료 시 원래 설정을 복원합니다. 전체 등록·조회/hash·재실행 중복 방지·RCA 소비 검증은 유지합니다. 실제 Backend의 429와 `Retry-After: 60`은 낮은 테스트 한도로 즉시 확인하고, CLI의 대기·동일 요청 재시도는 기존 단위 테스트에서 실제 대기 없이 검사합니다. 운영 기본 한도와 CLI 재시도 동작은 변경하지 않습니다.
 
 Agent E2E는 `AGENT_E2E_DATABASE_URL`을 주면 외부 테스트 DB에 임시 schema를 생성하고 종료 시 삭제합니다. 해당 사용자는 schema 생성 권한이 필요합니다. Windows 로컬에서는 변수를 생략하면 기존 native PostgreSQL을 띄우는 방식을 유지합니다. 테스트 경로/바이너리는 [Agent QA](../agents/QA.md)를 참고하세요.
 
