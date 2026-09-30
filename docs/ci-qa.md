@@ -4,7 +4,7 @@
 
 [실패 실행 36680447708](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/36680447708)의 커밋 `7fd8f3e`에서 Go·Python·Frontend·Helm 검사는 모두 통과했다. 이미지 7개는 OCI 출력 후 `exporting to GitHub Actions Cache` 단계의 `failed to reserve cache`로 실패했고 chart는 건너뛰었다. 캐시 서비스가 예약을 거부한 구체적인 원인(용량·권한·일시 장애)은 로그만으로 확정하지 않는다.
 
-공통 이미지 workflow의 cache-to에 Docker 공식 `ignore-error=true`를 적용했다. 캐시 내보내기만 선택적으로 처리하고 이미지 빌드·발행·digest 및 필수 CI gate는 유지한다. 최신 수정 커밋의 원격 CI 결과는 PR #28에서 별도 확인한다. 운영 배포는 하지 않았다.
+공통 이미지 workflow의 cache-to에 Docker 공식 `ignore-error=true`를 적용했다. 캐시 내보내기만 선택적으로 처리하고 이미지 빌드·발행·digest 및 필수 CI gate는 유지한다. PR #28은 수정 전에 병합됐으므로 원격 CI 결과는 후속 CI 수정 PR에서 확인한다. 운영 배포는 하지 않았다.
 
 2026-09-17 / Windows / Python 3.12 / Go 1.26.2 / Helm 3.17.3.
 
