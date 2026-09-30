@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
+import { RcaJobSummary } from '../components/RcaDebug';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 export function Jobs() {
@@ -102,6 +103,7 @@ export function JobDetail() {
                 시도 {num(j.attempt_no)} · {str(j.stage, '단계 미확인')}
               </span>
             </div>
+            {j.kind === 'rca' && <RcaJobSummary job={j} />}
             <dl className="details">
               <dt>접수 시각</dt>
               <dd>{formatDate(str(j.created_at))}</dd>

@@ -39,3 +39,11 @@ npm run format:check
 ```
 
 [검증 기록](QA.md) · [Backend API](../backend/API.md)
+
+## RCA 디버깅 화면
+
+사건 목록/상세에서 alarm_status(발생/해제), state(열림/확인/종결), review_status를 분리한다. 상세의 연결된 RCA 작업에서 실행 상태·시도 이력 및 공개 결과로 이동한다. 새 RCA 실행·취소·재시도 기능은 추가하지 않는다.
+
+RCA 결과는 공개 상태, 결과 품질, 종료 사유, 근거 충분성, 분석 경로, LLM 응답 사용 기록을 구분한다. llm_usage.calls는 원격 요청의 완전한 감사 기록이 아니므로 0건을 연결 실패나 미호출 확정으로 표시하지 않는다. 내부 evidence는 종료 후 일괄 저장되며 실행 중에는 서버 stage만 표시한다.
+
+공개 결과의 evidence_refs를 기존 GET /evidence/{id}로 사용자가 8건씩 불러온다. 동일 job/attempt인지 검사하고 조회 실패는 별도 재조회로 제공한다. D-query별 구간·datasource UID·완전성·표본 수·안전한 오류 코드를 표시하며 구간 표본을 합산하지 않는다. 내부 조사 기록과 원본 결과는 펼쳐 볼 수 있다. 현재 API가 제외하는 input 쿼리 원문과 공개되지 않은 후보·webhook/outbox 기록은 제공하지 않는다. 화면은 운영 Grafana/LLM 검증을 대신하지 않는다.

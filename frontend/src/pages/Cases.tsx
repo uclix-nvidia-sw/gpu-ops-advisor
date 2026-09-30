@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Field, PageHead, Panel } from '../components/ui';
+import { Field, PageHead, Panel } from '../components/ui';
 import { JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, useList } from '../lib/live';
-import { formatDate } from '../lib/domain';
+import { IncidentStates } from '../components/RcaDebug';
+import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 export function Cases() {
   const app = useApp();
@@ -39,14 +40,16 @@ export function Cases() {
       </div>
       <Panel title={tab === 'incidents' ? '사건 목록' : '조사 목록'}>
         <div className="live-toolbar">
-          <Field label="상태">
+          <Field label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}>
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">전체</option>
               {(tab === 'incidents'
-                ? ['open', 'investigating', 'resolved', 'closed']
+                ? ['open', 'acknowledged', 'closed']
                 : ['queued', 'running', 'succeeded', 'failed', 'cancelled']
               ).map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s}>
+                  {labels[s] || s}
+                </option>
               ))}
             </select>
           </Field>
@@ -60,7 +63,7 @@ export function Cases() {
                 <thead>
                   <tr>
                     <th>사건</th>
-                    <th>상태</th>
+                    <th>알람·사건·검토 상태</th>
                     <th>발생 시각</th>
                   </tr>
                 </thead>
@@ -73,7 +76,7 @@ export function Cases() {
                         </Link>
                       </td>
                       <td>
-                        <Badge status={str(i.status)} />
+                        <IncidentStates incident={i} />
                       </td>
                       <td>{formatDate(str(i.occurred_at, str(i.created_at)))}</td>
                     </tr>

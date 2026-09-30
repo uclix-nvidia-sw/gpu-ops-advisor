@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { errorText, obj, rows, str, useResource, type Row } from '../lib/live';
+import { errorText, obj, str, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 export function QueryState({
@@ -239,52 +239,6 @@ export function JobRows({ items }: { items: Row[] }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-export function ResultContent({
-  value,
-  onEvidence,
-}: {
-  value: unknown;
-  onEvidence: (s: string) => void;
-}) {
-  const r = obj(value);
-  return (
-    <div className="stack">
-      {Object.entries(r)
-        .filter(([k]) => !['evidence_refs', 'request_id'].includes(k))
-        .map(([k, v]) => (
-          <section className="result-section" key={k}>
-            <h3>
-              {(
-                {
-                  summary: '요약',
-                  facts: '관측 사실',
-                  topics: '주제별 결과',
-                  recommendations: '검토 제안',
-                  narrative: '설명',
-                  quality: '관측 품질',
-                } as Record<string, string>
-              )[k] || k}
-            </h3>
-            <DataView value={v} />
-          </section>
-        ))}
-      {(Array.isArray(r.evidence_refs) ? r.evidence_refs : []).map((v, i) => {
-        const id = typeof v === 'string' ? v : str(obj(v).id, str(obj(v).evidence_id));
-        return id ? (
-          <button className="button" key={i} onClick={() => onEvidence(id)}>
-            근거 확인 · {id}
-          </button>
-        ) : null;
-      })}
-      {rows(r.topics).length === 0 && Object.keys(r).length === 0 && (
-        <Empty
-          title="저장된 결과 본문이 없습니다."
-          description="작업 상태와 결과 저장 여부를 확인하세요."
-        />
-      )}
     </div>
   );
 }

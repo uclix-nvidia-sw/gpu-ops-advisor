@@ -1,3 +1,15 @@
+# 2026-09-30 RCA 디버깅 GUI 로컬 검증
+
+기준: main `185ea2b`에서 분리한 `fix/rca-debugging-ui`의 로컬 변경. 기존 Backend 읽기 API만 사용하며 DB·Worker·RCA 실행 계약은 변경하지 않았다.
+
+- **통과:** frontend에서 `npm test` (19 tests), `npm run build`, `npm run format:check`.
+- **통과:** Edge/Playwright 브라우저에서 모든 `/api/**`를 fixture로 대체하여 사건 상태·필터 → 사건 연결 작업 → 공개된 blocked 결과 → 근거 8건씩 조회 → 일시적 조회 실패 재조회 → 다른 job 근거 차단 → 근거 dialog 열기/닫기를 검증했다. 브라우저 pageerror 0건, 390px 화면의 페이지 가로 넘침 없음. 근거 표는 자체 가로 스크롤을 사용한다.
+- **통과:** 저장소 루트 문서 링크 검사 (95 documents, 1123 local links/assets), `git diff --check`.
+- **미수행/미검증:** 실제 Backend/DB 연동, 운영 Grafana·LLM, 실제 알람 재시험, 원격 CI·배포. fixture의 성공·실패는 운영 관측 품질의 검증이 아니다.
+- **해당 없음:** Go/Worker/DB migration 검사 — 해당 코드와 API 계약을 수정하지 않았다.
+
+---
+
 # Frontend v1.3 Backend 연결 검증
 
 2026-09-17: 사용자/권한 부트스트랩을 등록 CPC 조회로 바꾸고, 직접 RCA/Assistant/용량 변경 UI를 제거했습니다. 일정 입력과 revision 수정은 Backend v1.3 API에 연결했습니다.
