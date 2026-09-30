@@ -280,7 +280,7 @@ def wait_http(url, process=None):
 
 
 @pytest.fixture(scope="module")
-def stack():
+def stack(request):
     if os.getenv("RUN_AGENT_E2E") != "1":
         pytest.skip(
             "set RUN_AGENT_E2E=1; requires official MCP and native PostgreSQL/JC binaries"
@@ -388,6 +388,8 @@ def stack():
                 query=urlencode(query, doseq=True, quote_via=quote)
             ).geturl()
         config = json.loads((ROOT / "job-controller/config.example.json").read_text())
+        if getattr(request, "param", None) is not None:
+            config["versions"]["criteria"] = request.param
         config["execution_profiles"]["local-v1"].update(
             attempt_budget=100000, token_budget=300000
         )
@@ -674,6 +676,38 @@ async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeyp
         'cluster="cpc-2"' in q["query"][0] and 'namespace=~"dev"' in q["query"][0]
         for q in requests
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("stack", ["1.2"], indirect=True)
+def test_namespace_report_draft_with_isolated_criteria_profile(stack):
+    # The parametrized stack owns a separate DB; shipped/global config stays unchanged.
+    data = dict(
+        scope=SCOPE,
+        time_range=PERIOD,
+        timezone="UTC",
+        topic_ids=["O08"],
+        group_by=["namespace"],
+    )
+    jid = submit(stack, "report", data)
+    result, evidence = worker_result(stack, "report", jid, "-namespace")
+    assert result["versions"]["criteria"] == "1.2"
+    topic = result["topics"][0]
+    metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
+    assert metrics["observed_namespace_hours"]["value"] == 1
+    assert metrics["namespace_activity_valid_hours"]["value"] == 1
+    assert metrics["namespace_connected_gpu_util"]["value"] == 2
+    assert metrics["namespace_connected_gpu_util"]["target"] == {
+        "cluster_id": "cpc-2",
+        "namespace": "dev",
+    }
+    assert topic["status"] == "partial"
+    assert not topic["recommendations"]
+    assert any(q == "D02" and status == "ok" for q, status in evidence)
+    for artifact in result["artifacts"]:
+        body = (LOCAL / "artifacts" / artifact["object_key"]).read_bytes()
+        assert hashlib.sha256(body).hexdigest() == artifact["checksum"]
+        assert b"O08.namespace_connected_gpu_util.0" in body
 
 
 @pytest.mark.e2e
