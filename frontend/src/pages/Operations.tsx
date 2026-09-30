@@ -187,9 +187,17 @@ export function OperationsCases() {
   const app = useApp(),
     [params, setParams] = useSearchParams();
   const status = params.get('status') || '';
-  const tab = params.get('tab') === 'analyses' ? 'analyses' : 'incidents';
+  const tab = ['analyses', 'reports'].includes(params.get('tab') || '')
+    ? params.get('tab')!
+    : 'incidents';
   const q = useList(
-    app.canOperate ? queryPath('/' + tab, { scope: app.scope, status, limit: 30 }) : null,
+    app.canOperate
+      ? queryPath('/' + (tab === 'reports' ? 'analyses' : tab), {
+          scope: app.scope,
+          status: tab === 'reports' ? 'succeeded' : status,
+          limit: 30,
+        })
+      : null,
     true,
   );
   return (
@@ -200,12 +208,15 @@ export function OperationsCases() {
           <h1 tabIndex={-1}>어떤 사건을 확인할까요?</h1>
           <p>알람 발생, 사건 처리, 사람의 검토를 구분해 확인합니다.</p>
         </div>
-        <SectionLink to="/jobs?kind=rca">RCA 실행 이력</SectionLink>
+        <Link className="button primary" to="/cases?tab=reports">
+          최종 보고서
+        </Link>
       </header>
       <div className="tabs">
         {[
           ['incidents', '사건'],
           ['analyses', '조사 이력'],
+          ['reports', '최종 보고서'],
         ].map(([value, label]) => (
           <button
             key={value}
@@ -221,38 +232,44 @@ export function OperationsCases() {
           </button>
         ))}
       </div>
-      <div
-        className="ops-filter-pills"
-        aria-label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}
-      >
-        {(tab === 'incidents'
-          ? [
-              ['', '전체 사건'],
-              ['open', '열린 사건'],
-              ['acknowledged', '확인한 사건'],
-              ['closed', '종결한 사건'],
-            ]
-          : ['', 'queued', 'running', 'succeeded', 'failed', 'cancelled'].map((value) => [
-              value,
-              labels[value] || '전체',
-            ])
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            aria-pressed={status === value}
-            onClick={() => {
-              const next = new URLSearchParams(params);
-              next.set('status', value);
-              setParams(next);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {tab !== 'reports' && (
+        <div
+          className="ops-filter-pills"
+          aria-label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}
+        >
+          {(tab === 'incidents'
+            ? [
+                ['', '전체 사건'],
+                ['open', '열린 사건'],
+                ['acknowledged', '확인한 사건'],
+                ['closed', '종결한 사건'],
+              ]
+            : ['', 'queued', 'running', 'succeeded', 'failed', 'cancelled'].map((value) => [
+                value,
+                labels[value] || '전체',
+              ])
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              aria-pressed={status === value}
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.set('status', value);
+                setParams(next);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <section className="ops-section">
         <QueryState query={q} empty={!q.items.length}>
-          {tab === 'analyses' ? <JobRows items={q.items} /> : <OperationCaseList items={q.items} />}
+          {tab !== 'incidents' ? (
+            <JobRows items={q.items} />
+          ) : (
+            <OperationCaseList items={q.items} />
+          )}
         </QueryState>
         <More query={q} />
       </section>
@@ -331,7 +348,7 @@ export function OperationsReports() {
                   <dd>{formatDate(str(r.created_at))}</dd>
                 </dl>
                 <span className="ops-link">
-                  {r.result_ref != null ? '분석 읽기' : '진행 확인'} <ArrowRight size={16} />
+                  {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'} <ArrowRight size={16} />
                 </span>
               </div>
             </Link>

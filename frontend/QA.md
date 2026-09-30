@@ -1,5 +1,9 @@
 # 2026-09-30 보고서 GPU·시간과 부분 산출 안내
 
+## RCA 첫 화면·Ops 최종 보고서 — 2026-09-30
+
+main `40b68d3` 기반. Frontend에서 `npm run format:check`, `npm test`(**38 passed**), `npm run build` **통과**. 공개 참조가 있는 RCA/Ops의 hash 바로가기, 미발행 링크 미노출, Ops 제목/본문/기본 보고서·HTML escape 및 기존 Namespace/수치 표시 회귀를 확인했다. 실제 브라우저 상호작용과 운영 API 화면은 **미검증**이며 컴포넌트 렌더 fixture다. 별도 실제 프로세스 8건은 [Agent QA](../agents/QA.md)에 기록했다.
+
 - **통과:** `frontend/`에서 `npm run format:check`, `npm test` **36 tests**, `npm run build`. 기간과 누적 GPU·시간 구분, 연결 GPU 대수, partial 사유의 상세 밖 노출, 실제 0/null/구 결과, cluster 보고서의 namespace 전용 표 숨김, 혼합 보고서에서 다른 주제 설명 보존을 검사했다.
 - **통과:** 로컬 합성 API·Vite build와 브라우저에서 기존/운영측/개발측의 동일 보고서 표시, 0%와 공유 구간 산출 불가, 기간·고유 GPU 대수·누적 시간 설명 확인. 390px viewport에서 문서 가로 넘침 없음(스크롤바 제외 clientWidth=scrollWidth=375), 브라우저 오류 없음. 검사 뒤 뷰포트·기존 관점을 복원했다.
 - **통과:** Backend HTML의 GPU·시간 설명·한계 우선 표시와 CSV의 `7.9864155557420515,GPU-hours` 원시 정밀도 보존 검사. 실제 로컬 서비스 공개 경로는 [Agent QA](../agents/QA.md)를 따른다.

@@ -44,7 +44,16 @@ def render(result):
     page = (
         '<!doctype html><html lang="ko"><meta charset="utf-8"><title>GPU 운영 보고서</title><body><h1>GPU 운영 보고서</h1><p>'
         + html.escape(result["result_status"])
-        + "</p><table><thead><tr><th>항목</th><th>값</th><th>단위</th><th>산식</th><th>제한</th></tr></thead><tbody>"
+        + "</p>"
+        + "".join(
+            "<section><h2>"
+            + html.escape(s.get("title", "분석 설명"))
+            + "</h2>"
+            + "".join("<p>" + html.escape(p) + "</p>" for p in s["text"].split("\n\n"))
+            + "</section>"
+            for s in result.get("narrative", [])
+        )
+        + "<table><thead><tr><th>항목</th><th>값</th><th>단위</th><th>산식</th><th>제한</th></tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>"
     )

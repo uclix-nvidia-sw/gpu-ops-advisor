@@ -17,6 +17,7 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	metrics := reportMetrics(body)
+	body["narrative"] = []any{Object{"title": "분석 범위와 결과", "text": "<script>report</script>"}}
 	if len(metrics) != 2 {
 		t.Fatalf("metrics: %v", metrics)
 	}
@@ -24,7 +25,7 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 	if err := exportMetrics(html, "report-id", "html", body, metrics); err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"<table>", "GPU–Pod 연결 관측 시간", "1.5", "산출 불가", "독점 할당량이나 실제 연산 시간이 아닙니다", "&lt;script&gt;"} {
+	for _, expected := range []string{"최종 보고서", "분석 범위와 결과", "기본 보고서", "<table>", "GPU–Pod 연결 관측 시간", "1.5", "산출 불가", "독점 할당량이나 실제 연산 시간이 아닙니다", "&lt;script&gt;"} {
 		if !strings.Contains(html.Body.String(), expected) {
 			t.Errorf("missing %q", expected)
 		}

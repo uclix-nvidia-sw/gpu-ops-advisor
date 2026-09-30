@@ -9,11 +9,10 @@ from agent_common.calculations import (
     seconds,
 )
 from agent_common.contracts import base_result, result_status, metric, timestamp, now
-from agent_common.llm import explain
 from agent_common.normalize import allocations, gpu_intervals, intervals
 from agent_common.observation import Observation
 from agent_common.runtime import attempt_context
-from .prompts import EXPLANATION
+from .report import write_report
 from .namespace_usage import namespace_usage, pod_namespace_scope
 
 
@@ -779,14 +778,6 @@ async def run(tools):
             discovery_calls=obs.discovery_calls,
         ),
     )
-    await explain(result, ctx["llm"], EXPLANATION)
-    if not ctx["llm"].configured:
-        result["quality"]["narrative_reason"] = "model_not_configured"
-    elif not any(topic["facts"] for topic in topics):
-        result["quality"]["narrative_reason"] = "no_verified_facts"
-    elif result["narrative_status"] == "failed":
-        result["quality"]["narrative_reason"] = (
-            getattr(ctx["llm"], "last_failure", None) or "llm_invalid_output"
-        )
+    await write_report(result, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": obs.evidence}

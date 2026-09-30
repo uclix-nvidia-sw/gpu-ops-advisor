@@ -736,6 +736,7 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     assert result["quality"]["requested_group_by"] == ["namespace"]
     html = httpx.get(backend + f"/reports/{jid}/export?format=html")
     assert html.status_code == 200
+    assert "분석 범위와 결과" in html.text and "권고와 실행 조건" in html.text
     assert "연결 GPU 평균 활동률" in html.text
     assert "Namespace의 실제 소비량" in html.text
     with psycopg.connect(stack["url"]) as conn:
@@ -821,12 +822,16 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     energy = next(t for t in report["topics"] if t["topic_id"] == "O09")["metrics"][0]
     assert energy["value"] == 0.25, report
     assert report["narrative_status"] == "complete"
+    assert len(report["narrative"]) == 5
+    assert report["quality"]["report"]["status"] == "complete"
     assert next(t for t in report["topics"] if t["topic_id"] == "O05")[
         "rca_references"
     ][0]["result_id"]
     for artifact in report["artifacts"]:
         path = LOCAL / "artifacts" / artifact["object_key"]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact["checksum"]
+        if artifact["format"] == "html":
+            assert "권고와 실행 조건" in path.read_text(encoding="utf-8")
     assert any("/api/v1/query" in p for p, _ in Upstream.requests)
     assert any("/loki/api/v1/query_range" in p for p, _ in Upstream.requests)
     assert any(p == "/v1/chat/completions" for p, _ in Upstream.requests)

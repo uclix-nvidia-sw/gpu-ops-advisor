@@ -7,7 +7,9 @@ import { useApp } from '../lib/store';
 export function Cases() {
   const app = useApp();
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'analyses' ? 'analyses' : 'incidents',
+  const tab = ['analyses', 'reports'].includes(params.get('tab') || '')
+      ? params.get('tab')!
+      : 'incidents',
     status = params.get('status') || '';
   const setStatus = (value: string) => {
     const next = new URLSearchParams(params);
@@ -15,7 +17,13 @@ export function Cases() {
     setParams(next);
   };
   const q = useList(
-    app.ready ? queryPath('/' + tab, { scope: app.scope, status, limit: 30 }) : null,
+    app.ready
+      ? queryPath('/' + (tab === 'reports' ? 'analyses' : tab), {
+          scope: app.scope,
+          status: tab === 'reports' ? 'succeeded' : status,
+          limit: 30,
+        })
+      : null,
     true,
   );
   return (
@@ -24,11 +32,17 @@ export function Cases() {
         eyebrow="ROOT CAUSE ANALYSIS"
         title="RCA 조사"
         description="사건에 연결된 RCA 조사와 발행된 결과를 확인합니다."
+        actions={
+          <Link className="button primary" to="/cases?tab=reports">
+            최종 보고서
+          </Link>
+        }
       />
       <div className="tabs">
         {[
           ['incidents', '사건'],
           ['analyses', '조사 이력'],
+          ['reports', '최종 보고서'],
         ].map(([v, l]) => (
           <button
             className={tab === v ? 'active' : ''}
@@ -44,24 +58,30 @@ export function Cases() {
           </button>
         ))}
       </div>
-      <Panel title={tab === 'incidents' ? '사건 목록' : '조사 목록'}>
-        <div className="live-toolbar">
-          <Field label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}>
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">전체</option>
-              {(tab === 'incidents'
-                ? ['open', 'acknowledged', 'closed']
-                : ['queued', 'running', 'succeeded', 'failed', 'cancelled']
-              ).map((s) => (
-                <option key={s} value={s}>
-                  {labels[s] || s}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+      <Panel
+        title={
+          tab === 'incidents' ? '사건 목록' : tab === 'reports' ? '공개된 RCA 보고서' : '조사 목록'
+        }
+      >
+        {tab !== 'reports' && (
+          <div className="live-toolbar">
+            <Field label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}>
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="">전체</option>
+                {(tab === 'incidents'
+                  ? ['open', 'acknowledged', 'closed']
+                  : ['queued', 'running', 'succeeded', 'failed', 'cancelled']
+                ).map((s) => (
+                  <option key={s} value={s}>
+                    {labels[s] || s}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
         <QueryState query={q} empty={!q.items.length}>
-          {tab === 'analyses' ? (
+          {tab !== 'incidents' ? (
             <JobRows items={q.items} />
           ) : (
             <div className="table-wrap">

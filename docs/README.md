@@ -1,5 +1,9 @@
 # GPU Ops Advisor 개발 문서 안내
 
+## RCA·Ops 최종 보고서 — 2026-09-30
+
+[RCA 첫 화면 접근과 Ops 표시](../frontend/README.md), [Ops의 마지막 LLM 편집·기본 보고서 계약](../ops-agent/README.md), [HTML 내보내기](../backend/README.md)를 반영했다. 최신 main의 Namespace/GPU 시간·수집 개선을 유지한다. 검증 범위는 [Agent QA](../agents/QA.md)와 모듈 QA에 기록한다.
+
 ## 2026-09-30 RCA evidence 보완
 
 [현재 실행 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완): 정밀도 partial 개별 관측 사용, degraded 후속 조사, Fleet JSON 정규화, target 투영의 중복 호환, R02/R03 매핑 조사와 최종 보고서. [Agent QA](../agents/QA.md)와 [Incident QA](../incident/QA.md)는 로컬 검증 범위를 기록한다. 기존 DB schema와 snapshot/hash를 유지하며 운영 배포/시각 의미/LLM 품질은 별도 검수한다.

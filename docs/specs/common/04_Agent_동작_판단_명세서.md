@@ -1,5 +1,9 @@
 # 04. Agent 공통 동작·판단 명세서
 
+## Ops 최종 보고서 계약 — 2026-09-30
+
+Ops 계산 이후 다섯 섹션을 항상 구성하고 모델 문장 ID 편집을 시도한다. 근거 부족/모델 확정 실패는 기본 보고서로 표시하며 수치·목적 품질·권고 조건을 변경하지 않는다. 원격 불확실성의 실패/격리 계약은 유지한다. `narrative`의 title/text/ref 및 `quality.report` 의미는 [Ops 실행 안내](../../../ops-agent/README.md)를 따른다. 새 DB schema/API는 없다.
+
 ## RCA 수집 보완 (2026-09-30)
 
 `degraded`도 승인된 미실행 query와 남은 예산/deadline이 있으면 최대 한 번 독립 후속 조회를 진행한다. 실패 query 반복 재시도는 하지 않는다. R02/R03가 요청되고 승인 Runbook이 선택되면 D08/D06 목적 조회를 계획에 추가한다. 대상 GPU UUID/Pod UID 미확인, query 미실행/source 불가, 사건 당시 관계 부재를 구분해 부족 사유로 남긴다. Loki 기록 관측 사용과 장비 상태 fact 승격은 [RCA 계약](../../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따른다.
