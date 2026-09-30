@@ -1,7 +1,13 @@
 import copy
 import importlib.util
+import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import unittest
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -53,6 +59,49 @@ class ReleaseTests(unittest.TestCase):
         self.env["GITHUB_REF"] = "refs/tags/v9.0.0"
         with self.assertRaises(ValueError):
             metadata(self.env, "1.3.0")
+
+    def test_parallel_pr_build_and_required_gate(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
+        self.assertEqual(jobs["pr-images"]["needs"], ["metadata"])
+        self.assertEqual(jobs["pr-images"]["if"], "github.event_name == 'pull_request'")
+        self.assertIs(jobs["pr-images"]["with"]["publish"], False)
+        self.assertEqual(jobs["images"]["needs"], ["metadata", "tests"])
+        self.assertEqual(jobs["images"]["if"], "github.event_name != 'pull_request'")
+        self.assertEqual(
+            set(jobs["chart"]["needs"]), {"metadata", "tests", "images", "pr-images"}
+        )
+        gate = jobs["required"]
+        self.assertEqual(gate["if"], "always()")
+        self.assertEqual(set(gate["needs"]), set(jobs) - {"required"})
+        script = (
+            gate["steps"][0]["run"].split("python - <<'PY'\n", 1)[1].rsplit("PY", 1)[0]
+        )
+        for event in ("pull_request", "push", "workflow_dispatch"):
+            inactive = "images" if event == "pull_request" else "pr-images"
+            results = {
+                name: {"result": "skipped" if name == inactive else "success"}
+                for name in gate["needs"]
+            }
+            variants = [("all required jobs passed", results, 0)]
+            for name in results:
+                for status in ("success", "failure", "cancelled", "skipped"):
+                    if status == results[name]["result"]:
+                        continue
+                    changed = copy.deepcopy(results)
+                    changed[name]["result"] = status
+                    variants.append((f"{name}: {status}", changed, 1))
+            for label, candidate, expected in variants:
+                with self.subTest(event=event, result=label):
+                    result = subprocess.run(
+                        [sys.executable, "-c", script],
+                        env={
+                            **os.environ,
+                            "EVENT": event,
+                            "RESULTS": json.dumps(candidate),
+                        },
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_package_rejects_missing_wrong_or_unpublished_digests(self):
         values = {

@@ -35,7 +35,21 @@ jobs:
   tests:
     uses: ./.github/workflows/tests.yml
 
+  pr-images:
+    if: github.event_name == 'pull_request'
+    needs: [metadata]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/container-images.yml
+    with:
+      matrix: ${{ needs.metadata.outputs.matrix }}
+      image-tag: ${{ needs.metadata.outputs.image-tag }}
+      namespace: ${{ needs.metadata.outputs.namespace }}
+      publish: false
+
   images:
+    if: github.event_name != 'pull_request'
     needs: [metadata, tests]
     permissions:
       contents: read
@@ -48,7 +62,11 @@ jobs:
       publish: ${{ needs.metadata.outputs.publish-images == 'true' }}
 
   chart:
-    needs: [metadata, tests, images]
+    if: >-
+      ${{ !cancelled() && needs.metadata.result == 'success' &&
+          needs.tests.result == 'success' &&
+          (needs.images.result == 'success' || needs.pr-images.result == 'success') }}
+    needs: [metadata, tests, images, pr-images]
     permissions:
       contents: read
       packages: write
@@ -62,16 +80,20 @@ jobs:
   required:
     name: CI required
     if: always()
-    needs: [metadata, tests, images, chart]
+    needs: [metadata, tests, images, pr-images, chart]
     runs-on: ubuntu-latest
     steps:
       - name: Require every gate
         env:
           RESULTS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
         run: |
           python - <<'PY'
           import json, os
-          failed = [name for name, job in json.loads(os.environ['RESULTS']).items() if job['result'] != 'success']
+          results = json.loads(os.environ['RESULTS'])
+          inactive = 'images' if os.environ['EVENT'] == 'pull_request' else 'pr-images'
+          failed = [name for name, job in results.items()
+                    if job['result'] != ('skipped' if name == inactive else 'success')]
           if failed:
               raise SystemExit('Failed or skipped gates: ' + ', '.join(failed))
           PY

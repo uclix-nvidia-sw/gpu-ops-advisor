@@ -1,5 +1,16 @@
 # CI·Helm 검증 기록
 
+## 2026-10-01 CI 대기 단축
+
+기준: origin/main `638671a`. PR에서 테스트와 이미지 빌드를 병렬 실행하고, 런북 대량 등록 테스트의 분당 제한 대기를 테스트 전용 설정으로 분리했다. 제품 코드·운영 한도·이미지 발행 조건은 변경하지 않았다.
+
+- **통과:** macOS arm64/Python 3.11.16(Worker 지원 범위), Go 1.26.2로 최신 Backend/JC/Incident를 빌드한 뒤 `RUN_AGENT_E2E=1` 전체 Python **206 passed**, 33.58초. 런북 263개 등록·조회/hash·중복 방지·RCA 소비 테스트는 5.94초. 기존 MCP deprecation warning 3건. 운영 DB 환경변수를 제거하고 새 loopback PostgreSQL·실제 Worker/NAT/공식 MCP를 사용했다. Grafana/LLM 응답은 fixture이며 CI는 Python 3.12에서 재검증한다.
+- **통과:** 실제 Backend 429·`Retry-After: 60`, 기존 CLI의 동일 요청 재시도·대기 검증. 대량 테스트가 끝나거나 실패해도 원래 C07 설정을 복원한다. 기본 120회/분에서 실제 60초씩 두 번 기다리는 통합 경로는 분리했으며, 운영 기본값은 그대로다.
+- **통과:** 릴리스 도구 unittest 4건. PR/main·태그 push/수동 실행의 발행 설정과 필수 gate 스크립트를 검증했다. 이벤트별 비활성 이미지 job 하나만 건너뛸 수 있고 필요한 job의 실패·취소·skip 및 비활성 job의 예상 밖 실행은 차단한다.
+- **통과:** actionlint 1.7.11, Ruff lint/format, Helm 3.17.3 chart 계약·패키징, 내부 문서 링크, CRLF·diff 검사. 로컬 Python은 3.11이며 CI의 3.12 검증 결과는 PR에 별도 기록한다.
+- **미검증:** 수정 후 GitHub CI의 실제 총시간과 Linux 이미지 빌드는 push 후 확인한다. 비교 기준인 [main CI 36691385149](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/36691385149)는 7분 1초, Python job 4분 46초였다. 로컬 시간과 GitHub 시간은 환경이 달라 직접적인 성능 비교로 쓰지 않는다.
+- **해당 없음:** 배포·운영 Grafana/LLM 검수·DB migration·API/계산 변경. 수정 범위는 CI·테스트·검증 문서다.
+
 ## 2026-09-30 PR #28 이미지 캐시 저장 실패
 
 [실패 실행 36680447708](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/36680447708)의 커밋 `7fd8f3e`에서 Go·Python·Frontend·Helm 검사는 모두 통과했다. 이미지 7개는 OCI 출력 후 `exporting to GitHub Actions Cache` 단계의 `failed to reserve cache`로 실패했고 chart는 건너뛰었다. 캐시 서비스가 예약을 거부한 구체적인 원인(용량·권한·일시 장애)은 로그만으로 확정하지 않는다.
