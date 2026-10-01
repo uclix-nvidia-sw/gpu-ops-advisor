@@ -1,3 +1,12 @@
+# 2026-10-01 보고서 목록에서 본문 바로 열기
+
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **46 tests**, `npm run build`.
+- **통과:** 목록 컴포넌트 렌더 fixture로 공개된 부분 분석 보고서의 제목·카드가 `/reports/{id}#final-report`를 가리키며 작업 상세를 거치지 않는지 확인했다. 실행 중·실패·성공 상태라도 공개 참조가 없으면 `/jobs/{id}`로 연결된다. 공통 표의 RCA 제목·최종 보고서 링크는 기존 경로를 유지한다.
+- **미검증:** 실제 브라우저 클릭·스크롤, 운영 API·배포. 검사는 모의 API 데이터의 링크 출력에 한정한다.
+- **해당 없음:** Backend·Worker·DB 로컬 통합 재실행 — UI 링크 외 제품 코드·계약 변경 없음.
+
+---
+
 # 2026-09-30 보고서 GPU·시간과 부분 산출 안내
 
 Ops 목록 식별 정보 보강: Frontend `npm test` **43 passed**, `npm run format:check`와 `npm run build` **통과**. 표·운영 카드 렌더 fixture로 복수 분석 주제, CPC/Namespace 대상, 기간·요청 집계와 공개 보고서 링크를 확인했다. 공통 helper는 복수 CPC, 전체 Namespace(null), 범위 누락, 빈 Namespace 목록과 미지원 주제를 검사한다. 작업 UUID는 표의 접힌 상세로 이동했다. API/DB/LLM 변경 없음. 운영 API 및 실제 브라우저 검수는 **미수행**이다.
