@@ -2,6 +2,8 @@ import { obj, rows, str, strings } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import {
   collectionStatus,
+  collectionNextCheck,
+  queryName,
   groupLabel,
   namespaceRows,
   metricUnit,
@@ -14,7 +16,7 @@ import {
 } from '../lib/report';
 import { Badge, Notice } from './ui';
 import { DataView } from './live';
-import { reportMetrics } from '../lib/workflow';
+import { reportMetrics, reportScope } from '../lib/workflow';
 import { type Row } from '../lib/live';
 
 export function ReportContent({
@@ -70,28 +72,7 @@ export function ReportContent({
   );
   const mapped = metrics.find((m) => str(m.id).split('.')[1] === 'mapped_gpu_count');
   return (
-    <div className="stack">
-      {narrative.some((section) => section.title) && (
-        <section id="final-report" className="result-section" aria-label="GPU Ops 최종 보고서">
-          <h3>GPU Ops 최종 보고서</h3>
-          <p className="muted">
-            {result.narrative_status === 'complete'
-              ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
-              : 'LLM 편집을 사용하지 못해 계산 결과와 부족 사유로 기본 보고서를 작성했습니다.'}{' '}
-            보고서 작성 완료와 자료의 완전성은 별개입니다.
-          </p>
-          {narrative.map((section, index) => (
-            <section key={str(section.id, String(index))}>
-              <h4>{str(section.title)}</h4>
-              {str(section.text)
-                .split('\n\n')
-                .map((paragraph, i) => (
-                  <p key={i}>{paragraph}</p>
-                ))}
-            </section>
-          ))}
-        </section>
-      )}
+    <div className="stack" id="final-report" role="region" aria-label="GPU Ops 최종 보고서">
       <section className="result-section">
         <h3>분석 요약</h3>
         <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
@@ -99,14 +80,7 @@ export function ReportContent({
           {formatDate(str(obj(result.time_range).start))} –{' '}
           {formatDate(str(obj(result.time_range).end))} · {str(result.timezone, 'Asia/Seoul')}
         </p>
-        <p>
-          {rows(obj(result.scope).clusters)
-            .map(
-              (cluster) =>
-                `${str(cluster.cluster_id).toUpperCase()} / ${cluster.namespaces == null ? '전체 Namespace' : strings(cluster.namespaces).join(', ')}`,
-            )
-            .join(' · ')}
-        </p>
+        <p>{reportScope(result)}</p>
         {Number.isFinite(hours) && hours > 0 && (
           <p>분석 기간: {hours.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}시간</p>
         )}
@@ -193,7 +167,8 @@ export function ReportContent({
           {typeof collection.query_calls === 'number' && (
             <>
               {' '}
-              조회 호출 {collection.query_calls} / {String(collection.query_limit)}회.
+              조회 호출 {collection.query_calls} / {String(collection.query_limit ?? '기록 없음')}
+              회.
             </>
           )}{' '}
           CPC·Namespace 범위 또는 분석 주제를 줄여 새 보고서를 요청할 수 있습니다.
@@ -214,8 +189,8 @@ export function ReportContent({
               {requestedNamespace
                 ? 'Namespace 집계를 요청했지만 새 활동률 계산이 적용되지 않았습니다.'
                 : '이 보고서에는 새 Namespace 활동률 집계가 적용되지 않았습니다.'}{' '}
-              새 보고서에서 ‘Namespace GPU 현황’을 선택하세요. 계산 기준 1.2를 지원하는 서버가
-              필요하며 저장된 결과는 바뀌지 않습니다.
+              새 보고서에서 ‘Namespace별 GPU 사용 분석’을 선택하세요. 계산 기준 1.2를 지원하는
+              서버가 필요하며 저장된 결과는 바뀌지 않습니다.
             </Notice>
           )}
           <p>
@@ -282,6 +257,28 @@ export function ReportContent({
             <p>Namespace에 연결할 수 있는 유효 관측이 없습니다. 아래 O08 산출 제한을 확인하세요.</p>
           )}
         </section>
+      )}
+      {narrative.some((section) => section.title) && (
+        <details className="result-section">
+          <summary>저장된 보고서 해석 · LLM 또는 기본 보고서</summary>
+          <h3>GPU Ops 최종 보고서</h3>
+          <p className="muted">
+            {result.narrative_status === 'complete'
+              ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
+              : 'LLM 편집을 사용하지 못해 계산 결과와 부족 사유로 기본 보고서를 작성했습니다.'}{' '}
+            보고서 작성 완료와 자료의 완전성은 별개입니다.
+          </p>
+          {narrative.map((section, index) => (
+            <section key={str(section.id, String(index))}>
+              <h4>{str(section.title)}</h4>
+              {str(section.text)
+                .split('\n\n')
+                .map((paragraph, i) => (
+                  <p key={i}>{paragraph}</p>
+                ))}
+            </section>
+          ))}
+        </details>
       )}
       <details id="report-topic-details">
         <summary>주제별 상세 수치 · {topics.length}개 주제</summary>
@@ -402,63 +399,188 @@ export function ReportContent({
           <DataView value={metrics} />
         </section>
       )}
-      {!!observations.length && (
-        <section className="result-section">
-          <h3>데이터 수집 상태</h3>
-          {typeof collection.query_calls === 'number' && (
+      <details id="report-diagnostics">
+        <summary>분석 진행 상세 · 수집·계산·권고 보류 이유</summary>
+        <p>
+          저장된 실행 결과입니다. 실시간 진행 로그가 아닙니다. 미수집은 원본 데이터가 없다는 뜻이
+          아닙니다.
+        </p>
+        <p>
+          요청 기간: {formatDate(str(obj(result.time_range).start))} –{' '}
+          {formatDate(str(obj(result.time_range).end))} · {str(result.timezone, '시간대 미확인')}
+        </p>
+        <p>
+          요청 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
+          {str(obj(result.versions).criteria, '기록 없음')}
+        </p>
+        <p>
+          AI 설명 상태:{' '}
+          <Badge
+            status={str(result.narrative_status) || null}
+            label={
+              (
+                { complete: '설명 완료', failed: '설명 실패', omitted: '설명 생략' } as Record<
+                  string,
+                  string
+                >
+              )[str(result.narrative_status)] || '기록 없음'
+            }
+          />{' '}
+          {reportReason(str(quality.narrative_reason))}
+        </p>
+        {!topics.length && <p>주제별 진행 기록 없음. 기존 결과의 수치·근거를 확인하세요.</p>}
+        {topics.map((topic) => (
+          <section className="result-section" key={str(topic.topic_id)}>
+            <h4>
+              {topicName(str(topic.topic_id))} <small>{str(topic.topic_id)}</small> ·{' '}
+              <Badge status={str(topic.status) || null} />
+            </h4>
             <p>
-              실제 조회 호출: {collection.query_calls} / {String(collection.query_limit)}회
+              계산 결과: {rows(topic.metrics).filter((m) => m.value != null).length}개 산출 ·{' '}
+              {rows(topic.metrics).filter((m) => m.value == null).length}개 산출 불가
             </p>
-          )}
-          <p className="muted">
-            응답 표본 수는 조회 구간별 응답 건수의 합입니다. 경계 중복을 제거한 고유 표본 수 또는
-            전체 관측률이 아닙니다.
-          </p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>클러스터</th>
-                  <th>조회 데이터</th>
-                  <th>결과</th>
-                  <th>수집 표본</th>
-                  <th>사유</th>
-                </tr>
-              </thead>
-              <tbody>
-                {observations.map((observation) => (
-                  <tr key={`${str(observation.query_id)}:${str(observation.cluster_id)}`}>
-                    <td>{str(observation.cluster_id)}</td>
-                    <td>
-                      {str(observation.metric, str(observation.query_id))}
-                      {observation.metric != null && (
-                        <small className="muted"> · {str(observation.query_id)}</small>
-                      )}
-                    </td>
-                    <td>{collectionStatus(observation)}</td>
-                    <td>{String(observation.sample_count)}</td>
-                    <td>
-                      {strings(observation.reasons).map(reportReason).join(' ') || '—'}
-                      {!!strings(observation.queried_namespaces).length && (
-                        <p>
-                          GPU 관계에서 확인된 Namespace만 조회:{' '}
-                          {strings(observation.queried_namespaces).join(', ')}
-                        </p>
-                      )}
-                      {observation.reused_from_evidence != null && (
-                        <p>같은 실행의 동일한 원본 조회 결과를 재사용했습니다.</p>
-                      )}
-                    </td>
-                  </tr>
+            {!rows(topic.metrics).length && <p>항목별 계산 기록 없음.</p>}
+            {rows(topic.metrics)
+              .filter((m) => m.value == null)
+              .map((m, i) => (
+                <p key={str(m.id, String(i))}>
+                  {metricName(str(m.id))} · {metricTarget(m)}:{' '}
+                  {reportReason(str(obj(m.quality).reason, '사유 기록 없음'))}
+                </p>
+              ))}
+            {!!strings(topic.missing_inputs).length && (
+              <ul>
+                {[...new Set(strings(topic.missing_inputs))].map((reason) => (
+                  <li key={reason}>
+                    {reportReason(reason)} <code>{reason}</code>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-      {!observations.length && (
-        <p className="muted">세부 조회 결과는 아래 수집 근거에서 확인할 수 있습니다.</p>
-      )}
+              </ul>
+            )}
+            <p>
+              권고: {rows(topic.recommendations).filter((r) => r.eligibility === 'eligible').length}
+              개 검토 가능 ·{' '}
+              {rows(topic.recommendations).filter((r) => r.eligibility === 'withheld').length}개
+              보류 ·{' '}
+              {
+                rows(topic.recommendations).filter(
+                  (r) => !['eligible', 'withheld'].includes(str(r.eligibility)),
+                ).length
+              }
+              개 자격 미확인. 조치 실행 여부와는 별개입니다.
+            </p>
+            {!rows(topic.recommendations).length && (
+              <p>권고 기록 없음. 권고 가능 여부를 추정하지 않습니다.</p>
+            )}
+            {rows(topic.recommendations).map((r, i) => (
+              <p key={i}>
+                {str(r.text, '권고 내용 기록 없음')} ·{' '}
+                {reportReason(str(r.reason, '사유 기록 없음'))}
+              </p>
+            ))}
+            <h5>이 분석에서 기록된 조회</h5>
+            {!rows(obj(topic.quality).observations).length && (
+              <p>조회 기록 없음. 미조회인지 기록 누락인지 확인할 수 없습니다.</p>
+            )}
+            {reportObservations({ topics: [topic] }).map((o) => (
+              <div className="data-item" key={`${str(o.query_id)}:${str(o.cluster_id)}`}>
+                <strong>
+                  {str(o.cluster_id, '대상 미확인')} · {queryName(str(o.query_id))} (
+                  {str(o.query_id, '조회 ID 미확인')}) · {str(o.metric, '원본 지표 이름 기록 없음')}
+                </strong>
+                <p>
+                  {collectionStatus(o)} ·{' '}
+                  {strings(o.reasons).map(reportReason).join(' ') || '별도 사유 기록 없음'}
+                </p>
+                <p>다음 확인: {collectionNextCheck(o)}</p>
+                <details>
+                  <summary>조회 구간·원본 코드·수집 기록</summary>
+                  <DataView
+                    value={rows(obj(topic.quality).observations).filter(
+                      (raw) => raw.query_id === o.query_id && raw.cluster_id === o.cluster_id,
+                    )}
+                  />
+                </details>
+              </div>
+            ))}
+            <div className="head-actions">
+              {strings(topic.evidence_refs).map((id) => (
+                <button className="text-link" key={id} onClick={() => onEvidence(id)}>
+                  근거 {id}
+                </button>
+              ))}
+            </div>
+            <a
+              className="text-link"
+              href={`#topic-${str(topic.topic_id)}`}
+              onClick={() => {
+                const details = document.getElementById('report-topic-details');
+                if (details instanceof HTMLDetailsElement) details.open = true;
+              }}
+            >
+              이 분석의 수치·근거 상세 보기
+            </a>
+          </section>
+        ))}
+        {!!observations.length && (
+          <section className="result-section">
+            <h3>데이터 수집 상태</h3>
+            {typeof collection.query_calls === 'number' && (
+              <p>
+                실제 조회 호출: {collection.query_calls} /{' '}
+                {String(collection.query_limit ?? '기록 없음')}회
+              </p>
+            )}
+            <p className="muted">
+              응답 표본 수는 조회 구간별 응답 건수의 합입니다. 경계 중복을 제거한 고유 표본 수 또는
+              전체 관측률이 아닙니다.
+            </p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>클러스터</th>
+                    <th>조회 데이터</th>
+                    <th>결과</th>
+                    <th>수집 표본</th>
+                    <th>사유</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {observations.map((observation) => (
+                    <tr key={`${str(observation.query_id)}:${str(observation.cluster_id)}`}>
+                      <td>{str(observation.cluster_id)}</td>
+                      <td>
+                        {str(observation.metric, str(observation.query_id))}
+                        {observation.metric != null && (
+                          <small className="muted"> · {str(observation.query_id)}</small>
+                        )}
+                      </td>
+                      <td>{collectionStatus(observation)}</td>
+                      <td>{String(observation.sample_count ?? '기록 없음')}</td>
+                      <td>
+                        {strings(observation.reasons).map(reportReason).join(' ') || '—'}
+                        {!!strings(observation.queried_namespaces).length && (
+                          <p>
+                            GPU 관계에서 확인된 Namespace만 조회:{' '}
+                            {strings(observation.queried_namespaces).join(', ')}
+                          </p>
+                        )}
+                        {observation.reused_from_evidence != null && (
+                          <p>같은 실행의 동일한 원본 조회 결과를 재사용했습니다.</p>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+        {!observations.length && (
+          <p className="muted">세부 조회 결과는 아래 수집 근거에서 확인할 수 있습니다.</p>
+        )}
+      </details>
       {!!strings(result.limitations).length && (
         <section className="result-section">
           <h3>해석 시 참고사항</h3>

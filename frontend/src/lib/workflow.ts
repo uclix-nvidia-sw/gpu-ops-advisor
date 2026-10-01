@@ -154,6 +154,12 @@ export function reportMetrics(result: Row) {
   return fromTopics.length ? fromTopics : rows(result.measurements);
 }
 export function reportTitle(job: Row) {
+  const ids = strings(job.topic_ids);
+  if (ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace'))
+    return 'Namespace별 GPU 사용 분석';
+  return ids.length > 1 ? `GPU 운영 보고서 · ${ids.length}개 주제` : reportTopics(job);
+}
+export function reportTopics(job: Row) {
   return (
     strings(job.topic_ids)
       .map((id) => (/^O(0[1-9]|1[01])$/.test(id) ? topics[Number(id.slice(1)) - 1] : id))

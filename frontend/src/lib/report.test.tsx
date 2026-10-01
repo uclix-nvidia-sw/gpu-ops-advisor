@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ReportContent } from '../components/ReportContent';
-import { reportObservations, metricValue, metricUnit, collectionStatus } from './report';
+import {
+  reportObservations,
+  metricValue,
+  metricUnit,
+  collectionStatus,
+  collectionNextCheck,
+} from './report';
 import { QueryState } from '../components/live';
 
 describe('report presentation', () => {
@@ -328,4 +334,95 @@ it('retains other topic explanations when removing duplicate namespace metric su
   ).split('<summary>원본 결과 보기')[0];
   expect(html).toContain('Other topic explanation');
   expect(html).not.toContain('duplicate');
+});
+
+it('keeps diagnostics collapsed, separates zero/null and does not invent collection history', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        narrative_status: 'failed',
+        narrative: [{ title: '분석 범위', text: 'RAW_JSON_PLACEHOLDER' }],
+        topics: [
+          {
+            topic_id: 'O08',
+            status: 'partial',
+            missing_inputs: ['allocation_contract_missing'],
+            metrics: [
+              { id: 'O08.namespace_connected_gpu_util.0', value: 0, unit: 'percent' },
+              {
+                id: 'O08.allocated_gpu_hours',
+                value: null,
+                quality: { reason: 'allocation_contract_missing' },
+              },
+            ],
+            recommendations: [{ eligibility: 'withheld', reason: 'workload_purpose_unverified' }],
+            quality: {
+              observations: [
+                { query_id: 'D01', cluster_id: 'cpc', tool_status: 'ok', sample_count: 4 },
+                { query_id: 'D02', cluster_id: 'cpc', tool_status: 'empty', sample_count: 0 },
+                {
+                  query_id: 'D06',
+                  cluster_id: 'cpc',
+                  tool_status: 'unavailable',
+                  reason: 'query_failed',
+                },
+                {
+                  query_id: 'D08',
+                  cluster_id: 'cpc',
+                  tool_status: 'unavailable',
+                  reason: 'budget_exhausted',
+                  sample_count: 0,
+                },
+              ],
+            },
+            evidence_refs: ['e1'],
+          },
+          { topic_id: 'O11', status: 'blocked' },
+        ],
+      }}
+    />,
+  ).split('<summary>원본 결과 보기')[0];
+  expect(html).toContain('<details id="report-diagnostics"><summary>분석 진행 상세');
+  expect(html).toContain('계산 결과: 1개 산출 · 1개 산출 불가');
+  expect(html).toContain('1개 보류');
+  expect(html).toContain('조회 기록 없음. 미조회인지 기록 누락인지 확인할 수 없습니다.');
+  for (const text of [
+    '수집 완료',
+    '해당 기간 데이터 없음',
+    '조회 실패',
+    '실행 제한으로 미수집',
+    'allocation_contract_missing',
+    '근거 e1',
+    '다음 확인',
+  ])
+    expect(html).toContain(text);
+  expect(html.indexOf('분석 요약')).toBeLessThan(html.indexOf('RAW_JSON_PLACEHOLDER'));
+  expect(html).toContain('<summary>저장된 보고서 해석');
+  expect(collectionStatus({})).toBe('수집 상태 기록 없음');
+  expect(collectionNextCheck({ statuses: ['empty'] })).toContain(
+    '전체 서버에 데이터가 없다는 뜻은 아닙니다',
+  );
+});
+
+it('preserves unknown sample counts rather than manufacturing zero', () => {
+  const [record] = reportObservations({
+    topics: [
+      {
+        quality: {
+          observations: [
+            { query_id: 'D08', cluster_id: 'cpc', tool_status: 'ok', sample_count: 2 },
+            {
+              query_id: 'D08',
+              cluster_id: 'cpc',
+              tool_status: 'unavailable',
+              reason: 'budget_exhausted',
+            },
+          ],
+        },
+      },
+    ],
+  });
+  expect(record.sample_count).toBeNull();
+  expect(collectionStatus(record)).toBe('실행 제한 · 수집량 기록 없음');
 });

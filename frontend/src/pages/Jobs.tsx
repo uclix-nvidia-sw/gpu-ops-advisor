@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
+import { reportReturnPath } from '../lib/reportNavigation';
+import { obj } from '../lib/live';
 import { WorkflowGuide } from '../components/WorkflowGuide';
 export function Jobs() {
   const app = useApp();
@@ -65,6 +67,7 @@ export function Jobs() {
   );
 }
 export function JobDetail() {
+  const { state } = useLocation();
   const { id } = useParams(),
     app = useApp(),
     q = useResource(id ? `/jobs/${id}` : null, undefined, true),
@@ -97,8 +100,12 @@ export function JobDetail() {
         title="작업 상세"
         description={id || ''}
         actions={
-          <Link className="button" to="/jobs">
-            작업 목록
+          <Link
+            className="button"
+            to={obj(state).reportList ? reportReturnPath(state) : '/jobs'}
+            state={{ reportRow: obj(state).reportRow }}
+          >
+            목록으로
           </Link>
         }
       />
@@ -156,6 +163,7 @@ export function JobDetail() {
               {j.result_ref != null && (
                 <Link
                   className="button primary"
+                  state={state}
                   to={`/${j.kind === 'report' ? 'reports' : 'analyses'}/${id}`}
                 >
                   저장된 결과 보기

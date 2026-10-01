@@ -4031,3 +4031,12 @@ body:has(dialog[open]) {
 .result-section code {
   overflow-wrap: anywhere;
 }
+
+/* Keep report evidence readable without widening the page. */
+#final-report {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#report-diagnostics > .result-section {
+  margin-top: 1rem;
+}

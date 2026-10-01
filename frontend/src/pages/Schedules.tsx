@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Field, Modal, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, More, QueryState } from '../components/live';
-import { num, queryPath, str, useCommand, useList, useResource, type Row } from '../lib/live';
+import { num, obj, queryPath, str, useCommand, useList, useResource, type Row } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import { useApp } from '../lib/store';
+import { reportScope, reportTitle } from '../lib/workflow';
 import { reportTabs } from './Reports';
 export function Schedules() {
   const { id } = useParams();
@@ -18,7 +19,7 @@ function ScheduleList() {
       <PageHead
         eyebrow="REPORT SCHEDULES"
         title="정기 일정"
-        description="Backend에 등록된 실행 계획과 실행 회차를 확인합니다."
+        description="보고서를 자동 생성할 주기와 다음 실행 시각을 확인합니다."
         actions={
           <Link className="button primary" to="/reports/new?schedule=true">
             정기 일정 등록
@@ -35,7 +36,7 @@ function ScheduleList() {
                   <th>일정</th>
                   <th>상태</th>
                   <th>다음 실행 (KST)</th>
-                  <th>revision</th>
+                  <th>실행 주기</th>
                 </tr>
               </thead>
               <tbody>
@@ -43,8 +44,9 @@ function ScheduleList() {
                   <tr key={str(s.id)}>
                     <td>
                       <Link className="text-link" to={`/schedules/${str(s.id)}`}>
-                        {str(s.name, str(s.id))}
+                        {str(s.name, reportTitle(obj(s.report_spec)))}
                       </Link>
+                      <p className="cell-sub">{reportScope(obj(s.report_spec))}</p>
                     </td>
                     <td>
                       <Badge
@@ -53,7 +55,15 @@ function ScheduleList() {
                       />
                     </td>
                     <td>{formatDate(str(s.next_run_at))}</td>
-                    <td>{num(s.revision)}</td>
+                    <td>
+                      {(
+                        { daily: '매일', weekly: '매주', monthly: '매월' } as Record<string, string>
+                      )[str(s.frequency)] || '주기 미확인'}
+                      {s.frequency === 'weekly' &&
+                        ` ${['', '월', '화', '수', '목', '금', '토', '일'][num(s.weekday)] || '?'}요일`}
+                      {s.frequency === 'monthly' && ` ${str(s.day, String(s.day ?? '?'))}일`}{' '}
+                      {str(s.local_time)} · {str(s.timezone, '시간대 미확인')}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -76,7 +86,7 @@ function ScheduleDetail({ id }: { id: string }) {
     <div className="page">
       <PageHead
         eyebrow="SCHEDULE DETAIL"
-        title={str(s.name, '일정 상세')}
+        title={str(s.name, reportTitle(obj(s.report_spec)))}
         description={id}
         actions={
           <Link className="button" to="/schedules">

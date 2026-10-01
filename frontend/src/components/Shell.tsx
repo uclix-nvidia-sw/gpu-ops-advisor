@@ -64,7 +64,9 @@ export function Shell() {
   useEffect(() => {
     setMobile(false);
     window.scrollTo(0, 0);
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus());
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true }),
+    );
   }, [location.pathname]);
   const active = (to: string) =>
     location.pathname.startsWith(to.split('/').slice(0, 2).join('/')) ||
@@ -184,7 +186,7 @@ export function Shell() {
         </div>
         <main id="main-content">
           {app.mode === 'developer' && <DeveloperContext />}
-          {app.mode !== 'classic' && (
+          {app.mode !== 'classic' && !/^\/(reports|schedules)(\/|$)/.test(location.pathname) && (
             <nav className="context-links" aria-label="관련 기능">
               {(location.pathname.startsWith('/settings') ||
               location.pathname.startsWith('/knowledge')
@@ -195,21 +197,13 @@ export function Shell() {
                     ['/settings/backend', 'Backend·운영 설정'],
                     ['/knowledge', '지식·Runbook'],
                   ]
-                : location.pathname.startsWith('/reports') ||
-                    location.pathname.startsWith('/schedules')
+                : location.pathname.startsWith('/fleet')
                   ? [
-                      ['/reports', '보고서'],
-                      ['/reports/new', '분석 요청'],
-                      ['/schedules', '정기 일정'],
-                      ['/jobs?kind=report', '보고서 실행 이력'],
+                      ['/fleet/assets', 'GPU·Node'],
+                      ['/fleet/workloads', 'Pod·작업 연결'],
+                      ['/fleet/quality', '관측 품질'],
                     ]
-                  : location.pathname.startsWith('/fleet')
-                    ? [
-                        ['/fleet/assets', 'GPU·Node'],
-                        ['/fleet/workloads', 'Pod·작업 연결'],
-                        ['/fleet/quality', '관측 품질'],
-                      ]
-                    : []
+                  : []
               ).map(([to, label]) => (
                 <Link key={to} to={to}>
                   {label}

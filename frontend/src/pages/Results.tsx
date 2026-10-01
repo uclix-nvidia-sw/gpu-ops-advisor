@@ -16,6 +16,8 @@ import {
   type Row,
 } from '../lib/live';
 import { formatDate } from '../lib/domain';
+import { reportReturnPath } from '../lib/reportNavigation';
+import { reportTitle } from '../lib/workflow';
 import { topicName } from '../lib/report';
 import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
@@ -24,7 +26,7 @@ import { WorkflowGuide } from '../components/WorkflowGuide';
 import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
 import { RcaEvidence } from '../components/RcaDebug';
 export function ResultPage({ kind }: { kind: string }) {
-  const { hash } = useLocation();
+  const { hash, state } = useLocation();
   const { id } = useParams(),
     app = useApp(),
     q = useResource(
@@ -43,8 +45,11 @@ export function ResultPage({ kind }: { kind: string }) {
     [downloading, setDownloading] = useState(false);
   const r = q.data || {};
   useEffect(() => {
-    if (hash === '#final-report' && q.data)
-      document.getElementById('final-report')?.scrollIntoView();
+    if (hash !== '#final-report' || !q.data) return;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById('final-report')?.scrollIntoView(),
+    );
+    return () => cancelAnimationFrame(frame);
   }, [hash, q.data?.result_ref]);
   const download = async (format: string) => {
     setDownloading(true);
@@ -75,7 +80,7 @@ export function ResultPage({ kind }: { kind: string }) {
       <PageHead
         eyebrow={kind === 'incident' ? 'INCIDENT DETAIL' : 'SAVED RESULT'}
         title={
-          kind === 'incident' ? '사건 상세' : kind === 'report' ? '운영 보고서' : 'RCA 조사 결과'
+          kind === 'incident' ? '사건 상세' : kind === 'report' ? reportTitle(r) : 'RCA 조사 결과'
         }
         description={id || ''}
         actions={
@@ -92,7 +97,11 @@ export function ResultPage({ kind }: { kind: string }) {
                   {format.toUpperCase()} 다운로드
                 </button>
               ))}
-            <Link className="button" to={kind === 'report' ? '/reports' : '/cases'}>
+            <Link
+              className="button"
+              to={kind === 'report' ? reportReturnPath(state) : '/cases'}
+              state={kind === 'report' ? { reportRow: obj(state).reportRow } : undefined}
+            >
               목록으로
             </Link>
           </>
@@ -173,7 +182,7 @@ export function ResultPage({ kind }: { kind: string }) {
             )}
             <div className="head-actions">
               {kind !== 'incident' && (
-                <Link className="button" to={`/jobs/${id}`}>
+                <Link className="button" to={`/jobs/${id}`} state={state}>
                   작업 상태·시도 이력
                 </Link>
               )}
