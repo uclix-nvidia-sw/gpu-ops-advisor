@@ -368,6 +368,25 @@ export function ReportForm() {
             )}
           </div>
         </Panel>
+        <Notice>
+          <strong>요청 전 기간 확인</strong>
+          <p>
+            {scheduled
+              ? (
+                  {
+                    daily: '직전 완료된 하루',
+                    weekly: '직전 완료된 한 주',
+                    monthly: '직전 완료된 한 달',
+                  } as Record<string, string>
+                )[frequency] + ' 전체를 분석합니다.'
+              : `${start.replace('T', ' ')} – ${end.replace('T', ' ')} (KST) · ${Number.isFinite(new Date(end).getTime() - new Date(start).getTime()) ? ((new Date(end).getTime() - new Date(start).getTime()) / 3600000).toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '미확인'}시간`}
+          </p>
+          <p>
+            수집 시작 전 서버가 실제 보고서 한도와 기간·대상의 초기 조회량을 검사합니다. 한도를
+            넘으면 데이터를 조회하지 않고 사유를 남깁니다. 통과해도 데이터량·응답 제한에 따라 추가
+            분할이나 부분 수집이 발생할 수 있으며 결과에서 수집 구간을 확인할 수 있습니다.
+          </p>
+        </Notice>
         <CommandError error={cmd.error} />
         <div className="form-actions">
           <Link className="button" to="/reports">

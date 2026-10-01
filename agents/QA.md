@@ -7,6 +7,16 @@
 - **미검증:** `RUN_AGENT_E2E=1` 전체 검사는 PR CI로 확인한다. 배포 후 새 RCA 실행에서 모델 응답이 검증을 통과하는지는 별도 확인이 필요하다.
 - **해당 없음:** DB migration·결과 스키마·기존 결과 재작성.
 
+# 2026-10-01 Ops 기간 수집·예산 분리
+
+- **통과:** Python 3.11.16, Ruff check/format. 일반 검사 208 passed, 17 E2E skipped. 로컬 전용 PostgreSQL + 현재 소스의 Backend/JC/Incident + 두 Worker + 공식 Grafana MCP 1.4.2 전체 실행은 **225 passed, 0 skipped** (36.58초). 운영 DB는 사용하지 않았다.
+- **통과:** 새 10개 고정 검사로 1일/7일/31일/73시간 원본 표본과 전체 요청 구간 보존, 큰 응답 자동 분할, 기존 1시간 수집과 동일한 Namespace 수치·0%, 첫 dense 조회가 다른 query/CPC를 고갈시키지 않는 예산 배분, 초과 계획의 외부 조회 0회, 비교 기간 분리, 오류/시간 만료/취소 전파, RCA profile 불변과 구 설정 fallback을 확인했다.
+- **통과:** 기존 실제 프로세스 Namespace E2E에서 Backend 접수→Ops→JC 발행→HTML/CSV를 재검사하고 적용 한도 2048·계획 accepted·필수 D01/D02/D06/D08 전체 조회 구간 완료를 확인했다. RCA E2E도 통과했다. 데이터소스 응답은 HTTP fixture다.
+- **통과:** Helm 3.17.3 chart 계약/패키징 및 workflow 계약 5개, 소스 설정과 Helm 미러 일치.
+- **미검증:** 운영 배포, 실제 클러스터의 일간/주간/월간 데이터 밀도·표본 보존·부하/지연/최대 메모리. 기간 고정 검사는 운영 규모 성능 검증이 아니다. 보고서 전용 예산은 초기 예시이며 모든 범위의 성공을 보장하지 않는다. 재분할/에러/시간 소진 시 미완료를 명시한다. 원격 CI는 PR에 기록한다.
+
+---
+
 ## 2026-10-01 RCA synthesis 입력 크기 제한·단계별 진단
 
 기준 main `406f9fa`(#38 포함), `fix/rca-synthesis-context-budget`. 운영 작업 `22c1f69f`의 저장 evidence를 읽기 전용(`default_transaction_read_only=on`)으로 조회해 synthesis 입력 하한 530,150바이트가 작업 예산 32,768을 넘어 `LLM.complete()` 요청 전에 탈락함을 재현했다. 같은 GUI 결과의 `LLM 응답 사용 기록 1건`은 최종 보고서 편집 호출이었다.

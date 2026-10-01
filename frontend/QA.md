@@ -1,8 +1,18 @@
 # 2026-10-01 RCA 분석 검증 실패 사유 문구
 
-- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **56 tests**, `npm run build`.
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **59 tests**, `npm run build`.
 - **통과:** 렌더 fixture로 `invalid_limitations`가 코드만이 아니라 한국어 설명과 함께 표시되는지 확인했다. 운영 작업 `ed730b4d` 화면은 배포 전 `사유 코드 invalid_limitations`로 표시됐다.
+- **추가:** RCA 부족한 근거 중 문구가 없던 `error_code`·`observation_degraded`·`observation_conflicted`·`synthesis_failed`·`approved_runbook` 설명. 운영 작업 `ed730b4d` 화면에 `사유 코드 error_code` 등으로 표시되던 항목이다.
 - **미검증:** 배포 후 실제 브라우저 표시.
+
+---
+
+# 2026-10-01 보고서 기간·수집 구간 검수
+
+- **통과:** `npm run format:check`, `npm test` **57 tests**, `npm run build`.
+- **통과:** 로컬 production build + 합성 API의 in-app browser에서 30일 입력→720시간 안내 갱신, 수집 전 검사 중단/조회 구간 완료/일부 미완료 표시, query별 데이터 응답·빈 응답·미완료 구간과 근거 링크 표시를 확인했다. 실제 요청 전 서버 예산 판정 API는 없으며 Worker가 관측 시작 전에 검사한다는 문구를 확인했다.
+- **통과:** 390px 화면에서 수집 상세를 펼쳐도 문서 가로 넘침 없음(clientWidth=scrollWidth=375), 브라우저 오류/경고 없음. 뷰포트 원복.
+- **미검증:** 운영 배포와 실시간 데이터소스. 화면 검수는 합성 데이터다. 조회 완료를 원본 표본 연속성·계산 가능성으로 표시하지 않는다.
 
 ---
 

@@ -734,6 +734,12 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     result, evidence = worker_result(stack, "report", jid, "-namespace")
     assert result["versions"]["execution_profile_revision"] == "report-namespace-v1"
     assert result["quality"]["requested_group_by"] == ["namespace"]
+    collection = result["quality"]["collection"]
+    assert collection["plan_status"] == "accepted"
+    assert collection["query_limit"] == 2048
+    assert collection["complete"]
+    assert {t["query_id"] for t in collection["tasks"]} == {"D01", "D02", "D06", "D08"}
+    assert all(t["incomplete_seconds"] == 0 for t in collection["tasks"])
     html = httpx.get(backend + f"/reports/{jid}/export?format=html")
     assert html.status_code == 200
     assert "분석 범위와 결과" in html.text and "권고와 실행 조건" in html.text

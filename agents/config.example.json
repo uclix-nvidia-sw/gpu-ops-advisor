@@ -13,6 +13,9 @@
     "query_timeout_seconds": 30,
     "max_discovery_calls": 64
   },
+  "report": {
+    "limits": {"max_queries": 2048, "chunk_seconds": 86400, "max_rows": 50000}
+  },
   "clusters": {},
   "health_contracts": {
     "fleet-component-log-v1": {
