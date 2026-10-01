@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Notice, PageHead, Panel } from '../components/ui';
 import { topicId, topics } from '../lib/live';
 
@@ -6,6 +6,10 @@ import { topicId, topics } from '../lib/live';
 const topicGuides = [
   {
     purpose: '어떤 GPU가 관측됐고 메모리·온도는 어땠는지 확인합니다.',
+    examples: [
+      '이 기간에 클러스터에서 관측된 GPU는 몇 대인가?',
+      '관측된 GPU 중 기간 평균 온도가 가장 높은 장비는 무엇인가?',
+    ],
     result: '관측된 GPU 수와 GPU별 VRAM·온도의 시간 가중 평균을 제공합니다.',
     inputs: 'GPU 신원, VRAM, 온도, Pod 신원 관측이 필요합니다.',
     limit:
@@ -15,6 +19,10 @@ const topicGuides = [
   },
   {
     purpose: 'GPU가 작업에 얼마나 할당됐는지 확인합니다.',
+    examples: [
+      '분석 종료 시점에 전용으로 할당돼 있던 GPU는 몇 대인가?',
+      '이 기간에 확인된 전용 GPU 할당 시간을 합치면 얼마나 되나?',
+    ],
     result:
       '검증된 전용 할당은 종료 시점 할당 GPU 수와 GPU·시간, MIG는 인스턴스·시간으로 표시합니다. GPU–Pod 연결 관측 수·시간도 별도로 제공합니다.',
     inputs: '할당 모드·시작/종료·GPU·Pod 신원을 갖춘 할당 이력과 같은 시각의 관측이 필요합니다.',
@@ -25,6 +33,10 @@ const topicGuides = [
   },
   {
     purpose: '할당된 GPU 중 활동이 낮아 작업 목적을 확인할 대상을 찾습니다.',
+    examples: [
+      'GPU를 전용으로 할당받았지만 활동이 낮았던 구간은 어디인가?',
+      '담당자에게 대기 목적을 확인할 GPU와 작업은 무엇인가?',
+    ],
     result:
       '동일한 전용 할당 구간에서 저활동 시간과 검토 후보를 계산합니다. 현재 기준은 60분 창, 유효 관측 95% 이상, 활동률 5% 미만인 시간이 유효시간의 90% 이상입니다.',
     inputs: '전용 할당 이력, Pod UID와 할당 구간 식별자, 같은 GPU의 활동률이 필요합니다.',
@@ -35,6 +47,10 @@ const topicGuides = [
   },
   {
     purpose: '한 Pod에 연결된 여러 GPU의 활동률 차이를 확인합니다.',
+    examples: [
+      '한 Pod에 연결된 GPU 중 일부만 유난히 적게 활동했나?',
+      '같은 작업에 연결된 GPU들의 평균 활동률은 얼마나 차이 나나?',
+    ],
     result: '같은 Pod의 GPU들을 공통 관측 시간에 맞춰 평균·최솟값·최댓값·차이(%p)를 계산합니다.',
     inputs: 'Pod별 복수 GPU 할당 이력과 각 GPU의 같은 시각 활동률이 필요합니다.',
     limit:
@@ -44,6 +60,10 @@ const topicGuides = [
   },
   {
     purpose: '기간 내 기록된 사건과 공개 RCA를 함께 살펴봅니다.',
+    examples: [
+      '이 기간에 선택한 대상에서 기록된 장애 사건은 몇 건인가?',
+      '해당 사건의 공개된 RCA에는 어떤 원인 후보가 제시돼 있나?',
+    ],
     result:
       '사건 ID 중복을 제거한 건수, 사건이 둘 이상일 때 조회된 사건들의 평균 발생 간격, 공개 RCA 참조를 제공합니다.',
     inputs: '기간·범위에 해당하는 저장 Incident와 공개 RCA 결과를 사용합니다.',
@@ -54,6 +74,10 @@ const topicGuides = [
   },
   {
     purpose: '사건 발생 시점에 해당 GPU에 연결됐던 작업을 찾습니다.',
+    examples: [
+      '장애가 발생한 순간 해당 GPU에 연결된 Pod는 무엇이었나?',
+      '장애 당시 연결된 작업을 확인할 수 있는 사건은 어떤 것인가?',
+    ],
     result: '사건의 GPU UUID와 당시 할당 이력이 일치하는 Pod 관계를 제공합니다.',
     inputs: '사건 시각·GPU UUID, 당시 할당·Pod 신원, 영향 확인용 작업 근거가 필요합니다.',
     limit:
@@ -63,6 +87,10 @@ const topicGuides = [
   },
   {
     purpose: '노드에 배치되지 않은 작업의 GPU 요청을 확인합니다.',
+    examples: [
+      '아직 노드에 배치되지 않은 작업이 요청한 GPU는 얼마나 되나?',
+      '배치를 기다리는 작업은 어떤 종류의 GPU 자원을 요청했나?',
+    ],
     result: '종료되지 않은 미배치 Pod의 검증된 유효 요청량을 자원 종류별로 표시합니다.',
     inputs:
       'Pod UID·미배치·비종료 상태와 유효 요청량 계약을 갖춘 지표, 자원 카탈로그가 필요합니다.',
@@ -73,6 +101,10 @@ const topicGuides = [
   },
   {
     purpose: 'Namespace별로 어떤 GPU가 연결돼 있었고 얼마나 활동했는지 확인합니다.',
+    examples: [
+      '각 Namespace에 이 기간 동안 연결됐던 GPU는 몇 대인가?',
+      'Namespace별로 연결된 GPU의 평균 활동률과 연결 시간은 얼마인가?',
+    ],
     result:
       '기본 Namespace 분석은 기간 중 연결된 고유 GPU 수, 연결 관측 GPU·시간, 평균 계산의 유효 GPU·시간, 연결 GPU 평균 활동률을 제공합니다.',
     inputs:
@@ -85,6 +117,10 @@ const topicGuides = [
   },
   {
     purpose: '관측된 GPU의 전력 사용을 에너지로 환산합니다.',
+    examples: [
+      '이 기간에 관측된 GPU가 사용한 에너지는 몇 kWh인가?',
+      '에너지 계산에 실제로 포함된 GPU 관측시간은 얼마나 되나?',
+    ],
     result: '실제 전력(W)의 유효 관측 구간을 적분해 kWh로 표시합니다.',
     inputs: '단위가 확인된 실제 GPU 전력의 원본 시각·표본이 필요합니다.',
     limit:
@@ -94,6 +130,10 @@ const topicGuides = [
   },
   {
     purpose: '기록된 조치 전후의 관측 에너지 차이를 확인합니다.',
+    examples: [
+      '기록한 조치 전후로 같은 GPU들의 에너지 사용량이 얼마나 달라졌나?',
+      '비교 기간과 분석 기간에 공통으로 관측된 GPU의 에너지 사용량은 각각 얼마인가?',
+    ],
     result:
       '수행됨으로 기록된 조치와 비교 기간이 있으면 두 기간에 공통으로 관측된 GPU의 전후 에너지와 차이를 제공합니다.',
     inputs: '실제 수행 조치 기록 ID, 비교 기간, 분석 기간, 각 기간의 전력 관측이 필요합니다.',
@@ -104,6 +144,10 @@ const topicGuides = [
   },
   {
     purpose: '수집 상태와 분석에 쓸 수 있었던 관측 범위를 점검합니다.',
+    examples: [
+      '대상별로 수집 상태가 정상으로 관측된 시간은 얼마나 되나?',
+      '이 보고서의 수집 상태와 전체 커버리지를 확인할 근거가 충분한가?',
+    ],
     result: '수집 상태 지표가 정상(up=1)이었던 대상별 시간을 합산하고 수집 상태를 제공합니다.',
     inputs:
       '기간 내 수집 상태 지표가 필요합니다. 전체 커버리지에는 기대 대상 목록과 시간이 추가로 필요합니다.',
@@ -114,7 +158,17 @@ const topicGuides = [
   },
 ];
 
+const guideSections = [
+  ['start', '시작 방법'],
+  ['topics', '분석 주제 11개'],
+  ['values', '수치 읽는 법'],
+  ['missing', '근거 부족 확인'],
+];
+
 export function OperatorGuide() {
+  const location = useLocation(),
+    navigate = useNavigate();
+  const selected = guideSections.find(([key]) => location.hash === `#guide-${key}`)?.[0] ?? 'start';
   return (
     <div className="page operator-guide">
       <PageHead
@@ -132,50 +186,56 @@ export function OperatorGuide() {
         아닙니다. 실제 보고서의 기간·계산 기준·부족 사유를 함께 확인하세요.
       </Notice>
       <nav className="guide-jump-links" aria-label="가이드 목차">
-        <a className="button" href="#guide-start">
-          시작 방법
-        </a>
-        <a className="button" href="#guide-topics">
-          분석 주제 11개
-        </a>
-        <a className="button" href="#guide-values">
-          수치 읽는 법
-        </a>
-        <a className="button" href="#guide-missing">
-          근거 부족 확인
-        </a>
+        {guideSections.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className="button"
+            aria-pressed={selected === key}
+            aria-controls={`guide-${key}`}
+            onClick={() => navigate(`${location.pathname}#guide-${key}`, { replace: true })}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
-      <Panel title="처음에는 이렇게 요청하세요" className="guide-section">
-        <div id="guide-start" className="guide-body">
-          <ol>
-            <li>
-              <strong>Namespace별 현황이 목적이면 기본 분석으로 시작하세요.</strong> 새 보고서의
-              기본 목적은 O08 단독·Namespace 집계입니다. 모든 주제를 선택할 필요는 없습니다.
-            </li>
-            <li>
-              <strong>CPC·Namespace와 분석 시작/종료 시각을 확인하세요.</strong> 보고서를 작성하는
-              시각과 분석 기간은 다릅니다. 기간 밖에서 실행된 LLM 추론 부하는 해당 보고서 수치에
-              포함되지 않습니다.
-            </li>
-            <li>
-              <strong>일간·주간·월간은 정기 일정에서 설정하세요.</strong> 직전 완료된 달력 기간을
-              분석합니다. 즉시 보고서는 시작일과 종료일을 날짜로 정합니다. 종료일을 포함하며 같은
-              날짜면 1일(24시간)입니다. 기본값은 어제 하루이고 최대 31일까지 선택합니다. 긴 기간도
-              요청할 수 있지만 적용된 기간·조회·시간 한도와 데이터 양에 따라 일부 수집이 끝나지 않을
-              수 있습니다.
-            </li>
-            <li>
-              <strong>추가 질문이 있을 때 세부 분석 설정에서 주제를 선택하세요.</strong> 현재 요청
-              집계가 명시적으로 반영되는 경로는 O08의 Namespace 분석입니다. 다른 주제까지 모두
-              Namespace별로 묶인다고 해석하지 마세요.
-            </li>
-          </ol>
-          <Link className="text-link" to="/reports">
-            보고서 이력으로 이동
-          </Link>
-        </div>
-      </Panel>
-      <section id="guide-topics" aria-labelledby="guide-topics-title">
+      <section id="guide-start" hidden={selected !== 'start'} aria-label="시작 방법">
+        <Panel title="처음에는 이렇게 요청하세요" className="guide-section">
+          <div className="guide-body">
+            <ol>
+              <li>
+                <strong>Namespace별 현황이 목적이면 기본 분석으로 시작하세요.</strong> 새 보고서의
+                기본 목적은 O08 단독·Namespace 집계입니다. 모든 주제를 선택할 필요는 없습니다.
+              </li>
+              <li>
+                <strong>CPC·Namespace와 분석 시작/종료 시각을 확인하세요.</strong> 보고서를 작성하는
+                시각과 분석 기간은 다릅니다. 기간 밖에서 실행된 LLM 추론 부하는 해당 보고서 수치에
+                포함되지 않습니다.
+              </li>
+              <li>
+                <strong>일간·주간·월간은 정기 일정에서 설정하세요.</strong> 직전 완료된 달력 기간을
+                분석합니다. 즉시 보고서는 시작일과 종료일을 날짜로 정합니다. 종료일을 포함하며 같은
+                날짜면 1일(24시간)입니다. 기본값은 어제 하루이고 최대 31일까지 선택합니다. 긴 기간도
+                요청할 수 있지만 적용된 기간·조회·시간 한도와 데이터 양에 따라 일부 수집이 끝나지
+                않을 수 있습니다.
+              </li>
+              <li>
+                <strong>추가 질문이 있을 때 세부 분석 설정에서 주제를 선택하세요.</strong> 현재 요청
+                집계가 명시적으로 반영되는 경로는 O08의 Namespace 분석입니다. 다른 주제까지 모두
+                Namespace별로 묶인다고 해석하지 마세요.
+              </li>
+            </ol>
+            <Link className="text-link" to="/reports">
+              보고서 이력으로 이동
+            </Link>
+          </div>
+        </Panel>
+      </section>
+      <section
+        id="guide-topics"
+        hidden={selected !== 'topics'}
+        aria-labelledby="guide-topics-title"
+      >
         <h2 id="guide-topics-title">분석 주제 11개</h2>
         <p>
           11개는 개발명세에 정의된 운영 질문입니다. 장비 상태, 할당·활동·배분, 사건과 작업 관계,
@@ -192,6 +252,14 @@ export function OperatorGuide() {
                   <span>
                     <strong>{name}</strong>
                     <span className="guide-topic-purpose">{guide.purpose}</span>
+                    <span className="guide-topic-examples">
+                      <span className="guide-topic-examples-label">
+                        이런 게 궁금할 때 선택하세요
+                      </span>
+                      {guide.examples.map((question) => (
+                        <span key={question}>• {question}</span>
+                      ))}
+                    </span>
                   </span>
                 </summary>
                 <dl className="guide-topic-fields">
@@ -213,7 +281,12 @@ export function OperatorGuide() {
           })}
         </div>
       </section>
-      <section id="guide-values" className="guide-section" aria-label="수치 읽는 법">
+      <section
+        id="guide-values"
+        hidden={selected !== 'values'}
+        className="guide-section"
+        aria-label="수치 읽는 법"
+      >
         <Panel title="수치를 이렇게 읽으세요">
           <dl className="guide-body guide-topic-fields">
             <dt>0% / 산출 불가 / 미계산</dt>
@@ -254,7 +327,12 @@ export function OperatorGuide() {
           </dl>
         </Panel>
       </section>
-      <section id="guide-missing" className="guide-section" aria-labelledby="guide-missing-title">
+      <section
+        id="guide-missing"
+        hidden={selected !== 'missing'}
+        className="guide-section"
+        aria-labelledby="guide-missing-title"
+      >
         <h2 id="guide-missing-title">근거 부족이면 무엇부터 확인하나요?</h2>
         <p>
           보고서 본문의 <strong>분석 진행 상세</strong>를 펼쳐 해당 주제의 부족 사유와 query·CPC별

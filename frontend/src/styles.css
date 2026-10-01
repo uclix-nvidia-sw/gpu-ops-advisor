@@ -4167,6 +4167,11 @@ body:has(dialog[open]) {
   background: #cce3d4;
   border-color: #548a69;
 }
+.guide-jump-links .button[aria-pressed='true'] {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
 .guide-section,
 .guide-topic-list {
   margin: 24px 0;
@@ -4216,6 +4221,21 @@ body:has(dialog[open]) {
   color: var(--muted);
   margin-top: 8px;
   line-height: 1.6;
+}
+.guide-topic-examples {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: normal;
+  line-height: 1.7;
+}
+.guide-topic-examples > span {
+  display: block;
+}
+.guide-topic-examples-label {
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 .guide-topic-fields {
   display: grid;

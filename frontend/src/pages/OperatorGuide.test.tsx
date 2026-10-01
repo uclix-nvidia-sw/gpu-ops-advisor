@@ -52,3 +52,18 @@ it('allows reading before cluster registration without opening report execution'
   expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
   expect(render('/reports')).not.toContain('report-content-marker');
 });
+
+it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
+  'shows only the selected guide section for %s',
+  (key) => {
+    const html = render(`/operator-guide#guide-${key}`);
+    const selected = key === 'unknown' ? 'start' : key;
+    for (const section of ['start', 'topics', 'values', 'missing']) {
+      expect(html.includes(`<section id="guide-${section}" hidden=""`)).toBe(section !== selected);
+      expect(html).toContain(
+        `aria-pressed="${section === selected}" aria-controls="guide-${section}"`,
+      );
+    }
+    expect(render()).not.toContain('<section id="guide-start" hidden=""');
+  },
+);
