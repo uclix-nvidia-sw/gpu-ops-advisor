@@ -178,3 +178,14 @@ it.each([Reports, OperationsReports])(
     expect(paths.at(-1)).toContain('topic_id=O08');
   },
 );
+
+it('previews the complete requested period and explains worker preflight before submission', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/reports/new']}>
+      <ReportForm />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('요청 전 기간 확인');
+  expect(html).toContain('24시간');
+  expect(html).toContain('수집 시작 전 서버');
+});

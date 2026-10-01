@@ -64,7 +64,10 @@ export function ReportContent({
   const collection = obj(quality.collection);
   const limited = observations.filter((o) =>
     strings(o.reasons).some(
-      (reason) => reason.includes('budget_exhausted') || reason === 'discovery_deadline_exhausted',
+      (reason) =>
+        reason.includes('budget_exhausted') ||
+        reason.endsWith('deadline_exhausted') ||
+        reason === 'collection_plan_budget_exceeded',
     ),
   );
   const observed = metrics.find((m) =>
@@ -160,6 +163,28 @@ export function ReportContent({
           </ul>
         )}
       </section>
+      {collection.plan_status != null && (
+        <Notice tone={collection.complete === true ? undefined : 'warning'}>
+          <strong>
+            {collection.plan_status === 'rejected'
+              ? '수집 전 검사에서 중단'
+              : collection.complete === true
+                ? '요청한 조회 구간 처리 완료'
+                : '요청한 조회 구간 일부 미완료'}
+          </strong>
+          <p>
+            초기 계획 {String(collection.planned_calls ?? '기록 없음')}회 · 실제 조회{' '}
+            {String(collection.query_calls ?? '기록 없음')} /{' '}
+            {String(collection.query_limit ?? '기록 없음')}회. 초기 계획은 응답 크기에 따른 추가
+            분할과 재사용 전 기준이며 완료 보장이 아닙니다.
+          </p>
+          {collection.plan_reason != null && <p>{reportReason(str(collection.plan_reason))}</p>}
+          <p>
+            조회 완료에는 빈 응답도 포함됩니다. 원본 표본의 연속성이나 계산 가능 여부와는
+            별개입니다. 분석 진행 상세에서 대상별 구간을 확인하세요.
+          </p>
+        </Notice>
+      )}
       {!!limited.length && (
         <Notice tone="warning">
           실행 제한으로 {limited.length}개 조회 대상의 수집이 완료되지 않았습니다. 연결 장애나 해당
@@ -428,6 +453,70 @@ export function ReportContent({
           />{' '}
           {reportReason(str(quality.narrative_reason))}
         </p>
+        {!!rows(collection.tasks).length && (
+          <section className="result-section">
+            <h4>요청 기간과 실제 수집 구간</h4>
+            <p>
+              시간은 GPU 사용시간이 아니라 조회한 기간 길이입니다. 데이터 응답 구간에도 원본 표본
+              공백이 있을 수 있습니다.
+            </p>
+            {rows(collection.tasks).map((task, i) => (
+              <details key={i}>
+                <summary>
+                  {str(task.cluster_id)} · {queryName(str(task.query_id))} ({str(task.query_id)}) ·
+                  미완료{' '}
+                  {typeof task.incomplete_seconds === 'number'
+                    ? (task.incomplete_seconds / 3600).toLocaleString('ko-KR', {
+                        maximumFractionDigits: 3,
+                      }) + '시간'
+                    : '기록 없음'}
+                </summary>
+                <p>
+                  요청: {formatDate(str(obj(task.requested_range).start))} –{' '}
+                  {formatDate(str(obj(task.requested_range).end))}
+                </p>
+                <p>
+                  조회 응답에 데이터 있음{' '}
+                  {typeof task.data_seconds === 'number'
+                    ? (task.data_seconds / 3600).toLocaleString('ko-KR', {
+                        maximumFractionDigits: 3,
+                      })
+                    : '미확인'}
+                  시간 · 빈 응답{' '}
+                  {typeof task.empty_seconds === 'number'
+                    ? (task.empty_seconds / 3600).toLocaleString('ko-KR', {
+                        maximumFractionDigits: 3,
+                      })
+                    : '미확인'}
+                  시간
+                </p>
+                <p>
+                  배분 {String(task.reserved_calls ?? '미확인')}회 · 사용{' '}
+                  {String(task.query_calls ?? '미확인')}회
+                </p>
+                {rows(task.ranges).map((range, j) => (
+                  <p key={j}>
+                    {formatDate(str(obj(range.time_range).start))} –{' '}
+                    {formatDate(str(obj(range.time_range).end))} ·{' '}
+                    {collectionStatus({
+                      statuses: [range.status],
+                      reasons: range.reason ? [range.reason] : [],
+                    })}{' '}
+                    · {reportReason(str(range.reason))}{' '}
+                    {range.evidence_id != null && (
+                      <button
+                        className="text-link"
+                        onClick={() => onEvidence(str(range.evidence_id))}
+                      >
+                        근거 보기
+                      </button>
+                    )}
+                  </p>
+                ))}
+              </details>
+            ))}
+          </section>
+        )}
         {!topics.length && <p>주제별 진행 기록 없음. 기존 결과의 수치·근거를 확인하세요.</p>}
         {topics.map((topic) => (
           <section className="result-section" key={str(topic.topic_id)}>
