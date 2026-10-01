@@ -39,6 +39,23 @@ describe('mode-independent published data and developer guides', () => {
       'cpc-1 / 전체 Namespace · cpc-2 / a, b · cpc-3 / Namespace 범위 미확인 · cpc-4 / 선택된 Namespace 없음',
     );
   });
+  it.each([
+    ['2026-09-30T15:00:00Z', '2026-10-01T15:00:00Z', '2026. 10. 01.'],
+    ['2026-09-24T15:00:00Z', '2026-10-01T15:00:00Z', '2026. 09. 25. ~ 2026. 10. 01.'],
+    ['2026-10-01T03:00:00Z', '2026-10-01T05:00:00Z', '2026. 10. 01.'],
+    ['2026-12-31T14:00:00Z', '2026-12-31T16:00:00Z', '2026. 12. 31. ~ 2027. 01. 01.'],
+    ['invalid', '2026-10-01T05:00:00Z', ''],
+    ['2026-10-02T05:00:00Z', '2026-10-01T05:00:00Z', ''],
+  ])('titles reports using their analyzed dates: %s to %s', (start, end, dates) => {
+    expect(
+      reportTitle({
+        topic_ids: ['O08'],
+        group_by: ['namespace'],
+        time_range: { start, end },
+        created_at: '2027-02-01T00:00:00Z',
+      }),
+    ).toBe(`${dates ? dates + ' · ' : ''}Namespace별 GPU 사용 분석`);
+  });
   it('records bounded HTTP metadata without query values or request/response bodies', async () => {
     clearApiTrace();
     vi.stubGlobal(

@@ -80,9 +80,18 @@ describe('Ops report landing', () => {
       expect(html).toContain('/reports/published#final-report');
       expect(html).not.toContain('href="/jobs/published"');
       expect(html).toContain('Namespace·프로젝트 배분 · GPU 에너지');
-      expect(html).toContain('대상: cpc-2 / training');
+      if (Page === Reports) {
+        expect(html).toContain('<dt>대상</dt><dd>cpc-2 / training</dd>');
+        expect(html).toContain('<dt>집계 기준</dt><dd>Namespace</dd>');
+        expect(html).toContain('title="published">ID publishe</span>');
+        expect(html).toContain('<article class="report-history-card"');
+        expect(html).not.toContain('<table');
+        expect(html).toContain('<code>published</code>');
+      } else {
+        expect(html).toContain('대상: cpc-2 / training');
+        expect(html).toContain('요청 집계');
+      }
       expect(html).toContain('분석 기간');
-      expect(html).toContain('요청 집계');
       expect(html).not.toContain('>published</a>');
       expect(paths.at(-1)).not.toContain('status=succeeded');
     },

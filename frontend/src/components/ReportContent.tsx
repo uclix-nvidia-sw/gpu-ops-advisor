@@ -75,7 +75,12 @@ export function ReportContent({
   );
   const mapped = metrics.find((m) => str(m.id).split('.')[1] === 'mapped_gpu_count');
   return (
-    <div className="stack" id="final-report" role="region" aria-label="GPU Ops 최종 보고서">
+    <div
+      className="stack ops-report-content"
+      id="final-report"
+      role="region"
+      aria-label="GPU Ops 최종 보고서"
+    >
       <section className="result-section">
         <h3>분석 요약</h3>
         <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
@@ -294,7 +299,7 @@ export function ReportContent({
             보고서 작성 완료와 자료의 완전성은 별개입니다.
           </p>
           {narrative.map((section, index) => (
-            <section key={str(section.id, String(index))}>
+            <section className="report-narrative-section" key={str(section.id, String(index))}>
               <h4>{str(section.title)}</h4>
               {str(section.text)
                 .split('\n\n')

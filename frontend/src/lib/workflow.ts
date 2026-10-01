@@ -155,9 +155,25 @@ export function reportMetrics(result: Row) {
 }
 export function reportTitle(job: Row) {
   const ids = strings(job.topic_ids);
-  if (ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace'))
-    return 'Namespace별 GPU 사용 분석';
-  return ids.length > 1 ? `GPU 운영 보고서 · ${ids.length}개 주제` : reportTopics(job);
+  const purpose =
+    ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace')
+      ? 'Namespace별 GPU 사용 분석'
+      : ids.length > 1
+        ? `GPU 운영 보고서 · ${ids.length}개 주제`
+        : reportTopics(job);
+  const start = Date.parse(str(obj(job.time_range).start));
+  const end = Date.parse(str(obj(job.time_range).end));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return purpose;
+  const date = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  // A period ending at midnight covers the preceding day; keep exact times in the detail.
+  const first = date.format(start);
+  const last = date.format(end - 1);
+  return `${first === last ? first : `${first} ~ ${last}`} · ${purpose}`;
 }
 export function reportTopics(job: Row) {
   return (
