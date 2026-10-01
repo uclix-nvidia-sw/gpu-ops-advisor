@@ -329,17 +329,76 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
   const location = useLocation();
   const reportsOnly = location.pathname === '/reports';
   const from = location.pathname + location.search;
+  if (reportsOnly)
+    return (
+      <div className="report-history-cards">
+        {items.map((j) => (
+          <article className="report-history-card" key={str(j.id)} id={`report-row-${str(j.id)}`}>
+            <header>
+              <span className="report-history-id" title={str(j.id)}>
+                ID {str(j.id).slice(0, 8)}
+              </span>
+              <div className="report-history-status">
+                <span>
+                  실행 상태 <Badge status={str(j.status) || null} />
+                </span>
+                <span>
+                  결과 품질 <Badge status={str(j.result_status) || null} />
+                </span>
+              </div>
+            </header>
+            <h3>
+              <Link
+                className="text-link report-history-title"
+                state={{ from, reportList: from, reportRow: str(j.id) }}
+                to={
+                  j.result_ref != null ? `/reports/${str(j.id)}#final-report` : `/jobs/${str(j.id)}`
+                }
+              >
+                {reportTitle(j)}
+              </Link>
+            </h3>
+            <dl className="report-history-meta">
+              <div>
+                <dt>분석 기간</dt>
+                <dd>
+                  {formatDate(str(obj(j.time_range).start))} –{' '}
+                  {formatDate(str(obj(j.time_range).end))} (KST)
+                </dd>
+              </div>
+              <div>
+                <dt>대상</dt>
+                <dd>{reportScope(j)}</dd>
+              </div>
+              <div>
+                <dt>집계 기준</dt>
+                <dd>{groupLabel(j.group_by)}</dd>
+              </div>
+              <div>
+                <dt>접수 시각</dt>
+                <dd>{formatDate(str(j.created_at))} (KST)</dd>
+              </div>
+            </dl>
+            <details className="report-history-details">
+              <summary>세부 주제 · 전체 작업 ID</summary>
+              <p>{reportTopics(j)}</p>
+              <code>{str(j.id)}</code>
+            </details>
+          </article>
+        ))}
+      </div>
+    );
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             <th>분석 · 대상</th>
-            {!reportsOnly && <th>종류</th>}
+            <th>종류</th>
             <th>접수 시각</th>
             <th>실행 상태</th>
             <th>결과 품질</th>
-            {!reportsOnly && <th>최종 보고서</th>}
+            <th>최종 보고서</th>
           </tr>
         </thead>
         <tbody>
@@ -348,7 +407,7 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
               <td>
                 <Link
                   className="text-link"
-                  state={reportsOnly ? { from, reportList: from, reportRow: str(j.id) } : { from }}
+                  state={{ from }}
                   to={
                     (preferResult || j.kind === 'report') && j.result_ref != null
                       ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`

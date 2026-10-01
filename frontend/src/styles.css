@@ -4040,3 +4040,108 @@ body:has(dialog[open]) {
 #report-diagnostics > .result-section {
   margin-top: 1rem;
 }
+
+/* Separate Ops report topics without changing RCA result layouts. */
+.ops-report-content > section:not(:first-child),
+.ops-report-content > details {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+.ops-report-content .result-section > h3,
+.ops-report-content .report-topic-head,
+.ops-report-content .report-narrative-section > h4,
+.ops-report-content .report-statements > h4 {
+  margin: 0 0 16px;
+}
+.ops-report-content > details[open] > summary {
+  margin-bottom: 20px;
+}
+.ops-report-content details > .result-section,
+.ops-report-content .report-narrative-section,
+.ops-report-content .report-statements {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+.ops-report-content .report-narrative-section p {
+  margin: 12px 0;
+  line-height: 1.8;
+}
+
+/* Independent report cards retain space even when several titles match. */
+.report-history-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding: 24px;
+  background: #f1f4f2;
+}
+.report-history-card {
+  min-width: 0;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px #24382c0a;
+  overflow-wrap: anywhere;
+}
+.report-history-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-history-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.report-history-card h3 {
+  margin: 20px 0;
+  line-height: 1.6;
+}
+.report-history-card .report-history-title {
+  font-size: 17px;
+}
+.report-history-id {
+  color: var(--muted);
+  font-family: monospace;
+  font-size: 11px;
+}
+.report-history-meta {
+  margin: 0 0 20px;
+  font-size: 12px;
+}
+.report-history-meta > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+.report-history-meta dt {
+  color: var(--muted);
+}
+.report-history-meta dd {
+  margin: 0;
+  line-height: 1.6;
+}
+.report-history-details {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.report-history-details p {
+  margin: 10px 0;
+}
+@media (max-width: 1100px) {
+  .report-history-cards {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 20px;
+  }
+  .report-history-card {
+    padding: 20px;
+  }
+}
