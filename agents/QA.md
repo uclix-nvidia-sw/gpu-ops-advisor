@@ -1,3 +1,13 @@
+## 2026-10-01 RCA synthesis 입력 크기 제한·단계별 진단
+
+기준 main `406f9fa`(#38 포함), `fix/rca-synthesis-context-budget`. 운영 작업 `22c1f69f`의 저장 evidence를 읽기 전용(`default_transaction_read_only=on`)으로 조회해 synthesis 입력 하한 530,150바이트가 작업 예산 32,768을 넘어 `LLM.complete()` 요청 전에 탈락함을 재현했다. 같은 GUI 결과의 `LLM 응답 사용 기록 1건`은 최종 보고서 편집 호출이었다.
+
+- **통과:** Windows/Python 3.12.14 `python -m pytest -c agents/pytest.ini agents/tests -q`: **198 passed, 17 skipped**(E2E). 관계없는 로컬 미추적 `test_gpu_node_scope.py`는 제외했다. Ruff check/format 통과.
+- **통과:** 같은 저장 evidence에 새 `bounded_context`를 적용하면 모델 입력 15,680바이트, 장비 관측 2건 전부 유지, metric 계열 138개 중 7개 선택·131개 생략이 `context_selection`에 기록된다. 원본 evidence는 변경하지 않는다.
+- **통과:** README의 `rca_synthesis` 진단 SQL을 같은 DB에서 읽기 전용 실행. 구 결과의 `diagnostics`는 NULL이다.
+- **미검증:** 로컬 Docker·Go가 없어 `RUN_AGENT_E2E=1` 전체 검사는 PR CI(Linux/Python 3.12, PostgreSQL 16)로 확인한다. 운영 배포와 새 RCA 실행에서의 실제 모델 응답 품질은 별도 검수 대상이다.
+- **해당 없음:** DB migration·결과 스키마 버전·기존 결과 재작성·운영 설정 변경.
+
 ## 2026-10-01 Agent E2E Backend 중복 migration 교착 수정
 
 기준 main `af9294e`(#34·#35 포함). [실패 CI 36793523231](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/36793523231)의 PostgreSQL 로그에서 Backend `ALTER TABLE jobs`와 JC의 만료 작업 `UPDATE jobs` 사이 `SQLSTATE 40P01` 교착을 확인했다. stack의 JC가 공통 schema를 준비한 뒤 모델 인증·런북 테스트의 Backend가 migration을 재실행하던 두 곳을 `DSX_MIGRATE=false`로 바꿨다. 기존 Namespace 테스트와 같은 설정이다.

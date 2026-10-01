@@ -544,13 +544,14 @@ async def run(tools):
         if not queries:
             break
         followups += 1
+    synthesis_diagnostics = {}
     if not fast_path:
         payload = synthesis_input(
             data, obs.evidence, health, relations, applicable, selected
         )
         payload.update(evidence_gap=gaps, sufficiency=gate)
         analysis_status, model_candidates, analysis_limits = await synthesize(
-            ctx["llm"], payload
+            ctx["llm"], payload, synthesis_diagnostics
         )
         obs._evidence(
             "rca_synthesis",
@@ -558,12 +559,19 @@ async def run(tools):
             data["time_range"],
             {
                 "status": analysis_status,
-                "input_evidence_refs": payload["observation_refs"],
+                "input_evidence_refs": synthesis_diagnostics.get(
+                    "input_evidence_refs", []
+                ),
+                "diagnostics": synthesis_diagnostics,
                 "hypotheses": model_candidates,
                 "limitations": analysis_limits,
             },
             "ok" if analysis_status == "complete" else "unavailable",
-            {"validated": analysis_status == "complete", "reason": analysis_status},
+            {
+                "validated": analysis_status == "complete",
+                "reason": analysis_status,
+                "error_code": synthesis_diagnostics.get("error_code"),
+            },
         )
     analysis_missing = []
     if not fast_path and analysis_status != "complete":
@@ -760,6 +768,7 @@ async def run(tools):
         "followups": followups,
         "sufficiency": gate,
         "remaining_budget": budget,
+        "synthesis": synthesis_diagnostics,
     }
     result["limitations"].extend(analysis_limits)
     await write_report(result, data, clues, obs.evidence, ctx["llm"])

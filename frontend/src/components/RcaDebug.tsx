@@ -29,6 +29,16 @@ const reasons: Record<string, string> = {
   response_byte_limit: '응답 크기 제한으로 관측을 보존하지 못했습니다.',
   budget_exhausted: '조회 횟수 또는 시간 예산이 소진됐습니다.',
   no_usable_evidence: '분석에 사용할 유효한 관측 근거가 없습니다.',
+  llm_context_budget_exhausted:
+    '모델 입력 예산에 유효한 관측을 담지 못해 분석 요청을 생략했습니다.',
+  llm_token_budget_exhausted: '남은 모델 예산이 부족해 요청을 생략했습니다.',
+  llm_http_error: '모델 서버가 HTTP 오류를 반환했습니다.',
+  llm_deadline_exhausted: '모델 요청 전에 실행 시간이 소진됐습니다.',
+  llm_output_truncated: '모델 응답이 출력 제한으로 잘렸습니다.',
+  llm_invalid_output: '모델 응답을 JSON으로 해석하지 못했습니다.',
+  invalid_model_response: '모델 응답 구조를 검증하지 못했습니다.',
+  invalid_evidence_references: '모델 답변의 근거 참조가 전달한 관측과 일치하지 않습니다.',
+  unregistered_numeric_claim: '모델 답변에 허용되지 않은 숫자 주장이 포함됐습니다.',
   synthesis_no_usable_evidence: '유효한 관측 근거가 없어 LLM 분석을 생략했습니다.',
   unconfigured: '이 작업에 사용할 LLM 연결이 구성되지 않았습니다.',
   synthesis_unconfigured: 'LLM 연결이 구성되지 않아 분석을 생략했습니다.',
@@ -379,6 +389,7 @@ export function RcaEvidence({
 export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: string) => void }) {
   const result = obj(job.result),
     analysis = obj(obj(result.quality).analysis),
+    synthesis = obj(analysis.synthesis),
     usage = obj(result.llm_usage);
   return (
     <div className="stack">
@@ -406,14 +417,35 @@ export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: stri
               </dd>
               <dt>LLM 응답 사용 기록</dt>
               <dd>{typeof usage.calls === 'number' ? `${usage.calls}건` : '미확인'}</dd>
+              <dt>RCA 분석 요청 시도</dt>
+              <dd>
+                {typeof synthesis.request_attempts === 'number'
+                  ? `${synthesis.request_attempts}건`
+                  : '미확인 · 구 결과에는 단계별 기록이 없습니다.'}
+              </dd>
+              <dt>RCA 분석 응답 기록</dt>
+              <dd>
+                {typeof synthesis.response_calls === 'number'
+                  ? `${synthesis.response_calls}건`
+                  : '미확인'}
+              </dd>
+              {synthesis.error_code != null && (
+                <>
+                  <dt>RCA 분석 실패 사유</dt>
+                  <dd>
+                    <RcaReason value={synthesis.error_code} />
+                  </dd>
+                </>
+              )}
               <dt>분석 상태</dt>
               <dd>
                 <RcaReason value={analysis.status} />
               </dd>
             </dl>
             <p className="muted">
-              LLM 기록 0건만으로 연결 실패를 판단하지 않습니다. 요청 실패·생략 여부는 분석 상태와
-              근거를 함께 확인하세요.
+              전체 LLM 응답 기록에는 후속 조회 선택과 최종 보고서 편집도 포함됩니다. RCA 분석 성공
+              횟수가 아닙니다. LLM 기록 0건만으로 연결 실패를 판단하지 않습니다. 요청 실패·생략
+              여부는 분석 상태와 근거를 함께 확인하세요.
             </p>
             <p>{str(result.summary)}</p>
           </section>

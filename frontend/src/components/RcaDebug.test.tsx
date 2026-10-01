@@ -13,6 +13,33 @@ const render = (node: ReactNode) =>
     </QueryClientProvider>,
   );
 describe('RCA diagnostics', () => {
+  it('separates synthesis preflight failure from report LLM calls and handles legacy results', () => {
+    const job = {
+      id: 'job',
+      result_ref: 'result',
+      result: {
+        llm_usage: { calls: 1 },
+        quality: {
+          analysis: {
+            status: 'failed',
+            synthesis: {
+              request_attempts: 0,
+              response_calls: 0,
+              error_code: 'llm_context_budget_exhausted',
+            },
+          },
+        },
+      },
+    };
+    const html = render(<RcaResult job={job} onEvidence={() => {}} />);
+    expect(html).toContain('RCA 분석 요청 시도</dt><dd>0건');
+    expect(html).toContain('LLM 응답 사용 기록</dt><dd>1건');
+    expect(html).toContain('분석 요청을 생략했습니다');
+    expect(html).toContain('최종 보고서 편집도 포함');
+    expect(
+      render(<RcaResult job={{ result_ref: 'old', result: {} }} onEvidence={() => {}} />),
+    ).toContain('구 결과에는 단계별 기록이 없습니다');
+  });
   it('links only published RCA and Ops reports directly from lists', () => {
     const html = render(
       <JobRows

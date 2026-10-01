@@ -230,7 +230,14 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
                 return {"fact_ids": [s["id"] for s in payload["facts"]]}
             assert (
                 payload["observation_refs"]
-                and len(payload["device_observations"]) == 62
+                and 0 < len(payload["device_observations"]) <= 62
+            )
+            assert (
+                len(payload["device_observations"])
+                + payload["context_selection"]["omitted_observations"][
+                    "device_observations"
+                ]
+                == 62
             )
             return analysis_reply(payload["observation_refs"])
 
@@ -264,6 +271,17 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
     assert {"D05", "D09", "D08", "D06", "D02"} <= collected
     assert calls.count("logs") == 2
     result = output["result"]
+    assert len(result["device_observations"]) == 62
+    diagnostics = result["quality"]["analysis"]["synthesis"]
+    assert diagnostics["input_bytes"] <= 16000
+    assert (
+        diagnostics["context_selection"]["omitted_observations"]["device_observations"]
+        > 0
+    )
+    synthesis_evidence = next(
+        e for e in output["evidence"] if e["query_id"] == "rca_synthesis"
+    )
+    assert synthesis_evidence["snapshot"]["diagnostics"] == diagnostics
     assert result["quality"]["analysis"]["status"] == "complete"
     assert result["quality"]["analysis"]["sufficiency"] == "degraded"
     assert "mapping_target_unverified" in result["missing_inputs"]
