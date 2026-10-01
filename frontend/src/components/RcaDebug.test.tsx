@@ -3,7 +3,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { EvidenceRows, IncidentDebug, IncidentStates, RcaJobSummary, RcaResult } from './RcaDebug';
+import {
+  EvidenceRows,
+  IncidentDebug,
+  IncidentStates,
+  RcaJobSummary,
+  RcaReason,
+  RcaResult,
+} from './RcaDebug';
 import { AlarmIdentity, DataView, JobRows } from './live';
 
 const render = (node: ReactNode) =>
@@ -39,6 +46,16 @@ describe('RCA diagnostics', () => {
     expect(
       render(<RcaResult job={{ result_ref: 'old', result: {} }} onEvidence={() => {}} />),
     ).toContain('구 결과에는 단계별 기록이 없습니다');
+  });
+  it('labels every missing input the RCA worker emits for this incident', () => {
+    for (const code of [
+      'error_code',
+      'observation_degraded',
+      'synthesis_failed',
+      'approved_runbook',
+    ]) {
+      expect(render(<RcaReason value={code} />)).not.toContain('사유 코드 <code>');
+    }
   });
   it('explains synthesis validation failure codes instead of a bare code', () => {
     const job = {

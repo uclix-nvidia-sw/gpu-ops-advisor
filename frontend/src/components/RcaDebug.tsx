@@ -57,6 +57,13 @@ const reasons: Record<string, string> = {
   causal_confirmation_evidence: '원인을 뒷받침할 추가 근거가 필요합니다.',
   producer_contract: '로그 생산자의 상태 해석 계약이 확인되지 않았습니다.',
   incident_mapping: '관측과 사건 대상의 연결이 확인되지 않았습니다.',
+  error_code:
+    '장비 오류 코드가 검증된 상태 fact로 확인되지 않았습니다. 로그 보고 내용은 조사 단서로만 사용합니다.',
+  observation_degraded: '일부 관측 조회가 불완전하거나 실패해 근거 품질이 낮아졌습니다.',
+  observation_conflicted: '관측 상태가 서로 상충해 근거 품질이 낮아졌습니다.',
+  synthesis_failed:
+    'LLM 원인 분석이 검증을 통과하지 못했습니다. 분석 요약의 실패 사유를 확인하세요.',
+  approved_runbook: '이 사건에 적용할 승인된 Runbook이 선택되지 않았습니다.',
   stale_alert: '허용 기간을 벗어난 오래된 알람입니다.',
   future_timestamp: '미래 시각으로 기록된 알람입니다.',
   analysis_policy_unconfigured: '적용할 분석 정책이 없습니다.',
