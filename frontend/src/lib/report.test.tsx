@@ -426,3 +426,50 @@ it('preserves unknown sample counts rather than manufacturing zero', () => {
   expect(record.sample_count).toBeNull();
   expect(collectionStatus(record)).toBe('실행 제한 · 수집량 기록 없음');
 });
+
+it('shows preflight rejection and collected windows without implying sample coverage', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        quality: {
+          collection: {
+            plan_status: 'rejected',
+            plan_reason: 'collection_plan_budget_exceeded',
+            complete: false,
+            planned_calls: 60,
+            query_calls: 0,
+            query_limit: 48,
+            tasks: [
+              {
+                query_id: 'D06',
+                cluster_id: 'cpc-1',
+                requested_range: { start: '2026-09-01T00:00:00Z', end: '2026-09-02T00:00:00Z' },
+                requested_seconds: 86400,
+                incomplete_seconds: 86400,
+                data_seconds: 0,
+                empty_seconds: 0,
+                reserved_calls: 1,
+                query_calls: 0,
+                ranges: [
+                  {
+                    time_range: {},
+                    status: 'unavailable',
+                    reason: 'collection_plan_budget_exceeded',
+                    evidence_id: 'e1',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        topics: [],
+      }}
+    />,
+  );
+  expect(html).toContain('수집 전 검사에서 중단');
+  expect(html).toContain('미완료 24시간');
+  expect(html).toContain('빈 응답도 포함');
+  expect(html).toContain('근거 보기');
+  expect(html).not.toContain('요청한 조회 구간 처리 완료');
+});

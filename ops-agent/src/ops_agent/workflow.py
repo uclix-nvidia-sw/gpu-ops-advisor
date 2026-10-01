@@ -10,10 +10,10 @@ from agent_common.calculations import (
 )
 from agent_common.contracts import base_result, result_status, metric, timestamp, now
 from agent_common.normalize import allocations, gpu_intervals, intervals
-from agent_common.observation import Observation
 from agent_common.runtime import attempt_context
 from .report import write_report
-from .namespace_usage import namespace_usage, pod_namespace_scope
+from .namespace_usage import namespace_usage
+from .collection import collect_report
 
 
 PLAN = {
@@ -113,6 +113,7 @@ def calculate(
             query_id=e["query_id"],
             cluster_id=e.get("cluster_id"),
             tool_status=e["tool_status"],
+            time_range=e.get("time_range"),
             **e["quality"],
         )
         for e in all_refs
@@ -706,7 +707,6 @@ async def run(tools):
     ctx = attempt_context.get()
     claim, data = ctx["claim"], ctx["claim"]["input"]
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
-    obs = Observation(tools, ctx["profile"], data, ctx["deadline"], reuse_queries=True)
     db_evidence = dict(
         id=str(uuid4()),
         query_id="report_db_snapshot",
@@ -720,8 +720,6 @@ async def run(tools):
         snapshot=ctx["context"],
         collected_at=now(),
     )
-    obs.evidence.append(db_evidence)
-    collected = {}
     criteria_version = claim["versions"].get("criteria")
     queries = {
         q for topic in data["topic_ids"] for q in query_ids(topic, criteria_version)
@@ -741,15 +739,10 @@ async def run(tools):
         if namespace_only
         else sorted(queries, key=lambda q: (q not in priority, int(q[1:])))
     )
-    for query in order:
-        if namespace_only and query == "D06":
-            collected[query] = await obs.collect(
-                query, namespace_scope=pod_namespace_scope(collected)
-            )
-        else:
-            collected[query] = await obs.collect(query)
-    if "O10" in data["topic_ids"] and data.get("comparison_range"):
-        collected["comparison.D11"] = await obs.collect("D11", data["comparison_range"])
+    collected, evidence, collection = await collect_report(
+        tools, ctx["profile"], data, ctx["deadline"], order, namespace_only
+    )
+    evidence.insert(0, db_evidence)
     topics = [
         calculate(
             t,
@@ -764,7 +757,7 @@ async def run(tools):
     result.update(
         topics=topics,
         result_status=result_status(topics),
-        evidence_refs=refs(obs.evidence),
+        evidence_refs=refs(evidence),
         limitations=[
             "기간 원본·신원·분모가 확인되지 않은 계산은 보류합니다.",
             "관측 변화는 조치의 인과적 효과를 확정하지 않습니다.",
@@ -772,12 +765,8 @@ async def run(tools):
     )
     result["quality"].update(
         requested_group_by=data["group_by"],
-        collection=dict(
-            query_calls=obs.calls,
-            query_limit=ctx["profile"]["limits"]["max_queries"],
-            discovery_calls=obs.discovery_calls,
-        ),
+        collection=collection,
     )
     await write_report(result, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage
-    return {"result": result, "evidence": obs.evidence}
+    return {"result": result, "evidence": evidence}

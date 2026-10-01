@@ -85,6 +85,13 @@ const reasons: Record<string, string> = {
   sample_limit_exceeded: '최소 조회 구간에서도 수집량 제한을 초과했습니다.',
   response_byte_limit: '조회 응답 크기가 제한을 초과했습니다.',
   source_warning: '데이터소스가 불완전한 결과라는 경고를 반환했습니다.',
+  collection_plan_budget_exceeded:
+    '수집 전 검사에서 기간·대상에 필요한 초기 조회량이 보고서 한도를 초과했습니다.',
+  collection_query_unconfigured: '요청한 분석에 필요한 조회 정의가 설정되지 않았습니다.',
+  collection_task_budget_exhausted:
+    '다른 필수 자료의 예산을 보존하기 위해 이 조회의 수집을 중단했습니다.',
+  collection_task_deadline_exhausted:
+    '이 조회에 배분한 실행시간이 끝나 남은 구간을 수집하지 못했습니다.',
   budget_exhausted: '조회 횟수 또는 실행시간 제한으로 남은 구간을 수집하지 못했습니다.',
   query_failed: '데이터 조회가 실패했습니다.',
   inventory_completeness_and_change_events:
@@ -181,6 +188,9 @@ export function collectionStatus(observation: Row) {
       'discovery_budget_exhausted',
       'discovery_deadline_exhausted',
       'range_budget_exhausted',
+      'collection_plan_budget_exceeded',
+      'collection_task_budget_exhausted',
+      'collection_task_deadline_exhausted',
     ].includes(reason),
   );
   if (limited && typeof observation.sample_count !== 'number')
@@ -252,7 +262,10 @@ export function collectionNextCheck(observation: Row) {
   const reasons = strings(observation.reasons);
   if (
     reasons.some(
-      (reason) => reason.includes('budget_exhausted') || reason === 'discovery_deadline_exhausted',
+      (reason) =>
+        reason.includes('budget_exhausted') ||
+        reason.endsWith('deadline_exhausted') ||
+        reason === 'collection_plan_budget_exceeded',
     )
   )
     return '조회·시간 한도와 분석 범위를 확인하세요. 범위 축소 또는 수집 계획 검토가 필요합니다.';

@@ -1,5 +1,10 @@
 # RCA·보고서 Worker v1.3
 
+## Ops 전용 관측 limits — 2026-10-01
+
+`report.limits`는 Ops만 적용하는 부분 override다. 예시는 max_queries=2048, chunk_seconds=86400, max_rows=50000이며 공통/RCA limits는 48/3600/5000을 유지한다. 사용자 정의 `configuration.agents`는 전체 객체 교체이므로 새 블록을 직접 포함해야 한다. 없는 경우 기존 limits를 사용한다. 응답 크기·deadline·timeout·범위와 RCA 로직은 바꾸지 않는다. 자세한 계획·검수 계약은 [Ops 명세](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다. 이 설정은 예시이지 주간·월간 수집 성공의 보장이 아니다.
+
+
 `11_RCA_Agent_모듈_설계서.md`, `12_보고서_Agent_모듈_설계서.md`와 두 문서가 참조하는 공통 계약 03/04/14를 기준으로 구현했습니다. 폴더 이름은 요청대로 **rcca-agent**, **ops-agent**이며 JC의 kind는 각각 `rca`, `report`입니다.
 
 `runaiRCA`에서는 `agent/app/llm.py`의 연결 방식과 `agent/app/config.py`의 LLM 설정만 참고했습니다. 후속 요청에 따라 Dockerfile의 dependencies/build/runtime 구조도 맞췄습니다. 그 저장소의 조사·보고서·지식·업무 로직은 가져오지 않았습니다.

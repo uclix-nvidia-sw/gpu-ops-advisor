@@ -65,6 +65,37 @@ async def write_report(result, llm):
         f"분석 기간: {literal(result['time_range'])}. 대상: {literal(result['scope'])}. "
         f"결과 품질: {result['result_status']}. 보고서 작성 완료와 자료의 완전성은 별개입니다.",
     )
+    collection = result.get("quality", {}).get("collection", {})
+    if collection.get("plan_status"):
+        state = (
+            "수집 전 검사에서 중단"
+            if collection["plan_status"] == "rejected"
+            else "요청한 조회 구간 처리 완료"
+            if collection.get("complete")
+            else "요청한 조회 구간 일부 미완료"
+        )
+        add(
+            "scope",
+            f"수집 상태: {state}. 초기 계획 {collection['planned_calls']}회, "
+            f"실제 조회 {collection['query_calls']}/{collection['query_limit']}회. "
+            "조회 완료에는 빈 응답이 포함되며 원본 표본의 연속성·계산 가능 여부를 보장하지 않습니다.",
+        )
+        if collection.get("plan_reason"):
+            add(
+                "next",
+                f"수집 전 검사 사유: {collection['plan_reason']}. 보고서 수집 설정과 요청 범위를 확인하세요.",
+            )
+        for task in collection.get("tasks", []):
+            if task["incomplete_seconds"]:
+                add(
+                    "next",
+                    f"{task['cluster_id']} / {task['query_id']} / "
+                    f"{literal(task['requested_range'])}: "
+                    f"요청 {task['requested_seconds'] / 3600:g}시간 중 "
+                    f"미완료 {task['incomplete_seconds'] / 3600:g}시간. "
+                    "조회하지 못한 구간과 조회 실패·불완전 응답은 수집 근거에서 구분하세요.",
+                    [r["evidence_id"] for r in task["ranges"]],
+                )
     for topic in result["topics"]:
         for metric in topic["metrics"]:
             if metric["value"] is not None:
