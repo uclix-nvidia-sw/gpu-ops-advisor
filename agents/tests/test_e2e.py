@@ -1209,7 +1209,8 @@ def test_gui_model_auth_and_pinned_revision_reach_real_worker(stack, kind, monke
             **os.environ,
             "DATABASE_URL": stack["url"],
             "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
-            "DSX_MIGRATE": "true",
+            # JC prepared the schema before its background work started.
+            "DSX_MIGRATE": "false",
             "DSX_SEED": "false",
             "DSX_SCHEDULER_ENABLED": "false",
             "DSX_MODEL_HOSTS": host,
@@ -1364,7 +1365,8 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
             **os.environ,
             "DATABASE_URL": stack["url"],
             "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
-            "DSX_MIGRATE": "true",
+            # JC prepared the schema before its background work started.
+            "DSX_MIGRATE": "false",
             "DSX_SEED": "false",
             "DSX_SCHEDULER_ENABLED": "false",
         },
