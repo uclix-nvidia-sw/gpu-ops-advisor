@@ -380,4 +380,4 @@ async def test_scoped_collection_reduces_large_pod_history_without_changing_name
         calls.append(obs.calls)
     assert outputs[0] == outputs[1]
     assert calls[0] > 10
-    assert calls[1] == 3
+    assert calls[1] == 2  # D01/D02/D08 share the same observed DCGM source.

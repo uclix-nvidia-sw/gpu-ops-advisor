@@ -1,6 +1,8 @@
 {
-  "revision": "builtin-grafana-v3",
-  "rca": {"general_runbook_key": "RB-GENERAL-GPU-NODE"},
+  "revision": "builtin-grafana-v4",
+  "rca": {
+    "general_runbook_key": "RB-GENERAL-GPU-NODE"
+  },
   "limits": {
     "max_queries": 48,
     "max_rows": 5000,
@@ -14,7 +16,11 @@
     "max_discovery_calls": 64
   },
   "report": {
-    "limits": {"max_queries": 2048, "chunk_seconds": 86400, "max_rows": 50000}
+    "limits": {
+      "max_queries": 2048,
+      "chunk_seconds": 86400,
+      "max_rows": 50000
+    }
   },
   "clusters": {},
   "health_contracts": {
@@ -77,12 +83,9 @@
     },
     "D05": {
       "source": "loki",
-      "revision": "builtin-v3",
+      "derived_from": "D09",
+      "revision": "builtin-v4",
       "health_contract": "fleet-component-log-v1",
-      "json_target_fields": {
-        "node": "resources[\"k8s.node.name\"]",
-        "component": "attributes[\"component\"]"
-      },
       "validated": true
     },
     "D06": {
@@ -90,8 +93,11 @@
       "metric": "kube_pod_info",
       "unit": "info",
       "max_hold_seconds": 30,
-      "revision": "builtin-v1",
-      "validated": true
+      "revision": "builtin-v4",
+      "validated": true,
+      "target_labels": {
+        "node": "node"
+      }
     },
     "D07": {
       "source": "mimir",
@@ -103,11 +109,16 @@
     },
     "D08": {
       "source": "mimir",
-      "metric": "gpu_ops_allocation_info",
-      "unit": "info",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "unit": "percent",
       "max_hold_seconds": 30,
-      "revision": "builtin-v1",
-      "validated": true
+      "revision": "builtin-v4",
+      "validated": true,
+      "allocation_semantics": "observed_pod_labels",
+      "target_labels": {
+        "node": "node",
+        "gpu_uuid": "UUID"
+      }
     },
     "D09": {
       "source": "loki",

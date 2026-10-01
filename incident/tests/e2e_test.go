@@ -270,6 +270,11 @@ func TestIncidentEndToEnd(t *testing.T) {
 		if Number(item(v, 0), "evidence_version") != 1 || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 1 {
 			t.Fatal("heartbeat caused RCA")
 		}
+		a["labels"].(map[string]any)["reason"] = "synthetic display-only update"
+		v = call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+		if Number(item(v, 0), "evidence_version") != 1 || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 1 {
+			t.Fatal("display metadata changed evidence identity")
+		}
 		a["annotations"].(map[string]any)["error_code"] = "Xid79"
 		v = call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
 		if Number(item(v, 0), "evidence_version") != 2 {

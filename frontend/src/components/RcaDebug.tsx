@@ -211,7 +211,8 @@ export function EvidenceRows({
                     {str(v.query_version, 'revision 미확인')}
                   </small>
                   <small className="cell-sub">
-                    {str(v.time_start, '시작 미확인')} → {str(v.time_end, '종료 미확인')}
+                    {v.time_start ? formatDate(str(v.time_start)) : '시작 미확인'} →{' '}
+                    {v.time_end ? formatDate(str(v.time_end)) : '종료 미확인'}
                   </small>
                 </td>
                 <td>
@@ -221,10 +222,27 @@ export function EvidenceRows({
                   />
                 </td>
                 <td>
-                  {str(q.datasource_uid, '데이터소스 미확인')}
+                  <span title={str(q.datasource_uid)}>
+                    {obj(v.input).logql
+                      ? 'Loki'
+                      : obj(v.input).expr
+                        ? 'Mimir'
+                        : q.original_samples === true
+                          ? 'Mimir'
+                          : q.original_samples === false
+                            ? 'Loki'
+                            : '유형 미확인'}{' '}
+                    ({str(v.cluster_id, '클러스터 미확인')})
+                  </span>
                   <small className="cell-sub">
                     완전성:{' '}
-                    {q.complete === true ? '완전' : q.complete === false ? '불완전' : '미확인'}
+                    {v.tool_status === 'empty' && q.complete === true
+                      ? '조회 정상 완료 · 데이터 0건'
+                      : q.complete === true
+                        ? '조회 완료'
+                        : q.complete === false
+                          ? '불완전'
+                          : '미확인'}
                   </small>
                   <small className="cell-sub">
                     응답 표본: {typeof q.sample_count === 'number' ? q.sample_count : '미확인'}
@@ -334,7 +352,7 @@ export function RcaEvidence({
             {trace.map((v) => (
               <article className="data-item" key={str(v.id)}>
                 <h4>{str(v.query_id)}</h4>
-                <DataView value={v.snapshot} />
+                <DataView value={v.snapshot} field="snapshot" />
                 <button className="text-link" onClick={() => onEvidence(str(v.id))}>
                   근거 상세 · {str(v.id)}
                 </button>
@@ -361,6 +379,12 @@ export function RcaResult({
     analysis = obj(obj(result.quality).analysis),
     synthesis = obj(analysis.synthesis),
     usage = obj(result.llm_usage);
+  const evidenceLabels = Object.fromEntries(
+    rows(obj(result.quality).evidence_catalog).map((e) => [
+      str(e.id),
+      `${str(e.label)} · ${formatDate(str(obj(e.time_range).start))}–${formatDate(str(obj(e.time_range).end))}${typeof e.sample_count === 'number' ? ` · ${e.sample_count}건` : ''}`,
+    ]),
+  );
   return (
     <div className="stack">
       <RcaJobSummary job={job} />
@@ -490,14 +514,20 @@ export function RcaResult({
                 rows(value).map((assessment, index) => (
                   <article key={str(assessment.purpose_id) || index}>
                     <h4>{purposeLabel(str(assessment.purpose_id))}</h4>
-                    <DataView value={assessment} />
+                    <DataView value={assessment} evidenceLabels={evidenceLabels} />
                   </article>
                 ))
               ) : (
-                <DataView value={value} />
+                <DataView value={value} evidenceLabels={evidenceLabels} />
               )}
             </section>
           ))}
+          {!!rows(result.runbook_revisions).length && (
+            <section className="result-section">
+              <h3>참조 Runbook</h3>
+              <DataView field="runbook_revisions" value={result.runbook_revisions} />
+            </section>
+          )}
           <details>
             <summary>공개 결과 원본 · 모델/Runbook revision 포함</summary>
             <DataView value={result} />

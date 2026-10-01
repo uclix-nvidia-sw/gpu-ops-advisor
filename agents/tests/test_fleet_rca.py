@@ -208,7 +208,10 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
                 "result": [
                     {
                         "stream": {},
-                        "values": [[NS, json.dumps(fleet())] for _ in range(31)],
+                        "values": [
+                            [str(int(NS) + i * 1000), json.dumps(fleet())]
+                            for i in range(31)
+                        ],
                     }
                 ]
             }
@@ -230,14 +233,14 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
                 return {"fact_ids": [s["id"] for s in payload["facts"]]}
             assert (
                 payload["observation_refs"]
-                and 0 < len(payload["device_observations"]) <= 62
+                and 0 < len(payload["device_observations"]) <= 31
             )
             assert (
                 len(payload["device_observations"])
                 + payload["context_selection"]["omitted_observations"][
                     "device_observations"
                 ]
-                == 62
+                == 31
             )
             return analysis_reply(payload["observation_refs"])
 
@@ -269,9 +272,9 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
         e["query_id"] for e in output["evidence"] if e["query_id"].startswith("D")
     }
     assert {"D05", "D09", "D08", "D06", "D02"} <= collected
-    assert calls.count("logs") == 2
+    assert calls.count("logs") == 1
     result = output["result"]
-    assert len(result["device_observations"]) == 62
+    assert len(result["device_observations"]) == 31
     diagnostics = result["quality"]["analysis"]["synthesis"]
     assert diagnostics["input_bytes"] <= 16000
     assert (

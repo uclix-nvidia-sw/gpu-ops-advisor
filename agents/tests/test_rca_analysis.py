@@ -292,7 +292,7 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         )
         assert any(e["query_id"] == "rca_synthesis" for e in output["evidence"])
         if mode in ("followup", "xid", "sxid"):
-            assert events == ["collect", "collect", "plan", "collect", "synthesize"]
+            assert events == ["collect", "plan", "collect", "synthesize"]
             assert result["quality"]["analysis"]["followups"] == 1
         elif mode == "unconfigured":
             assert "synthesize" not in events
@@ -301,11 +301,11 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             assert events == []
             assert "approved_runbook" in result["missing_inputs"]
         elif mode == "query_failed":
-            assert events == ["collect", "collect", "collect", "synthesize"]
+            assert events == ["collect", "collect", "synthesize"]
             assert result["termination_reason"] == "query_failed"
             assert result["quality"]["analysis"]["followups"] == 1
         elif mode == "invalid_plan":
-            assert events == ["collect", "collect", "plan", "synthesize"]
+            assert events == ["collect", "plan", "synthesize"]
             assert result["quality"]["analysis"]["followups"] == 0
             assert result["quality"]["analysis"]["status"] == "complete"
         else:

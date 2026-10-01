@@ -4322,3 +4322,43 @@ body:has(dialog[open]) {
     padding: 20px;
   }
 }
+
+/* Nested evidence must not reserve a label column at every level. */
+.live-details .data-stacked > div,
+.live-details.data-stacked > div {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.data-stacked .data-item {
+  padding: 6px;
+}
+.modal-wide {
+  width: min(1100px, calc(100vw - 28px));
+}
+.raw-json pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre;
+  max-height: 420px;
+}
+.snapshot-table {
+  min-width: 680px;
+  table-layout: auto;
+}
+.snapshot-table td {
+  min-width: 120px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.snapshot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.snapshot-chips > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  background: #eef2f0;
+  padding: 3px 6px;
+  border-radius: 5px;
+}

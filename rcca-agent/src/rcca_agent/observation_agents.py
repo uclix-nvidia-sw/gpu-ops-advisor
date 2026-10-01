@@ -9,7 +9,12 @@ from agent_common.observation import Observation
 
 
 async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
-    queries = list(dict.fromkeys(query_ids))
+    requested = list(dict.fromkeys(query_ids))
+    aliases = {
+        q: parent.profile["queries"].get(q, {}).get("derived_from", q)
+        for q in requested
+    }
+    queries = list(dict.fromkeys(aliases.values()))
     if not queries:
         return {}
     if type(concurrency) is not int or concurrency < 1:
@@ -132,4 +137,10 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
             )
         )
         parent.evidence.extend(merged)
-    return {query: [e for e in merged if e["query_id"] == query] for query in queries}
+    outputs = {
+        query: [e for e in merged if e["query_id"] == query] for query in queries
+    }
+    for query, source in aliases.items():
+        if query != source:
+            outputs[query] = parent.derive(query, outputs[source])
+    return {query: outputs[query] for query in requested}

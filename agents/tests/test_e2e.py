@@ -929,7 +929,7 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         for args in log_requests
     )
     if fleet_reports:
-        assert len(result["device_observations"]) == 62
+        assert len(result["device_observations"]) == 31
         assert all(
             h["error_code"] == "sxid:11001" and not h["fact_eligible"]
             for h in result["device_observations"]

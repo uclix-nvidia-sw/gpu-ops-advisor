@@ -22,6 +22,8 @@ def alert_clues(source):
             continue
         if isinstance(left or right, str):
             result[key] = left or right
+    if result.get("component", "").endswith(("-xid", "-sxid")):
+        result["symptom"] = "xid"
     result["error_codes"] = sorted(
         {
             f"{kind.lower()}:{int(code)}"

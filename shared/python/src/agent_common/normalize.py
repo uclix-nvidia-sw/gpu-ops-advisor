@@ -16,7 +16,7 @@ def intervals(evidence, period):
     return out
 
 
-def allocations(evidence, period, pods=None, *, observed=False):
+def allocations(evidence, period, pods=None, *, observed=False, require_pod_join=False):
     out = []
     identities = defaultdict(lambda: defaultdict(list))
     identity_refs = defaultdict(set)
@@ -50,6 +50,13 @@ def allocations(evidence, period, pods=None, *, observed=False):
             if len(active) == 1:
                 windows.append((at, times[i + 1], next(iter(active))))
         pod_windows[key] = windows
+    # Observed DCGM Pod labels are not a declared allocation contract.
+    if not observed:
+        evidence = [
+            e
+            for e in evidence
+            if e.get("quality", {}).get("allocation_semantics") != "observed_pod_labels"
+        ]
     for s in intervals(evidence, period):
         labels = s["labels"]
         gpu = labels.get("gpu_uuid") or labels.get("UUID") or labels.get("uuid")
@@ -67,7 +74,7 @@ def allocations(evidence, period, pods=None, *, observed=False):
                 continue
             matches = []
             evidence_refs = list(s["evidence_refs"])
-            if uid:
+            if uid and not require_pod_join:
                 matches = [(a, b, uid)]
             else:
                 key = (
@@ -79,7 +86,7 @@ def allocations(evidence, period, pods=None, *, observed=False):
                 matches = [
                     (max(a, x), min(b, y), pod_uid)
                     for x, y, pod_uid in pod_windows.get(key, [])
-                    if min(b, y) > max(a, x)
+                    if min(b, y) > max(a, x) and (not uid or pod_uid == uid)
                 ]
                 evidence_refs += sorted(identity_refs.get(key, set()))
             for x, y, pod_uid in matches:

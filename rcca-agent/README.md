@@ -81,3 +81,12 @@ Incident가 생성한 `incident_snapshot.alert`를 원본 알람 증거로 읽�
 - 보고서 대상·종료 사유·미충족 항목을 한국어로 표시하며 원본 코드는 병기한다. 원인 분석 응답 검증 완료와 결과 부분 산출이 함께 나오는 이유를 설명한다. 부족 항목의 네 분류는 확인 방향이며 해당 작업의 exporter 부재나 Fleet 설정값을 추정하는 근거가 아니다.
 
 Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변경하지 않았다. 기존 결과는 재작성하지 않으므로 저장된 영어 모델 문장이 소급 번역되지는 않는다. 검증 범위는 [Agent QA](../agents/QA.md)를 따른다.
+
+## ci.110 후속 증거·표시 보정
+
+- Synthesis 한계 문장은 개별 검증 후 탈락 문장만 제외합니다. 가설 검증 실패는 여전히 거부합니다. 남은 요청 예산과 deadline이 허용하면 최대 한 번 교정을 요청하고, 교정 실패 시 앞서 검증된 가설을 보존합니다. 추론 종료 불확실/취소는 기존 worker fencing으로 전파합니다.
+- 진단은 문장 위치·고정 규칙·토큰 **분류**만 보존합니다. 임의 모델 토큰은 비밀값일 수 있어 원문을 저장하지 않습니다. `validation_failures`, `rejected_limitations`, `repair_attempts/status/error_code`로 원인을 구분합니다. 전체 job 예산을 현재 LLM 잔여 예산으로 해석하지 않습니다.
+- XID/SXID 구성 요소 단서는 `gpu_access` 조사 절차를 선택하지만 검증된 사실은 아닙니다. R02/R03의 필수 D08/D06 조회는 별도로 유지합니다.
+- R01의 공개 assessment enum은 변경하지 않습니다. `quality.analysis.reported_errors`는 보고된 코드이며 Runbook applicability, verified facts, 조치 적격성을 높이지 않습니다. 유효한 발생 시각·신원 계약 없이 `reported`를 새로운 충분성 상태로 만드는 것은 안전 계약과 충돌합니다.
+- Fleet `gpuInfo.gpus`는 시각·근거가 있는 **미검증 신원 후보**로 보존합니다. GPU 한 장이라는 로그만으로 사건 시각의 장애 GPU를 확정하지 않습니다. 검증된 inventory freshness/device-time 계약이 제공될 때까지 `mapping_target_unverified`를 유지합니다.
+- 라벨의 단일 원천은 `src/rcca_agent/report_labels.json`입니다. 수정 후 저장소 루트에서 `python tools/generate_rca_labels.py`를 실행하여 frontend JSON을 생성합니다. Python 패키지 데이터에도 포함하며 기존 mirror 일치 테스트를 유지합니다.
