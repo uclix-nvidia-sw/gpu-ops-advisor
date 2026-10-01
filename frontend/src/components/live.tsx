@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { errorText, obj, str, useResource, type Row } from '../lib/live';
+import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
-import { groupLabel } from '../lib/report';
+import { groupLabel, metricValue, metricUnit, namespaceRows, reportReason } from '../lib/report';
 export function QueryState({
   query,
   empty = false,
@@ -329,65 +329,7 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
   const location = useLocation();
   const reportsOnly = location.pathname === '/reports';
   const from = location.pathname + location.search;
-  if (reportsOnly)
-    return (
-      <div className="report-history-cards">
-        {items.map((j) => (
-          <article className="report-history-card" key={str(j.id)} id={`report-row-${str(j.id)}`}>
-            <header>
-              <span className="report-history-id" title={str(j.id)}>
-                ID {str(j.id).slice(0, 8)}
-              </span>
-              <div className="report-history-status">
-                <span>
-                  실행 상태 <Badge status={str(j.status) || null} />
-                </span>
-                <span>
-                  결과 품질 <Badge status={str(j.result_status) || null} />
-                </span>
-              </div>
-            </header>
-            <h3>
-              <Link
-                className="text-link report-history-title"
-                state={{ from, reportList: from, reportRow: str(j.id) }}
-                to={
-                  j.result_ref != null ? `/reports/${str(j.id)}#final-report` : `/jobs/${str(j.id)}`
-                }
-              >
-                {reportTitle(j)}
-              </Link>
-            </h3>
-            <dl className="report-history-meta">
-              <div>
-                <dt>분석 기간</dt>
-                <dd>
-                  {formatDate(str(obj(j.time_range).start))} –{' '}
-                  {formatDate(str(obj(j.time_range).end))} (KST)
-                </dd>
-              </div>
-              <div>
-                <dt>대상</dt>
-                <dd>{reportScope(j)}</dd>
-              </div>
-              <div>
-                <dt>집계 기준</dt>
-                <dd>{groupLabel(j.group_by)}</dd>
-              </div>
-              <div>
-                <dt>접수 시각</dt>
-                <dd>{formatDate(str(j.created_at))} (KST)</dd>
-              </div>
-            </dl>
-            <details className="report-history-details">
-              <summary>세부 주제 · 전체 작업 ID</summary>
-              <p>{reportTopics(j)}</p>
-              <code>{str(j.id)}</code>
-            </details>
-          </article>
-        ))}
-      </div>
-    );
+  if (reportsOnly) return <ReportHistory items={items} from={from} />;
   return (
     <div className="table-wrap">
       <table>
@@ -477,5 +419,171 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ReportHistory({ items, from }: { items: Row[]; from: string }) {
+  // The API orders this filtered page by request time, newest first.
+  const featured = items.find((job) => str(job.result_ref));
+  const others = items.filter((job) => job !== featured);
+  const card = (job: Row, large = false) => (
+    <article
+      className={`report-history-card ${large ? 'report-history-featured' : 'report-history-compact'}`}
+      key={str(job.id)}
+      id={`report-row-${str(job.id)}`}
+    >
+      <header>
+        <span className="report-history-id" title={str(job.id)}>
+          ID {str(job.id).slice(0, 8)}
+        </span>
+        <div className="report-history-status">
+          <span>
+            실행 상태 <Badge status={str(job.status) || null} />
+          </span>
+          <span>
+            결과 품질 <Badge status={str(job.result_status) || null} />
+          </span>
+        </div>
+      </header>
+      {large && (
+        <p className="report-featured-label">현재 목록의 최신 공개 보고서 · 접수 시각 기준</p>
+      )}
+      <h3>
+        <Link
+          className="text-link report-history-title"
+          state={{ from, reportList: from, reportRow: str(job.id) }}
+          to={str(job.result_ref) ? `/reports/${str(job.id)}#final-report` : `/jobs/${str(job.id)}`}
+        >
+          {reportTitle(job)}
+        </Link>
+      </h3>
+      <dl className="report-history-meta">
+        <div>
+          <dt>분석 기간</dt>
+          <dd>
+            {formatDate(str(obj(job.time_range).start))} –{' '}
+            {formatDate(str(obj(job.time_range).end))} (KST)
+          </dd>
+        </div>
+        <div>
+          <dt>대상</dt>
+          <dd>{reportScope(job)}</dd>
+        </div>
+        {large && (
+          <div>
+            <dt>집계 기준</dt>
+            <dd>{groupLabel(job.group_by)}</dd>
+          </div>
+        )}
+        <div>
+          <dt>접수 시각</dt>
+          <dd>{formatDate(str(job.created_at))} (KST)</dd>
+        </div>
+      </dl>
+      {large && <ReportPreview job={job} />}
+      <details className="report-history-details">
+        <summary>세부 주제 · 전체 작업 ID</summary>
+        <p>{reportTopics(job)}</p>
+        {!large && <p>집계 기준: {groupLabel(job.group_by)}</p>}
+        <code>{str(job.id)}</code>
+      </details>
+      {large && (
+        <Link
+          className="button primary"
+          state={{ from, reportList: from, reportRow: str(job.id) }}
+          to={`/reports/${str(job.id)}#final-report`}
+        >
+          보고서 읽기
+        </Link>
+      )}
+    </article>
+  );
+  return (
+    <div className={`report-history-cards ${featured ? 'report-history-asymmetric' : ''}`}>
+      {featured && card(featured, true)}
+      <div className="report-history-others">
+        <h3>{featured ? '다른 요청·보고서' : '아직 공개된 보고서가 없습니다'}</h3>
+        {!others.length && <p className="muted">현재 목록에 다른 보고서는 없습니다.</p>}
+        {others.map((job) => card(job))}
+      </div>
+    </div>
+  );
+}
+
+function ReportPreview({ job }: { job: Row }) {
+  const query = useResource(`/reports/${encodeURIComponent(str(job.id))}`);
+  if (query.isPending) return <p role="status">저장된 요약을 불러오는 중…</p>;
+  if (query.isError)
+    return (
+      <div className="report-preview" role="alert">
+        <p>요약을 불러오지 못했습니다. 보고서 본문은 아래 버튼으로 열 수 있습니다.</p>
+        <button className="text-link" onClick={() => query.refetch()}>
+          요약 다시 불러오기
+        </button>
+      </div>
+    );
+  const detail = obj(query.data);
+  if (detail.id !== job.id || detail.result_ref !== job.result_ref)
+    return <p className="muted">목록과 요약의 결과 참조가 다릅니다. 목록을 새로고침해 주세요.</p>;
+  const result = obj(detail.result),
+    topics = rows(result.topics);
+  const metrics = topics.flatMap((topic) => rows(topic.metrics));
+  const namespaces = namespaceRows(metrics);
+  const reasons = [
+    ...new Set(
+      [
+        ...topics.flatMap((topic) => strings(topic.missing_inputs)),
+        ...metrics.flatMap((metric) => [
+          ...strings(obj(metric.quality).excluded_reasons),
+          ...(metric.value == null ? [str(obj(metric.quality).reason)] : []),
+        ]),
+      ].filter(Boolean),
+    ),
+  ];
+  return (
+    <section className="report-preview" aria-label="저장된 결과 요약">
+      <h4>핵심 결과</h4>
+      {topics.length ? (
+        <p>
+          산출 완료 {topics.filter((t) => t.status === 'ready').length}개 · 부분 산출{' '}
+          {topics.filter((t) => t.status === 'partial').length}개 · 판단 보류{' '}
+          {topics.filter((t) => t.status === 'blocked').length}개 주제
+        </p>
+      ) : (
+        <p>{str(result.summary, '요약에 사용할 주제별 기록이 없습니다. 본문을 확인하세요.')}</p>
+      )}
+      {namespaces.slice(0, 2).map(({ target, metrics: values }) => {
+        const activity = values.namespace_connected_gpu_util;
+        return (
+          <p key={JSON.stringify(target)}>
+            <strong>
+              {str(target.cluster_id)} / {str(target.namespace)}
+            </strong>
+            <br />
+            연결 GPU 평균 활동률:{' '}
+            {activity
+              ? `${metricValue(activity)}${activity.value == null ? '' : ` ${metricUnit(activity)}`}`
+              : '미계산'}
+          </p>
+        );
+      })}
+      {namespaces.length > 2 && (
+        <p>외 {namespaces.length - 2}개 Namespace는 본문에서 확인하세요.</p>
+      )}
+      {!!namespaces.length && (
+        <p className="muted">연결 GPU의 관측 활동이며 Namespace의 실제 소비량은 아닙니다.</p>
+      )}
+      {!!reasons.length && (
+        <div className="report-preview-limitations">
+          <h4>자료 부족·주의사항</h4>
+          <ul>
+            {reasons.slice(0, 2).map((reason) => (
+              <li key={reason}>{reportReason(reason)}</li>
+            ))}
+          </ul>
+          {reasons.length > 2 && <p>추가 제한 {reasons.length - 2}개는 본문에서 확인하세요.</p>}
+        </div>
+      )}
+    </section>
   );
 }

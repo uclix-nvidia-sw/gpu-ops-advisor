@@ -27,6 +27,7 @@ vi.mock('../lib/store', () => ({
 }));
 vi.mock('../lib/live', async (original) => ({
   ...(await original<typeof import('../lib/live')>()),
+  useResource: () => ({ isPending: true, isError: false }),
   useCommand: () => ({ run: vi.fn(), busy: false, error: '', setError: vi.fn() }),
   useList: (path: string) => {
     paths.push(path);
@@ -84,7 +85,7 @@ describe('Ops report landing', () => {
         expect(html).toContain('<dt>대상</dt><dd>cpc-2 / training</dd>');
         expect(html).toContain('<dt>집계 기준</dt><dd>Namespace</dd>');
         expect(html).toContain('title="published">ID publishe</span>');
-        expect(html).toContain('<article class="report-history-card"');
+        expect(html).toContain('<article class="report-history-card report-history-featured"');
         expect(html).not.toContain('<table');
         expect(html).toContain('<code>published</code>');
       } else {
