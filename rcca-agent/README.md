@@ -7,6 +7,7 @@
 - `synthesis_context.py`는 저장된 evidence를 수정하지 않고 모델용 view만 제한한다. 최대 16,000바이트이고 남은 예산에서 system/전송 여유와 8,192의 출력 여유를 뺀 값이 더 작으면 그 값을 사용한다. 실제 output cap과 비용 차감은 기존 LLM transport가 담당한다.
 - health, 검증된 relation, metric 순서로 담는다. metric은 사건 노드와 비-inventory 계열을 우선하고 계열당 최대 8개의 균등 간격 원본 인덱스 표본을 전달한다. 새로운 평균·최댓값·연속성을 계산하거나 주장하지 않는다. 생략한 관측/표본 수와 계열별 선택 방법을 `context_selection`/`sample_selection`에 명시하며 보고서 한계에도 남긴다. 최소 메타데이터와 유효 관측을 담을 수 없으면 명시적으로 실패한다.
 - 후보의 참조는 실제 선택한 관측의 evidence ID로 제한한다. 숫자 측정값을 자유 문장으로 생성하지 못하며, 인용한 관측의 typed `error_code`와 일치하는 XID/SXID 식별자만 예외로 허용한다. 오류 코드 인용은 원인 확정이나 fact 승격이 아니다.
+- 모델 view에 그대로 들어 있는 영문+숫자 식별자 토큰(`D05`, `R01`, `cpc-2`, 노드·Pod 이름, UUID 등)은 그대로 인용해도 숫자 검사에서 제외한다. 토큰은 공백 단위로 추출하며 metric `samples`, ISO 시각, `16GB`·`85C`·`30m` 같은 숫자+단위 값과 `sxid:11001` 같은 오류 코드는 식별자로 보지 않는다(오류 코드는 기존처럼 인용 관측의 typed `error_code`만 허용). 숫자만 있는 값(`GPU 0`), 개수·기간·측정값은 계속 `invalid_limitations`/`unregistered_numeric_claim`으로 거부한다. 운영 작업 `ed730b4d`에서 입력 제한 후 실제 요청 1건이 이 검사로 탈락해 보완했다.
 - `quality.analysis.synthesis`와 `rca_synthesis.snapshot.diagnostics`에 단계별 `request_attempts`, `response_calls`, 안전한 `error_code`, 입력 크기와 선택 범위를 저장한다. 모델 원문·외부 예외 문자열은 진단에 저장하지 않는다. 응답 기록도 내용 검증 성공을 의미하지 않는다.
 
 기존 partial/missing-data·producer 시각 계약·GPU–Pod mapping 조건과 취소/원격 추론 종료 불명 처리는 유지한다. DB migration과 기존 결과 재작성은 없다. 운영 적용에는 RCA Worker/Frontend의 승인된 배포와 새 실행 검수가 필요하다. [검증 범위](../agents/QA.md).

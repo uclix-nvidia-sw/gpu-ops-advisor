@@ -70,7 +70,43 @@ class SynthesisValidationError(ValueError):
     """Fixed diagnostic codes only; never persist model text or raw exceptions."""
 
 
-def validate_synthesis(response, refs, observations=()):
+# Measurements, timestamps and number-with-unit values never become identifiers.
+TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
+MEASUREMENT = re.compile(r"[\d.,:\s]*\d[\d.,:\s]*[A-Za-z%]{0,3}", re.I)
+ERROR_CODE = re.compile(r"s?xid[ :]*\d+", re.I)
+
+
+def identifier_tokens(view):
+    """Alphanumeric identifiers the model received verbatim, e.g. D05 or cpc-2."""
+    found = set()
+
+    def walk(value, key=None):
+        if key == "samples":
+            return
+        if isinstance(value, dict):
+            for k, v in value.items():
+                walk(v, k)
+        elif isinstance(value, list):
+            for v in value:
+                walk(v, key)
+        elif isinstance(value, str) and len(value) <= 200:
+            # Per token, so a producer sentence cannot whitelist its measurements.
+            # Error codes stay limited to cited observations by numeric_prose.
+            found.update(
+                token
+                for token in (t.strip(".,;()[]{}\"'") for t in value.split())
+                if re.search(r"\d", token)
+                and not ERROR_CODE.fullmatch(token)
+                and re.search(r"[A-Za-z]", token)
+                and not TIMESTAMP.search(token)
+                and not MEASUREMENT.fullmatch(token)
+            )
+
+    walk(view)
+    return found
+
+
+def validate_synthesis(response, refs, observations=(), identifiers=()):
     """Validate structure/references, not the truth of an LLM hypothesis."""
     if not isinstance(response, dict) or set(response) != {
         "hypotheses",
@@ -81,8 +117,22 @@ def validate_synthesis(response, refs, observations=()):
     if not isinstance(hypotheses, list) or len(hypotheses) > 8:
         raise SynthesisValidationError("invalid_hypotheses")
 
+    # Longest first so "vessl-k8s-worker-01" is masked before a shorter overlap.
+    known = sorted(set(identifiers), key=len, reverse=True)
+    identifier = (
+        re.compile(
+            r"(?<![A-Za-z0-9_.:-])(?:"
+            + "|".join(map(re.escape, known))
+            + r")(?![A-Za-z0-9_:-])",
+            re.I,
+        )
+        if known
+        else None
+    )
+
     def numeric_prose(text, evidence_refs):
-        # Only typed error identifiers from cited observations may contain digits.
+        # Typed error codes of cited observations and identifiers copied from the
+        # input may contain digits; any other digit is an unregistered number.
         codes = {
             h.get("error_code")
             for h in observations
@@ -93,9 +143,10 @@ def validate_synthesis(response, refs, observations=()):
             code = f"{match[1].lower()}:{int(match[2])}"
             return "reported error" if code in codes else match[0]
 
-        return re.search(
-            r"\d", re.sub(r"\b(s?xid)[ :]+([0-9]+)\b", replace, text, flags=re.I)
-        )
+        text = re.sub(r"\b(s?xid)[ :]+([0-9]+)\b", replace, text, flags=re.I)
+        if identifier:
+            text = identifier.sub("identifier", text)
+        return re.search(r"\d", text)
 
     def strings(items):
         return (
@@ -200,7 +251,10 @@ async def synthesize(llm, payload, diagnostics=None):
             )
             return "failed", [], []
         candidates = validate_synthesis(
-            response, view["observation_refs"], view["device_observations"]
+            response,
+            view["observation_refs"],
+            view["device_observations"],
+            identifier_tokens(view),
         )
     except SynthesisValidationError as exc:
         diagnostics["error_code"] = str(exc)

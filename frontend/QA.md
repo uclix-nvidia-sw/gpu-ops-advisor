@@ -1,3 +1,12 @@
+# 2026-10-01 RCA 분석 검증 실패 사유 문구
+
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **59 tests**, `npm run build`.
+- **통과:** 렌더 fixture로 `invalid_limitations`가 코드만이 아니라 한국어 설명과 함께 표시되는지 확인했다. 운영 작업 `ed730b4d` 화면은 배포 전 `사유 코드 invalid_limitations`로 표시됐다.
+- **추가:** RCA 부족한 근거 중 문구가 없던 `error_code`·`observation_degraded`·`observation_conflicted`·`synthesis_failed`·`approved_runbook` 설명. 운영 작업 `ed730b4d` 화면에 `사유 코드 error_code` 등으로 표시되던 항목이다.
+- **미검증:** 배포 후 실제 브라우저 표시.
+
+---
+
 # 2026-10-01 보고서 기간·수집 구간 검수
 
 - **통과:** `npm run format:check`, `npm test` **57 tests**, `npm run build`.
