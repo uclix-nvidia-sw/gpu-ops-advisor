@@ -354,7 +354,9 @@ export function OperationsReports() {
             <Link
               className="ops-report-book"
               key={str(r.id)}
-              to={`/reports/${str(r.id)}${r.result_ref != null ? '#final-report' : ''}`}
+              to={
+                r.result_ref != null ? `/reports/${str(r.id)}#final-report` : `/jobs/${str(r.id)}`
+              }
             >
               <div className="ops-book-spine">
                 <FileChartColumn size={32} />

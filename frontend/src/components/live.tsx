@@ -337,7 +337,14 @@ export function JobRows({ items }: { items: Row[] }) {
           {items.map((j) => (
             <tr key={str(j.id)}>
               <td>
-                <Link className="text-link" to={`/jobs/${str(j.id)}`}>
+                <Link
+                  className="text-link"
+                  to={
+                    j.kind === 'report' && j.result_ref != null
+                      ? `/reports/${str(j.id)}#final-report`
+                      : `/jobs/${str(j.id)}`
+                  }
+                >
                   {j.kind === 'rca' ? (
                     <AlarmIdentity record={j} />
                   ) : j.kind === 'report' ? (
