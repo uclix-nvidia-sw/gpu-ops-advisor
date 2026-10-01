@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 
 import yaml
@@ -102,6 +103,54 @@ class ReleaseTests(unittest.TestCase):
                         capture_output=True,
                     )
                     self.assertEqual(result.returncode, expected, result.stderr)
+
+    def test_agent_preparation_overlaps_and_preserves_failures(self):
+        steps = yaml.safe_load((ROOT / ".github/workflows/tests.yml").read_text())[
+            "jobs"
+        ]["agents"]["steps"]
+        prepare = next(step for step in steps if step.get("id") == "prepare-agents")
+        self.assertEqual(prepare["shell"], "bash")
+        # pip cannot finish until Go starts, so sequential preparation would time out.
+        stubs = """
+        pip() {
+          for attempt in {1..500}; do
+            if [ -f go-started ]; then return "${PIP_RESULT:-0}"; fi
+            sleep 0.01
+          done
+          return 99
+        }
+        go() {
+          touch go-started
+          return "${GO_RESULT:-0}"
+        }
+        curl() {
+          printf 'fixture mcp-grafana_Linux_x86_64.tar.gz\\n' > checksums.txt
+          return "${CURL_RESULT:-0}"
+        }
+        sha256sum() { cat >/dev/null; return "${CHECKSUM_RESULT:-0}"; }
+        tar() { return "${TAR_RESULT:-0}"; }
+        """
+        for failure in (None, "PIP", "GO", "CURL", "CHECKSUM", "TAR"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as folder:
+                env = dict(os.environ)
+                for name in ("PIP", "GO", "CURL", "CHECKSUM", "TAR"):
+                    env[name + "_RESULT"] = "17" if name == failure else "0"
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "--noprofile",
+                        "--norc",
+                        "-eo",
+                        "pipefail",
+                        "-c",
+                        stubs + prepare["run"],
+                    ],
+                    cwd=folder,
+                    env=env,
+                    capture_output=True,
+                    timeout=10,
+                )
+                self.assertEqual(result.returncode, 17 if failure else 0, result.stderr)
 
     def test_package_rejects_missing_wrong_or_unpublished_digests(self):
         values = {

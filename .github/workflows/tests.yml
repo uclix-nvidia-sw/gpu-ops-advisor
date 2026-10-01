@@ -79,27 +79,40 @@ jobs:
         with:
           go-version-file: job-controller/go.mod
           cache-dependency-path: '**/go.sum'
-      - name: Install both workers
-        run: pip install -r agents/requirements.txt -e shared/python -e rcca-agent -e ops-agent ruff==0.14.0
       - uses: azure/setup-helm@v4.3.0
         with:
           version: v3.17.3
+      - name: Prepare workers and E2E tools
+        id: prepare-agents
+        shell: bash
+        run: |
+          # Independent preparation only; tests start after both processes succeed.
+          (
+            pip install -r agents/requirements.txt -e shared/python -e rcca-agent -e ops-agent ruff==0.14.0
+          ) &
+          install_pid=$!
+          (
+            mkdir -p .local/mcp-grafana
+            go -C job-controller build -o ../.local/job-controller ./cmd/server
+            go -C incident build -o ../.local/incident ./cmd/server
+            go -C backend build -o ../.local/backend-e2e ./cmd/server
+            cd .local/mcp-grafana
+            release=https://github.com/grafana/mcp-grafana/releases/download/v1.4.2
+            curl --fail --location --retry 3 "$release/mcp-grafana_Linux_x86_64.tar.gz" -o mcp-grafana_Linux_x86_64.tar.gz
+            curl --fail --location --retry 3 "$release/mcp-grafana_1.4.2_checksums.txt" -o checksums.txt
+            grep ' mcp-grafana_Linux_x86_64.tar.gz$' checksums.txt | sha256sum --check --strict
+            tar -xzf mcp-grafana_Linux_x86_64.tar.gz
+          ) &
+          tools_pid=$!
+          # Wait for both, preserving either failure instead of a bare `wait`.
+          prepare_status=0
+          wait "$install_pid" || prepare_status=$?
+          wait "$tools_pid" || prepare_status=$?
+          exit "$prepare_status"
       - name: Lint
         run: |
           ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
           ruff format --check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci
-      - name: Build JC and Incident and download verified official MCP
-        run: |
-          mkdir -p .local/mcp-grafana
-          go -C job-controller build -o ../.local/job-controller ./cmd/server
-          go -C incident build -o ../.local/incident ./cmd/server
-          go -C backend build -o ../.local/backend-e2e ./cmd/server
-          cd .local/mcp-grafana
-          release=https://github.com/grafana/mcp-grafana/releases/download/v1.4.2
-          curl --fail --location --retry 3 "$release/mcp-grafana_Linux_x86_64.tar.gz" -o mcp-grafana_Linux_x86_64.tar.gz
-          curl --fail --location --retry 3 "$release/mcp-grafana_1.4.2_checksums.txt" -o checksums.txt
-          grep ' mcp-grafana_Linux_x86_64.tar.gz$' checksums.txt | sha256sum --check --strict
-          tar -xzf mcp-grafana_Linux_x86_64.tar.gz
       - name: Unit, lifecycle and real process E2E
         env:
           RUN_AGENT_E2E: '1'
