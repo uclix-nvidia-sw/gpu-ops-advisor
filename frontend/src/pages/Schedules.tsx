@@ -1,3 +1,4 @@
+import { scheduleLabels, schedulePeriods, scheduleWindows } from '../lib/reportPeriod';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Field, Modal, NavTabs, Notice, PageHead, Panel } from '../components/ui';
@@ -56,9 +57,7 @@ function ScheduleList() {
                     </td>
                     <td>{formatDate(str(s.next_run_at))}</td>
                     <td>
-                      {(
-                        { daily: '매일', weekly: '매주', monthly: '매월' } as Record<string, string>
-                      )[str(s.frequency)] || '주기 미확인'}
+                      {scheduleLabels[str(s.frequency)] || '주기 미확인'}
                       {s.frequency === 'weekly' &&
                         ` ${['', '월', '화', '수', '목', '금', '토', '일'][num(s.weekday)] || '?'}요일`}
                       {s.frequency === 'monthly' && ` ${str(s.day, String(s.day ?? '?'))}일`}{' '}
@@ -227,13 +226,7 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
                 frequency,
                 local_time: time,
                 timezone: str(calendar.timezone, 'Asia/Seoul'),
-                period: (
-                  {
-                    daily: 'previous_complete_day',
-                    weekly: 'previous_complete_week',
-                    monthly: 'previous_complete_month',
-                  } as Record<string, string>
-                )[frequency],
+                period: schedulePeriods[frequency],
                 ...(frequency === 'weekly' ? { weekday } : frequency === 'monthly' ? { day } : {}),
               },
               { method: 'PATCH', version: num(initial.version) },
@@ -244,9 +237,11 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
       >
         <Field label="반복 주기">
           <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="daily">매일</option>
-            <option value="weekly">매주</option>
-            <option value="monthly">매월</option>
+            {Object.entries(scheduleLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="실행 시각">
@@ -276,7 +271,10 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
             />
           </Field>
         )}
-        <Notice>저장된 새 revision은 이후 회차에 적용됩니다.</Notice>
+        <Notice>
+          {scheduleWindows[frequency]} 전체를 분석합니다. 저장된 새 revision은 이후 회차에
+          적용됩니다.
+        </Notice>
         <CommandError error={cmd.error} />
         <button className="button primary" disabled={cmd.busy}>
           조건 저장

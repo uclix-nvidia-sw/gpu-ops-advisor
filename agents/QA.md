@@ -1,3 +1,12 @@
+# 2026-10-01 일 단위 보고서 Backend 접수 회귀
+
+- **통과:** 최신 main `e9ed87e` 기반 Python 3.11.16 전체 **286 passed, 0 skipped**, Ruff check/format 66개 파일. `RUN_AGENT_E2E=1`과 격리 로컬 PostgreSQL, 최신 Backend/JC/Incident 바이너리, 공식 Grafana MCP 1.4.2, Helm으로 두 Worker의 실제 프로세스·발행 경로를 실행했다. 데이터소스와 모델 응답은 HTTP fixture다.
+- **변경:** Backend를 통한 Namespace 보고서 E2E만 1시간 요청에서 24시간 요청으로 바꿨다. fixture의 121개 표본 × 30초 hold를 기대 관측시간으로 명시해, 하루 요청을 하루 전체 관측으로 오해하지 않도록 검사한다. Worker 구현·공통 PERIOD·RCA 요청·수집 한도는 변경하지 않았다.
+- 첫 검증은 오래된 Incident 실행 파일·잘못된 Helm 경로와 시간 기대값으로 실패했다. 최신 소스 빌드와 올바른 도구 경로·기대값으로 다시 실행해 전체 통과했다.
+- **미검증:** 운영 배포·실제 Grafana/LLM 실행. 운영 DB는 사용하지 않았다.
+
+---
+
 ## 2026-10-01 RCA synthesis 식별자 인용 허용
 
 기준 main `7abc8d2`(#39·#40 포함), `fix/rca-synthesis-identifier-prose`. #39 배포 후 운영 작업 `ed730b4d`(Loki 합성 SXID 11001)에서 입력 536,621→15,570바이트 제한, `request_attempts=1`·`response_calls=1`을 확인했으나 응답이 `invalid_limitations`로 탈락했다. 같은 view를 읽기 전용으로 재구성하면 `D05`·`R01`·`cpc-2`·`vessl-k8s-worker-01` 등 숫자가 포함된 식별자가 47종이었고, 기존 `\d` 전면 금지가 이를 거부한다. 모델 원문은 저장하지 않으므로 실제 문장은 추정이다.

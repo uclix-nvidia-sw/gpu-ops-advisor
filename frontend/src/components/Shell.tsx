@@ -26,6 +26,7 @@ const nav = [
   { to: '/fleet/assets', label: '자산·관측', icon: Server },
   { to: '/cases', label: 'RCA 조사', icon: ScanSearch },
   { to: '/reports', label: '운영 분석·보고서', icon: ChartNoAxesCombined },
+  { to: '/operator-guide', label: '운영자 가이드', icon: BookOpen },
   { to: '/jobs', label: '작업 이력', icon: History },
   { to: '/knowledge', label: '지식·Runbook', icon: BookOpen },
   { to: '/settings/models', label: '연결·설정', icon: Settings2 },
@@ -34,6 +35,7 @@ export function Shell() {
   const app = useApp(),
     location = useLocation(),
     me = app.connection;
+  const isGuide = location.pathname === '/operator-guide';
   const names =
     app.mode === 'operations'
       ? [
@@ -41,6 +43,7 @@ export function Shell() {
           '자산 탐색',
           '사건 대응',
           '분석 서재',
+          '운영자 가이드',
           '요청 진행',
           '운영 지식',
           '환경 관리',
@@ -51,6 +54,7 @@ export function Shell() {
             '관측·신원',
             '사건·RCA',
             '보고서·일정',
+            '운영자 가이드',
             '작업 디버깅',
             'Runbook·revision',
             '연결·구성',
@@ -145,71 +149,77 @@ export function Shell() {
             <ViewMode />
           </div>
         </header>
-        <div className="scopebar">
-          <div className="scope-left">
-            <span className="scope-label">관측 범위</span>
-            <button
-              className="scope-button"
-              disabled={!app.ready || !app.registeredScope.clusters.length}
-              onClick={() => {
-                setDraft(structuredClone(app.scope));
-                setScopeError('');
-                setScopeOpen(true);
-              }}
-            >
-              {app.scope.clusters.length}개 CPC
-              <ChevronDown size={14} />
-            </button>
-            <div className="scope-chips">
-              {app.scope.clusters.map((c) => (
-                <span key={c.cluster_id}>
-                  {c.cluster_id.toUpperCase()} / {c.namespaces?.join(', ') || '전체 Namespace'}
-                </span>
-              ))}
+        {!isGuide && (
+          <div className="scopebar">
+            <div className="scope-left">
+              <span className="scope-label">관측 범위</span>
+              <button
+                className="scope-button"
+                disabled={!app.ready || !app.registeredScope.clusters.length}
+                onClick={() => {
+                  setDraft(structuredClone(app.scope));
+                  setScopeError('');
+                  setScopeOpen(true);
+                }}
+              >
+                {app.scope.clusters.length}개 CPC
+                <ChevronDown size={14} />
+              </button>
+              <div className="scope-chips">
+                {app.scope.clusters.map((c) => (
+                  <span key={c.cluster_id}>
+                    {c.cluster_id.toUpperCase()} / {c.namespaces?.join(', ') || '전체 Namespace'}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="scope-right">
+              <span className="time-zone">Asia/Seoul</span>
+              <select
+                aria-label="조회 기간"
+                value={app.period}
+                onChange={(e) => app.setPeriod(e.target.value)}
+              >
+                <option value="1h">최근 1시간</option>
+                <option value="6h">최근 6시간</option>
+                <option value="24h">최근 24시간</option>
+              </select>
+              <button className="icon-button" aria-label="데이터 새로고침" onClick={app.refresh}>
+                <RefreshCw size={17} />
+              </button>
             </div>
           </div>
-          <div className="scope-right">
-            <span className="time-zone">Asia/Seoul</span>
-            <select
-              aria-label="조회 기간"
-              value={app.period}
-              onChange={(e) => app.setPeriod(e.target.value)}
-            >
-              <option value="1h">최근 1시간</option>
-              <option value="6h">최근 6시간</option>
-              <option value="24h">최근 24시간</option>
-            </select>
-            <button className="icon-button" aria-label="데이터 새로고침" onClick={app.refresh}>
-              <RefreshCw size={17} />
-            </button>
-          </div>
-        </div>
+        )}
         <main id="main-content">
           {app.mode === 'developer' && <DeveloperContext />}
-          <QueryState query={me}>
-            {!app.registeredScope.clusters.length &&
-            !location.pathname.startsWith('/settings') &&
-            !location.pathname.startsWith('/knowledge') ? (
-              <div className="page">
-                <PageHead
-                  eyebrow="GET STARTED"
-                  title="클러스터 등록"
-                  description="분석할 클러스터를 등록해 시작하세요."
-                />
-                <Empty
-                  title="등록된 클러스터가 없습니다."
-                  description="클러스터를 등록하면 관측 범위를 선택하고 분석을 요청할 수 있습니다."
-                  action={
-                    <Link className="button primary" to="/settings/data">
-                      클러스터 등록하기
-                    </Link>
-                  }
-                />
-              </div>
-            ) : (
-              <Outlet />
-            )}
-          </QueryState>
+          {isGuide ? (
+            <Outlet />
+          ) : (
+            <QueryState query={me}>
+              {!app.registeredScope.clusters.length &&
+              !location.pathname.startsWith('/settings') &&
+              !location.pathname.startsWith('/knowledge') ? (
+                <div className="page">
+                  <PageHead
+                    eyebrow="GET STARTED"
+                    title="클러스터 등록"
+                    description="분석할 클러스터를 등록해 시작하세요."
+                  />
+                  <Empty
+                    title="등록된 클러스터가 없습니다."
+                    description="클러스터를 등록하면 관측 범위를 선택하고 분석을 요청할 수 있습니다."
+                    action={
+                      <Link className="button primary" to="/settings/data">
+                        클러스터 등록하기
+                      </Link>
+                    }
+                  />
+                </div>
+              ) : (
+                <Outlet />
+              )}
+            </QueryState>
+          )}
           {app.mode === 'developer' && <ApiInspector />}
         </main>
         <footer className="app-footer">

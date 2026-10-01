@@ -14,6 +14,7 @@ import { ReportForm, Reports } from './pages/Reports';
 import { ResultPage } from './pages/Results';
 import { Schedules } from './pages/Schedules';
 import { Settings } from './pages/Settings';
+import { OperatorGuide } from './pages/OperatorGuide';
 import { Backend } from './pages/Backend';
 import { OperationsHome, OperationsCases, OperationsReports } from './pages/Operations';
 import { DeveloperHome } from './pages/Developer';
@@ -80,6 +81,7 @@ root.render(
                 <Route path="analyses/new" element={<Navigate to="/cases" replace />} />
                 <Route path="analyses/:id" element={<ResultPage kind="analysis" />} />
                 <Route path="incidents/:id" element={<ResultPage kind="incident" />} />
+                <Route path="operator-guide" element={<OperatorGuide />} />
                 <Route path="reports" element={<ReportsView />} />
                 <Route path="reports/new" element={<ReportForm />} />
                 <Route path="reports/:id" element={<ResultPage kind="report" />} />

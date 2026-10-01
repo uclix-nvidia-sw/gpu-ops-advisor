@@ -66,7 +66,7 @@ RCA/보고서 모델 지정 후 새로 접수된 작업은 JC가 고정한 모�
 
 ## 보고서/일정
 
-보고서 입력은 scope/time_range/timezone/topic_ids(O01~O11)/group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id다. O07 자원 이름·단위는 저장된 resource_catalog와 대조한다. O10 조치 전후 계산/단순 비교 판정은 Report Agent 입력으로 전달한다.
+보고서 입력은 scope/time_range/timezone/topic_ids(O01~O11)/group_by와 선택 comparison_range/action_record_ids/resource_selectors/parent_job_id다. 새 수동 보고서와 comparison_range는 최소 24시간·24시간 정수 배수로 검증하며, 미달/부분 일은 `REPORT_DAY_RANGE_REQUIRED`(422)다. 기존 C07 `max_query_days` 상한(기본 31일)은 유지한다. GUI는 KST 시작일과 포함 종료일을 [시작일 00:00, 종료일 다음 날 00:00)으로 전달한다. 기존 저장 결과·JC 재시도 입력과 RCA 기간은 바꾸지 않는다. 정기 일정은 기존 현지 달력 일/주/월 및 DST 규칙을 유지한다. O07 자원 이름·단위는 저장된 resource_catalog와 대조한다. O10 조치 전후 계산/단순 비교 판정은 Report Agent 입력으로 전달한다.
 
 O08을 포함하고 group_by가 namespace 또는 cluster+namespace이면 즉시·정기 envelope는 `DSX_NAMESPACE_REPORT_PROFILE_REVISION`(기본 report-namespace-v1)을 사용한다. 그 외는 기존 DSX_EXECUTION_PROFILE_REVISION을 쓴다. JC 프로필이 criteria 1.2와 report 전용 제한을 소유한다. API 입력에 사용자 임의 criteria 필드를 추가하지 않는다. 원본 envelope에 프로필을 고정하므로 재전송·기존 job은 변경되지 않는다.
 
