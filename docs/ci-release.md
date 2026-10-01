@@ -32,6 +32,8 @@ BuildKit의 GitHub Actions 캐시는 빌드 가속용이다. `cache-to`의 `igno
 - Helm: strict lint, 실제 manifest 계약 검사, 기본/외부 DB·PVC·Ingress·Secret·digest 변형, 패키지 재렌더링, 릴리스 metadata 테스트.
 - Actions: actionlint 1.7.11. 문서: 저장소 내부 링크·파일명 대소문자 검사.
 
+Python 검사 job은 Worker 패키지 설치와 Go 바이너리 빌드·공식 MCP 다운로드/체크섬 검증을 같은 runner에서 병렬 준비합니다. 두 준비 작업의 종료 상태를 각각 확인하며 어느 쪽이든 실패하면 lint·테스트로 진행하지 않습니다. 실제 테스트 실행 순서와 이미지 발행 조건은 유지합니다.
+
 런북 263개 일괄 등록 E2E는 해당 테스트의 격리 DB에서만 요청 한도를 1,000회/분으로 올리고 종료 시 원래 설정을 복원합니다. 전체 등록·조회/hash·재실행 중복 방지·RCA 소비 검증은 유지합니다. 실제 Backend의 429와 `Retry-After: 60`은 낮은 테스트 한도로 즉시 확인하고, CLI의 대기·동일 요청 재시도는 기존 단위 테스트에서 실제 대기 없이 검사합니다. 운영 기본 한도와 CLI 재시도 동작은 변경하지 않습니다.
 
 Agent E2E는 `AGENT_E2E_DATABASE_URL`을 주면 외부 테스트 DB에 임시 schema를 생성하고 종료 시 삭제합니다. 해당 사용자는 schema 생성 권한이 필요합니다. Windows 로컬에서는 변수를 생략하면 기존 native PostgreSQL을 띄우는 방식을 유지합니다. 테스트 경로/바이너리는 [Agent QA](../agents/QA.md)를 참고하세요.
