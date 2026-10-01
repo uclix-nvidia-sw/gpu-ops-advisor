@@ -50,7 +50,7 @@ export function Reports() {
         )}
         <ReportFilters />
         <QueryState query={q} empty={!q.items.length}>
-          <JobRows items={q.items} />
+          <JobRows items={q.items} preferResult />
         </QueryState>
         <More query={q} />
       </Panel>

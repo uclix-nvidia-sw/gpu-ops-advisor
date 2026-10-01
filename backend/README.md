@@ -56,3 +56,7 @@ go build -o bin/dsx-backend.exe ./cmd/server
 테스트는 실제 PostgreSQL의 고유 e2e schema에서 실행하고 해당 schema만 정리합니다. 기존 Backend 계약 검사는 HTTP fixture, `TestRealJobController`는 실제 JC와 Backend를 HTTP로 연결해 검사합니다. Agent만 테스트 프로토콜 드라이버이며 LLM은 호출하지 않습니다. Go 포맷 후 CRLF를 복구합니다.
 
 [API](API.md) · [검증 기록](QA.md)
+
+## 개발자 웹 추적
+
+작업별 읽기 API로 사건 고정 증거 → 전달 기록 → 작업 입력, 시도별 근거와 저장 조회 인자를 제공한다. 기록 조회는 [웹 추적 API](API.md#저장-기록-웹-추적--2026-10-01)를 따른다. 새 DB migration이나 Worker 실행 변경은 없으며 실제 실행 시각과 미기록 오류 원인을 만들어내지 않는다.

@@ -19,8 +19,8 @@ export function DeveloperHome() {
       <header className="dev-page-head">
         <div>
           <span className="dev-kicker">SYSTEM / DATA FLOW</span>
-          <h1 tabIndex={-1}>처리 흐름과 검증 지점</h1>
-          <p>단계를 선택해 확인할 데이터와 판단 기준을 읽고, 실제 작업으로 이동하세요.</p>
+          <h1 tabIndex={-1}>디버깅할 작업 선택</h1>
+          <p>작업 하나를 선택하면 입력·실행·근거·결과와 DB 연결 정보를 한곳에서 확인합니다.</p>
         </div>
         <Link className="button" to="/settings/backend">
           Backend 응답·서비스 상태
@@ -36,7 +36,10 @@ export function DeveloperHome() {
           <span>즉시 요청 / 정기 발생 → JC → Ops → 공개 결과</span>
         </button>
       </div>
-      <WorkflowGuide key={kind} kind={kind} />
+      <details className="panel live-padding">
+        <summary>선택한 Agent의 처리 흐름·검증 안내</summary>
+        <WorkflowGuide key={kind} kind={kind} />
+      </details>
       <section className="panel">
         <div className="panel-head">
           <h2>실제 {kind === 'rca' ? 'RCA' : '보고서'} 작업 선택</h2>

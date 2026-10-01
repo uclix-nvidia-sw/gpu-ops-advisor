@@ -1,3 +1,12 @@
+# 2026-10-01 저장 기록 웹 추적 API
+
+- **통과:** Backend `go vet ./...`, `go test -race ./...`, `go build ./...`. 진단 응답의 중첩 헤더·비밀·claim token·object_key 제거와 조회 인자 보존을 검사했다.
+- **통과:** 새 localhost PostgreSQL data directory의 격리 schema에서 `go test -tags=e2e ./tests -v -count=1 -timeout=5m`. 기존 Backend/실제 JC/부트스트랩과 새 `TestStoredWebTrace`를 검사했다. 고정 사건 revision(현재 99/작업 2), outbox/알람 연결, 미공개 후보 본문 제외, 공개 후보 메타데이터, 과거 시도 근거·페이지 이동, 다른 작업/시도 404, 잘못된 cursor/인자 422, 비밀 제거와 원본 시간 정밀도, 즉시 요청과 정기 회차 revision, 빈 목록을 포함한다.
+- **통과:** 문서 링크·diff 검사. Windows Go embed의 대괄호 경로와 PostgreSQL의 한글 경로 제약 때문에 소스 복사본/별도 ASCII data directory를 사용했다. 테스트 DB는 종료했다.
+- **미수행/미검증:** 운영 DB·배포·실제 Grafana/LLM·Worker 재실행. Frontend 브라우저는 별도의 모의 API 검증이다. DB migration/Worker/API 기존 응답 계약 변경 없음; 읽기 경로를 추가했다.
+
+---
+
 # 2026-09-30 보고서 단위·한계 출력
 
 ## Ops 최종 보고서 HTML — 2026-09-30

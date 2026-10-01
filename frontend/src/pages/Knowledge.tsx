@@ -13,6 +13,7 @@ import {
   type Row,
 } from '../lib/live';
 import { useApp } from '../lib/store';
+import { RunbookContent } from '../components/RunbookContent';
 export function Knowledge() {
   const app = useApp();
   const [state, setState] = useState('draft'),
@@ -84,7 +85,7 @@ export function Knowledge() {
                   </small>
                 </div>
                 <h3>{str(obj(k.content).title, '제목 없음')}</h3>
-                <p>{str(obj(k.content).text)}</p>
+                <p>{str(obj(k.content).description, str(obj(k.content).text))}</p>
                 <small>{str(k.visibility) === 'common' ? '공통 지식' : '범위 지정 지식'}</small>
               </button>
             ))}
@@ -279,11 +280,10 @@ function KnowledgeDialog({
         </form>
       ) : (
         <>
-          <h3>{str(obj(row.content).title)}</h3>
-          <p className="data-text">{str(obj(row.content).text)}</p>
           <small>
             revision {num(row.revision)} · {str(row.knowledge_id)}
           </small>
+          <RunbookContent value={row.content} />
           <details>
             <summary>범위·호환 조건·근거</summary>
             <DataView

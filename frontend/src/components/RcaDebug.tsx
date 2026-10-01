@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { errorText, obj, rows, str, strings, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
@@ -109,6 +109,8 @@ export function IncidentStates({ incident }: { incident: Row }) {
 }
 
 export function IncidentDebug({ incident }: { incident: Row }) {
+  const location = useLocation();
+  const from = location.pathname + location.search;
   const analyses = rows(incident.analyses);
   return (
     <div className="stack">
@@ -144,7 +146,7 @@ export function IncidentDebug({ incident }: { incident: Row }) {
                 {analyses.map((a) => (
                   <tr key={str(a.job_id)}>
                     <td>
-                      <Link className="text-link" to={`/jobs/${str(a.job_id)}`}>
+                      <Link className="text-link" to={`/jobs/${str(a.job_id)}`} state={{ from }}>
                         {str(a.job_id)}
                       </Link>
                     </td>
@@ -152,7 +154,11 @@ export function IncidentDebug({ incident }: { incident: Row }) {
                       <Badge status={str(a.status) || null} />
                     </td>
                     <td>
-                      <Link className="text-link" to={`/analyses/${str(a.job_id)}`}>
+                      <Link
+                        className="text-link"
+                        to={`/analyses/${str(a.job_id)}`}
+                        state={{ from }}
+                      >
                         결과·수집 근거
                       </Link>
                     </td>
@@ -401,7 +407,15 @@ export function RcaEvidence({
   );
 }
 
-export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: string) => void }) {
+export function RcaResult({
+  job,
+  onEvidence,
+  showEvidence = true,
+}: {
+  job: Row;
+  onEvidence: (id: string) => void;
+  showEvidence?: boolean;
+}) {
   const result = obj(job.result),
     analysis = obj(obj(result.quality).analysis),
     synthesis = obj(analysis.synthesis),
@@ -500,12 +514,14 @@ export function RcaResult({ job, onEvidence }: { job: Row; onEvidence: (id: stri
             )}
             <DataView value={result.limitations} />
           </section>
-          <RcaEvidence
-            key={str(job.result_ref)}
-            result={result}
-            job={job}
-            onEvidence={onEvidence}
-          />
+          {showEvidence && (
+            <RcaEvidence
+              key={str(job.result_ref)}
+              result={result}
+              job={job}
+              onEvidence={onEvidence}
+            />
+          )}
           {(
             [
               ['관측 사실', result.facts],
