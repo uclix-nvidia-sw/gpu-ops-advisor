@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { differences, DifferenceTable } from './TraceView';
 import { RunbookContent } from './RunbookContent';
-import runbook from '../../../rcca-agent/runbooks/xid/RB-XID-99.json';
+// Snapshot of rcca-agent/runbooks/xid/RB-XID-99.json, kept inside the frontend build context.
+import runbook from './fixtures/RB-XID-99.json';
 import { evidenceRelation, jobRelation } from '../lib/debug';
 
 describe('stored web trace', () => {
