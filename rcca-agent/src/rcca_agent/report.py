@@ -1,8 +1,11 @@
 """Always render an RCA report; the model may prioritize supplied statements only."""
 
 import json
+from collections import Counter, defaultdict
 
 from agent_common.llm import explain
+
+from .report_labels import label, query_label
 
 
 TITLES = {
@@ -36,9 +39,31 @@ async def write_report(result, data, clues, evidence, llm):
     for key in ("machine_id", "k8s_node_name", "component"):
         if key in clues:
             target.setdefault(key, clues[key])
+    target_names = {
+        "cluster_id": "클러스터",
+        "node": "노드",
+        "k8s_node_name": "노드",
+        "machine_id": "장비",
+        "gpu_uuid": "GPU",
+        "component": "구성 요소",
+        "namespace": "네임스페이스",
+        "pod": "Pod",
+        "pod_uid": "Pod UID",
+        "alertname": "알람",
+    }
+    target_text = (
+        " · ".join(
+            dict.fromkeys(
+                f"{target_names.get(key, key)} {value}"
+                for key, value in target.items()
+                if value is not None
+            )
+        )
+        or "대상 미확인"
+    )
     add(
         "problem",
-        f"사건 시각: {data['incident_time']}. 입력 대상: {literal(target)}. "
+        f"사건 시각: {data['incident_time']}. 입력 대상: {target_text}. "
         f"알람이 보고한 증상: {clues.get('reason') or '상세 증상 미제공'}. "
         "알람 내용은 조사 단서이며 현재 장애 상태나 근본 원인을 확정하지 않습니다.",
         incident_refs,
@@ -86,7 +111,11 @@ async def write_report(result, data, clues, evidence, llm):
         add(
             "next",
             "불완전하거나 실패·빈 응답인 조회의 datasource·tenant·대상 조건·시간 범위를 "
-            "확인하고, 원본 데이터 존재 여부와 조회 권한·한도를 점검한 뒤 다시 조사해야 합니다.",
+            "확인하고, 원본 데이터 존재 여부와 조회 권한·한도를 점검한 뒤 다시 조사해야 합니다. "
+            + "대상 조회: "
+            + ", ".join(
+                query_label(q) for q in sorted({e["query_id"] for e in incomplete})
+            ),
             [e["id"] for e in incomplete],
         )
     if "approved_runbook" in result["missing_inputs"]:
@@ -108,7 +137,7 @@ async def write_report(result, data, clues, evidence, llm):
         add(
             "next",
             "로그의 생산자 계약·관측 시각·장비 신원과 원인별 확인 조건을 점검해야 합니다. "
-            f"미충족 항목: {', '.join(result['missing_inputs'])}.",
+            f"미충족 항목: {', '.join(label('reasons', code) for code in result['missing_inputs'])}.",
         )
     if not any(s["section"] == "next" for s in statements):
         add(
@@ -117,7 +146,8 @@ async def write_report(result, data, clues, evidence, llm):
         )
     add(
         "limits",
-        f"분석 결과: {result['result_status']}; 종료 사유: {result['termination_reason']}. "
+        f"분석 결과: {label('result_status', result['result_status'])}; "
+        f"종료 사유: {label('termination_reason', result['termination_reason'])}. "
         "보고서 작성 완료는 원인 확정이나 복구 완료를 의미하지 않습니다.",
     )
     if not queries:
@@ -130,17 +160,56 @@ async def write_report(result, data, clues, evidence, llm):
             "limits",
             "Fleet 상태는 Loki 로그 기록 시각의 보고 내용입니다. 장비 발생 시각·현재 상태를 검증한 것은 아니며 Runbook의 검증된 상태 fact로 승격하지 않았습니다.",
         )
-    for e in incomplete:
-        quality = e["quality"]
+    if (
+        result.get("quality", {}).get("analysis", {}).get("status") == "complete"
+        and result["result_status"] == "partial"
+    ):
         add(
             "limits",
-            f"조회 {e['query_id']}: 상태={e['tool_status']}, "
-            f"완전성={quality.get('complete', '미확인')}, "
-            f"사유={quality.get('reason', '미제공')}, "
-            f"오류={quality.get('error_code', '미제공')}.",
-            [e["id"]],
+            "원인 분석 응답 검증은 완료했지만 목적별 필수 근거가 부족하여 결과는 부분 산출입니다.",
         )
-    for limitation in result["limitations"]:
+    grouped = defaultdict(list)
+    for e in queries:
+        grouped[e["query_id"]].append(e)
+    for query_id, chunks in sorted(grouped.items()):
+        statuses = Counter(e["tool_status"] for e in chunks)
+        if len(chunks) == 1:
+            e = chunks[0]
+            summary = label("tool_status", e["tool_status"])
+            count = e["quality"].get("sample_count")
+            if isinstance(count, int) and not isinstance(count, bool):
+                summary += f" · {count}건"
+        else:
+            summary = f"{len(chunks)}개 구간: " + ", ".join(
+                f"{label('tool_status', status)} {count}개"
+                for status, count in sorted(statuses.items())
+            )
+        completeness = Counter(
+            "완전"
+            if e["quality"].get("complete") is True
+            else "불완전"
+            if e["quality"].get("complete") is False
+            else "완전성 미확인"
+            for e in chunks
+        )
+        summary += " · " + ", ".join(
+            f"{state} {count}개 구간" if len(chunks) > 1 else state
+            for state, count in sorted(completeness.items())
+        )
+        details = Counter(
+            (key, e["quality"][key])
+            for e in chunks
+            for key in ("reason", "error_code")
+            if e["quality"].get(key)
+        )
+        for (key, code), count in sorted(details.items()):
+            summary += (
+                f" · {'사유' if key == 'reason' else '오류'}: {label('reasons', code)}"
+            )
+            if len(chunks) > 1:
+                summary += f" ({count}개 구간)"
+        add("limits", f"{query_label(query_id)}: {summary}.", [e["id"] for e in chunks])
+    for limitation in dict.fromkeys(result["limitations"]):
         add("limits", limitation)
 
     # Reuse the existing reference-only editor: prose, eligibility and facts cannot

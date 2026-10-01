@@ -221,3 +221,20 @@ main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 �
 - **Passed — failure/missing states (mocked)**: 빈 보고서 목록, 503와 요청 ID, failed 작업, 미공개 후보 비노출, 설명 생성 실패와 부분 산출을 확인했다. 추가 단위 검사는 0과 null, 분모와 제외 사유, 공개 참조, API 메타데이터의 최대 50건 및 본문·쿼리 값 제외를 검사한다.
 - **Not run / unverified**: 실제 Backend·PostgreSQL·Grafana·LLM·Worker 연결, 실환경 Agent 완료와 보고서 다운로드 내용. 브라우저 응답은 격리된 모의 API이며 운영 데이터는 수정하지 않았다. 서버가 제공하지 않는 실시간 단계 trace와 내부 호출 원문은 구현 범위 밖이다.
 - **Not applicable**: Backend/Agent 로컬 테스트는 해당 코드·계약 변경이 없어 실행하지 않았다. 이 기록은 로컬 검증 결과이며 원격 CI 결과는 PR에서 별도로 확인한다. 배포는 수행하지 않았다.
+
+## 2026-10-01 RCA 한국어·중복 제거·부족 근거 분류
+
+기준 `529df747173e76a908ff2d56b1ac3688c4a3e648`, 브랜치 `fix/rca-report-korean-labels`. 로컬 파일 변경 단계.
+
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **77 tests**, `npm run build`. esbuild subprocess의 샌드박스 EPERM은 권한 있는 검사 재실행으로 해소했다.
+- **통과:** 렌더 fixture로 본문 분석 한계 1회 표시(접힌 원본 제외), 구 결과 한계 보존, 부족 항목 네 분류와 확인 방향, R01 이름·필수 근거, D05 이름, `non_korean_claim`·`invalid_limitations` 한국어 설명을 확인했다. 기존 공개/미공개·실패·빈 응답·partial·0/미확인 검사도 통과했다.
+- **통과:** Python 검사에서 Frontend `rcaLabels.json` 전체와 Worker 사전이 일치함을 확인했다. 표기 재사용만 변경했으며 API·결과 구조와 근거 원본을 보존한다.
+- **미검증:** 실제 브라우저 시각 검사, 운영 배포 후 화면, 실제 LLM/Grafana 신규 결과, 원격 CI. 저장된 본문의 영어 문장은 자동 번역하지 않는다. 운영 저장 결과 읽기 전용 재현은 [Agent QA](../agents/QA.md)에 기록했다.
+
+- **문서 검사:** 전체 `python tools/check_links.py`는 기존 미추적 `_review_current/`·`_codex_dcgm_publish/` 안의 경로 7건으로 실패했다. 두 기존 검토용 폴더만 제외해 같은 `check()`를 실행하면 변경 문서를 포함한 링크 검사는 통과한다. 이 폴더들은 수정하지 않았다.
+
+### PR 제출 전 최신 main 호환 검사 — 2026-10-01
+
+- `origin/main` `212e2bc4d18270fd8b46212eeb67f3db6757aaf6`의 최신 보고서 강조 카드 변경과 충돌 없이 결합했다.
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **82 tests**, `npm run build`. 기존 77건에 최신 main의 ReportHistory 검사 5건이 추가됐다.
+- Python 제품 코드는 최신 main에서 바뀌지 않아 위 Agent QA의 269 passed/17 skipped 검증 범위를 유지한다. PR 대상 밖의 기존 미추적 파일은 포함하지 않는다. 원격 CI·배포는 이 로컬 검사와 별도다.

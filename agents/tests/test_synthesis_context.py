@@ -29,7 +29,7 @@ def payload():
     }
 
 
-def response(ref="log", claim="Reported SXID 11001 needs confirmation."):
+def response(ref="log", claim="보고된 SXID 11001은 추가 확인이 필요합니다."):
     return {
         "hypotheses": [
             {
@@ -126,7 +126,7 @@ def test_input_identifiers_allowed_but_measurements_rejected():
             ids,
         )
 
-    def check(limitation, claim="Reported SXID 11001 needs confirmation."):
+    def check(limitation, claim="보고된 SXID 11001은 추가 확인이 필요합니다."):
         reply = response(claim=claim)
         reply["limitations"] = [limitation]
         return validate_synthesis(reply, ["log"], observations, ids)

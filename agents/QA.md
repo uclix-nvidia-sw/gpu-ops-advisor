@@ -265,3 +265,17 @@ Grafana datasource HTTP 응답과 OpenAI 호환 LLM endpoint만 고정 데이터
 ## 남은 운영 검수
 
 배포 C02~C07의 실제 datasource UID/CPC 필터/metric 의미/원본 주기/조회 한도, Fleet parser 계약, 할당/작업 신원·완전성, 기대 대상 분모를 설정해야 합니다. 설정이 없는 판단은 null/partial/blocked입니다. 실제 도구 호출 모델 호환성, 실제 GPU 부하·공백·장기 이력과 C08 회복 정책은 운영 표본으로 별도 검수해야 합니다.
+
+## 2026-10-01 Korean RCA prose / 한국어 문장·조회 표기 검증
+
+기준 `origin/main` `529df747173e76a908ff2d56b1ac3688c4a3e648`, 브랜치 `fix/rca-report-korean-labels`. 로컬 파일 변경 단계이며 commit·push·PR·배포 없음.
+
+- **통과:** Python 3.12.14 격리 환경에서 `python -m pytest -c agents/pytest.ini agents/tests -q -rs --ignore=agents/tests/test_gpu_node_scope.py -p no:cacheprovider --basetemp=.local/rca-korean/pytest-final`: **269 passed, 17 skipped**. 두 Worker의 추적 대상 단위·모의 lifecycle 검사와 새 한국어/숫자 단어/일반 단어 오탐/입력 식별자/정밀도 조건/단정/전체 D-query/사전 일치 회귀를 포함한다. `synthesize()`에 실제 전달되는 query_quality도 모의 모델로 검사했다.
+- **실패(기존 사용자 파일):** 전체 `agents/tests` 실행에서 작업 시작 전부터 존재한 미추적 `test_gpu_node_scope.py`의 2건이 실패한다. `gpu-node-rca-v1` 및 `gpu_node`를 기대하지만 현재 기준 코드 값은 `gpu-alert-v1`·`gpu_access`다. 해당 파일과 정책·procedure를 수정하지 않았다. 전체 검사를 통과로 표시하지 않는다.
+- **통과:** CI 범위 `ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci` (ruff 0.14.0). **실패:** 같은 범위 `ruff format --check`는 기존 미추적 `test_gpu_node_scope.py` 1파일 때문에 실패. 이 파일을 제외한 66파일은 통과했다.
+- **통과:** 운영 작업 `ed730b4d`, `1e48ed0f`, `e24b3f20`의 해당 발행 시도 evidence와 result body를 `default_transaction_read_only=on`, `SHOW transaction_read_only=on`으로 읽고 로컬 보고서를 재생성했다. D02/D05/D06/D08/D09를 모두 표시하고 D06은 5개 구간으로 묶으며 표본 합산이 없다. 구 작업의 D05/D09는 정밀도 partial, 새 두 작업은 ok, D08은 모두 empty다. DB 변경·모델 재호출은 없다.
+- **통과:** 저장된 문장 재검증에서 `1e48ed0f`의 영어 후보 2개는 `non_korean_claim`, 영어 한계 6개는 `invalid_limitations`; `e24b3f20` 후보 2개는 숫자 단어 제한, 영어 한계 4개는 `invalid_limitations`로 거부했다. 원래 모델 응답/view는 저장되지 않아 저장 문자열 재현 범위이며 당시 모델 품질 전체 검증이 아니다. 운영 원문 비교표는 Git 제외 로컬 `.local/rca-korean/production-comparison.md`에만 보존한다.
+- **미수행/미검증:** Go 실행 파일이 없으며 공식 MCP·격리 PostgreSQL/JC·Helm 준비가 없어 17개 실프로세스 E2E가 건너뛰어졌다. 실제 LLM/Grafana 새 실행, 운영 배포 후 표시·언어 품질, 원격 CI는 미검증이다. Docker는 사용하지 않았다. mock lifecycle와 읽기 전용 저장 결과 재현을 실환경 새 실행으로 해석하지 않는다.
+- **해당 없음:** Go 코드·DB migration·Fleet 시각 계약·충분성 gate·R01/R02 `REQUIRED`·결과 스키마 변경. 기존 결과는 재작성하지 않는다.
+
+- **문서 검사:** 전체 `python tools/check_links.py`는 기존 미추적 `_review_current/`·`_codex_dcgm_publish/` 안의 경로 7건으로 실패했다. 두 기존 검토용 폴더만 제외해 같은 `check()`를 실행하면 변경 문서를 포함한 링크 검사는 통과한다. 이 폴더들은 수정하지 않았다.

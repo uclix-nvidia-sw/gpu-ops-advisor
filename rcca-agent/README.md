@@ -68,3 +68,16 @@ Runbook 조회·검색·조건 검사는 코드로 수행합니다. 전용 Runbo
 저장소 루트에서 실행합니다. `incident_id`가 없는 임의 증상 요청은 받지 않습니다.
 
 Incident가 생성한 `incident_snapshot.alert`를 원본 알람 증거로 읽습니다. 기존 `incident_snapshot.evidence` 형식도 지원합니다. 원본 snapshot과 hash는 변경하지 않으며, 알람의 필드를 `verified_facts`로 승격하지 않습니다. `alert` 형식은 등록된 purpose에 따라 조사 절차를 선택하고 실제 수집 증거로 판단합니다. 두 증거 필드가 모두 없거나 `alert`가 객체가 아니면 Worker 입력 검증 단계에서 거부합니다.
+
+## Korean synthesis and report labels / 한국어 분석·보고서 표기 — 2026-10-01
+
+기준: `origin/main` `529df747173e76a908ff2d56b1ac3688c4a3e648`, 브랜치 `fix/rca-report-korean-labels`.
+
+- Synthesis `claim`·`limitations`는 한국어 문장이어야 한다. 입력 식별자와 인용한 관측의 typed XID/SXID 코드를 제거한 뒤 typed node/Pod/namespace 필드의 숫자 없는 이름도 식별자로 제외한 뒤 한글 완성형 음절이 하나 이상이고, 영문 알파벳 수가 한글 음절 수 이하여야 한다(두 문자군 중 영문 비중 최대 50%). GPU·PCIe 같은 짧은 기술 용어를 허용하면서 영어 문장에 한글만 덧붙이는 우회를 막기 위한 보수적인 기준이며 언어 의미 판별기는 아니다. 실패는 `non_korean_claim`/`invalid_limitations`로 기록한다.
+- 수치는 코드가 관리한다. 영어 수사·수량 단어, 한국어 독립 수사, 수관형사+단위와 한자어 수사+퍼센트를 차단한다. Unicode 단어 경계로 일반 단어 안의 수사 접두사를 제외하며 단위 뒤 조사만 제한적으로 허용한다. `한계·열화·일부·이상·삼성·이번·영향·일반·두께·세부·네트워크` 회귀 검사를 둔다. 모든 한국어 수량 표현을 해석하는 형태소 분석기는 아니다.
+- 프롬프트는 가설형 문장과 표본 기반 유휴·고장·정상 추론 및 synthetic/test 단어 기반 원인 해석 금지를 명시한다. 검증기는 명시적인 `원인이다/원인입니다`, `고장이다/고장입니다`, 원인 확정, `physically` 등 좁은 표현만 `unsupported_assertion`으로 거부한다. 모든 `…이다` 종결을 금지하면 관측·불확실성 설명도 오탐하므로 넓은 의미 검증은 하지 않는다. 후보는 계속 미확정이다.
+- 시각 정밀도 손실 문구는 모델에 전달한 `query_quality[].quality.reason=time_precision_reduced`가 있을 때만 허용한다. 조건 없는 한계 문구는 `invalid_limitations`로 응답 전체를 거부하며 조용히 삭제하지 않는다. Fleet `fact_eligible=false`·Runbook 계획의 한계도 입력에 존재할 때만 언급하도록 프롬프트를 제한한다.
+- `report_labels.py`와 Frontend `rcaLabels.json`의 조회·목적·필수 근거·사유·상태·부족 항목 분류를 동일하게 유지하며 Python 테스트로 비교한다. 모든 실행 D-query를 ID별로 표시하고 여러 구간은 상태/완전성별 구간 수로 묶는다. 표본은 단일 구간만 표시하고 합산하지 않는다. 정상은 수집 상태이며 장비 정상이나 전체 기간의 연속성을 뜻하지 않는다.
+- 보고서 대상·종료 사유·미충족 항목을 한국어로 표시하며 원본 코드는 병기한다. 원인 분석 응답 검증 완료와 결과 부분 산출이 함께 나오는 이유를 설명한다. 부족 항목의 네 분류는 확인 방향이며 해당 작업의 exporter 부재나 Fleet 설정값을 추정하는 근거가 아니다.
+
+Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변경하지 않았다. 기존 결과는 재작성하지 않으므로 저장된 영어 모델 문장이 소급 번역되지는 않는다. 검증 범위는 [Agent QA](../agents/QA.md)를 따른다.
