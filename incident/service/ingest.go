@@ -117,6 +117,18 @@ func (s *Server) parse(raw any, now time.Time) (alert, string) {
 			a.target[key] = value
 		}
 	}
+	// Display metadata is excluded from both lifecycle and evidence identity.
+	title := a.labels["reason"]
+	if title == "" {
+		title = a.annotations["summary"]
+	}
+	if title == "" {
+		title = a.labels["alertname"]
+	}
+	a.target["title"] = title
+	if strings.Contains(strings.ToLower(title), "synthetic") || a.labels["test_id"] != "" {
+		a.target["test_alarm"] = true
+	}
 	for i := range s.Config.Policies {
 		if s.Config.Policies[i].AlertName == a.labels["alertname"] {
 			a.policy = &s.Config.Policies[i]
@@ -271,7 +283,7 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 	// Projection-only upgrades must not enqueue another RCA for a legacy lifecycle.
 	identityTarget := Object{}
 	for key, value := range a.target {
-		if !Has([]string{"machine_id", "component", "k8s_node_name"}, key) {
+		if !Has([]string{"machine_id", "component", "k8s_node_name", "title", "test_alarm"}, key) {
 			identityTarget[key] = value
 		}
 	}

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
+import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
 import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
 import { groupLabel, metricValue, metricUnit, namespaceRows, reportReason } from '../lib/report';
 export function QueryState({
@@ -201,7 +202,12 @@ const incidentFields: Record<string, [string, string]> = {
 export function AlarmIdentity({ record }: { record: Row }) {
   const target = obj(record.target);
   const name =
-    str(target.alertname) || str(record.title) || str(record.symptom) || '알람 이름 미확인';
+    str(target.reason) ||
+    str(target.title) ||
+    str(record.title) ||
+    str(record.symptom) ||
+    str(target.alertname) ||
+    '알람 이름 미확인';
   const targets = [
     ['cluster_id', 'CPC'],
     ['namespace', 'Namespace'],
@@ -218,6 +224,12 @@ export function AlarmIdentity({ record }: { record: Row }) {
   return (
     <span className="alarm-identity">
       <strong>{name}</strong>
+      {(target.test_alarm === true || /synthetic/i.test(name) || !!target.test_id) && (
+        <Badge status={null} label="테스트 알람" />
+      )}
+      {str(target.alertname) && target.alertname !== name && (
+        <span className="cell-sub">{str(target.alertname)}</span>
+      )}
       <span className="cell-sub">{targets.join(' · ') || '발생 대상 미확인'}</span>
       {str(record.symptom) && record.symptom !== name && (
         <span className="cell-sub">{str(record.symptom)}</span>
@@ -248,12 +260,107 @@ export function DataView({
   field = '',
   explain = false,
   fieldNames = {},
+  depth = 0,
+  evidenceLabels = {},
 }: {
   value: unknown;
   field?: string;
   explain?: boolean;
   fieldNames?: Record<string, string>;
+  depth?: number;
+  evidenceLabels?: Record<string, string>;
 }) {
+  if (
+    ['evidence_refs', 'supporting_refs', 'contradicting_refs'].includes(field) &&
+    Array.isArray(value)
+  )
+    return value.length ? (
+      <ul>
+        {strings(value).map((id) => (
+          <li key={id} title={id}>
+            {evidenceLabels[id] || '저장 근거 · 조회·판단 기록에서 상세 확인'}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <span className="muted">기록 없음</span>
+    );
+  if (field === 'runbook_revisions' && Array.isArray(value))
+    return (
+      <ul>
+        {rows(value).map((book, index) => (
+          <li key={index} title={str(book.id)}>
+            {str(book.knowledge_key, 'Runbook 이름 미확인')} (rev{' '}
+            {String(book.revision ?? '미확인')}) · {str(book.title, '제목 미확인')}
+          </li>
+        ))}
+      </ul>
+    );
+  if (field === 'model' && typeof value === 'object')
+    return (
+      <div>
+        {str(obj(value).name) || str(obj(value).model_name) || '모델 이름 미확인'} · revision{' '}
+        {String(obj(value).revision ?? '미확인')}
+        <RawJson value={value} />
+      </div>
+    );
+  if (field === 'knowledge' && Array.isArray(value))
+    return (
+      <ul>
+        {rows(value).map((entry, index) => (
+          <li key={index}>
+            {str(entry.title) || str(entry.knowledge_key) || '지식 이름 미확인'} · revision{' '}
+            {String(entry.revision ?? '미확인')}
+            <RawJson value={entry} />
+          </li>
+        ))}
+      </ul>
+    );
+  if (field === 'snapshot')
+    return (
+      <ObservationSnapshot value={value} fallback={<DataView value={value} depth={depth} />} />
+    );
+  if (field === 'sub_agent_id' && typeof value === 'string') {
+    const match = /^observation-(\d+)-(\d+)$/.exec(value);
+    if (match)
+      return (
+        <span title={value}>
+          {Number(match[1]) + 1}차 수집 · 작업 {Number(match[2]) + 1}
+        </span>
+      );
+  }
+  if (field === 'loki_timestamp_ns' && typeof value === 'string' && /^\d{16,20}$/.test(value))
+    return (
+      <span title={value}>
+        {new Date(Number(BigInt(value) / 1000000n)).toLocaleString('ko-KR', {
+          timeZone: 'Asia/Seoul',
+        })}{' '}
+        KST
+      </span>
+    );
+  if (field === 'source_position' && typeof obj(value).line === 'number')
+    return <span>{Number(obj(value).line) + 1}번째 줄</span>;
+  if (field === 'suggested_actions' && typeof value === 'string') {
+    try {
+      const actions = obj(JSON.parse(value));
+      return (
+        <div>
+          원천 제안 조치:{' '}
+          {strings(actions.repair_actions)
+            .map((action) =>
+              action === 'REBOOT_SYSTEM'
+                ? '시스템 재부팅(REBOOT_SYSTEM)'
+                : '등록되지 않은 원천 조치',
+            )
+            .join(' · ')}
+          <p>실행 조건 미검증 · 미수행 · 담당자 확인 필요</p>
+          <RawJson value={actions} />
+        </div>
+      );
+    } catch {
+      return <span>원천 제안 형식 미확인</span>;
+    }
+  }
   if (field === 'namespaces' && value === null) return <span>전체 Namespace</span>;
   if (value === null || value === undefined) return <span className="muted">미확인</span>;
   if (typeof value === 'boolean') return <span>{value ? '예 (true)' : '아니요 (false)'}</span>;
@@ -273,7 +380,13 @@ export function DataView({
       <div className="stack">
         {value.map((v, i) => (
           <div className="data-item" key={i}>
-            <DataView value={v} explain={explain} fieldNames={fieldNames} />
+            <DataView
+              value={v}
+              explain={explain}
+              fieldNames={fieldNames}
+              depth={depth + 1}
+              evidenceLabels={evidenceLabels}
+            />
           </div>
         ))}
       </div>
@@ -281,9 +394,19 @@ export function DataView({
       <span className="muted">기록 없음</span>
     );
   return (
-    <dl className="live-details">
+    <dl className={`live-details ${depth >= 2 ? 'data-stacked' : ''}`} data-depth={depth}>
       {Object.entries(obj(value))
-        .filter(([k]) => k !== 'request_id')
+        .filter(
+          ([k]) =>
+            ![
+              'request_id',
+              'checksum',
+              '__tenant_id__',
+              'content_hash',
+              'knowledge_id',
+              'model_id',
+            ].includes(k),
+        )
         .map(([k, v]) => (
           <div key={k}>
             <dt>
@@ -308,7 +431,14 @@ export function DataView({
               )}
             </dt>
             <dd>
-              <DataView value={v} field={k} explain={explain} fieldNames={fieldNames} />
+              <DataView
+                value={v}
+                field={k}
+                explain={explain}
+                fieldNames={fieldNames}
+                depth={depth + 1}
+                evidenceLabels={evidenceLabels}
+              />
             </dd>
           </div>
         ))}
@@ -321,6 +451,7 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
     <Modal title="관측 근거 상세" wide onClose={onClose}>
       <QueryState query={q}>
         <DataView value={q.data} />
+        <RawJson value={q.data} />
       </QueryState>
     </Modal>
   );

@@ -1,6 +1,9 @@
 """Bounded evidence interpretation; model output never establishes verified facts."""
 
 import re
+import time
+import copy
+import json
 
 from agent_common.observation import series, usable_observation
 
@@ -69,6 +72,16 @@ def synthesis_input(data, evidence, health, relations, applicable, planned=()):
 class SynthesisValidationError(ValueError):
     """Fixed diagnostic codes only; never persist model text or raw exceptions."""
 
+    def __init__(self, code, *, rule="shape", index=None, tokens=()):
+        super().__init__(code)
+        self.diagnostic = {"code": code, "rule": rule, "tokens": list(tokens)[:10]}
+        if index is not None:
+            self.diagnostic[
+                "limitation_index"
+                if code == "invalid_limitations"
+                else "hypothesis_index"
+            ] = index
+
 
 # Measurements, timestamps and number-with-unit values never become identifiers.
 TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
@@ -83,7 +96,7 @@ NUMBER_WORD = re.compile(
     r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|"
     r"nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|"
     r"hundred|thousand|million|billion|percent|half|dozen|single|double|twice)(?![\w])"
-    r"|(?<![\w])(?:하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열|스물)(?![\w])"
+    r"|(?<![\w])(?:하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열|스물)(?:의|는|가|를|만|도)?(?![\w])"
     r"|(?<![\w])(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|스물)"
     r"\s*(?:대|개|번|건|명|장|시간|분|초)(?:은|는|이|가|을|를|의|에|만|도|씩)?(?![\w])"
     r"|(?<![\w])(?:영|일|이|삼|사|오|육|칠|팔|구|십|백|천)+"
@@ -113,6 +126,8 @@ def identifier_tokens(view):
             return
         if isinstance(value, dict):
             for k, v in value.items():
+                if re.fullmatch(r"[a-z][a-z0-9]*_[a-z0-9_]+", k):
+                    found.add(k)
                 walk(v, k)
         elif isinstance(value, list):
             for v in value:
@@ -124,7 +139,8 @@ def identifier_tokens(view):
                 token
                 for token in (t.strip(".,;()[]{}\"'") for t in value.split())
                 if (
-                    re.search(r"\d", token)
+                    re.fullmatch(r"[a-z][a-z0-9]*_[a-z0-9_]+", token)
+                    or re.search(r"\d", token)
                     or key
                     in {
                         "node",
@@ -218,13 +234,29 @@ def validate_synthesis(
             and all(isinstance(s, str) and s.strip() and len(s) <= 2000 for s in items)
         )
 
-    if not strings(response["limitations"]) or any(
-        numeric_prose(s, refs)
-        or not korean(s, refs)
-        or (not precision_reduced and PRECISION_LOSS.search(s))
-        for s in response["limitations"]
+    if (
+        not isinstance(response["limitations"], list)
+        or len(response["limitations"]) > 32
     ):
         raise SynthesisValidationError("invalid_limitations")
+    for i, text in enumerate(response["limitations"]):
+        rule = (
+            "shape"
+            if not strings([text])
+            else "numeric"
+            if numeric_prose(text, refs)
+            else "non_korean"
+            if not korean(text, refs)
+            else "precision_loss"
+            if not precision_reduced and PRECISION_LOSS.search(text)
+            else None
+        )
+        if rule:
+            # Do not retain arbitrary model tokens (which may contain secrets).
+            # Fixed offending-token classes provide bounded repair feedback.
+            raise SynthesisValidationError(
+                "invalid_limitations", rule=rule, index=i, tokens=[rule]
+            )
     candidates = []
     for i, h in enumerate(hypotheses):
         if not isinstance(h, dict) or set(h) != {
@@ -233,18 +265,18 @@ def validate_synthesis(
             "contradicting_refs",
             "missing_inputs",
         }:
-            raise SynthesisValidationError("invalid_hypothesis_shape")
+            raise SynthesisValidationError("invalid_hypothesis_shape", index=i)
         if (
             not isinstance(h["claim"], str)
             or not h["claim"].strip()
             or len(h["claim"]) > 2000
         ):
-            raise SynthesisValidationError("invalid_claim")
+            raise SynthesisValidationError("invalid_claim", index=i)
         if not all(
             strings(h[k])
             for k in ("supporting_refs", "contradicting_refs", "missing_inputs")
         ):
-            raise SynthesisValidationError("invalid_hypothesis_references")
+            raise SynthesisValidationError("invalid_hypothesis_references", index=i)
         supporting, contradicting = (
             set(h["supporting_refs"]),
             set(h["contradicting_refs"]),
@@ -254,13 +286,22 @@ def validate_synthesis(
             or not (supporting | contradicting) <= set(refs)
             or supporting & contradicting
         ):
-            raise SynthesisValidationError("invalid_evidence_references")
+            raise SynthesisValidationError("invalid_evidence_references", index=i)
         if numeric_prose(h["claim"], supporting):
-            raise SynthesisValidationError("unregistered_numeric_claim")
+            raise SynthesisValidationError(
+                "unregistered_numeric_claim",
+                rule="numeric",
+                index=i,
+                tokens=["numeric"],
+            )
         if not korean(h["claim"], supporting):
-            raise SynthesisValidationError("non_korean_claim")
+            raise SynthesisValidationError(
+                "non_korean_claim", rule="non_korean", index=i, tokens=["non_korean"]
+            )
         if ASSERTION.search(prose(h["claim"], supporting)):
-            raise SynthesisValidationError("unsupported_assertion")
+            raise SynthesisValidationError(
+                "unsupported_assertion", rule="assertion", index=i, tokens=["assertion"]
+            )
         candidates.append(
             dict(
                 id=f"analysis-{i + 1}",
@@ -302,44 +343,109 @@ async def synthesize(llm, payload, diagnostics=None):
     usage = getattr(llm, "usage", {})
     before = {k: usage.get(k, 0) for k in ("request_attempts", "calls")}
     # RemoteUncertain and cancellation propagate to Worker fencing.
+    fallback = None
+    feedback = []
+    diagnostics.update(
+        repair_attempts=0, repair_status="not_needed", validation_failures=[]
+    )
     try:
-        response = await llm.complete(SYNTHESIS, view, stage="synthesis")
-        if response is None:
-            code = getattr(llm, "last_failure", None)
-            diagnostics["error_code"] = (
-                code
-                if code
-                in {
-                    "llm_token_budget_exhausted",
-                    "llm_deadline_exhausted",
-                    "llm_http_error",
-                    "llm_output_truncated",
-                    "llm_invalid_output",
-                    "model_not_configured",
-                }
-                else "llm_no_response"
+        for attempt in range(2):
+            request = dict(view)
+            if attempt:
+                request["validation_feedback"] = feedback
+                # Match the transport's conservative UTF-8 accounting; reserve output.
+                bound = (
+                    len(
+                        (
+                            SYNTHESIS + json.dumps(request, ensure_ascii=False) + "[]"
+                        ).encode()
+                    )
+                    + 256
+                    + 8192
+                )
+                if (
+                    getattr(llm, "remaining", 32768) < bound
+                    or getattr(llm, "deadline", float("inf")) <= time.monotonic()
+                ):
+                    diagnostics["repair_status"] = "budget_or_deadline_exhausted"
+                    break
+                diagnostics.update(repair_attempts=1, repair_status="failed")
+            response = await llm.complete(SYNTHESIS, request, stage="synthesis")
+            if response is None:
+                code = getattr(llm, "last_failure", None)
+                diagnostics["error_code"] = (
+                    code
+                    if code
+                    in {
+                        "llm_token_budget_exhausted",
+                        "llm_deadline_exhausted",
+                        "llm_http_error",
+                        "llm_output_truncated",
+                        "llm_invalid_output",
+                        "model_not_configured",
+                    }
+                    else "llm_no_response"
+                )
+                break
+            args = (
+                view["observation_refs"],
+                view["device_observations"],
+                identifier_tokens(view),
+                view.get("query_quality", []),
             )
-            return "failed", [], []
-        candidates = validate_synthesis(
-            response,
-            view["observation_refs"],
-            view["device_observations"],
-            identifier_tokens(view),
-            view.get("query_quality", []),
-        )
-    except SynthesisValidationError as exc:
-        diagnostics["error_code"] = str(exc)
-        return "failed", [], []
+            filtered = copy.deepcopy(response)
+            rejected = []
+            if (
+                isinstance(filtered, dict)
+                and isinstance(filtered.get("limitations"), list)
+                and len(filtered["limitations"]) <= 32
+            ):
+                accepted = []
+                for index, limitation in enumerate(filtered["limitations"]):
+                    try:
+                        validate_synthesis(
+                            {"hypotheses": [], "limitations": [limitation]}, *args
+                        )
+                        accepted.append(limitation)
+                    except SynthesisValidationError as exc:
+                        rejected.append({**exc.diagnostic, "limitation_index": index})
+                filtered["limitations"] = accepted
+            diagnostics["rejected_limitations"] = len(rejected)
+            feedback = rejected
+            try:
+                candidates = validate_synthesis(filtered, *args)
+                fallback = (candidates, filtered["limitations"], rejected)
+                if not rejected:
+                    if attempt:
+                        diagnostics["repair_status"] = "repaired"
+                    break
+                diagnostics["error_code"] = "invalid_limitations"
+            except SynthesisValidationError as exc:
+                diagnostics["error_code"] = str(exc)
+                feedback += [exc.diagnostic]
+            diagnostics["validation_failures"].append(
+                {"attempt": attempt + 1, "violations": feedback}
+            )
     except (ValueError, TypeError, KeyError):
         diagnostics["error_code"] = "invalid_model_response"
-        return "failed", [], []
     finally:
         usage = getattr(llm, "usage", {})
         diagnostics["request_attempts"] = (
             usage.get("request_attempts", 0) - before["request_attempts"]
         )
         diagnostics["response_calls"] = usage.get("calls", 0) - before["calls"]
-    limitations = list(response["limitations"])
+    if fallback is None:
+        return "failed", [], []
+    candidates, limitations, rejected = fallback
+    limitations = list(limitations)
+    diagnostics["rejected_limitations"] = len(rejected)
+    if diagnostics["repair_status"] == "failed":
+        diagnostics["repair_error_code"] = diagnostics["error_code"]
+    diagnostics["error_code"] = None
+    if rejected:
+        limitations.append(
+            "모델의 일부 한계 문장이 검증을 통과하지 못해 제외했습니다. 검증된 근거와 아래 미충족 조건을 함께 확인해야 합니다."
+        )
     if not view["context_selection"]["complete"]:
         limitations.append(
             "모델 입력 한도로 일부 관측·표본을 생략했습니다. 선택된 표본만으로 전체 기간의 연속성이나 오류 부재를 판단할 수 없습니다."

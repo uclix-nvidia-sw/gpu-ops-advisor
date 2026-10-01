@@ -39,6 +39,12 @@ async def write_report(result, data, clues, evidence, llm):
     for key in ("machine_id", "k8s_node_name", "component"):
         if key in clues:
             target.setdefault(key, clues[key])
+    display_title = (
+        target.pop("title", None) or target.pop("reason", None) or clues.get("reason")
+    )
+    target.pop("test_alarm", None)
+    if display_title:
+        target["alertname"] = display_title
     target_names = {
         "cluster_id": "클러스터",
         "node": "노드",
@@ -68,6 +74,15 @@ async def write_report(result, data, clues, evidence, llm):
         "알람 내용은 조사 단서이며 현재 장애 상태나 근본 원인을 확정하지 않습니다.",
         incident_refs,
     )
+    reported = result.get("quality", {}).get("analysis", {}).get("reported_errors", [])
+    if reported:
+        add(
+            "problem",
+            "보고된 오류 코드: "
+            + ", ".join(sorted({h["error_code"] for h in reported}))
+            + ". 보고 내용과 장비 발생 시각·현재 상태 검증은 구분합니다. R01 필수 사실과 복구 조치 조건은 별도로 검증해야 합니다.",
+            [r for h in reported for r in h["evidence_refs"]],
+        )
     candidates = result["cause_candidates"]
     if not candidates:
         add(
@@ -97,7 +112,14 @@ async def write_report(result, data, clues, evidence, llm):
     if provider:
         add(
             "action",
-            f"원천 시스템 제안: {literal(provider['value'])}. "
+            "원천 제안 조치: "
+            + ", ".join(
+                {"REBOOT_SYSTEM": "시스템 재부팅(REBOOT_SYSTEM)"}.get(
+                    action, "등록되지 않은 원천 조치"
+                )
+                for action in provider["value"]["repair_actions"]
+            )
+            + ". "
             "실행 적격성 미검증·미수행이며 승인된 실행 권고가 아닙니다.",
             incident_refs,
         )
@@ -208,6 +230,13 @@ async def write_report(result, data, clues, evidence, llm):
             )
             if len(chunks) > 1:
                 summary += f" ({count}개 구간)"
+        if all(
+            e["tool_status"] == "empty" and e["quality"].get("complete") is True
+            for e in chunks
+        ):
+            summary = "조회는 정상 완료됐으나 데이터 0건"
+        if all(e["quality"].get("derived_from") for e in chunks):
+            summary += " · 원본 로그에서 파생한 보기(추가 관측 아님)"
         add("limits", f"{query_label(query_id)}: {summary}.", [e["id"] for e in chunks])
     for limitation in dict.fromkeys(result["limitations"]):
         add("limits", limitation)

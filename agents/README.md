@@ -134,7 +134,9 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 
 코드가 모든 R/O ID를 받아 주제별 결과와 부족 입력을 반환하지만, 실제 생산자 의미를 추정하지 않습니다. 다음 입력이 없으면 해당 판단은 `partial/blocked` 또는 null입니다.
 
-- `D08`의 `gpu_ops_allocation_info`는 실제로 존재한다고 가정한 metric이 아니라 **배포 시 매핑할 정규화 계약 예시**입니다. `gpu_uuid`/`UUID`, namespace, pod, pod_uid 또는 동시 KSM uid, allocation_mode, allocation_episode_key, MIG instance_id를 검증해야 합니다. episode가 없으면 장시간 저활동 후보를 만들지 않습니다.
+- 기본 `D08`은 `DCGM_FI_DEV_GPU_UTIL`의 Pod 라벨을 사건 구간의 D06 `kube_pod_info`와 연결하는 **관측 관계**입니다(`allocation_semantics=observed_pod_labels`). 값 0도 관측된 연결일 수 있지만 Pod/namespace가 없거나 UID가 중첩되면 관계를 만들지 않습니다. 노드가 있으면 D06/D08을 해당 노드로 제한합니다. 원본 시각과 최대 유지시간의 교집합만 사용합니다.
+- 이 기본 D08은 Ops의 독점/공유 할당량·할당 episode를 증명하지 않습니다. 실제 정규화 할당 producer를 배포한 환경은 D08 metric과 `allocation_semantics`를 함께 재정의하고 `allocation_mode`, `allocation_episode_key`, MIG 신원을 검증해야 합니다. episode가 없으면 장시간 저활동 후보를 만들지 않습니다.
+- 기본 D05는 D09의 파생 보기입니다. 같은 수집 라운드에서 Loki는 한 번 조회하며 원본 근거 ID를 `quality.derived_from`에 보존합니다. 같은 클러스터·시각·로그·해석 계약의 관측은 한 번 세고 근거 참조를 합칩니다. `DCGM_FI_DEV_XID_ERRORS`의 사건 구간 존재와 의미를 확인하지 못해 기본 원천으로 채택하지 않았습니다.
 - O02·O08은 이 정규화 metric이 없어도 기존 DCGM 활용률(D01)과 `kube_pod_info`(D06)의 동시 구간을 연결해 관측 GPU 수, GPU–Pod 연결 관측 시간, Namespace별 연결 관측 시간을 산출합니다. 같은 이름의 Pod UID가 중첩되는 구간은 제외합니다. 이 수치는 독점 할당량·실제 연산 시간과 구분하며 공유 GPU의 Namespace별 시간을 합산해 전체 할당량으로 사용하지 않습니다.
 - Prometheus 원본 표본 수 또는 응답 크기가 한도를 넘으면 시간 구간을 자동으로 줄여 다시 조회합니다. `max_queries`와 실행시간 한도는 재조회에도 적용되며, 끝내 수집하지 못한 구간·원본 경고는 부분 수집으로 남깁니다. 결과의 주제별 관측 품질에는 조회별 상태와 표본 수가 저장됩니다.
 - `D07`의 `gpu_ops_effective_unbound_request` 역시 검증된 recording rule/원본으로 교체해야 합니다. scheduler 버전별 effective request 규칙, terminal/binding, resource 단위를 확인해야 합니다.

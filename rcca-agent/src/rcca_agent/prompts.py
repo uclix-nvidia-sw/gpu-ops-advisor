@@ -12,7 +12,11 @@ unproven and investigation-only plans cannot establish a cause.
 Return JSON with exactly these keys:
 {"hypotheses": [{"claim": "추가 확인이 필요한 원인 후보일 가능성이 있다", "supporting_refs": ["evidence id"],
 "contradicting_refs": [], "missing_inputs": ["needed confirmation"]}], "limitations": []}.
-Write every claim and limitation in Korean. Input identifiers (D05, R01, cpc-2,
+Write every claim and limitation in Korean. Never copy input field names into
+prose: describe them in Korean (e.g. "로그 기록 시각 기준 관측이라 장비 발생 시각을 확정할 수 없다").
+The orchestrator adds input-omission limitations; do not repeat them.
+If validation_feedback is supplied, regenerate the response avoiding those rules;
+it contains validation codes only, never new evidence. Input identifiers (D05, R01, cpc-2,
 node/Pod names) and permitted XID/SXID codes may be copied verbatim.
 Use tentative hypotheses such as "…일 가능성이 있다" or "…를 확인해야 한다".
 Do not assert "원인이다", "확정" or "physically …". Do not infer idle, faulty or

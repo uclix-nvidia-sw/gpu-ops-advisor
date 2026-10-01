@@ -84,3 +84,10 @@ Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops
 테스트는 임시 schema와 임시 Backend 프로세스를 사용하고 종료 시 해당 자원만 정리합니다. 기존 개발 Backend/JC 프로세스는 재시작하지 않았습니다. 현재 실행 중인 Backend는 Incident URL이 아직 적용되지 않아 service-status에서 Incident 미연결로 표시됩니다. 갱신된 `backend/scripts/dev-server.ps1`로 다음 기동 시 8091을 연결합니다.
 
 실제 Grafana Contact point 설정, Grafana 서버 발송, 운영망 연결, 실제 RCA Agent/LLM 추론은 검증 범위 밖입니다. 공식 기본 Webhook JSON을 HTTP로 전송해 검증했습니다. Docker가 없어 컨테이너 이미지 빌드와 compose 실행은 확인하지 않았습니다.
+
+## 2026-10-01 알람 표시 제목 보정 — 로컬 검증
+
+- Go 1.26.2 `go vet ./...`, `go test ./...`, `go build ./...`: 통과. Backend/JC/shared 소비자 검사도 통과.
+- 격리 PostgreSQL에서 `go test -tags=e2e ./tests -v -count=1 -timeout=10m`: 통과. reason 표시만 바뀌면 evidence revision/outbox 건수가 증가하지 않음을 추가 검증했다. Backend E2E도 통과.
+- PR 준비 시 공식 w64devkit 2.10.0 휴대용 C 컴파일러와 `CGO_ENABLED=1`로 네 Go 모듈의 `go test -race ./...` 재실행: 통과(shared는 테스트 없음). CI Linux 검사는 별도 확인한다.
+- resolved는 알람 수명주기를 갱신하지만 기존 immutable RCA snapshot/result를 재작성하지 않는다. 이번 변경은 복구 판정이나 자동 재분석을 추가하지 않는다.

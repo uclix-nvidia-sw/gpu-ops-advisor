@@ -288,3 +288,12 @@ Grafana datasource HTTP 응답과 OpenAI 호환 LLM endpoint만 고정 데이터
 - **해당 없음:** Go 코드·DB migration·Fleet 시각 계약·충분성 gate·R01/R02 `REQUIRED`·결과 스키마 변경. 기존 결과는 재작성하지 않는다.
 
 - **문서 검사:** 전체 `python tools/check_links.py`는 기존 미추적 `_review_current/`·`_codex_dcgm_publish/` 안의 경로 7건으로 실패했다. 두 기존 검토용 폴더만 제외해 같은 `check()`를 실행하면 변경 문서를 포함한 링크 검사는 통과한다. 이 폴더들은 수정하지 않았다.
+
+## 2026-10-01 ci.110 후속 수정 — 로컬 검증
+
+- `ruff check` / `ruff format --check`: 통과. 일반 pytest 284 passed, 17 skipped. 이후 격리 PostgreSQL 16.9(127.0.0.1:55432) + 실제 Incident/JC/두 worker + 공식 Grafana MCP 1.4.2 프로세스로 전체 실행: 299 passed, Helm 경로 누락 2 failed. `HELM_BINARY` 설정 후 실패한 두 사례만 재실행: 2 passed. 서로 다른 301개 사례 모두 통과, 남은 skip 없음. Grafana·LLM 응답은 fixture이며 운영 모델 품질 검증이 아니다.
+- `python tools/ci/check_chart.py`: 실제 Helm 3.17.3 lint/template/package 계약 통과. `python -m unittest discover -s tools/ci/tests -v`: Git Bash 경로 설정 후 5 passed.
+- 저장된 9684a61e 증거의 로컬 재생: 62개 장비 관측 → 고유 31개, Loki 호출 1회, gpu_pod → gpu_access. 고정 모델 응답 fixture에서 synthesis complete; 실제 실패 원문은 미보관이라 원인 문장 재현/운영 모델 성공을 입증하지 않는다. `partial/missing_data`와 R01/R02 partial 유지.
+- 실제 사건 구간 D02에는 GPU UUID/node는 있지만 Pod·namespace 라벨이 없다. D08을 DCGM으로 바꾸어도 해당 사건의 Pod를 확정할 수 없다. inventory 로그도 장비 사건 시각·freshness 계약이 없어 신원 후보로만 보존한다.
+- `DCGM_FI_DEV_XID_ERRORS`의 해당 구간 가용성은 미검증. 기본 D05는 D09 파생 보기를 사용한다. 전역 metric 부재나 모든 GPUAlert의 R01/R02 충족 불가를 주장하지 않는다.
+- 운영 배포·동일 incident의 운영 재실행·실제 모델 품질 검증은 미실행. 과거 evidence/result와 hash는 변경하지 않았다.

@@ -227,7 +227,9 @@ async def test_failure_diagnostics_and_fencing(mode):
                 "invalid": "invalid_evidence_references",
             }[mode]
         )
-        assert diagnostics["request_attempts"] == (0 if mode == "budget" else 1)
+        assert diagnostics["request_attempts"] == (
+            0 if mode == "budget" else 2 if mode == "invalid" else 1
+        )
         assert "private" not in json.dumps(diagnostics)
 
 

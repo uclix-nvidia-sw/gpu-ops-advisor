@@ -17,6 +17,7 @@ from agent_common.parsers import parse_health, health_facts
 from .procedures import select_procedure
 from .synthesis import synthesis_input, synthesize
 from .report import write_report
+from .report_labels import query_label
 from .observation_agents import collect_round
 from .incident import alert_clues
 from .retrieval import retrieve_runbooks
@@ -212,6 +213,10 @@ def normalized_state(obs, collected, data, profile, initial_facts):
             for e in collected.get("D06", [])
             if e["tool_status"] == "ok" and e["quality"].get("complete")
         ],
+        require_pod_join=profile["queries"].get("D08", {}).get("allocation_semantics")
+        == "observed_pod_labels",
+        observed=profile["queries"].get("D08", {}).get("allocation_semantics")
+        == "observed_pod_labels",
     )
     incident_at = timestamp(data["incident_time"])
     mapping_identity = {
@@ -369,7 +374,10 @@ async def run(tools):
         for k, v in source.get("verified_facts", {}).items()
         if v is not None and v != "unknown"
     }
-    procedure = select_procedure(data, source)
+    procedure = select_procedure(
+        data,
+        {**source, **({"symptom": clues["symptom"]} if clues.get("symptom") else {})},
+    )
     runbooks, plans = select_runbooks(
         ctx["context"]["runbooks"], source, profile, procedure, obs
     )
@@ -745,7 +753,13 @@ async def run(tools):
             "version": procedure.version,
         },
         runbook_revisions=[
-            {"id": b["id"], "revision": b["revision"]} for b in selected
+            {
+                "id": b["id"],
+                "revision": b["revision"],
+                "knowledge_key": b["knowledge_key"],
+                "title": b["content"].get("title") or b["knowledge_key"],
+            }
+            for b in selected
         ],
         device_observations=health,
         result_status=result_status(assessments),
@@ -769,7 +783,40 @@ async def run(tools):
         "sufficiency": gate,
         "remaining_budget": budget,
         "synthesis": synthesis_diagnostics,
+        "reported_errors": [
+            {
+                "error_code": h["error_code"],
+                "status": "reported",
+                "verified": False,
+                "fact_eligible": h.get("fact_eligible", False),
+                "evidence_refs": h["evidence_refs"],
+            }
+            for h in health
+            if h.get("error_code") and h["check_status"] == "valid"
+        ],
+        "gpu_identity_candidates": [
+            {
+                **candidate,
+                "node": h["target"].get("node"),
+                "observed_at": h["observed_at"],
+                "evidence_refs": h["evidence_refs"],
+                "limitation": "device_event_time_unverified",
+            }
+            for h in health
+            for candidate in h.get("gpu_candidates", [])
+        ],
     }
+    result["quality"]["evidence_catalog"] = [
+        {
+            "id": e["id"],
+            "label": query_label(e["query_id"]),
+            "time_range": e["time_range"],
+            "sample_count": e["quality"].get("sample_count"),
+            "cluster_id": e["cluster_id"],
+        }
+        for e in obs.evidence
+        if e["query_id"].startswith("D")
+    ]
     result["limitations"].extend(analysis_limits)
     await write_report(result, data, clues, obs.evidence, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage

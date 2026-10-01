@@ -17,6 +17,9 @@ from ops_agent.workflow import calculate
 
 def setup(days=7):
     profile = json.load(open("agents/config.example.json"))
+    profile["queries"]["D08"].update(
+        metric="gpu_ops_allocation_info", allocation_semantics="normalized_allocation"
+    )
     profile["clusters"] = {
         c: {"mimir_uid": "metrics", "metric_selector": {"cluster_id": c}}
         for c in ("cpc-1", "cpc-2")

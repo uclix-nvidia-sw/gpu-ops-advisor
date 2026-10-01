@@ -95,6 +95,24 @@ class Observation:
             # Never put upstream error bodies or credentials into evidence/logs.
             raise DiscoveryError("datasource_discovery_failed") from exc
 
+    def derive(self, query_id, sources):
+        return [
+            self._evidence(
+                query_id,
+                e["cluster_id"],
+                e["time_range"],
+                e["snapshot"],
+                e["tool_status"],
+                {
+                    **e["quality"],
+                    "derived_from": e["id"],
+                    "derived_query": e["query_id"],
+                },
+                {"derived_from": e["id"]},
+            )
+            for e in sources
+        ]
+
     async def collect(self, query_id, period=None, *, namespace_scope=None):
         period = period or self.data["time_range"]
         key = (
@@ -108,6 +126,17 @@ class Observation:
         definition = self.profile["queries"].get(query_id)
         if not definition:
             return []
+        source_query = definition.get("derived_from")
+        if source_query:
+            if source_query == query_id or self.profile["queries"].get(
+                source_query, {}
+            ).get("derived_from"):
+                raise ValueError("derived query must reference a concrete source")
+            sources = await self.collect(
+                source_query, period, namespace_scope=namespace_scope
+            )
+            self.cache[key] = self.derive(query_id, sources)
+            return self.cache[key]
         start, end = timestamp(period["start"]), timestamp(period["end"])
         allowed = self.data["time_range"]
         permitted = [allowed, self.data.get("comparison_range", allowed)]
@@ -286,6 +315,7 @@ class Observation:
                     "complete": True,
                     "original_samples": source != "loki",
                     "max_hold_seconds": definition.get("max_hold_seconds"),
+                    "allocation_semantics": definition.get("allocation_semantics"),
                     "unit": definition.get("unit"),
                     "datasource_uid": uid,
                     "query_revision": definition["revision"],

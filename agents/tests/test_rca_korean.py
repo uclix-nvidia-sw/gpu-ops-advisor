@@ -238,7 +238,7 @@ async def test_report_all_queries_grouped_without_summing_samples(old):
         if old
         else "time_precision_reduced" not in limits
     )
-    assert "결과 없음(empty)" in limits and "부분 산출" in limits
+    assert "조회는 정상 완료됐으나 데이터 0건" in limits and "부분 산출" in limits
     assert "응답 검증은 완료했지만" in limits
     assert limits.count("관측은 원인 확정이 아닙니다.") == 1
     assert "D08(GPU–Pod 할당)" in sections["next"]
@@ -289,5 +289,6 @@ async def test_synthesis_uses_query_quality_from_the_model_view(reduced):
     }
     diagnostics = {}
     status, _, _ = await synthesize(Model(), payload, diagnostics)
-    assert status == ("complete" if reduced else "failed")
-    assert diagnostics["error_code"] == (None if reduced else "invalid_limitations")
+    assert status == "complete"
+    assert diagnostics["error_code"] is None
+    assert diagnostics["rejected_limitations"] == (0 if reduced else 1)

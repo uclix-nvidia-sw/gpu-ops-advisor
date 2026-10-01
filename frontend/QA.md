@@ -269,3 +269,9 @@ main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 �
 - `origin/main` `212e2bc4d18270fd8b46212eeb67f3db6757aaf6`의 최신 보고서 강조 카드 변경과 충돌 없이 결합했다.
 - **통과:** `frontend/`에서 `npm run format:check`, `npm test` **82 tests**, `npm run build`. 기존 77건에 최신 main의 ReportHistory 검사 5건이 추가됐다.
 - Python 제품 코드는 최신 main에서 바뀌지 않아 위 Agent QA의 269 passed/17 skipped 검증 범위를 유지한다. PR 대상 밖의 기존 미추적 파일은 포함하지 않는다. 원격 CI·배포는 이 로컬 검사와 별도다.
+
+## 2026-10-01 RCA 관측 표시 보정 — 로컬 fixture
+
+- `npm run format:check`, `npm test`(92 passed), `npm run build`: 통과.
+- 실제 브라우저의 1280px viewport: 상세 모달 1100px, 깊이 4 값 열 약 708px, 표 셀 최소 약 126px. 390px viewport: 모달 약 362px, 깊은 값 열 약 323px, 표 셀 최소 120px. 모바일 표는 가로 스크롤 사용. 원본 JSON은 접힌 disclosure로 보존한다.
+- Loki/Mimir/빈 응답, 깊은 객체, 테스트 알람 제목을 렌더 테스트로 검사했다. 운영 30006 화면에 새 코드를 배포한 검증은 아니다.
