@@ -136,7 +136,7 @@ func (s *Server) schedules(w http.ResponseWriter, q *Request, parts []string) er
 			clone.Body[k] = v
 		}
 		clone.Body["timezone"] = spec.Timezone
-		clone.Body["time_range"] = Object{"start": now.Add(-time.Hour).Format(time.RFC3339), "end": now.Format(time.RFC3339)}
+		clone.Body["time_range"] = Object{"start": now.Add(-24 * time.Hour).Format(time.RFC3339), "end": now.Format(time.RFC3339)}
 		if e = s.validateWork(&clone, "reports"); e != nil {
 			return e
 		}

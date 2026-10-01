@@ -88,6 +88,20 @@ func TestBackendE2E(t *testing.T) {
 		b["time_range"] = Object{"start": "2026-09-16T00:00:00Z", "end": "2026-09-15T00:00:00Z"}
 		call("POST", "/reports", b, 422, "Idempotency-Key", ID())
 	})
+
+	t.Run("report_full_day_input_and_comparison", func(t *testing.T) {
+		for _, hours := range []int{1, 23, 25} {
+			for _, field := range []string{"time_range", "comparison_range"} {
+				b := report()
+				start := time.Date(2026, 9, 14, 15, 0, 0, 0, time.UTC)
+				b[field] = Object{"start": start.Format(time.RFC3339), "end": start.Add(time.Duration(hours) * time.Hour).Format(time.RFC3339)}
+				call("POST", "/reports", b, 422, "Idempotency-Key", ID())
+			}
+		}
+		b := report()
+		b["comparison_range"] = Object{"start": "2026-09-07T15:00:00Z", "end": "2026-09-14T15:00:00Z"}
+		call("POST", "/reports", b, 202, "Idempotency-Key", ID())
+	})
 	t.Run("JC_commit_lost_response_stable_input_and_report_only_commands", func(t *testing.T) {
 		fixture.lose.Store(true)
 		call("POST", "/reports", report(), 503, "Idempotency-Key", "manual-lost")

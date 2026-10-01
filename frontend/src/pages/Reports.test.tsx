@@ -146,7 +146,15 @@ it.each(['/reports/new', '/reports/new?schedule=true'])(
       path.includes('schedule') ? 2 : 1,
     );
     expect(html).toContain('value="namespace" selected="">Namespace');
-    if (path.includes('schedule')) expect(html).toContain('직전에 완료된');
+    if (path.includes('schedule')) {
+      expect(html).toContain('직전 완료된 하루');
+      expect(html).not.toContain('yearly');
+      expect(html).toContain('월간 (매월)');
+    } else {
+      expect(html.match(/type="date"/g)).toHaveLength(2);
+      expect(html).not.toContain('datetime-local');
+      expect(html).toContain('1일 · 시작일 00:00');
+    }
   },
 );
 it('names schedules by report purpose and recurrence instead of ID', () => {

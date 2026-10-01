@@ -501,11 +501,8 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
   return (
     <div className={`report-history-cards ${featured ? 'report-history-asymmetric' : ''}`}>
       {featured && card(featured, true)}
-      <div className="report-history-others">
-        <h3>{featured ? '다른 요청·보고서' : '아직 공개된 보고서가 없습니다'}</h3>
-        {!others.length && <p className="muted">현재 목록에 다른 보고서는 없습니다.</p>}
-        {others.map((job) => card(job))}
-      </div>
+      {!featured && <p className="muted">아직 공개된 보고서가 없습니다.</p>}
+      {others.map((job) => card(job))}
     </div>
   );
 }

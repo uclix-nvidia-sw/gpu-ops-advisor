@@ -721,7 +721,7 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     wait_http(backend + "/health/ready", process)
     data = dict(
         scope=SCOPE,
-        time_range=PERIOD,
+        time_range={"start": PERIOD["start"], "end": "2026-09-16T00:00:00Z"},
         timezone="UTC",
         topic_ids=["O08"],
         group_by=["namespace"],
@@ -754,8 +754,10 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
     assert metrics["namespace_connected_gpu_count"]["value"] == 1
     assert "GPU·시간" in html.text
-    assert metrics["observed_namespace_hours"]["value"] == 1
-    assert metrics["namespace_activity_valid_hours"]["value"] == 1
+    # The fixture has 121 samples held for 30 seconds, not a full day of data.
+    observed_hours = 121 * 30 / 3600
+    assert metrics["observed_namespace_hours"]["value"] == observed_hours
+    assert metrics["namespace_activity_valid_hours"]["value"] == observed_hours
     assert metrics["namespace_connected_gpu_util"]["value"] == 2
     assert metrics["namespace_connected_gpu_util"]["target"] == {
         "cluster_id": "cpc-2",

@@ -2,14 +2,23 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, JobRows, More, QueryState } from '../components/live';
-import { localInput, queryPath, str, topicId, topics, useCommand, useList } from '../lib/live';
-import { preciseRange, scopeLabel } from '../lib/domain';
+import { queryPath, str, topicId, topics, useCommand, useList } from '../lib/live';
+import { scopeLabel } from '../lib/domain';
 import { groupLabel } from '../lib/report';
 import { useReportListPosition } from '../lib/reportNavigation';
+import {
+  previousReportDay,
+  reportDayRange,
+  reportDaySummary,
+  scheduleLabels,
+  schedulePeriods,
+  scheduleWindows,
+} from '../lib/reportPeriod';
 import { useApp } from '../lib/store';
 export const reportTabs = [
   { to: '/reports', label: '보고서 이력' },
   { to: '/schedules', label: '정기 일정' },
+  { to: '/operator-guide', label: '운영자 가이드' },
 ];
 export function Reports() {
   const app = useApp();
@@ -70,8 +79,8 @@ export function ReportForm() {
     [localTime, setLocalTime] = useState('09:00'),
     [weekday, setWeekday] = useState(1),
     [day, setDay] = useState(1),
-    [start, setStart] = useState(localInput(new Date(app.timeRange.start))),
-    [end, setEnd] = useState(localInput(new Date(app.timeRange.end))),
+    [start, setStart] = useState(previousReportDay()),
+    [end, setEnd] = useState(previousReportDay()),
     [compare, setCompare] = useState(false),
     [compareStart, setCompareStart] = useState(''),
     [compareEnd, setCompareEnd] = useState('');
@@ -113,20 +122,14 @@ export function ReportForm() {
             frequency,
             local_time: localTime,
             timezone: 'Asia/Seoul',
-            period: (
-              {
-                daily: 'previous_complete_day',
-                weekly: 'previous_complete_week',
-                monthly: 'previous_complete_month',
-              } as Record<string, string>
-            )[frequency],
+            period: schedulePeriods[frequency],
             ...(frequency === 'weekly' ? { weekday } : frequency === 'monthly' ? { day } : {}),
           }
         : {
             ...template,
             timezone: 'Asia/Seoul',
-            time_range: preciseRange(start, end),
-            ...(compare ? { comparison_range: preciseRange(compareStart, compareEnd) } : {}),
+            time_range: reportDayRange(start, end),
+            ...(compare ? { comparison_range: reportDayRange(compareStart, compareEnd) } : {}),
             ...(params.get('parent_job_id') ? { parent_job_id: params.get('parent_job_id') } : {}),
           };
       const result = await cmd.run(scheduled ? '/schedules' : '/reports', body, {
@@ -273,9 +276,11 @@ export function ReportForm() {
                 <div className="form-grid">
                   <Field label="반복 주기">
                     <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-                      <option value="daily">매일</option>
-                      <option value="weekly">매주</option>
-                      <option value="monthly">매월</option>
+                      {Object.entries(scheduleLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                   </Field>
                   <Field label="실행 시각 (KST)">
@@ -311,26 +316,26 @@ export function ReportForm() {
                   )}
                 </div>
                 <Notice>
-                  직전에 완료된{' '}
-                  {frequency === 'daily' ? '일' : frequency === 'weekly' ? '주' : '월'}을
-                  분석합니다. 다음 실행 시각은 Backend에서 계산합니다.
+                  {scheduleWindows[frequency]} 전체를 분석합니다. 다음 실행 시각은 Backend에서
+                  계산합니다.
                 </Notice>
               </>
             ) : (
               <>
                 <div className="form-grid">
-                  <Field label="시작 시각 (KST)">
+                  <Field label="분석 시작일 (KST)">
                     <input
                       required
-                      type="datetime-local"
+                      type="date"
                       value={start}
                       onChange={(e) => setStart(e.target.value)}
                     />
                   </Field>
-                  <Field label="종료 시각 (KST)">
+                  <Field label="분석 종료일 (포함, KST)">
                     <input
                       required
-                      type="datetime-local"
+                      type="date"
+                      min={start}
                       value={end}
                       onChange={(e) => setEnd(e.target.value)}
                     />
@@ -346,18 +351,19 @@ export function ReportForm() {
                 </label>
                 {compare && (
                   <div className="form-grid">
-                    <Field label="비교 시작 (KST)">
+                    <Field label="비교 시작일 (KST)">
                       <input
                         required
-                        type="datetime-local"
+                        type="date"
                         value={compareStart}
                         onChange={(e) => setCompareStart(e.target.value)}
                       />
                     </Field>
-                    <Field label="비교 종료 (KST)">
+                    <Field label="비교 종료일 (포함, KST)">
                       <input
                         required
-                        type="datetime-local"
+                        type="date"
+                        min={compareStart}
                         value={compareEnd}
                         onChange={(e) => setCompareEnd(e.target.value)}
                       />
@@ -369,17 +375,17 @@ export function ReportForm() {
           </div>
         </Panel>
         <Notice>
-          <strong>요청 전 기간 확인</strong>
+          <strong>요청 전 기간 확인 · 최소 1일(24시간), 최대 31일</strong>
           <p>
             {scheduled
-              ? (
-                  {
-                    daily: '직전 완료된 하루',
-                    weekly: '직전 완료된 한 주',
-                    monthly: '직전 완료된 한 달',
-                  } as Record<string, string>
-                )[frequency] + ' 전체를 분석합니다.'
-              : `${start.replace('T', ' ')} – ${end.replace('T', ' ')} (KST) · ${Number.isFinite(new Date(end).getTime() - new Date(start).getTime()) ? ((new Date(end).getTime() - new Date(start).getTime()) / 3600000).toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '미확인'}시간`}
+              ? scheduleWindows[frequency] + ' 전체를 분석합니다.'
+              : reportDaySummary(start, end)}
+            {!scheduled && compare && (
+              <>
+                <br />
+                비교: {reportDaySummary(compareStart, compareEnd)}
+              </>
+            )}
           </p>
           <p>
             수집 시작 전 서버가 실제 보고서 한도와 기간·대상의 초기 조회량을 검사합니다. 한도를

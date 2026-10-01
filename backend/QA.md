@@ -1,3 +1,12 @@
+# 2026-10-01 보고서 24시간 단위 접수 로컬 검수
+
+- **통과:** `backend/`에서 `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드. 보고서 기간의 1·23·25시간 거부, 24시간·7일·31일 허용, 기존 최대 기간 보존을 검사했다.
+- **통과:** `.local/report-usability/go_e2e.py`에서 새 임시 PostgreSQL data directory와 loopback 포트, 새 Backend 바이너리로 `go test -tags=e2e ./tests -count=1 -timeout=10m` 전체 실행. 새 `report_full_day_input_and_comparison`은 본문·비교 기간의 시간 단위 입력 422와 하루/7일 접수 202를 확인한다. 기존 정기 일정·JC 연계도 통과했으며 DB는 종료했다.
+- **변경 범위:** 보고서 신규 접수와 비교 기간에 최소 24시간·24시간 배수 검증을 추가했다. 정기 일정 템플릿 검증의 임시 기간을 24시간으로 맞췄다. 기존 일정의 달력/DST 계산, RCA 접수, 조회 한도·Worker·DB 스키마는 변경하지 않았다.
+- **미수행/미검증:** 운영 배포·운영 DB·실제 Grafana/LLM·원격 CI. Frontend 브라우저는 별도의 모의 API 검증이다. 로컬 파일 수정 단계다.
+
+---
+
 # 2026-10-01 저장 기록 웹 추적 API
 
 - **통과:** Backend `go vet ./...`, `go test -race ./...`, `go build ./...`. 진단 응답의 중첩 헤더·비밀·claim token·object_key 제거와 조회 인자 보존을 검사했다.

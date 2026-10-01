@@ -131,12 +131,18 @@ func (s *Server) validateWork(q *Request, kind string) error {
 	if e := only(b, "scope", "time_range", "timezone", "parent_job_id", "topic_ids", "group_by", "comparison_range", "action_record_ids", "resource_selectors"); e != nil {
 		return e
 	}
-	scope, e := s.common(q, b, true, true)
+	scope, e := s.common(q, b, true, false)
 	if e != nil {
 		return e
 	}
 	if String(b, "timezone") == "" {
 		return Invalid("timezone")
+	}
+	if _, e = time.LoadLocation(String(b, "timezone")); e != nil {
+		return Invalid("timezone")
+	}
+	if e = reportTimeRange(b["time_range"], q.Limits); e != nil {
+		return e
 	}
 	if e = enums(b, "topic_ids", []string{"O01", "O02", "O03", "O04", "O05", "O06", "O07", "O08", "O09", "O10", "O11"}, true); e != nil {
 		return e
@@ -145,7 +151,7 @@ func (s *Server) validateWork(q *Request, kind string) error {
 		return e
 	}
 	if b["comparison_range"] != nil {
-		if e = TimeRange(b["comparison_range"], time.Duration(Number(q.Limits, "max_query_days"))*24*time.Hour); e != nil {
+		if e = reportTimeRange(b["comparison_range"], q.Limits); e != nil {
 			return e
 		}
 	}
@@ -250,4 +256,19 @@ func (s *Server) registeredScope(q *Request) (Scope, error) {
 		out.Clusters = append(out.Clusters, ClusterScope{ClusterID: id})
 	}
 	return out, rows.Err()
+}
+
+// Report requests use full 24-hour units independently of RCA/query limits.
+func reportTimeRange(value any, limits Object) error {
+	days := Number(limits, "max_query_days")
+	if e := TimeRange(value, time.Duration(days)*24*time.Hour); e != nil {
+		return e
+	}
+	period := value.(map[string]any)
+	start, _ := time.Parse(time.RFC3339Nano, String(period, "start"))
+	end, _ := time.Parse(time.RFC3339Nano, String(period, "end"))
+	if duration := end.Sub(start); duration < 24*time.Hour || duration%(24*time.Hour) != 0 {
+		return Fail(422, "REPORT_DAY_RANGE_REQUIRED", "보고서 기간은 최소 24시간이며 24시간 단위여야 합니다.")
+	}
+	return nil
 }
