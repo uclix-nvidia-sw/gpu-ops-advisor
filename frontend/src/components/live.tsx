@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ReportOrigin } from './ReportMeta';
 import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
@@ -250,7 +251,7 @@ const valueLabels: Record<string, string> = {
   report: '보고서',
   chatbot: 'Assistant',
   incident: '사건·알림',
-  scheduler: '정기 일정',
+  scheduler: '자동 보고서 설정',
   previous_complete_day: '직전 완료일',
   previous_complete_week: '직전 완료 주',
   previous_complete_month: '직전 완료 월',
@@ -260,6 +261,7 @@ export function DataView({
   field = '',
   explain = false,
   fieldNames = {},
+  reportDisplay = false,
   depth = 0,
   evidenceLabels = {},
 }: {
@@ -267,6 +269,7 @@ export function DataView({
   field?: string;
   explain?: boolean;
   fieldNames?: Record<string, string>;
+  reportDisplay?: boolean;
   depth?: number;
   evidenceLabels?: Record<string, string>;
 }) {
@@ -361,6 +364,13 @@ export function DataView({
       return <span>원천 제안 형식 미확인</span>;
     }
   }
+  if (reportDisplay && field === 'timezone') return <span>한국 시간</span>;
+  if (
+    reportDisplay &&
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+  )
+    return <span>{formatDate(value)}</span>;
   if (field === 'namespaces' && value === null) return <span>전체 Namespace</span>;
   if (value === null || value === undefined) return <span className="muted">미확인</span>;
   if (typeof value === 'boolean') return <span>{value ? '예 (true)' : '아니요 (false)'}</span>;
@@ -386,6 +396,7 @@ export function DataView({
               fieldNames={fieldNames}
               depth={depth + 1}
               evidenceLabels={evidenceLabels}
+              reportDisplay={reportDisplay}
             />
           </div>
         ))}
@@ -438,6 +449,7 @@ export function DataView({
                 fieldNames={fieldNames}
                 depth={depth + 1}
                 evidenceLabels={evidenceLabels}
+                reportDisplay={reportDisplay}
               />
             </dd>
           </div>
@@ -498,6 +510,7 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                 {j.kind === 'rca' && <small className="cell-sub">작업 ID · {str(j.id)}</small>}
                 {j.kind === 'report' ? (
                   <>
+                    <ReportOrigin value={j.report_origin} />
                     <details>
                       <summary>분석 주제 · 작업 ID</summary>
                       <p>{reportTopics(j)}</p>
@@ -579,7 +592,8 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
       {large && (
         <p className="report-featured-label">현재 목록의 최신 공개 보고서 · 접수 시각 기준</p>
       )}
-      <h3>
+      <h3 className="report-title-with-origin">
+        <ReportOrigin value={job.report_origin} />
         <Link
           className="text-link report-history-title"
           state={{ from, reportList: from, reportRow: str(job.id) }}
@@ -593,7 +607,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
           <dt>분석 기간</dt>
           <dd>
             {formatDate(str(obj(job.time_range).start))} –{' '}
-            {formatDate(str(obj(job.time_range).end))} (KST)
+            {formatDate(str(obj(job.time_range).end))}
           </dd>
         </div>
         <div>
@@ -608,7 +622,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
         )}
         <div>
           <dt>접수 시각</dt>
-          <dd>{formatDate(str(job.created_at))} (KST)</dd>
+          <dd>{formatDate(str(job.created_at))}</dd>
         </div>
       </dl>
       {large && <ReportPreview job={job} />}
@@ -630,7 +644,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
     </article>
   );
   return (
-    <div className={`report-history-cards ${featured ? 'report-history-asymmetric' : ''}`}>
+    <div className="report-history-cards">
       {featured && card(featured, true)}
       {!featured && <p className="muted">아직 공개된 보고서가 없습니다.</p>}
       {others.map((job) => card(job))}

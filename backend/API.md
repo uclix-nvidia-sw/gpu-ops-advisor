@@ -1,3 +1,7 @@
+## 보고서 생성 방식 표시 — 2026-10-01
+
+`GET /reports`, `/reports/{id}`, `/jobs`, `/jobs/{id}`의 report 작업 DTO는 `report_origin: manual | schedule | unknown`을 제공한다. 기존 `source_module=backend`이며 비어 있지 않은 `manual:` 또는 `schedule:` source_key에서 파생한다. 나머지는 unknown이며 RCA DTO에는 필드를 추가하지 않는다. 원본 source_key는 노출하지 않고 DB·JC/Worker 입력·결과 계약은 변경하지 않는다.
+
 # Backend API v1.3
 
 기준: `docs/specs/backend/02_백엔드_API_작업명세서.md`, 03·10·14 공통 계약.

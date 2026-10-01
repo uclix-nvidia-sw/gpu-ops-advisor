@@ -86,7 +86,7 @@ export function ReportContent({
         <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
         <p>
           {formatDate(str(obj(result.time_range).start))} –{' '}
-          {formatDate(str(obj(result.time_range).end))} · {str(result.timezone, 'Asia/Seoul')}
+          {formatDate(str(obj(result.time_range).end))}
         </p>
         <p>{reportScope(result)}</p>
         {Number.isFinite(hours) && hours > 0 && (
@@ -367,6 +367,7 @@ export function ReportContent({
                         <details>
                           <summary>분모·산식·기간·근거</summary>
                           <DataView
+                            reportDisplay
                             value={{
                               denominator: metric.denominator,
                               method: metric.method,
@@ -426,7 +427,7 @@ export function ReportContent({
       {!topics.length && metrics.length > 0 && (
         <section className="result-section">
           <h3>저장된 수치 · 이전 결과 형식</h3>
-          <DataView value={metrics} />
+          <DataView reportDisplay value={metrics} />
         </section>
       )}
       <details id="report-diagnostics">
@@ -437,7 +438,7 @@ export function ReportContent({
         </p>
         <p>
           요청 기간: {formatDate(str(obj(result.time_range).start))} –{' '}
-          {formatDate(str(obj(result.time_range).end))} · {str(result.timezone, '시간대 미확인')}
+          {formatDate(str(obj(result.time_range).end))}
         </p>
         <p>
           요청 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
@@ -590,6 +591,7 @@ export function ReportContent({
                 <details>
                   <summary>조회 구간·원본 코드·수집 기록</summary>
                   <DataView
+                    reportDisplay
                     value={rows(obj(topic.quality).observations).filter(
                       (raw) => raw.query_id === o.query_id && raw.cluster_id === o.cluster_id,
                     )}
@@ -744,7 +746,7 @@ function ReportStatements({
               item.preconditions.every((p) => typeof p === 'string') ? (
                 <p>{strings(item.preconditions).map(reportReason).join(' ')}</p>
               ) : (
-                <DataView value={item.preconditions} />
+                <DataView reportDisplay value={item.preconditions} />
               )}
             </details>
           )}
@@ -772,7 +774,7 @@ function ReportStatements({
           )}
           <details>
             <summary>상세 기록</summary>
-            <DataView value={item} />
+            <DataView reportDisplay value={item} />
           </details>
         </article>
       ))}

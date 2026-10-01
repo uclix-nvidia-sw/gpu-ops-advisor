@@ -118,7 +118,7 @@ func TestBackendE2E(t *testing.T) {
 		different["topic_ids"] = []string{"O01"}
 		call("POST", "/reports", different, 409, "Idempotency-Key", "manual-lost")
 		job := call("GET", "/jobs/"+reportID, nil, 200)
-		if job["status"] != "queued" || job["queue_reason"] != "worker_unavailable" {
+		if job["report_origin"] != "manual" || job["status"] != "queued" || job["queue_reason"] != "worker_unavailable" {
 			t.Fatal(job)
 		}
 		call("POST", "/jobs/"+reportID+"/cancel", Object{"reason": "test"}, 200, "Idempotency-Key", "cancel", "If-Match", "1")
@@ -268,6 +268,24 @@ func TestBackendE2E(t *testing.T) {
 		occ = occurrences["items"].([]any)[0].(map[string]any)
 		if occ["status"] != "accepted" || occ["job_id"] == nil {
 			t.Fatal(occ)
+		}
+		scheduled := call("GET", "/reports/"+String(occ, "job_id"), nil, 200)
+		if scheduled["report_origin"] != "schedule" {
+			t.Fatal(scheduled)
+		}
+		reports := call("GET", "/reports?limit=50", nil, 200)
+		found := false
+		for _, item := range reports["items"].([]any) {
+			row := item.(map[string]any)
+			if row["id"] == occ["job_id"] {
+				found = true
+				if row["report_origin"] != "schedule" {
+					t.Fatal(row)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("scheduled report absent from list")
 		}
 		call("PATCH", "/schedules/"+id, Object{"enabled": false}, 200, "Idempotency-Key", "pause", "If-Match", "1")
 		call("PATCH", "/schedules/"+id, Object{"enabled": false}, 200, "Idempotency-Key", "pause", "If-Match", "1")
