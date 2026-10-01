@@ -1,3 +1,29 @@
+# 2026-10-01 최신 main 통합 검증
+
+- **통과:** main `e22947f`의 보고서 요청·목록 복귀 및 RCA 단계 진단을 보존해 충돌을 해결했다. Frontend 포맷, 69개 테스트, 타입/프로덕션 빌드 및 문서 링크 검사를 통과했다.
+- Backend 코드는 통합 중 변경되지 않았으며 아래 격리 PostgreSQL 검증 결과를 유지한다. 통합 후 운영 배포·실환경 검증은 미수행이다.
+
+---
+
+# 2026-10-01 저장 기록 웹 추적·Runbook content
+
+- **통과:** frontend `npm test` 53건, 타입/프로덕션 build, format 검사. 원본 소수점 시각·null/필드 없음 차이, 고정 revision, 선택한 시도의 경로, 실제 XID 99 Runbook content와 legacy text, HTML escape를 검사했다.
+- **통과:** Edge/Playwright 모의 API에서 고정 사건 revision, 전달 전후 비교, 두 작업 비교, 과거 시도, 실제 저장 조회 인자·응답 표시, 두 조회 비교, 페이지 추가, 503 재조회, 잘못된 작업 근거 차단, trace 실패 상태를 확인했다. 지식 상세와 작업의 고정 revision에서 Runbook 본문 표시, 1440px/390px 화면, 모바일 넘침 없음, pageerror 0건을 확인했다.
+- **통과:** 새 API의 실제 HTTP/PostgreSQL 검증은 [Backend QA](../backend/QA.md)를 따른다. 브라우저는 모의 API로 검사했으며 운영 데이터와 연결하지 않았다.
+- **미수행/미검증:** 운영 배포·실제 RCA/보고서 재실행·Grafana/LLM 연동. 미기록 synthesis 오류 상세와 실제 단계 실행 시각은 이번 변경으로 복구되지 않는다. Worker와 DB migration 변경 없음.
+
+---
+
+# 2026-10-01 작업 중심 개발자 디버깅
+
+- **통과:** frontend에서 `npm test` 50건, `npm run format:check`, `npm run build`. 키 연결·복합 키·지식 content_hash 대조, 미공개 결과 차단, 상세 탭과 목록 복귀 경로 보존을 검사했다.
+- **통과:** Edge/Playwright 격리 모의 API로 RCA/보고서의 단일 상세 진입, 사건·근거·지식 조회, 과거 시도 선택, 다른 작업의 근거 차단, 503 재조회·404·접수 대기·미공개 상태, 새로고침 후 목록 필터 복귀, 세 관점 전환과 중복 메뉴 제거를 확인했다. 1440px/390px 화면 확인, 모바일 가로 넘침 없음, pageerror 0건.
+- **통과:** 문서 링크 및 diff 검사. 브라우저 검사는 모의 응답이며 운영 DB를 읽거나 수정하지 않았다.
+- **미수행/미검증:** 실제 Backend·DB·Worker·Grafana·LLM 연결, 원격 CI·배포. 실행 당시 사건/모델 스냅샷과 원본 요청 키, 미공개 후보는 기존 API가 제공하지 않아 GUI 조회 불가로 표시한다.
+- **해당 없음:** Backend/Agent/DB 테스트 — 해당 코드와 API 계약 변경 없음. 로컬 파일 수정 단계다.
+
+---
+
 # 2026-10-01 RCA 분석 검증 실패 사유 문구
 
 - **통과:** `frontend/`에서 `npm run format:check`, `npm test` **59 tests**, `npm run build`.

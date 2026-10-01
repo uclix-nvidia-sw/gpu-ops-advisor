@@ -1,3 +1,113 @@
+.trace-json,
+.trace-diff pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  max-height: 520px;
+  overflow: auto;
+  padding: 12px;
+  background: #f1f4f8;
+}
+.trace-diff {
+  table-layout: fixed;
+  width: 100%;
+}
+.trace-diff th,
+.trace-diff td,
+.runbook-content {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.runbook-content h4 {
+  margin: 14px 0 8px;
+}
+.debug-summary {
+  border-left: 3px solid #375e83;
+  padding: 16px 20px;
+  background: #edf2f7;
+  overflow-wrap: anywhere;
+}
+.debug-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid #b9c8d6;
+}
+.debug-tabs a {
+  padding: 14px 16px;
+  color: #526477;
+  border-bottom: 3px solid transparent;
+}
+.debug-tabs a small {
+  display: block;
+  margin-top: 6px;
+}
+.debug-tabs a[aria-current='page'] {
+  border-bottom-color: #315c85;
+  background: #eaf0f6;
+  color: #183f65;
+}
+.debug-layout {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+.debug-layout.has-inspector {
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+}
+.debug-content,
+.record-inspector {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.record-inspector {
+  padding: 18px;
+  border: 1px solid #a9becf;
+  background: #f7fafc;
+  border-radius: 6px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+.record-inspector .panel-head {
+  padding: 0;
+  align-items: start;
+  gap: 12px;
+}
+.record-inspector h2 {
+  font-size: 17px;
+}
+.record-inspector .live-details > div {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.record-inspector dd {
+  margin: 0;
+}
+.record-key {
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1150px) {
+  .debug-layout.has-inspector {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .record-inspector {
+    position: static;
+    max-height: none;
+  }
+}
+@media (max-width: 600px) {
+  .debug-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .debug-tabs a {
+    padding: 10px;
+  }
+  .debug-summary {
+    padding: 12px;
+  }
+}
 .view-switch {
   display: flex;
   gap: 3px;

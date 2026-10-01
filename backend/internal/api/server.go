@@ -284,6 +284,14 @@ func (s *Server) route(w http.ResponseWriter, q *Request, path string) error {
 		}
 		return s.forward(w, q, "job_controller", path)
 	}
+	if kind == "jobs" && r.Method == "GET" && len(parts) >= 3 {
+		if len(parts) == 3 && parts[2] == "trace" {
+			return s.jobTrace(w, q, parts[1])
+		}
+		if parts[2] == "evidence" && (len(parts) == 3 || len(parts) == 4) {
+			return s.jobEvidence(w, q, parts[1], parts[3:])
+		}
+	}
 	if kind == "reports" && len(parts) == 3 && parts[2] == "export" && r.Method == "GET" {
 		return s.exportReport(w, q, parts[1])
 	}

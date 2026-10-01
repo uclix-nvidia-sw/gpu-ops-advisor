@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Badge, Field, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, EvidenceDialog, More, QueryState } from '../components/live';
 import {
@@ -22,15 +22,14 @@ import { topicName } from '../lib/report';
 import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
-import { WorkflowGuide } from '../components/WorkflowGuide';
 import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
-import { RcaEvidence } from '../components/RcaDebug';
+import { debugPath, returnPath } from '../lib/debug';
 export function ResultPage({ kind }: { kind: string }) {
-  const { hash, state } = useLocation();
+  const { hash, state, search } = useLocation();
   const { id } = useParams(),
     app = useApp(),
     q = useResource(
-      id
+      id && !(app.mode === 'developer' && kind !== 'incident')
         ? `/${kind === 'analysis' ? 'analyses' : kind === 'report' ? 'reports' : 'incidents'}/${id}`
         : null,
       undefined,
@@ -40,9 +39,7 @@ export function ResultPage({ kind }: { kind: string }) {
   const [evidence, setEvidence] = useState(''),
     [incidentState, setIncidentState] = useState(''),
     [status, setStatus] = useState(''),
-    [reason, setReason] = useState(''),
-    [downloadError, setDownloadError] = useState(''),
-    [downloading, setDownloading] = useState(false);
+    [reason, setReason] = useState('');
   const r = q.data || {};
   useEffect(() => {
     if (hash !== '#final-report' || !q.data) return;
@@ -51,30 +48,22 @@ export function ResultPage({ kind }: { kind: string }) {
     );
     return () => cancelAnimationFrame(frame);
   }, [hash, q.data?.result_ref]);
-  const download = async (format: string) => {
-    setDownloading(true);
-    setDownloadError('');
-    try {
-      const response = await fetch(`/api/v1/reports/${id}/export?format=${format}`);
-      if (!response.ok) {
-        const body = await response.json();
-        throw new Error(str(obj(body.error).message, '내보내기에 실패했습니다.'));
-      }
-      const blob = await response.blob(),
-        url = URL.createObjectURL(blob),
-        a = document.createElement('a');
-      a.href = url;
-      a.download = `report-${id}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (e) {
-      setDownloadError(errorText(e));
-    } finally {
-      setDownloading(false);
-    }
-  };
+  if (app.mode === 'developer' && kind !== 'incident' && id) {
+    return (
+      <Navigate
+        state={state}
+        replace
+        to={debugPath(
+          id,
+          'result',
+          returnPath(
+            new URLSearchParams(search).get('from') || state?.from,
+            kind === 'report' ? reportReturnPath(state) : '/cases',
+          ),
+        )}
+      />
+    );
+  }
   return (
     <div className="page">
       <PageHead
@@ -85,21 +74,10 @@ export function ResultPage({ kind }: { kind: string }) {
         description={id || ''}
         actions={
           <>
-            {kind === 'report' &&
-              r.result_ref != null &&
-              ['html', 'csv'].map((format) => (
-                <button
-                  className={`button ${format === 'html' ? 'primary' : ''}`}
-                  key={format}
-                  disabled={downloading}
-                  onClick={() => download(format)}
-                >
-                  {format.toUpperCase()} 다운로드
-                </button>
-              ))}
+            {kind === 'report' && r.result_ref != null && <ReportExports id={id!} />}
             <Link
               className="button"
-              to={kind === 'report' ? reportReturnPath(state) : '/cases'}
+              to={returnPath(state?.from, kind === 'report' ? reportReturnPath(state) : '/cases')}
               state={kind === 'report' ? { reportRow: obj(state).reportRow } : undefined}
             >
               목록으로
@@ -107,11 +85,7 @@ export function ResultPage({ kind }: { kind: string }) {
           </>
         }
       />
-      <CommandError error={downloadError} />
       <QueryState query={q}>
-        {app.mode === 'developer' && kind !== 'incident' && (
-          <WorkflowGuide key={id} job={r} kind={kind === 'report' ? 'report' : 'rca'} />
-        )}
         {app.mode === 'developer' && kind === 'incident' && (
           <Notice>
             <strong>이 화면의 검증 지점: Incident → RCA 작업 연결</strong>
@@ -157,14 +131,6 @@ export function ResultPage({ kind }: { kind: string }) {
                     onEvidence={setEvidence}
                   />
                 </div>
-                {app.mode === 'developer' && r.result_ref != null && (
-                  <RcaEvidence
-                    key={str(r.result_ref)}
-                    result={obj(r.result)}
-                    job={r}
-                    onEvidence={setEvidence}
-                  />
-                )}
               </>
             ) : kind === 'incident' ? (
               app.mode === 'operations' ? (
@@ -260,7 +226,7 @@ export function ResultPage({ kind }: { kind: string }) {
     </div>
   );
 }
-function Reviews({ id, subject, target }: { id: string; subject: string; target: Row }) {
+export function Reviews({ id, subject, target }: { id: string; subject: string; target: Row }) {
   const app = useApp(),
     q = useList(queryPath('/reviews', { subject_type: subject, subject_id: id, limit: 30 })),
     cmd = useCommand();
@@ -404,5 +370,51 @@ function Reviews({ id, subject, target }: { id: string; subject: string; target:
         </form>
       </div>
     </Panel>
+  );
+}
+
+export function ReportExports({ id }: { id: string }) {
+  const [downloadError, setDownloadError] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const download = async (format: string) => {
+    setDownloading(true);
+    setDownloadError('');
+    try {
+      const response = await fetch(`/api/v1/reports/${id}/export?format=${format}`);
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(str(obj(body.error).message, '내보내기에 실패했습니다.'));
+      }
+      const blob = await response.blob(),
+        url = URL.createObjectURL(blob),
+        a = document.createElement('a');
+      a.href = url;
+      a.download = `report-${id}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setDownloadError(errorText(e));
+    } finally {
+      setDownloading(false);
+    }
+  };
+  return (
+    <div className="stack">
+      <div className="head-actions">
+        {['html', 'csv'].map((format) => (
+          <button
+            className="button"
+            key={format}
+            disabled={downloading}
+            onClick={() => download(format)}
+          >
+            {format.toUpperCase()} 다운로드
+          </button>
+        ))}
+      </div>
+      <CommandError error={downloadError} />
+    </div>
   );
 }

@@ -61,6 +61,9 @@ export const CommandError = ({ error }: { error: string }) =>
     </p>
   ) : null;
 const fieldLabels: Record<string, string> = {
+  queue_reason: '대기 사유',
+  deadline_at: '작업 기한',
+  cancel_requested_at: '취소 요청 시각',
   reason: '사유',
   status: '상태',
   tool_status: '조회 품질',
@@ -133,7 +136,7 @@ const fieldLabels: Record<string, string> = {
 };
 const incidentFields: Record<string, [string, string]> = {
   id: ['식별 ID', '이 기록을 구분하는 고유 ID입니다.'],
-  job_id: ['작업 ID', 'JC가 관리하는 RCA 실행 작업의 고유 ID입니다.'],
+  job_id: ['작업 ID', 'JC가 관리하는 RCA 또는 보고서 실행 작업의 고유 ID입니다.'],
   alertname: [
     '알람 이름',
     '알람 생산자가 지정한 규칙 이름입니다. 확정된 장애 원인을 뜻하지 않습니다.',
@@ -223,6 +226,7 @@ export function AlarmIdentity({ record }: { record: Row }) {
   );
 }
 const valueLabels: Record<string, string> = {
+  timeout: '시간 초과 (timeout)',
   live_observation_not_configured: '실시간 관측 소스가 연결되지 않았습니다.',
   stored_snapshot: '저장된 관측 스냅샷',
   only_verified_stored_snapshots_available:
@@ -243,10 +247,12 @@ export function DataView({
   value,
   field = '',
   explain = false,
+  fieldNames = {},
 }: {
   value: unknown;
   field?: string;
   explain?: boolean;
+  fieldNames?: Record<string, string>;
 }) {
   if (field === 'namespaces' && value === null) return <span>전체 Namespace</span>;
   if (value === null || value === undefined) return <span className="muted">미확인</span>;
@@ -267,7 +273,7 @@ export function DataView({
       <div className="stack">
         {value.map((v, i) => (
           <div className="data-item" key={i}>
-            <DataView value={v} explain={explain} />
+            <DataView value={v} explain={explain} fieldNames={fieldNames} />
           </div>
         ))}
       </div>
@@ -288,7 +294,7 @@ export function DataView({
                       incidentFields[k]?.[1] || `${fieldLabels[k] || k}: 서버에 저장된 필드입니다.`
                     }
                   >
-                    {incidentFields[k]?.[0] || fieldLabels[k] || k}{' '}
+                    {fieldNames[k] || incidentFields[k]?.[0] || fieldLabels[k] || k}{' '}
                     <span aria-hidden="true">ⓘ</span>
                   </summary>
                   <code>{k}</code>
@@ -298,11 +304,11 @@ export function DataView({
                   </p>
                 </details>
               ) : (
-                incidentFields[k]?.[0] || fieldLabels[k] || k
+                fieldNames[k] || incidentFields[k]?.[0] || fieldLabels[k] || k
               )}
             </dt>
             <dd>
-              <DataView value={v} field={k} explain={explain} />
+              <DataView value={v} field={k} explain={explain} fieldNames={fieldNames} />
             </dd>
           </div>
         ))}
@@ -319,9 +325,10 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
     </Modal>
   );
 }
-export function JobRows({ items }: { items: Row[] }) {
+export function JobRows({ items, preferResult = false }: { items: Row[]; preferResult?: boolean }) {
   const location = useLocation();
   const reportsOnly = location.pathname === '/reports';
+  const from = location.pathname + location.search;
   return (
     <div className="table-wrap">
       <table>
@@ -341,14 +348,10 @@ export function JobRows({ items }: { items: Row[] }) {
               <td>
                 <Link
                   className="text-link"
-                  state={
-                    reportsOnly
-                      ? { reportList: location.pathname + location.search, reportRow: str(j.id) }
-                      : undefined
-                  }
+                  state={reportsOnly ? { from, reportList: from, reportRow: str(j.id) } : { from }}
                   to={
-                    j.kind === 'report' && j.result_ref != null
-                      ? `/reports/${str(j.id)}#final-report`
+                    (preferResult || j.kind === 'report') && j.result_ref != null
+                      ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
                       : `/jobs/${str(j.id)}`
                   }
                 >
@@ -400,6 +403,7 @@ export function JobRows({ items }: { items: Row[] }) {
                   {j.result_ref != null ? (
                     <Link
                       className="text-link"
+                      state={{ from }}
                       to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`}
                     >
                       최종 보고서 보기

@@ -97,3 +97,12 @@ DB 저장 조회·일정·지식·설정은 독립 동작한다. JC/Incident 미
 Backend는 기동 시 필수 `C07` 운영 한도를 자동 생성한다. 기존 행은 config/enabled/version을 보존한다. `DSX_SEED=false`에서도 동작하며 예제 클러스터는 등록하지 않는다. 등록 클러스터가 없어도 API 조회를 위한 readiness는 성공한다. 분석·보고서 실행에는 실제 cluster ID 등록이 필요하다. 화면의 연결·설정 → 데이터 연결에서 등록하거나 `POST /clusters`를 사용한다. 등록은 수집 성공을 의미하지 않으며 collection_status는 unknown으로 시작한다. 클러스터 등록과 감사 기록, 멱등 receipt는 한 트랜잭션으로 저장한다.
 
 readiness 실패는 `DATABASE_UNAVAILABLE`(DB/스키마 조회 실패), `SCHEMA_NOT_READY`(version 2 미적용), `LIMITS_NOT_CONFIGURED`(C07 누락·비활성·유효하지 않은 한도)로 구분한다. 모든 경우 HTTP 503이며 liveness와는 별개다.
+
+## 저장 기록 웹 추적 — 2026-10-01
+
+- `GET /jobs/{id}/trace`: 작업의 input_snapshot·versions·원본 출처 키, 고정 incident_evidence_versions, 같은 source_module/source_key의 outbox, 즉시 보고서 원본, 정기 회차와 해당 revision, 공개된 후보의 메타데이터를 읽는다. 후보 본문은 이 경로에 포함하지 않는다. 각 연결은 `state: available | not_found | schema_unavailable`과 `record`로 반환한다. 현재 사건 revision이나 최신 일정으로 대체하지 않는다. 한 읽기 전용 repeatable-read 트랜잭션에서 조회한다.
+- `alerts`는 같은 사건의 수신 이벤트와 receipt의 수신 시각·HTTP 상태·라벨·annotation을 최근 200건까지 제공한다. 초과하면 `truncated: true`. receipt 전체 payload는 반환하지 않는다. 사건의 모든 이벤트가 현재 작업을 생성했다는 의미는 아니다.
+- `GET /jobs/{id}/evidence?attempt=1&limit=50&cursor=...`: 선택한 시도의 저장 근거 메타데이터. attempt 생략 시 현재 시도, 0 이상 정수. 기본 50/최대 200건, created_at/id 오름차순, cursor는 작업·시도에 고정된다. `order: stored_at_asc`; 일괄 저장 시각은 실행 순서/소요시간이 아니다. 공개 결과가 없는 작업도 저장 근거를 조회할 수 있으며 빈 목록은 수집 미실행을 증명하지 않는다.
+- `GET /jobs/{id}/evidence/{evidence_id}?attempt=1`: 작업·시도·근거 ID가 모두 일치하는 행만 반환한다. 다른 작업/시도는 404. 기존 snapshot 외에 저장된 LogQL/PromQL·datasource UID·요청 시간·limit·target 등 허용된 input 인자를 제공한다. 일반 `/evidence/{id}`의 응답 계약은 유지한다.
+
+기존 인증 없는 내부 GUI 계약을 따른다. 진단 응답도 기존 sanitize와 헤더·키·토큰 필드 제거를 적용하며 lease 자격증명, 내부 object_key, 임의 transport 설정, 미공개 후보 본문을 반환하지 않는다. 임의 SQL 실행이나 Grafana/Worker 직접 호출 API가 아니다. 새 migration은 없고, Incident/JC 테이블 미설치는 미제공 상태로 구분한다. Worker가 저장하지 않은 오류 원인·실행 시각은 추가하지 않는다.

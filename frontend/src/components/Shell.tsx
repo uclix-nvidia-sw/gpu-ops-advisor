@@ -49,9 +49,9 @@ export function Shell() {
         ? [
             '처리 흐름·검증',
             '관측·신원',
-            'RCA 추적',
-            '보고서 추적',
-            '실행·시도',
+            '사건·RCA',
+            '보고서·일정',
+            '작업 디버깅',
             'Runbook·revision',
             '연결·구성',
           ]
@@ -186,31 +186,6 @@ export function Shell() {
         </div>
         <main id="main-content">
           {app.mode === 'developer' && <DeveloperContext />}
-          {app.mode !== 'classic' && !/^\/(reports|schedules)(\/|$)/.test(location.pathname) && (
-            <nav className="context-links" aria-label="관련 기능">
-              {(location.pathname.startsWith('/settings') ||
-              location.pathname.startsWith('/knowledge')
-                ? [
-                    ['/settings/data', '클러스터·수집'],
-                    ['/settings/models', '모델 프로필'],
-                    ['/settings/routing', 'Agent 모델 지정'],
-                    ['/settings/backend', 'Backend·운영 설정'],
-                    ['/knowledge', '지식·Runbook'],
-                  ]
-                : location.pathname.startsWith('/fleet')
-                  ? [
-                      ['/fleet/assets', 'GPU·Node'],
-                      ['/fleet/workloads', 'Pod·작업 연결'],
-                      ['/fleet/quality', '관측 품질'],
-                    ]
-                  : []
-              ).map(([to, label]) => (
-                <Link key={to} to={to}>
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          )}
           <QueryState query={me}>
             {!app.registeredScope.clusters.length &&
             !location.pathname.startsWith('/settings') &&

@@ -143,10 +143,55 @@ function ScheduleDetail({ id }: { id: string }) {
             <div className="live-padding stack">
               {occurrences.items.map((o) => (
                 <div className="data-item" key={str(o.id)}>
+                  <strong>{formatDate(str(o.scheduled_for))} 예정 회차</strong>
                   <DataView value={o} />
+                  {app.mode === 'developer' && (
+                    <details>
+                      <summary>이 회차의 DB 키 연결 설명</summary>
+                      <dl className="live-details">
+                        <div>
+                          <dt>일정 조건</dt>
+                          <dd>
+                            <code>
+                              schedule_occurrences.(schedule_id, revision) →
+                              schedule_revisions.(schedule_id, revision)
+                            </code>
+                            <p>
+                              이 회차가 사용한 일정 버전입니다. 현재 일정의 revision으로 대체하지
+                              않습니다.
+                            </p>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>전달 기록</dt>
+                          <dd>
+                            <code>schedule_occurrences.outbox_id → enqueue_outbox.id</code>
+                            <p>
+                              Backend가 JC에 전달할 요청입니다. 원본 outbox 조회 API는 제공되지
+                              않습니다.
+                            </p>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>실행 작업</dt>
+                          <dd>
+                            <code>schedule_occurrences.job_id → jobs.id</code>
+                            <p>
+                              accepted는 JC 접수입니다. 작업 보기에서 실행 시도와 공개 결과를
+                              확인하세요.
+                            </p>
+                          </dd>
+                        </div>
+                      </dl>
+                    </details>
+                  )}
                   <div className="head-actions">
                     {o.job_id != null && (
-                      <Link className="button" to={`/jobs/${str(o.job_id)}`}>
+                      <Link
+                        className="button"
+                        to={`/jobs/${str(o.job_id)}`}
+                        state={{ from: `/schedules/${id}` }}
+                      >
                         작업 보기
                       </Link>
                     )}
