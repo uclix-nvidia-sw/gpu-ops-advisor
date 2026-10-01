@@ -14,6 +14,8 @@ All hypotheses remain unconfirmed candidates. An empty list is valid when eviden
 cannot support an explanation. Preserve gaps, conflicts and observation failures.
 Do not invent numbers, producer semantics, impact, recovery, or performed actions.
 Do not put numeric measurements in prose; the orchestrator owns the value registry.
+Identifiers such as query IDs, node or cluster names may be copied verbatim from
+the input; do not write counts, durations, indices or measured values.
 You may quote an XID/SXID identifier only when error_code in a cited device
 observation contains that exact code. A reported code is not a verified cause.
 context_selection and sample_selection describe omitted observations/samples.

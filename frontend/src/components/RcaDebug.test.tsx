@@ -40,6 +40,29 @@ describe('RCA diagnostics', () => {
       render(<RcaResult job={{ result_ref: 'old', result: {} }} onEvidence={() => {}} />),
     ).toContain('구 결과에는 단계별 기록이 없습니다');
   });
+  it('explains synthesis validation failure codes instead of a bare code', () => {
+    const job = {
+      id: 'job',
+      result_ref: 'result',
+      result: {
+        llm_usage: { calls: 2 },
+        quality: {
+          analysis: {
+            status: 'failed',
+            synthesis: {
+              request_attempts: 1,
+              response_calls: 1,
+              error_code: 'invalid_limitations',
+            },
+          },
+        },
+      },
+    };
+    const html = render(<RcaResult job={job} onEvidence={() => {}} />);
+    expect(html).toContain('RCA 분석 요청 시도</dt><dd>1건');
+    expect(html).toContain('분석 한계 문장이 형식 또는 숫자 제한을 통과하지 못했습니다');
+    expect(html).not.toContain('사유 코드 <code>invalid_limitations');
+  });
   it('links only published RCA and Ops reports directly from lists', () => {
     const html = render(
       <JobRows

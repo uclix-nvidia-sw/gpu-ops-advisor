@@ -1,3 +1,12 @@
+## 2026-10-01 RCA synthesis 식별자 인용 허용
+
+기준 main `7abc8d2`(#39·#40 포함), `fix/rca-synthesis-identifier-prose`. #39 배포 후 운영 작업 `ed730b4d`(Loki 합성 SXID 11001)에서 입력 536,621→15,570바이트 제한, `request_attempts=1`·`response_calls=1`을 확인했으나 응답이 `invalid_limitations`로 탈락했다. 같은 view를 읽기 전용으로 재구성하면 `D05`·`R01`·`cpc-2`·`vessl-k8s-worker-01` 등 숫자가 포함된 식별자가 47종이었고, 기존 `\d` 전면 금지가 이를 거부한다. 모델 원문은 저장하지 않으므로 실제 문장은 추정이다.
+
+- **통과:** Windows/Python 3.12.14 agent tests **199 passed, 17 skipped**(E2E). 식별자 허용·대소문자·부분 일치(`D050`, `worker-02`) 거부, 숫자만/개수/기간/측정값·생산자 문장 속 `95C` 거부 회귀 추가. Ruff check/format 통과(무관한 로컬 미추적 파일 제외).
+- **통과:** 운영 작업 `ed730b4d` view에서 추출한 식별자 47종에 공백 포함 문장·시각·숫자+단위 값이 없음을 확인했다.
+- **미검증:** `RUN_AGENT_E2E=1` 전체 검사는 PR CI로 확인한다. 배포 후 새 RCA 실행에서 모델 응답이 검증을 통과하는지는 별도 확인이 필요하다.
+- **해당 없음:** DB migration·결과 스키마·기존 결과 재작성.
+
 ## 2026-10-01 RCA synthesis 입력 크기 제한·단계별 진단
 
 기준 main `406f9fa`(#38 포함), `fix/rca-synthesis-context-budget`. 운영 작업 `22c1f69f`의 저장 evidence를 읽기 전용(`default_transaction_read_only=on`)으로 조회해 synthesis 입력 하한 530,150바이트가 작업 예산 32,768을 넘어 `LLM.complete()` 요청 전에 탈락함을 재현했다. 같은 GUI 결과의 `LLM 응답 사용 기록 1건`은 최종 보고서 편집 호출이었다.

@@ -9,7 +9,7 @@ import pytest
 from agent_common.llm import LLM, RemoteUncertain
 from agent_common.settings import Settings
 from rcca_agent.prompts import SYNTHESIS
-from rcca_agent.synthesis import synthesize, validate_synthesis
+from rcca_agent.synthesis import identifier_tokens, synthesize, validate_synthesis
 from rcca_agent.synthesis_context import bounded_context, encoded_size
 
 
@@ -86,6 +86,69 @@ def test_only_cited_typed_error_identifiers_can_contain_digits():
             validate_synthesis(response(claim=claim), ["log"], observations)
     with pytest.raises(ValueError):
         validate_synthesis(response("metric"), ["log", "metric"], observations)
+
+
+def test_input_identifiers_allowed_but_measurements_rejected():
+    # Shape of the deployed RCA view: digit-bearing IDs, timestamps and samples.
+    view = {
+        "target": {"cluster_id": "cpc-2", "k8s_node_name": "vessl-k8s-worker-01"},
+        "purpose_ids": ["R01"],
+        "incident_time": "2026-10-01T02:27:11Z",
+        "query_quality": [{"query_id": "D05"}, {"query_id": "D09"}],
+        "device_observations": [
+            {
+                "error_code": "sxid:11001",
+                "reason": "SXID 11001 temperature 95C on node3",
+                "evidence_refs": ["log"],
+            }
+        ],
+        "metric_observations": [
+            {
+                "labels": {"gpu": "0", "modelName": "Tesla V100-PCIE-16GB"},
+                "samples": [[1700000000, "85C"]],
+                "evidence_refs": ["metric"],
+            }
+        ],
+        "limits": {"memory": "16GB", "window": "30m"},
+    }
+    ids = identifier_tokens(view)
+    assert {"cpc-2", "vessl-k8s-worker-01", "R01", "D05", "V100-PCIE-16GB"} <= ids
+    assert not ids & {"0", "2026-10-01T02:27:11Z", "85C", "95C", "16GB", "30m"}
+    assert not any(" " in i for i in ids)
+    assert "sxid:11001" not in ids
+    observations = view["device_observations"]
+    # Error codes remain limited to cited observations even with identifiers.
+    with pytest.raises(ValueError, match="unregistered_numeric_claim"):
+        validate_synthesis(
+            response("metric", "sxid:11001 was reported."),
+            ["log", "metric"],
+            observations,
+            ids,
+        )
+
+    def check(limitation, claim="Reported SXID 11001 needs confirmation."):
+        reply = response(claim=claim)
+        reply["limitations"] = [limitation]
+        return validate_synthesis(reply, ["log"], observations, ids)
+
+    for text in (
+        "D05·D09 조회가 partial이라 cpc-2의 vessl-k8s-worker-01 상태가 불완전합니다.",
+        "R01 판단은 Tesla V100-PCIE-16GB 장비 연결 확인이 필요합니다.",
+        "d05 조회가 불완전합니다.",
+    ):
+        assert check(text)[0]["causal_status"] == "candidate"
+    for text in (
+        "GPU 0 온도가 85C입니다.",
+        "SXID 11001 temperature 95C on node3",
+        "30분 동안 오류가 없었습니다.",
+        "D050 조회가 불완전합니다.",
+        "vessl-k8s-worker-02 상태가 불명확합니다.",
+        "cpc-2 노드 3대가 영향을 받았습니다.",
+    ):
+        with pytest.raises(ValueError, match="invalid_limitations"):
+            check(text)
+    with pytest.raises(ValueError, match="unregistered_numeric_claim"):
+        check("D05 조회가 불완전합니다.", claim="vessl-k8s-worker-01 사용률 99")
 
 
 @pytest.mark.asyncio
