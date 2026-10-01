@@ -9,6 +9,7 @@ import {
   returnPath,
 } from '../lib/debug';
 import { obj, rows, str, useResource, type Row } from '../lib/live';
+import { ReportOrigin, ReportTimeNote } from './ReportMeta';
 import { formatDate } from '../lib/domain';
 import { reportScope, reportTitle } from '../lib/workflow';
 import { Reviews, ReportExports } from '../pages/Results';
@@ -72,7 +73,11 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
           <AlarmIdentity record={job} />
         ) : (
           <>
-            <strong>{reportTitle(job)}</strong>
+            <div className="report-title-with-origin">
+              <ReportOrigin value={job.report_origin} />
+              <strong>{reportTitle(job)}</strong>
+            </div>
+            <ReportTimeNote />
             <span>{reportScope(job)}</span>
           </>
         )}
@@ -125,6 +130,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                 이 작업 API에 보존된 대상과 기간입니다. 현재 설정으로 다시 계산한 값이 아닙니다.
               </p>
               <DataView
+                reportDisplay={job.kind === 'report'}
                 value={Object.fromEntries(
                   [
                     'target',
@@ -210,6 +216,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
               {keyButton('attempt', '선택한 시도')}
               <h3>작업 전체 상태</h3>
               <DataView
+                reportDisplay={job.kind === 'report'}
                 value={Object.fromEntries(
                   [
                     'status',
@@ -302,7 +309,12 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                   )}
                 </>
               )}
-              <Reviews id={str(job.id)} subject="job" target={obj(job.target)} />
+              <Reviews
+                id={str(job.id)}
+                subject="job"
+                target={obj(job.target)}
+                reportDisplay={job.kind === 'report'}
+              />
             </>
           )}
         </section>

@@ -1,3 +1,11 @@
+# 2026-10-01 보고서 생성 방식 읽기 API
+
+- **통과:** Backend `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드. manual/schedule/누락/잘못된 접두어/다른 source_module/RCA DTO 및 원본 키 미노출을 검사했다.
+- **통과:** `.local/report-usability/go_e2e.py`의 새 임시 PostgreSQL·loopback Backend로 전체 `go test -tags=e2e ./tests -count=1 -timeout=10m`. 직접 접수 응답과 정기 생성 작업의 상세·목록 origin을 확인했다. 테스트 DB는 종료했다.
+- **해당 없음:** DB migration·Agent·JC 변경. **미수행:** 커밋·푸시·원격 CI·배포·운영 데이터 검증.
+
+---
+
 # 2026-10-01 보고서 24시간 단위 접수 로컬 검수
 
 - **통과:** `backend/`에서 `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드. 보고서 기간의 1·23·25시간 거부, 24시간·7일·31일 허용, 기존 최대 기간 보존을 검사했다.

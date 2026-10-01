@@ -15,6 +15,7 @@ import {
   useResource,
   type Row,
 } from '../lib/live';
+import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
 import { formatDate } from '../lib/domain';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { reportTitle } from '../lib/workflow';
@@ -85,6 +86,7 @@ export function ResultPage({ kind }: { kind: string }) {
           </>
         }
       />
+      {kind === 'report' && <ReportTimeNote />}
       <QueryState query={q}>
         {app.mode === 'developer' && kind === 'incident' && (
           <Notice>
@@ -99,6 +101,7 @@ export function ResultPage({ kind }: { kind: string }) {
         <Panel title={str(r.title, kind === 'incident' ? '사건 관측' : '저장된 결과')}>
           <div className="live-padding stack">
             <div className="head-actions">
+              {kind === 'report' && <ReportOrigin value={r.report_origin} />}
               {kind !== 'incident' && <Badge status={str(r.status)} />}
               {kind !== 'incident' && <Badge status={str(r.result_status) || null} />}
               <span>{formatDate(str(r.created_at))}</span>
@@ -220,13 +223,24 @@ export function ResultPage({ kind }: { kind: string }) {
           id={id!}
           subject={kind === 'incident' ? 'incident' : 'job'}
           target={obj(r.target)}
+          reportDisplay={kind === 'report'}
         />
       </QueryState>
       {evidence && <EvidenceDialog id={evidence} onClose={() => setEvidence('')} />}
     </div>
   );
 }
-export function Reviews({ id, subject, target }: { id: string; subject: string; target: Row }) {
+export function Reviews({
+  id,
+  subject,
+  target,
+  reportDisplay = false,
+}: {
+  id: string;
+  subject: string;
+  target: Row;
+  reportDisplay?: boolean;
+}) {
   const app = useApp(),
     q = useList(queryPath('/reviews', { subject_type: subject, subject_id: id, limit: 30 })),
     cmd = useCommand();
@@ -305,7 +319,7 @@ export function Reviews({ id, subject, target }: { id: string; subject: string; 
                     정정 기록 작성
                   </button>
                 </div>
-                <DataView value={v.body} />
+                <DataView value={v.body} reportDisplay={reportDisplay} />
               </article>
             ))}
           </div>
@@ -333,7 +347,7 @@ export function Reviews({ id, subject, target }: { id: string; subject: string; 
           {kind === 'action' && (
             <>
               <div className="form-grid">
-                <Field label="실제 조치 시각 (KST)">
+                <Field label={reportDisplay ? '실제 조치 시각' : '실제 조치 시각 (KST)'}>
                   <input
                     required
                     type="datetime-local"

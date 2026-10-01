@@ -2,6 +2,7 @@ import { ArrowRight, ClipboardList, FileChartColumn, Radar, Telescope } from 'lu
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../lib/store';
 import { obj, queryPath, str, useList, useResource, type Row } from '../lib/live';
+import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
 import { reportTabs, ReportFilters } from './Reports';
@@ -133,7 +134,10 @@ export function OperationsHome() {
             {reports.items.map((r) => (
               <Link className="ops-report-teaser" key={str(r.id)} to={`/reports/${str(r.id)}`}>
                 <Badge status={str(r.result_status, 'unpublished')} />
-                <h3>{reportTitle(r)}</h3>
+                <h3 className="report-title-with-origin">
+                  <ReportOrigin value={r.report_origin} />
+                  {reportTitle(r)}
+                </h3>
                 <p>대상: {reportScope(r)}</p>
                 <small>{formatDate(str(r.created_at))}</small>
                 <ArrowRight size={18} />
@@ -155,8 +159,8 @@ export function OperationsHome() {
         <Link to="/schedules">
           <ClipboardList />
           <div>
-            <b>반복 분석은 일정으로</b>
-            <span>정기 보고서와 예정·발생 이력 관리</span>
+            <b>자동 보고서 설정</b>
+            <span>반복 주기·다음 실행·자동 생성 이력 확인</span>
           </div>
           <ArrowRight />
         </Link>
@@ -300,6 +304,7 @@ export function OperationsReports() {
         </div>
       </header>
       <NavTabs items={reportTabs} />
+      <ReportTimeNote />
       {finalOnly && (
         <section className="ops-section">
           <h2>공개된 Ops 최종 보고서</h2>
@@ -331,7 +336,10 @@ export function OperationsReports() {
                   <Badge status={str(r.status) || null} />
                   <Badge status={str(r.result_status, 'unpublished')} />
                 </div>
-                <h2>{reportTitle(r)}</h2>
+                <h2 className="report-title-with-origin">
+                  <ReportOrigin value={r.report_origin} />
+                  {reportTitle(r)}
+                </h2>
                 <p className="muted">{reportTopics(r)}</p>
                 <p>대상: {reportScope(r)}</p>
                 <dl>

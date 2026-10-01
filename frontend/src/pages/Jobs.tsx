@@ -4,6 +4,7 @@ import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
+import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportReturnPath } from '../lib/reportNavigation';
@@ -147,9 +148,11 @@ export function JobDetail() {
           />
         ) : (
           <>
+            {j.kind === 'report' && <ReportTimeNote />}
             <Panel title="실행 상태">
               <div className="live-padding stack">
                 <div className="head-actions">
+                  {j.kind === 'report' && <ReportOrigin value={j.report_origin} />}
                   <Badge status={str(j.status)} />
                   <Badge status={str(j.result_status) || null} />
                   <span>
@@ -216,6 +219,7 @@ export function JobDetail() {
             <Panel title="요청 조건">
               <div className="live-padding">
                 <DataView
+                  reportDisplay={j.kind === 'report'}
                   value={Object.fromEntries(
                     [
                       'scope',
@@ -236,7 +240,7 @@ export function JobDetail() {
             </Panel>
             <Panel title="시도 이력">
               <div className="live-padding">
-                <DataView value={j.attempts} />
+                <DataView reportDisplay={j.kind === 'report'} value={j.attempts} />
               </div>
             </Panel>
           </>

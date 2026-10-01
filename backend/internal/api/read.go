@@ -8,6 +8,7 @@ import (
 	"gpu-ops-advisor/backend/internal/store"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -171,6 +172,13 @@ func onlyQuery(q *Request, keys ...string) error {
 }
 func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 	out := Object{}
+	if String(v, "kind") == "report" {
+		out["report_origin"] = "unknown"
+		prefix, key, ok := strings.Cut(String(v, "source_key"), ":")
+		if String(v, "source_module") == "backend" && ok && key != "" && (prefix == "manual" || prefix == "schedule") {
+			out["report_origin"] = prefix
+		}
+	}
 	for _, k := range []string{"id", "kind", "status", "stage", "attempt_no", "created_at", "started_at", "deadline_at", "queue_reason", "cancel_requested_at", "termination_reason", "version", "parent_job_id", "scope"} {
 		out[k] = v[k]
 	}

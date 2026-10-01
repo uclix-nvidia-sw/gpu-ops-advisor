@@ -140,7 +140,7 @@ export function InputTrace({ trace }: { trace: Row }) {
                 <RawRecord value={section.record} />
                 {key === 'schedule' && str(obj(obj(section.record).occurrence).schedule_id) && (
                   <Link to={`/schedules/${str(obj(obj(section.record).occurrence).schedule_id)}`}>
-                    정기 일정 보기
+                    자동 보고서 설정 보기
                   </Link>
                 )}
               </>

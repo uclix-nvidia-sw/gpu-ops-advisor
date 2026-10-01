@@ -39,7 +39,7 @@ export function reportDayRange(first: string, last: string): TimeRange {
 export function reportDaySummary(first: string, last: string) {
   try {
     const range = reportDayRange(first, last);
-    return `${first} ~ ${last} 포함 · ${(Date.parse(range.end) - Date.parse(range.start)) / dayMs}일 · 시작일 00:00부터 종료일 다음 날 00:00까지 (KST)`;
+    return `${first} ~ ${last} 포함 · ${(Date.parse(range.end) - Date.parse(range.start)) / dayMs}일 · 시작일 00:00부터 종료일 다음 날 00:00까지`;
   } catch (error) {
     return (error as Error).message;
   }

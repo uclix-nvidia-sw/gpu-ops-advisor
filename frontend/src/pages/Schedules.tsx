@@ -7,6 +7,7 @@ import { num, obj, queryPath, str, useCommand, useList, useResource, type Row } 
 import { formatDate } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportScope, reportTitle } from '../lib/workflow';
+import { ReportTimeNote } from '../components/ReportMeta';
 import { reportTabs } from './Reports';
 export function Schedules() {
   const { id } = useParams();
@@ -19,15 +20,16 @@ function ScheduleList() {
     <div className="page">
       <PageHead
         eyebrow="REPORT SCHEDULES"
-        title="정기 일정"
-        description="보고서를 자동 생성할 주기와 다음 실행 시각을 확인합니다."
+        title="자동 보고서 설정"
+        description="매일·매주·매월 지정한 시각에 보고서를 자동으로 만듭니다."
         actions={
           <Link className="button primary" to="/reports/new?schedule=true">
-            정기 일정 등록
+            자동 생성 설정
           </Link>
         }
       />
       <NavTabs items={reportTabs} />
+      <ReportTimeNote />
       <Panel title="등록된 일정">
         <QueryState query={q} empty={!q.items.length}>
           <div className="table-wrap">
@@ -36,7 +38,7 @@ function ScheduleList() {
                 <tr>
                   <th>일정</th>
                   <th>상태</th>
-                  <th>다음 실행 (KST)</th>
+                  <th>다음 실행</th>
                   <th>실행 주기</th>
                 </tr>
               </thead>
@@ -61,7 +63,6 @@ function ScheduleList() {
                       {s.frequency === 'weekly' &&
                         ` ${['', '월', '화', '수', '목', '금', '토', '일'][num(s.weekday)] || '?'}요일`}
                       {s.frequency === 'monthly' && ` ${str(s.day, String(s.day ?? '?'))}일`}{' '}
-                      {str(s.local_time)} · {str(s.timezone, '시간대 미확인')}
                     </td>
                   </tr>
                 ))}
@@ -89,10 +90,11 @@ function ScheduleDetail({ id }: { id: string }) {
         description={id}
         actions={
           <Link className="button" to="/schedules">
-            일정 목록
+            자동 보고서 설정 목록
           </Link>
         }
       />
+      <ReportTimeNote />
       <QueryState query={q}>
         <Panel title="실행 조건">
           <div className="live-padding stack">
@@ -105,14 +107,13 @@ function ScheduleDetail({ id }: { id: string }) {
               <span>revision {num(s.revision)}</span>
             </div>
             <DataView
-              value={{
-                frequency: s.frequency,
-                local_time: s.local_time,
-                timezone: s.timezone,
-                period: s.period,
-                report_spec: s.report_spec,
-              }}
+              reportDisplay
+              value={{ frequency: s.frequency, period: s.period, report_spec: s.report_spec }}
             />
+            <details>
+              <summary>원본 일정 설정</summary>
+              <DataView value={{ local_time: s.local_time, timezone: s.timezone }} />
+            </details>
             <div className="head-actions">
               <button
                 className="button"
@@ -244,7 +245,13 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
             ))}
           </select>
         </Field>
-        <Field label="실행 시각">
+        <Field
+          label={
+            calendar.timezone && calendar.timezone !== 'Asia/Seoul'
+              ? `원본 실행 시각 · ${str(calendar.timezone)}`
+              : '실행 시각'
+          }
+        >
           <input required type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
         {frequency === 'weekly' && (

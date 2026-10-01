@@ -106,3 +106,15 @@ it('shows missing topic records without inventing zero counts', () => {
   expect(html).toContain('요약에 사용할 주제별 기록이 없습니다');
   expect(html).not.toContain('산출 완료 0');
 });
+
+it('shows origin badges on both large and small cards without KST suffixes', () => {
+  const html = render([
+    { ...job, report_origin: 'schedule' },
+    { ...job, id: 'manual', report_origin: 'manual' },
+    { ...job, id: 'old' },
+  ]);
+  expect(html).toContain('생성 방식: 자동 생성');
+  expect(html).toContain('생성 방식: 직접 요청');
+  expect(html).toContain('생성 방식 미확인');
+  expect(html).not.toContain('(KST)');
+});

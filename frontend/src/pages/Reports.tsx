@@ -14,10 +14,11 @@ import {
   schedulePeriods,
   scheduleWindows,
 } from '../lib/reportPeriod';
+import { ReportTimeNote } from '../components/ReportMeta';
 import { useApp } from '../lib/store';
 export const reportTabs = [
   { to: '/reports', label: '보고서 이력' },
-  { to: '/schedules', label: '정기 일정' },
+  { to: '/schedules', label: '자동 보고서 설정' },
   { to: '/operator-guide', label: '운영자 가이드' },
 ];
 export function Reports() {
@@ -50,6 +51,7 @@ export function Reports() {
         }
       />
       <NavTabs items={reportTabs} />
+      <ReportTimeNote />
       <Panel title={finalOnly ? '공개된 Ops 최종 보고서' : '보고서 목록'}>
         {finalOnly && (
           <p>
@@ -155,6 +157,7 @@ export function ReportForm() {
         description="기본 분석은 Namespace별 GPU 사용 분석입니다. 대상과 기간을 확인하고 요청하세요."
       />
       <NavTabs items={reportTabs} />
+      <ReportTimeNote />
       <form className="stack" onSubmit={submit}>
         <Field label="보고서 목적">
           <select
@@ -269,7 +272,7 @@ export function ReportForm() {
                 checked={scheduled}
                 onChange={(e) => setScheduled(e.target.checked)}
               />
-              정기 일정으로 등록
+              자동 생성 설정
             </label>
             {scheduled ? (
               <>
@@ -283,7 +286,7 @@ export function ReportForm() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="실행 시각 (KST)">
+                  <Field label="실행 시각">
                     <input
                       required
                       type="time"
@@ -323,7 +326,7 @@ export function ReportForm() {
             ) : (
               <>
                 <div className="form-grid">
-                  <Field label="분석 시작일 (KST)">
+                  <Field label="분석 시작일">
                     <input
                       required
                       type="date"
@@ -331,7 +334,7 @@ export function ReportForm() {
                       onChange={(e) => setStart(e.target.value)}
                     />
                   </Field>
-                  <Field label="분석 종료일 (포함, KST)">
+                  <Field label="분석 종료일 (포함)">
                     <input
                       required
                       type="date"
@@ -351,7 +354,7 @@ export function ReportForm() {
                 </label>
                 {compare && (
                   <div className="form-grid">
-                    <Field label="비교 시작일 (KST)">
+                    <Field label="비교 시작일">
                       <input
                         required
                         type="date"
@@ -359,7 +362,7 @@ export function ReportForm() {
                         onChange={(e) => setCompareStart(e.target.value)}
                       />
                     </Field>
-                    <Field label="비교 종료일 (포함, KST)">
+                    <Field label="비교 종료일 (포함)">
                       <input
                         required
                         type="date"
@@ -402,7 +405,7 @@ export function ReportForm() {
             className="button primary"
             disabled={cmd.busy || !selected.length || !app.canOperate}
           >
-            {cmd.busy ? '접수 확인 중…' : scheduled ? '일정 등록' : '보고서 요청'}
+            {cmd.busy ? '접수 확인 중…' : scheduled ? '자동 생성 설정 저장' : '보고서 요청'}
           </button>
         </div>
       </form>
