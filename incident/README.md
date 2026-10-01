@@ -1,5 +1,9 @@
 # Incident 모듈 · Go · 기본 접수 1.3 / 선택적 에피소드 접수 1.4
 
+## 분석 구간 밀리초 경계 (2026-10-01)
+
+새 RCA 입력 `time_range`의 시작은 밀리초 올림, 끝은 밀리초 내림으로 저장한다. `incident_time`과 `received_at`은 원래 정밀도를 유지한다. Grafana MCP는 밀리초 RFC3339만 받으므로 수신 시각 `now`의 마이크로초가 끝 경계에 남으면 Loki 조회(D05·D09)가 매번 꼬리 1ms 미만을 잃고 `time_precision_reduced`/partial이 되어 RCA 충분성이 `degraded`로 떨어졌다(운영 작업 `ed730b4d`: 끝 `02:29:46.513252Z` → 요청 `.513Z`). 안쪽으로만 반올림하므로 승인 구간을 넓히지 않는다. 기존 snapshot/hash는 재작성하지 않고 새 사건부터 적용한다. DB migration 없음.
+
 ## Fleet target 투영 호환 (2026-09-30)
 
 새 RCA 입력 target에 label의 `machine_id/component/k8s_node_name`을 보존하고 노드명은 annotation fallback도 지원한다. 노드 label/annotation 충돌은 `conflicting_node_name`으로 거부한다. 기존 1.3 event key와 의미 evidence hash는 추가 target 필드를 제외한 기존 식별 기준을 유지한다. 정책의 evidence label 비교는 유지한다. 투영만 추가된 반복 alert는 새 incident/outbox/snapshot을 만들지 않으며 기존 snapshot/hash/target을 소급 변경하지 않는다. episode 모드도 공통 parse 투영을 재사용한다. DB migration은 없다.

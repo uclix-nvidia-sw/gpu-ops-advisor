@@ -341,11 +341,8 @@ func (s *Server) createEpisode(ctx context.Context, tx pgx.Tx, a episodeAlert, p
 	if e != nil {
 		return "", nil, e
 	}
-	end := a.at.Add(time.Duration(s.Config.AfterSeconds) * time.Second)
-	if now.After(a.at) && end.After(now) {
-		end = now
-	}
-	input := Object{"incident_id": id, "evidence_version": 1, "scope": a.scope, "target": a.target, "incident_time": a.at.Format(time.RFC3339Nano), "time_range": Object{"start": a.at.Add(-time.Duration(s.Config.BeforeSeconds) * time.Second).Format(time.RFC3339Nano), "end": end.Format(time.RFC3339Nano)}}
+	start, end := s.analysisWindow(a.at, now)
+	input := Object{"incident_id": id, "evidence_version": 1, "scope": a.scope, "target": a.target, "incident_time": a.at.Format(time.RFC3339Nano), "time_range": Object{"start": start.Format(time.RFC3339Nano), "end": end.Format(time.RFC3339Nano)}}
 	if priorID != nil {
 		input["prior_incident_id"] = priorID
 	}

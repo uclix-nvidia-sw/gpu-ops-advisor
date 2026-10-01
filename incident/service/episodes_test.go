@@ -106,3 +106,28 @@ func TestEpisodeDecisions(t *testing.T) {
 		t.Fatal("unverified observation gap accepted")
 	}
 }
+
+func TestAnalysisWindowUsesWholeMilliseconds(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.BeforeSeconds, cfg.AfterSeconds = 1800, 1800
+	s := &Server{Config: cfg}
+	// Production receipt time ed730b4d: 02:29:46.513252Z lost 252µs at the MCP boundary.
+	at := time.Date(2026, 10, 1, 2, 29, 10, 0, time.UTC)
+	now := time.Date(2026, 10, 1, 2, 29, 46, 513252000, time.UTC)
+	start, end := s.analysisWindow(at, now)
+	if !start.Equal(at.Add(-30*time.Minute)) || end.Format(time.RFC3339Nano) != "2026-10-01T02:29:46.513Z" {
+		t.Fatalf("window: %s - %s", start.Format(time.RFC3339Nano), end.Format(time.RFC3339Nano))
+	}
+	// A sub-millisecond start rounds up and an end rounds down: never widened.
+	at = time.Date(2026, 10, 1, 2, 29, 10, 400, time.UTC)
+	start, end = s.analysisWindow(at, at.Add(time.Hour))
+	if start.Before(at.Add(-30*time.Minute)) || start.Nanosecond()%int(time.Millisecond) != 0 ||
+		end.After(at.Add(30*time.Minute)) || end.Nanosecond()%int(time.Millisecond) != 0 {
+		t.Fatalf("rounding widened window: %s - %s", start.Format(time.RFC3339Nano), end.Format(time.RFC3339Nano))
+	}
+	// Receipt before the alarm keeps the configured after-window.
+	start, end = s.analysisWindow(now, at)
+	if !end.Equal(now.Add(30*time.Minute).Truncate(time.Millisecond)) || end.Before(start) {
+		t.Fatalf("future alarm window: %s - %s", start.Format(time.RFC3339Nano), end.Format(time.RFC3339Nano))
+	}
+}

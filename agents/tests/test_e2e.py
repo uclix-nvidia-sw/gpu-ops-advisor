@@ -952,13 +952,25 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         if query.startswith("D")
     ), evidence
     with psycopg.connect(stack["url"]) as conn:
+        # startsAt and receipt time carry microseconds; Incident stores a whole
+        # millisecond window so Loki requests keep the exact period (no partial).
+        window = conn.execute(
+            "SELECT input_snapshot->'time_range' FROM jobs WHERE id=%s", (jid,)
+        ).fetchone()[0]
+        assert all(
+            datetime.fromisoformat(window[k].replace("Z", "+00:00")).microsecond % 1000
+            == 0
+            for k in ("start", "end")
+        ), window
         partial = conn.execute(
-            "SELECT quality FROM evidence WHERE job_id=%s AND tool_status='partial'",
+            "SELECT query_id, quality FROM evidence WHERE job_id=%s AND tool_status='partial'",
             (jid,),
         ).fetchall()
-        assert partial and all(
-            q[0]["reason"] == "time_precision_reduced" for q in partial
-        )
+        assert not [
+            q
+            for q, quality in partial
+            if quality.get("reason") == "time_precision_reduced"
+        ], partial
         clues = conn.execute(
             "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='alert_clues'",
             (jid,),

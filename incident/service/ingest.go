@@ -311,11 +311,8 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 			policyRevision = p.Revision
 			purposes := append([]string(nil), p.PurposeIDs...)
 			sort.Strings(purposes)
-			end := a.starts.Add(time.Duration(s.Config.AfterSeconds) * time.Second)
-			if now.After(a.starts) && end.After(now) {
-				end = now
-			}
-			input = Object{"incident_id": id, "evidence_version": revision, "analysis_profile_revision": p.Revision, "scope": a.scope, "target": a.target, "incident_time": a.starts.Format(time.RFC3339Nano), "time_range": Object{"start": a.starts.Add(-time.Duration(s.Config.BeforeSeconds) * time.Second).Format(time.RFC3339Nano), "end": end.UTC().Format(time.RFC3339Nano)}, "purpose_ids": purposes}
+			start, end := s.analysisWindow(a.starts, now)
+			input = Object{"incident_id": id, "evidence_version": revision, "analysis_profile_revision": p.Revision, "scope": a.scope, "target": a.target, "incident_time": a.starts.Format(time.RFC3339Nano), "time_range": Object{"start": start.Format(time.RFC3339Nano), "end": end.UTC().Format(time.RFC3339Nano)}, "purpose_ids": purposes}
 		}
 		snapshot := Object{"input": input, "alert": raw, "alert_event_id": eventID, "received_at": now, "analysis_policy": a.policy, "eligible": eligible, "reason": reason}
 		// Hash the JSON object representation that PostgreSQL/JC will read, including nested policy structs.
@@ -386,4 +383,24 @@ func safeJSON(v any) any {
 		return Object{"encoding": "base64-json", "data": base64.StdEncoding.EncodeToString(b)}
 	}
 	return v
+}
+
+// analysisWindow keeps the incident time exact but bounds the collection window to
+// whole milliseconds: Grafana MCP accepts millisecond RFC3339 only, so a
+// microsecond receipt time made every Loki query lose its tail and report
+// time_precision_reduced. Rounding inward never widens the authorized interval.
+func (s *Server) analysisWindow(at, now time.Time) (time.Time, time.Time) {
+	start := at.Add(-time.Duration(s.Config.BeforeSeconds) * time.Second)
+	end := at.Add(time.Duration(s.Config.AfterSeconds) * time.Second)
+	if now.After(at) && end.After(now) {
+		end = now
+	}
+	if rounded := start.Truncate(time.Millisecond); rounded.Before(start) {
+		start = rounded.Add(time.Millisecond)
+	}
+	end = end.Truncate(time.Millisecond)
+	if end.Before(start) {
+		end = start
+	}
+	return start, end
 }
