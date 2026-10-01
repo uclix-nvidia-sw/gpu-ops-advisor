@@ -19,7 +19,10 @@ def report_profile(profile):
     ):
         raise ValueError("invalid report collection limits")
     # Only Ops calls this. Never modify the shared/RCA profile object.
-    return {**profile, "limits": {**profile["limits"], **overrides}}
+    return {
+        **profile,
+        "limits": {"chunk_seconds": 3600, **profile["limits"], **overrides},
+    }
 
 
 def collection_plan(profile, data, order):

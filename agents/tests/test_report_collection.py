@@ -233,6 +233,8 @@ def test_report_override_validation_and_legacy_fallback():
     profile, _ = setup()
     profile.pop("report")
     assert report_profile(profile)["limits"] == profile["limits"]
+    profile["limits"].pop("chunk_seconds")
+    assert report_profile(profile)["limits"]["chunk_seconds"] == 3600
     for overrides in (
         {"max_queries": 0},
         {"max_queries": True},
