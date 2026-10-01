@@ -1,3 +1,13 @@
+## 2026-10-01 Agent E2E Backend 중복 migration 교착 수정
+
+기준 main `af9294e`(#34·#35 포함). [실패 CI 36793523231](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/36793523231)의 PostgreSQL 로그에서 Backend `ALTER TABLE jobs`와 JC의 만료 작업 `UPDATE jobs` 사이 `SQLSTATE 40P01` 교착을 확인했다. stack의 JC가 공통 schema를 준비한 뒤 모델 인증·런북 테스트의 Backend가 migration을 재실행하던 두 곳을 `DSX_MIGRATE=false`로 바꿨다. 기존 Namespace 테스트와 같은 설정이다.
+
+- **통과:** macOS arm64/Python 3.11.16, Go 1.26.2의 현재 소스와 동일한 Backend/JC/Incident 바이너리, 실제 새 loopback PostgreSQL·Worker/NAT/공식 MCP로 전체 **206 passed**, 33.80초. 기존 MCP deprecation warning 3건. `DATABASE_URL`·`AGENT_E2E_DATABASE_URL`을 제거하고 `RUN_AGENT_E2E=1`로 실행했다. JUnit: `.local/e2e-migration-fix/results.xml`. Grafana/LLM 응답은 fixture다.
+- **통과:** 모델 인증 두 Worker·고정 revision·런북 263개 등록/조회/hash/중복 방지 및 실제 RCA 소비·Namespace 보고서 검사. Ruff check/format·문서 링크·diff 검사.
+- **유지:** Backend 자체 migration 및 재실행 검증은 별도 Backend DB E2E에 남아 있다. 테스트 재시도나 timeout 증가로 실패를 숨기지 않는다.
+- **미검증:** 수정 커밋의 Linux/Python 3.12 전체 CI는 PR 생성 후 확인하고 PR 설명에 기록한다. 운영 migration 동시 실행 조정이나 배포 검증은 이번 변경 범위가 아니다.
+- **해당 없음:** 제품 코드·SQL·운영 DB/설정·UI·API·배포 변경.
+
 ## 2026-09-30 보고서 단위 설명·수집 범위 개선
 
 ## RCA 접근·Ops 최종 보고서 — 2026-09-30
