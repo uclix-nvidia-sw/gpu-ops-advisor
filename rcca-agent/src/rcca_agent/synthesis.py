@@ -76,8 +76,36 @@ MEASUREMENT = re.compile(r"[\d.,:\s]*\d[\d.,:\s]*[A-Za-z%]{0,3}", re.I)
 ERROR_CODE = re.compile(r"s?xid[ :]*\d+", re.I)
 
 
+# Unicode word boundaries exclude ordinary words beginning with number syllables.
+# Particles are allowed only after explicit counters; e.g. 두 개의, never 두께.
+NUMBER_WORD = re.compile(
+    r"(?<![\w])(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|"
+    r"nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|"
+    r"hundred|thousand|million|billion|percent|half|dozen|single|double|twice)(?![\w])"
+    r"|(?<![\w])(?:하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열|스물)(?![\w])"
+    r"|(?<![\w])(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|스물)"
+    r"\s*(?:대|개|번|건|명|장|시간|분|초)(?:은|는|이|가|을|를|의|에|만|도|씩)?(?![\w])"
+    r"|(?<![\w])(?:영|일|이|삼|사|오|육|칠|팔|구|십|백|천)+"
+    r"\s*(?:퍼센트|프로|%)(?:는|가|를|의|에|만|도)?(?![\w])"
+    r"|전혀\s*(?:없|없는|없음)",
+    re.I,
+)
+PRECISION_LOSS = re.compile(
+    r"time_precision_reduced|(?:time|timestamp)\s+precision\s+(?:loss|reduc\w*)"
+    r"|정밀도.{0,12}(?:손실|축소|저하)|(?:손실|축소|저하).{0,12}정밀도",
+    re.I,
+)
+# Deliberately narrow: broad Korean copula matching would reject valid uncertainty.
+ASSERTION = re.compile(
+    r"원인(?:이다|입니다)|고장(?:이다|입니다)|원인(?:이|으로)\s*확정(?:되었|됐|됨)"
+    r"|physically|(?:사용률|활동률|표본).{0,30}(?:유휴|고장|정상)(?:이다|입니다)",
+    re.I,
+)
+
+
 def identifier_tokens(view):
-    """Alphanumeric identifiers the model received verbatim, e.g. D05 or cpc-2."""
+    """Input identifiers, including digit-free node/Pod names in typed fields."""
     found = set()
 
     def walk(value, key=None):
@@ -95,7 +123,20 @@ def identifier_tokens(view):
             found.update(
                 token
                 for token in (t.strip(".,;()[]{}\"'") for t in value.split())
-                if re.search(r"\d", token)
+                if (
+                    re.search(r"\d", token)
+                    or key
+                    in {
+                        "node",
+                        "k8s_node_name",
+                        "pod",
+                        "pod_uid",
+                        "gpu_uuid",
+                        "machine_id",
+                        "cluster_id",
+                        "namespace",
+                    }
+                )
                 and not ERROR_CODE.fullmatch(token)
                 and re.search(r"[A-Za-z]", token)
                 and not TIMESTAMP.search(token)
@@ -106,7 +147,9 @@ def identifier_tokens(view):
     return found
 
 
-def validate_synthesis(response, refs, observations=(), identifiers=()):
+def validate_synthesis(
+    response, refs, observations=(), identifiers=(), query_quality=()
+):
     """Validate structure/references, not the truth of an LLM hypothesis."""
     if not isinstance(response, dict) or set(response) != {
         "hypotheses",
@@ -130,7 +173,7 @@ def validate_synthesis(response, refs, observations=(), identifiers=()):
         else None
     )
 
-    def numeric_prose(text, evidence_refs):
+    def prose(text, evidence_refs):
         # Typed error codes of cited observations and identifiers copied from the
         # input may contain digits; any other digit is an unregistered number.
         codes = {
@@ -141,12 +184,32 @@ def validate_synthesis(response, refs, observations=(), identifiers=()):
 
         def replace(match):
             code = f"{match[1].lower()}:{int(match[2])}"
-            return "reported error" if code in codes else match[0]
+            return " " if code in codes else match[0]
 
-        text = re.sub(r"\b(s?xid)[ :]+([0-9]+)\b", replace, text, flags=re.I)
+        text = re.sub(
+            r"(?<![A-Za-z0-9_])(s?xid)[ :]+([0-9]+)(?![A-Za-z0-9_])",
+            replace,
+            text,
+            flags=re.I,
+        )
         if identifier:
-            text = identifier.sub("identifier", text)
-        return re.search(r"\d", text)
+            text = identifier.sub(" ", text)
+        return text
+
+    def numeric_prose(text, evidence_refs):
+        text = prose(text, evidence_refs)
+        return re.search(r"\d", text) or NUMBER_WORD.search(text)
+
+    def korean(text, evidence_refs):
+        text = prose(text, evidence_refs)
+        hangul = len(re.findall(r"[가-힣]", text))
+        latin = len(re.findall(r"[a-z]", text, re.I))
+        return hangul > 0 and latin <= hangul
+
+    precision_reduced = any(
+        q.get("quality", {}).get("reason") == "time_precision_reduced"
+        for q in query_quality
+    )
 
     def strings(items):
         return (
@@ -156,7 +219,10 @@ def validate_synthesis(response, refs, observations=(), identifiers=()):
         )
 
     if not strings(response["limitations"]) or any(
-        numeric_prose(s, refs) for s in response["limitations"]
+        numeric_prose(s, refs)
+        or not korean(s, refs)
+        or (not precision_reduced and PRECISION_LOSS.search(s))
+        for s in response["limitations"]
     ):
         raise SynthesisValidationError("invalid_limitations")
     candidates = []
@@ -191,6 +257,10 @@ def validate_synthesis(response, refs, observations=(), identifiers=()):
             raise SynthesisValidationError("invalid_evidence_references")
         if numeric_prose(h["claim"], supporting):
             raise SynthesisValidationError("unregistered_numeric_claim")
+        if not korean(h["claim"], supporting):
+            raise SynthesisValidationError("non_korean_claim")
+        if ASSERTION.search(prose(h["claim"], supporting)):
+            raise SynthesisValidationError("unsupported_assertion")
         candidates.append(
             dict(
                 id=f"analysis-{i + 1}",
@@ -255,6 +325,7 @@ async def synthesize(llm, payload, diagnostics=None):
             view["observation_refs"],
             view["device_observations"],
             identifier_tokens(view),
+            view.get("query_quality", []),
         )
     except SynthesisValidationError as exc:
         diagnostics["error_code"] = str(exc)

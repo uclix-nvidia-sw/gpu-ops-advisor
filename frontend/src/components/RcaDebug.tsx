@@ -1,3 +1,5 @@
+import { rcaReasons, missingGroups, purposeLabel } from '../lib/rcaLabels';
+import { queryName } from '../lib/report';
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
@@ -7,70 +9,7 @@ import { formatDate, labels } from '../lib/domain';
 import { Badge, Notice } from './ui';
 import { AlarmIdentity, DataView } from './live';
 
-const reasons: Record<string, string> = {
-  mapping_queries_not_executed:
-    'GPU–Pod 연결에 필요한 조회가 실행되지 않았습니다. 승인 계획과 예산을 확인하세요.',
-  mapping_source_unavailable: 'GPU 할당 원천에서 완전한 연결 데이터를 확보하지 못했습니다.',
-  mapping_target_unverified:
-    '장애 대상과 GPU UUID의 관계가 검증되지 않아 직접 GPU–Pod 연결을 판단할 수 없습니다.',
-  mapping_not_observed_at_incident: '사건 시각의 GPU–Pod 연결 관측을 확보하지 못했습니다.',
-  target_identity_conflict: '사건 대상과 알람의 장비 식별 정보가 충돌합니다.',
-  sufficient: '필수 근거를 충족했습니다.',
-  degraded: '수집 실패 또는 불완전한 관측이 있습니다.',
-  conflicted: '관측 상태가 상충합니다.',
-  insufficient_actionable: '근거가 부족하며 추가 조회 후보가 있습니다.',
-  insufficient_blocked: '근거가 부족하고 추가 조회 후보가 없습니다.',
-  complete: '분석 응답 검증을 완료했습니다. 원인 확정 여부는 후보별 근거를 확인하세요.',
-  query_failed: '관측 조회가 실패했습니다. 수집 현황에서 오류 코드를 확인하세요.',
-  loki_entry_limit_exceeded: 'Loki 조회 행 제한을 초과했습니다.',
-  mcp_tool_error: 'MCP 도구가 오류를 반환했습니다. Worker·MCP 로그를 확인하세요.',
-  invalid_mcp_response: 'MCP 응답을 해석하지 못했습니다.',
-  sample_limit_exceeded: '조회 행 수가 제한에 도달해 일부 데이터가 누락될 수 있습니다.',
-  response_byte_limit: '응답 크기 제한으로 관측을 보존하지 못했습니다.',
-  budget_exhausted: '조회 횟수 또는 시간 예산이 소진됐습니다.',
-  no_usable_evidence: '분석에 사용할 유효한 관측 근거가 없습니다.',
-  llm_context_budget_exhausted:
-    '모델 입력 예산에 유효한 관측을 담지 못해 분석 요청을 생략했습니다.',
-  llm_token_budget_exhausted: '남은 모델 예산이 부족해 요청을 생략했습니다.',
-  llm_http_error: '모델 서버가 HTTP 오류를 반환했습니다.',
-  llm_deadline_exhausted: '모델 요청 전에 실행 시간이 소진됐습니다.',
-  llm_output_truncated: '모델 응답이 출력 제한으로 잘렸습니다.',
-  llm_invalid_output: '모델 응답을 JSON으로 해석하지 못했습니다.',
-  invalid_model_response: '모델 응답 구조를 검증하지 못했습니다.',
-  invalid_evidence_references: '모델 답변의 근거 참조가 전달한 관측과 일치하지 않습니다.',
-  unregistered_numeric_claim: '모델 답변에 허용되지 않은 숫자 주장이 포함됐습니다.',
-  invalid_analysis_shape: '모델 응답의 최상위 구조가 계약과 다릅니다.',
-  invalid_hypotheses: '모델 응답의 원인 후보 목록 형식이 올바르지 않습니다.',
-  invalid_limitations: '모델이 작성한 분석 한계 문장이 형식 또는 숫자 제한을 통과하지 못했습니다.',
-  invalid_hypothesis_shape: '원인 후보 항목의 구조가 계약과 다릅니다.',
-  invalid_claim: '원인 후보 문장이 비어 있거나 길이 제한을 넘었습니다.',
-  invalid_hypothesis_references: '원인 후보의 근거·부족 항목 목록 형식이 올바르지 않습니다.',
-  llm_no_response: '모델 응답을 받지 못했습니다.',
-  model_not_configured: '모델 연결이 구성되지 않았습니다.',
-  synthesis_no_usable_evidence: '유효한 관측 근거가 없어 LLM 분석을 생략했습니다.',
-  unconfigured: '이 작업에 사용할 LLM 연결이 구성되지 않았습니다.',
-  synthesis_unconfigured: 'LLM 연결이 구성되지 않아 분석을 생략했습니다.',
-  skipped_runbook: 'Runbook의 결정적 판단 경로를 사용했습니다.',
-  missing_data: '필수 근거가 부족합니다. 부족 항목을 확인하세요.',
-  conflicting_evidence: '관측 근거가 서로 상충합니다.',
-  evidence_sufficient: '코드의 근거 충분성 기준을 충족했습니다.',
-  causal_confirmation_evidence: '원인을 뒷받침할 추가 근거가 필요합니다.',
-  producer_contract: '로그 생산자의 상태 해석 계약이 확인되지 않았습니다.',
-  incident_mapping: '관측과 사건 대상의 연결이 확인되지 않았습니다.',
-  error_code:
-    '장비 오류 코드가 검증된 상태 fact로 확인되지 않았습니다. 로그 보고 내용은 조사 단서로만 사용합니다.',
-  observation_degraded: '일부 관측 조회가 불완전하거나 실패해 근거 품질이 낮아졌습니다.',
-  observation_conflicted: '관측 상태가 서로 상충해 근거 품질이 낮아졌습니다.',
-  synthesis_failed:
-    'LLM 원인 분석이 검증을 통과하지 못했습니다. 분석 요약의 실패 사유를 확인하세요.',
-  approved_runbook: '이 사건에 적용할 승인된 Runbook이 선택되지 않았습니다.',
-  stale_alert: '허용 기간을 벗어난 오래된 알람입니다.',
-  future_timestamp: '미래 시각으로 기록된 알람입니다.',
-  analysis_policy_unconfigured: '적용할 분석 정책이 없습니다.',
-  alarm_resolved: '알람이 해제되어 새 RCA 접수 대상이 아닙니다.',
-  incident_closed: '종결된 사건입니다.',
-  repeated_evidence: '기존과 같은 증거로 새 RCA를 생성하지 않았습니다.',
-};
+const reasons = rcaReasons;
 export function RcaReason({ value }: { value: unknown }) {
   const code = str(value);
   return code ? (
@@ -264,7 +203,9 @@ export function EvidenceRows({
             return (
               <tr key={str(v.id)}>
                 <td>
-                  <strong>{str(v.query_id, '조회 ID 미확인')}</strong>
+                  <strong>
+                    {str(v.query_id, '조회 ID 미확인')} · {queryName(str(v.query_id))}
+                  </strong>
                   <small className="cell-sub">
                     {str(v.cluster_id, '클러스터 미확인')} ·{' '}
                     {str(v.query_version, 'revision 미확인')}
@@ -499,20 +440,33 @@ export function RcaResult({
               ))}
             </section>
           )}
+          {!rows(result.narrative).length && strings(result.limitations).length > 0 && (
+            <section className="result-section">
+              <h3>분석 한계</h3>
+              <DataView value={result.limitations} />
+            </section>
+          )}
           <section className="result-section">
             <h3>부족한 근거 · {strings(result.missing_inputs).length}개</h3>
             {strings(result.missing_inputs).length ? (
-              <ul>
-                {strings(result.missing_inputs).map((v) => (
-                  <li key={v}>
-                    <RcaReason value={v} />
-                  </li>
+              <div>
+                {missingGroups(strings(result.missing_inputs)).map((group) => (
+                  <section key={group.id}>
+                    <h4>{group.name}</h4>
+                    <ul>
+                      {group.items.map((code) => (
+                        <li key={code}>
+                          <RcaReason value={code} />
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="muted">{group.next}</p>
+                  </section>
                 ))}
-              </ul>
+              </div>
             ) : (
               <p>보고된 부족 항목이 없습니다. 원인이 확정됐다는 의미는 아닙니다.</p>
             )}
-            <DataView value={result.limitations} />
           </section>
           {showEvidence && (
             <RcaEvidence
@@ -532,7 +486,16 @@ export function RcaResult({
           ).map(([title, value]) => (
             <section className="result-section" key={title}>
               <h3>{title}</h3>
-              <DataView value={value} />
+              {title === '목적별 판단' ? (
+                rows(value).map((assessment, index) => (
+                  <article key={str(assessment.purpose_id) || index}>
+                    <h4>{purposeLabel(str(assessment.purpose_id))}</h4>
+                    <DataView value={assessment} />
+                  </article>
+                ))
+              ) : (
+                <DataView value={value} />
+              )}
             </section>
           ))}
           <details>

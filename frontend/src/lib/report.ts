@@ -1,3 +1,4 @@
+import { rcaLabels } from './rcaLabels';
 import { obj, rows, str, strings, topics, type Row } from './live';
 
 const names: Record<string, string> = {
@@ -284,24 +285,5 @@ export function collectionNextCheck(observation: Row) {
 }
 
 export function queryName(id: string) {
-  return (
-    (
-      {
-        D01: 'GPU·Node 신원',
-        D02: 'GPU 활동',
-        D03: 'GPU 메모리',
-        D04: 'Host CPU·메모리',
-        D05: 'GPU 오류·상태',
-        D06: 'Node·Pod 관계',
-        D07: 'GPU 유효 요청·배치',
-        D08: 'GPU–Pod 할당',
-        D09: '로그·원본 이벤트',
-        D10: '수집 품질',
-        D11: 'GPU 전력·에너지',
-        D12: '소유권·배치 제약',
-        D13: '업무 영향·성과',
-        D14: '파생 업무 이력',
-      } as Record<string, string>
-    )[id] || '조회 의미 미확인'
-  );
+  return (rcaLabels.queries as Record<string, string>)[id] || '조회 의미 미확인';
 }

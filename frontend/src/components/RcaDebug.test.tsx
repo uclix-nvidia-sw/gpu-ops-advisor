@@ -77,7 +77,9 @@ describe('RCA diagnostics', () => {
     };
     const html = render(<RcaResult job={job} onEvidence={() => {}} />);
     expect(html).toContain('RCA 분석 요청 시도</dt><dd>1건');
-    expect(html).toContain('분석 한계 문장이 형식 또는 숫자 제한을 통과하지 못했습니다');
+    expect(html).toContain(
+      '분석 한계 문장이 형식·한국어·숫자 또는 입력 근거 제한을 통과하지 못했습니다',
+    );
     expect(html).not.toContain('사유 코드 <code>invalid_limitations');
   });
   it('links only published RCA and Ops reports directly from lists', () => {
@@ -264,5 +266,61 @@ describe('RCA diagnostics', () => {
     ])
       expect(html).toContain(text);
     expect(items[0].id).toBe('ok');
+  });
+});
+
+describe('Korean RCA report labels', () => {
+  it('groups missing evidence and renders limitations once outside raw details', () => {
+    const html = render(
+      <RcaResult
+        showEvidence={false}
+        onEvidence={() => {}}
+        job={{
+          result_ref: 'published',
+          result: {
+            missing_inputs: [
+              'causal_confirmation_evidence',
+              'incident_mapping',
+              'producer_contract',
+              'synthesis_failed',
+            ],
+            limitations: ['고유한 분석 한계 문장'],
+            narrative: [{ id: 'limits', title: '분석 한계', text: '고유한 분석 한계 문장' }],
+            assessments: [{ purpose_id: 'R01', status: 'blocked' }],
+          },
+        }}
+      />,
+    );
+    const visible = html.split('<summary>공개 결과 원본')[0];
+    expect(visible.match(/고유한 분석 한계 문장/g)).toHaveLength(1);
+    for (const text of [
+      '설계상 항상 남음',
+      '데이터 원천 부재',
+      '생산자 계약 미확인',
+      '이번 실행의 수집·분석 품질',
+      'gpu_ops_allocation_info',
+      'R01 알려진 오류',
+      '생산자 계약·오류 코드 확인 필요',
+    ])
+      expect(visible).toContain(text);
+    expect(render(<RcaReason value="non_korean_claim" />)).toContain('한국어 문장 기준');
+  });
+  it('keeps legacy limitations and explains query names', () => {
+    expect(
+      render(
+        <RcaResult
+          showEvidence={false}
+          onEvidence={() => {}}
+          job={{ result_ref: 'old', result: { limitations: ['과거 한계'] } }}
+        />,
+      ),
+    ).toContain('<h3>분석 한계</h3>');
+    const html = render(
+      <EvidenceRows
+        items={[{ id: 'e', query_id: 'D05', tool_status: 'ok' }]}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('GPU 오류·상태');
   });
 });

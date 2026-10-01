@@ -19,7 +19,7 @@ def analysis_reply(refs):
     return {
         "hypotheses": [
             {
-                "claim": "Observed device symptom needs confirmation.",
+                "claim": "관측한 장비 증상은 추가 확인이 필요합니다.",
                 "supporting_refs": refs,
                 "contradicting_refs": [],
                 "missing_inputs": ["producer_confirmation"],
