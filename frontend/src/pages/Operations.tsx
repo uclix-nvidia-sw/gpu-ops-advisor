@@ -1,12 +1,14 @@
 import { ArrowRight, ClipboardList, FileChartColumn, Radar, Telescope } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../lib/store';
-import { obj, queryPath, str, topicId, topics, useList, useResource, type Row } from '../lib/live';
+import { obj, queryPath, str, useList, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
-import { reportScope, reportTitle } from '../lib/workflow';
+import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
+import { reportTabs, ReportFilters } from './Reports';
+import { useReportListPosition } from '../lib/reportNavigation';
 import { groupLabel } from '../lib/report';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
-import { Badge, Field } from '../components/ui';
+import { Badge, NavTabs } from '../components/ui';
 import { IncidentStates } from '../components/RcaDebug';
 
 function SectionLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -268,7 +270,7 @@ export function OperationsCases() {
 }
 export function OperationsReports() {
   const app = useApp(),
-    [params, setParams] = useSearchParams();
+    [params] = useSearchParams();
   const topic = params.get('topic') || '';
   const finalOnly = params.get('tab') === 'final';
   const q = useList(
@@ -276,12 +278,13 @@ export function OperationsReports() {
       ? queryPath('/reports', {
           scope: app.scope,
           topic_id: topic,
-          status: finalOnly ? 'succeeded' : '',
+          status: params.get('status') || (finalOnly ? 'succeeded' : ''),
           limit: 30,
         })
       : null,
     true,
   );
+  const reportList = useReportListPosition(q.items);
   return (
     <div className="ops-page">
       <header className="ops-intro">
@@ -291,34 +294,12 @@ export function OperationsReports() {
           <p>무엇이 관측되었는지, 무엇을 아직 판단할 수 없는지 함께 확인하세요.</p>
         </div>
         <div className="head-actions">
-          <Link className="button primary" to="/reports?tab=final">
-            최종 보고서 <ArrowRight size={16} />
-          </Link>
-          <Link className="button" to="/reports/new">
-            새 운영 분석 요청 <ArrowRight size={16} />
+          <Link className="button primary" to="/reports/new">
+            새 보고서 만들기 <ArrowRight size={16} />
           </Link>
         </div>
       </header>
-      <div className="tabs" aria-label="보고서 보기">
-        {[
-          [false, '전체 이력'],
-          [true, '최종 보고서'],
-        ].map(([final, label]) => (
-          <button
-            key={String(label)}
-            className={finalOnly === final ? 'active' : ''}
-            aria-pressed={finalOnly === final}
-            onClick={() => {
-              const next = new URLSearchParams(params);
-              if (final) next.set('tab', 'final');
-              else next.delete('tab');
-              setParams(next);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <NavTabs items={reportTabs} />
       {finalOnly && (
         <section className="ops-section">
           <h2>공개된 Ops 최종 보고서</h2>
@@ -328,31 +309,14 @@ export function OperationsReports() {
           </p>
         </section>
       )}
-      <div className="ops-report-tools">
-        <Field label="궁금한 분석 주제">
-          <select
-            value={topic}
-            onChange={(e) => {
-              const next = new URLSearchParams(params);
-              next.set('topic', e.target.value);
-              setParams(next);
-            }}
-          >
-            <option value="">모든 주제</option>
-            {topics.map((t, i) => (
-              <option key={t} value={topicId(i)}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <SectionLink to="/schedules">정기 보고서 관리</SectionLink>
-      </div>
+      <ReportFilters />
       <QueryState query={q} empty={!q.items.length}>
         <div className="ops-library">
           {q.items.map((r, i) => (
             <Link
               className="ops-report-book"
+              id={`report-row-${str(r.id)}`}
+              state={{ reportList, reportRow: str(r.id) }}
               key={str(r.id)}
               to={
                 r.result_ref != null ? `/reports/${str(r.id)}#final-report` : `/jobs/${str(r.id)}`
@@ -368,6 +332,7 @@ export function OperationsReports() {
                   <Badge status={str(r.result_status, 'unpublished')} />
                 </div>
                 <h2>{reportTitle(r)}</h2>
+                <p className="muted">{reportTopics(r)}</p>
                 <p>대상: {reportScope(r)}</p>
                 <dl>
                   <dt>요청 집계</dt>

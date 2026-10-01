@@ -135,7 +135,11 @@ export function reportObservations(result: Row) {
         ...observation,
         statuses: [...statuses],
         reasons: [...why],
-        sample_count: Number(previous?.sample_count || 0) + Number(observation.sample_count || 0),
+        sample_count:
+          typeof observation.sample_count === 'number' &&
+          (!previous || typeof previous.sample_count === 'number')
+            ? Number(previous?.sample_count ?? 0) + observation.sample_count
+            : null,
       });
     }
     for (const [key, value] of local) groups.set(key, value);
@@ -179,25 +183,29 @@ export function collectionStatus(observation: Row) {
       'range_budget_exhausted',
     ].includes(reason),
   );
+  if (limited && typeof observation.sample_count !== 'number')
+    return '실행 제한 · 수집량 기록 없음';
   if (limited)
     return Number(observation.sample_count) > 0
       ? '일부 수집 후 제한으로 중단'
       : '실행 제한으로 미수집';
   if (reasons.includes('query_failed')) return '조회 실패';
-  return strings(observation.statuses)
-    .map(
-      (status) =>
-        (
-          ({
-            ok: '수집 완료',
-            empty: '해당 기간 데이터 없음',
-            partial: '일부 수집',
-            unavailable: '수집 불가',
-            parse_error: '응답 해석 실패',
-          }) as Record<string, string>
-        )[status] || status,
-    )
-    .join(', ');
+  return (
+    strings(observation.statuses)
+      .map(
+        (status) =>
+          (
+            ({
+              ok: '수집 완료',
+              empty: '해당 기간 데이터 없음',
+              partial: '일부 수집',
+              unavailable: '수집 불가',
+              parse_error: '응답 해석 실패',
+            }) as Record<string, string>
+          )[status] || status,
+      )
+      .join(', ') || '수집 상태 기록 없음'
+  );
 }
 export function groupLabel(groups: unknown) {
   return (
@@ -238,4 +246,49 @@ export function namespaceRows(metrics: Row[]) {
     groups.set(key, group);
   }
   return [...groups.values()];
+}
+
+export function collectionNextCheck(observation: Row) {
+  const reasons = strings(observation.reasons);
+  if (
+    reasons.some(
+      (reason) => reason.includes('budget_exhausted') || reason === 'discovery_deadline_exhausted',
+    )
+  )
+    return '조회·시간 한도와 분석 범위를 확인하세요. 범위 축소 또는 수집 계획 검토가 필요합니다.';
+  if (
+    reasons.includes('query_failed') ||
+    strings(observation.statuses).some((s) => ['unavailable', 'parse_error'].includes(s))
+  )
+    return '관련 근거에서 오류와 데이터소스 연결·권한·응답 형식을 확인하세요.';
+  if (strings(observation.statuses).includes('empty'))
+    return '해당 기간·대상·지표의 표본과 필터를 확인하세요. 전체 서버에 데이터가 없다는 뜻은 아닙니다.';
+  if (strings(observation.statuses).includes('partial'))
+    return '누락된 조회 구간과 응답 제한·원본 경고를 확인하세요.';
+  if (strings(observation.statuses).includes('ok'))
+    return '수집 응답은 정상입니다. 계산 보류가 있다면 신원 연결·단위·분모 등 계산 조건을 확인하세요.';
+  return '관련 근거에서 수집 상태를 확인하세요. 기록만으로 실행 여부를 단정할 수 없습니다.';
+}
+
+export function queryName(id: string) {
+  return (
+    (
+      {
+        D01: 'GPU·Node 신원',
+        D02: 'GPU 활동',
+        D03: 'GPU 메모리',
+        D04: 'Host CPU·메모리',
+        D05: 'GPU 오류·상태',
+        D06: 'Node·Pod 관계',
+        D07: 'GPU 유효 요청·배치',
+        D08: 'GPU–Pod 할당',
+        D09: '로그·원본 이벤트',
+        D10: '수집 품질',
+        D11: 'GPU 전력·에너지',
+        D12: '소유권·배치 제약',
+        D13: '업무 영향·성과',
+        D14: '파생 업무 이력',
+      } as Record<string, string>
+    )[id] || '조회 의미 미확인'
+  );
 }

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, str, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
-import { reportScope, reportTitle } from '../lib/workflow';
+import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
 import { groupLabel } from '../lib/report';
 export function QueryState({
   query,
@@ -320,25 +320,32 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
   );
 }
 export function JobRows({ items }: { items: Row[] }) {
+  const location = useLocation();
+  const reportsOnly = location.pathname === '/reports';
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             <th>분석 · 대상</th>
-            <th>종류</th>
+            {!reportsOnly && <th>종류</th>}
             <th>접수 시각</th>
             <th>실행 상태</th>
             <th>결과 품질</th>
-            <th>최종 보고서</th>
+            {!reportsOnly && <th>최종 보고서</th>}
           </tr>
         </thead>
         <tbody>
           {items.map((j) => (
-            <tr key={str(j.id)}>
+            <tr key={str(j.id)} id={`report-row-${str(j.id)}`}>
               <td>
                 <Link
                   className="text-link"
+                  state={
+                    reportsOnly
+                      ? { reportList: location.pathname + location.search, reportRow: str(j.id) }
+                      : undefined
+                  }
                   to={
                     j.kind === 'report' && j.result_ref != null
                       ? `/reports/${str(j.id)}#final-report`
@@ -356,28 +363,31 @@ export function JobRows({ items }: { items: Row[] }) {
                 {j.kind === 'rca' && <small className="cell-sub">작업 ID · {str(j.id)}</small>}
                 {j.kind === 'report' ? (
                   <>
+                    <details>
+                      <summary>분석 주제 · 작업 ID</summary>
+                      <p>{reportTopics(j)}</p>
+                      <small>{str(j.id)}</small>
+                    </details>
                     <div className="cell-sub">대상: {reportScope(j)}</div>
                     <div className="cell-sub">
                       분석 기간: {formatDate(str(obj(j.time_range).start))} –{' '}
                       {formatDate(str(obj(j.time_range).end))}
                     </div>
                     <div className="cell-sub">요청 집계: {groupLabel(j.group_by)}</div>
-                    <details>
-                      <summary>작업 ID</summary>
-                      <small>{str(j.id)}</small>
-                    </details>
                   </>
                 ) : (
                   <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
                 )}
               </td>
-              <td>
-                {str(j.kind) === 'rca'
-                  ? 'RCA 조사'
-                  : str(j.kind) === 'report'
-                    ? '보고서'
-                    : str(j.kind)}
-              </td>
+              {!reportsOnly && (
+                <td>
+                  {str(j.kind) === 'rca'
+                    ? 'RCA 조사'
+                    : str(j.kind) === 'report'
+                      ? '보고서'
+                      : str(j.kind)}
+                </td>
+              )}
               <td>{formatDate(str(j.created_at))}</td>
               <td>
                 <Badge status={str(j.status)} />
@@ -385,18 +395,20 @@ export function JobRows({ items }: { items: Row[] }) {
               <td>
                 <Badge status={str(j.result_status) || null} />
               </td>
-              <td>
-                {j.result_ref != null ? (
-                  <Link
-                    className="text-link"
-                    to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`}
-                  >
-                    최종 보고서 보기
-                  </Link>
-                ) : (
-                  '미발행'
-                )}
-              </td>
+              {!reportsOnly && (
+                <td>
+                  {j.result_ref != null ? (
+                    <Link
+                      className="text-link"
+                      to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`}
+                    >
+                      최종 보고서 보기
+                    </Link>
+                  ) : (
+                    '미발행'
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

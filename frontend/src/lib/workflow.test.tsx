@@ -3,13 +3,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { WorkflowGuide } from '../components/WorkflowGuide';
 import { ReportContent } from '../components/ReportContent';
-import { rcaSteps, reportScope, reportTitle, reportSteps, workflowValues } from './workflow';
+import {
+  rcaSteps,
+  reportScope,
+  reportTitle,
+  reportTopics,
+  reportSteps,
+  workflowValues,
+} from './workflow';
 import { apiRequest, apiTraceSnapshot, clearApiTrace } from './api';
 
 describe('mode-independent published data and developer guides', () => {
   it('identifies report topics and scope without guessing missing metadata', () => {
-    expect(reportTitle({ topic_ids: ['O01', 'O11', 'future-topic'] })).toBe(
+    expect(reportTopics({ topic_ids: ['O01', 'O11', 'future-topic'] })).toBe(
       '장비·Node 변화 · 관측 품질 · future-topic',
+    );
+    expect(reportTitle({ topic_ids: ['O01', 'O11'] })).toBe('GPU 운영 보고서 · 2개 주제');
+    expect(reportTitle({ topic_ids: ['O08'], group_by: ['namespace'] })).toBe(
+      'Namespace별 GPU 사용 분석',
     );
     expect(reportTitle({})).toBe('분석 주제 미확인');
     expect(reportScope({})).toBe('분석 대상 미확인');
