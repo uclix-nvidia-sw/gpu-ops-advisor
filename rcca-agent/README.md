@@ -1,5 +1,26 @@
 # rcca-agent
 
+## Bounded synthesis context / 분석 입력 크기 제한 — 2026-10-01
+
+원본 메트릭 전체를 그대로 JSON 직렬화하면 `LLM.complete()`의 보수적 UTF-8 입력 예산을 초과해 HTTP 요청 전에 실패할 수 있다. 전체 `llm_usage.calls`에는 후속 조회 선택과 최종 보고서 편집도 포함되므로 값이 양수여도 원인 Synthesis 호출 성공을 뜻하지 않는다.
+
+- `synthesis_context.py`는 저장된 evidence를 수정하지 않고 모델용 view만 제한한다. 최대 16,000바이트이고 남은 예산에서 system/전송 여유와 8,192의 출력 여유를 뺀 값이 더 작으면 그 값을 사용한다. 실제 output cap과 비용 차감은 기존 LLM transport가 담당한다.
+- health, 검증된 relation, metric 순서로 담는다. metric은 사건 노드와 비-inventory 계열을 우선하고 계열당 최대 8개의 균등 간격 원본 인덱스 표본을 전달한다. 새로운 평균·최댓값·연속성을 계산하거나 주장하지 않는다. 생략한 관측/표본 수와 계열별 선택 방법을 `context_selection`/`sample_selection`에 명시하며 보고서 한계에도 남긴다. 최소 메타데이터와 유효 관측을 담을 수 없으면 명시적으로 실패한다.
+- 후보의 참조는 실제 선택한 관측의 evidence ID로 제한한다. 숫자 측정값을 자유 문장으로 생성하지 못하며, 인용한 관측의 typed `error_code`와 일치하는 XID/SXID 식별자만 예외로 허용한다. 오류 코드 인용은 원인 확정이나 fact 승격이 아니다.
+- `quality.analysis.synthesis`와 `rca_synthesis.snapshot.diagnostics`에 단계별 `request_attempts`, `response_calls`, 안전한 `error_code`, 입력 크기와 선택 범위를 저장한다. 모델 원문·외부 예외 문자열은 진단에 저장하지 않는다. 응답 기록도 내용 검증 성공을 의미하지 않는다.
+
+기존 partial/missing-data·producer 시각 계약·GPU–Pod mapping 조건과 취소/원격 추론 종료 불명 처리는 유지한다. DB migration과 기존 결과 재작성은 없다. 운영 적용에는 RCA Worker/Frontend의 승인된 배포와 새 실행 검수가 필요하다. [검증 범위](../agents/QA.md).
+
+DBeaver/PostgreSQL에서는 아래 읽기 전용 조회의 `:job_id`에 새 RCA 작업 UUID를 넣어 분석 단계의 진단을 확인한다. 구 결과는 `diagnostics`가 NULL이며 호출 0회를 뜻하지 않는다. `reason`은 장비 식별용 target이 아니라 사건의 `alert.labels.reason`과 `alert_clues`에 보존된다.
+
+```sql
+SELECT query_id, tool_status, quality,
+       jsonb_extract_path(snapshot, 'diagnostics') AS diagnostics
+FROM public.evidence
+WHERE job_id = CAST(:job_id AS uuid)
+  AND query_id = 'rca_synthesis';
+```
+
 ## 보고서 첫 화면 접근 — 2026-09-30
 
 RCA 첫 페이지의 `최종 보고서` 버튼/탭과 공개 작업의 바로가기에서 저장된 다섯 섹션으로 이동한다. RCA 판단·저장·LLM 호출 계약은 변경하지 않는다. 미공개 작업을 최종 보고서로 표시하지 않으며 기존 결과를 재작성하지 않는다.

@@ -1,3 +1,12 @@
+# 2026-10-01 RCA 분석 요청 시도·응답 기록 분리 표시
+
+- **통과:** `frontend/`에서 `npm run format:check`, `npm test` **47 tests**, `npm run build`.
+- **통과:** 렌더 fixture로 synthesis 요청 0건·전체 LLM 응답 1건·`llm_context_budget_exhausted` 사유 표시와, 단계별 진단이 없는 구 결과의 `미확인` 표시를 확인했다.
+- **확인:** 운영 GUI(배포 전)의 작업 `22c1f69f` 화면에서 `LLM 응답 사용 기록 1건`과 분석 상태 `failed`가 함께 표시되는 기존 혼동을 확인했다.
+- **미검증:** 배포 후 실제 브라우저에서 새 항목 표시. 운영 API·배포는 이번 범위가 아니다.
+
+---
+
 # 2026-10-01 보고서 목록에서 본문 바로 열기
 
 - **통과:** `frontend/`에서 `npm run format:check`, `npm test` **46 tests**, `npm run build`.
