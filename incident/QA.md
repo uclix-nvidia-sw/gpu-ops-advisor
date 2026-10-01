@@ -1,5 +1,13 @@
 # Incident 검증 기록
 
+## 2026-10-01 분석 구간 밀리초 경계
+
+기준 main `555f8dd`. 운영 작업 `ed730b4d`의 DB를 읽기 전용으로 조회해 `time_range.end=2026-10-01T02:29:46.513252Z`, D05·D09 `request_time_range.end=...46.513Z`, `reason=time_precision_reduced`를 확인했다.
+
+- **추가:** `TestAnalysisWindowUsesWholeMilliseconds` — 운영 값 재현, 마이크로초 시작 올림·끝 내림으로 구간 미확장, 알람 이후 수신이 아닌 경우의 after-window 유지.
+- **미검증(로컬):** 이 PC에는 Go·Docker가 없어 `go vet`/`go test -race`/e2e는 PR CI에서 확인한다.
+- **해당 없음:** DB migration·기존 snapshot/hash 재작성·Python RCA 정밀도 계약 변경(실제 손실이 있으면 여전히 `time_precision_reduced`로 표시).
+
 ## 2026-09-30 Fleet target 투영
 
 **통과:** Go 1.26.2에서 `go vet ./...`, `go test -race ./...`, `go build ./...`. 최신 로컬 소스의 격리 임시 복사본으로 실행했다. 별도 로컬 PostgreSQL에서 `go test -tags=e2e ./tests -v -count=1 -timeout=5m` 전체 통과: 투영만 추가된 반복 알림에서 기존 incident/outbox/snapshot/hash 유지, 새 incident에 machine/component/node 투영, 기존 episode·migration 충돌 회귀 포함. Agent 실제 프로세스 E2E의 webhook→outbox→JC→RCA 공개도 통과했다. 상위 Grafana·LLM은 fixture이며 운영 배포는 미수행이다. DB migration 변경 없음.
