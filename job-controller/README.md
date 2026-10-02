@@ -53,6 +53,12 @@ query/parser/criteria의 개발 기본 revision은 `unconfigured`입니다. Agen
 
 `JC_APPLY_CONFIG`는 미지정 시 `true`이며, 시작할 때 전달한 설정을 DB에 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 기본 실행 프로필은 `local-v1` 하나이며 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. 예산 변경은 새로 접수되는 작업에 적용하고, 기존 작업은 접수 시 저장한 실행 설정 스냅샷을 사용합니다. 자동 적용을 끄려면 `JC_APPLY_CONFIG=false`를 명시합니다.
 
+## 저장 중 lease 갱신 — 2026-10-02
+
+Agent의 evidence/candidate INSERT는 외래 키 검사 때문에 jobs 행에 KEY SHARE 잠금을 유지한다. JC의 jobs/attempts 상태 변경은 키를 변경하지 않으므로 `FOR NO KEY UPDATE`를 사용해 이 잠금과 공존한다. JC 상태 변경끼리의 배타성과 공통 capacity 잠금은 그대로 유지한다. 접수 재전송·claim·heartbeat/complete/fail·취소/재시도·sweep 경로를 함께 맞춘다. heartbeat와 complete는 행 잠금을 얻은 뒤 현재 시각을 다시 읽어 대기 중 만료된 lease를 되살리거나 결과를 공개하지 않는다.
+
+공통 Worker Store는 대량 쓰기 뒤 커밋 직전의 짧은 최종 검증에만 공유 잠금을 사용한다. 이 변경은 JC와 두 Worker를 함께 반영해야 하며 JC → Worker 순서로 교체한다. DB migration·접수/결과 스키마·30초 lease·5초 heartbeat·격리 해제 기준은 변경하지 않는다. JC만 되돌리면 장시간 저장의 FK 잠금 대기가 다시 생길 수 있으므로 함께 검증한 버전 조합으로 복구한다.
+
 ## 추론 격리와 취소
 
 lease 만료나 boot 교체 시 원격 추론 종료를 증명할 수 없으면 reservation을 quarantined로 유지합니다. 해당 job과 점유된 공유/종류/Worker 슬롯은 다시 사용하지 않습니다. HTTP timeout만으로 슬롯을 반환하지 않습니다. 현재 검증된 원격 최대 수명 설정은 없으므로 운영 확인 해제만 제공합니다.

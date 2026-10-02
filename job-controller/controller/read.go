@@ -41,7 +41,7 @@ func (c *Controller) command(ctx context.Context, id, op string, b Object, h htt
 	hash := Hash(Object{"body": b, "version": version})
 	var result Object
 	e := c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
-		j, e := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE id=$1 FOR UPDATE", id)
+		j, e := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE id=$1 FOR NO KEY UPDATE", id)
 		if e != nil {
 			return e
 		}

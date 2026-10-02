@@ -53,7 +53,7 @@ func (c *Controller) finish(ctx context.Context, tx pgx.Tx, j Object, now time.T
 }
 func (c *Controller) Sweep(ctx context.Context) error {
 	return c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
-		rows, e := tx.Query(ctx, `SELECT to_jsonb(j) FROM jobs j JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no WHERE j.source_module IS NOT NULL AND j.status='running' AND (a.ended_at IS NULL OR j.deadline_at<=$1) AND (j.deadline_at<=$1 OR a.lease_expires_at<=$1 OR NOT EXISTS(SELECT 1 FROM workers w WHERE w.worker_id=a.worker_id AND w.boot_id::text=a.boot_id AND NOT retired)) ORDER BY j.id FOR UPDATE OF j,a`, now)
+		rows, e := tx.Query(ctx, `SELECT to_jsonb(j) FROM jobs j JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no WHERE j.source_module IS NOT NULL AND j.status='running' AND (a.ended_at IS NULL OR j.deadline_at<=$1) AND (j.deadline_at<=$1 OR a.lease_expires_at<=$1 OR NOT EXISTS(SELECT 1 FROM workers w WHERE w.worker_id=a.worker_id AND w.boot_id::text=a.boot_id AND NOT retired)) ORDER BY j.id FOR NO KEY UPDATE OF j,a`, now)
 		if e != nil {
 			return e
 		}
@@ -132,11 +132,11 @@ func (c *Controller) attempt(ctx context.Context, id, op string, b Object) (Obje
 	}
 	var result Object
 	e := c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
-		j, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE id=$1 FOR UPDATE", id)
+		j, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE id=$1 FOR NO KEY UPDATE", id)
 		if err != nil {
 			return err
 		}
-		a, err := one(ctx, tx, "SELECT to_jsonb(a) FROM job_attempts a WHERE job_id=$1 AND attempt_no=$2 FOR UPDATE", id, n)
+		a, err := one(ctx, tx, "SELECT to_jsonb(a) FROM job_attempts a WHERE job_id=$1 AND attempt_no=$2 FOR NO KEY UPDATE", id, n)
 		if err != nil {
 			if missing(err) {
 				return stale()
@@ -153,6 +153,10 @@ func (c *Controller) attempt(ctx context.Context, id, op string, b Object) (Obje
 				return nil
 			}
 			return stale()
+		}
+		// Recheck time after row-lock waits; never renew or publish an expired attempt.
+		if err = tx.QueryRow(ctx, "SELECT clock_timestamp()").Scan(&now); err != nil {
+			return err
 		}
 		if Number(j, "attempt_no") != n || j["status"] != "running" || a["ended_at"] != nil || !instant(a, "lease_expires_at").After(now) || !instant(j, "deadline_at").After(now) {
 			return stale()

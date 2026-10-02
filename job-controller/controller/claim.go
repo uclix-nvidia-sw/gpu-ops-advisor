@@ -195,7 +195,7 @@ func (c *Controller) claim(ctx context.Context, b Object) (Object, error) {
 		if err != nil {
 			return err
 		}
-		job, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE kind=$1 AND "+eligible+" AND "+jobContractSQL+"=ANY($3::text[]) ORDER BY eligible_at,created_at,id LIMIT 1 FOR UPDATE", kind, now, contracts)
+		job, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE kind=$1 AND "+eligible+" AND "+jobContractSQL+"=ANY($3::text[]) ORDER BY eligible_at,created_at,id LIMIT 1 FOR NO KEY UPDATE", kind, now, contracts)
 		if err != nil {
 			if p, ok := err.(*Problem); ok && p.Status == 404 {
 				return c.reasons(ctx, tx, now)

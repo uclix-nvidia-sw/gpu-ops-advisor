@@ -1,3 +1,7 @@
+import asyncio
+import json
+import logging
+import time
 from uuid import uuid4
 
 import psycopg
@@ -5,6 +9,40 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from .contracts import content_hash, validate_result
+
+log = logging.getLogger(__name__)
+
+
+def encoded_json(value):
+    # Encode in the preparation thread, not psycopg's event-loop adapter.
+    return Jsonb(json.dumps(value).encode(), dumps=lambda data: data)
+
+
+def prepare_result(result, evidence):
+    validate_result(result, evidence)
+    return encoded_json(result), content_hash(result)
+
+
+def prepare_evidence(e):
+    return (
+        encoded_json(e["scope"]),
+        encoded_json(e["input"]),
+        encoded_json(e["quality"]),
+        encoded_json(e["snapshot"]),
+        content_hash(e["snapshot"]),
+    )
+
+
+async def check_attempt(conn, claim):
+    # Wall clock, not transaction-start now(): a save may outlive a lease.
+    row = await (
+        await conn.execute(
+            "SELECT 1 FROM job_attempts a JOIN jobs j ON j.id=a.job_id WHERE a.job_id=%s AND a.attempt_no=%s AND a.claim_token=%s AND a.ended_at IS NULL AND a.lease_expires_at>clock_timestamp() AND j.deadline_at>clock_timestamp() AND j.cancel_requested_at IS NULL AND j.status='running' AND j.attempt_no=a.attempt_no",
+            (claim["job_id"], claim["attempt_no"], claim["claim_token"]),
+        )
+    ).fetchone()
+    if not row:
+        raise ValueError("stale attempt")
 
 
 class Store:
@@ -130,21 +168,23 @@ class Store:
                 return context
 
     async def save(self, claim, result, evidence):
-        validate_result(result, evidence)
+        started = time.monotonic()
         candidate_id = str(uuid4())
-        digest = content_hash(result)
+        body, digest = await asyncio.to_thread(prepare_result, result, evidence)
+        prepare_seconds = time.monotonic() - started
         async with await psycopg.AsyncConnection.connect(self.url) as conn:
             async with conn.transaction():
-                # Fence stale attempts without modifying JC-owned rows.
-                row = await (
-                    await conn.execute(
-                        "SELECT 1 FROM job_attempts a JOIN jobs j ON j.id=a.job_id WHERE a.job_id=%s AND a.attempt_no=%s AND a.claim_token=%s AND a.ended_at IS NULL AND a.lease_expires_at>now() AND j.deadline_at>now() AND j.cancel_requested_at IS NULL AND j.status='running' AND j.attempt_no=a.attempt_no FOR SHARE OF j,a",
-                        (claim["job_id"], claim["attempt_no"], claim["claim_token"]),
-                    )
-                ).fetchone()
-                if not row:
-                    raise ValueError("stale attempt")
+                await check_attempt(conn, claim)
                 for e in evidence:
+                    before = time.monotonic()
+                    (
+                        scope,
+                        inputs,
+                        quality,
+                        snapshot,
+                        checksum,
+                    ) = await asyncio.to_thread(prepare_evidence, e)
+                    prepare_seconds += time.monotonic() - before
                     await conn.execute(
                         "INSERT INTO evidence(id,job_id,attempt_no,cluster_id,scope,query_id,query_version,input,tool_status,time_start,time_end,data_cutoff_at,quality,snapshot,checksum) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                         (
@@ -152,17 +192,17 @@ class Store:
                             claim["job_id"],
                             claim["attempt_no"],
                             e.get("cluster_id"),
-                            Jsonb(e["scope"]),
+                            scope,
                             e["query_id"],
                             e["query_version"],
-                            Jsonb(e["input"]),
+                            inputs,
                             e["tool_status"],
                             e["time_range"]["start"],
                             e["time_range"]["end"],
                             result["data_cutoff_at"],
-                            Jsonb(e["quality"]),
-                            Jsonb(e["snapshot"]),
-                            content_hash(e["snapshot"]),
+                            quality,
+                            snapshot,
+                            checksum,
                         ),
                     )
                 await conn.execute(
@@ -175,8 +215,26 @@ class Store:
                         claim["versions"]
                         .get("execution", {})
                         .get("result_schema", "1.3"),
-                        Jsonb(result),
+                        body,
                         digest,
                     ),
                 )
+                # Keep the fence only for final validation/commit. JC non-key updates
+                # remain compatible with the FK key-share locks held during inserts.
+                await conn.execute(
+                    "SELECT 1 FROM jobs WHERE id=%s FOR SHARE", (claim["job_id"],)
+                )
+                await conn.execute(
+                    "SELECT 1 FROM job_attempts WHERE job_id=%s AND attempt_no=%s FOR SHARE",
+                    (claim["job_id"], claim["attempt_no"]),
+                )
+                await check_attempt(conn, claim)
+        elapsed = time.monotonic() - started
+        log.info(
+            "candidate saved job=%s evidence=%d prepare_seconds=%.3f db_seconds=%.3f",
+            claim["job_id"],
+            len(evidence),
+            prepare_seconds,
+            elapsed - prepare_seconds,
+        )
         return candidate_id, digest

@@ -1,3 +1,15 @@
+# 2026-10-02 대량 저장 중 heartbeat·lease 보호 — 로컬 검수
+
+- 기준: 새로 fetch한 `origin/main` **5ddfe21**, 로컬 브랜치 `fix/worker-save-heartbeat`. 공통 Store/Worker와 JC 행 잠금만 수정하며 Worker별 분석·관측 계획·해시 규칙·스키마·lease/슬롯 설정은 유지한다.
+- **통과:** Python 3.11.16, 루트 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/save-results.xml` — **315 passed, 0 skipped, 43.36초**, 기존 MCP API deprecation warning 3건. `RUN_AGENT_E2E=1`, `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `GRAFANA_MCP_BINARY`, `HELM_BINARY`를 준비된 로컬 도구로 지정했다. 새 임시 loopback PostgreSQL·실제 JC/Incident/Backend·두 Worker·공식 Grafana MCP를 사용하며 데이터소스/모델 응답은 HTTP fixture다. 테스트 DB는 종료했다.
+- **통과:** `test_store.py`의 실제 JC/DB 검사: 합성 evidence 217건, 2초 시험 lease보다 긴 2.6초 저장 지연 중 heartbeat 갱신과 최종 공개·동일 완료 재전송·원본 JSON/checksum 보존. 저장 중 취소·lease 만료·attempt 교체·deadline 만료는 evidence/candidate를 모두 롤백한다. JC의 실제 행 잠금 대기를 확인한 뒤 lease를 만료시키면 heartbeat 409로 갱신을 거부한다. 실제 운영 41 MiB snapshot의 성능 재현은 아니다.
+- **통과:** Worker 저장 도중 취소/409 lease 상실 시 저장 task를 회수하고 complete를 보내지 않는 검사. JSON 큰 정수·소수·한국어·특수문자 보존, 기존 RCA/Ops 회귀 포함.
+- **통과:** Ruff check/format 70개 파일. JC·Backend·Incident 각각 Go vet/race/server build, 별도 임시 PostgreSQL의 Backend·Incident 전체 `-tags=e2e` 검사. 관련 JC 배분·취소·완료·재시도 경로 포함. 문서 링크와 diff 검사 통과.
+- **미수행/미검증:** 커밋·푸시·PR·원격 CI·배포·운영 보고서 재실행·기존 격리 해제·실제 Grafana/LLM·운영 메모리/저장 성능. 기존 운영 실패의 CPU와 DB 대기 시간 비율은 당시 계측 부재로 확정하지 않는다.
+- **해당 없음:** DB migration, API/result schema, Frontend 변경. 배포 시 JC → 두 Worker 순서로 함께 반영하며 기존 격리는 모델 서버 종료 확인 후 별도 운영 절차로 해제한다.
+
+---
+
 # 2026-10-02 보고서 계획 기반 병렬 MCP 수집
 
 - **통과:** Python 3.12.14 전체 Agent 검사 **306 passed, 0 skipped** (94.70초). `RUN_AGENT_E2E=1`, 격리 로컬 PostgreSQL, 최신 소스 Backend/JC/Incident, 공식 Grafana MCP 1.4.2와 Helm으로 실행했다. 데이터소스·모델은 HTTP fixture이며 운영 DB는 사용하지 않았다.
