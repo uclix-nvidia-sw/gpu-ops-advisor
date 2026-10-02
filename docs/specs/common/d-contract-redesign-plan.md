@@ -53,7 +53,7 @@ Fleet는 source 이름과 중앙 변환 이름, DCGM은 장비 지원과 exporte
 | agents/config.example.json + charts/gpu-ops-advisor/files/agents.json | D15~D49 중 검증된 binding 등록, 새 profile의 D 통합 | 두 사본 일치. 기존 환경 override 전수 대조 |
 | settings.py, observation.py, discovery.py, runtime.py | 단일 query 구조 유지, 필요 등록 도구/검사와 대상 투영 | scope·기간·예산·chunk·취소·원본 시각·응답 재사용 보존 |
 | normalize.py, parsers.py, calculations.py | D별 단위/타입 및 출력 fact, 통합 D02/D09 입력 소비 | query 숫자를 의미로 추정하지 않음. counter/bitmask/info/gauge 구분 |
-| RCA runbook_contract.py, workflow.py, runbooks | D05→D09 fact 요구, 기본 D08→D02 관계 입력, 새 관측 계획 | 모든 발행본/필수 fact/권고를 revision별 대조. 새 revision으로 전환 |
+| RCA runbook_contract.py, workflow.py, runbooks | 267개 초안/일반 패키지의 D05→D09 fact 요구, 기본 D08→D02 관계 입력, 코드별 추가 관측과 비코드 조사 계획 | 모든 발행본/필수 fact/권고를 revision별 대조. 새 revision으로 전환 |
 | Ops workflow.py, collection.py, namespace_usage.py | 매핑 §6의 현재→기본+추가 D, 신규 출력·조건부 조사 | O08 두 profile·기존 연결/할당/품질 gate·기존 산식 유지 |
 | store.py, contracts.py, shared/contract, JC/Incident | query/version 및 공개 계약 영향 검사 | snapshot/hash·lease·publication·idempotency 보존. 실제 필요 없으면 변경하지 않음 |
 | Backend API/export, Frontend, Agent report | 신규 지표·상태·단위·근거 표시, D04 명칭 정합 | 기존 결과 열람·HTML/CSV 유지. 관측을 인과로 표시하지 않음 |
@@ -83,6 +83,6 @@ Fleet는 source 이름과 중앙 변환 이름, DCGM은 장비 지원과 exporte
 
 ## 7. 남은 구체 결정
 
-D 형태를 다시 논의하는 단계는 아니다. 남은 결정은 후보 D의 환경별 binding·타입·단위·주기, 신규 출력의 정확한 직렬화/산식/필수성, 발행 Runbook 전수 대응, 구/신 실행 revision 전환이다. 전체 운영 가용 목록과 전용 Runbook 전수 매핑은 미완료로 유지한다.
+D 형태를 다시 논의하는 단계는 아니다. 남은 결정은 후보 D의 환경별 binding·타입·단위·주기, 신규 출력의 정확한 직렬화/산식/필수성, 발행 Runbook 전수 대응, 구/신 실행 revision 전환이다. 전체 운영 가용 목록과 전용 Runbook의 내용·발행 revision 전수 전환은 미완료다. 저장소 초안 267개가 모두 D09/D05 필수·D02 선택을 사용하는 정적 대조는 매핑 §7.2에 기록했다. 비코드 사례의 조사 질문→D→계산 fact→판단/보류는 §7.1에 정의한다.
 
 [매핑 설계](d-query-mapping.md)가 신규 D와 O/RCA 관계의 기준이며, 03은 공통 정의, 04는 판단·산식, 14는 모듈 실행 계약의 기준이다. 실제 구현 시 이들 문서와 해당 모듈 명세를 함께 갱신한다.
