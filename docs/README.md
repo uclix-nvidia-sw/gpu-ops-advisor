@@ -1,5 +1,9 @@
 # GPU Ops Advisor 개발 문서 안내
 
+## D 계약 재설계 계획 — 2026-10-02
+
+[D 계약 재설계 개발 계획](specs/common/d-contract-redesign-plan.md)은 데이터 원장 확인 → D 재정의 → 연계 설계 → 구현 → 검수의 산출물·완료 기준을 정의한다. 현재는 계획·문서 단계다. 기존 D 번호·분류 유지와 하위 관측 구조 채택을 전제로 하지 않는다. [03 §3.3](specs/common/03_데이터_설계서.md#33-d-정의역할과-복수-관측-확장--2026-10-02)은 기존 D별 조사·메트릭 후보 자료로 정정했으며 최종 계약이 아니다. 실환경 전체 가용 목록 확인과 구현은 후속 작업이다.
+
 ## RCA·Ops 최종 보고서 — 2026-09-30
 
 [RCA 첫 화면 접근과 Ops 표시](../frontend/README.md), [Ops의 마지막 LLM 편집·기본 보고서 계약](../ops-agent/README.md), [HTML 내보내기](../backend/README.md)를 반영했다. 최신 main의 Namespace/GPU 시간·수집 개선을 유지한다. 검증 범위는 [Agent QA](../agents/QA.md)와 모듈 QA에 기록한다.
