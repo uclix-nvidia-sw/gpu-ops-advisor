@@ -50,6 +50,7 @@ class Upstream(BaseHTTPRequestHandler):
     logs_max_limit = None
     logs_json_target = None
     logs_max_seconds = None
+    logs_padding_bytes = 16384
     fleet_reports = False
 
     def log_message(self, *args):
@@ -61,7 +62,9 @@ class Upstream(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        # A size-limited MCP client may close an oversized fixture response early.
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            self.wfile.write(data)
 
     def do_POST(self):
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
@@ -221,7 +224,7 @@ class Upstream(BaseHTTPRequestHandler):
                 start = int(query["start"][0])
                 seconds = (int(query["end"][0]) - start) / 1e9
                 padding = (
-                    "fixture " * 2048
+                    "x" * self.logs_padding_bytes
                     if self.logs_max_seconds is not None
                     and seconds > self.logs_max_seconds
                     else "fixture"
@@ -628,18 +631,25 @@ async def test_loki_limit_through_nat_and_official_mcp(stack, monkeypatch):
 
 
 @pytest.mark.e2e
-async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeypatch):
+@pytest.mark.parametrize("padding_bytes", [16384, 11 * 1024 * 1024])
+async def test_fleet_json_logs_split_through_nat_and_official_mcp(
+    stack, monkeypatch, padding_bytes
+):
     from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 
-    from agent_common.observation import Observation
+    from agent_common.observation import MCPResponseError, Observation, unwrap
     from agent_common.parsers import log_lines, parse_health
 
     target = {"node": 'node-"fixture\\1', "component": "accelerator-nvidia-error-xid"}
     monkeypatch.setattr(Upstream, "logs_json_target", target)
     monkeypatch.setattr(Upstream, "logs_max_seconds", 900)
+    monkeypatch.setattr(Upstream, "logs_padding_bytes", padding_bytes)
     profile = json.loads(json.dumps(stack["profile"]))
     profile["limits"].update(max_bytes=4096, max_queries=40)
-    for query_id in ("D05", "D09"):
+    profile["queries"]["D13"]["json_target_fields"] = dict(
+        profile["queries"]["D09"]["json_target_fields"]
+    )
+    for query_id in ("D05", "D09", "D13"):
         profile["queries"][query_id]["target_labels"] = {
             "node": "node",
             "component": "component",
@@ -657,8 +667,17 @@ async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeyp
         tools = {}
         for name in ("query_loki_logs", "list_datasources", "list_loki_label_values"):
             tools[name] = (await client.get_tool(name)).acall
+        raw_responses = []
+        query_logs = tools["query_loki_logs"]
+
+        async def logs_with_response(args):
+            raw = await query_logs(args)
+            raw_responses.append(raw)
+            return raw
+
+        tools["query_loki_logs"] = logs_with_response
         observation = Observation(tools, profile, data, time.monotonic() + 60)
-        for query_id in ("D05", "D09"):
+        for query_id in ("D05", "D09", "D13"):
             evidence = await observation.collect(query_id)
             assert len(evidence) > 1 and all(
                 row["tool_status"] == "ok" and row["snapshot"] for row in evidence
@@ -676,13 +695,30 @@ async def test_fleet_json_logs_split_through_nat_and_official_mcp(stack, monkeyp
                 row["resources"]["k8s.node.name"] == target["node"]
                 and row["attributes"]["component"] == target["component"]
                 and row["attributes"]["health"] == "healthy"
+                and row["body"] == "fixture"
                 for row in logs
             )
             health = parse_health(evidence, profile["health_contracts"])
-            assert health and all(
-                row["check_status"] == row["normalized_health"] == "unknown"
-                for row in health
-            )
+            if query_id == "D13":
+                assert health == []  # Event logs are not health observations.
+            else:
+                assert health and all(
+                    row["check_status"] == row["normalized_health"] == "unknown"
+                    for row in health
+                )
+        errors = [
+            raw
+            for raw in raw_responses
+            if raw.startswith("MCPToolClient tool call failed:")
+        ]
+        if padding_bytes > 10 * 1024 * 1024:
+            # Exercise the real MCP upstream HTTP ceiling, before our JSON byte check.
+            assert errors
+            for raw in errors:
+                with pytest.raises(MCPResponseError, match="^response_byte_limit$"):
+                    unwrap(raw)
+        else:
+            assert not errors
     requests = [
         args
         for path, args in Upstream.requests[request_start:]

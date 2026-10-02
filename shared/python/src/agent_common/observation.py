@@ -25,6 +25,10 @@ class MCPResponseError(ValueError):
 
 
 def _tool_failure(message):
+    if re.search(
+        r"response body exceeds maximum size of [0-9]+ bytes", message.lower()
+    ):
+        return MCPResponseError("response_byte_limit")
     code = (
         "loki_entry_limit_exceeded"
         if "max entries limit per query exceeded" in message.lower()
@@ -314,7 +318,7 @@ class Observation:
                             {"start": iso(cursor), "end": iso(end)},
                             {},
                             "unavailable",
-                            {"reason": "budget_exhausted"},
+                            {"complete": False, "reason": "budget_exhausted"},
                         )
                     )
                     break
@@ -377,12 +381,19 @@ class Observation:
                         sample_count=count,
                         series_count=len(rows) if isinstance(rows, list) else 0,
                     )
-                    # Re-query a smaller window before discarding an oversized response.
+                    metadata = (
+                        response.get("metadata", {})
+                        if isinstance(response, dict)
+                        else {}
+                    )
+                    limited = (
+                        count >= args["limit"] or bool(metadata.get("resultsTruncated"))
+                        if source == "loki"
+                        else count > limits["max_rows"]
+                    )
+                    # Re-query a smaller window before retaining oversized/truncated data.
                     # Every retry still consumes the same query/deadline budget.
-                    if (
-                        size > limits["max_bytes"]
-                        or (source != "loki" and count > limits["max_rows"])
-                    ) and stop - cursor > 1:
+                    if (size > limits["max_bytes"] or limited) and stop - cursor > 1:
                         ratio = min(
                             limits["max_bytes"] / max(size, 1),
                             limits["max_rows"] / max(count, 1),
@@ -396,21 +407,10 @@ class Observation:
                         quality.update(complete=False, reason="response_byte_limit")
                         status = "partial"
                     else:
-                        metadata = (
-                            response.get("metadata", {})
-                            if isinstance(response, dict)
-                            else {}
-                        )
                         warning = (
                             bool(response.get("warnings"))
                             if isinstance(response, dict)
                             else False
-                        )
-                        limited = (
-                            count >= args["limit"]
-                            or bool(metadata.get("resultsTruncated"))
-                            if source == "loki"
-                            else count > limits["max_rows"]
                         )
                         if limited or warning:
                             quality.update(
@@ -446,6 +446,18 @@ class Observation:
                     error = {"error_type": type(exc).__name__}
                     if isinstance(exc, MCPResponseError):
                         error["error_code"] = str(exc)
+                    oversized = (
+                        source == "loki"
+                        and error.get("error_code") == "response_byte_limit"
+                    )
+                    if oversized and stop - cursor > 1:
+                        chunk_seconds = max(1, int((stop - cursor) / 2))
+                        log.info(
+                            "Grafana Loki window reduced query=%s error_code=response_byte_limit chunk_seconds=%s",
+                            query_id,
+                            chunk_seconds,
+                        )
+                        continue
                     log.warning(
                         "Grafana query unavailable query=%s source=%s error_type=%s error_code=%s",
                         query_id,
@@ -463,7 +475,9 @@ class Observation:
                             {
                                 **quality,
                                 "complete": False,
-                                "reason": "query_failed",
+                                "reason": "response_byte_limit"
+                                if oversized
+                                else "query_failed",
                                 **error,
                             },
                             args,

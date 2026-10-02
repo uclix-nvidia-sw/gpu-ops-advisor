@@ -1,3 +1,15 @@
+# 2026-10-02 Loki 응답 용량·잘림 복구 — 로컬 검수
+
+- 기준: 새로 fetch한 `origin/main` **a1d73e2**, `fix/loki-response-size-recovery`. 공통 Observation에서 MCP 본문 크기 초과와 Loki 행 잘림을 기존 기간 분할로 복구한다. 두 Worker의 수집 동작에 적용하며 RCA 판단·Ops 산식·D 정의·프로필/한도·DB/API/result schema는 유지한다.
+- **통과:** 저장소 루트, Python 3.11.16 전체 Agent 검사 **362 passed, 0 skipped, 61.71초**. `RUN_AGENT_E2E=1`과 로컬 `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `GRAFANA_MCP_BINARY`, `HELM_BINARY`를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/loki-size-results.xml`을 실행했다. 외부 DB 환경 변수를 제거하고 새 임시 loopback PostgreSQL·최신 소스 JC/Backend/Incident·두 Worker·공식 Grafana MCP 1.4.2를 사용했다. Grafana/LLM 응답은 fixture이며 기존 MCP deprecation warning 3건이 남는다.
+- **통과:** 공식 MCP/NAT E2E에서 상위 HTTP fixture의 11MiB 응답으로 실제 `response body exceeds maximum size of 10485760 bytes` 오류를 발생시킨 뒤 D09/D13·파생 D05의 연속 구간 복구·요청 기간 끝까지 수집·대상 필터와 정상 응답 필드 보존을 확인했다. D13 로그는 건강 관측으로 승격하지 않는다. 이 fixture는 조회 구간에 따라 응답을 생성하므로 동일 사건 집합 보존은 별도 고정 사건 단위 검사로 확인한다.
+- **통과:** `test_discovery.py` **67 passed**. NAT 문자열/isError envelope·행 잘림/행 수 도달, 원본 고정 로그 집합·범위·query revision·파생 참조, 성공한 앞 구간과 예산/deadline 소진 나머지, 최소 구간 초과·원본 오류 비노출·취소 전파·일반 오류/Prometheus 미재시도·기존 시각 정밀도 회귀를 확인했다. 수정 전에는 새 복구/사유 검사 16건이 실패했다.
+- **통과:** Ruff check/format 72개 파일, 문서 링크·diff 검사. 기존 `response_byte_limit` 사유를 재사용하므로 RCA/Frontend/Backend 이름 맵·UI 변경은 없다. 독립 코드 검토에서 차단할 문제는 발견하지 않았다.
+- **미검증:** 원격 CI, 운영 배포 후 동일 기간의 실제 Grafana 재조회·보고서 공개·운영 부하/메모리. 로컬 fixture 성공은 실제 운영의 전체 기간 수집 보장이 아니다. 기존 예산/마감 안에 복구하지 못한 구간은 계속 미확인으로 남는다.
+- **반영:** 병합·CI 성공 후 두 Worker 이미지를 함께 갱신하고 새 보고서로 확인한다. MCP 이미지·설정·DB migration·기존 결과 재작성은 필요 없다. 배포와 운영 변경은 이번 PR 생성에 포함하지 않는다.
+
+---
+
 # 2026-10-02 Ops 계산 중 heartbeat 유지 — 로컬 검수
 
 - 기준: 최신 `origin/main` **03105a4**, `fix/report-calculation-heartbeat`. Ops 주제 계산만 요청 순서대로 별도 스레드에서 실행하고, 해당 주제에 필요한 할당·활동 입력만 정규화한다. 취소 시 현재 계산을 회수하며 다음 주제·문장 구성·저장으로 진행하지 않는다. RCA·공통 Worker/Store·JC·조회 한도·lease·스키마는 변경하지 않았다.
