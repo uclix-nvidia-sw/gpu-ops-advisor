@@ -167,7 +167,51 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | PCIe·Fabric/NVLink | 기존 D09/D05 상태·원문 | D09 + 동일 조건의 상태 fact | D44,D47; 통신 질문 D31,D32,D33,D34. 트래픽을 오류로 해석하지 않음 |
 | 사건 당시 GPU–Pod | D08+D06의 관계 처리 | 기본 설정은 D02 labels+D06의 observed 처리 | 필요 시 D20 Node 상태. 기존 UID·유효시간·공유/할당 구분 보존 |
 
-전용 발행 Runbook의 전체 required_queries/조건/권고를 revision별로 전수 대조하는 작업은 남아 있다. 위 표는 실제 확인한 일반 템플릿/공통 처리와 새 질문별 계획이며 모든 발행본의 전수 전환 완료를 뜻하지 않는다. D→출력 fact 호환성 검사를 추가하고 수치 fact도 등록된 코드로 생산한다. 새 관측은 새 질문/판단을 보강하며, 기존 판정 gate를 임의로 완화하지 않는다.
+저장소 초안 267개의 공통 조회 계획 전수 대조는 §7.2에 기록했다. 개별 조사 내용·조건·권고와 운영 발행본 revision의 전수 전환 검토는 남아 있다. 위 표는 실제 확인한 일반 템플릿/공통 처리와 새 질문별 계획이며 모든 발행본의 전수 전환 완료를 뜻하지 않는다. D→출력 fact 호환성 검사를 추가하고 수치 fact도 등록된 코드로 생산한다. 새 관측은 새 질문/판단을 보강하며, 기존 판정 gate를 임의로 완화하지 않는다.
+
+### 7.1 XID/SXID 외의 사례에 D를 적용하는 방법
+
+D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼리다. XID/SXID는 Runbook 검색·진입 단서 중 하나이며, 오류 코드가 없어도 증상·producer event·대상으로 조사 질문을 구성한다. 현재 search 스키마는 codes 외 producer_events/aliases/symptoms를 허용하지만, 이 사실만으로 비코드 사례의 실제 검색·판단 경로가 검수됐다고 볼 수 없다.
+
+| 오류 코드 없는 사례·진입 단서 | 조사 질문 | 1차 D | 조건부 보완 D | 코드가 산출할 사실·미확보 근거 |
+|---|---|---|---|---|
+| 낮은 GPU 활동·처리 지연 | 연산·메모리·Host·통신 중 어떤 관측이 동반되는가 | D02,D03,D15,D10,D22 | Host D18/D19, 연산 D26/D29, 통신 D31~D34 | 유효 구간 활동/용량/통신 변화. 업무량·기대 성능/지연 source가 없으면 저활동 원인·성능 저하 자체의 정량 확정 보류 |
+| 메모리 부족 의심 | 실제 용량 여유와 실패 사건이 함께 있는가 | D03,D15,D16,D09 | 관련 ECC D36~D43 | 용량 비율·오류 증가/사건. 할당 실패 원문·업무 메모리 요구가 없으면 OOM/누수 원인 확정 금지 |
+| 고온·클록 하락 | 열·전력 제한 근거와 시간적으로 일치하는가 | D04,D23,D24,D25,D11 | D45,D46,D48,D09 | 온도/클록/전력/제한 상태의 동시 관측. 장비별 정책·지원 의미 검증 필요, 단일 임계값을 모든 모델에 적용하지 않음 |
+| 작업 Pending·배치 지연 | 유효 요청과 배치 제약이 확인되는가 | D06,D07,D12,D20,D21 | 검증된 scheduler 사건의 신규 D는 미정 | 원시 요청/유효 요청 구분·Node 상태. init/sidecar/바인딩·scheduler source 부족이면 용량 부족 원인 보류 |
+| Node 상태 이상 | 장비·Kubernetes·Host·수집 문제를 구분할 근거가 있는가 | D20,D18,D19,D09,D10,D22 | 대상에 맞는 GPU 오류/온도 D | condition·Host 부하·사건·수집 공백. 네트워크·runtime·storage 직접 근거가 없으면 해당 원인 미확정 |
+| 데이터 공백·지표 소실 | target 수집 실패인가, 특정 장비 관측 부재인가 | D10,D22, 해당 대상의 D02/D06 | producer 로그 D09 | target 상태·표본 공백·신원 상태. 기대 inventory/주기 없으면 전체 coverage와 장비 장애를 확정하지 않음 |
+
+위는 설계상 조사 계획이며 실제 비코드 Runbook은 아직 구현·발행하지 않았다. 해당 질문에 대응하는 Runbook이 없으면 기존 일반 조사로 근거를 수집하고 미해결 질문을 남긴다. 기존 D35개의 추가만으로 network/storage/runtime/업무 성과 등 모든 사례를 커버한다고 주장하지 않는다. 재사용 가능한 D가 없을 때만 목적·원본·반환 사실을 정의해 독립 D를 추가하며 사례마다 같은 메트릭을 새 D로 복제하지 않는다.
+
+현행 `runbook_contract.py`의 FACT_NAMES/SCALAR_FACTS는 제한된 상태·코드·producer 등이며 `_conditions()`는 등록된 scalar의 `field/equals`만 허용한다. 수치 시계열 비교·지속시간·부족량 계산을 문자열 fact나 임의 LLM 판정으로 우회하지 않는다. 비코드 Runbook 구현 전에 등록된 계산 함수가 생산할 typed fact/quality와 validator·판단 소비를 함께 정의한다. 원본 D→계산 fact→Runbook 적용/지지·반박→조건부 추가 D→종료/보류를 검수한다. 일반 조건 DSL을 먼저 만드는 대신 필요한 계산만 등록한다.
+
+### 7.2 기존 Runbook 전수 조사 결과와 변경 계획
+
+2026-10-02 저장소 `rcca-agent/runbooks/**/RB-*.json`을 파싱한 정적 대조:
+
+| 항목 | 확인 결과 |
+|---|---|
+| 초안 수 | XID 173 + SXID 93 + 일반 1 = **267개** |
+| required_queries | **267개 모두 D09,D05** |
+| observation_plan | **267개 모두 D09 필수, D05 필수, D02 선택** |
+| compatibility | **267개 모두 빈 객체**. 운영 환경 호환성이 바인딩된 발행본이라고 볼 수 없음 |
+| 패키지 일반 템플릿 | `rcca-agent/src/rcca_agent/general_runbook.json`에도 D09/D05/D02 계획 존재, 함께 수정·동기화 필요 |
+
+따라서 XID/SXID별 설명·문헌 내용이 있어도 현재 쿼리 선택은 동일하다. D 재설계가 코드별 조사 근거 확대에 연결되려면 단순 번호 치환과 별도로 코드/장비/producer별 관측 목적을 검토해야 한다. 운영 DB의 발행 Runbook 개수·revision은 이번에 조회하지 않았으므로 위 숫자를 운영 발행본 수로 사용하지 않는다.
+
+| 변경 작업 | 실제 변경·검토 대상 | 완료 기준 |
+|---|---|---|
+| 공통 D05 통합 | 267개 초안의 required_queries/observation_plan + 패키지 일반 템플릿 | D09 항목을 한 개로 합치고 요구 fact·required 의미·purpose·priority를 보존. D09 중복 항목을 만들지 않음; 상태 fact gate 유지 |
+| 추가 관측 선정 | 각 Runbook의 코드·조사 질문·장비/producer compatibility·출처 | 메모리/전력/PCIe/Fabric 등 해당 질문에 필요한 신규 D만 추가. 35개 일괄 추가 금지 |
+| fact/조건/권고 점검 | required_evidence, fact_names, applicability_conditions, exclusion_conditions, recommendations.preconditions, analysis_guidance | 각 사실의 생산 D/parser/계산이 연결되고 기존 판단을 약화하지 않음. XID/SXID 코드만으로 원인 확정 금지 |
+| 후속 조사 점검 | unexpected_evidence.additional_queries/fallback 및 예산/중단 | 구 D 참조 잔존·반복 조회·불가능한 fact 요구 없음. 추가 D 실패/미지원 시 보류 사유 보존 |
+| source 파일/생성 경로 | Runbook JSON, 관련 생성·import/validator, 카탈로그·패키지 사본·테스트 | 재생성 시 이전 계획으로 되돌아가지 않음. 사본 동기화·문헌/코드별 내용 보존 |
+| 발행본 전환 | Backend 지식 등록/검토/발행과 실제 DB revision 목록 | 별도 권한하에 새 revision 발행. 구 revision/hash는 보존, Worker 지원 profile과 순서 정합 |
+
+파일별 전환 원장은 `knowledge_key / source_file / old_revision_or_hash / current_queries / new_queries / required_facts / parser_or_calculation / compatibility / expected_retained_behavior / added_question / fixture / review_status / publication_status`를 남긴다. 267개 구조 검사는 자동화할 수 있으나 내용 검토·운영 발행을 자동 완료로 표시하지 않는다.
+
+검수는 (1) 모든 초안의 구조/참조/사본 검사, (2) 오류 종류별 대표 조사에서 기존 사실·판정과 추가 근거 비교, (3) 비코드 사례별 정상/이상/누락/상충 fixture, (4) 실제 producer·사건 표본의 검토로 나눈다. 지원하지 않는 사례는 일반 조사/미확정으로 종료해야 하며 LLM이 부족한 사실을 만들어서는 안 된다.
 
 ## 8. 원본 미확정 요구와 제외
 
