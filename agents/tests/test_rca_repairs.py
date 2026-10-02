@@ -6,7 +6,6 @@ import pytest
 from agent_common.normalize import allocations
 from agent_common.parsers import parse_health, health_facts
 from rcca_agent.incident import alert_clues
-from rcca_agent.procedures import select_procedure
 from rcca_agent.synthesis import (
     identifier_tokens,
     validate_synthesis,
@@ -167,12 +166,10 @@ def test_observed_zero_utilization_joins_pod_only_in_time_and_never_becomes_allo
 @pytest.mark.parametrize(
     "component", ["accelerator-nvidia-error-xid", "accelerator-nvidia-error-sxid"]
 )
-def test_xid_procedure_precedes_mapping_purpose(component):
+def test_xid_clues_do_not_choose_a_purpose(component):
     clues = alert_clues({"alert": {"labels": {"component": component}}})
-    assert (
-        select_procedure({"purpose_ids": ["R01", "R02"]}, clues).procedure_id
-        == "gpu_access"
-    )
+    assert clues["symptom"] == "xid"
+    assert "purpose_ids" not in clues
 
 
 def test_dcgm_uid_must_agree_with_same_time_ksm_when_join_required():

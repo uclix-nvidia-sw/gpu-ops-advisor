@@ -4,7 +4,6 @@ from uuid import uuid4
 import pytest
 
 from agent_common.contracts import content_hash, incident_source, validate_input
-from rcca_agent.procedures import select_procedure
 
 
 def rca_input(snapshot_fields):
@@ -34,7 +33,6 @@ def test_incident_alert_is_raw_evidence_and_snapshot_is_unchanged():
     source = incident_source(data["incident_snapshot"])
     assert source["alert"] == alert
     assert "verified_facts" not in source
-    assert select_procedure(data, source).procedure_id == "gpu_pod"
     assert data["incident_snapshot"] == snapshot
     assert content_hash(data["incident_snapshot"]) == content_hash(snapshot)
 

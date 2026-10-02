@@ -7,6 +7,26 @@ import re
 from urllib.parse import urlsplit
 
 SCHEMA = "gpu-rca-runbook/1.0"
+UNEXPECTED_EVENTS = {
+    "unknown_value",
+    "missing_evidence",
+    "conflicting_evidence",
+    "query_failed",
+}
+
+
+def unexpected_policy(content):
+    """Old published revisions keep conservative defaults; never infer success."""
+    return content.get(
+        "unexpected_evidence",
+        {
+            "on": sorted(UNEXPECTED_EVENTS),
+            "additional_queries": [],
+            "fallback": "general_runbook",
+        },
+    )
+
+
 CODE = re.compile(r"(?:xid|sxid):(0|[1-9][0-9]*)")
 FACT_NAMES = {
     "producer_contract",
@@ -165,6 +185,7 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
         "analysis_guidance",
         "limitations",
         "investigation_only",
+        "unexpected_evidence",
     }
     _require(set(content) <= allowed_fields, "content: unsupported fields")
     investigation_only = content.get("investigation_only", False)
@@ -253,6 +274,30 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
         "allowed_queries: expected query IDs",
     )
     allowed = set(allowed_queries)
+    policy = unexpected_policy(content)
+    _require(
+        isinstance(policy, dict)
+        and set(policy) == {"on", "additional_queries", "fallback"},
+        "unexpected_evidence: invalid fields",
+    )
+    _require(
+        set(_strings(policy["on"], "unexpected_evidence.on", nonempty=True))
+        <= UNEXPECTED_EVENTS,
+        "unexpected_evidence: unsupported event",
+    )
+    _require(
+        set(
+            _strings(
+                policy["additional_queries"], "unexpected_evidence.additional_queries"
+            )
+        )
+        <= set(queries) & allowed,
+        "unexpected_evidence: unregistered query",
+    )
+    _require(
+        policy["fallback"] in ("general_runbook", "stop"),
+        "unexpected_evidence: unsupported fallback",
+    )
     required = _strings(content.get("required_queries", []), "required_queries")
     plan = content.get("observation_plan")
     if plan is None:

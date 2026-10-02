@@ -14,30 +14,19 @@ from agent_common.normalize import allocations
 from agent_common.observation import Observation, usable_observation
 from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
-from .procedures import select_procedure
+from importlib.resources import files
 from .synthesis import synthesis_input, synthesize
 from .report import write_report
 from .report_labels import query_label
 from .observation_agents import collect_round
 from .incident import alert_clues
 from .retrieval import retrieve_runbooks
-from .runbook_contract import schema_kind, validate_runbook, compatibility_status
-
-
-REQUIRED = {
-    "R01": ["producer_contract", "error_code"],
-    "R02": ["incident_mapping"],
-    "R03": ["incident_mapping"],
-    "R04": ["incident_mapping", "workload_evidence"],
-    "R05": ["observations"],
-    "R06": ["incident_history"],
-    "R07": ["incident_history", "topology"],
-    "R08": ["current_mapping", "action_policy"],
-    "R09": ["action_records", "device_recovery_evidence", "workload_evidence"],
-}
-
-# Purpose obligations are independent of the selected runbook's narrow plan.
-PURPOSE_QUERIES = {"R02": ("D08", "D06"), "R03": ("D08", "D06")}
+from .runbook_contract import (
+    schema_kind,
+    validate_runbook,
+    compatibility_status,
+    unexpected_policy,
+)
 
 
 def compatible_runbooks(rows, source):
@@ -75,7 +64,7 @@ def check_conditions(conditions, facts):
     )
 
 
-def select_runbooks(rows, source, profile, procedure, obs):
+def select_runbooks(rows, source, profile, obs):
     legacy, current, plans, diagnostics = [], [], {}, []
     general_key = profile.get("rca", {}).get("general_runbook_key")
     for row in rows:
@@ -89,10 +78,15 @@ def select_runbooks(rows, source, profile, procedure, obs):
             if row["knowledge_key"] == general_key and kind != "v1":
                 raise ValueError("general_runbook_requires_v1")
             if kind == "legacy":
+                if (
+                    not set(row["content"].get("required_queries", []))
+                    <= profile["queries"].keys()
+                ):
+                    raise ValueError("unregistered_query")
                 legacy.append(row)
             else:
                 plans[row["id"]] = validate_runbook(
-                    row, profile["queries"], procedure.allowed_next_steps
+                    row, profile["queries"], list(profile["queries"])
                 )
                 if row["knowledge_key"] == general_key and not row["content"].get(
                     "investigation_only", False
@@ -121,9 +115,34 @@ def select_runbooks(rows, source, profile, procedure, obs):
             }
         )
     if general:
-        row = max(general, key=lambda r: r["revision"])
-        selected.append({**row, "general_investigation": True})
-        diagnostics.append({"revision_id": row["id"], "status": "general_available"})
+        selected.append(
+            {**max(general, key=lambda r: r["revision"]), "general_investigation": True}
+        )
+    # Packaged fallback is an investigation template, never published knowledge.
+    content = json.loads(
+        files("rcca_agent").joinpath("general_runbook.json").read_text(encoding="utf-8")
+    )
+    row = dict(
+        id="builtin-general",
+        knowledge_key="BUILTIN-GENERAL-GPU-NODE",
+        revision=1,
+        content=content,
+        compatibility={},
+        origin="builtin",
+    )
+    plans[row["id"]] = validate_runbook(
+        row, profile["queries"], list(profile["queries"]), authoring=True
+    )
+    selected.append({**row, "general_investigation": True})
+    for book in selected:
+        if book.get("general_investigation"):
+            diagnostics.append(
+                {
+                    "revision_id": book["id"],
+                    "status": "general_available",
+                    "origin": book.get("origin", "published"),
+                }
+            )
     obs._evidence(
         "runbook_selection",
         None,
@@ -149,7 +168,7 @@ def matching_runbooks(books, legacy_facts, verified, data):
         facts = legacy_facts if schema_kind(content) == "legacy" else verified
         status = (
             "compatible"
-            if schema_kind(content) == "legacy"
+            if schema_kind(content) == "legacy" or book.get("origin") == "builtin"
             else compatibility_status(book["compatibility"], attributes)
         )
         if status == "incompatible" or check_conditions(
@@ -162,7 +181,10 @@ def matching_runbooks(books, legacy_facts, verified, data):
             and all(
                 c["field"] in facts for c in content.get("exclusion_conditions", [])
             )
-            and check_conditions(content.get("applicability_conditions", []), facts)
+            and (
+                content.get("investigation_only")
+                or check_conditions(content.get("applicability_conditions", []), facts)
+            )
         ):
             applicable.append(book)
         else:
@@ -171,6 +193,9 @@ def matching_runbooks(books, legacy_facts, verified, data):
     if specific:
         applicable = [b for b in applicable if not b.get("general_investigation")]
         pending = [b for b in pending if not b.get("general_investigation")]
+    elif any(b.get("origin") != "builtin" for b in applicable + pending):
+        applicable = [b for b in applicable if b.get("origin") != "builtin"]
+        pending = [b for b in pending if b.get("origin") != "builtin"]
     return applicable, pending
 
 
@@ -374,82 +399,62 @@ async def run(tools):
         for k, v in source.get("verified_facts", {}).items()
         if v is not None and v != "unknown"
     }
-    procedure = select_procedure(
-        data,
-        {**source, **({"symptom": clues["symptom"]} if clues.get("symptom") else {})},
-    )
-    runbooks, plans = select_runbooks(
-        ctx["context"]["runbooks"], source, profile, procedure, obs
-    )
+    runbooks, plans = select_runbooks(ctx["context"]["runbooks"], source, profile, obs)
     applicable, pending = matching_runbooks(runbooks, initial_facts, {}, data)
-    fast_path = any(
-        not b.get("general_investigation")
-        and not b["content"].get("investigation_only")
-        for b in applicable
-    ) and all(set(REQUIRED[p]) <= initial_facts.keys() for p in data["purpose_ids"])
     selected = applicable + pending
-    runbooks = selected
-    approved = list(
-        dict.fromkeys(
-            [step["query_id"] for b in selected for step in plans.get(b["id"], [])]
-            + [
-                q
-                for b in selected
-                if b["id"] not in plans
-                for q in b["content"].get("required_queries", [])
-                if q in procedure.allowed_next_steps
-            ]
-        )
+    fast_path = bool(selected) and all(
+        b in applicable and not b["content"].get("investigation_only") for b in selected
     )
-    queries = list(
-        dict.fromkeys(
+
+    def steps(book):
+        return plans.get(
+            book["id"],
             [
-                step["query_id"]
-                for b in selected
-                for step in plans.get(b["id"], [])
-                if step["required"]
-            ]
-            + [
-                q
-                for b in selected
-                if b["id"] not in plans
-                for q in b["content"].get("required_queries", [])
-                if q in approved
-            ]
+                dict(
+                    query_id=q,
+                    required=True,
+                    fact_names=[],
+                    purpose="Runbook observation",
+                )
+                for q in book["content"].get("required_queries", [])
+            ],
         )
-    )
-    purpose_queries = (
-        list(
+
+    def plan_queries(books, required=False):
+        return list(
             dict.fromkeys(
-                q
-                for purpose in data["purpose_ids"]
-                for q in PURPOSE_QUERIES.get(purpose, ())
+                step["query_id"]
+                for book in books
+                for step in steps(book)
+                if not required or step["required"]
             )
         )
-        if selected
-        else []
-    )
-    # These queries are registered code obligations, not model/runbook expansion.
-    for query in purpose_queries:
-        if query not in queries:
-            queries.append(query)
-        if query not in approved:
-            approved.append(query)
-    obs._evidence(
-        "purpose_plan",
+
+    approved = plan_queries(selected)
+    queries = plan_queries(selected, required=True)
+    plan_id = obs._evidence(
+        "investigation_plan",
         None,
         data["time_range"],
         {
-            "purpose_ids": data["purpose_ids"],
-            "required_queries": purpose_queries,
-            "mapping_target_known": bool(
-                target.get("gpu_uuid") or target.get("pod_uid")
-            ),
-            "blocked_reason": None if selected else "approved_runbook",
+            "runbooks": [
+                dict(
+                    revision_id=b["id"],
+                    revision=b["revision"],
+                    content_hash=content_hash(b["content"]),
+                    origin=b.get("origin", "published"),
+                    required_evidence=b["content"].get("required_evidence", []),
+                    steps=steps(b),
+                    unexpected_evidence=unexpected_policy(b["content"]),
+                )
+                for b in selected
+            ],
+            "required_queries": queries,
+            "allowed_queries": approved,
         },
         "ok",
         {"deterministic": True},
-    )
+    )["id"]
     collected = {}
     budget = {
         "queries": profile["limits"]["max_queries"],
@@ -471,14 +476,20 @@ async def run(tools):
         applicable, pending = matching_runbooks(runbooks, facts, verified, data)
         if ctx["context"]["incidents"]:
             available.add("incident_history")
-        gaps = sorted(
-            {
-                k
-                for purpose in data["purpose_ids"]
-                for k in REQUIRED[purpose]
-                if k not in available
-            }
-        )
+        required_facts = {
+            k for b in selected for k in b["content"].get("required_evidence", [])
+        }
+        gaps = sorted(required_facts - available)
+        for q in plan_queries(selected, required=True):
+            if not fast_path and (
+                q not in collected
+                or not collected[q]
+                or any(
+                    e["tool_status"] != "ok" or not e["quality"].get("complete")
+                    for e in collected[q]
+                )
+            ):
+                gaps.append("required_query:" + q)
         if not any(
             not b.get("general_investigation")
             and not b["content"].get("investigation_only")
@@ -487,7 +498,7 @@ async def run(tools):
             gaps.append("causal_confirmation_evidence")
         if not selected:
             gaps.append("approved_runbook")
-        if any(p in PURPOSE_QUERIES for p in data["purpose_ids"]) and not relations:
+        if "incident_mapping" in required_facts and not relations:
             gaps.append(
                 "mapping_target_unverified"
                 if not (target.get("gpu_uuid") or target.get("pod_uid"))
@@ -508,7 +519,98 @@ async def run(tools):
             for e in es
         )
         conflicting = conflicting_health(health)
-        remaining = [q for q in approved if q not in collected]
+        events = []
+        if gaps:
+            events.append("missing_evidence")
+        if conflicting:
+            events.append("conflicting_evidence")
+        if degraded:
+            events.append("query_failed")
+        if any(
+            h["check_status"] != "valid" or h["normalized_health"] == "unknown"
+            for h in health
+        ) or (any(collected.get(q) for q in ("D05", "D09")) and not health):
+            events.append("unknown_value")
+            gaps.append("unknown_value")
+        unexpected_queries = []
+        fallback_books = []
+        stopped_queries = set()
+        for book in list(selected):
+            policy = unexpected_policy(book["content"])
+            triggered = sorted(set(events) & set(policy["on"]))
+            if not triggered:
+                continue
+            unexpected_queries.extend(policy["additional_queries"])
+            if policy["fallback"] == "stop":
+                stopped_queries.update(plan_queries([book]))
+            if policy["fallback"] == "general_runbook" and not book.get(
+                "general_investigation"
+            ):
+                eligible, waiting = matching_runbooks(
+                    [b for b in runbooks if b.get("general_investigation")],
+                    facts,
+                    verified,
+                    data,
+                )
+                fallback_books.extend(
+                    b for b in eligible + waiting if b not in selected
+                )
+            obs._evidence(
+                "unexpected_evidence",
+                None,
+                data["time_range"],
+                {
+                    "round": round_no,
+                    "runbook_revision_id": book["id"],
+                    "events": triggered,
+                    "policy": policy,
+                },
+                "ok",
+                {"deterministic": True},
+            )
+        for book in fallback_books:
+            if book not in selected:
+                selected.append(book)
+                obs._evidence(
+                    "investigation_plan_extension",
+                    None,
+                    data["time_range"],
+                    {
+                        "round": round_no,
+                        "parent_plan_id": plan_id,
+                        "runbook_revision_id": book["id"],
+                        "revision": book["revision"],
+                        "content_hash": content_hash(book["content"]),
+                        "origin": book.get("origin", "published"),
+                        "steps": steps(book),
+                        "required_evidence": book["content"].get(
+                            "required_evidence", []
+                        ),
+                        "unexpected_evidence": unexpected_policy(book["content"]),
+                    },
+                    "ok",
+                    {"deterministic": True},
+                )
+                gaps.extend(
+                    k
+                    for k in book["content"].get("required_evidence", [])
+                    if k not in available
+                )
+                gaps.extend(
+                    "required_query:" + q
+                    for q in plan_queries([book], required=True)
+                    if q not in collected
+                )
+        unexpected_queries.extend(plan_queries(fallback_books, required=True))
+        approved = list(
+            dict.fromkeys(approved + plan_queries(fallback_books) + unexpected_queries)
+        )
+        remaining = [
+            q
+            for q in approved
+            if q not in collected
+            and (q not in stopped_queries or q in unexpected_queries)
+        ]
         gate = (
             "degraded"
             if degraded
@@ -544,7 +646,9 @@ async def run(tools):
             or time.monotonic() >= ctx["deadline"]
         ):
             break
-        queries = (
+        queries = [
+            q for q in dict.fromkeys(unexpected_queries) if q not in collected
+        ] or (
             remaining[:1]
             if gate == "degraded"
             else await choose_followup(ctx["llm"], remaining, gaps)
@@ -594,18 +698,7 @@ async def run(tools):
         analysis_missing.append("approved_runbook")
     if gate in ("degraded", "conflicted"):
         analysis_missing.append("observation_" + gate)
-    analysis_missing.extend(
-        g
-        for g in gaps
-        if g
-        in {
-            "mapping_target_unverified",
-            "mapping_not_observed_at_incident",
-            "target_identity_conflict",
-            "mapping_queries_not_executed",
-            "mapping_source_unavailable",
-        }
-    )
+    analysis_missing.extend(gaps)
     candidates = list(model_candidates)
     recommendations = []
     for book in applicable:
@@ -620,7 +713,10 @@ async def run(tools):
                 time_range=data["time_range"],
                 input={"revision_id": book["id"]},
                 tool_status="ok",
-                quality={"reviewed": True},
+                quality={
+                    "reviewed": book.get("origin") != "builtin",
+                    "origin": book.get("origin", "published"),
+                },
                 snapshot=book["content"],
                 collected_at=now(),
             )
@@ -662,26 +758,31 @@ async def run(tools):
                 )
             )
     assessments = []
-    for purpose in data["purpose_ids"]:
-        missing = [
-            k for k in REQUIRED[purpose] if k not in available
-        ] + analysis_missing
+    for book in selected:
+        missing = sorted(
+            set(
+                k
+                for k in book["content"].get("required_evidence", [])
+                if k not in available
+            )
+            | set(analysis_missing)
+        )
         assessments.append(
             dict(
-                purpose_id=purpose,
+                assessment_id=book["id"],
+                question=book["content"].get("title", book["knowledge_key"]),
+                runbook_revision_id=book["id"],
                 status="ready"
                 if not missing
-                else (
-                    "partial"
-                    if "observations" in available or applicable or relations
-                    else "blocked"
-                ),
+                else "partial"
+                if "observations" in available or applicable or relations
+                else "blocked",
                 missing_inputs=missing,
-                evidence_refs=[eid]
+                evidence_refs=[eid, plan_id]
                 + [
                     e["id"]
                     for e in obs.evidence
-                    if e["tool_status"] == "ok" and e["id"] != eid
+                    if e["tool_status"] == "ok" and e["id"] not in (eid, plan_id)
                 ],
             )
         )
@@ -748,16 +849,14 @@ async def run(tools):
         recommendations=recommendations,
         missing_inputs=missing,
         termination_reason=reason,
-        procedure={
-            "procedure_id": procedure.procedure_id,
-            "version": procedure.version,
-        },
+        procedure={"procedure_id": "runbook_plan", "version": "1.0"},
         runbook_revisions=[
             {
                 "id": b["id"],
                 "revision": b["revision"],
                 "knowledge_key": b["knowledge_key"],
                 "title": b["content"].get("title") or b["knowledge_key"],
+                "origin": b.get("origin", "published"),
             }
             for b in selected
         ],
@@ -780,6 +879,7 @@ async def run(tools):
         "status": analysis_status,
         "fast_path": fast_path,
         "followups": followups,
+        "plan_evidence_id": plan_id,
         "sufficiency": gate,
         "remaining_budget": budget,
         "synthesis": synthesis_diagnostics,

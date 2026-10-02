@@ -1,5 +1,11 @@
 # 기존 설치의 Agent 기동 수정과 이름 변경
 
+## Runbook-first 지원의 적용 순서 — 2026-10-02
+
+로컬 변경 단계이며 운영 배포 승인은 별도다. JC 007 migration은 Worker 지원 계약 제약만 확장하며 job/snapshot/PVC를 변경하지 않는다. 적용 순서는 JC → 1.3/1.4/1.5 지원 RCA Worker → Incident 1.5 생산자 → 결과 화면이다. 기존 outbox는 원래 계약으로 전달된다. 변경된 Runbook은 Backend의 새 revision 검토·발행을 거친다.
+
+실패 시 신규 Incident 접수를 멈추고 해당 설정·이미지를 복구한다. 이미 만들어진 1.5 작업은 지원 Worker를 유지하거나 대기시켜야 하며 구형 Worker로 강제 배분하거나 snapshot을 1.3으로 바꾸지 않는다. DB 제약 확장은 유지해도 기존 계약을 수용한다. 이전 JC/Worker로 복구하기 전에 1.5 Worker 등록·작업 상태를 확인한다. DB/PVC 삭제는 복구 절차가 아니다.
+
 ## Fleet RCA profile v3 반영 시 확인 (2026-09-30)
 
 이번 변경에는 DB migration이 없다. 기존 DB/report PVC와 snapshot/hash를 유지한다. Agent 전체 override를 쓰는 경우 `builtin-grafana-v3`의 D05/D09 `json_target_fields`, `health_contract`, query revision과 `health_contracts`를 기존 설정에 병합한다. 기본 `loki_timestamp_is_observed_at=false`를 운영 시각 계약 검증 없이 켜지 않는다. [상세 설정](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따른다.

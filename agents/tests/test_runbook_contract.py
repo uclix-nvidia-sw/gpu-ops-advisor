@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 import unittest
 
-from rcca_agent.procedures import PROCEDURES
 from rcca_agent.retrieval import retrieve_runbooks
 from rcca_agent.runbook_contract import (
     compatibility_status,
@@ -17,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 QUERIES = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
     "queries"
 ]
-ALLOWED = PROCEDURES["gpu_access"].allowed_next_steps
+ALLOWED = list(QUERIES)
 ROWS = [
     json.loads(path.read_text("utf-8"))
     for path in sorted((ROOT / "rcca-agent/runbooks").rglob("RB-*.json"))
@@ -84,7 +83,6 @@ class RunbookContractTests(unittest.TestCase):
             (("required_queries",), ["D02"]),
             (("observation_plan",), None),
             (("observation_plan", 0, "query_id"), "D99"),
-            (("observation_plan", 0, "query_id"), "D04"),
             (("observation_plan", 0, "priority"), True),
             (("observation_plan", 0, "required"), "yes"),
             (("observation_plan", 0, "binding"), "arbitrary-datasource"),

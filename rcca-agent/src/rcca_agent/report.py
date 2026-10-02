@@ -80,7 +80,7 @@ async def write_report(result, data, clues, evidence, llm):
             "problem",
             "보고된 오류 코드: "
             + ", ".join(sorted({h["error_code"] for h in reported}))
-            + ". 보고 내용과 장비 발생 시각·현재 상태 검증은 구분합니다. R01 필수 사실과 복구 조치 조건은 별도로 검증해야 합니다.",
+            + ". 보고 내용과 장비 발생 시각·현재 상태 검증은 구분합니다. Runbook 필수 근거와 복구 조치 조건은 별도로 검증해야 합니다.",
             [r for h in reported for r in h["evidence_refs"]],
         )
     candidates = result["cause_candidates"]
@@ -145,6 +145,11 @@ async def write_report(result, data, clues, evidence, llm):
             "next",
             "사건과 호환되는 검토·발행된 Runbook과 허용된 조사 쿼리를 등록해야 합니다.",
         )
+    if any(b.get("origin") == "builtin" for b in result.get("runbook_revisions", [])):
+        add(
+            "limits",
+            "적용할 발행 Runbook이 없어 기본 일반 조사 템플릿을 사용했습니다. 이 템플릿은 원인 판정 규칙이나 발행된 지식이 아닙니다.",
+        )
     if "mapping_target_unverified" in result["missing_inputs"]:
         add(
             "next",
@@ -188,7 +193,7 @@ async def write_report(result, data, clues, evidence, llm):
     ):
         add(
             "limits",
-            "원인 분석 응답 검증은 완료했지만 목적별 필수 근거가 부족하여 결과는 부분 산출입니다.",
+            "원인 분석 응답 검증은 완료했지만 조사에 필요한 근거가 부족하여 결과는 부분 산출입니다.",
         )
     grouped = defaultdict(list)
     for e in queries:

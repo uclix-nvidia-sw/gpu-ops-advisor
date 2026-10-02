@@ -1,5 +1,23 @@
 # Runbook 개발 및 RCA 연계
 
+## R 없는 조사 계획과 예상 밖 근거 — 2026-10-02
+
+Runbook의 `observation_plan`이 수집 계획의 원천이다. R 코드나 procedure별 허용 D를 작성하지 않는다. 등록된 D는 모두 계획에 사용할 수 있지만 대상/기간/예산 제한을 우회할 수 없다. `required_evidence`는 판단에 필요한 근거이며 `fact_names`에 적었다고 자동 생성되지 않는다.
+
+선택 필드 예시:
+
+```json
+"unexpected_evidence": {
+  "on": ["unknown_value", "missing_evidence", "conflicting_evidence", "query_failed"],
+  "additional_queries": ["D02"],
+  "fallback": "general_runbook"
+}
+```
+
+미등록 상태·해석 불가 응답, 부족 근거, 상충 관측, 조회 실패가 발생하면 등록된 추가 조회를 수행하고 일반 조사로 보완한다. `fallback=stop`은 지정 추가 조회 이후 더 확장하지 않는다는 뜻이다. 최대 한 번의 추가 라운드와 기존 예산을 사용하며, 해결되지 않은 근거·관측은 unknown/partial/blocked로 남긴다. 원본 값·실패와 실행한 정책을 evidence에 기록한다. 임의 쿼리/명령 실행과 원인·회복 추정은 허용하지 않는다.
+
+필드가 없는 과거 발행본은 보수적인 일반 조사 전환 정책을 적용하고 유효 정책을 Plan에 기록한다. 변경한 콘텐츠는 새 revision으로 등록·검토·발행해야 하며 기존 DB/hash는 수정하지 않는다. 일반 Runbook의 패키지 사본은 content를 그대로 동기화하고 일치 테스트를 통과해야 한다.
+
 2026-09-28 후속: XID 173건·SXID 93건과 일반 조사 1건, 총 267건의 문헌 기반 조사 초안을 작성했다. 기존 대표 3건을 보강하고 263건을 추가했다. 전체 파일·근거 상태·검토 절차는 [전체 코드 목록](CATALOG.md)을 따른다. 기존 Backend 등록·검토·발행·RCA 소비 경로를 사용한다. 저장 구조와 다른 PC의 재현 절차는 [DB 등록 안내](DB-WORKFLOW.md)를 따른다. 운영 DB 등록 및 실제 Grafana/LLM 검증은 수행하지 않았다.
 
 아래는 기존 대표 사례이며 전체 범위는 CATALOG를 따른다.

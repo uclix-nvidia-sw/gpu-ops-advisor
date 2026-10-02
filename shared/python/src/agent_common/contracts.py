@@ -78,8 +78,7 @@ def incident_source(snapshot):
     if "alert" in snapshot:
         if not isinstance(snapshot["alert"], dict):
             raise ValueError("invalid incident alert")
-        # Incident stores the raw Grafana alert here. Keep it raw; procedure selection
-        # falls back to the registered purposes, not unverified fields in the webhook.
+        # Incident stores the raw Grafana alert here. Keep search clues unverified.
         return {"alert": snapshot["alert"]}
     if "evidence" in snapshot:
         # Compatibility with previously accepted, immutable evidence-format snapshots.
@@ -88,7 +87,7 @@ def incident_source(snapshot):
     raise ValueError("incident snapshot requires alert or evidence")
 
 
-def validate_input(kind, data):
+def validate_input(kind, data, version="1.3"):
     clusters = data["scope"]["clusters"]
     if not clusters or len({c["cluster_id"] for c in clusters}) != len(clusters):
         raise ValueError("invalid scope")
@@ -100,17 +99,27 @@ def validate_input(kind, data):
         raise ValueError("invalid time range")
     if kind == "rca":
         UUID(data["incident_id"])
-        if data["evidence_version"] < 1 or not data["analysis_profile_revision"]:
+        if version not in {"1.3", "1.4", "1.5"}:
+            raise ValueError("unsupported RCA input contract")
+        if data["evidence_version"] < 1 or (
+            version in {"1.3", "1.5"} and not data.get("analysis_profile_revision")
+        ):
             raise ValueError("missing immutable revision")
         if not start <= timestamp(data["incident_time"]) <= end:
             raise ValueError("incident outside investigation period")
-        ids, allowed = data["purpose_ids"], {f"R{i:02}" for i in range(1, 10)}
+        if version != "1.3" and "purpose_ids" in data:
+            raise ValueError("purpose_ids forbidden in runbook-first input")
+        if version == "1.4" and (
+            data["evidence_version"] != 1 or "analysis_profile_revision" in data
+        ):
+            raise ValueError("invalid episode input")
         snapshot = data["incident_snapshot"]
         incident_source(snapshot)
         if snapshot["input"] != {
             k: v for k, v in data.items() if k != "incident_snapshot"
         }:
             raise ValueError("incident snapshot mismatch")
+        return
     else:
         ZoneInfo(data["timezone"])
         ids, allowed = data["topic_ids"], {f"O{i:02}" for i in range(1, 12)}

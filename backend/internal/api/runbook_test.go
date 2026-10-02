@@ -39,6 +39,12 @@ func TestRunbookAuthoringAndPublication(t *testing.T) {
 				func(c Object) { c["investigation_only"] = "true" },
 				func(c Object) { c["required_evidence"] = []any{"unknown"} },
 				func(c Object) { c["unexpected"] = true },
+				func(c Object) {
+					c["unexpected_evidence"] = Object{"on": []any{"invented"}, "additional_queries": []any{}, "fallback": "stop"}
+				},
+				func(c Object) {
+					c["unexpected_evidence"] = Object{"on": []any{"unknown_value"}, "additional_queries": []any{}, "fallback": "execute"}
+				},
 				func(c Object) { c["sources"] = nil },
 				func(c Object) { c["observation_plan"] = nil },
 				func(c Object) { c["required_queries"] = []any{"D99"} },

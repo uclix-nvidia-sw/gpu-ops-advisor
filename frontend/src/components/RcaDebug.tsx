@@ -505,15 +505,17 @@ export function RcaResult({
               ['관측 사실', result.facts],
               ['원인 후보', result.cause_candidates],
               ['검토 권고 · 장비 조치 미수행', result.recommendations],
-              ['목적별 판단', result.assessments],
+              ['조사별 판단', result.assessments],
             ] as const
           ).map(([title, value]) => (
             <section className="result-section" key={title}>
               <h3>{title}</h3>
-              {title === '목적별 판단' ? (
+              {title === '조사별 판단' ? (
                 rows(value).map((assessment, index) => (
-                  <article key={str(assessment.purpose_id) || index}>
-                    <h4>{purposeLabel(str(assessment.purpose_id))}</h4>
+                  <article
+                    key={str(assessment.assessment_id) || str(assessment.purpose_id) || index}
+                  >
+                    <h4>{str(assessment.question) || purposeLabel(str(assessment.purpose_id))}</h4>
                     <DataView value={assessment} evidenceLabels={evidenceLabels} />
                   </article>
                 ))

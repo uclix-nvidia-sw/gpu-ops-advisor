@@ -9,14 +9,13 @@ from uuid import UUID
 import httpx
 
 from agent_common.contracts import content_hash
-from .procedures import PROCEDURES
 from .runbook_contract import validate_runbook
 
 
 def check(row, profile, *, runtime=False):
     if row.get("kind") != "runbook":
         raise ValueError("kind must be runbook")
-    allowed = {q for p in PROCEDURES.values() for q in p.allowed_next_steps}
+    allowed = set(profile["queries"])
     return validate_runbook(row, profile["queries"], allowed, authoring=not runtime)
 
 

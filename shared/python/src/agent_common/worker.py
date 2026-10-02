@@ -82,7 +82,11 @@ class Worker:
         try:
             if claim["kind"] != self.settings.kind:
                 raise ValueError("wrong worker kind")
-            validate_input(claim["kind"], claim["input"])
+            validate_input(
+                claim["kind"],
+                claim["input"],
+                claim.get("versions", {}).get("input_contract", "1.3"),
+            )
             profile = self.settings.profile()
             deadline = time.monotonic() + min(
                 profile["limits"]["deadline_seconds"],
@@ -198,6 +202,9 @@ class Worker:
                 "/workers/register",
                 {
                     **self.identity,
+                    "supported_contract_versions": ["1.3", "1.4", "1.5"]
+                    if self.settings.kind == "rca"
+                    else ["1.3"],
                     "capacity_profile_id": os.getenv(
                         "CAPACITY_PROFILE_ID", self.settings.kind + "-v1"
                     ),

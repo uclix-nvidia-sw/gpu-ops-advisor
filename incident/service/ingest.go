@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	. "gpu-ops-advisor/shared/contract"
-	"sort"
 	"strings"
 	"time"
 )
@@ -321,10 +320,8 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 		if a.policy != nil {
 			p := a.policy
 			policyRevision = p.Revision
-			purposes := append([]string(nil), p.PurposeIDs...)
-			sort.Strings(purposes)
 			start, end := s.analysisWindow(a.starts, now)
-			input = Object{"incident_id": id, "evidence_version": revision, "analysis_profile_revision": p.Revision, "scope": a.scope, "target": a.target, "incident_time": a.starts.Format(time.RFC3339Nano), "time_range": Object{"start": start.Format(time.RFC3339Nano), "end": end.UTC().Format(time.RFC3339Nano)}, "purpose_ids": purposes}
+			input = Object{"incident_id": id, "evidence_version": revision, "analysis_profile_revision": p.Revision, "scope": a.scope, "target": a.target, "incident_time": a.starts.Format(time.RFC3339Nano), "time_range": Object{"start": start.Format(time.RFC3339Nano), "end": end.UTC().Format(time.RFC3339Nano)}}
 		}
 		snapshot := Object{"input": input, "alert": raw, "alert_event_id": eventID, "received_at": now, "analysis_policy": a.policy, "eligible": eligible, "reason": reason}
 		// Hash the JSON object representation that PostgreSQL/JC will read, including nested policy structs.
@@ -345,7 +342,7 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 			oid := ID()
 			outbox = oid
 			deadline := now.Add(time.Duration(s.Config.DispatchSeconds) * time.Second)
-			envelope := Object{"contract_version": "1.3", "source_module": "incident", "source_key": source, "kind": "rca", "input": input, "dispatch_deadline": deadline.UTC().Format(time.RFC3339Nano), "deadline_at": now.Add(time.Duration(s.Config.DeadlineSeconds) * time.Second).UTC().Format(time.RFC3339Nano), "snapshot_ref": Object{"incident_id": id, "revision": revision}, "execution_profile_revision": s.Config.ExecutionRevision}
+			envelope := Object{"contract_version": "1.5", "source_module": "incident", "source_key": source, "kind": "rca", "input": input, "dispatch_deadline": deadline.UTC().Format(time.RFC3339Nano), "deadline_at": now.Add(time.Duration(s.Config.DeadlineSeconds) * time.Second).UTC().Format(time.RFC3339Nano), "snapshot_ref": Object{"incident_id": id, "revision": revision}, "execution_profile_revision": s.Config.ExecutionRevision}
 			_, e = tx.Exec(ctx, "INSERT INTO enqueue_outbox(id,source_module,source_key,kind,input_snapshot,request_hash,status,dispatch_deadline) VALUES($1,'incident',$2,'rca',$3,$4,'pending',$5)", oid, source, envelope, Hash(envelope), deadline)
 			if e != nil {
 				return nil, e

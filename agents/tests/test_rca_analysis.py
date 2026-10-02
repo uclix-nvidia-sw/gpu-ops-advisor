@@ -181,6 +181,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                     }
                 ]
             events.append("synthesize")
+            if mode in ("missing_runbook", "unsafe_general"):
+                assert payload["runbook_plans"][0]["investigation_only"] is True
+                return analysis_reply(payload["observation_refs"])
             assert payload["runbook_plans"][0]["investigation_only"] == books[0][
                 "content"
             ].get("investigation_only", False)
@@ -193,6 +196,13 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             return analysis_reply(payload["observation_refs"])
 
     books = [general_runbook()]
+    if mode in ("followup", "invalid_plan"):
+        books[0]["content"]["unexpected_evidence"]["additional_queries"] = []
+        books[0]["content"]["unexpected_evidence"]["fallback"] = "general_runbook"
+        books[0].update(
+            content_hash=content_hash(books[0]["content"]),
+            reviewed_content_hash=content_hash(books[0]["content"]),
+        )
     if mode == "unsafe_general":
         content = books[0]["content"]
         content["investigation_only"] = False
@@ -298,8 +308,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             assert "synthesize" not in events
             assert "synthesis_unconfigured" in result["missing_inputs"]
         elif mode in ("missing_runbook", "unsafe_general"):
-            assert events == []
-            assert "approved_runbook" in result["missing_inputs"]
+            assert events == ["collect", "collect", "synthesize"]
+            assert result["runbook_revisions"][0]["id"] == "builtin-general"
+            assert "causal_confirmation_evidence" in result["missing_inputs"]
         elif mode == "query_failed":
             assert events == ["collect", "collect", "synthesize"]
             assert result["termination_reason"] == "query_failed"

@@ -1,5 +1,9 @@
 # 공유 계약과 스키마
 
+## Runbook-first 입력 지원 — 2026-10-02
+
+JC의 추가 migration `007_runbook_contract.sql`은 Worker 지원 계약 제약에 RCA 1.5를 추가한다. 새 테이블이나 기존 job/snapshot/hash 변경은 없다. 기존 1.3/1.4 계약은 유지한다. 신규 Incident 요청은 R 없이 1.5로 전달하고, Python Worker는 1.3/1.4/1.5를 구분해 검증한다. RCA 결과의 assessments는 Runbook 질문 기준이며 과거 purpose_id는 화면에서 읽기 호환한다.
+
 ## RCA 관측 호환 보완 (2026-09-30)
 
 공통 Python 수집기는 밀리초 정밀도 축소의 실제 요청 범위와 개별 관측 사용 가능 여부를 기록한다. 원본 기간 complete=false는 유지하고 RCA health 해석만 사용 가능 범위를 구분한다. Ops 집계/매핑 완전성 요구는 유지한다. 등록 Fleet JSON adapter와 기존 producer JSON parser를 함께 지원한다. [RCA 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따르며 DB 테이블·migration·소유권 변경은 없다.

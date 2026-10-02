@@ -13,3 +13,6 @@ var Queue string
 
 //go:embed 006_worker_contracts.sql
 var WorkerContracts string
+
+//go:embed 007_runbook_contract.sql
+var RunbookContract string

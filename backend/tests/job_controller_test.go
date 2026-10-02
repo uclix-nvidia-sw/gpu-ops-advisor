@@ -13,6 +13,7 @@ import (
 	. "gpu-ops-advisor/backend/internal/contract"
 	"gpu-ops-advisor/backend/internal/store"
 	jc "gpu-ops-advisor/job-controller/controller"
+	"gpu-ops-advisor/shared/migrations"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -53,8 +54,24 @@ func TestRealJobController(t *testing.T) {
 	attemptBudget := cfg.Execution["local-v1"].AttemptBudget
 	controller, e := jc.New(db.Pool, cfg)
 	must(t, e)
+	// Upgrade an actual pre-runbook worker constraint, retaining its existing row.
+	for _, migration := range []string{migrations.Queue, migrations.WorkerContracts} {
+		_, e = db.Pool.Exec(ctx, migration)
+		must(t, e)
+	}
+	oldBoot := ID()
+	_, e = db.Pool.Exec(ctx, "INSERT INTO workers(worker_id,boot_id,kind,profile_id,last_seen_at) VALUES('upgrade-fixture',$1,'rca','rca-v1',now())", oldBoot)
+	must(t, e)
 	must(t, controller.Prepare(ctx, false))
 	must(t, controller.Prepare(ctx, false))
+	_, e = db.Pool.Exec(ctx, `UPDATE workers SET supported_contract_versions='["1.3","1.4","1.5"]' WHERE worker_id='upgrade-fixture' AND boot_id=$1`, oldBoot)
+	must(t, e)
+	_, e = db.Pool.Exec(ctx, `UPDATE workers SET supported_contract_versions='["1.6"]' WHERE worker_id='upgrade-fixture'`)
+	if e == nil {
+		t.Fatal("unsupported worker contract accepted after upgrade")
+	}
+	_, e = db.Pool.Exec(ctx, "DELETE FROM workers WHERE worker_id='upgrade-fixture'")
+	must(t, e)
 	var lose atomic.Bool
 	queue := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/internal/v1/jobs/report" && lose.Swap(false) {

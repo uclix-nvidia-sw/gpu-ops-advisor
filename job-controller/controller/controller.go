@@ -48,7 +48,7 @@ func (c *Controller) Prepare(ctx context.Context, apply bool) error {
 			return e
 		}
 	}
-	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue, migrations.WorkerContracts} {
+	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue, migrations.WorkerContracts, migrations.RunbookContract} {
 		if _, e = tx.Exec(ctx, sql); e != nil {
 			return e
 		}
