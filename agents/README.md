@@ -1,3 +1,7 @@
+## 근거 기록 시각·순번 — 2026-10-02
+
+RCA/Ops 근거를 생성할 때 `collected_at`과 프로세스 공통 단조 증가 `record_sequence`를 부여한다. 병렬 수집 결과를 병합하거나 DB에 일괄 저장할 때 새로 매기지 않는다. 저장 시 기존 `quality` JSON에 `recorded_at`·`record_sequence`를 보존하고 계획된 조회에는 `plan_order`를 기록한다. `recorded_at`은 근거 생성 시각이며 조회 시작·소요시간이나 장비 이벤트 시각이 아니다. 기존 데이터는 수정하지 않는다.
+
 # RCA·보고서 Worker v1.3
 
 ## Ops 전용 관측 limits — 2026-10-01

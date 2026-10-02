@@ -121,7 +121,9 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
         for assignment, child in agents:
             for evidence in child.evidence:
                 evidence["quality"].update(
-                    round=round_no, sub_agent_id=assignment["sub_agent_id"]
+                    round=round_no,
+                    sub_agent_id=assignment["sub_agent_id"],
+                    plan_order=queries.index(assignment["query_id"]),
                 )
                 merged.append(evidence)
         merged.sort(

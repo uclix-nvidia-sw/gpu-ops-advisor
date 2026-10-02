@@ -1,3 +1,7 @@
+## Evidence ordering metadata (2026-10-02)
+
+`GET /jobs/{id}/evidence` returns `order=recorded_plan_v1`. Items include optional `recorded_at` (evidence creation time, not query start) and `order_basis` (`recorded_time`, `inferred_plan`, or `unknown`). `created_at` remains the original storage timestamp. `quality.record_sequence` preserves creation order and `quality.plan_order` identifies planned query order. Ordering is chronological, then plan order within same-time/same-round query slots; unplanned records retain their sequence positions. Legacy rows use storage time and inferred phases, with unresolved ties stabilized by ID. Sort the attempt metadata before pagination. Old-order cursors are invalid; restart pagination. Detail/raw snapshots retain their original timestamps.
+
 ## Runbook 예상 밖 근거 처리 — 2026-10-02
 
 Runbook content에 선택 필드 `unexpected_evidence`를 지원한다. `on`은 unknown_value/missing_evidence/conflicting_evidence/query_failed, `additional_queries`는 D 목록, `fallback`은 general_runbook/stop이다. Backend는 형식을 검사하고 Worker는 실행 profile의 등록 쿼리까지 검증한다. 기존 발행 revision/hash는 변경하지 않으며 콘텐츠 변경은 새 revision으로 검토·발행한다. 실행 의미는 [Runbook 개발 안내](../rcca-agent/runbooks/README.md)를 따른다.
