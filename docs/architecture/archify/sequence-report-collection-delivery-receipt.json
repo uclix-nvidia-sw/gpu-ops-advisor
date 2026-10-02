@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-report-collection.json",
+  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-report-collection.html",
+  "specification": {
+    "sha256": "f43124921ec670661f25f4c96716efc9a6638a6b55959d0d925126723e4af7c5",
+    "bytes": 3716
+  },
+  "artifact": {
+    "sha256": "0132dcdc0b96e35bd911b3e6594ebd00e602c34e9cc2d5fb87bda4d7f46a9ce6",
+    "bytes": 805545
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

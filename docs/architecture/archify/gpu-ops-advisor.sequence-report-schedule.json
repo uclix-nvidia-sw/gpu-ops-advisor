@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "보고서 · Backend 정기 일정과 outbox",
+    "title": "자동 보고서 · 일정 발생과 접수",
     "quality_profile": "showcase",
     "column_fit": "spread",
     "viewBox": [

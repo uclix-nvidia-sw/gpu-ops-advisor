@@ -46,7 +46,7 @@
     {
       "from": 359,
       "to": 478,
-      "label": "B · 필요한 관측의 cache miss · LLM 사용 예"
+      "label": "B · 병렬 관측·충분성 판정·원인 분석"
     },
     {
       "from": 515,
@@ -108,7 +108,7 @@
       "from": "worker",
       "to": "mcp",
       "y": 376,
-      "label": "07 도구 탐색·관측 조회",
+      "label": "07 병렬 MCP 관측 · 필요 시 재조사",
       "variant": "emphasis"
     },
     {
@@ -124,7 +124,7 @@
       "from": "worker",
       "to": "llm",
       "y": 432,
-      "label": "09 POST /chat/completions",
+      "label": "09 원인 분석 · 교정 · 보고서 편집",
       "variant": "emphasis"
     },
     {
@@ -132,7 +132,7 @@
       "from": "llm",
       "to": "worker",
       "y": 460,
-      "label": "10 근거 기반 설명",
+      "label": "10 검증된 후보·한계 / 기본 보고서",
       "variant": "return"
     },
     {
@@ -203,16 +203,16 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "관측 캐시",
+      "title": "Worker 내부 관측",
       "items": [
-        "hit: 같은 실행의 근거 재사용. miss: MCP 조회; DB fallback 없음."
+        "query별 task · 동시성 제한 · 충분성 판정 후 최대 1회 재조사."
       ]
     },
     {
       "dot": "emerald",
-      "title": "실행 조건",
+      "title": "추론 단계 구분",
       "items": [
-        "Runbook 적용 검사 후 필요한 조회만 수행. LLM 호출은 조건부."
+        "Synthesis 교정 최대 1회. 최종 보고서 편집은 별도 호출."
       ]
     },
     {

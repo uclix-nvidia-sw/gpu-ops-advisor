@@ -5222,11 +5222,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="worker" data-edge-to="mcp" data-edge-label="07 도구 탐색·관측 조회" data-edge-key="6" data-edge-id="m07">
+        <g data-edge-from="worker" data-edge-to="mcp" data-edge-label="07 계획·예산·의존성에 따른 병렬 조회" data-edge-key="6" data-edge-id="m07">
           <path data-composition-edge-from="worker" data-composition-edge-to="mcp" data-composition-edge-id="m07" data-composition-points="425.6,376;934.8000000000001,376" d="M 425.6 376 L 934.8000000000001 376" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="617" y="356" width="126.4" height="16" rx="3" class="c-mask"/>
-          <text x="680.2" y="366" class="t-backend" font-size="9" text-anchor="middle">07 도구 탐색·관측 조회</text>
+          <rect x="580.6" y="356" width="199.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="680.2" y="366" class="t-backend" font-size="9" text-anchor="middle">07 계획·예산·의존성에 따른 병렬 조회</text>
         </g>
         </g>
 
@@ -5238,19 +5238,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="worker" data-edge-to="llm" data-edge-label="09 POST /chat/completions" data-edge-key="8" data-edge-id="m09">
+        <g data-edge-from="worker" data-edge-to="llm" data-edge-label="09 코드 계산 후 보고서 문장 선택" data-edge-key="8" data-edge-id="m09">
           <path data-composition-edge-from="worker" data-composition-edge-to="llm" data-composition-edge-id="m09" data-composition-points="425.6,432;1196.4,432" d="M 425.6 432 L 1196.4 432" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="740" y="412" width="142" height="16" rx="3" class="c-mask"/>
-          <text x="811" y="422" class="t-backend" font-size="9" text-anchor="middle">09 POST /chat/completions</text>
+          <rect x="721.8" y="412" width="178.4" height="16" rx="3" class="c-mask"/>
+          <text x="811" y="422" class="t-backend" font-size="9" text-anchor="middle">09 코드 계산 후 보고서 문장 선택</text>
         </g>
         </g>
 
-        <g data-edge-from="llm" data-edge-to="worker" data-edge-label="10 근거 기반 설명" data-edge-key="9" data-edge-id="m10">
+        <g data-edge-from="llm" data-edge-to="worker" data-edge-label="10 검증된 문장 순서 / 기본 보고서" data-edge-key="9" data-edge-id="m10">
           <path data-composition-edge-from="llm" data-composition-edge-to="worker" data-composition-edge-id="m10" data-composition-points="1196.4,460;425.6,460" d="M 1196.4 460 L 425.6 460" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="760.8" y="440" width="100.4" height="16" rx="3" class="c-mask"/>
-          <text x="811" y="450" class="t-muted" font-size="9" text-anchor="middle">10 근거 기반 설명</text>
+          <rect x="719.2" y="440" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="811" y="450" class="t-muted" font-size="9" text-anchor="middle">10 검증된 문장 순서 / 기본 보고서</text>
         </g>
         </g>
 
@@ -5340,8 +5340,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text x="62" y="138" class="t-dim" font-size="9" font-weight="600">A · 등록된 Worker가 작업 인수</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="1">
-          <rect x="56" y="337" width="232.4" height="18" rx="3" class="c-mask"/>
-          <text x="62" y="350" class="t-dim" font-size="9" font-weight="600">B · 필요한 관측의 cache miss · LLM 사용 예</text>
+          <rect x="56" y="337" width="196" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="350" class="t-dim" font-size="9" font-weight="600">B · 수집 계획·병렬 관측·결정적 계산</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="2">
           <rect x="56" y="493" width="118" height="18" rx="3" class="c-mask"/>
@@ -5617,20 +5617,20 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>관측 캐시</h3>
+          <h3>계획 후 병렬 수집</h3>
         </div>
         <ul>
-          <li>&bull; hit: 같은 실행의 근거 재사용. miss: MCP 조회; DB fallback 없음.</li>
+          <li>&bull; query·CPC·기간 task. 캐시 재사용과 D06 선행 조건을 보존.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>실행 조건</h3>
+          <h3>계산과 설명</h3>
         </div>
         <ul>
-          <li>&bull; 코드가 수치를 계산. LLM은 설정·근거가 있을 때 설명.</li>
+          <li>&bull; 코드가 수치 산출. LLM은 문장 선택. 자율 보완 조사는 미구현.</li>
         </ul>
       </div>
 

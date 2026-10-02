@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "보고서 · 계획·병렬 MCP 수집",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      850
+    ]
+  },
+  "participants": [
+    {
+      "id": "planner",
+      "label": "Ops 수집 계획",
+      "type": "backend"
+    },
+    {
+      "id": "a",
+      "label": "관측 task A",
+      "type": "backend"
+    },
+    {
+      "id": "b",
+      "label": "관측 task B",
+      "type": "backend"
+    },
+    {
+      "id": "mcp",
+      "label": "Grafana MCP",
+      "type": "external"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 435,
+      "label": "A · 독립 조회는 병렬 실행"
+    },
+    {
+      "from": 455,
+      "to": 755,
+      "label": "B · 배치 취합·의존성 확인 후 다음 조회"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "planner",
+      "to": "a",
+      "y": 175,
+      "label": "중복 제거·예산 예약 후 A 배분",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "planner",
+      "to": "b",
+      "y": 220,
+      "label": "독립 B 배분 · 같은 Worker/lease",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m03",
+      "from": "a",
+      "to": "mcp",
+      "y": 275,
+      "label": "A MCP 조회 시작",
+      "variant": "default"
+    },
+    {
+      "id": "m04",
+      "from": "b",
+      "to": "mcp",
+      "y": 320,
+      "label": "B MCP 조회 · A와 동시 진행",
+      "variant": "default"
+    },
+    {
+      "id": "m05",
+      "from": "mcp",
+      "to": "b",
+      "y": 370,
+      "label": "B 관측 응답 / 오류·부분 근거",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "mcp",
+      "to": "a",
+      "y": 415,
+      "label": "A 관측 응답 / 오류·부분 근거",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "a",
+      "to": "planner",
+      "y": 475,
+      "label": "A 종료 · 실제 호출량·원본 근거",
+      "variant": "return"
+    },
+    {
+      "id": "m08",
+      "from": "b",
+      "to": "planner",
+      "y": 520,
+      "label": "B 종료 · 실제 호출량·원본 근거",
+      "variant": "return"
+    },
+    {
+      "id": "m09",
+      "from": "planner",
+      "to": "a",
+      "y": 590,
+      "label": "선행 조건 충족한 다음 task 배분",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "a",
+      "to": "mcp",
+      "y": 635,
+      "label": "완전 응답은 재사용 · 미적중만 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m11",
+      "from": "mcp",
+      "to": "a",
+      "y": 680,
+      "label": "범위·기간에 해당하는 응답",
+      "variant": "return"
+    },
+    {
+      "id": "m12",
+      "from": "a",
+      "to": "planner",
+      "y": 735,
+      "label": "전부 취합 → 코드 계산 → 보고서",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "실제 동시 실행",
+      "items": [
+        "예시는 두 task. 기본 동시성 3, 1이면 순차. 응답 순서는 가변."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "의존성과 예산",
+      "items": [
+        "O08 단독 namespace: D01/D08 이후 D06 범위 축소. 배치 종료 후 남은 예산 배분."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "실패와 취소",
+      "items": [
+        "실패는 해당 근거에 보존. 취소·deadline은 task 회수 후 반환."
+      ]
+    }
+  ]
+}

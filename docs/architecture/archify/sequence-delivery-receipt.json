@@ -3,8 +3,8 @@
   "ok": true,
   "command": "deliver",
   "type": "sequence",
-  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence.json",
-  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence.html",
+  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence.json",
+  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence.html",
   "specification": {
     "sha256": "b113d39f6e20adbd47a2f486c6c413fa25826affd6a4b18aaa7c7169b9fdd182",
     "bytes": 3643

@@ -11,7 +11,7 @@
     "repository": {
       "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor",
       "provider": "github",
-      "revision": "5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac",
+      "revision": "cd2273be1af3d1ab4056ed13284d36d9beac2b51",
       "link_mode": "web"
     }
   },
@@ -31,7 +31,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         }
       ]
     },
@@ -61,7 +61,7 @@
       "id": "client",
       "type": "frontend",
       "label": "Frontend · 브라우저",
-      "sublabel": "조회 · 즉시 보고서 요청",
+      "sublabel": "기존·운영·개발 / 웹 추적",
       "pos": [
         265,
         623
@@ -73,6 +73,9 @@
       "sources": [
         {
           "path": "frontend/src/lib/api.ts"
+        },
+        {
+          "path": "frontend/src/components/JobDebug.tsx"
         }
       ]
     },
@@ -80,7 +83,7 @@
       "id": "backend",
       "type": "backend",
       "label": "Backend",
-      "sublabel": "API · 내부 정기 스케줄러",
+      "sublabel": "API · 자동 보고서 · 추적",
       "pos": [
         510,
         459
@@ -95,6 +98,9 @@
         },
         {
           "path": "backend/internal/api/schedules.go"
+        },
+        {
+          "path": "backend/internal/api/trace.go"
         }
       ]
     },
@@ -124,7 +130,7 @@
       "id": "rca",
       "type": "backend",
       "label": "GPU RCA Agent",
-      "sublabel": "독립 Worker · NAT 조사",
+      "sublabel": "병렬 관측 · 판정·교정",
       "pos": [
         942,
         335
@@ -138,10 +144,10 @@
           "path": "rcca-agent/src/rcca_agent/workflow.py"
         },
         {
-          "path": "rcca-agent/configs/workflow.yml"
+          "path": "rcca-agent/src/rcca_agent/observation_agents.py"
         },
         {
-          "path": "shared/python/src/agent_common/worker.py"
+          "path": "rcca-agent/src/rcca_agent/synthesis.py"
         }
       ]
     },
@@ -149,7 +155,7 @@
       "id": "ops",
       "type": "backend",
       "label": "GPU Ops 보고서 Agent",
-      "sublabel": "독립 Worker · NAT 계산·설명",
+      "sublabel": "계획·병렬 관측·계산·보고",
       "pos": [
         942,
         583
@@ -163,10 +169,10 @@
           "path": "ops-agent/src/ops_agent/workflow.py"
         },
         {
-          "path": "ops-agent/configs/workflow.yml"
+          "path": "ops-agent/src/ops_agent/collection.py"
         },
         {
-          "path": "shared/python/src/agent_common/worker.py"
+          "path": "ops-agent/src/ops_agent/report.py"
         }
       ]
     },
@@ -248,7 +254,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -270,7 +276,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -292,7 +298,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         }
       ]
     },
@@ -311,7 +317,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -333,7 +339,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -355,7 +361,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -377,7 +383,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -399,7 +405,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         },
         {
           "path": "docs/evidence/CPC-2_수집검증_20260915.md"
@@ -421,7 +427,7 @@
       ],
       "sources": [
         {
-          "path": "output/architecture-modules-20260917-v1.3/hall architecture.svg"
+          "path": "docs/architecture/architecture-modules-20260917-v1.3/hall architecture.svg"
         }
       ]
     }

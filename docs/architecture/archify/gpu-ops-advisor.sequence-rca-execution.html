@@ -5221,11 +5221,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="worker" data-edge-to="mcp" data-edge-label="07 도구 탐색·관측 조회" data-edge-key="6" data-edge-id="m07">
+        <g data-edge-from="worker" data-edge-to="mcp" data-edge-label="07 병렬 MCP 관측 · 필요 시 재조사" data-edge-key="6" data-edge-id="m07">
           <path data-composition-edge-from="worker" data-composition-edge-to="mcp" data-composition-edge-id="m07" data-composition-points="491,376;1131,376" d="M 491 376 L 1131 376" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="747.8" y="356" width="126.4" height="16" rx="3" class="c-mask"/>
-          <text x="811" y="366" class="t-backend" font-size="9" text-anchor="middle">07 도구 탐색·관측 조회</text>
+          <rect x="719.2" y="356" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="811" y="366" class="t-backend" font-size="9" text-anchor="middle">07 병렬 MCP 관측 · 필요 시 재조사</text>
         </g>
         </g>
 
@@ -5237,19 +5237,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="worker" data-edge-to="llm" data-edge-label="09 POST /chat/completions" data-edge-key="8" data-edge-id="m09">
+        <g data-edge-from="worker" data-edge-to="llm" data-edge-label="09 원인 분석 · 교정 · 보고서 편집" data-edge-key="8" data-edge-id="m09">
           <path data-composition-edge-from="worker" data-composition-edge-to="llm" data-composition-edge-id="m09" data-composition-points="491,432;1458,432" d="M 491 432 L 1458 432" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="903.5" y="412" width="142" height="16" rx="3" class="c-mask"/>
-          <text x="974.5" y="422" class="t-backend" font-size="9" text-anchor="middle">09 POST /chat/completions</text>
+          <rect x="882.7" y="412" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="974.5" y="422" class="t-backend" font-size="9" text-anchor="middle">09 원인 분석 · 교정 · 보고서 편집</text>
         </g>
         </g>
 
-        <g data-edge-from="llm" data-edge-to="worker" data-edge-label="10 근거 기반 설명" data-edge-key="9" data-edge-id="m10">
+        <g data-edge-from="llm" data-edge-to="worker" data-edge-label="10 검증된 후보·한계 / 기본 보고서" data-edge-key="9" data-edge-id="m10">
           <path data-composition-edge-from="llm" data-composition-edge-to="worker" data-composition-edge-id="m10" data-composition-points="1458,460;491,460" d="M 1458 460 L 491 460" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="924.3" y="440" width="100.4" height="16" rx="3" class="c-mask"/>
-          <text x="974.5" y="450" class="t-muted" font-size="9" text-anchor="middle">10 근거 기반 설명</text>
+          <rect x="882.7" y="440" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="974.5" y="450" class="t-muted" font-size="9" text-anchor="middle">10 검증된 후보·한계 / 기본 보고서</text>
         </g>
         </g>
 
@@ -5323,8 +5323,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text x="62" y="138" class="t-dim" font-size="9" font-weight="600">A · 등록된 Worker가 작업 인수</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="1">
-          <rect x="56" y="337" width="232.4" height="18" rx="3" class="c-mask"/>
-          <text x="62" y="350" class="t-dim" font-size="9" font-weight="600">B · 필요한 관측의 cache miss · LLM 사용 예</text>
+          <rect x="56" y="337" width="196" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="350" class="t-dim" font-size="9" font-weight="600">B · 병렬 관측·충분성 판정·원인 분석</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="2">
           <rect x="56" y="493" width="118" height="18" rx="3" class="c-mask"/>
@@ -5589,20 +5589,20 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>관측 캐시</h3>
+          <h3>Worker 내부 관측</h3>
         </div>
         <ul>
-          <li>&bull; hit: 같은 실행의 근거 재사용. miss: MCP 조회; DB fallback 없음.</li>
+          <li>&bull; query별 task · 동시성 제한 · 충분성 판정 후 최대 1회 재조사.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>실행 조건</h3>
+          <h3>추론 단계 구분</h3>
         </div>
         <ul>
-          <li>&bull; Runbook 적용 검사 후 필요한 조회만 수행. LLM 호출은 조건부.</li>
+          <li>&bull; Synthesis 교정 최대 1회. 최종 보고서 편집은 별도 호출.</li>
         </ul>
       </div>
 

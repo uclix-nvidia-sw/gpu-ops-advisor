@@ -6,9 +6,9 @@
   "status": "pass",
   "visualReview": "pending",
   "artifact": {
-    "path": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence-rca-execution.html",
-    "sha256": "c2bde9533cc2026f69659b243e081e51b94982f0f38b8835eac3865d2923a755",
-    "bytes": 810712
+    "path": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-rca-execution.html",
+    "sha256": "225db7c0e2a866620279cc6d3e9c09e9f14c9a98d17378bd062e49b9dc94167f",
+    "bytes": 810834
   },
   "state": {
     "detail": "read",

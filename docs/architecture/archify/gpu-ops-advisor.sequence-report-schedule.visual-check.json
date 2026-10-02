@@ -6,9 +6,9 @@
   "status": "pass",
   "visualReview": "pending",
   "artifact": {
-    "path": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence-report-schedule.html",
-    "sha256": "e3b7f6607fdacd49e1b7d4d2bddac7fa2b5f96f48b7dbb2b3dbc5b8616252b72",
-    "bytes": 804192
+    "path": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-report-schedule.html",
+    "sha256": "48c36b3419a980df5c432a6652843b4c14bcf353bb5310e23dd52937c842d250",
+    "bytes": 804189
   },
   "state": {
     "detail": "read",

@@ -2,15 +2,13 @@
 
 [상단 탭 통합 뷰어](gpu-ops-advisor.html) · [Architecture 단독](gpu-ops-advisor.architecture.html) · [Sequence 단독](gpu-ops-advisor.sequence.html) · [Sequence 코드 근거](sequence-evidence.md)
 
-2026-09-21 재구성. 기준 revision: `5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac`.
-
-2026-09-22 문서 정리에서 이 묶음을 `docs/architecture/archify/`로 이동했다. 원본 JSON·생성 HTML·이미지·검증 기록은 그대로 보존했다. JSON과 HTML 안의 `output/` 근거 경로는 위 고정 revision의 파일을 가리키며 현재 checkout의 경로가 아니다. 당시 생성·검증 기록은 이번 이동의 새 실행 결과로 취급하지 않는다.
+2026-10-02 코드 재검토. 기준 revision: `cd2273be1af3d1ab4056ed13284d36d9beac2b51`. 보고서 최초 계획·병렬 수집, RCA 병렬 관측·교정·보고서 편집, 기존·운영·개발 GUI와 저장 기록 추적을 반영했다. CPC·CSC 외부 수집 토폴로지는 변경하지 않았다.
 
 ## Architecture: 두 Agent와 공통 의존성
 
 GPU RCA Agent와 GPU Ops 보고서 Agent를 **독립 실행 모듈**로 분리했다. Incident → Job Controller의 RCA 접수와 Backend → Job Controller의 보고서 접수를 각각 표시했다. 두 Agent 각각의 Job Controller·Grafana MCP·LLM endpoint·PostgreSQL 연결을 모두 선으로 표현했다. PostgreSQL은 보고서 파일과 분리된 명시적 DB 노드다.
 
-기존 도면은 두 Agent를 하나로 묶고 핵심 의존 관계까지 카드 설명으로 옮겨, 전체 실행 구조를 읽기 어려웠다. 이번 도면은 19개 구성요소와 48개 방향선을 사용한다. CPC 수집 모듈과 CSC 수신·저장 모듈을 각각 분리했다. 핵심 연결을 보존하는 상세 구조도이므로 Archify `standard` 배치를 사용한다.
+전체 도면은 19개 구성요소와 48개 방향선을 사용한다. CPC 수집 모듈과 CSC 수신·저장 모듈을 각각 분리했다. 핵심 연결을 보존하는 상세 구조도이므로 Archify `standard` 배치를 사용한다.
 
 ### 실제 호출 방향
 
@@ -34,7 +32,7 @@ Job Controller가 Agent의 HTTP endpoint를 직접 호출하는 구조가 아니
 | JC → PostgreSQL | [작업 접수](../../../job-controller/controller/submit.go), [claim](../../../job-controller/controller/claim.go), [완료](../../../job-controller/controller/attempt.go). 작업·attempt·lease·공개 참조 |
 | 두 Agent → PostgreSQL | [read_context / save](../../../shared/python/src/agent_common/store.py). 입력 읽기와 후보·근거 저장 |
 
-LLM 연결은 구성된 endpoint를 사용하는 의존성이다. 매 실행에서 반드시 추론을 호출한다는 의미는 아니다. LLM 설정과 가용 근거·예산에 따라 호출을 생략할 수 있다. RCA는 등록된 추가 조사 선택과 근거 해석에 사용하고, 보고서는 코드로 계산한 사실의 설명에 사용한다.
+LLM 연결은 구성된 endpoint를 사용하는 의존성이다. 매 실행에서 반드시 추론을 호출한다는 의미는 아니다. LLM 설정과 가용 근거·예산에 따라 호출을 생략할 수 있다. RCA는 부족한 증거의 추가 조사 선택·원인 후보 해석·최대 1회 교정과 별도 보고서 편집에 사용한다. 보고서는 코드가 계산한 사실·기본 보고서 문장의 참조와 순서를 선택한다. 자유 생성형 보고서 조언은 미구현이다.
 
 RCA는 호환 발행 Runbook과 사건 snapshot을 읽는다. 보고서는 기간 사건·공개 RCA 결과를 읽으며 새 RCA를 실행하지 않는다. 두 Agent의 공통 코드는 각 Worker 내부에서 재사용된다.
 
@@ -79,15 +77,17 @@ JC → Agent 점선은 Worker의 claim에 대한 작업 응답이다. JC가 Agen
 
 ## Sequence 재검토
 
-Sequence 탭 안의 선택 메뉴에서 아래 다섯 화면을 전환한다. 요청과 반환 방향, DB 저장, 두 Agent 각각의 MCP·LLM 호출을 표시했다. 단계별 분할이며 새 서비스가 추가된 것이 아니다.
+Sequence 탭 안의 선택 메뉴에서 아래 일곱 화면을 전환한다. 요청과 반환 방향, DB 저장, 두 Agent 각각의 MCP·LLM 호출을 표시했다. 단계별 분할이며 새 서비스가 추가된 것이 아니다.
 
 | 화면 | 내용 | 생성 영수증 |
 |---|---|---|
 | [RCA 접수](gpu-ops-advisor.html#sequence) | Grafana → Incident → DB·outbox → JC | [receipt](sequence-delivery-receipt.json) |
 | [RCA 실행](gpu-ops-advisor.html#sequence-rca-execution) | Worker claim, Runbook·MCP·LLM, 후보 저장과 공개 | [receipt](sequence-rca-execution-delivery-receipt.json) |
 | [즉시 보고서 요청·조회](gpu-ops-advisor.html#sequence-report-request) | Client → Backend → JC, 완료 후 상태·결과·다운로드 | [receipt](sequence-report-request-delivery-receipt.json) |
-| [정기 보고서 접수](gpu-ops-advisor.html#sequence-report-schedule) | Backend 내부 일정·outbox 전달 | [receipt](sequence-report-schedule-delivery-receipt.json) |
+| [자동 보고서 접수](gpu-ops-advisor.html#sequence-report-schedule) | Backend 내부 일정·outbox 전달 | [receipt](sequence-report-schedule-delivery-receipt.json) |
 | [보고서 실행](gpu-ops-advisor.html#sequence-report-execution) | 보고서 Worker, MCP·LLM, 파일·후보 저장과 공개 | [receipt](sequence-report-execution-delivery-receipt.json) |
+| [보고서 수집 상세](gpu-ops-advisor.html#sequence-report-collection) | 계획·의존성·예약 예산 → 병렬 MCP → 취합·다음 배치 | [receipt](sequence-report-collection-delivery-receipt.json) |
+| [웹 디버깅 추적](gpu-ops-advisor.html#sequence-debug) | job trace·attempt별 근거·고정 Runbook content 조회 | [receipt](sequence-debug-delivery-receipt.json) |
 
 즉시 보고서는 요청 의도를 DB에 저장한 뒤 JC를 직접 호출하고, 정기 보고서는 outbox로 전달한다. API 응답 캐시와 별개로 Agent에는 실행별 관측 캐시가 있다. hit는 근거 재사용, miss는 MCP 조회이며 관측 실패 시 DB fallback은 없다. 제품 인증은 범위 제외로 유지한다.
 
@@ -95,17 +95,17 @@ Sequence 탭 안의 선택 메뉴에서 아래 다섯 화면을 전환한다. �
 
 ## 검증
 
-- [Architecture 생성 영수증](delivery-receipt.json): **9/9 standard 통과, 오류 0, 교차 경고 10건**, 소스 참조 35개 확인. 경고는 양방향 선을 관계별로 집계한 교차 진단이다. 노드 관통·모호한 선 중첩·레이블 간격·가독성 진단은 0건이다. showcase 무경고 통과로 표기하지 않는다.
+- [Architecture 생성 영수증](delivery-receipt.json): **9/9 standard 통과, 오류 0, 교차 경고 10건**, 고정 revision의 코드·외부 수집 근거 경로를 확인했다. 경고는 양방향 선을 관계별로 집계한 교차 진단이다. 노드 관통·모호한 선 중첩·레이블 간격·가독성 진단은 0건이다. showcase 무경고 통과로 표기하지 않는다.
 - [Architecture 브라우저 기록](gpu-ops-advisor.architecture.visual-check.json): 1440×900, 1600×1000, 1920×1080, 2048×1320에서 화면 넘침 없음.
 - [Architecture 캡처](gpu-ops-advisor.architecture.visual-check.html), [이미지 검토 기록](review-receipt.json): 1440×900과 2048×1320의 밝은/어두운 테마 4개를 육안 확인했다. 노드·카드 가림 없음.
-- 다섯 Sequence 생성 영수증: 각각 **9/9 showcase, 오류·경고 0**. 각 HTML과 같은 이름의 `.visual-check.json`에 브라우저 검사를 기록했다. 네 화면 크기에서 넘침 없음. 최종 1440×900 밝은 테마와 2048×1320 어두운 테마 캡처 10개를 직접 검토했다.
-- [탭 검증](tabs-check.json): 네 화면 크기에서 Architecture와 다섯 Sequence 선택·전환, 직접 링크, 파일 직접 열기와 내부/외부 넘침 확인.
-- 제품 코드 변경이나 새로운 서비스 통합 시험은 수행하지 않았다. Viewer 내보내기는 별도 시험하지 않았다.
+- 일곱 Sequence 생성 영수증: 각각 **9/9 showcase, 오류·경고 0**. 각 HTML과 같은 이름의 `.visual-check.json`에 브라우저 검사를 기록했다. 네 화면 크기에서 넘침 없음. 최종 1440×900 밝은 테마와 2048×1320 어두운 테마 캡처 14개를 직접 검토했다.
+- [탭 검증](tabs-check.json): 네 화면 크기에서 Architecture와 일곱 Sequence 선택·전환, 직접 링크, 파일 직접 열기와 내부/외부 넘침 확인.
+- 제품 코드는 [Agent QA](../../../agents/QA.md)의 fixture E2E 포함 306개 검사로 확인했다. 실제 Grafana/LLM·운영 배포와 Viewer 내보내기는 별도 시험하지 않았다.
 - 본문은 한국어다. Archify 고정 Viewer UI와 생성 HTML의 `lang`은 영어 기본값이다.
 
 ## 파일과 재검증
 
-공유 시 `gpu-ops-advisor.html`, `gpu-ops-advisor.architecture.html`, `gpu-ops-advisor.sequence.html` 및 `gpu-ops-advisor.sequence-*.html`의 시나리오 4개를 같은 폴더에 둔다. 총 7개 HTML이며 `visual-check` 파일은 공유에 필수가 아니다. 각 단독 다이어그램은 자체 포함 HTML이다.
+공유 시 `gpu-ops-advisor.html`, `gpu-ops-advisor.architecture.html`, `gpu-ops-advisor.sequence.html` 및 `gpu-ops-advisor.sequence-*.html`의 시나리오 6개를 같은 폴더에 둔다. 총 9개 HTML이며 `visual-check` 파일은 공유에 필수가 아니다. 각 단독 다이어그램은 자체 포함 HTML이다.
 
 [Architecture 원본](gpu-ops-advisor.architecture.json) · [Sequence 원본](gpu-ops-advisor.sequence.json)
 

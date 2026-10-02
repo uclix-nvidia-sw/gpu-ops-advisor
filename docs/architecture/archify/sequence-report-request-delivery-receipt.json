@@ -3,15 +3,15 @@
   "ok": true,
   "command": "deliver",
   "type": "sequence",
-  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence-report-request.json",
-  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.sequence-report-request.html",
+  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-report-request.json",
+  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.sequence-report-request.html",
   "specification": {
-    "sha256": "fd0876eb5f681040412bad94b159ccaf1f03569b9619442e00ef0eed0c2ede9e",
-    "bytes": 4808
+    "sha256": "554a875fdcc74980a104cd131043326f10faccbaea46c6dcac602eb729f3822a",
+    "bytes": 5052
   },
   "artifact": {
-    "sha256": "24777fc27a9514ca3b1d5291e91aeff1dc306be0fabb28e6334551111c203406",
-    "bytes": 811274
+    "sha256": "2d8bf9334f80a2b7e57b7630b46bcc321d9342f463e43a91c82c7f5acf717e14",
+    "bytes": 811282
   },
   "validation": {
     "checksPassed": 9,

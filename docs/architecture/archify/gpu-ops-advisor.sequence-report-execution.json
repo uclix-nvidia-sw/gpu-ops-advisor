@@ -51,7 +51,7 @@
     {
       "from": 359,
       "to": 478,
-      "label": "B · 필요한 관측의 cache miss · LLM 사용 예"
+      "label": "B · 수집 계획·병렬 관측·결정적 계산"
     },
     {
       "from": 515,
@@ -113,7 +113,7 @@
       "from": "worker",
       "to": "mcp",
       "y": 376,
-      "label": "07 도구 탐색·관측 조회",
+      "label": "07 계획·예산·의존성에 따른 병렬 조회",
       "variant": "emphasis"
     },
     {
@@ -129,7 +129,7 @@
       "from": "worker",
       "to": "llm",
       "y": 432,
-      "label": "09 POST /chat/completions",
+      "label": "09 코드 계산 후 보고서 문장 선택",
       "variant": "emphasis"
     },
     {
@@ -137,7 +137,7 @@
       "from": "llm",
       "to": "worker",
       "y": 460,
-      "label": "10 근거 기반 설명",
+      "label": "10 검증된 문장 순서 / 기본 보고서",
       "variant": "return"
     },
     {
@@ -224,16 +224,16 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "관측 캐시",
+      "title": "계획 후 병렬 수집",
       "items": [
-        "hit: 같은 실행의 근거 재사용. miss: MCP 조회; DB fallback 없음."
+        "query·CPC·기간 task. 캐시 재사용과 D06 선행 조건을 보존."
       ]
     },
     {
       "dot": "emerald",
-      "title": "실행 조건",
+      "title": "계산과 설명",
       "items": [
-        "코드가 수치를 계산. LLM은 설정·근거가 있을 때 설명."
+        "코드가 수치 산출. LLM은 문장 선택. 자율 보완 조사는 미구현."
       ]
     },
     {

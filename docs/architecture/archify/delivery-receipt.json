@@ -3,15 +3,15 @@
   "ok": true,
   "command": "deliver",
   "type": "architecture",
-  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.architecture.json",
-  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\output\\archify\\gpu-ops-advisor.architecture.html",
+  "input": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.architecture.json",
+  "output": "C:\\Users\\이주원\\OneDrive - turtleknowledge\\[0] Work\\git_repo\\gpu-ops-advisor\\docs\\architecture\\archify\\gpu-ops-advisor.architecture.html",
   "specification": {
-    "sha256": "caad3141dded7f89ff2e8f8156e1c733f2f79b3e9b0f1ed64b814cbbb173c363",
-    "bytes": 19176
+    "sha256": "63ba22cdb69c2a9569b5ceb1d1ebc05757b39f349bc59c4d6ad20fcb1f0242e5",
+    "bytes": 19458
   },
   "artifact": {
-    "sha256": "5eabe1bff48f6b6c74be45c3b3ea4ee07a72f058694fae1a10c4f1a2b416f2de",
-    "bytes": 855062
+    "sha256": "3c9eb89090755736046b02fa2ecc1c55b16cefd52bf8103c830be1522b65b14c",
+    "bytes": 855710
   },
   "validation": {
     "checksPassed": 9,
@@ -24,7 +24,7 @@
   "evidence": {
     "verified": true,
     "repository": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor",
-    "revision": "5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac",
-    "references": 35
+    "revision": "cd2273be1af3d1ab4056ed13284d36d9beac2b51",
+    "references": 37
   }
 }

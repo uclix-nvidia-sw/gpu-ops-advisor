@@ -10,7 +10,7 @@ const skill = process.env.ARCHIFY_SKILL_DIR || path.join(os.homedir(), '.agents/
 const { ChromeVisualBrowser } = await import(pathToFileURL(path.join(skill, 'bin/visual-check.mjs')));
 const chrome = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const browser = new ChromeVisualBrowser(chrome);
-const types = ['architecture','sequence','sequence-rca-execution','sequence-report-request','sequence-report-schedule','sequence-report-execution'];
+const types = ['architecture','sequence','sequence-rca-execution','sequence-report-request','sequence-report-schedule','sequence-report-execution','sequence-report-collection','sequence-debug'];
 const files = ['gpu-ops-advisor.html', ...types.map(type => 'gpu-ops-advisor.'+type+'.html')];
 const server = createServer((req,res) => {
   const name = req.url.split('?')[0].slice(1);
@@ -95,5 +95,5 @@ try {
     binding[name]={sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length};
   }
   fs.writeFileSync(path.join(dir,'tabs-check.json'),JSON.stringify({status:'pass',binding,checks:rows},null,2));
-  console.log('PASS: both tabs and all 5 sequence scenarios, 4 viewports, frame/outer containment, direct links and invalid-hash fallback.');
+  console.log('PASS: both tabs and all 7 sequence scenarios, 4 viewports, frame/outer containment, direct links and invalid-hash fallback.');
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
