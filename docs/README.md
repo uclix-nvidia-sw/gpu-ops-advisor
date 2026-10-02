@@ -1,5 +1,9 @@
 # GPU Ops Advisor 개발 문서 안내
 
+## D 쿼리 통합·확장 설계 — 2026-10-02
+
+[메트릭→D→O/RCA 매핑](specs/common/d-query-mapping.md)을 먼저 읽는다. D 하나=단일 쿼리를 유지하고, 기본 D01/D08→D02 및 D05→D09 상태 처리를 통합하면서 신규 D15~D49 35개를 추가하는 설계다. 기존 분석 기능은 보존한다. O01~O11의 이전→이후 입력·추가 출력과 RCA 연결을 명시했다. [개발 계획](specs/common/d-contract-redesign-plan.md)은 환경 검증·구현·검수 순서를 정의한다. 복수 하위 관측 컨테이너안은 철회했으며, 현재는 문서만 작성했다. 실환경 가용성·제품 구현·발행본 전수 전환은 완료되지 않았다.
+
 ## RCA·Ops 최종 보고서 — 2026-09-30
 
 [RCA 첫 화면 접근과 Ops 표시](../frontend/README.md), [Ops의 마지막 LLM 편집·기본 보고서 계약](../ops-agent/README.md), [HTML 내보내기](../backend/README.md)를 반영했다. 최신 main의 Namespace/GPU 시간·수집 개선을 유지한다. 검증 범위는 [Agent QA](../agents/QA.md)와 모듈 QA에 기록한다.
