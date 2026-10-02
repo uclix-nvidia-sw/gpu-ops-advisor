@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import time
@@ -298,6 +299,7 @@ async def test_loki_reserves_mcp_probe_and_preserves_truncation(query):
     config = profile()
     config["limits"]["max_rows"] = 3
     obs = observation(grafana, config)
+    obs.data["time_range"] = {"start": PERIOD["start"], "end": "2026-09-15T00:00:01Z"}
 
     async def truncated(args):
         assert args["limit"] == 2  # MCP asks Loki for one additional entry.
@@ -315,6 +317,7 @@ async def test_loki_reserves_mcp_probe_and_preserves_truncation(query):
 @pytest.mark.parametrize("max_rows", [1, 3, 5000, 5001, 10000])
 async def test_loki_requested_limit_is_positive_and_enforced(max_rows):
     obs = observation(Grafana())
+    obs.data["time_range"] = {"start": PERIOD["start"], "end": "2026-09-15T00:00:01Z"}
     obs.profile["limits"]["max_rows"] = max_rows
 
     async def full(args):
@@ -360,6 +363,7 @@ async def test_mcp_failures_keep_safe_codes_instead_of_json_errors(
 
     obs.tools["query_prometheus" if query == "D02" else "query_loki_logs"] = failed
     result = (await obs.collect(query))[0]
+    assert obs.calls == 1
     assert result["tool_status"] == "unavailable"
     assert result["snapshot"] == {}
     assert result["quality"]["reason"] == "query_failed"
@@ -510,3 +514,144 @@ async def test_single_oversized_loki_entry_remains_partial():
     assert obs.calls == 1
     assert result[0]["tool_status"] == "partial" and result[0]["snapshot"] == {}
     assert result[0]["quality"]["reason"] == "response_byte_limit"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D05", "D09", "D13"])
+@pytest.mark.parametrize(
+    "failure", ["nat_bytes", "mcp_bytes", "truncated", "row_limit"]
+)
+async def test_loki_remote_limits_split_without_losing_scope_or_logs(query, failure):
+    obs = observation(Grafana())
+    obs.profile["limits"]["max_rows"] = 3
+    events = [
+        {
+            "timestamp": "2026-09-15T00:15:00Z",
+            "line": "first",
+            "labels": {"node": "n1"},
+        },
+        {"timestamp": "2026-09-15T00:45:00Z", "line": "last", "labels": {"node": "n2"}},
+    ]
+    calls = []
+
+    async def logs(args):
+        calls.append(args.copy())
+        start, end = timestamp(args["startRfc3339"]), timestamp(args["endRfc3339"])
+        if end - start > 1800:
+            error = "response body exceeds maximum size of 10485760 bytes; try narrowing your query"
+            if failure == "nat_bytes":
+                return "MCPToolClient tool call failed: " + error
+            if failure == "mcp_bytes":
+                return {"isError": True, "content": [{"type": "text", "text": error}]}
+            if failure == "truncated":
+                return {"data": events[:1], "metadata": {"resultsTruncated": True}}
+            return {"data": events}
+        return {"data": [e for e in events if start <= timestamp(e["timestamp"]) < end]}
+
+    obs.tools["query_loki_logs"] = logs
+    original = copy.deepcopy(obs.data)
+    result = await obs.collect(query)
+    assert obs.calls == len(calls) == 3 and len(result) == 2
+    assert all(e["tool_status"] == "ok" and e["quality"]["complete"] for e in result)
+    assert [row for e in result for row in e["snapshot"]["data"]] == events
+    assert result[0]["time_range"]["start"] == PERIOD["start"]
+    assert result[0]["time_range"]["end"] == result[1]["time_range"]["start"]
+    assert result[1]["time_range"]["end"] == PERIOD["end"]
+    assert all(
+        e["query_id"] == query and e["cluster_id"] == "cluster-a" for e in result
+    )
+    assert all(
+        e["query_version"] == obs.profile["queries"][query]["revision"] for e in result
+    )
+    assert all(
+        {k: v for k, v in args.items() if k not in {"startRfc3339", "endRfc3339"}}
+        == {
+            k: v for k, v in calls[0].items() if k not in {"startRfc3339", "endRfc3339"}
+        }
+        for args in calls
+    )
+    assert obs.data == original
+    assert await obs.collect(query) is result
+    assert obs.calls == 3
+    if query == "D05":
+        assert all(e["quality"]["derived_query"] == "D09" for e in result)
+        assert all(
+            e["quality"]["derived_from"] in {x["id"] for x in obs.evidence}
+            for e in result
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exhaust", ["queries", "deadline"])
+async def test_mcp_byte_retry_preserves_complete_prefix_and_unknown_tail(exhaust):
+    obs = observation(Grafana())
+    obs.profile["limits"].update(
+        chunk_seconds=1800, max_queries=2 if exhaust == "queries" else 48
+    )
+
+    async def logs(args):
+        if args["startRfc3339"] == PERIOD["start"]:
+            return {"data": [{"line": "retained prefix"}]}
+        if exhaust == "deadline":
+            obs.deadline = time.monotonic() - 1
+        return "MCPToolClient tool call failed: response body exceeds maximum size of 10485760 bytes"
+
+    obs.tools["query_loki_logs"] = logs
+    result = await obs.collect("D09")
+    assert obs.calls == 2 and len(result) == 2
+    assert result[0]["tool_status"] == "ok" and result[0]["quality"]["complete"]
+    assert result[0]["snapshot"]["data"] == [{"line": "retained prefix"}]
+    assert result[1]["tool_status"] == "unavailable" and result[1]["snapshot"] == {}
+    assert result[1]["quality"]["reason"] == "budget_exhausted"
+    assert result[1]["quality"].get("complete") is not True
+    assert result[0]["time_range"]["end"] == result[1]["time_range"]["start"]
+    assert result[1]["time_range"]["end"] == PERIOD["end"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D09", "D02"])
+async def test_mcp_byte_failure_stops_at_minimum_window_and_redacts_details(
+    query, caplog
+):
+    obs = observation(Grafana())
+    obs.data["time_range"] = {"start": PERIOD["start"], "end": "2026-09-15T00:00:04Z"}
+
+    async def logs(args):
+        return (
+            "MCPToolClient tool call failed: response body exceeds maximum size of "
+            "10485760 bytes; private-test-token"
+        )
+
+    obs.tools["query_loki_logs" if query == "D09" else "query_prometheus"] = logs
+    result = await obs.collect(query)
+    assert obs.calls == (6 if query == "D09" else 1)
+    assert all(
+        e["tool_status"] == "unavailable" and e["snapshot"] == {} for e in result
+    )
+    assert all(e["quality"]["complete"] is False for e in result)
+    assert all(e["quality"]["error_code"] == "response_byte_limit" for e in result)
+    reason = "response_byte_limit" if query == "D09" else "query_failed"
+    assert all(e["quality"]["reason"] == reason for e in result)
+    assert "private-test-token" not in json.dumps(result) + caplog.text
+
+
+@pytest.mark.asyncio
+async def test_loki_size_retry_propagates_cancellation():
+    obs = observation(Grafana())
+    retry_started = asyncio.Event()
+
+    async def logs(args):
+        if obs.calls == 1:
+            return "MCPToolClient tool call failed: response body exceeds maximum size of 10485760 bytes"
+        retry_started.set()
+        await asyncio.Future()
+
+    obs.tools["query_loki_logs"] = logs
+    task = asyncio.create_task(obs.collect("D09"))
+    try:
+        await asyncio.wait_for(retry_started.wait(), timeout=1)
+    finally:
+        task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert obs.calls == 2 and not obs.evidence
