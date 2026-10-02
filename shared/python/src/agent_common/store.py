@@ -27,7 +27,19 @@ def prepare_evidence(e):
     return (
         encoded_json(e["scope"]),
         encoded_json(e["input"]),
-        encoded_json(e["quality"]),
+        encoded_json(
+            {
+                **e["quality"],
+                **{
+                    k: e[v]
+                    for k, v in (
+                        ("recorded_at", "collected_at"),
+                        ("record_sequence", "record_sequence"),
+                    )
+                    if v in e
+                },
+            }
+        ),
         encoded_json(e["snapshot"]),
         content_hash(e["snapshot"]),
     )

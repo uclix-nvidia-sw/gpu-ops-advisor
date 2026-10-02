@@ -112,6 +112,7 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
     tasks, rejected = collection_plan(profile, data, order)
     for index, task in enumerate(tasks):
         task["sub_agent_id"] = f"report-observation-{index}"
+        task["plan_order"] = index
     dependencies(tasks, profile, namespace_only)
     collected, evidence, summaries = {}, [], []
     calls = discovery_calls = 0
@@ -182,7 +183,9 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
             )
         elapsed = time.monotonic() - started
         for e in obs.evidence:
-            e["quality"].update(sub_agent_id=task["sub_agent_id"])
+            e["quality"].update(
+                sub_agent_id=task["sub_agent_id"], plan_order=task["plan_order"]
+            )
             if e["quality"].get("reason") == "budget_exhausted":
                 e["quality"]["reason"] = (
                     "collection_task_deadline_exhausted"

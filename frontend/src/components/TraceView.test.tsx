@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { differences, DifferenceTable } from './TraceView';
+import { differences, DifferenceTable, StoredEvidence } from './TraceView';
 import { RunbookContent } from './RunbookContent';
 // Snapshot of rcca-agent/runbooks/xid/RB-XID-99.json, kept inside the frontend build context.
 import runbook from './fixtures/RB-XID-99.json';
@@ -43,4 +43,50 @@ describe('stored web trace', () => {
       '/jobs/j1/evidence/e1?attempt=1',
     );
   });
+});
+
+vi.mock('../lib/live', async (original) => ({
+  ...(await original<typeof import('../lib/live')>()),
+  useList: () => ({
+    items: [
+      {
+        id: 'actual',
+        query_id: 'D09',
+        tool_status: 'ok',
+        created_at: '2026-10-02T05:00:00Z',
+        recorded_at: '2026-10-02T04:41:37.229202Z',
+        order_basis: 'recorded_time',
+      },
+      {
+        id: 'legacy',
+        query_id: 'D05',
+        tool_status: 'ok',
+        created_at: '2026-10-02T05:00:00Z',
+        order_basis: 'inferred_plan',
+      },
+      {
+        id: 'unknown',
+        query_id: 'custom',
+        tool_status: 'ok',
+        created_at: '2026-10-02T05:00:00Z',
+        order_basis: 'unknown',
+      },
+    ],
+    isPending: false,
+    isError: false,
+    hasNextPage: false,
+  }),
+}));
+
+it('distinguishes actual KST record time from legacy inferred order without reordering API rows', () => {
+  const html = renderToStaticMarkup(
+    <StoredEvidence job={{ id: 'job' }} attempt={1} onEvidence={() => {}} />,
+  );
+  expect(html).toContain('13:41:37');
+  expect(html).toContain('.229202');
+  expect(html).toContain('기록 생성 시각');
+  expect(html).toContain('계획 기반 추정 순서');
+  expect(html).toContain('실행 순서 미확인');
+  expect(html.indexOf('actual')).toBeLessThan(html.indexOf('legacy'));
+  expect(html).toContain('2026-10-02T04:41:37.229202Z');
 });

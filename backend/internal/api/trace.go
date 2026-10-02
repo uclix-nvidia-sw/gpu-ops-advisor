@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	. "gpu-ops-advisor/backend/internal/contract"
 	"gpu-ops-advisor/backend/internal/store"
 	"net/http"
@@ -148,7 +147,8 @@ func (s *Server) jobEvidence(w http.ResponseWriter, q *Request, id string, detai
 		s.write(w, q.ID, 200, v)
 		return nil
 	}
-	filter := Hash(Object{"job": id, "attempt": attempt})
+	filter := Hash(Object{"job": id, "attempt": attempt, "order": "recorded_plan_v1"})
+	var after cursor
 	args := []any{id, attempt}
 	where := "job_id::text=$1 AND attempt_no=$2"
 	if raw := q.R.URL.Query().Get("cursor"); raw != "" {
@@ -160,15 +160,13 @@ func (s *Server) jobEvidence(w http.ResponseWriter, q *Request, id string, detai
 		if _, err = time.Parse(time.RFC3339Nano, c.At); err != nil {
 			return Invalid("cursor")
 		}
-		args = append(args, c.At, c.ID)
-		where += " AND (created_at,id::text)>($3::timestamptz,$4)"
+		after = c
 	}
 	limit := 50
 	if raw := q.R.URL.Query().Get("limit"); raw != "" {
 		limit, _ = strconv.Atoi(raw)
 	}
-	args = append(args, limit+1)
-	records, e := s.DB.Pool.Query(q.R.Context(), `SELECT jsonb_build_object('id',id,'job_id',job_id,'attempt_no',attempt_no,'query_id',query_id,'query_version',query_version,'cluster_id',cluster_id,'tool_status',tool_status,'quality',quality,'time_start',time_start,'time_end',time_end,'created_at',created_at,'checksum',checksum) FROM evidence WHERE `+where+fmt.Sprintf(" ORDER BY created_at,id::text LIMIT $%d", len(args)), args...)
+	records, e := s.DB.Pool.Query(q.R.Context(), `SELECT jsonb_build_object('id',id,'job_id',job_id,'attempt_no',attempt_no,'query_id',query_id,'query_version',query_version,'cluster_id',cluster_id,'tool_status',tool_status,'quality',quality,'time_start',time_start,'time_end',time_end,'created_at',created_at,'checksum',checksum,'_round',snapshot->'round','_assignments',CASE WHEN query_id='observation_plan' THEN snapshot->'assignments' END) FROM evidence WHERE `+where, args...)
 	if e != nil {
 		return e
 	}
@@ -189,6 +187,20 @@ func (s *Server) jobEvidence(w http.ResponseWriter, q *Request, id string, detai
 	if e = records.Err(); e != nil {
 		return e
 	}
+	orderEvidence(items)
+	if after.ID != "" {
+		index := -1
+		for i, v := range items {
+			if String(v, "id") == after.ID && String(v, "created_at") == after.At {
+				index = i
+				break
+			}
+		}
+		if index < 0 {
+			return Invalid("cursor")
+		}
+		items = items[index+1:]
+	}
 	var next any
 	if len(items) > limit {
 		last := items[limit-1]
@@ -196,6 +208,6 @@ func (s *Server) jobEvidence(w http.ResponseWriter, q *Request, id string, detai
 		next = base64.RawURLEncoding.EncodeToString(b)
 		items = items[:limit]
 	}
-	s.write(w, q.ID, 200, Object{"items": items, "next_cursor": next, "order": "stored_at_asc", "attempt_no": attempt})
+	s.write(w, q.ID, 200, Object{"items": items, "next_cursor": next, "order": "recorded_plan_v1", "attempt_no": attempt})
 	return nil
 }

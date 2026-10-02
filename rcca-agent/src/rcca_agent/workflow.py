@@ -7,11 +7,10 @@ from agent_common.contracts import (
     result_status,
     content_hash,
     timestamp,
-    now,
     incident_source,
 )
 from agent_common.normalize import allocations
-from agent_common.observation import Observation, usable_observation
+from agent_common.observation import Observation, usable_observation, evidence_stamp
 from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
@@ -388,7 +387,7 @@ async def run(tools):
             tool_status="ok",
             quality={"immutable": True},
             snapshot=data["incident_snapshot"],
-            collected_at=now(),
+            **evidence_stamp(),
         )
     )
     obs._evidence(
@@ -718,7 +717,7 @@ async def run(tools):
                     "origin": book.get("origin", "published"),
                 },
                 snapshot=book["content"],
-                collected_at=now(),
+                **evidence_stamp(),
             )
         )
         observation_refs = [

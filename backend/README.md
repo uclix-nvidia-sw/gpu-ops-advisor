@@ -1,3 +1,7 @@
+## 근거 타임라인 정렬 — 2026-10-02
+
+작업 evidence API는 실제 기록 생성 시각을 우선하며 동률의 계획된 조회는 회차별 계획 순서, 그 외는 생성 순번을 유지한다. 기존 기록은 저장 시각·계획 메타데이터로 추정 정렬하고 `order_basis`로 구분한다. 정확한 실행 시각을 복원하지 않는다. 전체 시도의 compact metadata를 정렬한 후 cursor pagination을 적용하며 snapshot 본문은 목록에 반환하지 않는다. DB migration 없음.
+
 ## 자동 보고서 실행 상태 조회 — 2026-10-02
 
 일정 목록과 회차 목록에 저장된 report 작업·최신 시도의 상태를 함께 제공한다. 요청 접수와 실행 시작·완료를 구분하고, 예정 시각이 지났지만 요청 기록이 없는 활성 일정을 표시한다. [읽기 API 계약](API.md)의 `latest_occurrence`, `awaiting_occurrence`, `execution`을 참고한다. DB migration이나 스케줄러 정책 변경은 없다.
