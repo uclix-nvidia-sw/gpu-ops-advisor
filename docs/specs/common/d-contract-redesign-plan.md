@@ -22,6 +22,10 @@
 
 ## 2. 이전 문서에서 정정한 내용
 
+[PR #61](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/pull/61)은 단일 쿼리 D, 기존 D 통합·기능 보존, D15~D49 후보와 O01~O11/RCA 입력 관계를 정리했다. 이번 후속 설계는 그 위에 오류 코드 없는 조사 사례, 저장소 Runbook 267개의 공통 계획 대조, 작성 원본 수정부터 DB 초안 등록·검토·발행까지의 작업을 연결한다. 앞선 D/O 매핑을 대체하지 않으며 함께 읽는다.
+
+저장소 Runbook JSON은 **추후 DB에 등록할 작성 원본**이다. 먼저 변경된 D와 fact 계약에 맞춰 원본을 보완하고 기존 등록 경로로 DB draft를 만든다. 초안 등록과 실행 가능한 revision의 발행은 별도 단계이며, 자세한 산출물과 전환 조건은 [매핑 설계 §7.3](d-query-mapping.md#73-작성-원본에서-db-등록실행까지의-후속-작업)을 따른다.
+
 초기 대화/문서의 ‘기존 D 분류 유지 + 복수 하위 관측’과 이후 ‘D 단위를 추후 결정’은 이번 명확한 요구로 대체한다. 확정된 단위는 단일 논리 쿼리이며, 전체 메트릭 목록을 D 안에 넣지 않는다. [03 데이터 설계서 §3.3](03_데이터_설계서.md#33-d-정의역할과-복수-관측-확장--2026-10-02)은 이 설계로 연결하는 요약으로 정정했다.
 
 이미 조사한 저장소 설정·과거 수집 기록·Fleet/DCGM 카탈로그는 재사용한다. 신규 문서의 D 번호 매핑은 작성했지만 현재 운영 환경의 전체 메트릭·로그 확인을 완료했다고 주장하지 않는다. 번호/목적 매핑, 현재 가용성, 런타임 구현, 실제 분석 검수는 다른 단계다.
@@ -32,9 +36,9 @@
 |---|---|---|---|
 | P0 설계·관계 작성 | D 쿼리 매핑과 목적, 기존 통합, 신규 D 및 O/RCA 사용 관계 정의 | 매핑 설계 §3~§7, 본 계획 | 모든 신규 D가 원본·목적·활용처에 연결되고 O01~O11 전환표가 있음. 이번 문서 단계 |
 | P1 환경별 binding 검증 | 지정 환경의 실제 이름·타입·단위·대상·시간·필터 확인 | docs/evidence/의 날짜·환경별 데이터 원장 | 각 활성화 대상 D에 검증 근거 또는 미확보 사유. 페이지/권한/기간 한도와 누락 범위 기록 |
-| P2 소비 계약 확정 | 각 신규 D의 정규화·fact, O 출력·산식·실패 상태, 모든 발행 Runbook 전환 대조 | 03 상세 데이터 계약, 04 판단/산식, 14 실행 계약 및 모듈 11/12 명세 | 실제 실행할 query binding·fact·계산·소비자·버전이 연결되고 미확정 입력으로 확정 판정하지 않음 |
-| P3 구현 | 공통 실행·신규 정의·통합된 소비자·표시·설정 사본·테스트 변경 | 기존 코드 경로, 모듈 README/QA | 기존 기능 회귀 + 신규 관측/계산의 두 Worker 경로 완성 |
-| P4 검수·전환 | 격리 테스트/E2E, 실환경 의미·품질, 버전 적용/복구 확인 | QA·운영 검수 기록 | fixture와 실환경 결과를 구분해 승인된 범위 통과. 배포는 별도 권한 |
+| P2 소비 계약 확정 | 각 신규 D의 정규화·fact, O 출력·산식·실패 상태, 267개 작성 원본의 전환표와 대상 DB에 기존 revision이 있으면 그 대응 정의 | 03 상세 데이터 계약, 04 판단/산식, 14 실행 계약 및 모듈 11/12 명세 | 실제 실행할 query binding·fact·계산·소비자·버전이 연결되고 미확정 입력으로 확정 판정하지 않음 |
+| P3 구현 | 공통 실행·신규 정의·통합된 소비자·표시·설정 사본·테스트 변경, Runbook 작성 원본·생성 경로·패키지 사본 수정 | 기존 코드 경로, 모듈 README/QA | 기존 기능 회귀 + 신규 관측/계산의 두 Worker 경로 완성 |
+| P4 검수·전환 | 격리 테스트/E2E, 승인된 대상에 DB draft 등록, 실환경 의미·품질 검토 후 발행·적용/회수 확인 | QA·운영 검수 기록 | fixture와 실환경 결과를 구분해 승인된 범위 통과. 배포는 별도 권한 |
 
 이번 요청에서는 P0 문서만 수행한다. 운영 조회, 제품 구현, migration, Runbook 발행이나 배포는 실행하지 않는다. P1과 P2 설계 보완은 병행할 수 있으나 검증되지 않은 binding을 실행 준비 완료로 표시하지 않는다.
 
@@ -53,7 +57,7 @@ Fleet는 source 이름과 중앙 변환 이름, DCGM은 장비 지원과 exporte
 | agents/config.example.json + charts/gpu-ops-advisor/files/agents.json | D15~D49 중 검증된 binding 등록, 새 profile의 D 통합 | 두 사본 일치. 기존 환경 override 전수 대조 |
 | settings.py, observation.py, discovery.py, runtime.py | 단일 query 구조 유지, 필요 등록 도구/검사와 대상 투영 | scope·기간·예산·chunk·취소·원본 시각·응답 재사용 보존 |
 | normalize.py, parsers.py, calculations.py | D별 단위/타입 및 출력 fact, 통합 D02/D09 입력 소비 | query 숫자를 의미로 추정하지 않음. counter/bitmask/info/gauge 구분 |
-| RCA runbook_contract.py, workflow.py, runbooks | D05→D09 fact 요구, 기본 D08→D02 관계 입력, 새 관측 계획 | 모든 발행본/필수 fact/권고를 revision별 대조. 새 revision으로 전환 |
+| RCA runbook_contract.py, workflow.py, runbooks | 267개 초안/일반 패키지의 D05→D09 fact 요구, 기본 D08→D02 관계 입력, 코드별 추가 관측과 비코드 조사 계획 | 작성 원본 전수 검토 후 기존 API로 DB draft 등록·검토·발행. 기존 DB revision이 있으면 대응·hash 보존 |
 | Ops workflow.py, collection.py, namespace_usage.py | 매핑 §6의 현재→기본+추가 D, 신규 출력·조건부 조사 | O08 두 profile·기존 연결/할당/품질 gate·기존 산식 유지 |
 | store.py, contracts.py, shared/contract, JC/Incident | query/version 및 공개 계약 영향 검사 | snapshot/hash·lease·publication·idempotency 보존. 실제 필요 없으면 변경하지 않음 |
 | Backend API/export, Frontend, Agent report | 신규 지표·상태·단위·근거 표시, D04 명칭 정합 | 기존 결과 열람·HTML/CSV 유지. 관측을 인과로 표시하지 않음 |
@@ -83,6 +87,6 @@ Fleet는 source 이름과 중앙 변환 이름, DCGM은 장비 지원과 exporte
 
 ## 7. 남은 구체 결정
 
-D 형태를 다시 논의하는 단계는 아니다. 남은 결정은 후보 D의 환경별 binding·타입·단위·주기, 신규 출력의 정확한 직렬화/산식/필수성, 발행 Runbook 전수 대응, 구/신 실행 revision 전환이다. 전체 운영 가용 목록과 전용 Runbook 전수 매핑은 미완료로 유지한다.
+D 형태를 다시 논의하는 단계는 아니다. 남은 결정은 후보 D의 환경별 binding·타입·단위·주기, 신규 출력의 정확한 직렬화/산식/필수성, 발행 Runbook 전수 대응, 구/신 실행 revision 전환이다. 전체 운영 가용 목록과 전용 Runbook별 최종 D·fact·판단 조건 설계, JSON 수정·DB 초안 등록·검토·발행은 미완료다. 저장소 초안 267개가 모두 D09/D05 필수·D02 선택을 사용하는 정적 대조는 매핑 §7.2에 기록했다. 비코드 사례의 조사 질문→D→계산 fact→판단/보류는 §7.1에 정의한다.
 
 [매핑 설계](d-query-mapping.md)가 신규 D와 O/RCA 관계의 기준이며, 03은 공통 정의, 04는 판단·산식, 14는 모듈 실행 계약의 기준이다. 실제 구현 시 이들 문서와 해당 모듈 명세를 함께 갱신한다.
