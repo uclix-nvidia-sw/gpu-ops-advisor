@@ -1,5 +1,7 @@
 # XID·SXID Runbook 작성과 Knowledge DB 등록
 
+> 2026-10-02 후속 설계: 이 폴더의 JSON은 추후 DB에 등록할 작성 원본이다. D 통합·확장에 따른 원본 수정, 오류 코드 없는 조사, DB 초안 등록·검토·발행의 순서는 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑)과 [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md)을 따른다. 현재 JSON과 아래 실행 절차는 아직 변경하지 않았으며, 신규 D가 구현·검증된 것으로 읽지 않는다.
+
 2026-09-28. 다른 PC에서 대화 기록 없이 이어가기 위한 문서다. **XID 173건·SXID 93건과 일반 1건, 총 267건이며 [전체 코드 목록](CATALOG.md)을 따른다.** 기존 Backend API로 초안을 등록하고 검토·발행한다. 문헌 미정의·출처 차이는 개별 항목에 보존했다. 운영 적용에는 환경별 parser/query/compatibility 검증이 필요하다.
 
 ## 1. 완료된 단계와 남은 경계

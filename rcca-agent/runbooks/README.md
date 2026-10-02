@@ -1,5 +1,7 @@
 # Runbook 개발 및 RCA 연계
 
+> 2026-10-02 후속 설계: 이 폴더의 JSON은 추후 DB에 등록할 작성 원본이다. D 통합·확장에 따른 원본 수정, 오류 코드 없는 조사, DB 초안 등록·검토·발행의 순서는 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑)과 [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md)을 따른다. 현재 JSON과 아래 실행 절차는 아직 변경하지 않았으며, 신규 D가 구현·검증된 것으로 읽지 않는다.
+
 ## R 없는 조사 계획과 예상 밖 근거 — 2026-10-02
 
 Runbook의 `observation_plan`이 수집 계획의 원천이다. R 코드나 procedure별 허용 D를 작성하지 않는다. 등록된 D는 모두 계획에 사용할 수 있지만 대상/기간/예산 제한을 우회할 수 없다. `required_evidence`는 판단에 필요한 근거이며 `fact_names`에 적었다고 자동 생성되지 않는다.

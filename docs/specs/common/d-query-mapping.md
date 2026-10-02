@@ -162,8 +162,8 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | Runbook 질문 | 현재 경로 | 새 기본/통합 입력 | 추가 D·목적 |
 |---|---|---|---|
 | 일반 장비 조사 | 일반 필수 D09,D05 / 선택 D02 | D09 + 상태/producer fact 검사, 선택 D02 | Node 질문 D20, 수집 품질 D10/D22 |
-| 메모리 여유·오류 | 기존 D03/D09와 각 발행본의 필수 입력 | 기존 입력 유지, D05 요구는 위 fact 경로로 전환 | D15,D16, 해당 ECC D36~D43으로 여유·용량·오류 변화 보완 |
-| 온도·클록·전력 제한 | 기존 D04/D11/D09 사용 경로 | 기존 입력 유지 | D23,D24,D25,D45,D46,D48로 열·클록·제한 사유·한도 조사 |
+| 메모리 여유·오류 | 저장소 초안은 D09/D05 필수·D02 선택; D03 쿼리는 별도 존재 | D09 + 상태 fact, 질문에 D03 연결 | D15,D16, 해당 ECC D36~D43으로 여유·용량·오류 변화 보완 |
+| 온도·클록·전력 제한 | 저장소 초안은 D09/D05 필수·D02 선택; D04/D11 쿼리는 별도 존재 | D09 + 상태 fact, 질문에 D04/D11 연결 | D23,D24,D25,D45,D46,D48로 열·클록·제한 사유·한도 조사 |
 | PCIe·Fabric/NVLink | 기존 D09/D05 상태·원문 | D09 + 동일 조건의 상태 fact | D44,D47; 통신 질문 D31,D32,D33,D34. 트래픽을 오류로 해석하지 않음 |
 | 사건 당시 GPU–Pod | D08+D06의 관계 처리 | 기본 설정은 D02 labels+D06의 observed 처리 | 필요 시 D20 Node 상태. 기존 UID·유효시간·공유/할당 구분 보존 |
 
@@ -182,7 +182,7 @@ D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼�
 | Node 상태 이상 | 장비·Kubernetes·Host·수집 문제를 구분할 근거가 있는가 | D20,D18,D19,D09,D10,D22 | 대상에 맞는 GPU 오류/온도 D | condition·Host 부하·사건·수집 공백. 네트워크·runtime·storage 직접 근거가 없으면 해당 원인 미확정 |
 | 데이터 공백·지표 소실 | target 수집 실패인가, 특정 장비 관측 부재인가 | D10,D22, 해당 대상의 D02/D06 | producer 로그 D09 | target 상태·표본 공백·신원 상태. 기대 inventory/주기 없으면 전체 coverage와 장비 장애를 확정하지 않음 |
 
-위는 설계상 조사 계획이며 실제 비코드 Runbook은 아직 구현·발행하지 않았다. 해당 질문에 대응하는 Runbook이 없으면 기존 일반 조사로 근거를 수집하고 미해결 질문을 남긴다. 기존 D35개의 추가만으로 network/storage/runtime/업무 성과 등 모든 사례를 커버한다고 주장하지 않는다. 재사용 가능한 D가 없을 때만 목적·원본·반환 사실을 정의해 독립 D를 추가하며 사례마다 같은 메트릭을 새 D로 복제하지 않는다.
+위는 설계상 조사 계획이며 실제 비코드 Runbook은 아직 구현·발행하지 않았다. 기존 267개는 `investigation_only: true`인 조사 초안이다. D 추가만으로 원인 확정용 Runbook으로 승격하지 않으며, 원인 판정 범위를 넓히려면 별도로 fact·조건·충분성 검수를 완료해야 한다. 해당 질문에 대응하는 Runbook이 없으면 기존 일반 조사로 근거를 수집하고 미해결 질문을 남긴다. 신규 D 35개 추가만으로 network/storage/runtime/업무 성과 등 모든 사례를 커버한다고 주장하지 않는다. 재사용 가능한 D가 없을 때만 목적·원본·반환 사실을 정의해 독립 D를 추가하며 사례마다 같은 메트릭을 새 D로 복제하지 않는다.
 
 현행 `runbook_contract.py`의 FACT_NAMES/SCALAR_FACTS는 제한된 상태·코드·producer 등이며 `_conditions()`는 등록된 scalar의 `field/equals`만 허용한다. 수치 시계열 비교·지속시간·부족량 계산을 문자열 fact나 임의 LLM 판정으로 우회하지 않는다. 비코드 Runbook 구현 전에 등록된 계산 함수가 생산할 typed fact/quality와 validator·판단 소비를 함께 정의한다. 원본 D→계산 fact→Runbook 적용/지지·반박→조건부 추가 D→종료/보류를 검수한다. 일반 조건 DSL을 먼저 만드는 대신 필요한 계산만 등록한다.
 
@@ -195,7 +195,7 @@ D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼�
 | 초안 수 | XID 173 + SXID 93 + 일반 1 = **267개** |
 | required_queries | **267개 모두 D09,D05** |
 | observation_plan | **267개 모두 D09 필수, D05 필수, D02 선택** |
-| compatibility | **267개 모두 빈 객체**. 운영 환경 호환성이 바인딩된 발행본이라고 볼 수 없음 |
+| compatibility | **267개 모두 빈 객체**. DB 초안 등록용 작성 원본이며 실제 적용 조건은 검토·발행 전에 검증·입력 |
 | 패키지 일반 템플릿 | `rcca-agent/src/rcca_agent/general_runbook.json`에도 D09/D05/D02 계획 존재, 함께 수정·동기화 필요 |
 
 따라서 XID/SXID별 설명·문헌 내용이 있어도 현재 쿼리 선택은 동일하다. D 재설계가 코드별 조사 근거 확대에 연결되려면 단순 번호 치환과 별도로 코드/장비/producer별 관측 목적을 검토해야 한다. 운영 DB의 발행 Runbook 개수·revision은 이번에 조회하지 않았으므로 위 숫자를 운영 발행본 수로 사용하지 않는다.
@@ -212,6 +212,32 @@ D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼�
 파일별 전환 원장은 `knowledge_key / source_file / old_revision_or_hash / current_queries / new_queries / required_facts / parser_or_calculation / compatibility / expected_retained_behavior / added_question / fixture / review_status / publication_status`를 남긴다. 267개 구조 검사는 자동화할 수 있으나 내용 검토·운영 발행을 자동 완료로 표시하지 않는다.
 
 검수는 (1) 모든 초안의 구조/참조/사본 검사, (2) 오류 종류별 대표 조사에서 기존 사실·판정과 추가 근거 비교, (3) 비코드 사례별 정상/이상/누락/상충 fixture, (4) 실제 producer·사건 표본의 검토로 나눈다. 지원하지 않는 사례는 일반 조사/미확정으로 종료해야 하며 LLM이 부족한 사실을 만들어서는 안 된다.
+
+### 7.3 작성 원본에서 DB 등록·실행까지의 후속 작업
+
+**저장소의 Runbook 초안은 나중에 DB에 등록할 작성 원본이다.** 참고 문서로만 남기는 것이 아니다. D 변경에 맞춰 이 원본과 생성 경로를 먼저 수정한 뒤, 기존 [DB 등록 절차](../../../rcca-agent/runbooks/DB-WORKFLOW.md)로 반영한다. 이번 PR은 이 절차의 설계만 남기며 JSON 수정·DB 등록·발행은 수행하지 않는다.
+
+```text
+D·메트릭·fact 계약 확정
+→ 저장소 Runbook 초안·생성 경로·패키지 사본 수정
+→ 구조·참조 검사 후 기존 Backend API로 DB draft 등록
+→ 실제 query/parser/계산·compatibility 및 사례별 결과 검수
+→ in_review → reviewed → published
+→ JC가 실행에 고정한 revision/hash를 RCA Worker가 검증·소비
+```
+
+| 순서 | 작업·산출물 | 다음 단계로 넘길 조건 |
+|---|---|---|
+| 1. 작성 계약 | 각 Runbook의 질문, 기존→신규 D, 필수/선택 입력, 생산 fact·계산, 조건·한계 정의 | §7.2 원장을 파일별로 작성. 공통 치환과 개별 의미 검토를 구분 |
+| 2. 원본 수정 | 기존 코드별 지침·문헌·knowledge_key 보존, D05 통합, 목적별 D 추가; 비코드 사례는 필요한 새 Runbook 작성 | 생성 경로·일반 패키지 사본 동기화. 기존 조사 기능·불충분 판정 유지 |
+| 3. DB 초안 등록 | 기존 `runbook_import`/관리 CLI → Backend API → `knowledge_revisions` draft | 입력·profile 구조 검사. 기존 knowledge_key는 대상 DB의 knowledge_id에 연결해 새 revision 생성; 등록 receipt 보관 |
+| 4. 검토 준비 | 실제 source binding·장비/producer compatibility, typed fact·계산·조건·예산·실패 처리 검수 | Python 및 영향받는 Backend 검증기가 같은 계약을 지원. 신규 D와 parser/계산이 실행 profile/Worker에 준비됨 |
+| 5. 검토·발행 | 기존 draft → in_review → reviewed → published 전이 | 대상·본문 hash·검수 근거 확인. 비어 있는 compatibility나 지원되지 않는 실행 입력으로 발행하지 않음 |
+| 6. 실행·회수 검수 | JC의 revision/hash 고정, RCA 계획·근거·결과, Ops의 공개 RCA 참조 확인 | 신규 실패/누락·과거 결과 열람 보존. 문제 revision은 기존 retire 절차로 신규 선택에서 제외하고 수정 revision을 검토 |
+
+DB draft 등록과 운영 발행은 별도 단계다. 빈 compatibility는 작성 중 의도된 상태일 수 있고 초안으로 저장할 수 있지만, 운영 적용 가능성을 뜻하지 않는다. 저장소 JSON을 수정하거나 Helm을 갱신해도 DB의 발행 콘텐츠는 자동으로 바뀌지 않는다. Worker는 작성 폴더를 실행 원본으로 읽지 않는다. 패키지 일반 Runbook 사본도 동기화하되 DB 발행 절차를 대체하지 않는다.
+
+원장에는 §7.2 항목과 함께 `target_environment / knowledge_id / draft_revision_id / content_hash / import_receipt / execution_profile_revision / validation_evidence`를 남긴다. 새 내용에는 새 batch key/receipt를 사용하며 동일 요청 재시도는 기존 등록 절차의 멱등 규칙을 따른다. DB 내용 적재에 새 테이블·직접 SQL·자동 seed를 추가하지 않는다. 기존 published revision과 실행 중 claim, 과거 evidence/result/hash는 그대로 보존한다. 실제 DB 반영 때 대상 환경·적용 순서·회수 조건을 확인한다.
 
 ## 8. 원본 미확정 요구와 제외
 
@@ -267,7 +293,7 @@ D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼�
 | DCGM_FI_DEV_FB_USED_PERCENT | D17 | 실행 source·이름·가용성은 위 매핑 표 참조 |
 | DCGM_FI_DEV_GPU_TEMP | D04 | 실행 source·이름·가용성은 위 매핑 표 참조 |
 | DCGM_FI_DEV_GPU_TEMP_LIMIT | 보류 | 1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정 |
-| DCGM_FI_DEV_GPU_UTIL | D08 | 실행 source·이름·가용성은 위 매핑 표 참조 |
+| DCGM_FI_DEV_GPU_UTIL | D02 (기존 D01/D08 통합) | 기본 GPU_UTIL 쿼리 기준. 별도 할당 source override는 §3의 보존 조건 적용 |
 | DCGM_FI_DEV_INFOROM_CONFIG_VALID | 보류 | 1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정 |
 | DCGM_FI_DEV_INFOROM_IMAGE_VER | 보류 | 1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정 |
 | DCGM_FI_DEV_LOW_UTIL_VIOLATION | 보류 | 1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정 |
