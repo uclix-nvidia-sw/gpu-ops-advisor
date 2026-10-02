@@ -70,9 +70,9 @@ Incident는 알람 생명주기 상태와 사건 ID를 분리하고, source를 �
 
 ### 보고서 Orchestrator·병렬 관측·조언 개발 기준
 
-2026-09-30에 [상세 Mermaid 흐름도](../architecture/report-agent-workflow/detailed-workflow.md)의 합의를 현행 설계의 **추가 개발 목표**로 반영했다. 기준은 [12 Ops](ops-agent/12_보고서_Agent_모듈_설계서.md)의 OP-05~07과 §2.4~§5다. query별 Observation Sub-agent를 한 Worker/job/lease 안에서 병렬 실행하고, 결정적 통계·제한적 보완 조회 후 도구 없는 단일 Synthesis가 개선 조언을 작성한다. O01~O11별 Agent나 별도 큐·일정 서비스는 만들지 않는다.
+[현재 상세 흐름](../architecture/report-agent-workflow/detailed-workflow.md)과 [12 Ops](ops-agent/12_보고서_Agent_모듈_설계서.md)를 기준으로 query+CPC별 독립 Observation·의존성·공유 예산·취소 회수를 구현했다. 보고서 문장은 기존 reference-only 선택으로 편집한다. 추가 관측 라운드·자유 생성형 조언·의미 검증은 OP-05~07의 남은 목표다.
 
-판단/결과 의미는 [04](common/04_Agent_동작_판단_명세서.md), 공유 예산·취소·공개는 [14](common/14_모듈간_호출과_공통실행_계약.md), 추가 검수는 [05 T60~T65](05_테스트_검수_기준서.md), Backend/화면 소비는 02/07/08에 연결했다. 현재 코드는 순차 수집·fact_ids 선택이며 **병렬 수집·종합 조언은 미구현, 신규 제품 검수는 NOT RUN**이다. 보고서 접수 1.3·결과 스키마 1.1, 기존 집계 변경 목표 criteria 1.2를 유지한다. 구현·DB/배포는 이번 문서 변경에 포함하지 않는다.
+실행 계약은 [14](common/14_모듈간_호출과_공통실행_계약.md), 판단 의미는 [04](common/04_Agent_동작_판단_명세서.md), 실제 통과 범위는 [Agent QA](../../agents/QA.md)를 따른다. [T60~T65](05_테스트_검수_기준서.md) 전체 완료를 뜻하지 않는다. 접수 1.3·결과 1.1, Namespace criteria 1.2와 기존 공개 계약을 유지한다.
 
 ## 개발 문서
 
@@ -89,7 +89,7 @@ Incident는 알람 생명주기 상태와 사건 ID를 분리하고, source를 �
 | 09 | [개정·정리 내역](09_통합검토_반영내역.md) | 변경 이유·삭제 범위·추적·검증 |
 | 10 | [Job Controller](job-controller/10_Job_Controller_모듈_설계서.md) | 큐·배분·용량 제한·상태 전이 |
 | 11 | [RCA Agent](rca-agent/11_RCA_Agent_모듈_설계서.md) | R01~R09, workflow·runbook 계약, D-쿼리 선결 조건, 개발·검수 순서 |
-| 12 | [보고서 Agent](ops-agent/12_보고서_Agent_모듈_설계서.md) | O01~O11, Orchestrator·병렬 관측·Synthesis 개발 목표·검수 순서 |
+| 12 | [보고서 Agent](ops-agent/12_보고서_Agent_모듈_설계서.md) | O01~O11, 현재 병렬 관측·남은 조언 목표·검수 순서 |
 | 13 | [Incident](incident/13_Incident_모듈_설계서.md) | Grafana 알람·사건·RCA 접수 |
 | 14 | [모듈 간 계약](common/14_모듈간_호출과_공통실행_계약.md) | DTO·멱등·lease·완료·오류 |
 

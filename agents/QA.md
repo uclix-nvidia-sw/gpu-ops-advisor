@@ -1,3 +1,14 @@
+# 2026-10-02 보고서 계획 기반 병렬 MCP 수집
+
+- **통과:** Python 3.12.14 전체 Agent 검사 **306 passed, 0 skipped** (94.70초). `RUN_AGENT_E2E=1`, 격리 로컬 PostgreSQL, 최신 소스 Backend/JC/Incident, 공식 Grafana MCP 1.4.2와 Helm으로 실행했다. 데이터소스·모델은 HTTP fixture이며 운영 DB는 사용하지 않았다.
+- **통과:** `test_report_parallel.py`는 동시성 1/3의 수치 동일성, 상한, 중복 query 제거, 의존 순서와 Namespace 범위 축소, 완료 응답 재사용, 발견 예산 상한, 취소 후 task 회수, 독립 실패와 비교 기간 분리를 검사한다. 기존 기간 수집·RCA 병렬 회귀도 통과했다.
+- **통과:** Ruff check/format, 문서 링크 검사, 실제 Helm lint/template/package 및 설정 미러 검사. Linux Bash 실행을 포함하는 배포 파이프라인 단위 검사는 Windows에 Bash 실행 파일이 없어 로컬에서 실패했으며 PR CI에서 확인한다.
+- **시간 비교:** 독립 MCP 6회에 각 40ms 지연을 주는 고정 검사에서 순차 0.281초, 동시성 3에서 0.094초였다. 실제 Grafana 성능 측정이 아니다.
+- **미검증:** 운영 배포·실제 일간/주간/월간 자료의 처리시간·부하·메모리·관측 의미·모델 품질. 추가 보완 라운드·자유 생성형 조언은 이번 구현 범위가 아니다.
+- 실행: `.local/rca-dev-venv/Scripts/python.exe -m pytest -c agents/pytest.ini agents/tests --tb=short` (위 E2E 환경과 현재 서비스 바이너리 지정). 로컬 준비 스크립트는 검증 도구 경로만 지정하며 제품 코드에 포함하지 않는다.
+
+---
+
 # 2026-10-01 일 단위 보고서 Backend 접수 회귀
 
 - **통과:** 최신 main `e9ed87e` 기반 Python 3.11.16 전체 **286 passed, 0 skipped**, Ruff check/format 66개 파일. `RUN_AGENT_E2E=1`과 격리 로컬 PostgreSQL, 최신 Backend/JC/Incident 바이너리, 공식 Grafana MCP 1.4.2, Helm으로 두 Worker의 실제 프로세스·발행 경로를 실행했다. 데이터소스와 모델 응답은 HTTP fixture다.

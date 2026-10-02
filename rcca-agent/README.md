@@ -29,7 +29,7 @@ RCA 첫 페이지의 `최종 보고서` 버튼/탭과 공개 작업의 바로가
 ## 2026-09-30 Fleet RCA 수집·분석 보완
 
 - Loki 경계를 밀리초로 안쪽 정규화한 경우 원본 기간의 `complete=false`와 실제 `request_time_range`를 보존한다. 조회 성공·미잘림·경고 없음이면 `observation_usable=true`로 실제 구간 안의 개별 health 관측을 Synthesis에 전달한다. 기간 전체의 오류 부재·지속 시간·집계가 완전하다는 뜻은 아니다. 다른 partial 사유는 허용하지 않는다.
-- 기본 프로필 `builtin-grafana-v3`의 D05/D09는 등록된 `fleet-component-log-v1` adapter로 `attributes.health/component/reason`, `resources["machine.id"]`, `resources["k8s.node.name"]`, Loki ns timestamp와 XID/SXID 코드를 정규화한다. `log_type=component_data`, 알려진 component, 대상과 유효 시각이 필요하다. `Unhealthy`만 등록했으며 미등록 상태는 unknown이다.
+- 기본 프로필 `builtin-grafana-v5`에서 D05는 D09 원본으로 파생하며 D09는 등록된 `fleet-component-log-v1` adapter로 `attributes.health/component/reason`, `resources["machine.id"]`, `resources["k8s.node.name"]`, Loki ns timestamp와 XID/SXID 코드를 정규화한다. `log_type=component_data`, 알려진 component, 대상과 유효 시각이 필요하다. `Unhealthy`만 등록했으며 미등록 상태는 unknown이다.
 - Loki 시각은 기본적으로 로그 기록 시각이다. `fact_eligible=false`인 보고 관측은 모델 입력으로 쓰지만 현재 장비 상태·runbook 실행 조건으로 승격하지 않는다. 운영 producer의 시각 의미를 검증해 `loki_timestamp_is_observed_at=true`를 명시하고 query의 `max_hold_seconds`를 등록한 경우에만 동일 대상·단일 cluster·사건 이전 freshness 검사 후 health/error_code fact로 승격할 수 있다. 기본 설정은 이 승격을 켜지 않는다.
 - `degraded`여도 승인된 미실행 query와 예산·deadline이 남으면 최대 한 번 독립 후속 조회를 실행한다. 실패한 query를 재시도하는 루프는 추가하지 않는다.
 - 승인 Runbook이 선택됐고 R02/R03가 요청되면 D08/D06을 계획에 포함한다. `purpose_plan`에 계획과 대상 식별 상태를 남긴다. GPU UUID 또는 Pod UID와 사건 시각 매핑을 확인하지 못하면 `incident_mapping`은 여전히 부족하다. 같은 노드의 Pod만으로 직접 GPU 사용 관계를 단정하지 않는다. 미실행·source 불가·대상 불명·당시 관계 부재를 구분한다.
