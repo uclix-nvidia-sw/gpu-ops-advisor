@@ -4042,6 +4042,41 @@ body:has(dialog[open]) {
 }
 
 /* Separate Ops report topics without changing RCA result layouts. */
+.ops-report-content .result-section > p {
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.ops-report-content .result-section > h4 {
+  border-top: 1px solid var(--border);
+  margin: 28px 0 12px;
+  padding-top: 24px;
+}
+.report-summary-meta {
+  margin: 0 0 24px;
+}
+.report-summary-meta > div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 8px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.7;
+}
+.report-summary-meta dt {
+  color: var(--muted);
+}
+.report-summary-meta dd {
+  margin: 0;
+  min-width: 0;
+}
+.report-summary-meta .report-scope {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .report-summary-meta > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ops-report-content > section:not(:first-child),
 .ops-report-content > details {
   border-top: 1px solid var(--border);
@@ -4474,5 +4509,28 @@ body:has(dialog[open]) {
   color: var(--muted);
 }
 .report-history-compact .report-history-meta > div:has(.report-scope) {
+  flex-basis: 100%;
+}
+
+.report-cluster-summary th:last-child,
+.report-cluster-summary td:last-child {
+  white-space: normal;
+  min-width: 150px;
+}
+.report-cluster-summary td:last-child p {
+  margin: 4px 0;
+}
+
+.report-cluster-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.report-cluster-filter label {
+  font-weight: 600;
+}
+.report-cluster-filter p {
   flex-basis: 100%;
 }

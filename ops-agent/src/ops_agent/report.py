@@ -6,6 +6,11 @@ from agent_common.llm import explain
 
 
 METRIC_NAMES = {
+    "cluster_observed_gpu_count": "클러스터 관측 GPU",
+    "cluster_connected_gpu_count": "클러스터 연결 확인 GPU",
+    "cluster_connected_gpu_hours": "클러스터 누적 연결 시간",
+    "cluster_unlabeled_gpu_count": "Pod 연결 라벨 없는 GPU",
+    "cluster_unattributed_gpu_count": "Pod 신원 연결 미확인 GPU",
     "namespace_connected_gpu_count": "기간 중 연결이 확인된 GPU",
     "namespace_activity_valid_hours": "활동률 계산에 사용한 시간",
     "namespace_connected_gpu_util": "연결 GPU 평균 활동률",
@@ -33,6 +38,13 @@ METRIC_NAMES = {
     "incident_count": "사건 수",
     "total_coverage": "전체 관측률",
     "observed_healthy_collection_seconds": "정상 수집 관측 시간",
+}
+
+
+REASON_NAMES = {
+    "gpu_pod_labels_absent": "Namespace·Pod 라벨이 없는 GPU 관측입니다. 유휴 상태나 회수 가능 여부는 확인되지 않았습니다.",
+    "gpu_inventory_missing": "해당 클러스터의 GPU 관측 또는 연결 집계 근거가 부족합니다.",
+    "unattributed_gpu_observation": "GPU의 작업 라벨과 Pod 신원·시간 구간을 연결하지 못한 관측이 있습니다.",
 }
 
 
@@ -102,7 +114,8 @@ async def write_report(result, llm):
                 add(
                     "findings",
                     f"{METRIC_NAMES.get(metric['id'].split('.')[1], metric['id'])}: {metric['value']} {metric['unit']}; "
-                    f"대상: {literal(metric.get('target', result['scope']))}.",
+                    f"대상: {literal(metric.get('target', result['scope']))}. "
+                    + REASON_NAMES.get(metric.get("quality", {}).get("reason"), ""),
                     metric["evidence_refs"],
                     [metric["id"]],
                 )
@@ -117,7 +130,7 @@ async def write_report(result, llm):
         if topic["missing_inputs"]:
             add(
                 "next",
-                f"{topic['topic_id']}의 미충족 항목: {', '.join(topic['missing_inputs'])}. "
+                f"{topic['topic_id']}의 미충족 항목: {', '.join(REASON_NAMES.get(reason, reason) for reason in topic['missing_inputs'])}. "
                 "해당 대상·기간의 원본 데이터, 수집 상태와 의미 계약을 확인한 뒤 다시 분석해야 합니다.",
                 topic["evidence_refs"],
             )

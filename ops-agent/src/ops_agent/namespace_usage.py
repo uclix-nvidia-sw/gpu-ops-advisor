@@ -2,7 +2,8 @@
 
 from collections import defaultdict
 
-from agent_common.calculations import allocation_hours
+from agent_common.calculations import allocation_hours, seconds, union
+from agent_common.contracts import timestamp
 from agent_common.normalize import allocations, intervals
 from agent_common.observation import series
 
@@ -20,9 +21,17 @@ def namespace_usage(data, collected):
     # An instance UUID cannot be counted as a physical GPU without its parent history.
     observed = [r for r in observed if not r["gpu_uuid"].startswith("MIG-")]
     allocated = allocations(usable["D08"], period, usable["D06"])
-    mapped_names = {
-        (r["cluster_id"], r["gpu_uuid"], r["namespace"], r["pod"], r["node"])
-        for r in observed
+    mapped_windows = defaultdict(list)
+    for r in observed:
+        mapped_windows[
+            (r["cluster_id"], r["gpu_uuid"], r["namespace"], r["pod"], r["node"])
+        ].append((r["start"], r["end"]))
+    mapped_windows = {key: union(spans) for key, spans in mapped_windows.items()}
+    inventory = {
+        cluster: dict(
+            gpus=set(), unlabeled=set(), unattributed=set(), issues=False, invalid=False
+        )
+        for cluster in scope
     }
     groups = {}
     events = defaultdict(lambda: defaultdict(list))
@@ -80,13 +89,40 @@ def namespace_usage(data, collected):
             namespace = labels.get("namespace")
             if cluster not in scope:
                 continue
-            if query == "D01":
-                if (
-                    not namespace
-                    or (cluster, gpu, namespace, labels.get("pod"), labels.get("node"))
-                    not in mapped_names
+            if query == "D01" and allowed(cluster, namespace):
+                spans = [(a, b) for a, b, value in row["intervals"] if value >= 0]
+                if not spans:
+                    inventory[cluster]["invalid"] = True
+                    continue
+                state = inventory[cluster]
+                physical = (
+                    bool(gpu)
+                    and not gpu.startswith("MIG-")
+                    and not any(
+                        labels.get(k) is not None
+                        for k in ("instance_id", "GPU_I_ID", "GPU_CI_ID")
+                    )
+                )
+                if physical:
+                    state["gpus"].add(gpu)
+                mapped = mapped_windows.get(
+                    (cluster, gpu, namespace, labels.get("pod"), labels.get("node")), []
+                )
+                blank = not any(
+                    labels.get(k) for k in ("namespace", "pod", "pod_uid", "uid")
+                )
+                if blank and physical and scope[cluster] is None:
+                    state["unlabeled"].add(gpu)
+                elif (
+                    not physical
+                    or not namespace
+                    or not labels.get("pod")
+                    or seconds(spans + mapped) > seconds(mapped) + 1e-6
                 ):
                     unattributed += 1
+                    state["issues"] = True
+                    if physical:
+                        state["unattributed"].add(gpu)
                 if namespace and allowed(cluster, namespace):
                     group(cluster, namespace)
             if not gpu:
@@ -193,7 +229,66 @@ def namespace_usage(data, collected):
                 reasons=sorted(reasons),
             )
         )
-    return output, unattributed
+    cluster_output = []
+    for cluster in sorted(scope):
+        state = inventory[cluster]
+        es = [e for e in collected.get("D01", []) if e["cluster_id"] == cluster]
+        # Successful empty collection can establish zero observed devices; a missing
+        # query or incomplete requested range cannot. This is not fleet coverage.
+        complete = (
+            bool(es)
+            and all(
+                e["tool_status"] in {"ok", "empty"}
+                and e["quality"].get("complete") is True
+                for e in es
+            )
+            and seconds(
+                [
+                    (
+                        max(
+                            timestamp(e["time_range"]["start"]),
+                            timestamp(period["start"]),
+                        ),
+                        min(
+                            timestamp(e["time_range"]["end"]), timestamp(period["end"])
+                        ),
+                    )
+                    for e in es
+                    if e.get("time_range")
+                ]
+            )
+            >= timestamp(period["end"]) - timestamp(period["start"])
+        )
+        connections = [
+            r
+            for r in observed
+            if r["cluster_id"] == cluster
+            and allowed(cluster, r["namespace"])
+            and r["gpu_uuid"] in state["gpus"]
+        ]
+        known = bool(state["gpus"]) or (
+            complete and not state["issues"] and not state["invalid"]
+        )
+        zero_connections = complete and not state["issues"] and not state["invalid"]
+        cluster_output.append(
+            dict(
+                target={"cluster_id": cluster},
+                observed_gpu_count=len(state["gpus"]) if known else None,
+                connected_gpu_count=len({r["gpu_uuid"] for r in connections})
+                if connections or zero_connections
+                else None,
+                connected_gpu_hours=allocation_hours(connections, "unknown")
+                if connections or zero_connections
+                else None,
+                unlabeled_gpu_count=len(state["unlabeled"]) if known else None,
+                unattributed_gpu_count=len(state["unattributed"]) if known else None,
+                reason="unattributed_gpu_observation"
+                if state["issues"]
+                else "gpu_inventory_missing",
+                complete=complete,
+            )
+        )
+    return output, unattributed, cluster_output
 
 
 def pod_namespace_scope(collected):
