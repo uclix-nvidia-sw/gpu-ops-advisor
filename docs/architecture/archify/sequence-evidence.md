@@ -1,7 +1,7 @@
 # Sequence 재검토 근거
 
-기준 revision: `5f59ac6ba4afe8fa982f2d03d7d18113acdd44ac` · 2026-09-21.
-[통합 뷰어](gpu-ops-advisor.html#sequence)의 Sequence 탭에서 다섯 시나리오를 선택한다. Architecture는 유지했다.
+기준 revision: `cd2273be1af3d1ab4056ed13284d36d9beac2b51` · 2026-10-02.
+[통합 뷰어](gpu-ops-advisor.html#sequence)의 Sequence 탭에서 일곱 시나리오를 선택한다. Architecture는 기존 19개 모듈·48개 연결과 CPC·CSC 수집 경계를 보존했다.
 
 ## 시나리오와 시간 순서
 
@@ -12,6 +12,8 @@
 | [즉시 보고서 요청·조회](gpu-ops-advisor.sequence-report-request.html) | Client → Backend → 요청 의도 저장 → JC → 202. 실행 완료 후 별도 상태·결과·다운로드 요청 | [proxy.go](../../../backend/internal/api/proxy.go), [read.go](../../../backend/internal/api/read.go), [export.go](../../../backend/internal/api/export.go) |
 | [정기 보고서 접수](gpu-ops-advisor.sequence-report-schedule.html) | Backend 내부 일정 루프 → occurrence·outbox → 별도 전달 루프 → JC | [schedules.go](../../../backend/internal/api/schedules.go) |
 | [보고서 실행](gpu-ops-advisor.sequence-report-execution.html) | 보고서 Worker claim → 기간 입력 → MCP·LLM → 파일·후보 저장 → complete → 공개 | [Ops workflow](../../../ops-agent/src/ops_agent/workflow.py), [artifacts.py](../../../shared/python/src/agent_common/artifacts.py) |
+| [보고서 수집 상세](gpu-ops-advisor.sequence-report-collection.html) | query+CPC 계획·의존성·예약 예산 → 독립 MCP 병렬 실행 → 배치 종료·취합 | [collection.py](../../../ops-agent/src/ops_agent/collection.py), [parallel.py](../../../shared/python/src/agent_common/parallel.py) |
+| [웹 디버깅 추적](gpu-ops-advisor.sequence-debug.html) | job trace → attempt별 근거 목록·상세 → 고정 Runbook 본문 | [trace.go](../../../backend/internal/api/trace.go), [JobDebug](../../../frontend/src/components/JobDebug.tsx), [TraceView](../../../frontend/src/components/TraceView.tsx) |
 
 각 화면의 숫자는 그 화면 안의 순서다. 실선은 호출·저장, 반대 방향 점선은 응답이다. SQL 묶음과 MCP 도구 탐색·조회는 관련 호출을 요약한다. 전체 화면을 하나의 동기 호출 스택으로 읽지 않는다.
 
@@ -35,9 +37,16 @@ DB receipt와 intent는 멱등성·복구용 영속 기록이다. API 응답 캐
 
 Agent는 [RCA NAT 설정](../../../rcca-agent/configs/workflow.yml)과 [Ops NAT 설정](../../../ops-agent/configs/workflow.yml)의 Grafana MCP `/mcp`를 통해 데이터소스 도구를 호출한다. Grafana·Mimir·Loki의 관측 인프라 연결은 Architecture에서 확인한다. 실행 시퀀스는 Agent의 도구 호출과 반환 경계를 표시한다.
 
-**‘캐시 없음’으로 통칭했던 기존 설명을 수정했다.** [Observation](../../../shared/python/src/agent_common/observation.py)은 실행별 메모리 캐시를 가지며 `(query_id, period.start, period.end)`가 같으면 근거를 재사용한다. miss일 때 MCP를 조회한다. 실패한 관측 조회를 PostgreSQL로 대체하는 fallback은 없으며 unavailable/partial 품질 상태로 다룬다. DB 입력 조회는 별도 단계다.
+[Observation](../../../shared/python/src/agent_common/observation.py)은 실행별 메모리 캐시를 가지며 `(query_id, period.start, period.end)`가 같으면 근거를 재사용한다. miss일 때 MCP를 조회한다. 실패한 관측 조회를 PostgreSQL로 대체하는 fallback은 없으며 unavailable/partial 품질 상태로 다룬다. DB 입력 조회는 별도 단계다.
 
-도면의 B 구간은 필요한 조회에서 cache miss가 나고 LLM을 사용하는 대표 경로다. 모든 실행이 이를 반드시 통과하지는 않는다. RCA는 Runbook 적용 여부를 먼저 확인하고 필요한 관측만 조회한다. LLM은 설정·근거·예산 등 조건에 따라 호출하며, RCA의 등록된 추가 조사 선택과 설명에 사용될 수 있다. 보고서 수치는 코드가 계산하고 LLM은 근거 설명을 작성한다. [LLM 클라이언트](../../../shared/python/src/agent_common/llm.py).
+RCA는 [Orchestrator](../../../rcca-agent/src/rcca_agent/workflow.py)의 승인 계획과 [병렬 관측](../../../rcca-agent/src/rcca_agent/observation_agents.py), 코드 충분성 판정, 최대 1회 재조사, 도구 없는 [Synthesis](../../../rcca-agent/src/rcca_agent/synthesis.py)와 최대 1회 교정을 사용한다. 적용 Runbook과 기존 증거가 충분하면 MCP·원인 Synthesis를 생략한다. 최종 보고서 구성·조건부 문장 편집은 별도 단계다.
+
+보고서는 query+CPC+기간별 계획을 먼저 검사하고 준비된 task를 예약 예산·동시성 상한 안에서 배치 실행한다. 같은 metric의 완전한 동일 응답 재사용과 O08 단독 namespace의 D01/D08→D06 의존성을 유지한다. 완료된 캐시만 복사하며 실행 중 mutable Observation은 공유하지 않는다. 배치가 모두 끝난 후 미사용 예산을 재배분한다. 비교 기간은 별도 task다. RCA와 bounded runner만 공유하며 보고서 추가 관측 라운드는 구현하지 않았다.
+
+보고서 수치는 코드로 계산한다. [report.py](../../../ops-agent/src/ops_agent/report.py)는 기본 다섯 섹션을 만들고 조건이 맞으면 LLM으로 검증된 문장 참조·순서를 선택한다. 확정 실패·미설정에도 기본 보고서를 보존한다. 원격 종료 불명은 공통 fail/격리 계약을 따른다. [LLM 클라이언트](../../../shared/python/src/agent_common/llm.py).
+
+웹 디버깅 도면의 API에는 `/api/v1` prefix를 생략했다. trace는 고정 입력·발행 revision·출처·공개 참조를 연결하고, evidence는 job+attempt로 제한해 목록·상세를 조회한다. 저장된 요청 인자·응답·품질만 표시하며 실시간 trace나 미저장 모델 원문을 생성하지 않는다. 미공개 후보 본문·lease 자격 증명은 반환하지 않는다. Runbook은 실행 당시 revision과 현재 지식 상세를 구분한다.
+
 
 Worker는 실행 중 별도 heartbeat task를 병행하고, 저장 직전 heartbeat로 lease·취소 상태를 재확인한다. Store는 유효 attempt·lease·취소·deadline 조건을 검사하며 후보·근거를 저장한다. complete의 전송 재시도는 동일 후보·hash를 사용한다. JC의 [완료 처리](../../../job-controller/controller/attempt.go)가 유효성·schema/hash 등을 검사한 뒤 `published_result_id`를 확정한다. 후보 저장과 공개 완료는 별개다.
 
@@ -53,4 +62,4 @@ Client의 POST는 202로 끝난다. 상태 조회, 공개 보고서 조회, 다�
 
 실제 비동기 경계인 DB outbox 전달과 Worker heartbeat를 표시했다. 코드에서 근거를 확인하지 못한 Kafka·외부 trace collector·완료 이벤트 broker는 추가하지 않았다. 재시도·조건 분기·캐시 hit는 카드에 설명하고 도면은 정상 완료의 주 경로를 유지한다.
 
-다섯 Sequence는 각각 Archify showcase 9/9, 오류·경고 0으로 생성했다. 네 desktop 크기 브라우저 검사와 밝은/어두운 실제 캡처 검토 결과는 [검토 영수증](review-receipt.json)에 기록한다. 상단 탭·시나리오 선택은 [탭 검사](tabs-check.json)로 확인한다. 제품 코드 실행 시험이나 export 기능 시험을 의미하지 않는다.
+일곱 Sequence는 각각 Archify showcase 9/9, 오류·경고 0으로 생성했다. 네 desktop 크기 브라우저 검사와 밝은/어두운 실제 캡처 검토 결과는 [검토 영수증](review-receipt.json)에 기록한다. 상단 탭·시나리오 선택은 [탭 검사](tabs-check.json)로 확인한다. 제품 코드 실행 시험이나 export 기능 시험을 의미하지 않는다.

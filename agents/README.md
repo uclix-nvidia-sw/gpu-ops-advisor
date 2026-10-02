@@ -2,7 +2,7 @@
 
 ## Ops 전용 관측 limits — 2026-10-01
 
-`report.limits`는 Ops만 적용하는 부분 override다. 예시는 max_queries=2048, chunk_seconds=86400, max_rows=50000이며 공통/RCA limits는 48/3600/5000을 유지한다. 사용자 정의 `configuration.agents`는 전체 객체 교체이므로 새 블록을 직접 포함해야 한다. 없는 경우 기존 limits를 사용한다. 응답 크기·deadline·timeout·범위와 RCA 로직은 바꾸지 않는다. 자세한 계획·검수 계약은 [Ops 명세](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다. 이 설정은 예시이지 주간·월간 수집 성공의 보장이 아니다.
+`report.limits`는 Ops만 적용하는 부분 override다. 예시는 max_queries=2048, chunk_seconds=86400, max_rows=50000, max_concurrency=3이며 공통/RCA limits는 48/3600/5000을 유지한다. 사용자 정의 `configuration.agents`는 전체 객체 교체이므로 새 블록을 직접 포함해야 한다. 없는 경우 기존 limits를 사용한다. 보고서도 의존성·예약 예산을 계획한 독립 Observation task를 병렬 실행하며 max_concurrency=1이면 순차 실행한다. 응답 크기·deadline·timeout·범위와 RCA 로직은 바꾸지 않는다. 자세한 계획·검수 계약은 [Ops 명세](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다. 이 설정은 예시이지 주간·월간 수집 성공의 보장이 아니다.
 
 
 `11_RCA_Agent_모듈_설계서.md`, `12_보고서_Agent_모듈_설계서.md`와 두 문서가 참조하는 공통 계약 03/04/14를 기준으로 구현했습니다. 폴더 이름은 요청대로 **rcca-agent**, **ops-agent**이며 JC의 kind는 각각 `rca`, `report`입니다.
@@ -29,7 +29,7 @@ Grafana MCP 1.4.2는 Loki 결과의 잘림 여부를 확인하려고 요청한 `
 
 요청한 행 수에 도달하거나 MCP의 `metadata.resultsTruncated=true`이면 `partial`, `quality.complete=false`, `reason=sample_limit_exceeded`로 보존합니다. 조회 한도를 줄여 받은 일부 로그를 완전한 근거로 취급하지 않습니다.
 
-기본 프로필 `builtin-grafana-v3`의 D05/D09는 Fleet 알림의 `k8s_node_name`·`component` 단서를 JSON 본문 필터에 사용합니다. `json_target_fields`가 각각 `resources["k8s.node.name"]`, `attributes["component"]`를 지정하며, `| json`으로 본문 값을 추출한 뒤 문자열 동등 조건으로 필터링합니다. 기존 라벨과 충돌해 잘못된 값을 비교하지 않도록 임시 별칭과 `_extracted` 이름을 먼저 제거하고, JSON이 채운 쪽을 검사합니다. 이 값을 Loki에 저장된 stream label로 가정하지 않습니다. cluster/namespace와 배포 프로필의 기존 selector는 유지합니다. 대응하는 JSON 노드 단서가 있으면 D09의 기본 `node` stream label 조건 대신 JSON 조건을 사용하며, 단서가 없거나 해당 query에 JSON 필드 구성이 없으면 기존 selector 동작을 유지합니다.
+기본 프로필 `builtin-grafana-v5`에서 D05는 D09 원본으로 파생하며 D09는 Fleet 알림의 `k8s_node_name`·`component` 단서를 JSON 본문 필터에 사용합니다. `json_target_fields`가 각각 `resources["k8s.node.name"]`, `attributes["component"]`를 지정하며, `| json`으로 본문 값을 추출한 뒤 문자열 동등 조건으로 필터링합니다. 기존 라벨과 충돌해 잘못된 값을 비교하지 않도록 임시 별칭과 `_extracted` 이름을 먼저 제거하고, JSON이 채운 쪽을 검사합니다. 이 값을 Loki에 저장된 stream label로 가정하지 않습니다. cluster/namespace와 배포 프로필의 기존 selector는 유지합니다. 대응하는 JSON 노드 단서가 있으면 D09의 기본 `node` stream label 조건 대신 JSON 조건을 사용하며, 단서가 없거나 해당 query에 JSON 필드 구성이 없으면 기존 selector 동작을 유지합니다.
 
 알림 단서는 수집에만 사용하며 원본 Incident snapshot·해시는 바꾸지 않습니다. 새 Incident target에는 `machine_id/component/k8s_node_name`을 투영하지만 component는 검색 메타데이터이며 장비 식별 비교에서는 제외합니다. 이 투영만으로 검증된 건강 상태가 되지는 않습니다. 라벨과 annotation이 충돌한 단서는 필터에 사용하지 않습니다. 보고서 Worker처럼 알림 단서가 없는 호출에는 이 JSON 필터를 추가하지 않습니다.
 

@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "개발자 GUI · 저장 기록 추적",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1600,
+      850
+    ]
+  },
+  "participants": [
+    {
+      "id": "gui",
+      "label": "개발자 GUI",
+      "type": "frontend"
+    },
+    {
+      "id": "api",
+      "label": "Backend 읽기 API",
+      "type": "backend"
+    },
+    {
+      "id": "db",
+      "label": "PostgreSQL",
+      "type": "database"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 335,
+      "label": "A · 접수·공개 경로"
+    },
+    {
+      "from": 355,
+      "to": 540,
+      "label": "B · 시도별 근거"
+    },
+    {
+      "from": 560,
+      "to": 745,
+      "label": "C · 상세 기록과 Runbook"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "gui",
+      "to": "api",
+      "y": 175,
+      "label": "GET /jobs/{id}/trace",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "api",
+      "to": "db",
+      "y": 220,
+      "label": "고정 snapshot·outbox·접수·공개 조회",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "db",
+      "to": "api",
+      "y": 265,
+      "label": "실행 당시 revision / 미기록 상태",
+      "variant": "return"
+    },
+    {
+      "id": "m04",
+      "from": "api",
+      "to": "gui",
+      "y": 310,
+      "label": "연결된 DB 기록 · 원본 입력 비교",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "gui",
+      "to": "api",
+      "y": 380,
+      "label": "GET /jobs/{id}/evidence?attempt=N",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m06",
+      "from": "api",
+      "to": "db",
+      "y": 425,
+      "label": "선택한 job·attempt의 저장 근거",
+      "variant": "default"
+    },
+    {
+      "id": "m07",
+      "from": "db",
+      "to": "api",
+      "y": 470,
+      "label": "query·품질·sub_agent_id·페이지",
+      "variant": "return"
+    },
+    {
+      "id": "m08",
+      "from": "api",
+      "to": "gui",
+      "y": 515,
+      "label": "근거 목록 · 두 조회 비교",
+      "variant": "return"
+    },
+    {
+      "id": "m09",
+      "from": "gui",
+      "to": "api",
+      "y": 585,
+      "label": "근거 상세 / 고정 Runbook 조회",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "api",
+      "to": "db",
+      "y": 630,
+      "label": "키·attempt·revision에 맞는 기록",
+      "variant": "default"
+    },
+    {
+      "id": "m11",
+      "from": "db",
+      "to": "api",
+      "y": 675,
+      "label": "요청 인자·응답 / Runbook content",
+      "variant": "return"
+    },
+    {
+      "id": "m12",
+      "from": "api",
+      "to": "gui",
+      "y": 720,
+      "label": "비밀 제거 · 연결 조건 확인 · 본문",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "동일한 Frontend",
+      "items": [
+        "기존·운영·개발은 한 앱의 관점. Worker 실행을 직접 호출하지 않음."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "웹에서 추적",
+      "items": [
+        "입력·출처 / 실행·시도 / 근거·데이터 / 결과·공개."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "저장 기록의 한계",
+      "items": [
+        "미공개 후보 본문은 제외. 미기록 값·모델 원문을 추정하지 않음."
+      ]
+    }
+  ]
+}

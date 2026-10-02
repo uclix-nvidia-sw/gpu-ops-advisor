@@ -6,6 +6,7 @@ import json
 import time
 
 from agent_common.observation import Observation
+from agent_common.parallel import run_bounded
 
 
 async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
@@ -52,7 +53,6 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
         "ok",
         {"reserved_before_dispatch": True},
     )
-    semaphore = asyncio.Semaphore(concurrency)
     agents = []
 
     async def observe(assignment):
@@ -68,33 +68,32 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
         agents.append((assignment, child))
         query = assignment["query_id"]
         try:
-            async with semaphore:
-                if allocation["queries"] == 0:
-                    child._evidence(
-                        query,
-                        None,
-                        child.data["time_range"],
-                        {},
-                        "unavailable",
-                        {"reason": "budget_exhausted"},
-                    )
-                elif query not in profile["queries"]:
-                    child._evidence(
-                        query,
-                        None,
-                        child.data["time_range"],
-                        {},
-                        "unavailable",
-                        {"reason": "unsupported_source"},
-                    )
-                else:
-                    timeout = min(
-                        parent.deadline - time.monotonic(),
-                        profile["limits"].get("query_timeout_seconds", 30)
-                        * max(1, allocation["queries"] + allocation["discovery"]),
-                    )
-                    async with asyncio.timeout(max(0, timeout)):
-                        await child.collect(query)
+            if allocation["queries"] == 0:
+                child._evidence(
+                    query,
+                    None,
+                    child.data["time_range"],
+                    {},
+                    "unavailable",
+                    {"reason": "budget_exhausted"},
+                )
+            elif query not in profile["queries"]:
+                child._evidence(
+                    query,
+                    None,
+                    child.data["time_range"],
+                    {},
+                    "unavailable",
+                    {"reason": "unsupported_source"},
+                )
+            else:
+                timeout = min(
+                    parent.deadline - time.monotonic(),
+                    profile["limits"].get("query_timeout_seconds", 30)
+                    * max(1, allocation["queries"] + allocation["discovery"]),
+                )
+                async with asyncio.timeout(max(0, timeout)):
+                    await child.collect(query)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -113,11 +112,9 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
             )
 
     try:
-        async with asyncio.TaskGroup() as group:
-            for assignment in assignments:
-                group.create_task(observe(assignment), name=assignment["sub_agent_id"])
+        await run_bounded(assignments, observe, concurrency)
     finally:
-        # TaskGroup awaits cancellation too. No observation survives its round.
+        # The runner reaps cancellation too. No observation survives its round.
         budget["queries"] -= sum(child.calls for _, child in agents)
         budget["discovery"] -= sum(child.discovery_calls for _, child in agents)
         merged = []
