@@ -1,5 +1,9 @@
 # Job Controller 검증 기록
 
+## 2026-10-02 저장과 heartbeat 잠금 경합
+
+**통과:** `origin/main` 5ddfe21 기반 로컬 변경. JC/Backend/Incident 각각 Go vet/race/server build 및 격리 PostgreSQL Backend·Incident E2E. Agent 전체 315건에서 실제 JC와 Store로 2초 lease 중 2.6초 저장 지연·heartbeat 갱신·최종 공개·취소/만료/시도 교체 rollback·잠금 대기 후 만료된 heartbeat 409를 확인했다. non-key 잠금으로 FK KEY SHARE와 공존하며 JC 변경끼리의 배타성과 capacity 잠금은 보존한다. 상세 환경은 [Agent QA](../agents/QA.md)의 같은 날짜 대량 저장 기록을 따른다. **미수행:** 운영 반영·격리 해제·원격 CI. DB migration·lease 설정 변경 없음.
+
 ## 2026-09-30 보고서 전용 criteria 프로필
 
 **통과:** JC/Backend/Incident Go vet/race/build, 격리 PostgreSQL Backend E2E와 두 Worker E2E. report-namespace-v1은 report만 허용하며 criteria 1.2를 새 작업에 고정한다. RCA 접수의 사용 거부·전역 unconfigured 유지·정기 보고서 재전송 멱등성을 확인했다. **미검증:** 운영 설정 반영·배포. 환경·명령·fixture 경계는 [Agent QA](../agents/QA.md)의 같은 날짜 실행·표시 개선 기록을 따른다.

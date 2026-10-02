@@ -1,3 +1,7 @@
+## 일정 실행 상태 읽기 보완 — 2026-10-02
+
+`GET /schedules`는 최근 예정 회차 `latest_occurrence`와 서버 시각 기준 회차 기록 부재 `awaiting_occurrence`를 추가 제공한다. 최근 회차와 `GET /schedules/{id}/occurrences`의 `execution`은 실제 report 작업 및 최신 시도의 상태·시각·사유·공개 참조만 담는다. 접수는 실행 완료가 아니며 회차 기록 부재만으로 실패를 판정하지 않는다. 필드·null·정렬·호환 조건은 [Backend API](../../../backend/API.md)의 자동 보고서 실행 요약 계약을 따른다. 일정/outbox 쓰기와 JC 실행 소유권, DB schema는 유지한다.
+
 # 02. Backend·GUI API 및 정기 보고서
 
 버전 1.3 · 모듈 backend · 독립 실행·배포

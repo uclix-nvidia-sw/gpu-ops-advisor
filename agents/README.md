@@ -119,6 +119,14 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 
 이 환경에서는 사용자의 안내대로 Linux Docker 엔진 실행을 중단했습니다. **컨테이너 빌드/기동은 검증하지 않았고**, 실제 서버/Worker 연결은 Windows 프로세스 E2E로 검증했습니다.
 
+## 대량 결과 저장과 heartbeat — 2026-10-02
+
+공통 Store는 결과 검증·해시와 evidence별 JSON 인코딩/해시를 `asyncio.to_thread`에서 처리한다. evidence를 한 건씩 준비해 전체 직렬화 사본을 동시에 보관하지 않고, psycopg에는 인코딩된 bytes를 넘긴다. 기존 JSON 값과 Go 호환 checksum은 유지한다. 이 변경은 RCA·Ops 양쪽 저장 경로에 적용된다.
+
+저장 시작에는 실행 유효성을 읽고, 대량 INSERT 동안 jobs/attempts의 명시적 공유 잠금을 유지하지 않는다. 커밋 직전에 jobs → attempt 순서로 잠근 뒤 실제 현재 시각(`clock_timestamp`)으로 claim_token·현재 attempt·lease·deadline·취소를 다시 확인한다. 무효하면 evidence와 candidate 전체를 롤백한다. JC의 최종 complete 검증과 동일 candidate/hash 재전송은 유지한다. 저장 중에도 Worker는 취소·lease 상실을 감시해 저장 task를 취소하고 DB rollback을 기다린다. 취소된 준비 스레드는 계산을 마칠 수 있지만 DB 저장·공개는 수행하지 않는다.
+
+저장 성공 로그는 job ID·evidence 건수·`prepare_seconds`·`db_seconds`만 남긴다. 원본 snapshot·claim token·접속 정보는 출력하지 않는다. JC의 FK 호환 잠금 변경과 함께 반영해야 하며 JC를 먼저 반영한 뒤 두 Worker를 교체한다. lease 시간·공유 슬롯·원격 추론 격리 정책은 바꾸지 않는다. 기존 운영 격리는 자동 해제하지 않으며 모델 서버 종료 확인 후 [운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따른다.
+
 ## 결과·관측 계약
 
 - 결과 본문 `result_schema_version=1.1`, 현재 JC의 candidate 봉투 `schema_version=1.3`을 구분합니다. Go `encoding/json`과 호환되는 SHA-256을 사용하며 실제 JC complete에서 재검증합니다.

@@ -128,11 +128,23 @@ class Worker:
                 if ack.get("cancel_requested"):
                     code = "cancelled"
                     raise asyncio.CancelledError()
-                if claim["kind"] == "report":
-                    result["artifacts"] = await asyncio.to_thread(
-                        save_artifacts, result, self.settings.artifact_dir
-                    )
-                candidate, digest = await self.store.save(claim, result, evidence)
+                lease["expires"] = timestamp(ack["lease_expires_at"])
+
+                async def save_result():
+                    if claim["kind"] == "report":
+                        result["artifacts"] = await asyncio.to_thread(
+                            save_artifacts, result, self.settings.artifact_dir
+                        )
+                    return await self.store.save(claim, result, evidence)
+
+                run_task = asyncio.create_task(save_result())
+                done, _ = await asyncio.wait(
+                    [run_task, cancel_task], return_when=asyncio.FIRST_COMPLETED
+                )
+                if cancel_task in done:
+                    code = "cancelled"
+                    raise asyncio.CancelledError()
+                candidate, digest = await run_task
                 state["stage"] = "completing"
                 body = {**fence, "candidate_id": candidate, "content_hash": digest}
                 # Retry the SAME completion; never recompute or create a new candidate.

@@ -161,7 +161,7 @@ func (c *Controller) submit(ctx context.Context, kind string, b Object) (Object,
 	hash := Hash(b)
 	var result Object
 	e := c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
-		old, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE source_module=$1 AND source_key=$2 FOR UPDATE", b["source_module"], b["source_key"])
+		old, err := one(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE source_module=$1 AND source_key=$2 FOR NO KEY UPDATE", b["source_module"], b["source_key"])
 		if err == nil {
 			if old["request_hash"] != hash {
 				return Fail(409, "idempotency_conflict", "같은 키의 입력이 다릅니다.")

@@ -1,3 +1,7 @@
+## 자동 보고서 실행 상태 조회 — 2026-10-02
+
+일정 목록과 회차 목록에 저장된 report 작업·최신 시도의 상태를 함께 제공한다. 요청 접수와 실행 시작·완료를 구분하고, 예정 시각이 지났지만 요청 기록이 없는 활성 일정을 표시한다. [읽기 API 계약](API.md)의 `latest_occurrence`, `awaiting_occurrence`, `execution`을 참고한다. DB migration이나 스케줄러 정책 변경은 없다.
+
 # Go Backend v1.3
 
 ## 보고서 일 단위 접수 — 2026-10-01
