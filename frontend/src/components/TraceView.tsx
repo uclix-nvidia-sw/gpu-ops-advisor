@@ -4,6 +4,7 @@ import { canonical, obj, rows, str, useList, useResource, type Row } from '../li
 import { Badge, Field, Notice } from './ui';
 import { DataView, More, QueryState } from './live';
 import { relationMismatch, returnPath } from '../lib/debug';
+import { reportRequestTime } from '../lib/reportPeriod';
 
 export function RawRecord({
   value,
@@ -192,7 +193,7 @@ export function InputTrace({ trace }: { trace: Row }) {
           rows(obj(trace.alerts).items).map((a) => (
             <details key={str(a.id)}>
               <summary>
-                {str(a.observed_at)} · {str(a.status)} · {str(a.disposition)}
+                {reportRequestTime(str(a.observed_at))} KST · {str(a.status)} · {str(a.disposition)}
               </summary>
               <DataView value={a} />
               <RawRecord value={a} />
@@ -230,9 +231,9 @@ export function StoredEvidence({
     <section className="stack" aria-label="시도별 저장 근거">
       <h3>시도 {attempt}의 조회·판단 기록</h3>
       <Notice>
-        저장 시각 순서입니다. 종료 시 일괄 저장되므로 실제 실행 순서·소요시간을 뜻하지 않습니다.
-        sufficiency의 round·remaining과 계획 기록을 함께 대조하세요. 기록 없음은 미실행의 증거가
-        아닙니다.
+        기록 생성 시각을 우선으로, 같은 시각의 조회는 해당 회차의 계획 순서로 표시합니다. 계획 밖
+        기록은 생성 순번을 유지합니다. 기존 기록은 저장 시각과 계획으로 순서를 추정하며, 실제 실행
+        시각·소요시간을 복원한 것이 아닙니다.
       </Notice>
       <Field label="불러온 기록에서 조회 ID·상태·사유 검색">
         <input
@@ -251,7 +252,7 @@ export function StoredEvidence({
             <thead>
               <tr>
                 <th>조회·판단</th>
-                <th>저장 시각 (UTC 원본)</th>
+                <th>기록 시각 (KST)</th>
                 <th>수집 상태·표본</th>
                 <th>사유</th>
               </tr>
@@ -280,7 +281,21 @@ export function StoredEvidence({
                       요청 비교 선택
                     </label>
                   </td>
-                  <td>{str(r.created_at)}</td>
+                  <td title={str(r.recorded_at, str(r.created_at))}>
+                    {reportRequestTime(str(r.recorded_at, str(r.created_at)))}
+                    {
+                      str(r.recorded_at, str(r.created_at)).match(
+                        /\.\d+(?=Z$|[+-]\d{2}:\d{2}$)/,
+                      )?.[0]
+                    }
+                    <small className="cell-sub">
+                      {r.recorded_at
+                        ? '기록 생성 시각'
+                        : r.order_basis === 'inferred_plan'
+                          ? '저장 시각 · 계획 기반 추정 순서'
+                          : '저장 시각 · 실행 순서 미확인'}
+                    </small>
+                  </td>
                   <td>
                     <Badge status={str(r.tool_status)} /> ·{' '}
                     {String(obj(r.quality).sample_count ?? '미확인')}

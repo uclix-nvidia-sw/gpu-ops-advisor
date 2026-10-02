@@ -100,6 +100,10 @@ func TestStoredWebTrace(t *testing.T) {
 		_, e = db.Pool.Exec(ctx, `INSERT INTO evidence(id,job_id,attempt_no,scope,query_id,tool_status,input,snapshot) VALUES($1,$2,$3,$4,'D05','partial','{"logql":"{cluster_id=fixture}","startRfc3339":"2026-09-30T08:07:48.122Z","Authorization":"SECRET","endpoint":"SECRET"}','{"rows":["Healthy","Unhealthy"],"password":"SECRET"}')`, id, job, attempt, scope)
 		must(t, e)
 	}
+	// Both rows were persisted together; creation time, not UUID/storage order,
+	// must determine the first page and its continuation.
+	_, e = db.Pool.Exec(ctx, `UPDATE evidence SET created_at='2026-10-02T05:00:00Z',quality=jsonb_build_object('recorded_at',CASE WHEN id=$1 THEN '2026-10-02T04:00:02Z' ELSE '2026-10-02T04:00:01Z' END,'record_sequence',1) WHERE job_id=$2 AND attempt_no=1`, ids[0], job)
+	must(t, e)
 	first := get("/jobs/"+job+"/evidence?attempt=1&limit=1", 200)
 	cursor := String(first, "next_cursor")
 	if cursor == "" {
@@ -108,6 +112,9 @@ func TestStoredWebTrace(t *testing.T) {
 	second := get("/jobs/"+job+"/evidence?attempt=1&limit=1&cursor="+url.QueryEscape(cursor), 200)
 	if len(first["items"].([]any)) != 1 || len(second["items"].([]any)) != 1 || second["next_cursor"] != nil {
 		t.Fatal(first, second)
+	}
+	if String(first["items"].([]any)[0].(map[string]any), "id") != ids[1] || String(second["items"].([]any)[0].(map[string]any), "id") != ids[0] {
+		t.Fatal("creation ordering across pages", first, second)
 	}
 	get("/jobs/"+job+"/evidence?attempt=2&cursor="+url.QueryEscape(cursor), 422)
 	get("/jobs/"+job+"/evidence?attempt=-1", 422)

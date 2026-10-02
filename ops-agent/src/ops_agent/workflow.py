@@ -8,9 +8,10 @@ from agent_common.calculations import (
     low_activity_windows,
     seconds,
 )
-from agent_common.contracts import base_result, result_status, metric, timestamp, now
+from agent_common.contracts import base_result, result_status, metric, timestamp
 from agent_common.normalize import allocations, gpu_intervals, intervals
 from agent_common.runtime import attempt_context
+from agent_common.observation import evidence_stamp
 from .report import write_report
 from .namespace_usage import namespace_usage
 from .collection import collect_report
@@ -718,7 +719,7 @@ async def run(tools):
         tool_status="ok",
         quality={"repeatable_read": True},
         snapshot=ctx["context"],
-        collected_at=now(),
+        **evidence_stamp(),
     )
     criteria_version = claim["versions"].get("criteria")
     queries = {

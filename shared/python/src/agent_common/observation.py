@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+from itertools import count
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -11,6 +12,12 @@ from .discovery import Discovery, DiscoveryError
 from .grafana_time import mcp_time
 
 log = logging.getLogger(__name__)
+_record_sequence = count()
+
+
+def evidence_stamp():
+    # Shared by concurrent collectors in this process; assigned before persistence.
+    return dict(collected_at=now(), record_sequence=next(_record_sequence))
 
 
 class MCPResponseError(ValueError):
@@ -480,7 +487,7 @@ class Observation:
             quality=quality,
             snapshot=snapshot,
             input=args or {},
-            collected_at=now(),
+            **evidence_stamp(),
         )
         self.evidence.append(e)
         return e
