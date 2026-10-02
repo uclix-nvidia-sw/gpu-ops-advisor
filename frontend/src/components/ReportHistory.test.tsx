@@ -63,28 +63,38 @@ beforeEach(() => {
     },
   };
 });
-it('features the newest published entry and fetches only its summary, preserving pending and older entries', () => {
+it('keeps the newest request first even while an older published report exists', () => {
   const html = render([
-    { ...job, id: 'pending', status: 'running', result_ref: null },
+    {
+      ...job,
+      id: 'pending',
+      status: 'queued',
+      result_ref: null,
+      queue_reason: 'inference_quarantined',
+      created_at: '2026-10-02T02:37:18Z',
+      time_range: { start: '2026-09-30T15:00:00Z', end: '2026-10-01T15:00:00Z' },
+    },
     job,
     { ...job, id: 'older', result_ref: 'r0' },
   ]);
-  expect(state.paths).toEqual(['/reports/latest']);
-  expect(html.indexOf('id="report-row-latest"')).toBeLessThan(
-    html.indexOf('id="report-row-pending"'),
+  expect(state.paths).toEqual([]);
+  expect(html.indexOf('id="report-row-pending"')).toBeLessThan(
+    html.indexOf('id="report-row-latest"'),
   );
+  expect(html).toContain('가장 최근 요청');
+  expect(html).toContain('2026. 10. 02. 11:37:18');
+  expect(html).toContain('2026. 10. 01. 하루 · 1일(24시간)');
+  expect(html).toContain('아직 실행 시작 기록이 없습니다');
+  expect(html).toContain('이전 추론의 종료 확인');
   expect(html).toContain('/jobs/pending');
   expect(html).toContain('/reports/older#final-report');
-  expect(html).toContain('0 %');
-  expect(html).toContain('산출 불가');
-  expect(html).toContain('자료 부족·주의사항');
-  expect(html).toContain('GPU 공유 구간');
-});
-it('does not query or invent a summary when no result is published', () => {
-  const html = render([{ ...job, result_ref: null, status: 'running' }]);
-  expect(state.paths).toEqual([]);
-  expect(html).toContain('아직 공개된 보고서가 없습니다');
   expect(html).not.toContain('핵심 결과');
+});
+it('shows a saved summary only when the newest request is published', () => {
+  const html = render([job]);
+  expect(state.paths).toEqual(['/reports/latest']);
+  for (const text of ['0 %', '산출 불가', '자료 부족·주의사항', 'GPU 공유 구간'])
+    expect(html).toContain(text);
 });
 it('keeps the report link and retry available when summary retrieval fails', () => {
   state.isError = true;

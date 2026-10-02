@@ -379,6 +379,9 @@ export function ReportForm() {
         </Panel>
         <Notice>
           <strong>요청 전 기간 확인 · 최소 1일(24시간), 최대 31일</strong>
+          {!scheduled && (
+            <p>기본값은 어제 하루입니다. 요청 시점부터 거슬러 올라간 최근 24시간이 아닙니다.</p>
+          )}
           <p>
             {scheduled
               ? scheduleWindows[frequency] + ' 전체를 분석합니다.'

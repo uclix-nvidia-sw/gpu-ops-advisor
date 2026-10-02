@@ -1,3 +1,5 @@
+import { ReportPeriod, ReportScope } from './ReportMeta';
+import { reportRequestTime } from '../lib/reportPeriod';
 import { obj, rows, str, strings } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import {
@@ -16,7 +18,7 @@ import {
 } from '../lib/report';
 import { Badge, Notice } from './ui';
 import { DataView } from './live';
-import { reportMetrics, reportScope } from '../lib/workflow';
+import { reportMetrics } from '../lib/workflow';
 import { type Row } from '../lib/live';
 
 export function ReportContent({
@@ -39,9 +41,6 @@ export function ReportContent({
     partial: topics.filter((topic) => topic.status === 'partial').length,
     blocked: topics.filter((topic) => topic.status === 'blocked').length,
   };
-  const hours =
-    (Date.parse(str(obj(result.time_range).end)) - Date.parse(str(obj(result.time_range).start))) /
-    3_600_000;
   const quality = obj(result.quality);
   const namespaceTopic = topics.find((topic) => topic.topic_id === 'O08');
   const namespaceQuality = obj(namespaceTopic?.quality);
@@ -84,14 +83,12 @@ export function ReportContent({
       <section className="result-section">
         <h3>분석 요약</h3>
         <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
-        <p>
-          {formatDate(str(obj(result.time_range).start))} –{' '}
-          {formatDate(str(obj(result.time_range).end))}
-        </p>
-        <p>{reportScope(result)}</p>
-        {Number.isFinite(hours) && hours > 0 && (
-          <p>분석 기간: {hours.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}시간</p>
-        )}
+        <p>요청 접수 시각: {reportRequestTime(str(obj(request).created_at))}</p>
+        <div>
+          <strong>분석 대상 기간</strong>
+          <ReportPeriod value={result.time_range} />
+        </div>
+        <ReportScope job={result} />
         <p>
           요청한 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
           {str(obj(result.versions).criteria, '기록 없음')}

@@ -44,3 +44,38 @@ export function reportDaySummary(first: string, last: string) {
     return (error as Error).message;
   }
 }
+
+export function reportRequestTime(value: string) {
+  if (!Number.isFinite(Date.parse(value))) return '미확인';
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
+}
+
+export function reportPeriodLabel(start: string, end: string) {
+  const a = Date.parse(start),
+    b = Date.parse(end);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return '분석 대상 기간 미확인';
+  const hours = (b - a) / 3600000;
+  const date = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  // Only complete KST calendar days get inclusive date labels. Keep legacy hourly ranges exact.
+  if ((a + 9 * 3600000) % dayMs === 0 && (b + 9 * 3600000) % dayMs === 0) {
+    const days = (b - a) / dayMs;
+    const dates =
+      days === 1 ? `${date.format(a)} 하루` : `${date.format(a)} ~ ${date.format(b - 1)} 포함`;
+    return `${dates} · ${days}일(${hours}시간)`;
+  }
+  return `${reportRequestTime(start)} – ${reportRequestTime(end)} · ${hours.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}시간`;
+}

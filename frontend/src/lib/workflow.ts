@@ -182,18 +182,14 @@ export function reportTopics(job: Row) {
       .join(' · ') || '분석 주제 미확인'
   );
 }
-export function reportScope(job: Row) {
-  return (
-    rows(obj(job.scope).clusters)
-      .map((cluster) => {
-        const namespaces =
-          cluster.namespaces === null
-            ? '전체 Namespace'
-            : cluster.namespaces === undefined
-              ? 'Namespace 범위 미확인'
-              : strings(cluster.namespaces).join(', ') || '선택된 Namespace 없음';
-        return `${str(cluster.cluster_id, 'CPC 미확인')} / ${namespaces}`;
-      })
-      .join(' · ') || '분석 대상 미확인'
-  );
+export function reportScopeClusters(job: Row) {
+  return rows(obj(job.scope).clusters).map((cluster) => ({
+    cluster: str(cluster.cluster_id, '클러스터 미확인'),
+    namespaces:
+      cluster.namespaces === null
+        ? '전체 Namespace'
+        : cluster.namespaces === undefined
+          ? 'Namespace 범위 미확인'
+          : strings(cluster.namespaces).join(', ') || '선택된 Namespace 없음',
+  }));
 }

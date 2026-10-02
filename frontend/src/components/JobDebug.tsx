@@ -9,9 +9,9 @@ import {
   returnPath,
 } from '../lib/debug';
 import { obj, rows, str, useResource, type Row } from '../lib/live';
-import { ReportOrigin, ReportTimeNote } from './ReportMeta';
+import { ReportOrigin, ReportTimeNote, ReportScope } from './ReportMeta';
 import { formatDate } from '../lib/domain';
-import { reportScope, reportTitle } from '../lib/workflow';
+import { reportTitle } from '../lib/workflow';
 import { Reviews, ReportExports } from '../pages/Results';
 import { AlarmIdentity, DataView, QueryState } from './live';
 import { Badge, Notice } from './ui';
@@ -78,7 +78,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
               <strong>{reportTitle(job)}</strong>
             </div>
             <ReportTimeNote />
-            <span>{reportScope(job)}</span>
+            <ReportScope job={job} />
           </>
         )}
         <div className="head-actions">

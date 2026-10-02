@@ -6,8 +6,8 @@ import { CommandError, DataView, More, QueryState } from '../components/live';
 import { num, obj, queryPath, str, useCommand, useList, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
-import { reportScope, reportTitle } from '../lib/workflow';
-import { ReportTimeNote } from '../components/ReportMeta';
+import { reportTitle } from '../lib/workflow';
+import { ReportTimeNote, ReportScope } from '../components/ReportMeta';
 import { reportTabs } from './Reports';
 export function Schedules() {
   const { id } = useParams();
@@ -50,7 +50,7 @@ function ScheduleList() {
                       <Link className="text-link" to={`/schedules/${str(s.id)}`}>
                         {str(s.name, reportTitle(obj(s.report_spec)))}
                       </Link>
-                      <p className="cell-sub">{reportScope(obj(s.report_spec))}</p>
+                      <ReportScope job={obj(s.report_spec)} />
                     </td>
                     <td>
                       <Badge
