@@ -15,6 +15,21 @@ import (
 
 const scheduleSelect = "SELECT to_jsonb(s) || (to_jsonb(r)-'schedule_id'-'revision') || jsonb_build_object('revision',s.current_revision) FROM schedules s JOIN schedule_revisions r ON r.schedule_id=s.id AND r.revision=s.current_revision WHERE s.id::text=$1"
 
+// Read-only execution summary: do not expose claim tokens, snapshots or unpublished candidates.
+const occurrenceExecution = `(SELECT jsonb_build_object(
+ 'id',j.id,'status',j.status,'attempt_no',j.attempt_no,'queue_reason',j.queue_reason,
+ 'termination_reason',j.termination_reason,'result_ref',j.published_result_id,
+ 'started_at',a.started_at,'ended_at',a.ended_at,'attempt_reason',a.termination_reason)
+ FROM jobs j LEFT JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no
+ WHERE j.id=o.job_id AND j.kind='report')`
+
+const scheduleList = `(SELECT s.*,r.frequency,r.local_time,r.timezone,r.weekday,r.day,r.period,r.report_spec,s.current_revision AS revision,
+ (SELECT to_jsonb(o) || jsonb_build_object('execution',` + occurrenceExecution + `)
+ FROM schedule_occurrences o WHERE o.schedule_id=s.id ORDER BY o.scheduled_for DESC,o.id DESC LIMIT 1) AS latest_occurrence,
+ (s.enabled AND s.next_run_at<=clock_timestamp() AND NOT EXISTS
+ (SELECT 1 FROM schedule_occurrences o WHERE o.schedule_id=s.id AND o.scheduled_for=s.next_run_at)) AS awaiting_occurrence
+ FROM schedules s JOIN schedule_revisions r ON r.schedule_id=s.id AND r.revision=s.current_revision)`
+
 func (s *Server) schedules(w http.ResponseWriter, q *Request, parts []string) error {
 	ctx := q.R.Context()
 	method := q.R.Method
@@ -31,7 +46,7 @@ func (s *Server) schedules(w http.ResponseWriter, q *Request, parts []string) er
 			if enabled != "" && enabled != "true" && enabled != "false" {
 				return Invalid("enabled")
 			}
-			return s.page(w, q, "(SELECT s.*,r.frequency,r.local_time,r.timezone,r.weekday,r.day,r.period,r.report_spec,s.current_revision AS revision FROM schedules s JOIN schedule_revisions r ON r.schedule_id=s.id AND r.revision=s.current_revision)", "($1='' OR enabled=NULLIF($1,'')::boolean) AND dsx_scope_contains($2,report_spec->'scope')", []any{enabled, scope}, nil)
+			return s.page(w, q, scheduleList, "($1='' OR enabled=NULLIF($1,'')::boolean) AND dsx_scope_contains($2,report_spec->'scope')", []any{enabled, scope}, nil)
 		}
 		if len(parts) == 2 {
 			v, e := store.One(ctx, s.DB.Pool, scheduleSelect, parts[1])
@@ -53,7 +68,7 @@ func (s *Server) schedules(w http.ResponseWriter, q *Request, parts []string) er
 			if status != "" && !Has([]string{"pending", "accepted", "missed", "failed"}, status) {
 				return Invalid("status")
 			}
-			return s.page(w, q, "schedule_occurrences", "schedule_id::text=$1 AND ($2='' OR status=$2) AND ($3='' OR scheduled_for>=NULLIF($3,'')::timestamptz) AND ($4='' OR scheduled_for<NULLIF($4,'')::timestamptz)", []any{parts[1], status, v.Get("from"), v.Get("to")}, nil)
+			return s.page(w, q, "(SELECT o.*, "+occurrenceExecution+" AS execution FROM schedule_occurrences o)", "schedule_id::text=$1 AND ($2='' OR status=$2) AND ($3='' OR scheduled_for>=NULLIF($3,'')::timestamptz) AND ($4='' OR scheduled_for<NULLIF($4,'')::timestamptz)", []any{parts[1], status, v.Get("from"), v.Get("to")}, nil)
 		}
 	}
 	creating := method == "POST" && len(parts) == 1

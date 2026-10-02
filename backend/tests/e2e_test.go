@@ -234,9 +234,26 @@ func TestBackendE2E(t *testing.T) {
 		delete(template, "timezone")
 		schedule := call("POST", "/schedules", Object{"frequency": "daily", "local_time": "09:00", "timezone": "Asia/Seoul", "period": "previous_complete_day", "enabled": true, "report_spec": template}, 201, "Idempotency-Key", "schedule")
 		id := String(schedule, "id")
+		latest := func() Object {
+			list := call("GET", "/schedules?limit=200", nil, 200)
+			for _, item := range list["items"].([]any) {
+				row := item.(map[string]any)
+				if row["id"] == id {
+					return row
+				}
+			}
+			t.Fatal("schedule missing from list")
+			return nil
+		}
+		if row := latest(); row["latest_occurrence"] != nil || row["awaiting_occurrence"] != false {
+			t.Fatal(row)
+		}
 		due := time.Now().UTC().Add(-time.Minute)
 		_, e = db.Pool.Exec(ctx, "UPDATE schedules SET next_run_at=$2 WHERE id=$1", id, due)
 		must(t, e)
+		if row := latest(); row["awaiting_occurrence"] != true {
+			t.Fatal(row)
+		}
 		var wg sync.WaitGroup
 		errs := make(chan error, 2)
 		for i := 0; i < 2; i++ {
@@ -257,6 +274,9 @@ func TestBackendE2E(t *testing.T) {
 		occ := occurrences["items"].([]any)[0].(map[string]any)
 		if occ["status"] != "pending" {
 			t.Fatal(occ)
+		}
+		if row := latest(); row["awaiting_occurrence"] != false || row["latest_occurrence"].(map[string]any)["status"] != "pending" {
+			t.Fatal(row)
 		}
 		fixture.lose.Store(true)
 		must(t, handler.DeliverPending(ctx))
@@ -287,6 +307,35 @@ func TestBackendE2E(t *testing.T) {
 		if !found {
 			t.Fatal("scheduled report absent from list")
 		}
+		// A saved request is not execution success. Join the actual latest attempt, never its secrets.
+		job := String(occ, "job_id")
+		_, e = db.Pool.Exec(ctx, "UPDATE jobs SET status='retry_wait',attempt_no=1,queue_reason='inference_quarantined' WHERE id=$1", job)
+		must(t, e)
+		_, e = db.Pool.Exec(ctx, "INSERT INTO job_attempts(job_id,attempt_no,started_at,ended_at,termination_reason,claim_token) VALUES($1,1,now()-interval '2 minutes',now(),'timeout','private-fixture-token')", job)
+		must(t, e)
+		// Older backfill inserted later must not replace the latest scheduled occurrence.
+		_, e = db.Pool.Exec(ctx, "INSERT INTO schedule_occurrences(id,schedule_id,revision,scheduled_for,period_start,period_end,canonical,status) SELECT $2,schedule_id,revision,scheduled_for-interval '1 day',period_start-interval '1 day',period_end-interval '1 day',false,'missed' FROM schedule_occurrences WHERE id=$1", occ["id"], ID())
+		must(t, e)
+		row := latest()["latest_occurrence"].(map[string]any)
+		if row["id"] != occ["id"] {
+			t.Fatal("latest occurrence sorted by insertion instead of scheduled time", row)
+		}
+		checkExecution := func(v map[string]any) {
+			x := v["execution"].(map[string]any)
+			if x["status"] != "retry_wait" || x["attempt_reason"] != "timeout" || x["queue_reason"] != "inference_quarantined" || x["started_at"] == nil || x["ended_at"] == nil || x["result_ref"] != nil {
+				t.Fatal(x)
+			}
+			if _, exists := x["claim_token"]; exists {
+				t.Fatal("claim token exposed")
+			}
+		}
+		checkExecution(row)
+		for _, item := range call("GET", "/schedules/"+id+"/occurrences", nil, 200)["items"].([]any) {
+			v := item.(map[string]any)
+			if v["id"] == occ["id"] {
+				checkExecution(v)
+			}
+		}
 		call("PATCH", "/schedules/"+id, Object{"enabled": false}, 200, "Idempotency-Key", "pause", "If-Match", "1")
 		call("PATCH", "/schedules/"+id, Object{"enabled": false}, 200, "Idempotency-Key", "pause", "If-Match", "1")
 		current := call("GET", "/schedules/"+id, nil, 200)
@@ -297,7 +346,10 @@ func TestBackendE2E(t *testing.T) {
 		if count != 2 {
 			t.Fatal("revision overwritten")
 		}
-		occurrences = call("GET", "/schedules/"+id+"/occurrences", nil, 200)
+		occurrences = call("GET", "/schedules/"+id+"/occurrences?status=accepted", nil, 200)
+		if latest()["awaiting_occurrence"] != false {
+			t.Fatal("paused schedule shown as overdue")
+		}
 		if occurrences["items"].([]any)[0].(map[string]any)["status"] != "accepted" {
 			t.Fatal("pause cancelled accepted job")
 		}

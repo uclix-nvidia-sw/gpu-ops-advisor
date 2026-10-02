@@ -1,3 +1,14 @@
+## 자동 보고서 실행 요약 — 2026-10-02
+
+기존 읽기 API에 아래 필드를 추가한다. 일정 생성·전달·실행 정책, DB schema와 원본 저장 시각은 유지한다.
+
+- `GET /schedules`: 각 일정의 `latest_occurrence`는 `scheduled_for DESC, id DESC`의 최신 회차 또는 null이다. 늦게 저장된 과거 회차를 최신으로 취급하지 않는다. 회차의 기존 필드와 아래 `execution`을 포함한다.
+- `awaiting_occurrence`: enabled이고 `next_run_at <= clock_timestamp()`이며 같은 예정 시각의 회차 기록이 없으면 true. DB 현재 시각에 따른 기록 부재이며 실패 판정이나 스케줄러 장애 진단이 아니다. 일시 정지이면 false.
+- `GET /schedules/{id}/occurrences`: 각 회차에 `execution`을 추가한다. report job이 없으면 null이며 accepted만으로 실제 실행을 추정하지 않는다.
+- `execution`: `id`, `status`, `attempt_no`, `queue_reason`, `termination_reason`, `result_ref`(공개 결과 ID 또는 null), `started_at`, `ended_at`, `attempt_reason`. 시각·attempt_reason은 jobs.attempt_no와 같은 최신 시도의 저장값이다. 시도가 없으면 null이다. 토큰·스냅샷·미공개 결과는 반환하지 않는다.
+
+기존 목록 필터·cursor·정렬과 회차 상태 pending/accepted/missed/failed는 보존한다. 한 목록 SQL에서 관련 값을 읽으며 일정별 HTTP 추가 조회나 LLM 호출을 하지 않는다. 구 Frontend는 추가 필드를 무시할 수 있고 새 Frontend는 구 Backend의 실행 정보를 미확인으로 표시한다.
+
 ## 보고서 생성 방식 표시 — 2026-10-01
 
 `GET /reports`, `/reports/{id}`, `/jobs`, `/jobs/{id}`의 report 작업 DTO는 `report_origin: manual | schedule | unknown`을 제공한다. 기존 `source_module=backend`이며 비어 있지 않은 `manual:` 또는 `schedule:` source_key에서 파생한다. 나머지는 unknown이며 RCA DTO에는 필드를 추가하지 않는다. 원본 source_key는 노출하지 않고 DB·JC/Worker 입력·결과 계약은 변경하지 않는다.

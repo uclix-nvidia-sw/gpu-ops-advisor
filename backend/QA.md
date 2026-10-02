@@ -1,3 +1,11 @@
+# 2026-10-02 일정 실행 요약 로컬 검수
+
+- **통과:** `backend/`에서 `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드.
+- **통과:** `.local/report-usability/save-go-e2e.py`에서 새 임시 PostgreSQL·재빌드 Backend로 `go test -tags=e2e ./tests -count=1 -timeout=10m` (Backend/Incident). 일정 E2E는 첫 회차 없음, 예정 경과·기록 부재, 회차 생성 후 경고 해제, 접수와 실행 상태 분리, retry_wait/timeout/격리·시작/종료, 늦게 삽입된 과거 회차와 최신 예정 회차 구분, 토큰 미노출·미공개 결과 null, 일시 정지를 확인했다. 일정 전달의 JC는 기존 영속 접수 fixture이며 실제 운영 Worker가 아니다. 테스트 DB는 종료했다.
+- **미수행/미검증:** 운영 DB·배포·운영 부하·실제 자동보고서 복구·원격 CI. **해당 없음:** 이번 조회 변경의 DB migration·스케줄러/JC 정책·Agent 분석 수정. 기존 heartbeat 로컬 수정은 유지했다. 커밋·푸시·PR 없음.
+
+---
+
 # 2026-10-01 보고서 생성 방식 읽기 API
 
 - **통과:** Backend `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드. manual/schedule/누락/잘못된 접두어/다른 source_module/RCA DTO 및 원본 키 미노출을 검사했다.

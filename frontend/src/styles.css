@@ -4422,3 +4422,18 @@ body:has(dialog[open]) {
   color: var(--muted);
   margin: 12px 0 20px;
 }
+
+/* Schedule execution summaries retain the existing status palette. */
+.schedule-execution-cell {
+  min-width: 270px;
+  max-width: 440px;
+}
+.schedule-execution .cell-sub {
+  margin: 6px 0 0;
+  white-space: normal;
+}
+.schedule-overdue {
+  border-left: 3px solid #c07a18;
+  padding-left: 10px;
+  margin-bottom: 12px;
+}
