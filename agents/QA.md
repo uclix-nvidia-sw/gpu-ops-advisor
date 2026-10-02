@@ -1,3 +1,15 @@
+# 2026-10-02 Ops 계산 중 heartbeat 유지 — 로컬 검수
+
+- 기준: 최신 `origin/main` **03105a4**, `fix/report-calculation-heartbeat`. Ops 주제 계산만 요청 순서대로 별도 스레드에서 실행하고, 해당 주제에 필요한 할당·활동 입력만 정규화한다. 취소 시 현재 계산을 회수하며 다음 주제·문장 구성·저장으로 진행하지 않는다. RCA·공통 Worker/Store·JC·조회 한도·lease·스키마는 변경하지 않았다.
+- **통과:** Python 3.11.16 전체 Agent 검사 **344 passed, 0 skipped, 54.93초**. 저장소 루트에서 `RUN_AGENT_E2E=1`과 준비된 로컬 `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `GRAFANA_MCP_BINARY`, `HELM_BINARY`를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/calculation-results.xml`을 실행했다. 외부 DB 환경 변수를 제거하고 임시 loopback PostgreSQL·최신 소스 JC/Backend/Incident·두 Worker·공식 Grafana MCP를 사용했다. Grafana/LLM 응답은 fixture이며 기존 MCP deprecation warning 3건이 남는다.
+- **통과:** 새 Worker 검사 7건은 lease보다 긴 CPU 계산 중 heartbeat, criteria 1.1/1.2의 11개 주제 순서·산출물, 취소·반복 취소·409·deadline·계산 오류를 확인한다. 취소 후 계산 오류가 발생해도 원래 취소를 보존하며 Worker 반환 전에 계산을 회수한다. 수정 전 `run()`만 메모리에서 복원하면 성공 사례 2건이 계산 중 heartbeat 0회·lease 만료로 실패한다.
+- **통과:** 실제 JC/DB E2E는 시험 job에만 2초 lease를 적용하고 2.6초 CPU 계산 중 heartbeat 200 유지, 11개 주제·기본 보고서 저장, checksum 일치와 `succeeded` 공개를 확인했다. 운영 설정은 변경하지 않았다.
+- **통과:** main과 수정 코드의 11개 주제 × 기준 버전 2개 × 정상/빈 fixture 결과 44건이 동일했다. 별도 286 Pod·8 GPU·1시간 합성 자료에서 계산 0.506→0.258초, 10ms 주기 확인의 최대 공백 0.516→0.024초였고 수치·입력은 동일했다. 단일 로컬 측정이며 운영 처리시간이나 속도 개선율의 보장이 아니다.
+- **통과:** Ruff check/format, 문서 링크 검사, diff 검사. 수집·주제 계산·문장 구성 시작/완료 로그로 후속 지연 구간을 구분한다.
+- **미검증:** 운영 배포·실제 Grafana/LLM 보고서 재실행·운영 메모리/성능. 운영 로그의 약 75초 heartbeat 공백 전체가 계산에 쓰였는지는 당시 계측 부재로 확정하지 않는다. 기존 격리는 자동 해제하지 않으며 원격 종료 확인 뒤 별도 운영 절차를 따른다. DB migration·기존 결과 재작성은 해당 없음.
+
+---
+
 # 2026-10-02 O08 클러스터별 관측 요약 — 로컬 검수
 
 - 기준: `b79758a`, 로컬 `fix/report-cluster-observation`. Ops O08 criteria 1.2에 요청 클러스터별 관측 GPU·연결 GPU·연결 시간·라벨 부재·신원 미확인 지표를 추가했다. RCA·공통 정규화·DB/API/result schema는 변경하지 않았다.

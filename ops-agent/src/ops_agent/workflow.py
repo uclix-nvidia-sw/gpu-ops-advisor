@@ -1,4 +1,8 @@
+import asyncio
 from collections import defaultdict
+import contextlib
+import logging
+import time
 from uuid import uuid4
 
 from agent_common.calculations import (
@@ -15,6 +19,9 @@ from agent_common.observation import evidence_stamp
 from .report import write_report
 from .namespace_usage import namespace_usage
 from .collection import collect_report
+
+
+log = logging.getLogger(__name__)
 
 
 PLAN = {
@@ -98,12 +105,15 @@ def calculate(
     start, end = timestamp(period["start"]), timestamp(period["end"])
     namespace_draft = topic_id == "O08" and criteria_version == "1.2"
     mapping = (
-        []
-        if namespace_draft
-        else allocations(collected.get("D08", []), period, collected.get("D06", []))
+        allocations(collected.get("D08", []), period, collected.get("D06", []))
+        if topic_id in {"O02", "O03", "O04", "O06"}
+        or (topic_id == "O08" and not namespace_draft)
+        else []
     )
     activity = (
-        {} if namespace_draft else gpu_intervals(collected.get("D02", []), period)
+        gpu_intervals(collected.get("D02", []), period)
+        if topic_id in {"O03", "O04"}
+        else {}
     )
     all_refs = [
         e for q in query_ids(topic_id, criteria_version) for e in collected.get(q, [])
@@ -782,21 +792,63 @@ async def run(tools):
         if namespace_only
         else sorted(queries, key=lambda q: (q not in priority, int(q[1:])))
     )
+    started = time.monotonic()
+    log.info(
+        "report collection started job=%s attempt=%s",
+        claim["job_id"],
+        claim.get("attempt_no"),
+    )
     collected, evidence, collection = await collect_report(
         tools, ctx["profile"], data, ctx["deadline"], order, namespace_only
     )
+    log.info(
+        "report collection complete job=%s attempt=%s elapsed_seconds=%.3f evidence_count=%s",
+        claim["job_id"],
+        claim.get("attempt_no"),
+        time.monotonic() - started,
+        len(evidence),
+    )
     evidence.insert(0, db_evidence)
-    topics = [
-        calculate(
-            t,
-            data,
-            collected,
-            ctx["context"],
-            db_evidence,
-            criteria_version=criteria_version,
+    topics = []
+    for topic_id in data["topic_ids"]:
+        if time.monotonic() >= ctx["deadline"]:
+            raise TimeoutError()
+        started = time.monotonic()
+        log.info(
+            "report calculation started job=%s attempt=%s topic=%s",
+            claim["job_id"],
+            claim.get("attempt_no"),
+            topic_id,
         )
-        for t in data["topic_ids"]
-    ]
+        calculation = asyncio.create_task(
+            asyncio.to_thread(
+                calculate,
+                topic_id,
+                data,
+                collected,
+                ctx["context"],
+                db_evidence,
+                criteria_version=criteria_version,
+            )
+        )
+        try:
+            topics.append(await asyncio.shield(calculation))
+        except asyncio.CancelledError:
+            # Cancelling an await cannot stop CPU work in a thread. Drain this
+            # topic before returning the attempt; never start the next topic.
+            while not calculation.done():
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await asyncio.shield(calculation)
+            if not calculation.cancelled():
+                calculation.exception()
+            raise
+        log.info(
+            "report calculation complete job=%s attempt=%s topic=%s elapsed_seconds=%.3f",
+            claim["job_id"],
+            claim.get("attempt_no"),
+            topic_id,
+            time.monotonic() - started,
+        )
     result.update(
         topics=topics,
         result_status=result_status(topics),
@@ -811,6 +863,20 @@ async def run(tools):
         requested_group_by=data["group_by"],
         collection=collection,
     )
+    if time.monotonic() >= ctx["deadline"]:
+        raise TimeoutError()
+    started = time.monotonic()
+    log.info(
+        "report narrative started job=%s attempt=%s",
+        claim["job_id"],
+        claim.get("attempt_no"),
+    )
     await write_report(result, ctx["llm"])
+    log.info(
+        "report narrative complete job=%s attempt=%s elapsed_seconds=%.3f",
+        claim["job_id"],
+        claim.get("attempt_no"),
+        time.monotonic() - started,
+    )
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": evidence}
