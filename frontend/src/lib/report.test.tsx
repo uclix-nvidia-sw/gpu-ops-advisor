@@ -156,7 +156,7 @@ describe('namespace report usability', () => {
         }}
       />,
     ).split('<summary>원본 결과 보기')[0];
-    expect(html).toContain('요청한 집계: Namespace');
+    expect(html).toContain('<dt>요청한 집계</dt><dd>Namespace');
     expect(html).toContain('적용된 집계: Namespace');
     expect(html).toContain('0 %');
     expect(html).toContain('산출 불가');
@@ -473,4 +473,58 @@ it('shows preflight rejection and collected windows without implying sample cove
   expect(html).toContain('빈 응답도 포함');
   expect(html).toContain('근거 보기');
   expect(html).not.toContain('요청한 조회 구간 처리 완료');
+});
+
+it('keeps every requested cluster visible and separates zero connections from missing summaries', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        scope: {
+          clusters: [
+            { cluster_id: 'cpc-idle', namespaces: null },
+            { cluster_id: 'cpc-missing', namespaces: null },
+          ],
+        },
+        quality: { requested_group_by: ['namespace'] },
+        topics: [
+          {
+            topic_id: 'O08',
+            quality: { applied_group_by: ['namespace'] },
+            metrics: [
+              {
+                id: 'O08.cluster_observed_gpu_count.0',
+                target: { cluster_id: 'cpc-idle' },
+                value: 8,
+                unit: 'physical_gpu',
+              },
+              {
+                id: 'O08.cluster_connected_gpu_count.0',
+                target: { cluster_id: 'cpc-idle' },
+                value: 0,
+                unit: 'physical_gpu',
+              },
+              {
+                id: 'O08.cluster_connected_gpu_hours.0',
+                target: { cluster_id: 'cpc-idle' },
+                value: 0,
+                unit: 'GPU-hours',
+              },
+              {
+                id: 'O08.cluster_unlabeled_gpu_count.0',
+                target: { cluster_id: 'cpc-idle' },
+                value: 8,
+                unit: 'physical_gpu',
+              },
+            ],
+          },
+        ],
+      }}
+    />,
+  );
+  const summary = html.split('클러스터별 GPU 관측 요약')[1].split('연결된 Namespace별 활동')[0];
+  expect(summary).toContain('<td>cpc-idle</td><td>8 대</td><td>0 대</td><td>0 GPU·시간</td>');
+  expect(summary).toContain('<td>cpc-missing</td><td>미확인</td><td>미확인</td><td>미확인</td>');
+  expect(summary).toContain('저장된 클러스터 요약이 없습니다');
+  expect(summary).toContain('유휴 여부는 미확인');
 });

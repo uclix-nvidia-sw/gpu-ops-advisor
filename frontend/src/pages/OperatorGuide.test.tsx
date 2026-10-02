@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -14,17 +15,25 @@ const app = vi.hoisted(() => ({
   period: '1h',
 }));
 vi.mock('../lib/store', () => ({ useApp: () => app }));
-const render = (path = '/operator-guide') =>
-  renderToStaticMarkup(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<Shell />}>
-          <Route path="operator-guide" element={<OperatorGuide />} />
-          <Route path="reports" element={<p>report-content-marker</p>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+const render = (path = '/operator-guide') => {
+  const client = new QueryClient();
+  client.setQueryData(['api', '/reports/saved', undefined], {
+    result: { scope: { clusters: [{ cluster_id: 'saved-cluster', namespaces: ['training'] }] } },
+  });
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<Shell />}>
+            <Route path="operator-guide" element={<OperatorGuide />} />
+            <Route path="reports" element={<p>report-content-marker</p>} />
+            <Route path="reports/:id" element={<p>report-detail-marker</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
+};
 
 it.each(['classic', 'operations', 'developer'])(
   'keeps all topic guidance accessible while disconnected in %s mode',
@@ -67,3 +76,13 @@ it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
     expect(render()).not.toContain('<section id="guide-start" hidden=""');
   },
 );
+
+it('uses the saved report scope and keeps global controls on new requests', () => {
+  const saved = render('/reports/saved');
+  expect(saved).toContain('이 보고서의 분석 범위');
+  expect(saved).toContain('saved-cluster');
+  expect(saved).toContain('training');
+  expect(saved).not.toContain('aria-label="조회 기간"');
+  expect(saved).not.toContain('class="scope-button"');
+  expect(render('/reports/new')).toContain('class="scope-button"');
+});

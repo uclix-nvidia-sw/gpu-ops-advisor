@@ -14,7 +14,9 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom';
+import { obj, useResource } from '../lib/live';
+import { reportScopeClusters } from '../lib/workflow';
 import { scopeLabel } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
@@ -35,6 +37,10 @@ export function Shell() {
   const app = useApp(),
     location = useLocation(),
     me = app.connection;
+  const reportId = matchPath('/reports/:id', location.pathname)?.params.id;
+  const isSavedReport = !!reportId && reportId !== 'new';
+  const report = useResource(isSavedReport ? `/reports/${reportId}` : null, undefined, true);
+  const savedScope = reportScopeClusters(obj(report.data?.result ?? report.data));
   const isGuide = location.pathname === '/operator-guide';
   const names =
     app.mode === 'operations'
@@ -151,43 +157,70 @@ export function Shell() {
         </header>
         {!isGuide && (
           <div className="scopebar">
-            <div className="scope-left">
-              <span className="scope-label">관측 범위</span>
-              <button
-                className="scope-button"
-                disabled={!app.ready || !app.registeredScope.clusters.length}
-                onClick={() => {
-                  setDraft(structuredClone(app.scope));
-                  setScopeError('');
-                  setScopeOpen(true);
-                }}
-              >
-                {app.scope.clusters.length}개 CPC
-                <ChevronDown size={14} />
-              </button>
-              <div className="scope-chips">
-                {app.scope.clusters.map((c) => (
-                  <span key={c.cluster_id}>
-                    {c.cluster_id.toUpperCase()} / {c.namespaces?.join(', ') || '전체 Namespace'}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="scope-right">
-              <span className="time-zone">Asia/Seoul</span>
-              <select
-                aria-label="조회 기간"
-                value={app.period}
-                onChange={(e) => app.setPeriod(e.target.value)}
-              >
-                <option value="1h">최근 1시간</option>
-                <option value="6h">최근 6시간</option>
-                <option value="24h">최근 24시간</option>
-              </select>
-              <button className="icon-button" aria-label="데이터 새로고침" onClick={app.refresh}>
-                <RefreshCw size={17} />
-              </button>
-            </div>
+            {isSavedReport ? (
+              <>
+                <div className="scope-left">
+                  <span className="scope-label">이 보고서의 분석 범위</span>
+                  <div className="scope-chips">
+                    {savedScope.length ? (
+                      savedScope.map(({ cluster, namespaces }) => (
+                        <span key={cluster}>
+                          {cluster} / {namespaces}
+                        </span>
+                      ))
+                    ) : (
+                      <span>{report.isPending ? '불러오는 중' : '분석 범위 미확인'}</span>
+                    )}
+                  </div>
+                </div>
+                <span className="muted">생성 당시 범위 · 분석 기간은 본문에 표시</span>
+              </>
+            ) : (
+              <>
+                <div className="scope-left">
+                  <span className="scope-label">관측 범위</span>
+                  <button
+                    className="scope-button"
+                    disabled={!app.ready || !app.registeredScope.clusters.length}
+                    onClick={() => {
+                      setDraft(structuredClone(app.scope));
+                      setScopeError('');
+                      setScopeOpen(true);
+                    }}
+                  >
+                    {app.scope.clusters.length}개 CPC
+                    <ChevronDown size={14} />
+                  </button>
+                  <div className="scope-chips">
+                    {app.scope.clusters.map((c) => (
+                      <span key={c.cluster_id}>
+                        {c.cluster_id.toUpperCase()} /{' '}
+                        {c.namespaces?.join(', ') || '전체 Namespace'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="scope-right">
+                  <span className="time-zone">Asia/Seoul</span>
+                  <select
+                    aria-label="조회 기간"
+                    value={app.period}
+                    onChange={(e) => app.setPeriod(e.target.value)}
+                  >
+                    <option value="1h">최근 1시간</option>
+                    <option value="6h">최근 6시간</option>
+                    <option value="24h">최근 24시간</option>
+                  </select>
+                  <button
+                    className="icon-button"
+                    aria-label="데이터 새로고침"
+                    onClick={app.refresh}
+                  >
+                    <RefreshCw size={17} />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
         <main id="main-content">

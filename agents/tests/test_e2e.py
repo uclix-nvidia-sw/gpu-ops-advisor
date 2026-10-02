@@ -753,6 +753,10 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     topic = result["topics"][0]
     metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
     assert metrics["namespace_connected_gpu_count"]["value"] == 1
+    assert metrics["cluster_observed_gpu_count"]["value"] == 1
+    assert metrics["cluster_connected_gpu_count"]["value"] == 1
+    assert metrics["cluster_connected_gpu_count"]["target"] == {"cluster_id": "cpc-2"}
+    assert "클러스터 관측 GPU" in html.text
     assert "GPU·시간" in html.text
     # The fixture has 121 samples held for 30 seconds, not a full day of data.
     observed_hours = 121 * 30 / 3600
@@ -763,7 +767,9 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
         "cluster_id": "cpc-2",
         "namespace": "dev",
     }
-    assert topic["status"] == "partial"
+    assert (
+        topic["status"] == "ready"
+    )  # Complete observed metrics, not exclusive ownership.
     assert not topic["recommendations"]
     assert any(q == "D02" and status == "ok" for q, status in evidence)
     for artifact in result["artifacts"]:

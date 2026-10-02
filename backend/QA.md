@@ -1,3 +1,11 @@
+# 2026-10-02 O08 클러스터 요약 내보내기 — 로컬 검수
+
+- **통과:** `backend/`의 Go vet·전체 race 검사·서버 빌드. HTML의 새 지표 한글명·사유, 연결 0·산출 불가 구분, CSV의 원본 ID·값·사유 보존을 검사했다.
+- **통과:** 전체 Agent 검사 **335 passed**에 포함된 실제 Backend·Ops Worker·격리 DB 경로에서 새 클러스터 metric 발행과 HTML 내보내기 이름을 확인했다. Grafana/LLM은 HTTP fixture이며 운영 서비스가 아니다.
+- **해당 없음:** API/DB schema·JC·RCA 수정. **미수행/미검증:** 운영 배포·실제 데이터·커밋·푸시·PR·원격 CI.
+
+---
+
 # 2026-10-02 일정 실행 요약 로컬 검수
 
 - **통과:** `backend/`에서 `go vet ./...`, `go test -race ./...`, 서버 바이너리 빌드.

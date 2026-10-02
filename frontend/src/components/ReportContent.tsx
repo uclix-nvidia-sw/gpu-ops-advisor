@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { obj, rows, str, strings } from '../lib/live';
@@ -8,6 +9,7 @@ import {
   queryName,
   groupLabel,
   namespaceRows,
+  clusterRows,
   metricUnit,
   metricName,
   metricTarget,
@@ -30,6 +32,7 @@ export function ReportContent({
   request?: unknown;
   onEvidence: (id: string) => void;
 }) {
+  const [selectedCluster, setSelectedCluster] = useState('');
   const result = obj(value),
     topics = rows(result.topics),
     observations = reportObservations(result);
@@ -45,6 +48,23 @@ export function ReportContent({
   const namespaceTopic = topics.find((topic) => topic.topic_id === 'O08');
   const namespaceQuality = obj(namespaceTopic?.quality);
   const namespaceMetrics = namespaceRows(rows(namespaceTopic?.metrics));
+  const clusterMetrics = clusterRows(
+    rows(namespaceTopic?.metrics),
+    result.scope ?? obj(request).scope,
+  );
+  const clusters = [
+    ...new Set([
+      ...clusterMetrics.map(({ cluster }) => cluster),
+      ...namespaceMetrics.map(({ target }) => str(target.cluster_id)),
+    ]),
+  ].filter(Boolean);
+  const activeCluster = clusters.includes(selectedCluster) ? selectedCluster : '';
+  const visibleClusters = clusterMetrics.filter(
+    ({ cluster }) => !activeCluster || cluster === activeCluster,
+  );
+  const visibleNamespaces = namespaceMetrics.filter(
+    ({ target }) => !activeCluster || target.cluster_id === activeCluster,
+  );
   const requestedGroups = quality.requested_group_by ?? obj(request).group_by;
   const requestedNamespace = strings(requestedGroups).includes('namespace');
   const appliedNamespace = strings(namespaceQuality.applied_group_by).includes('namespace');
@@ -82,17 +102,35 @@ export function ReportContent({
     >
       <section className="result-section">
         <h3>분석 요약</h3>
-        <p className="report-version">데이터 기준 시각: {formatDate(str(result.data_cutoff_at))}</p>
-        <p>요청 접수 시각: {reportRequestTime(str(obj(request).created_at))}</p>
-        <div>
-          <strong>분석 대상 기간</strong>
-          <ReportPeriod value={result.time_range} />
-        </div>
-        <ReportScope job={result} />
-        <p>
-          요청한 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
-          {str(obj(result.versions).criteria, '기록 없음')}
-        </p>
+        <dl className="report-summary-meta">
+          <div>
+            <dt>데이터 기준 시각</dt>
+            <dd>{formatDate(str(result.data_cutoff_at))}</dd>
+          </div>
+          <div>
+            <dt>요청 접수 시각</dt>
+            <dd>{reportRequestTime(str(obj(request).created_at))}</dd>
+          </div>
+          <div>
+            <dt>분석 대상 기간</dt>
+            <dd>
+              <ReportPeriod value={result.time_range} />
+            </dd>
+          </div>
+          <div>
+            <dt>분석 대상</dt>
+            <dd>
+              <ReportScope job={result} />
+            </dd>
+          </div>
+          <div>
+            <dt>요청한 집계</dt>
+            <dd>
+              {groupLabel(requestedGroups)} · 계산 기준:{' '}
+              {str(obj(result.versions).criteria, '기록 없음')}
+            </dd>
+          </div>
+        </dl>
         {(observed || mapped) && (
           <p>
             {observed && (
@@ -220,6 +258,94 @@ export function ReportContent({
               서버가 필요하며 저장된 결과는 바뀌지 않습니다.
             </Notice>
           )}
+          {!!clusters.length && (
+            <div className="report-cluster-filter">
+              <label htmlFor="report-cluster">클러스터 골라 보기</label>
+              <select
+                id="report-cluster"
+                value={activeCluster}
+                onChange={(e) => setSelectedCluster(e.target.value)}
+              >
+                <option value="">전체 클러스터</option>
+                {clusters.map((cluster) => (
+                  <option key={cluster} value={cluster}>
+                    {cluster}
+                  </option>
+                ))}
+              </select>
+              <p className="muted">
+                아래 두 표에만 적용됩니다. 저장된 분석 결과·상세 근거·다운로드는 전체 보고서를
+                유지합니다.
+              </p>
+            </div>
+          )}
+          <h4>클러스터별 GPU 관측 요약</h4>
+          <p>
+            요청한 Namespace 범위 안의 관측입니다. 연결 0대는 확인된 Pod 연결이 없다는 뜻이며, GPU가
+            놀고 있거나 사용 가능하다는 뜻은 아닙니다.
+          </p>
+          <div className="table-wrap">
+            <table className="report-cluster-summary">
+              <thead>
+                <tr>
+                  <th>클러스터</th>
+                  <th>관측 GPU</th>
+                  <th>연결 확인 GPU</th>
+                  <th>누적 연결 시간</th>
+                  <th>관측 상태·확인할 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleClusters.map(({ cluster, metrics: values }) => (
+                  <tr key={cluster}>
+                    <td>{cluster || '클러스터 미확인'}</td>
+                    {[
+                      'cluster_observed_gpu_count',
+                      'cluster_connected_gpu_count',
+                      'cluster_connected_gpu_hours',
+                    ].map((name) => (
+                      <td key={name}>
+                        {values[name]
+                          ? `${metricValue(values[name])}${values[name].value == null ? '' : ` ${metricUnit(values[name])}`}`
+                          : '미확인'}
+                      </td>
+                    ))}
+                    <td>
+                      {!Object.keys(values).length &&
+                        '저장된 클러스터 요약이 없습니다. 새 보고서에서 확인하세요.'}
+                      {Number(values.cluster_unlabeled_gpu_count?.value) > 0 && (
+                        <p>
+                          Pod 연결 라벨 없음: {metricValue(values.cluster_unlabeled_gpu_count)}대.
+                          유휴 여부는 미확인입니다.
+                        </p>
+                      )}
+                      {Number(values.cluster_unattributed_gpu_count?.value) > 0 && (
+                        <p>
+                          Pod 신원 연결 미확인: {metricValue(values.cluster_unattributed_gpu_count)}
+                          대.
+                        </p>
+                      )}
+                      {[
+                        ...new Set(
+                          Object.values(values)
+                            .filter((m) => m.value == null)
+                            .map((m) => str(obj(m.quality).reason)),
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .map((reason) => (
+                          <p key={reason}>{reportReason(reason)}</p>
+                        ))}
+                      {Object.values(values).some((m) => obj(m.quality).complete === false) && (
+                        <p>일부 관측만 반영했습니다. 전체 기간의 합계로 해석하지 마세요.</p>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <h4>연결된 Namespace별 활동</h4>
           <p>
             연결 GPU의 관측 활동이며 Namespace의 실제 소비량·독점 할당량은 아닙니다. 공유 구간은
             Namespace 사이에 중복될 수 있습니다.
@@ -233,12 +359,12 @@ export function ReportContent({
             평균 계산에 사용한 유효 GPU·시간은 주제별 상세 수치에서 확인할 수 있습니다. 기존 결과에
             없는 GPU 대수는 추정하지 않습니다.
           </p>
-          {!!namespaceMetrics.length ? (
+          {!!visibleNamespaces.length ? (
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>CPC</th>
+                    <th>클러스터</th>
                     <th>Namespace</th>
                     <th>기간 중 연결 GPU</th>
                     <th>연결 GPU 평균 활동률</th>
@@ -247,7 +373,7 @@ export function ReportContent({
                   </tr>
                 </thead>
                 <tbody>
-                  {namespaceMetrics.map(({ target, metrics: values }) => (
+                  {visibleNamespaces.map(({ target, metrics: values }) => (
                     <tr key={JSON.stringify(target)}>
                       <td>{str(target.cluster_id)}</td>
                       <td>{str(target.namespace)}</td>
@@ -281,7 +407,10 @@ export function ReportContent({
               </table>
             </div>
           ) : (
-            <p>Namespace에 연결할 수 있는 유효 관측이 없습니다. 아래 O08 산출 제한을 확인하세요.</p>
+            <p>
+              선택한 범위에 표시할 Namespace 연결 행이 없습니다. 위 클러스터별 요약에서 연결 0대와
+              근거 미확인을 구분해 확인하세요.
+            </p>
           )}
         </section>
       )}

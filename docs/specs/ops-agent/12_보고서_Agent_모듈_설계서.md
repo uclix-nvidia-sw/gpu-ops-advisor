@@ -58,9 +58,11 @@ OP-05~07은 [05](../05_테스트_검수_기준서.md)의 T60~T65와 연결한다
 사용자 검토용 초안 구현이다. OP-01 중 O08의 namespace 및 cluster+namespace 조합만 `versions.criteria=1.2` 입력에서 지원한다. 이때 조회는 D01/D02/D06/D08이며 나머지 주제·기존 criteria 경로는 유지한다. 전체 OP-01 또는 OP-06~07의 조언 목표 완료가 아니다.
 
 - 연결 관측 시간은 기존 `observed_namespace_hours`를 재사용한다. `namespace_activity_valid_hours`는 평균에 채택한 연결∩활동 시간, `namespace_connected_gpu_util`은 그 시간 가중 활동률이다. 신원·단위·0~100 범위·동시 충돌·공유/MIG·모델 비교 가능성을 확인한다. 두 namespace의 순차 사용은 보존하고 동시 공유는 활동 귀속을 보류한다.
-- 대상은 항상 cluster_id+namespace이며 이름 없는 신원을 정상 그룹에 합치지 않는다. 요청한 namespace의 유효 연결 자체가 없으면 시간·평균은 null이다. 연결은 있지만 사용할 활동 표본이 없으면 유효 활동시간은 0, 평균은 null이다. 유효 0%는 수치 0으로 보존한다.
-- 명세상 미지원 축은 unsupported_group_by, 지원 표에 있지만 아직 구현하지 않은 조합은 group_by_not_implemented로 blocked다. 다른 주제는 계속한다. 전체 기대 대상 분모·독점 할당·namespace 실사용률·회수 가능성을 추정하지 않는다. 결과는 관측 범위의 partial 또는 blocked이며 권고를 생성하지 않는다.
+- Namespace 지표의 대상은 cluster_id+namespace이며 이름 없는 신원을 정상 그룹에 합치지 않는다. 요청한 namespace의 유효 연결 자체가 없으면 시간·평균은 null이다. 연결은 있지만 사용할 활동 표본이 없으면 유효 활동시간은 0, 평균은 null이다. 유효 0%는 수치 0으로 보존한다.
+- 명세상 미지원 축은 unsupported_group_by, 지원 표에 있지만 아직 구현하지 않은 조합은 group_by_not_implemented로 blocked다. 다른 주제는 계속한다. 전체 기대 대상 분모·독점 할당·namespace 실사용률·회수 가능성을 추정하지 않는다. 관측 수치의 근거가 충족되면 ready이며, 실제 수집·신원·활동 근거 부족은 partial 또는 blocked다. 독점 할당을 뜻하지 않는다는 해석 제한만으로 partial을 강제하지 않으며 권고를 생성하지 않는다.
 - 기준 버전은 JC claim에서만 읽고 Worker가 바꾸지 않는다. 기본 JC/Helm 전역 설정은 유지한다. 보고서 전용 1.2 프로필과 화면·다운로드 표시는 구현했다. 실제 Grafana 자료의 의미 검수는 별도다.
+
+2026-10-02에는 요청 클러스터별 관측·연결 GPU 수와 연결 시간 요약을 추가했다. Namespace 행이 없어도 클러스터 행은 유지한다. Pod 라벨 없는 관측은 `gpu_pod_labels_absent`로 표시하며 idle로 확정하지 않는다. 신원·시간 조인 실패는 기존 `unattributed_gpu_observation`을 유지한다. query 실패·부분 수집은 그대로 보존하며 연결 0과 미확인을 구분한다. 범위·정확한 지표 계약은 [03 §5.1](../common/03_데이터_설계서.md)을 따른다.
 
 고정 사례는 [namespace 검사](../../../agents/tests/test_namespace_usage.py), 별도 테스트용 1.2 JC에서 저장·공개까지의 경로는 [Worker E2E](../../../agents/tests/test_e2e.py)의 namespace 사례로 검수한다. 실제 실행 결과는 [Agent QA](../../../agents/QA.md)에 기록한다.
 

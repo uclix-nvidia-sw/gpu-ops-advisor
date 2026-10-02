@@ -72,3 +72,27 @@ async def test_final_report_preserves_unknown_zero_and_fallback(reply, value):
     page = render(result)["html"].decode()
     assert "분석 범위와 결과" in page and "&lt;script&gt;" in page
     assert "<script>" not in page
+
+
+@pytest.mark.asyncio
+async def test_cluster_summary_narrative_keeps_unlabeled_observation_limit():
+    from types import SimpleNamespace
+    from test_namespace_usage import inventory, report
+    from test_report_observation import DATA, row
+
+    topic = report({"D01": [inventory([row({"uuid": "gpu-1"}, "90")], "cpc-1")]})
+    result = dict(
+        time_range=DATA["time_range"],
+        scope=DATA["scope"],
+        topics=[topic],
+        result_status=topic["status"],
+        quality={},
+        limitations=[],
+    )
+    await write_report(result, SimpleNamespace(configured=False))
+    text = " ".join(section["text"] for section in result["narrative"])
+    assert "클러스터 관측 GPU: 1" in text
+    assert "클러스터 연결 확인 GPU: 0" in text
+    assert "Pod 연결 라벨 없는 GPU: 1" in text
+    assert "유휴 상태나 회수 가능 여부는 확인되지" in text
+    assert result["result_status"] == "ready"

@@ -157,12 +157,54 @@ def calculate(
             ]
             return topic
         topic["quality"]["applied_group_by"] = requested
-        summaries, unattributed = namespace_usage(data, collected)
+        summaries, unattributed, clusters = namespace_usage(data, collected)
         topic["quality"]["unattributed_series_count"] = unattributed
         if unattributed:
             topic["missing_inputs"].append("unattributed_gpu_observation")
-        if not summaries:
-            topic["missing_inputs"].append("gpu_pod_identity_missing")
+        for i, cluster in enumerate(clusters):
+            if not cluster["complete"]:
+                topic["missing_inputs"].append("incomplete_observation")
+            cluster_refs = [
+                e
+                for e in all_refs
+                if e["cluster_id"] == cluster["target"]["cluster_id"]
+            ]
+            for field, unit, method in (
+                ("observed_gpu_count", "physical_gpu", "unique_observed_inventory"),
+                (
+                    "connected_gpu_count",
+                    "physical_gpu",
+                    "observed_connected_gpu_distinct_count",
+                ),
+                ("connected_gpu_hours", "GPU-hours", "observed_gpu_pod_interval_union"),
+                (
+                    "unlabeled_gpu_count",
+                    "physical_gpu",
+                    "unique_gpu_without_pod_labels",
+                ),
+                (
+                    "unattributed_gpu_count",
+                    "physical_gpu",
+                    "unique_gpu_with_unresolved_pod_identity",
+                ),
+            ):
+                put(
+                    f"cluster_{field}.{i}",
+                    cluster[field],
+                    unit,
+                    method,
+                    cluster["reason"],
+                    evidence=cluster_refs,
+                    target=cluster["target"],
+                )
+                m = topic["metrics"][-1]
+                m["quality"].update(
+                    coverage_scope="observed_scope_only", complete=cluster["complete"]
+                )
+                if field == "unlabeled_gpu_count" and cluster[field]:
+                    m["quality"]["reason"] = "gpu_pod_labels_absent"
+                if field == "unattributed_gpu_count" and cluster[field]:
+                    m["quality"]["reason"] = "unattributed_gpu_observation"
         for i, summary in enumerate(summaries):
             reasons = summary["reasons"]
             for name, field, unit, method in (
@@ -221,8 +263,8 @@ def calculate(
                         "mean": "Namespace에 연결돼 관측된 GPU의 평균 활동률이며 namespace 실사용률은 아닙니다.",
                     }[field]
             topic["missing_inputs"].extend(reasons)
-        # Observation alone never establishes exclusive ownership, savings or reclaimability.
-        topic["missing_inputs"].append("observed_mapping_not_exclusive_allocation")
+        # The observed-connection interpretation is a limitation, not a failed input.
+        # Actual missing allocation queries still retain incomplete_observation below.
     elif topic_id == "O01":
         rows = intervals(collected.get("D01", []), period)
         devices = {
@@ -761,6 +803,7 @@ async def run(tools):
         limitations=[
             "기간 원본·신원·분모가 확인되지 않은 계산은 보류합니다.",
             "관측 변화는 조치의 인과적 효과를 확정하지 않습니다.",
+            "GPU–Pod 연결 관측은 독점 할당·실제 소비량이 아니며, Pod 라벨 부재는 유휴·회수 가능의 증명이 아닙니다.",
         ],
     )
     result["quality"].update(

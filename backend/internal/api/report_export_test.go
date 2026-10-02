@@ -99,3 +99,26 @@ func TestNamespaceTimeMeaningAndRawPrecision(t *testing.T) {
 		t.Fatal("CSV precision or raw unit changed")
 	}
 }
+
+func TestClusterObservationExportKeepsZeroUnknownAndLabels(t *testing.T) {
+	var body Object
+	if err := json.Unmarshal([]byte(`{"topics":[{"metrics":[{"id":"O08.cluster_observed_gpu_count.0","target":{"cluster_id":"cpc-2"},"value":8,"unit":"physical_gpu"},{"id":"O08.cluster_connected_gpu_count.0","target":{"cluster_id":"cpc-2"},"value":0,"unit":"physical_gpu"},{"id":"O08.cluster_unlabeled_gpu_count.0","target":{"cluster_id":"cpc-2"},"value":8,"quality":{"reason":"gpu_pod_labels_absent"}},{"id":"O08.cluster_connected_gpu_hours.1","target":{"cluster_id":"cpc-3"},"value":null,"quality":{"reason":"gpu_inventory_missing"}}]}]}`), &body); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	if err := exportMetrics(w, "fixture", "html", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"클러스터 관측 GPU", "클러스터 연결 확인 GPU", "<td>0</td>", "산출 불가", "Pod 연결 라벨 없는 GPU", "유휴 상태나 회수 가능 여부는 확인되지", "cpc-2", "cpc-3"} {
+		if !strings.Contains(w.Body.String(), want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+	w = httptest.NewRecorder()
+	if err := exportMetrics(w, "fixture", "csv", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(w.Body.String(), "O08.cluster_connected_gpu_count.0,cpc-2,0,physical_gpu") {
+		t.Fatal(w.Body.String())
+	}
+}

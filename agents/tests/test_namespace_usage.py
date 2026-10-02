@@ -33,6 +33,7 @@ def observations(*workloads):
     result = {q: [evidence(q, copy.deepcopy(rows))] for q in ("D01", "D02")}
     for es in result.values():
         es[0]["quality"].update(unit="percent", max_hold_seconds=15, complete=True)
+        es[0]["time_range"] = DATA["time_range"]
     return result
 
 
@@ -63,7 +64,7 @@ def test_weighted_gpu_time_and_zero_are_not_sample_or_device_averages():
         "namespace_connected_gpu_util": 60,
     }
     assert values(topic, "b")["namespace_connected_gpu_util"] == 0
-    assert topic["status"] == "partial"
+    assert topic["status"] == "ready"
     assert topic["recommendations"] == []
     assert topic["quality"]["applied_group_by"] == ["namespace"]
 
@@ -167,7 +168,7 @@ def test_pod_uid_ambiguity_is_not_a_zero_or_a_normal_group():
     ]
     source["D06"] = [evidence("D06", pods)]
     topic = report(source)
-    assert topic["status"] == "blocked"
+    assert topic["status"] == "partial"  # Inventory is known, Pod attribution is not.
     assert all(v is None for v in values(topic, "a").values())
     assert "gpu_pod_identity_missing" in topic["missing_inputs"]
 
@@ -233,8 +234,9 @@ def test_different_models_are_not_averaged_and_unattributed_series_are_visible()
     topic = report(source)
     assert values(topic, "a")["namespace_connected_gpu_util"] is None
     assert "gpu_model_comparison_unverified" in topic["missing_inputs"]
-    assert topic["quality"]["unattributed_series_count"] == 1
-    assert all(m["target"]["namespace"] == "a" for m in topic["metrics"])
+    assert topic["quality"]["unattributed_series_count"] == 0
+    assert all(m["target"].get("namespace", "a") == "a" for m in topic["metrics"])
+    assert cluster_values(topic)["cluster_unlabeled_gpu_count"] == 1
 
 
 @pytest.mark.parametrize(
@@ -366,3 +368,136 @@ async def test_namespace_only_narrows_pods_but_mixed_reports_keep_full_scope(top
     assert (
         values(output["result"]["topics"][0], "a")["namespace_connected_gpu_util"] == 20
     )
+
+
+def cluster_values(topic, cluster="cpc-1"):
+    return {
+        m["id"].split(".")[1]: m["value"]
+        for m in topic["metrics"]
+        if m["target"] == {"cluster_id": cluster}
+    }
+
+
+def inventory(rows, cluster="cpc-2"):
+    e = evidence("D01", rows, cluster)
+    e["quality"].update(complete=True)
+    e["time_range"] = DATA["time_range"]
+    return e
+
+
+def test_requested_clusters_keep_unlabeled_gpus_without_claiming_idle():
+    source = observations(("a", "gpu-1", START, END, 20))
+    # Duplicate labels for the same physical GPU must not inflate inventory.
+    unlabeled = [row({"uuid": f"gpu-{i}"}, "80") for i in range(8)]
+    unlabeled += [row({"uuid": "gpu-0", "producer": "duplicate"}, "80")]
+    source["D01"].append(inventory(unlabeled))
+    data = dict(
+        DATA,
+        group_by=["namespace"],
+        scope={
+            "clusters": [
+                {"cluster_id": "cpc-1", "namespaces": None},
+                {"cluster_id": "cpc-2", "namespaces": None},
+            ]
+        },
+    )
+    topic = report(source, data)
+    assert cluster_values(topic, "cpc-2") == {
+        "cluster_observed_gpu_count": 8,
+        "cluster_connected_gpu_count": 0,
+        "cluster_connected_gpu_hours": 0,
+        "cluster_unlabeled_gpu_count": 8,
+        "cluster_unattributed_gpu_count": 0,
+    }
+    assert cluster_values(topic)["cluster_connected_gpu_hours"] == 1
+    assert topic["status"] == "ready"
+    assert topic["quality"]["unattributed_series_count"] == 0
+    m = next(
+        m for m in topic["metrics"] if m["id"] == "O08.cluster_unlabeled_gpu_count.1"
+    )
+    assert m["quality"]["reason"] == "gpu_pod_labels_absent"
+    assert m["evidence_refs"] == ["D01cpc-2"]
+    assert "idle" not in str(topic)
+
+
+@pytest.mark.parametrize(
+    "failure", ["missing", "unavailable", "partial", "uncovered", "mig", "invalid"]
+)
+def test_missing_cluster_observation_never_becomes_zero(failure):
+    e = inventory([])
+    if failure == "unavailable":
+        e["tool_status"] = "unavailable"
+    if failure == "partial":
+        e["quality"]["complete"] = False
+    if failure == "uncovered":
+        e["time_range"] = dict(DATA["time_range"], end=DATA["time_range"]["start"])
+    if failure == "mig":
+        e = inventory([row({"uuid": "MIG-device"})])
+    if failure == "invalid":
+        e = inventory([row({"uuid": "gpu-1"}, "NaN")])
+    data = dict(
+        DATA,
+        group_by=["namespace"],
+        scope={"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
+    )
+    topic = report({"D01": [] if failure == "missing" else [e]}, data)
+    assert all(v is None for v in cluster_values(topic, "cpc-2").values())
+    assert topic["status"] == "blocked"
+
+
+def test_successfully_empty_cluster_keeps_zero_observations():
+    topic = report({"D01": [inventory([], "cpc-1")]})
+    assert set(cluster_values(topic).values()) == {0}
+    assert topic["status"] == "ready"
+
+
+def test_cluster_connection_hours_union_shared_gpu_and_keep_join_failure():
+    source = observations(
+        ("a", "gpu-1", START, END, 20), ("b", "gpu-1", START, END, 20)
+    )
+    topic = report(source)
+    assert cluster_values(topic)["cluster_connected_gpu_count"] == 1
+    assert cluster_values(topic)["cluster_connected_gpu_hours"] == 1
+    assert sum(values(topic, ns)["observed_namespace_hours"] for ns in ["a", "b"]) == 2
+    assert topic["status"] == "partial"
+    source = observations(("a", "gpu-1", START, END, 20))
+    del source["D01"][0]["snapshot"]["data"][0]["metric"]["pod_uid"]
+    topic = report(source)  # No D06 Pod identity to join.
+    assert cluster_values(topic)["cluster_observed_gpu_count"] == 1
+    assert cluster_values(topic)["cluster_connected_gpu_count"] is None
+    assert cluster_values(topic)["cluster_unattributed_gpu_count"] == 1
+    assert "unattributed_gpu_observation" in topic["missing_inputs"]
+
+
+def test_partial_time_join_and_namespace_filter_do_not_inflate_cluster_counts():
+    source = observations(
+        ("a", "gpu-1", START, END, 20), ("b", "gpu-2", START, END, 30)
+    )
+    del source["D01"][0]["snapshot"]["data"][0]["metric"]["pod_uid"]
+    source["D06"] = [
+        evidence(
+            "D06",
+            [
+                row(
+                    {
+                        "namespace": "a",
+                        "pod": "a-pod",
+                        "node": "node-1",
+                        "uid": "a-uid",
+                    },
+                    "1",
+                    START,
+                    START + 1785,
+                )
+            ],
+        )
+    ]
+    data = dict(
+        DATA,
+        group_by=["namespace"],
+        scope={"clusters": [{"cluster_id": "cpc-1", "namespaces": ["a"]}]},
+    )
+    topic = report(source, data)
+    assert cluster_values(topic)["cluster_observed_gpu_count"] == 1
+    assert cluster_values(topic)["cluster_unattributed_gpu_count"] == 1
+    assert "unattributed_gpu_observation" in topic["missing_inputs"]

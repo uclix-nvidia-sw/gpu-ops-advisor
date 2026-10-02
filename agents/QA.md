@@ -1,3 +1,12 @@
+# 2026-10-02 O08 클러스터별 관측 요약 — 로컬 검수
+
+- 기준: `b79758a`, 로컬 `fix/report-cluster-observation`. Ops O08 criteria 1.2에 요청 클러스터별 관측 GPU·연결 GPU·연결 시간·라벨 부재·신원 미확인 지표를 추가했다. RCA·공통 정규화·DB/API/result schema는 변경하지 않았다.
+- **통과:** Python 3.11.16 전체 Agent 검사 **335 passed, 0 skipped, 43.00초**, 기존 MCP deprecation warning 3건. `RUN_AGENT_E2E=1`과 로컬 도구 경로를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/cluster-results.xml`을 실행했다. 임시 loopback PostgreSQL·실제 JC/Incident/Backend·두 Worker·공식 Grafana MCP를 사용했고 Grafana/LLM 응답은 HTTP fixture다.
+- **통과:** 빈 작업 라벨은 유휴로 단정하지 않음, 클러스터별 evidence 참조, UUID 중복 제거, 공유 연결 시간 합집합, 선택 Namespace 범위, 부분 시간 조인, 유효 표본 없음·MIG·조회 실패·부분/미수집과 확인된 0 구분, 정상 빈 응답, 기존 Namespace 활동률·RCA 회귀. Ruff check/format 통과.
+- **미수행/미검증:** 운영 조회·배포·기존 결과 재계산·실제 클러스터의 유휴 여부·커밋·푸시·PR·원격 CI. 브라우저 예시는 합성 D01/D02를 실제 계산 함수와 결과 검증기로 처리했다.
+
+---
+
 # 2026-10-02 Runbook-first RCA / R 실행 의존 제거
 
 - **PR 준비 재검증 통과:** 최신 `main` **5f52fe5**를 반영하고 문서 2곳의 양쪽 변경을 보존했다. Python **324 passed, 0 skipped**(123.49초), Frontend **118 passed**·format/build, 4개 Go 모듈 vet/race/build, Backend·Incident DB/E2E, Ruff·문서 링크·diff 검사 통과. Windows 로컬 pytest 실행에는 실제 Worker와 같은 `WindowsSelectorEventLoopPolicy`를 적용했다. 아래 315/101건은 main 반영 전 최초 검증 기록이다.
