@@ -82,17 +82,20 @@ describe('Ops report landing', () => {
       expect(html).not.toContain('href="/jobs/published"');
       expect(html).toContain('Namespace·프로젝트 배분 · GPU 에너지');
       if (Page === Reports) {
-        expect(html).toContain('<dt>대상</dt><dd>cpc-2 / training</dd>');
+        expect(html).toContain('<dt>분석 대상</dt>');
+        expect(html).toContain('<strong>cpc-2</strong>');
+        expect(html).toContain('Namespace 범위</span><span>training</span>');
         expect(html).toContain('<dt>집계 기준</dt><dd>Namespace</dd>');
         expect(html).toContain('title="published">ID publishe</span>');
         expect(html).toContain('<article class="report-history-card report-history-featured"');
         expect(html).not.toContain('<table');
         expect(html).toContain('<code>published</code>');
       } else {
-        expect(html).toContain('대상: cpc-2 / training');
+        expect(html).toContain('<strong>cpc-2</strong>');
+        expect(html).toContain('Namespace 범위</span><span>training</span>');
         expect(html).toContain('요청 집계');
       }
-      expect(html).toContain('분석 기간');
+      expect(html).toContain('분석 대상 기간');
       expect(html).not.toContain('>published</a>');
       expect(paths.at(-1)).not.toContain('status=succeeded');
     },
@@ -164,7 +167,8 @@ it('names schedules by report purpose and recurrence instead of ID', () => {
     </MemoryRouter>,
   );
   expect(html).toContain('Namespace별 GPU 사용 분석');
-  expect(html).toContain('cpc-2 / training');
+  expect(html).toContain('<strong>cpc-2</strong>');
+  expect(html).toContain('Namespace 범위</span><span>training</span>');
   expect(html).toContain('매주');
   expect(html).toContain('월요일');
   expect(html).not.toContain('>published</a>');

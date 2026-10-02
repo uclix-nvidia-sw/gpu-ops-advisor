@@ -4,7 +4,8 @@ import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
-import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
+import { reportRequestTime } from '../lib/reportPeriod';
+import { ReportOrigin, ReportTimeNote, ReportPeriod } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportReturnPath } from '../lib/reportNavigation';
@@ -161,8 +162,20 @@ export function JobDetail() {
                 </div>
                 {j.kind === 'rca' && <RcaJobSummary job={j} />}
                 <dl className="details">
-                  <dt>접수 시각</dt>
-                  <dd>{formatDate(str(j.created_at))}</dd>
+                  <dt>{j.kind === 'report' ? '요청 접수 시각' : '접수 시각'}</dt>
+                  <dd>
+                    {j.kind === 'report'
+                      ? reportRequestTime(str(j.created_at))
+                      : formatDate(str(j.created_at))}
+                  </dd>
+                  {j.kind === 'report' && (
+                    <>
+                      <dt>분석 대상 기간</dt>
+                      <dd>
+                        <ReportPeriod value={j.time_range} />
+                      </dd>
+                    </>
+                  )}
                   <dt>실행 시각</dt>
                   <dd>{formatDate(str(j.started_at))}</dd>
                   <dt>기한</dt>

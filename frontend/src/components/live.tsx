@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { ReportOrigin } from './ReportMeta';
+import { reportRequestTime } from '../lib/reportPeriod';
+import { ReportOrigin, ReportPeriod, ReportScope } from './ReportMeta';
 import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
-import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
+import { reportTitle, reportTopics } from '../lib/workflow';
 import { groupLabel, metricValue, metricUnit, namespaceRows, reportReason } from '../lib/report';
 export function QueryState({
   query,
@@ -516,10 +517,9 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                       <p>{reportTopics(j)}</p>
                       <small>{str(j.id)}</small>
                     </details>
-                    <div className="cell-sub">대상: {reportScope(j)}</div>
+                    <ReportScope job={j} />
                     <div className="cell-sub">
-                      분석 기간: {formatDate(str(obj(j.time_range).start))} –{' '}
-                      {formatDate(str(obj(j.time_range).end))}
+                      분석 대상 기간: <ReportPeriod value={j.time_range} />
                     </div>
                     <div className="cell-sub">요청 집계: {groupLabel(j.group_by)}</div>
                   </>
@@ -536,7 +536,11 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                       : str(j.kind)}
                 </td>
               )}
-              <td>{formatDate(str(j.created_at))}</td>
+              <td>
+                {j.kind === 'report'
+                  ? reportRequestTime(str(j.created_at))
+                  : formatDate(str(j.created_at))}
+              </td>
               <td>
                 <Badge status={str(j.status)} />
               </td>
@@ -568,8 +572,8 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
 
 function ReportHistory({ items, from }: { items: Row[]; from: string }) {
   // The API orders this filtered page by request time, newest first.
-  const featured = items.find((job) => str(job.result_ref));
-  const others = items.filter((job) => job !== featured);
+  const featured = items[0];
+  const others = items.slice(1);
   const card = (job: Row, large = false) => (
     <article
       className={`report-history-card ${large ? 'report-history-featured' : 'report-history-compact'}`}
@@ -589,9 +593,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
           </span>
         </div>
       </header>
-      {large && (
-        <p className="report-featured-label">현재 목록의 최신 공개 보고서 · 접수 시각 기준</p>
-      )}
+      {large && <p className="report-featured-label">가장 최근 요청 · 요청 접수 시각 기준</p>}
       <h3 className="report-title-with-origin">
         <ReportOrigin value={job.report_origin} />
         <Link
@@ -604,35 +606,51 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
       </h3>
       <dl className="report-history-meta">
         <div>
-          <dt>분석 기간</dt>
+          <dt>요청 접수 시각</dt>
+          <dd>{reportRequestTime(str(job.created_at))}</dd>
+        </div>
+        <div>
+          <dt>분석 대상 기간</dt>
           <dd>
-            {formatDate(str(obj(job.time_range).start))} –{' '}
-            {formatDate(str(obj(job.time_range).end))}
+            <ReportPeriod value={job.time_range} />
           </dd>
         </div>
         <div>
-          <dt>대상</dt>
-          <dd>{reportScope(job)}</dd>
+          <dt>분석 대상</dt>
+          <dd>
+            <ReportScope job={job} />
+          </dd>
         </div>
-        {large && (
-          <div>
-            <dt>집계 기준</dt>
-            <dd>{groupLabel(job.group_by)}</dd>
-          </div>
-        )}
         <div>
-          <dt>접수 시각</dt>
-          <dd>{formatDate(str(job.created_at))}</dd>
+          <dt>집계 기준</dt>
+          <dd>{groupLabel(job.group_by)}</dd>
         </div>
       </dl>
-      {large && <ReportPreview job={job} />}
+      {large &&
+        (str(job.result_ref) ? (
+          <ReportPreview job={job} />
+        ) : (
+          <div className="report-preview">
+            <strong>{labels[str(job.status)] || '실행 상태 미확인'}</strong>
+            <p>
+              {job.started_at
+                ? `실행 시작: ${reportRequestTime(str(job.started_at))}`
+                : '아직 실행 시작 기록이 없습니다.'}
+            </p>
+            {job.queue_reason != null && (
+              <p>{labels[str(job.queue_reason)] || str(job.queue_reason)}</p>
+            )}
+            <Link className="button" to={`/jobs/${str(job.id)}`} state={{ from }}>
+              실행 상태 보기
+            </Link>
+          </div>
+        ))}
       <details className="report-history-details">
         <summary>세부 주제 · 전체 작업 ID</summary>
         <p>{reportTopics(job)}</p>
-        {!large && <p>집계 기준: {groupLabel(job.group_by)}</p>}
         <code>{str(job.id)}</code>
       </details>
-      {large && (
+      {large && str(job.result_ref) && (
         <Link
           className="button primary"
           state={{ from, reportList: from, reportRow: str(job.id) }}
@@ -646,7 +664,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
   return (
     <div className="report-history-cards">
       {featured && card(featured, true)}
-      {!featured && <p className="muted">아직 공개된 보고서가 없습니다.</p>}
+      {!featured && <p className="muted">아직 요청한 보고서가 없습니다.</p>}
       {others.map((job) => card(job))}
     </div>
   );

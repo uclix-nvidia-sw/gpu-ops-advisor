@@ -277,7 +277,8 @@ it('explains elapsed time, cumulative GPU time and topic limitations before deta
       }}
     />,
   ).split('<details id="report-topic-details">')[0];
-  expect(html).toContain('분석 기간: 1시간');
+  expect(html).toContain('분석 대상 기간');
+  expect(html).toContain('· 1시간');
   expect(html).toContain('부분 산출 1개');
   expect(html).toContain('일부 GPU 관측을 Namespace에 연결하지 못했습니다');
   expect(html).toContain('8 대');

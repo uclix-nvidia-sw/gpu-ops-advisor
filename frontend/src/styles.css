@@ -4118,7 +4118,7 @@ body:has(dialog[open]) {
 }
 .report-history-meta > div {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 12px;
   margin-top: 10px;
 }
@@ -4436,4 +4436,43 @@ body:has(dialog[open]) {
   border-left: 3px solid #c07a18;
   padding-left: 10px;
   margin-bottom: 12px;
+}
+
+.report-period details {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.report-period details p {
+  margin: 6px 0;
+}
+
+.report-scope {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 6px 0;
+  list-style: none;
+  font-size: 12px;
+}
+.report-scope > li {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  background: #f5f8f6;
+  padding: 10px 12px;
+}
+.report-scope > li > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.report-scope-label {
+  min-width: 94px;
+  color: var(--muted);
+}
+.report-history-compact .report-history-meta > div:has(.report-scope) {
+  flex-basis: 100%;
 }

@@ -2,9 +2,10 @@ import { ArrowRight, ClipboardList, FileChartColumn, Radar, Telescope } from 'lu
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../lib/store';
 import { obj, queryPath, str, useList, useResource, type Row } from '../lib/live';
-import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
+import { ReportOrigin, ReportTimeNote, ReportScope } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
-import { reportScope, reportTitle, reportTopics } from '../lib/workflow';
+import { reportPeriodLabel, reportRequestTime } from '../lib/reportPeriod';
+import { reportTitle, reportTopics } from '../lib/workflow';
 import { reportTabs, ReportFilters } from './Reports';
 import { useReportListPosition } from '../lib/reportNavigation';
 import { groupLabel } from '../lib/report';
@@ -138,7 +139,7 @@ export function OperationsHome() {
                   <ReportOrigin value={r.report_origin} />
                   {reportTitle(r)}
                 </h3>
-                <p>대상: {reportScope(r)}</p>
+                <ReportScope job={r} />
                 <small>{formatDate(str(r.created_at))}</small>
                 <ArrowRight size={18} />
               </Link>
@@ -341,17 +342,16 @@ export function OperationsReports() {
                   {reportTitle(r)}
                 </h2>
                 <p className="muted">{reportTopics(r)}</p>
-                <p>대상: {reportScope(r)}</p>
+                <ReportScope job={r} />
                 <dl>
                   <dt>요청 집계</dt>
                   <dd>{groupLabel(r.group_by)}</dd>
-                  <dt>분석 기간</dt>
+                  <dt>분석 대상 기간</dt>
                   <dd>
-                    {formatDate(str(obj(r.time_range).start))} —{' '}
-                    {formatDate(str(obj(r.time_range).end))}
+                    {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}
                   </dd>
-                  <dt>생성 시각</dt>
-                  <dd>{formatDate(str(r.created_at))}</dd>
+                  <dt>요청 접수 시각</dt>
+                  <dd>{reportRequestTime(str(r.created_at))}</dd>
                 </dl>
                 <span className="ops-link">
                   {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'} <ArrowRight size={16} />

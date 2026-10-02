@@ -5,7 +5,7 @@ import { WorkflowGuide } from '../components/WorkflowGuide';
 import { ReportContent } from '../components/ReportContent';
 import {
   rcaSteps,
-  reportScope,
+  reportScopeClusters,
   reportTitle,
   reportTopics,
   reportSteps,
@@ -23,9 +23,9 @@ describe('mode-independent published data and developer guides', () => {
       'Namespace별 GPU 사용 분석',
     );
     expect(reportTitle({})).toBe('분석 주제 미확인');
-    expect(reportScope({})).toBe('분석 대상 미확인');
+    expect(reportScopeClusters({})).toEqual([]);
     expect(
-      reportScope({
+      reportScopeClusters({
         scope: {
           clusters: [
             { cluster_id: 'cpc-1', namespaces: null },
@@ -35,9 +35,12 @@ describe('mode-independent published data and developer guides', () => {
           ],
         },
       }),
-    ).toBe(
-      'cpc-1 / 전체 Namespace · cpc-2 / a, b · cpc-3 / Namespace 범위 미확인 · cpc-4 / 선택된 Namespace 없음',
-    );
+    ).toEqual([
+      { cluster: 'cpc-1', namespaces: '전체 Namespace' },
+      { cluster: 'cpc-2', namespaces: 'a, b' },
+      { cluster: 'cpc-3', namespaces: 'Namespace 범위 미확인' },
+      { cluster: 'cpc-4', namespaces: '선택된 Namespace 없음' },
+    ]);
   });
   it.each([
     ['2026-09-30T15:00:00Z', '2026-10-01T15:00:00Z', '2026. 10. 01.'],
