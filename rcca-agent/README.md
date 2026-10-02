@@ -1,5 +1,17 @@
 # rcca-agent
 
+## Runbook-first RCA — 2026-10-02
+
+신규 실행은 R01~R09, `purpose_ids`, R별 procedure/조회 허용 목록과 `purpose_plan`을 사용하지 않는다. Alert 단서 → 검토된 Runbook 검색·호환성 검사 → `observation_plan`의 필수 조회 → 근거 검사 → 최대 한 번 추가 조회 → Synthesis/보고 순서다. D 정의는 변경하지 않았다. 아래 이전 날짜의 R 기반 설명은 과거 동작 기록이다.
+
+- 신규 Incident 입력 1.5(기존 사건 revision 경로), 에피소드 입력 1.4, 기존 입력 1.3을 처리한다. 1.3의 목적 필드는 불변 snapshot 호환을 위해 읽지만 실행을 제어하지 않는다. Worker가 지원 계약을 명시해 구형 Worker에 새 입력을 배분하지 않는다.
+- Plan은 Runbook revision/hash/origin, 필수 근거, 조회 단계와 `unexpected_evidence`를 evidence에 고정한다. 조사별 assessment는 `assessment_id`, `question`, `runbook_revision_id`로 표시한다. 과거 `purpose_id` 결과와 snapshot/hash는 수정하지 않는다.
+- Runbook의 `required_evidence`와 실제 필수 조회 완료 여부를 검사한다. 미실행·빈 응답·부분·실패를 충분한 근거로 보지 않는다. GPU–Pod 신원/사건 시각·producer/freshness·조치 조건 검증은 유지한다. 조건 충족과 코드 매칭은 다른 단계다.
+- `unexpected_evidence`는 `on`(unknown_value/missing_evidence/conflicting_evidence/query_failed), `additional_queries`(등록 D 목록), `fallback`(general_runbook/stop)이다. 추가 조회를 우선하고 stop이면 그 뒤 미확정으로 종료한다. 실패 조회를 반복하지 않고 예산/deadline/취소를 준수한다. 없는 필드는 기존 revision 호환을 위해 추가 조회 없음·일반 조사 전환으로 해석한다.
+- 발행 일반 Runbook이 없으면 패키지의 `general_runbook.json`을 사용한다. 이 파일은 `runbooks/RB-GENERAL-GPU-NODE.json`의 content와 일치해야 한다. `origin=builtin` 조사 전용 템플릿이며 발행 지식·원인 판정·조치 허가로 취급하지 않는다. 일반 템플릿은 D09/D05와 부족 시 D02를 사용한다. 광범위한 D 수집 구조 재설계는 별도 작업이다.
+
+배포 순서는 JC의 007 migration·입력 지원 → 새 Worker → Incident/화면이다. 기존 backlog는 유지하며, 실제 배포와 Runbook DB 발행은 별도 승인 작업이다.
+
 ## Bounded synthesis context / 분석 입력 크기 제한 — 2026-10-01
 
 원본 메트릭 전체를 그대로 JSON 직렬화하면 `LLM.complete()`의 보수적 UTF-8 입력 예산을 초과해 HTTP 요청 전에 실패할 수 있다. 전체 `llm_usage.calls`에는 후속 조회 선택과 최종 보고서 편집도 포함되므로 값이 양수여도 원인 Synthesis 호출 성공을 뜻하지 않는다.

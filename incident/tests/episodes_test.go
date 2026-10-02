@@ -53,7 +53,7 @@ func TestIncidentEpisodes(t *testing.T) {
 			w.WriteHeader(422)
 			return
 		}
-		if body["contract_version"] == "1.3" {
+		if body["contract_version"] == "1.3" || body["contract_version"] == "1.5" {
 			b, _ := json.Marshal(body)
 			req.Body = io.NopCloser(bytes.NewReader(b))
 			r.jc.ServeHTTP(w, req)

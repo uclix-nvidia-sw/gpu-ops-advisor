@@ -13,11 +13,7 @@
   "analysis_policies": [
     {
       "alertname": "GPUAlert",
-      "revision": "gpu-alert-v1",
-      "purpose_ids": [
-        "R01",
-        "R02"
-      ],
+      "revision": "gpu-alert-runbook-v1",
       "evidence_labels": [
         "severity"
       ],

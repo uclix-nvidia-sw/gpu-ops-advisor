@@ -1,3 +1,7 @@
+## Runbook 예상 밖 근거 처리 — 2026-10-02
+
+Runbook content에 선택 필드 `unexpected_evidence`를 지원한다. `on`은 unknown_value/missing_evidence/conflicting_evidence/query_failed, `additional_queries`는 D 목록, `fallback`은 general_runbook/stop이다. Backend는 형식을 검사하고 Worker는 실행 profile의 등록 쿼리까지 검증한다. 기존 발행 revision/hash는 변경하지 않으며 콘텐츠 변경은 새 revision으로 검토·발행한다. 실행 의미는 [Runbook 개발 안내](../rcca-agent/runbooks/README.md)를 따른다.
+
 ## 자동 보고서 실행 요약 — 2026-10-02
 
 기존 읽기 API에 아래 필드를 추가한다. 일정 생성·전달·실행 정책, DB schema와 원본 저장 시각은 유지한다.

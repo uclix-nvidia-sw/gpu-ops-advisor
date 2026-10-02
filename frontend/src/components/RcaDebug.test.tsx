@@ -270,6 +270,30 @@ describe('RCA diagnostics', () => {
 });
 
 describe('Korean RCA report labels', () => {
+  it('renders runbook investigation questions without a purpose code', () => {
+    const html = render(
+      <RcaResult
+        showEvidence={false}
+        onEvidence={() => {}}
+        job={{
+          result_ref: 'published',
+          result: {
+            assessments: [
+              {
+                assessment_id: 'book-1',
+                question: '온도 이상 조사',
+                status: 'partial',
+                missing_inputs: ['observations'],
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    expect(html).toContain('조사별 판단');
+    expect(html).toContain('<h4>온도 이상 조사</h4>');
+    expect(html).not.toContain('R01');
+  });
   it('groups missing evidence and renders limitations once outside raw details', () => {
     const html = render(
       <RcaResult

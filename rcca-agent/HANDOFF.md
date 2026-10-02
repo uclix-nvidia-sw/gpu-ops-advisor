@@ -40,7 +40,7 @@
 
 | 내용 | 코드·검사 |
 |---|---|
-| Runbook 검색·조건·계획·충분성·종료 | [workflow.py](src/rcca_agent/workflow.py), [retrieval.py](src/rcca_agent/retrieval.py), [procedures.py](src/rcca_agent/procedures.py) |
+| Runbook 검색·조건·계획·충분성·종료 | [workflow.py](src/rcca_agent/workflow.py), [retrieval.py](src/rcca_agent/retrieval.py) |
 | query별 독립 관측 task, 사전 예산 배정, 실패 격리·취소 회수 | [observation_agents.py](src/rcca_agent/observation_agents.py), [병렬 테스트](../agents/tests/test_rca_parallel.py) |
 | 최종 LLM 해석·참조 검증, 계획 지침 전달 | [synthesis.py](src/rcca_agent/synthesis.py), [prompts.py](src/rcca_agent/prompts.py), [분석 테스트](../agents/tests/test_rca_analysis.py) |
 | reason/component·Xid/SXid·suggested_actions 단서 | [incident.py](src/rcca_agent/incident.py). 원문 보존, 검색 단서와 검증된 사실 분리, 권고 미수행 |

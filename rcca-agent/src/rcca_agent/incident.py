@@ -7,8 +7,14 @@ from .retrieval import XID
 
 def alert_clues(source):
     alert = source.get("alert", {})
-    labels, annotations = alert.get("labels", {}), alert.get("annotations", {})
     result = {"status": "unverified", "conflicts": []}
+    labels, annotations = {}, {}
+    for key, destination in (("labels", labels), ("annotations", annotations)):
+        value = alert.get(key, {})
+        if isinstance(value, dict):
+            destination.update(value)
+        else:
+            result["conflicts"].append(key)
     for key in (
         "component",
         "machine_id",

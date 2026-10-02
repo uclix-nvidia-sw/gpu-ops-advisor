@@ -253,13 +253,14 @@ func TestIncidentEndToEnd(t *testing.T) {
 			t.Fatal(reason)
 		}
 		// Exercise the real Worker protocol to ensure complete RCA input survives every boundary.
-		w := Object{"worker_id": ID(), "boot_id": ID(), "kind": "rca", "capacity_profile_id": "rca-v1"}
+		w := Object{"worker_id": ID(), "boot_id": ID(), "kind": "rca", "capacity_profile_id": "rca-v1", "supported_contract_versions": []string{"1.3", "1.4", "1.5"}}
 		call(t, r.queueURL, "POST", "/internal/v1/workers/register", w, 200)
 		delete(w, "capacity_profile_id")
+		delete(w, "supported_contract_versions")
 		cl := call(t, r.queueURL, "POST", "/internal/v1/claims", w, 200)
 		input := cl["input"].(map[string]any)
 		target := input["target"].(map[string]any)
-		if input["incident_id"] != id || input["incident_snapshot"] == nil || target["gpu_uuid"] != nil || input["analysis_profile_revision"] != "gpu-alert-v1" {
+		if input["incident_id"] != id || input["incident_snapshot"] == nil || target["gpu_uuid"] != nil || input["analysis_profile_revision"] != "gpu-alert-runbook-v1" || input["purpose_ids"] != nil {
 			t.Fatal("RCA snapshot mismatch", input)
 		}
 		call(t, r.queueURL, "POST", "/internal/v1/jobs/"+String(cl, "job_id")+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "insufficient_data", "retryable": false, "remote_call_state": "not_started"}, 200)

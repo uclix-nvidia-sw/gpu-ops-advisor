@@ -935,8 +935,8 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
             for h in result["device_observations"]
         )
         assert result["quality"]["analysis"]["status"] == "complete"
-        assert {"D05", "D09", "D02", "D08", "D06"} <= {q for q, _ in evidence}
-        assert "mapping_target_unverified" in result["missing_inputs"]
+        assert {"D05", "D09", "D02"} <= {q for q, _ in evidence}
+        assert "purpose_plan" not in {q for q, _ in evidence}
         assert result["narrative_status"] == "complete"
     else:
         assert all(
@@ -944,7 +944,11 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
             for row in result["device_observations"]
         )
     assert result["incident_id"] == item["incident_id"]
-    assert {a["purpose_id"] for a in result["assessments"]} == {"R01", "R02"}
+    assert result["assessments"] and all(
+        "purpose_id" not in a for a in result["assessments"]
+    )
+    assert "purpose_ids" not in snapshot["input"]
+    assert result["versions"]["input_contract"] == "1.5"
     assert ("incident_snapshot", "ok") in evidence
     assert any(query.startswith("D") for query, _ in evidence)
     # A published blocked result must not hide MCP rejecting fractional times.
@@ -1027,7 +1031,7 @@ def test_builtin_profile_without_datasource_configuration(stack):
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("llm_failed", [False, True])
-def test_rca_without_observations_publishes_final_report(
+def test_rca_without_published_runbook_collects_and_publishes_final_report(
     stack, monkeypatch, llm_failed
 ):
     monkeypatch.setattr(Upstream, "llm_fail", llm_failed)
@@ -1072,14 +1076,15 @@ def test_rca_without_observations_publishes_final_report(
     start = len(Upstream.requests)
     jid = submit(stack, "rca", data)
     result, evidence = worker_result(isolated, "rca", jid, "-final-report")
-    assert result["result_status"] == "blocked"
-    assert result["quality"]["analysis"]["status"] == "no_usable_evidence"
+    assert result["result_status"] == "partial"
+    assert "causal_confirmation_evidence" in result["missing_inputs"]
+    assert any(r["origin"] == "builtin" for r in result["runbook_revisions"])
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
     assert len(result["narrative"]) == 5
-    assert not any(q.startswith("D") for q, _ in evidence)
+    assert {"D09", "D05", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
-    assert "XID 79" in text and "원인은 미확정" in text
+    assert "XID 79" in text and "미확정" in text
     assert "실행 적격성 미검증" in text and "REBOOT_SYSTEM" in text
     with psycopg.connect(stack["url"]) as conn:
         saved = conn.execute(

@@ -1,5 +1,11 @@
 # Incident 모듈 · Go · 기본 접수 1.3 / 선택적 에피소드 접수 1.4
 
+## R 없는 기본 접수 — 2026-10-02
+
+기본 사건 revision 경로는 입력 계약 1.5를 사용한다. `purpose_ids`를 보내지 않으며 RCA가 Runbook으로 계획한다. 기존 알람 정책은 접수 대상·의미 증거와 revision을 정하는 데 사용한다. 기본 정책 revision은 `gpu-alert-runbook-v1`이다. 기존 설정의 `purpose_ids`는 읽기 호환만 유지하며 새 요청에는 전달하지 않는다. `episode_policy`의 1.4 생명주기는 그대로다. 아래 이전 R01/R02 설명은 1.3 과거 기록이다.
+
+새 JC·Worker를 먼저 배포해야 한다. 신규 1.5 요청은 구형 Worker에 배분되지 않는다. 기존 outbox·snapshot·hash는 재작성하지 않고 원래 계약으로 전송한다. 정책 revision 변경은 새 분석을 유발할 수 있으므로 배포 시 기존 사건·backlog를 확인한다. 이번 작업은 로컬 코드이며 운영 설정·DB를 변경하지 않는다.
+
 ## 분석 구간 밀리초 경계 (2026-10-01)
 
 새 RCA 입력 `time_range`의 시작은 밀리초 올림, 끝은 밀리초 내림으로 저장한다. `incident_time`과 `received_at`은 원래 정밀도를 유지한다. Grafana MCP는 밀리초 RFC3339만 받으므로 수신 시각 `now`의 마이크로초가 끝 경계에 남으면 Loki 조회(D05·D09)가 매번 꼬리 1ms 미만을 잃고 `time_precision_reduced`/partial이 되어 RCA 충분성이 `degraded`로 떨어졌다(운영 작업 `ed730b4d`: 끝 `02:29:46.513252Z` → 요청 `.513Z`). 안쪽으로만 반올림하므로 승인 구간을 넓히지 않는다. 기존 snapshot/hash는 재작성하지 않고 새 사건부터 적용한다. DB migration 없음.

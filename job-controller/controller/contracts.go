@@ -3,7 +3,7 @@ package controller
 import . "gpu-ops-advisor/shared/contract"
 
 func supportedContract(kind, version string) bool {
-	return (kind == "rca" || kind == "report") && (version == "1.3" || kind == "rca" && version == "1.4")
+	return (kind == "rca" || kind == "report") && (version == "1.3" || kind == "rca" && (version == "1.4" || version == "1.5"))
 }
 
 // Only absence is legacy; explicit null, empty and unknown versions are errors.

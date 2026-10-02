@@ -1,3 +1,14 @@
+# 2026-10-02 Runbook-first RCA / R 실행 의존 제거
+
+- **PR 준비 재검증 통과:** 최신 `main` **5f52fe5**를 반영하고 문서 2곳의 양쪽 변경을 보존했다. Python **324 passed, 0 skipped**(123.49초), Frontend **118 passed**·format/build, 4개 Go 모듈 vet/race/build, Backend·Incident DB/E2E, Ruff·문서 링크·diff 검사 통과. Windows 로컬 pytest 실행에는 실제 Worker와 같은 `WindowsSelectorEventLoopPolicy`를 적용했다. 아래 315/101건은 main 반영 전 최초 검증 기록이다.
+- **통과:** Python 3.12.14 전체 Agent 검사 **315 passed, 0 skipped**(121.74초). 저장소 루트에서 `RUN_AGENT_E2E=1`과 현재 소스 JC/Incident/Backend 바이너리, 격리 로컬 PostgreSQL, 공식 Grafana MCP, Helm을 지정해 `python -m pytest -c agents/pytest.ini agents/tests -q --tb=short`를 실행했다. Grafana·LLM 응답은 HTTP fixture이며 운영 DB는 사용하지 않았다.
+- **통과:** R 없는 신규 1.5 입력 → Incident outbox → JC → RCA Worker → 결과 발행, 기존 1.3 입력·불변 snapshot 호환, 1.4/1.5 입력 검증, Runbook 계획의 D04 선택, 미등록 값·실패·stop·일반 조사 전환, 미일치·비호환 Runbook의 패키지 fallback, 원인 미확정·추가 근거 유지. 기존 R 목적에 따라 강제하던 GPU–Pod 조회는 이제 해당 Runbook의 필수 계획으로 검증한다.
+- **통과:** `shared`, `backend`, `job-controller`, `incident` 각각 `go vet ./...`, `go test -race ./...`, `go build ./...`. Windows 경로의 대괄호와 Go embed 제약 때문에 동일 소스를 임시 경로에 복사해 검사했다. Backend·Incident에서 격리 DB와 실제 Backend 바이너리를 지정한 `go test -tags=e2e ./tests -v -count=1 -timeout=10m`도 통과했다. 006의 기존 Worker 행/제약 → 007 업그레이드, 반복 시작, 1.5 허용·미지원 버전 거부를 포함한다.
+- **통과:** `frontend`에서 `npm test` **101 passed**, `npm run build`. 신규 조사 질문 표시와 과거 purpose_id 결과 표시를 함께 검사했다. 루트 Ruff check/format, 문서 링크, `python tools/ci/check_chart.py`, `python -m unittest discover -s tools/ci/tests -v` **5 passed**도 통과했다. 처음의 도구 경로 오류는 설치된 Git Bash·Helm 경로를 명시해 해결했다.
+- **미검증:** 원격 CI·운영 배포·실제 Grafana/LLM의 분석 품질. 완료 단계는 로컬 파일이며 commit/push/배포·Runbook DB 발행은 수행하지 않았다. 적용 순서는 JC → RCA Worker → Incident/화면이다. D 구조 확대는 이번 범위에서 제외했다.
+
+---
+
 # 2026-10-02 대량 저장 중 heartbeat·lease 보호 — 로컬 검수
 
 - 기준: 새로 fetch한 `origin/main` **5ddfe21**, 로컬 브랜치 `fix/worker-save-heartbeat`. 공통 Store/Worker와 JC 행 잠금만 수정하며 Worker별 분석·관측 계획·해시 규칙·스키마·lease/슬롯 설정은 유지한다.

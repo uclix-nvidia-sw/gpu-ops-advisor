@@ -1,5 +1,11 @@
 # 내부 API 계약 구현
 
+## RCA 1.5 Runbook-first input — 2026-10-02
+
+RCA 1.5는 기존 revision/source-key 생명주기를 유지하면서 `purpose_ids`를 금지한다. 입력은 `scope, incident_id, evidence_version, analysis_profile_revision, incident_time, time_range`와 선택 `target`이다. `evidence_version >= 1`이며 기존 불변 snapshot/hash 일치 검증을 적용한다. 1.3은 과거 요청 호환, 1.4는 최초 에피소드 전용 계약을 그대로 유지한다. 보고서 계약은 1.3이다.
+
+Worker는 지원하는 `supported_contract_versions`를 등록한다. 새 RCA Worker는 1.3/1.4/1.5, 보고서 Worker는 1.3이다. JC는 입력 계약과 Worker 지원을 맞추고 결과의 `versions.input_contract`도 검증한다. 요청에 목적을 주입하지 않는다.
+
 접두사 `/internal/v1`, JSON body, 응답 `request_id`, 오류 `{error:{code,message,details,retryable}}`. 인증/토큰 검증은 추가하지 않았습니다. source_module/worker_id는 업무 타입 식별자입니다. 변경 요청 body는 알려진 필드만 허용합니다.
 
 | 경로 | 용도 |

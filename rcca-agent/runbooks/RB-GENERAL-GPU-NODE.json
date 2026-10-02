@@ -81,10 +81,23 @@
     "analysis_guidance": [
       "원본 알람은 검색 단서로만 사용하고 같은 대상·기간의 수집 근거와 대조한다.",
       "검증된 producer 상태와 로그에서 증상·반박·미확인 항목을 구분한다. 알 수 없는 상태를 정상으로 바꾸지 않는다.",
-      "보조 사용률만으로 원인·작업 중단·복구를 확정하지 않는다. 필요한 신원·버전·추가 증거를 명시한다."
+      "보조 사용률만으로 원인·작업 중단·복구를 확정하지 않는다. 필요한 신원·버전·추가 증거를 명시한다.",
+      "미등록 코드·상태·예상 밖 값은 원문 근거와 부족 사유로 보존한다. 추가 조회 후에도 확인되지 않으면 원인·복구를 미확정으로 남긴다."
     ],
     "recommendations": [],
     "applicability_conditions": [],
-    "investigation_only": true
+    "investigation_only": true,
+    "unexpected_evidence": {
+      "on": [
+        "unknown_value",
+        "missing_evidence",
+        "conflicting_evidence",
+        "query_failed"
+      ],
+      "additional_queries": [
+        "D02"
+      ],
+      "fallback": "stop"
+    }
   }
 }

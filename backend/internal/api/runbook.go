@@ -29,7 +29,7 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if c["schema"] != "gpu-rca-runbook/1.0" {
 		return Invalid("runbook.schema")
 	}
-	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "limitations", "investigation_only"); err != nil {
+	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "limitations", "investigation_only", "unexpected_evidence"); err != nil {
 		return err
 	}
 	for _, key := range []string{"title", "description", "claim"} {
@@ -130,6 +130,27 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 		}
 		if _, err := time.Parse("2006-01-02", s["checked_at"].(string)); err != nil {
 			return Invalid("runbook.sources.checked_at")
+		}
+	}
+	if raw, exists := c["unexpected_evidence"]; exists {
+		policy, ok := raw.(map[string]any)
+		if !ok || len(policy) != 3 || only(policy, "on", "additional_queries", "fallback") != nil {
+			return Invalid("runbook.unexpected_evidence")
+		}
+		events, valid := runbookStrings(policy["on"])
+		if !valid || len(events) == 0 {
+			return Invalid("runbook.unexpected_evidence.on")
+		}
+		for _, event := range events {
+			if !Has([]string{"unknown_value", "missing_evidence", "conflicting_evidence", "query_failed"}, event) {
+				return Invalid("runbook.unexpected_evidence.on")
+			}
+		}
+		if _, valid := runbookStrings(policy["additional_queries"]); !valid {
+			return Invalid("runbook.unexpected_evidence.additional_queries")
+		}
+		if !Has([]string{"general_runbook", "stop"}, String(policy, "fallback")) {
+			return Invalid("runbook.unexpected_evidence.fallback")
 		}
 	}
 	queries := []string{}

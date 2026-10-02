@@ -1,5 +1,11 @@
 # 11. RCA Agent 모듈 설계서
 
+## 현행 변경: R 제거·Runbook-first — 2026-10-02
+
+이 절은 아래 R01~R09·purpose_plan·procedure 제한·일반 Runbook 부재 시 조회 중단에 관한 이전 실행 설명을 대체한다. 신규 RCA는 목적 코드 없이 Runbook의 observation_plan/required_evidence로 계획·검증한다. 적용할 발행본이 없으면 조사 전용 패키지 일반 템플릿으로 진행한다. 입력 1.3은 읽기 호환이며 1.4/1.5는 purpose_ids를 금지한다. 신규 결과는 Runbook 질문별 assessments를 사용한다.
+
+예상 밖 값·근거 부족·상충·조회 실패는 Runbook의 unexpected_evidence 정책으로 등록 D 추가 조회/일반 조사/중단을 결정한다. 한 번의 추가 라운드와 기존 제한을 유지하며 미검증 근거를 정상·원인·회복으로 승격하지 않는다. D 범위 재설계는 포함하지 않는다. 상세 계약과 검증 범위는 [RCA README](../../../rcca-agent/README.md), [Runbook 작성](../../../rcca-agent/runbooks/README.md), [QA](../../../agents/QA.md)를 따른다.
+
 ## 2026-09-30 수집 계약 보완
 
 현재 구현은 [RCA README](../../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)를 따른다. 밀리초 정밀도 축소만 있는 로그는 원본 기간 `complete=false`를 유지하면서 실제 `request_time_range` 안의 관측만 `observation_usable=true`로 사용할 수 있다. `degraded`는 예산 내 미실행 독립 query의 후속 실행을 막지 않는다. Fleet adapter의 query `health_contract` binding, 로그 기록 시각, 기본 `fact_eligible=false`와 별도 freshness 검증을 구분한다. R02/R03는 GPU UUID/Pod UID 없이 같은 노드 관계를 직접 GPU 사용자로 승격하지 않는다.
@@ -300,7 +306,7 @@ Runbook과 로그 분석은 결합할 수 있다. Runbook 적용 조건을 확�
 
 기본 procedure는 GPU 접근 이상, GPU 사건과 Pod, 작업 진행 이상, 다중 장치 사건의 네 가지를 제공한다. 각 procedure는 `procedure_id/version, accepted_symptoms, required/optional_queries, allowed_next_steps, stop_conditions, limits`를 가진 등록 함수다. 범용 YAML 해석 엔진을 만들지 않는다.
 
-현재 [procedures.py](../../../rcca-agent/src/rcca_agent/procedures.py)의 등록값은 다음과 같다. 모두 version 1.1이며 required와 optional의 합집합이 각 procedure의 allowlist다.
+현재 `procedures.py`(R 기반 경로 제거됨)의 등록값은 다음과 같다. 모두 version 1.1이며 required와 optional의 합집합이 각 procedure의 allowlist다.
 
 | procedure_id | 기본 required queries | optional queries |
 |---|---|---|

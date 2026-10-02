@@ -18,4 +18,4 @@ rcca_agent = "rcca_agent.nat_workflow"
 where = ["src"]
 
 [tool.setuptools.package-data]
-rcca_agent = ["report_labels.json"]
+rcca_agent = ["report_labels.json", "general_runbook.json"]

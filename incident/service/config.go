@@ -15,7 +15,7 @@ import (
 type Policy struct {
 	AlertName           string   `json:"alertname"`
 	Revision            string   `json:"revision"`
-	PurposeIDs          []string `json:"purpose_ids"`
+	PurposeIDs          []string `json:"purpose_ids,omitempty"`
 	EvidenceLabels      []string `json:"evidence_labels"`
 	EvidenceAnnotations []string `json:"evidence_annotations"`
 }
@@ -36,7 +36,7 @@ type Config struct {
 	JCURL             string         `json:"job_controller_url"`
 }
 
-// A nil policy keeps the deployed 1.3 producer until its consumers are upgraded.
+// A nil policy uses revision-based RCA input 1.5; episodes use input 1.4.
 type EpisodePolicy struct {
 	Revision                   string `json:"revision"`
 	RepeatIntervalSeconds      int    `json:"repeat_interval_seconds"`
@@ -48,11 +48,11 @@ func (c Config) inputContract() string {
 	if c.Episodes != nil {
 		return "1.4"
 	}
-	return "1.3"
+	return "1.5"
 }
 
 func DefaultConfig() Config {
-	return Config{Source: "local-grafana", ClusterLabel: "cluster_id", MaxBodyBytes: 1024 * 1024, MaxAlerts: 200, MaxAgeSeconds: 86400, FutureSeconds: 300, BeforeSeconds: 1800, AfterSeconds: 300, DispatchSeconds: 86400, DeadlineSeconds: 172800, ExecutionRevision: "local-v1", Policies: []Policy{{AlertName: "GPUAlert", Revision: "gpu-alert-v1", PurposeIDs: []string{"R01", "R02"}, EvidenceLabels: []string{"severity"}, EvidenceAnnotations: []string{"error_code"}}}, JCURL: "http://127.0.0.1:8090"}
+	return Config{Source: "local-grafana", ClusterLabel: "cluster_id", MaxBodyBytes: 1024 * 1024, MaxAlerts: 200, MaxAgeSeconds: 86400, FutureSeconds: 300, BeforeSeconds: 1800, AfterSeconds: 300, DispatchSeconds: 86400, DeadlineSeconds: 172800, ExecutionRevision: "local-v1", Policies: []Policy{{AlertName: "GPUAlert", Revision: "gpu-alert-runbook-v1", EvidenceLabels: []string{"severity"}, EvidenceAnnotations: []string{"error_code"}}}, JCURL: "http://127.0.0.1:8090"}
 }
 func (c Config) Validate() error {
 	if p := c.Episodes; p != nil {
@@ -69,7 +69,7 @@ func (c Config) Validate() error {
 	}
 	names, revisions := map[string]bool{}, map[string]bool{}
 	for _, p := range c.Policies {
-		if p.AlertName == "" || p.Revision == "" || len(p.Revision) > 100 || names[p.AlertName] || revisions[p.Revision] || len(p.PurposeIDs) == 0 {
+		if p.AlertName == "" || p.Revision == "" || len(p.Revision) > 100 || names[p.AlertName] || revisions[p.Revision] {
 			return errors.New("unique alertname/profile revision required")
 		}
 		names[p.AlertName] = true

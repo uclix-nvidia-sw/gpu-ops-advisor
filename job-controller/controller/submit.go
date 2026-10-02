@@ -107,13 +107,15 @@ func normalizeRCA(input Object, version string) error {
 	keys := []string{"scope", "incident_id", "evidence_version", "target", "incident_time", "time_range"}
 	if version == "1.3" {
 		keys = append(keys, "analysis_profile_revision", "purpose_ids")
+	} else if version == "1.5" {
+		keys = append(keys, "analysis_profile_revision")
 	} else {
 		keys = append(keys, "prior_incident_id")
 	}
 	if e := only(input, keys...); e != nil {
 		return e
 	}
-	if !uuid(String(input, "incident_id")) || !integer(input, "evidence_version") || version == "1.3" && String(input, "analysis_profile_revision") == "" {
+	if !uuid(String(input, "incident_id")) || !integer(input, "evidence_version") || (version == "1.3" || version == "1.5") && String(input, "analysis_profile_revision") == "" {
 		return Invalid("incident_snapshot")
 	}
 	if e := TimeRange(input["time_range"], 366*24*time.Hour); e != nil {
@@ -136,6 +138,12 @@ func normalizeRCA(input Object, version string) error {
 		}
 		if _, exists := input["prior_incident_id"]; exists && (!uuid(String(input, "prior_incident_id")) || input["prior_incident_id"] == input["incident_id"]) {
 			return Invalid("prior_incident_id")
+		}
+		return nil
+	}
+	if version == "1.5" {
+		if Number(input, "evidence_version") < 1 {
+			return Invalid("evidence_version")
 		}
 		return nil
 	}

@@ -41,7 +41,6 @@ def synthesis_input(data, evidence, health, relations, applicable, planned=()):
         "incident_time": data["incident_time"],
         "scope": data["scope"],
         "target": data.get("target", {}),
-        "purpose_ids": data["purpose_ids"],
         "device_observations": observations,
         "pod_relations": relations,
         "metric_observations": metrics,

@@ -112,11 +112,7 @@ class Store:
                         if (str(r["knowledge_id"]), r["revision"], r["content_hash"])
                         in pinned
                     ]
-                if claim["kind"] == "report" or set(data.get("purpose_ids", [])) & {
-                    "R06",
-                    "R07",
-                    "R09",
-                }:
+                if claim["kind"] in {"report", "rca"}:
                     # Exact supplied scope, absolute period, one repeatable-read snapshot.
                     rows = await (
                         await conn.execute(

@@ -24,7 +24,13 @@ func TestRCAContractNormalization(t *testing.T) {
 		{"snapshot_revision", "1.4", func(b Object) { b["snapshot_ref"].(Object)["revision"] = 2 }, false},
 		{"prior", "1.4", func(b Object) { b["input"].(Object)["prior_incident_id"] = ID() }, true},
 		{"self_prior", "1.4", func(b Object) { b["input"].(Object)["prior_incident_id"] = b["input"].(Object)["incident_id"] }, false},
-		{"unknown", "1.5", func(Object) {}, false},
+		{"runbook", "1.5", func(b Object) { b["input"].(Object)["analysis_profile_revision"] = "runbook-v1" }, true},
+		{"runbook_purposes_forbidden", "1.5", func(b Object) {
+			b["input"].(Object)["analysis_profile_revision"] = "runbook-v1"
+			b["input"].(Object)["purpose_ids"] = []string{"R01"}
+		}, false},
+		{"runbook_revision_required", "1.5", func(Object) {}, false},
+		{"unknown", "1.6", func(Object) {}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			id := ID()

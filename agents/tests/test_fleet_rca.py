@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from agent_common.contracts import timestamp, validate_result
+from agent_common.contracts import content_hash, timestamp, validate_result
 from agent_common.observation import usable_observation
 from agent_common.parsers import parse_health, health_facts
 from agent_common.runtime import attempt_context
@@ -244,6 +244,26 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
             )
             return analysis_reply(payload["observation_refs"])
 
+    book = general_runbook()
+    book["content"]["required_evidence"].append("incident_mapping")
+    for q in ("D08", "D06"):
+        book["content"]["required_queries"].append(q)
+        book["content"]["observation_plan"].append(
+            dict(
+                query_id=q,
+                priority=4,
+                required=True,
+                fact_names=["incident_mapping"],
+                purpose="Verify incident mapping",
+                binding="execution_profile",
+                time_range="incident",
+                freshness="query_contract",
+            )
+        )
+    book.update(
+        content_hash=content_hash(book["content"]),
+        reviewed_content_hash=content_hash(book["content"]),
+    )
     token = attempt_context.set(
         dict(
             claim={
@@ -255,7 +275,7 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
             profile=p,
             context={
                 "data_cutoff_at": PERIOD["end"],
-                "runbooks": [general_runbook()],
+                "runbooks": [book],
                 "incidents": [],
             },
             deadline=time.monotonic() + 30,
