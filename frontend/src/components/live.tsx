@@ -483,7 +483,7 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
     </Modal>
   );
 }
-export function JobRows({ items, preferResult = false }: { items: Row[]; preferResult?: boolean }) {
+export function JobRows({ items }: { items: Row[] }) {
   const location = useLocation();
   const reportsOnly = location.pathname === '/reports';
   const from = location.pathname + location.search;
@@ -510,7 +510,7 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                     className="text-link"
                     state={{ from }}
                     to={
-                      (preferResult || j.kind === 'report') && j.result_ref != null
+                      j.kind === 'report' || j.result_ref != null
                         ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
                         : `/jobs/${str(j.id)}`
                     }
@@ -577,8 +577,13 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                       최종 보고서 보기
                     </Link>
                   ) : (
-                    '미발행'
+                    '결과 미발행'
                   )}
+                  <div>
+                    <Link className="text-link" state={{ from }} to={`/jobs/${str(j.id)}`}>
+                      작업 상태·시도 이력
+                    </Link>
+                  </div>
                 </td>
               )}
             </tr>
@@ -618,7 +623,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
         <Link
           className="text-link report-history-title"
           state={{ from, reportList: from, reportRow: str(job.id) }}
-          to={str(job.result_ref) ? `/reports/${str(job.id)}#final-report` : `/jobs/${str(job.id)}`}
+          to={`/reports/${str(job.id)}#final-report`}
         >
           {reportTitle(job)}
         </Link>
@@ -664,6 +669,11 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
             </Link>
           </div>
         ))}
+      {str(job.result_ref) && (
+        <Link className="text-link" to={`/jobs/${str(job.id)}`} state={{ from }}>
+          작업 상태·시도 이력
+        </Link>
+      )}
       <details className="report-history-details">
         <summary>세부 주제 · 전체 작업 ID</summary>
         <p>{reportTopics(job)}</p>

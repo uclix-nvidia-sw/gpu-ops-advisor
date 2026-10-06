@@ -32,7 +32,7 @@ export function DeveloperContext() {
             : pathname === '/reports'
               ? [
                   '보고서 결과 추적',
-                  '보고서를 선택하면 입력 → DB 스냅샷 → 관측 → 결정적 계산 → 설명 → 공개 순서로 확인할 데이터를 안내합니다. 실행 status와 result_status·narrative_status는 별개입니다.',
+                  '발행된 보고서 제목은 분석 본문을 엽니다. 입력 → 관측 → 계산 → 공개 기록은 별도 작업 상태·시도 이력에서 확인하세요. 실행 status와 result_status·narrative_status는 별개입니다.',
                 ]
               : pathname === '/cases'
                 ? [

@@ -140,7 +140,7 @@ const listMarkup = (items: Row[]) =>
       <JobHistoryTable items={items} />
     </MemoryRouter>,
   );
-it('keeps history titles linked to jobs while publication only controls the separate result link', () => {
+it('opens published results from titles and keeps explicit job links', () => {
   const items = [
     {
       ...fixture.job,
@@ -171,12 +171,12 @@ it('keeps history titles linked to jobs while publication only controls the sepa
     },
   ];
   const html = listMarkup(items);
-  expect(html).toMatch(/class="text-link jobs-title" href="\/jobs\/complete"/);
+  expect(html).toMatch(/class="text-link jobs-title" href="\/reports\/complete#final-report"/);
   expect(html).toContain('href="/jobs/pending"');
   expect(html).toContain('href="/jobs/rca1"');
   expect(html).toContain('href="/reports/complete#final-report"');
   expect(html).toContain('href="/analyses/rca1#final-report"');
-  expect(html).not.toContain('href="/reports/pending');
+  expect(html).toContain('class="text-link jobs-title" href="/reports/pending#final-report"');
   expect(html).toContain('클러스터 2개 · 전체 Namespace');
   expect(html).toContain(
     '<details class="jobs-request-details"><summary>대상·요청 조건 보기</summary>',

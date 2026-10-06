@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Badge, Field, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, EvidenceDialog, More, QueryState } from '../components/live';
 import {
@@ -24,13 +24,13 @@ import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
 import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
-import { debugPath, returnPath } from '../lib/debug';
+import { returnPath } from '../lib/debug';
 export function ResultPage({ kind }: { kind: string }) {
-  const { hash, state, search } = useLocation();
+  const { hash, state } = useLocation();
   const { id } = useParams(),
     app = useApp(),
     q = useResource(
-      id && !(app.mode === 'developer' && kind !== 'incident')
+      id
         ? `/${kind === 'analysis' ? 'analyses' : kind === 'report' ? 'reports' : 'incidents'}/${id}`
         : null,
       undefined,
@@ -49,22 +49,6 @@ export function ResultPage({ kind }: { kind: string }) {
     );
     return () => cancelAnimationFrame(frame);
   }, [hash, q.data?.result_ref]);
-  if (app.mode === 'developer' && kind !== 'incident' && id) {
-    return (
-      <Navigate
-        state={state}
-        replace
-        to={debugPath(
-          id,
-          'result',
-          returnPath(
-            new URLSearchParams(search).get('from') || state?.from,
-            kind === 'report' ? reportReturnPath(state) : '/cases',
-          ),
-        )}
-      />
-    );
-  }
   return (
     <div className={kind === 'report' ? 'page report-workspace' : 'page'}>
       <PageHead
@@ -76,7 +60,7 @@ export function ResultPage({ kind }: { kind: string }) {
         actions={
           <>
             {kind === 'report' && r.result_ref != null && <ReportExports id={id!} />}
-            {kind === 'report' && (
+            {kind !== 'incident' && (
               <Link className="button" to={`/jobs/${id}`} state={state}>
                 작업 상태·시도 이력
               </Link>
@@ -103,7 +87,16 @@ export function ResultPage({ kind }: { kind: string }) {
             </p>
           </Notice>
         )}
-        <Panel title={str(r.title, kind === 'incident' ? '사건 관측' : '저장된 결과')}>
+        <Panel
+          title={str(
+            r.title,
+            kind === 'incident'
+              ? '사건 관측'
+              : kind === 'report' && r.result_ref == null
+                ? '보고서 작성 현황'
+                : '저장된 결과',
+          )}
+        >
           <div className="live-padding stack">
             <div className="head-actions">
               {kind === 'report' && <ReportOrigin value={r.report_origin} />}

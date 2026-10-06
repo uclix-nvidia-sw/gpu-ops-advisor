@@ -3,7 +3,7 @@ import { topicDisplayBases } from '../lib/reportKinds';
 import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { obj, rows, str, strings } from '../lib/live';
-import { formatDate } from '../lib/domain';
+import { formatDate, labels } from '../lib/domain';
 import {
   collectionStatus,
   collectionNextCheck,
@@ -21,7 +21,7 @@ import {
 } from '../lib/report';
 import { Badge, Notice } from './ui';
 import { DataView } from './live';
-import { reportMetrics } from '../lib/workflow';
+import { reportMetrics, reportTopics } from '../lib/workflow';
 import { type Row } from '../lib/live';
 
 export function ReportContent({
@@ -38,7 +38,56 @@ export function ReportContent({
     topics = rows(result.topics),
     observations = reportObservations(result);
   if (!Object.keys(result).length)
-    return <p>아직 발행된 보고서가 없습니다. 작업 상태를 확인하세요.</p>;
+    return (
+      <section className="result-section" id="final-report" aria-label="운영 보고서 작성 현황">
+        <h3>아직 발행된 보고서가 없습니다</h3>
+        <p>요청한 분석 조건과 현재 상태입니다. 분석 결과는 발행된 뒤 이 화면에 표시됩니다.</p>
+        <dl className="report-summary-meta">
+          <div>
+            <dt>실행 상태</dt>
+            <dd>
+              <Badge status={str(obj(request).status) || 'unknown'} />
+            </dd>
+          </div>
+          <div>
+            <dt>요청 접수 시각</dt>
+            <dd>{reportRequestTime(str(obj(request).created_at))}</dd>
+          </div>
+          <div>
+            <dt>분석 대상 기간</dt>
+            <dd>
+              <ReportPeriod value={obj(request).time_range} />
+            </dd>
+          </div>
+          <div>
+            <dt>분석 대상</dt>
+            <dd>
+              <ReportScope job={obj(request)} />
+            </dd>
+          </div>
+          <div>
+            <dt>요청한 분석 주제</dt>
+            <dd>{reportTopics(obj(request))}</dd>
+          </div>
+          {str(obj(request).queue_reason) && (
+            <div>
+              <dt>대기 사유</dt>
+              <dd>{labels[str(obj(request).queue_reason)] || str(obj(request).queue_reason)}</dd>
+            </div>
+          )}
+          {str(obj(request).termination_reason) && (
+            <div>
+              <dt>최근 종료 사유</dt>
+              <dd>
+                {labels[str(obj(request).termination_reason)] ||
+                  str(obj(request).termination_reason)}
+              </dd>
+            </div>
+          )}
+        </dl>
+        <p>실행·재시도 기록은 별도 작업 상태·시도 이력에서 확인할 수 있습니다.</p>
+      </section>
+    );
   const metrics = reportMetrics(result);
   const topicCounts = {
     ready: topics.filter((topic) => topic.status === 'ready').length,
