@@ -111,6 +111,16 @@ async def write_report(result, llm):
                     [r["evidence_id"] for r in task["ranges"]],
                 )
     for topic in result["topics"]:
+        for omitted in topic.get("quality", {}).get("omitted_queries", []):
+            if omitted.get("reason") == "no_stored_incidents_in_period":
+                add(
+                    "scope",
+                    f"{topic['topic_id']}: 해당 대상·기간의 저장된 사건이 0건이므로 "
+                    f"{omitted['query_id']} 작업 로그를 이 주제의 수집 대상에서 제외했습니다. "
+                    "다른 주제에 필요하면 조회를 유지합니다. "
+                    "등록되지 않은 장애가 없었다는 뜻은 아닙니다.",
+                    omitted.get("evidence_refs", []),
+                )
         for metric in topic["metrics"]:
             if metric["value"] is not None:
                 add(

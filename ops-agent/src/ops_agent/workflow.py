@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 PLAN = {
-    "O01": ("D01", "D03", "D04", "D06"),
+    "O01": ("D01", "D03", "D04"),
     "O02": ("D08", "D01", "D06", "D10"),
     "O03": ("D08", "D06", "D02", "D10"),
     "O04": ("D08", "D06", "D02"),
@@ -79,7 +79,10 @@ def add(
         topic["missing_inputs"].append(reason)
 
 
-def query_ids(topic_id, criteria_version=None):
+def query_ids(topic_id, criteria_version=None, *, context=None):
+    # Only an explicitly empty, successfully pinned DB snapshot permits omission.
+    if topic_id == "O06" and context is not None and context.get("incidents") == []:
+        return ("D08", "D06")
     return (
         ("D01", "D02", "D06", "D08")
         if topic_id == "O08" and criteria_version == "1.2"
@@ -116,7 +119,9 @@ def calculate(
         else {}
     )
     all_refs = [
-        e for q in query_ids(topic_id, criteria_version) for e in collected.get(q, [])
+        e
+        for q in query_ids(topic_id, criteria_version, context=context)
+        for e in collected.get(q, [])
     ]
     topic["evidence_refs"] = refs(all_refs)
     topic["quality"]["observations"] = [
@@ -595,6 +600,14 @@ def calculate(
             for r in context["rca_results"]
         ]
     elif topic_id == "O06":
+        if "D13" not in query_ids(topic_id, criteria_version, context=context):
+            topic["quality"]["omitted_queries"] = [
+                dict(
+                    query_id="D13",
+                    reason="no_stored_incidents_in_period",
+                    evidence_refs=[db_evidence["id"]],
+                )
+            ]
         relations = []
         for incident in context["incidents"]:
             at = timestamp(incident["occurred_at"])
@@ -790,7 +803,9 @@ async def run(tools):
     )
     criteria_version = claim["versions"].get("criteria")
     queries = {
-        q for topic in data["topic_ids"] for q in query_ids(topic, criteria_version)
+        q
+        for topic in data["topic_ids"]
+        for q in query_ids(topic, criteria_version, context=ctx["context"])
     }
     priority = (
         ("D01", "D02", "D06", "D08")
