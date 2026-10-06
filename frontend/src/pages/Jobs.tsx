@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
-import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
+import { AlarmIdentity, CommandError, DataView, More, QueryState } from '../components/live';
 import {
   num,
   queryPath,
@@ -27,7 +27,7 @@ import { useApp } from '../lib/store';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { obj } from '../lib/live';
 import { groupLabel, topicName } from '../lib/report';
-import { reportTitle } from '../lib/workflow';
+import { reportScopeClusters, reportTitle, reportTopics } from '../lib/workflow';
 import { JobDebug } from '../components/JobDebug';
 import { debugPath, returnPath } from '../lib/debug';
 export function Jobs() {
@@ -50,11 +50,11 @@ export function Jobs() {
     true,
   );
   return (
-    <div className="page">
+    <div className="page jobs-workspace">
       <PageHead
-        eyebrow="JOB HISTORY"
+        eyebrow=""
         title={app.mode === 'developer' ? '작업 디버깅' : '작업 이력'}
-        description="서버에 접수된 작업의 실행 상태와 결과 품질을 확인합니다."
+        description="작업의 진행 상태와 결과 품질을 확인하세요. 제목을 누르면 시도 이력과 상세 기록을 볼 수 있습니다."
       />
       {app.mode === 'developer' && (
         <form
@@ -78,7 +78,10 @@ export function Jobs() {
           </button>
         </form>
       )}
-      <Panel title="전체 작업">
+      <Panel
+        title={kind || status ? '조건에 맞는 작업' : '전체 작업'}
+        description="실행 상태는 처리 진행 상황, 결과 품질은 분석 근거의 충족 정도입니다."
+      >
         <div className="live-toolbar">
           <Field label="작업 종류">
             <select value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -99,19 +102,170 @@ export function Jobs() {
                 'cancelled',
                 'expired',
               ].map((v) => (
-                <option key={v}>{v}</option>
+                <option key={v} value={v}>
+                  {labels[v] || v}
+                </option>
               ))}
             </select>
           </Field>
+          {(kind || status) && (
+            <button
+              className="button"
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.delete('kind');
+                next.delete('status');
+                setParams(next);
+              }}
+            >
+              필터 초기화
+            </button>
+          )}
         </div>
-        <QueryState query={q} empty={!q.items.length}>
-          <JobRows items={q.items} />
+        {!q.isPending && !q.isError && (
+          <div className="jobs-list-summary">
+            <span>
+              현재 표시 {q.items.length}건{q.hasNextPage ? ' · 아래에서 더 보기' : ''}
+            </span>
+            {q.dataUpdatedAt > 0 && (
+              <span>마지막 조회 {reportRequestTime(new Date(q.dataUpdatedAt).toISOString())}</span>
+            )}
+          </div>
+        )}
+        <QueryState
+          query={q}
+          empty={!q.items.length}
+          emptyTitle="조건에 맞는 작업이 없습니다."
+          emptyDescription="선택한 클러스터와 작업 종류·실행 상태를 확인하세요. 필터를 적용했다면 초기화할 수 있습니다."
+        >
+          <JobHistoryTable items={q.items} />
         </QueryState>
         <More query={q} />
       </Panel>
     </div>
   );
 }
+export function JobHistoryTable({ items }: { items: Row[] }) {
+  const location = useLocation();
+  const from = location.pathname + location.search;
+  return (
+    <div className="table-wrap jobs-table-wrap">
+      <table className="jobs-history-table">
+        <caption className="sr-only">작업별 실행 상태, 결과 품질과 접수 시각</caption>
+        <colgroup>
+          <col className="jobs-title-col" />
+          <col />
+          <col />
+          <col className="jobs-time-col" />
+          <col className="jobs-action-col" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">작업 · 대상</th>
+            <th scope="col">실행 상태</th>
+            <th scope="col">결과 품질</th>
+            <th scope="col">접수 시각</th>
+            <th scope="col">결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((job) => {
+            const id = str(job.id);
+            const isReport = job.kind === 'report';
+            const target = obj(job.target);
+            const clusters = reportScopeClusters(job);
+            const namespaces = clusters.every((c) => c.namespaces === '전체 Namespace')
+              ? '전체 Namespace'
+              : clusters.some((c) => c.namespaces === 'Namespace 범위 미확인')
+                ? 'Namespace 범위 미확인'
+                : '클러스터별 Namespace 범위';
+            return (
+              <tr key={id}>
+                <td>
+                  <Link className="text-link jobs-title" to={`/jobs/${id}`} state={{ from }}>
+                    {isReport ? (
+                      reportTitle(job)
+                    ) : job.kind === 'rca' ? (
+                      <AlarmIdentity record={job} compact />
+                    ) : (
+                      str(job.title, id)
+                    )}
+                  </Link>
+                  <div className="jobs-identity">
+                    <span>
+                      {isReport
+                        ? '운영 분석 보고서'
+                        : job.kind === 'rca'
+                          ? 'RCA 조사'
+                          : str(job.kind)}
+                    </span>
+                    {isReport && <ReportOrigin value={job.report_origin} />}
+                  </div>
+                  <p className="jobs-scope-summary">
+                    {isReport
+                      ? clusters.length
+                        ? `클러스터 ${clusters.length}개 · ${namespaces}`
+                        : '분석 대상 미확인'
+                      : job.kind === 'rca'
+                        ? `클러스터 ${str(target.cluster_id) || str(job.cluster_id) || '미확인'} · Namespace ${str(target.namespace) || '미확인'}`
+                        : '대상 미확인'}
+                  </p>
+                  <details className="jobs-request-details">
+                    <summary>대상·요청 조건 보기</summary>
+                    {isReport ? (
+                      <>
+                        <ReportScope job={job} />
+                        <p>
+                          <strong>분석 주제</strong> {reportTopics(job)}
+                        </p>
+                        <div>
+                          <strong>분석 대상 기간</strong>
+                          <ReportPeriod value={job.time_range} />
+                        </div>
+                        <p>
+                          <strong>요청 집계</strong> {groupLabel(job.group_by, job.topic_group_by)}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        {job.kind === 'rca' && <AlarmIdentity record={job} />}
+                        <p>마지막 기록 단계 · {executionLabel(job.stage)}</p>
+                      </>
+                    )}
+                    <p className="jobs-id">작업 ID · {id}</p>
+                  </details>
+                </td>
+                <td className="job-state-cell">
+                  <Badge status={str(job.status) || 'unknown'} />
+                </td>
+                <td className="job-state-cell">
+                  <Badge status={str(job.result_status) || null} />
+                </td>
+                <td className="job-received-time">
+                  {reportRequestTime(str(job.created_at)).replace(/ (?=\d{2}:)/, '\n')}
+                </td>
+                <td>
+                  {job.result_ref != null ? (
+                    <Link
+                      className="text-link jobs-result-link"
+                      state={{ from }}
+                      to={`/${job.kind === 'rca' ? 'analyses' : 'reports'}/${id}#final-report`}
+                    >
+                      결과 보기
+                    </Link>
+                  ) : (
+                    <span className="jobs-unpublished">미발행</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function JobDetail() {
   const location = useLocation();
   const from = returnPath(

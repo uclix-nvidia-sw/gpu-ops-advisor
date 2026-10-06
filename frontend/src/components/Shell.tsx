@@ -42,6 +42,7 @@ export function Shell() {
   const report = useResource(isSavedReport ? `/reports/${reportId}` : null, undefined, true);
   const savedScope = reportScopeClusters(obj(report.data?.result ?? report.data));
   const isGuide = location.pathname === '/operator-guide';
+  const isJobHistory = location.pathname === '/jobs' || location.pathname.startsWith('/jobs/');
   const names =
     app.mode === 'operations'
       ? [
@@ -202,15 +203,17 @@ export function Shell() {
                 </div>
                 <div className="scope-right">
                   <span className="time-zone">Asia/Seoul</span>
-                  <select
-                    aria-label="조회 기간"
-                    value={app.period}
-                    onChange={(e) => app.setPeriod(e.target.value)}
-                  >
-                    <option value="1h">최근 1시간</option>
-                    <option value="6h">최근 6시간</option>
-                    <option value="24h">최근 24시간</option>
-                  </select>
+                  {!isJobHistory && (
+                    <select
+                      aria-label="조회 기간"
+                      value={app.period}
+                      onChange={(e) => app.setPeriod(e.target.value)}
+                    >
+                      <option value="1h">최근 1시간</option>
+                      <option value="6h">최근 6시간</option>
+                      <option value="24h">최근 24시간</option>
+                    </select>
+                  )}
                   <button
                     className="icon-button"
                     aria-label="데이터 새로고침"

@@ -1,10 +1,17 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { JobDetail } from './Jobs';
+import { JobDetail, Jobs, JobHistoryTable } from './Jobs';
 import type { Row } from '../lib/live';
-const fixture = vi.hoisted(() => ({ job: {} as Row, error: false }));
-vi.mock('../lib/store', () => ({ useApp: () => ({ mode: 'classic', canOperate: true }) }));
+const fixture = vi.hoisted(() => ({
+  job: {} as Row,
+  error: false,
+  items: [] as Row[],
+  paths: [] as string[],
+}));
+vi.mock('../lib/store', () => ({
+  useApp: () => ({ mode: 'classic', canOperate: true, ready: true, scope: { clusters: [] } }),
+}));
 vi.mock('../lib/live', async (original) => ({
   ...(await original<typeof import('../lib/live')>()),
   useResource: () => ({
@@ -14,10 +21,24 @@ vi.mock('../lib/live', async (original) => ({
     error: new Error('fixture offline'),
     refetch: vi.fn(),
   }),
+  useList: (path: string) => {
+    fixture.paths.push(path);
+    return {
+      items: fixture.items,
+      isPending: false,
+      isError: fixture.error,
+      error: new Error('fixture offline'),
+      refetch: vi.fn(),
+      hasNextPage: false,
+      dataUpdatedAt: 0,
+    };
+  },
   useCommand: () => ({ run: vi.fn(), busy: false, error: '', setError: vi.fn() }),
 }));
 beforeEach(() => {
   fixture.error = false;
+  fixture.items = [];
+  fixture.paths = [];
   fixture.job = {
     kind: 'report',
     status: 'retry_wait',
@@ -111,4 +132,110 @@ it('keeps publication quality separate from successful execution', () => {
   fixture.error = true;
   expect(render()).toContain('fixture offline');
   expect(render()).not.toContain('실행 상태와 시도 이력');
+});
+
+const listMarkup = (items: Row[]) =>
+  renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/jobs?status=succeeded']}>
+      <JobHistoryTable items={items} />
+    </MemoryRouter>,
+  );
+it('keeps history titles linked to jobs while publication only controls the separate result link', () => {
+  const items = [
+    {
+      ...fixture.job,
+      id: 'complete',
+      status: 'succeeded',
+      result_status: 'partial',
+      result_ref: 'r1',
+      created_at: '2026-10-06T00:00:00Z',
+      scope: {
+        clusters: [
+          { cluster_id: 'c1', namespaces: null },
+          { cluster_id: 'c2', namespaces: null },
+        ],
+      },
+    },
+    { ...fixture.job, id: 'pending', result_ref: null },
+    {
+      id: 'rca1',
+      kind: 'rca',
+      status: 'succeeded',
+      result_ref: 'r2',
+      target: {
+        reason: 'GPU temperature',
+        cluster_id: 'c1',
+        namespace: 'inference',
+        node: 'gpu-node-1',
+      },
+    },
+  ];
+  const html = listMarkup(items);
+  expect(html).toMatch(/class="text-link jobs-title" href="\/jobs\/complete"/);
+  expect(html).toContain('href="/jobs/pending"');
+  expect(html).toContain('href="/jobs/rca1"');
+  expect(html).toContain('href="/reports/complete#final-report"');
+  expect(html).toContain('href="/analyses/rca1#final-report"');
+  expect(html).not.toContain('href="/reports/pending');
+  expect(html).toContain('클러스터 2개 · 전체 Namespace');
+  expect(html).toContain(
+    '<details class="jobs-request-details"><summary>대상·요청 조건 보기</summary>',
+  );
+  expect(html).not.toContain('<details class="jobs-request-details" open');
+  expect(html).toContain('2026. 10. 06.\n09:00:00');
+  expect(html).toContain('실행 완료');
+  expect(html).toContain('부분 산출');
+  expect(html.match(/>결과 보기<\/a>/g)).toHaveLength(2);
+  expect(html).toContain('클러스터 c1 · Namespace inference');
+  expect(html).toContain('<strong>GPU temperature</strong></span></a>');
+  expect(html).toContain('노드: gpu-node-1');
+  expect(html.indexOf('/jobs/complete')).toBeLessThan(html.indexOf('/jobs/pending'));
+});
+it('preserves unknown and empty namespace scope instead of claiming all namespaces', () => {
+  for (const scope of [
+    undefined,
+    { clusters: [{ cluster_id: 'c1' }] },
+    { clusters: [{ cluster_id: 'c1', namespaces: [] }] },
+  ]) {
+    const html = listMarkup([{ ...fixture.job, id: 'unknown', scope }]);
+    expect(html).not.toContain('전체 Namespace');
+    expect(html).toMatch(/미확인|선택된 Namespace 없음/);
+  }
+});
+it('uses Korean filter labels while keeping status codes in the query', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/jobs?kind=report&status=retry_wait']}>
+      <Jobs />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('>재시도 대기</option>');
+  expect(html).not.toContain('>retry_wait</option>');
+  expect(html).toContain('필터 초기화');
+  expect(html).toContain('조건에 맞는 작업');
+  const url = new URL(fixture.paths.at(-1)!, 'http://localhost');
+  expect(url.searchParams.get('status')).toBe('retry_wait');
+  expect(url.searchParams.get('kind')).toBe('report');
+});
+it('distinguishes no matching jobs from a failed list request', () => {
+  const renderList = () =>
+    renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/jobs']}>
+        <Jobs />
+      </MemoryRouter>,
+    );
+  expect(renderList()).toContain('조건에 맞는 작업이 없습니다.');
+  expect(renderList()).not.toContain('저장된 결과가 없습니다.');
+  fixture.error = true;
+  expect(renderList()).toContain('fixture offline');
+  expect(renderList()).not.toContain('조건에 맞는 작업이 없습니다.');
+});
+
+it('keeps missing RCA targets unknown and does not assign a report creation source', () => {
+  const html = listMarkup([{ id: 'missing-rca', kind: 'rca', status: 'failed', result_ref: null }]);
+  expect(html).toContain('알람 이름 미확인');
+  expect(html).toContain('클러스터 미확인 · Namespace 미확인');
+  expect(html).toContain('실행 실패');
+  expect(html).not.toContain('직접 요청');
+  expect(html).not.toContain('자동 생성');
+  expect(html).not.toContain('결과 보기</a>');
 });
