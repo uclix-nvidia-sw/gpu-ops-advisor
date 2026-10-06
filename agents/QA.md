@@ -1,3 +1,16 @@
+# 2026-10-06 Ops 불필요한 수집 제거 — 로컬 검수
+
+- 기준: `origin/main` **baf6722**와 PR #66의 UI 커밋 **3d87983** 위에서 검증했다. PR 준비 시 #66이 병합된 최신 `origin/main` **6087d14**와 검증 기준의 파일 트리가 동일함을 확인했다. `fix/report-query-pruning`은 이 main 위에 수집 최적화만 올린다.
+- 변경: O01의 미사용 D06 조회 제거, 고정 DB snapshot의 사건 목록이 명시적으로 비어 있는 O06에서 D13 로그 제외. 다른 주제가 같은 query를 필요로 하면 유지하며, 사건 있음/목록 미확인에서는 생략하지 않는다. O06 D08/D06 관측·미준비 진단과 기존 null/blocked는 보존한다. 생략 사유·DB 참조를 quality와 보고서 문장에 남긴다.
+- **통과 — 집중 61건:** 저장소 루트 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests/test_report_query_pruning.py agents/tests/test_report_collection.py agents/tests/test_report_observation.py agents/tests/test_ops_report.py -q --tb=short`. O01 관측 GPU 수/메모리/온도 전후 일치, 무관한 Pod 조회 실패 배제, 다른 주제의 D06 보존, 1/7/31일 계획, O06 사건 유무/미확인·O10 공유 로그 조회, 원본 scope/profile/context 불변, 생략 설명·근거를 검사했다.
+- **통과 — 실제 collector 호출 비교(합성 upstream):** 기본 프로필·2개 클러스터·하루 O01/O09/O05를 같은 고정 응답으로 전후 실행했다. query 호출과 evidence 행이 각각 **34→10**, 수집 complete는 둘 다 true였다. 새 workflow의 O06 사건 0건은 **26회**, D13 호출 없음. 계획상 이전은 28회다. 운영 호출량이나 실행시간 측정은 아니다.
+- **통과 — 전체 두 Worker 회귀:** Python 3.11.16, 외부 `DATABASE_URL`/`AGENT_E2E_DATABASE_URL` 제거, `RUN_AGENT_E2E=1`, 로컬 `PG_BIN/JC_BINARY/INCIDENT_BINARY/BACKEND_BINARY/GRAFANA_MCP_BINARY/HELM_BINARY`로 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/report-prerequisites/pruning-agents.xml` 실행: **413 passed, 0 failures/errors/skips, 67.03초**. 임시 loopback PostgreSQL·실제 두 Worker/JC/Backend/Incident/공식 MCP 프로세스, Grafana/LLM 응답은 fixture다. 기존 MCP deprecation warning 3건. 최초 실행의 클라이언트 전용 PostgreSQL 경로 오류는 기존 로컬 서버 바이너리 경로로 바로잡고 전체 재실행으로 확인했다.
+- **통과 — 정적/문서:** Ruff check/format(75 files), UTF-8 CRLF, diff 검사, 링크 검사. 개발명세 12와 Ops README에 초기 계획 수와 생략 조건·진단 보존·후속 범위를 반영했다.
+- **해당 없음:** RCA·공통 Python·JC·Backend/Frontend 제품 코드·DB·프로필·조회 한도 변경. 보고서 문장은 Ops에서 생성하며 기존 결과/quality 구조를 사용한다. UI·Go 코드가 바뀌지 않아 별도 전체 Frontend/Go suite 재실행은 하지 않았다; Worker E2E에서 실제 Go 서비스 연동은 검사했다.
+- **미수행/미검증:** 실환경 배포·새 보고서·전송 바이트·실행시간·Mimir 부하 감소. O08 단독/전체 11주제는 필요한 다른 소비자가 있으므로 이번 변경으로 호출이 줄지 않는다. D 통합·evidence 중복 저장/보존 정책·다운샘플링·작업 간 캐시·사건별 범위 축소는 후속 검토다. 완료 단계는 로컬 수정·검수이며 커밋/푸시/새 PR/배포는 하지 않았다.
+
+---
+
 # 2026-10-06 보고서 선택 개편 전 분석 조건·호환성 — 로컬 검수
 
 - 기준: 새로 fetch한 `origin/main` **baf6722**. UI 개편 전 7개 종류의 topic_ids/group_by 기본값, 실제 집계 단위, 자료 준비 조건과 기존 일정/결과 보존 기준을 [12번 설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#보고서-선택-개편-전-확정-기준--2026-10-06)에 확정했다. 7개 선택 화면과 일반 group_by 계산을 새로 구현한 것은 아니다.
