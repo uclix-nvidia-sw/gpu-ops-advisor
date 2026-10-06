@@ -140,6 +140,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                     'purpose_ids',
                     'topic_ids',
                     'group_by',
+                    'topic_group_by',
                     'comparison_range',
                     'symptom',
                   ]

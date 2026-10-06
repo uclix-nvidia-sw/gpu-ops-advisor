@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { topicDisplayBases } from '../lib/reportKinds';
 import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { obj, rows, str, strings } from '../lib/live';
@@ -132,8 +133,10 @@ export function ReportContent({
           <div>
             <dt>요청한 집계</dt>
             <dd>
-              {groupLabel(requestedGroups)} · 계산 기준:{' '}
-              {str(obj(result.versions).criteria, '기록 없음')}
+              {Object.keys(obj(quality.topic_group_by)).length
+                ? '소주제별 기준 적용'
+                : groupLabel(requestedGroups)}{' '}
+              · 계산 기준: {str(obj(result.versions).criteria, '기록 없음')}
             </dd>
           </div>
         </dl>
@@ -442,7 +445,10 @@ export function ReportContent({
           ))}
         </details>
       )}
-      <details id="report-topic-details">
+      <details
+        id="report-topic-details"
+        open={Object.keys(obj(quality.topic_group_by)).length > 0 ? true : undefined}
+      >
         <summary>주제별 상세 수치 · {topics.length}개 주제</summary>
         {topics.map((topic) => (
           <section
@@ -454,6 +460,16 @@ export function ReportContent({
               <h3>{topicName(str(topic.topic_id))}</h3>
               <Badge status={str(topic.status)} />
             </div>
+            <p className="report-topic-basis">
+              <strong>표시 기준:</strong>{' '}
+              {str(
+                obj(topic.quality).display_basis,
+                topic.topic_id === 'O08' &&
+                  !strings(obj(topic.quality).applied_group_by).includes('namespace')
+                  ? '저장된 지표의 대상·단위 기준 (과거 결과)'
+                  : topicDisplayBases[str(topic.topic_id)] || '저장된 지표의 대상·단위 기준',
+              )}
+            </p>
             {(str(obj(topic.quality).interpretation) ||
               rows(topic.metrics).some((m) =>
                 str(m.id).includes('namespace_connected_gpu_util'),
@@ -465,7 +481,7 @@ export function ReportContent({
                 )}
               </Notice>
             )}
-            {(topic.topic_id === 'O08' || obj(topic.quality).requested_group_by != null) && (
+            {topic.topic_id === 'O08' && (
               <p className="muted">
                 요청 집계 축:{' '}
                 {strings(obj(topic.quality).requested_group_by).join(', ') || '미확인'} / 적용 집계
@@ -573,8 +589,11 @@ export function ReportContent({
           {formatDate(str(obj(result.time_range).end))}
         </p>
         <p>
-          요청 집계: {groupLabel(requestedGroups)} · 계산 기준:{' '}
-          {str(obj(result.versions).criteria, '기록 없음')}
+          요청 집계:{' '}
+          {Object.keys(obj(quality.topic_group_by)).length
+            ? '소주제별 기준 적용'
+            : groupLabel(requestedGroups)}{' '}
+          · 계산 기준: {str(obj(result.versions).criteria, '기록 없음')}
         </p>
         <p>
           AI 설명 상태:{' '}

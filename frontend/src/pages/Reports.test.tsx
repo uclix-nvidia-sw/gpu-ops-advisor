@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { Schedules } from './Schedules';
 import { Reports, ReportForm } from './Reports';
-import { reportKinds } from '../lib/reportKinds';
+import { reportKinds, reportSelection } from '../lib/reportKinds';
 import { OperationsReports } from './Operations';
 
 const publication = vi.hoisted(() => ({
@@ -135,7 +135,7 @@ describe('Ops report landing', () => {
 });
 
 it.each(['/reports/new', '/reports/new?schedule=true'])(
-  'defaults %s to namespace analysis with advanced fields collapsed',
+  'defaults %s to comprehensive analysis with optional comparison',
   (path) => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={[path]}>
@@ -143,7 +143,8 @@ it.each(['/reports/new', '/reports/new?schedule=true'])(
       </MemoryRouter>,
     );
     expect(html).toContain('Namespace별 GPU 사용 현황');
-    expect(html.match(/type="radio"/g)).toHaveLength(7);
+    expect(html.match(/type="radio"/g)).toHaveLength(2);
+    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(7);
     expect(html).toContain('name="report-kind" checked="" value="namespace"');
     expect(html).not.toContain('세부 분석 설정');
     expect(html).not.toContain('type="checkbox" checked="" value="O');
@@ -233,15 +234,19 @@ it.each(expectedKinds)(
     );
     expect(html).toContain(`name="report-kind" checked="" value="${id}"`);
     expect(html).toContain(kind.requirement);
-    if (id === 'comparison') {
-      expect(html).toContain('<textarea required=""');
-      expect(html.match(/type="date"/g)).toHaveLength(4);
-      expect(html).toContain('type="checkbox" disabled=""');
-      expect(html).not.toContain('자동 생성 설정 저장');
-    } else {
-      expect(html).not.toContain('<textarea');
-      expect(html).toContain('자동 생성 설정 저장');
-    }
+    expect(html).not.toContain('<textarea');
+    expect(html).toContain('자동 생성 설정 저장');
+    if (id === 'comparison') expect(html).toContain('조치 기록·비교 기간 미지정');
     expect(html.includes('자원 조건 지정 (선택)')).toBe(id === 'waiting');
   },
 );
+
+it('maps multiple kinds to one deduplicated request with per-topic bases', () => {
+  expect(reportSelection(['namespace', 'health', 'namespace'])).toEqual({
+    topic_ids: ['O01', 'O05', 'O08', 'O09'],
+    group_by: ['cluster'],
+    topic_group_by: { O01: ['cluster'], O05: ['cluster'], O08: ['namespace'], O09: ['cluster'] },
+  });
+  expect(reportSelection(reportKinds.map((k) => k.id)).topic_ids).toHaveLength(11);
+  expect(reportSelection([]).topic_ids).toEqual([]);
+});

@@ -4,7 +4,7 @@ import { Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, topicId, topics, useCommand, useList } from '../lib/live';
 import { scopeLabel } from '../lib/domain';
-import { reportKind, reportKinds } from '../lib/reportKinds';
+import { reportKind, reportKinds, reportSelection, topicDisplayBases } from '../lib/reportKinds';
 import { useReportListPosition } from '../lib/reportNavigation';
 import {
   previousReportDay,
@@ -73,10 +73,11 @@ export function ReportForm() {
     navigate = useNavigate(),
     [params] = useSearchParams(),
     cmd = useCommand();
-  const [kindId, setKindId] = useState(reportKind(params.get('kind')).id),
-    [scheduled, setScheduled] = useState(
-      params.get('schedule') === 'true' && reportKind(params.get('kind')).id !== 'comparison',
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+      params.has('kind') ? [reportKind(params.get('kind')).id] : reportKinds.map((kind) => kind.id),
     ),
+    [enableComparison, setEnableComparison] = useState(false),
+    [scheduled, setScheduled] = useState(params.get('schedule') === 'true'),
     [frequency, setFrequency] = useState('daily'),
     [localTime, setLocalTime] = useState('09:00'),
     [weekday, setWeekday] = useState(1),
@@ -89,30 +90,41 @@ export function ReportForm() {
     [resourceName, setResourceName] = useState(''),
     [resourceUnit, setResourceUnit] = useState(''),
     [resourceCluster, setResourceCluster] = useState(app.scope.clusters[0]?.cluster_id || '');
-  const kind = reportKind(kindId);
-  const compare = kind.id === 'comparison';
-  const waiting = kind.id === 'waiting';
+  const selectedKinds = reportKinds.filter((kind) => selectedIds.includes(kind.id));
+  const selection = reportSelection(selectedIds);
+  const comprehensive = selectedKinds.length === reportKinds.length;
+  const hasComparison = selectedIds.includes('comparison');
+  const compare = hasComparison && enableComparison && !scheduled;
+  const waiting = selectedIds.includes('waiting');
   const chooseKind = (id: string) => {
-    setKindId(id);
-    setActionRefs('');
-    setCompareStart('');
-    setCompareEnd('');
-    setResourceName('');
-    setResourceUnit('');
-    if (id === 'comparison') setScheduled(false);
+    setSelectedIds(
+      selectedIds.includes(id)
+        ? selectedIds.filter((selected) => selected !== id)
+        : [...selectedIds, id],
+    );
+    if (id === 'comparison') {
+      setEnableComparison(false);
+      setActionRefs('');
+      setCompareStart('');
+      setCompareEnd('');
+    }
+    if (id === 'waiting') {
+      setResourceName('');
+      setResourceUnit('');
+    }
   };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      if (compare && (scheduled || !actionRefs.trim())) {
+      if (!selection.topic_ids.length) throw new Error('보고서 종류를 하나 이상 선택하세요.');
+      if (compare && !actionRefs.trim()) {
         throw new Error(
           '조치 전후 비교는 수행한 조치 기록 ID와 비교 기간을 입력해 직접 요청하세요.',
         );
       }
       const template = {
         scope: app.scope,
-        topic_ids: kind.topicIds,
-        group_by: [kind.groupBy],
+        ...selection,
         ...(compare && actionRefs.trim()
           ? {
               action_record_ids: actionRefs
@@ -170,59 +182,122 @@ export function ReportForm() {
       <PageHead
         eyebrow="NEW REPORT"
         title="새 운영 보고서"
-        description="궁금한 내용에 맞는 보고서 종류를 고르고 대상과 기간을 확인하세요."
+        description="전체 종합 또는 필요한 종류를 여러 개 선택해 보고서 한 장으로 확인하세요."
       />
       <NavTabs items={reportTabs} />
       <ReportTimeNote />
       <form className="stack" onSubmit={submit}>
         <fieldset className="report-kind-fieldset">
-          <legend>어떤 내용을 확인할까요?</legend>
-          <p>한 가지를 선택하면 필요한 분석 주제를 함께 요청합니다.</p>
+          <legend>어떤 보고서를 만들까요?</legend>
+          <div className="report-mode-options">
+            <label className="check">
+              <input
+                type="radio"
+                name="report-mode"
+                checked={comprehensive}
+                onChange={() => setSelectedIds(reportKinds.map((kind) => kind.id))}
+              />
+              전체 종합보고서 · 모든 소주제
+            </label>
+            <label className="check">
+              <input
+                type="radio"
+                name="report-mode"
+                checked={!comprehensive}
+                onChange={() => {
+                  setSelectedIds(['namespace']);
+                  setEnableComparison(false);
+                  setActionRefs('');
+                  setCompareStart('');
+                  setCompareEnd('');
+                  setResourceName('');
+                  setResourceUnit('');
+                }}
+              />
+              직접 선택 · 여러 종류 선택 가능
+            </label>
+          </div>
+          <p className="report-selection-summary">
+            선택한 {selectedKinds.length}개 종류 · {selection.topic_ids.length}개 분석 주제를 보고서
+            한 장에 담습니다.
+            <br />
+            카드의 체크를 바꾸면 직접 선택으로 전환됩니다.
+          </p>
           <div className="report-kind-grid">
             {reportKinds.map((item) => (
               <label
                 key={item.id}
-                className={`report-kind-card${kind.id === item.id ? ' selected' : ''}`}
+                className={`report-kind-card${selectedIds.includes(item.id) ? ' selected' : ''}`}
               >
                 <input
-                  type="radio"
+                  type="checkbox"
                   name="report-kind"
                   value={item.id}
-                  checked={kind.id === item.id}
+                  checked={selectedIds.includes(item.id)}
                   onChange={() => chooseKind(item.id)}
                 />
                 <span>
                   <strong>{item.name}</strong>
                   <span className="report-kind-description">{item.description}</span>
                   <small>포함 주제 · {item.topicIds.join(' · ')}</small>
+                  <span className="report-kind-basis">
+                    표시 기준
+                    <br />
+                    {item.topicIds.map((id) => (
+                      <span key={id}>
+                        {id} · {topicDisplayBases[id]}
+                      </span>
+                    ))}
+                  </span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
         <section className="report-kind-detail" aria-label="선택한 보고서 안내" aria-live="polite">
-          <h2>{kind.name}</h2>
-          <p>{kind.insight}</p>
-          <dl>
-            <dt>필요한 자료</dt>
-            <dd>{kind.requirement}</dd>
-            <dt>해석할 때 주의</dt>
-            <dd>{kind.limit}</dd>
-            <dt>계산 범위</dt>
-            <dd>
-              {kind.groupBy === 'namespace'
-                ? '클러스터·Namespace별 연결 관측'
-                : '장비·작업별 수치와 선택 범위 합계가 함께 나옵니다. 각 지표의 대상을 확인하세요.'}
-            </dd>
-          </dl>
+          <h2>{comprehensive ? '전체 종합보고서' : '선택한 소주제 안내'}</h2>
+          {!selectedKinds.length && <Notice>보고서 종류를 하나 이상 선택하세요.</Notice>}
+          <p>
+            각 소주제는 자신의 계산 기준을 사용합니다. 자료가 부족한 소주제도 숨기지 않고 이유를
+            표시합니다.
+          </p>
+          {selectedKinds.map((kind) => (
+            <details key={kind.id}>
+              <summary>{kind.name} · 필요한 자료와 해석</summary>
+              <p>{kind.insight}</p>
+              <p>
+                <strong>필요한 자료:</strong> {kind.requirement}
+              </p>
+              <p>{kind.limit}</p>
+            </details>
+          ))}
           <p className="cell-sub">
-            자료 보유 여부는 실행 후 확인됩니다. 모든 보고서에서 조회 실패·누락 자료를 확인할 수
-            있습니다.
+            자료 보유 여부는 실행 후 확인됩니다. 전체 선택은 수집량과 실행시간이 늘어날 수 있습니다.
           </p>
           <Link className="text-link" to="/operator-guide#guide-topics">
             보고서 종류와 세부 분석 안내
           </Link>
         </section>
+        {hasComparison && (
+          <Notice>
+            <strong>운영 조치 전후 비교</strong>
+            <p>
+              {scheduled
+                ? '자동보고서는 비교 조건을 임의로 만들지 않습니다. 해당 소주제에 조치 기록·비교 기간 미지정 사유를 표시합니다.'
+                : '비교 조건을 넣지 않아도 요청할 수 있습니다. 해당 소주제에 미실행 이유를 표시하고 다른 분석은 진행합니다.'}
+            </p>
+            {!scheduled && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={enableComparison}
+                  onChange={(e) => setEnableComparison(e.target.checked)}
+                />
+                조치 기록과 비교 기간 입력
+              </label>
+            )}
+          </Notice>
+        )}
         {compare && (
           <Panel title="비교할 운영 조치">
             <div className="live-padding">
@@ -274,7 +349,6 @@ export function ReportForm() {
               <input
                 type="checkbox"
                 checked={scheduled}
-                disabled={compare}
                 onChange={(e) => setScheduled(e.target.checked)}
               />
               자동 생성 설정
@@ -401,7 +475,10 @@ export function ReportForm() {
           <Link className="button" to="/reports">
             돌아가기
           </Link>
-          <button className="button primary" disabled={cmd.busy || !app.canOperate}>
+          <button
+            className="button primary"
+            disabled={cmd.busy || !app.canOperate || !selection.topic_ids.length}
+          >
             {cmd.busy ? '접수 확인 중…' : scheduled ? '자동 생성 설정 저장' : '보고서 요청'}
           </button>
         </div>

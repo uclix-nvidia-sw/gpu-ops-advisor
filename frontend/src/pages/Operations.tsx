@@ -345,7 +345,7 @@ export function OperationsReports() {
                 <ReportScope job={r} />
                 <dl>
                   <dt>요청 집계</dt>
-                  <dd>{groupLabel(r.group_by)}</dd>
+                  <dd>{groupLabel(r.group_by, r.topic_group_by)}</dd>
                   <dt>분석 대상 기간</dt>
                   <dd>
                     {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}

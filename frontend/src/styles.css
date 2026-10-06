@@ -4546,6 +4546,9 @@ body:has(dialog[open]) {
   font-size: 20px;
   font-weight: 700;
 }
+.report-selection-summary {
+  margin-bottom: 24px;
+}
 .report-kind-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4628,4 +4631,70 @@ body:has(dialog[open]) {
   .report-kind-detail dd + dt {
     margin-top: 12px;
   }
+}
+
+.report-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid #8fb8a0;
+  border-radius: 12px;
+  background: #e0efe5;
+}
+.report-kind-basis {
+  display: block;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #b5cbbb;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.report-kind-basis > span {
+  display: block;
+  margin-top: 6px;
+}
+.report-topic-basis {
+  padding: 12px 16px;
+  border-left: 3px solid var(--green);
+  background: #f4f9f5;
+}
+.report-kind-detail details {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.job-report-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+.job-report-heading > .text-link {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.job-report-heading > .report-origin {
+  flex-shrink: 0;
+}
+
+.job-state-cell {
+  min-width: 144px;
+}
+th.job-state-cell {
+  font-size: 14px;
+}
+.job-state-cell .badge {
+  padding: 10px 14px;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  border: 1px solid currentColor;
+}
+.job-state-cell .status-dot {
+  width: 8px;
+  height: 8px;
 }

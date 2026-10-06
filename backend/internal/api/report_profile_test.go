@@ -38,3 +38,17 @@ func TestReportProfileSelection(t *testing.T) {
 		}
 	}
 }
+
+func TestMixedReportProfile(t *testing.T) {
+	s := New(nil, config.Config{})
+	input := Object{"topic_ids": []string{"O01", "O08"}, "group_by": []string{"cluster"}, "topic_group_by": map[string][]string{"O01": {"cluster"}, "O08": {"namespace"}}}
+	before := Hash(input)
+	for _, source := range []string{"manual:fixture", "schedule:fixture"} {
+		if s.envelope(input, source, time.Now())["execution_profile_revision"] != "report-namespace-v1" {
+			t.Fatal("namespace criteria lost")
+		}
+	}
+	if Hash(input) != before {
+		t.Fatal("input rewritten")
+	}
+}

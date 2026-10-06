@@ -128,7 +128,7 @@ func (s *Server) target(q *Request, scope Scope, raw any, at time.Time) error {
 }
 func (s *Server) validateWork(q *Request, kind string) error {
 	b := q.Body
-	if e := only(b, "scope", "time_range", "timezone", "parent_job_id", "topic_ids", "group_by", "comparison_range", "action_record_ids", "resource_selectors"); e != nil {
+	if e := only(b, "scope", "time_range", "timezone", "parent_job_id", "topic_ids", "group_by", "topic_group_by", "comparison_range", "action_record_ids", "resource_selectors"); e != nil {
 		return e
 	}
 	scope, e := s.common(q, b, true, false)
@@ -148,6 +148,9 @@ func (s *Server) validateWork(q *Request, kind string) error {
 		return e
 	}
 	if e = enums(b, "group_by", []string{"cluster", "model", "node", "namespace", "pod", "workload"}, true); e != nil {
+		return e
+	}
+	if e = ValidateTopicGroups(b); e != nil {
 		return e
 	}
 	if b["comparison_range"] != nil {

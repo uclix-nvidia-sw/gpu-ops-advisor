@@ -360,8 +360,9 @@ func TestBackendE2E(t *testing.T) {
 		for k, v := range template {
 			replacement[k] = v
 		}
-		replacement["topic_ids"] = []string{"O08"}
-		replacement["group_by"] = []string{"namespace"}
+		replacement["topic_ids"] = []string{"O01", "O08"}
+		replacement["group_by"] = []string{"cluster"}
+		replacement["topic_group_by"] = map[string][]string{"O01": {"cluster"}, "O08": {"namespace"}}
 		updated := call("PATCH", "/schedules/"+id, Object{"report_spec": replacement}, 200, "Idempotency-Key", "change-report-selection", "If-Match", "2")
 		if Number(updated, "revision") != 3 || updated["enabled"] != false || updated["local_time"] != current["local_time"] {
 			t.Fatal("report selection changed schedule timing or enabled state", updated)

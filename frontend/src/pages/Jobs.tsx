@@ -71,7 +71,7 @@ export function Jobs() {
             <select value={kind} onChange={(e) => setKind(e.target.value)}>
               <option value="">전체</option>
               <option value="rca">RCA 조사</option>
-              <option value="report">보고서</option>
+              <option value="report">운영 분석 보고서</option>
             </select>
           </Field>
           <Field label="실행 상태">
@@ -255,6 +255,7 @@ export function JobDetail() {
                       'purpose_ids',
                       'topic_ids',
                       'group_by',
+                      'topic_group_by',
                       'comparison_range',
                       'symptom',
                     ]

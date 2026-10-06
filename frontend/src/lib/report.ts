@@ -227,7 +227,8 @@ export function collectionStatus(observation: Row) {
       .join(', ') || '수집 상태 기록 없음'
   );
 }
-export function groupLabel(groups: unknown) {
+export function groupLabel(groups: unknown, topicGroups?: unknown) {
+  if (Object.keys(obj(topicGroups)).length) return '소주제별 기준 적용';
   return (
     strings(groups)
       .map(

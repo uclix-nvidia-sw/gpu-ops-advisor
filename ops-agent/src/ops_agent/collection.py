@@ -42,7 +42,11 @@ def collection_plan(profile, data, order):
         for q in dict.fromkeys(order)
         for c in data["scope"]["clusters"]
     ]
-    if "O10" in data["topic_ids"] and data.get("comparison_range"):
+    if (
+        "O10" in data["topic_ids"]
+        and data.get("comparison_range")
+        and ("topic_group_by" not in data or data.get("action_record_ids"))
+    ):
         tasks += [
             dict(
                 query_id="D11",

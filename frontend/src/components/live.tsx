@@ -7,6 +7,7 @@ import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
 import { reportTitle, reportTopics } from '../lib/workflow';
+import { topicDisplayBases } from '../lib/reportKinds';
 import { groupLabel, metricValue, metricUnit, namespaceRows, reportReason } from '../lib/report';
 export function QueryState({
   query,
@@ -123,6 +124,7 @@ const fieldLabels: Record<string, string> = {
   pending: '전달 대기',
   topic_ids: '분석 주제',
   group_by: '집계 기준',
+  topic_group_by: '소주제별 표시 기준',
   performed_by: '수행자',
   action_summary: '조치 요약',
   occurred_at: '발생 시각',
@@ -365,6 +367,17 @@ export function DataView({
       return <span>원천 제안 형식 미확인</span>;
     }
   }
+  if (reportDisplay && field === 'topic_group_by')
+    return (
+      <dl className="live-details data-stacked">
+        {Object.keys(obj(value)).map((id) => (
+          <div key={id}>
+            <dt>{id}</dt>
+            <dd>{topicDisplayBases[id] || groupLabel(obj(value)[id])}</dd>
+          </div>
+        ))}
+      </dl>
+    );
   if (reportDisplay && field === 'timezone') return <span>한국 시간</span>;
   if (
     reportDisplay &&
@@ -408,6 +421,7 @@ export function DataView({
   return (
     <dl className={`live-details ${depth >= 2 ? 'data-stacked' : ''}`} data-depth={depth}>
       {Object.entries(obj(value))
+        .filter(([k]) => !(reportDisplay && k === 'group_by' && obj(value).topic_group_by))
         .filter(
           ([k]) =>
             ![
@@ -482,8 +496,8 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
             <th>분석 · 대상</th>
             <th>종류</th>
             <th>접수 시각</th>
-            <th>실행 상태</th>
-            <th>결과 품질</th>
+            <th className="job-state-cell">실행 상태</th>
+            <th className="job-state-cell">결과 품질</th>
             <th>최종 보고서</th>
           </tr>
         </thead>
@@ -491,27 +505,29 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
           {items.map((j) => (
             <tr key={str(j.id)} id={`report-row-${str(j.id)}`}>
               <td>
-                <Link
-                  className="text-link"
-                  state={{ from }}
-                  to={
-                    (preferResult || j.kind === 'report') && j.result_ref != null
-                      ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
-                      : `/jobs/${str(j.id)}`
-                  }
-                >
-                  {j.kind === 'rca' ? (
-                    <AlarmIdentity record={j} />
-                  ) : j.kind === 'report' ? (
-                    <strong>{reportTitle(j)}</strong>
-                  ) : (
-                    str(j.title, str(j.id))
-                  )}
-                </Link>
+                <div className={j.kind === 'report' ? 'job-report-heading' : undefined}>
+                  <Link
+                    className="text-link"
+                    state={{ from }}
+                    to={
+                      (preferResult || j.kind === 'report') && j.result_ref != null
+                        ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
+                        : `/jobs/${str(j.id)}`
+                    }
+                  >
+                    {j.kind === 'rca' ? (
+                      <AlarmIdentity record={j} />
+                    ) : j.kind === 'report' ? (
+                      <strong>{reportTitle(j)}</strong>
+                    ) : (
+                      str(j.title, str(j.id))
+                    )}
+                  </Link>
+                  {j.kind === 'report' && <ReportOrigin value={j.report_origin} />}
+                </div>
                 {j.kind === 'rca' && <small className="cell-sub">작업 ID · {str(j.id)}</small>}
                 {j.kind === 'report' ? (
                   <>
-                    <ReportOrigin value={j.report_origin} />
                     <details>
                       <summary>분석 주제 · 작업 ID</summary>
                       <p>{reportTopics(j)}</p>
@@ -521,7 +537,9 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                     <div className="cell-sub">
                       분석 대상 기간: <ReportPeriod value={j.time_range} />
                     </div>
-                    <div className="cell-sub">요청 집계: {groupLabel(j.group_by)}</div>
+                    <div className="cell-sub">
+                      요청 집계: {groupLabel(j.group_by, j.topic_group_by)}
+                    </div>
                   </>
                 ) : (
                   <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
@@ -532,7 +550,7 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                   {str(j.kind) === 'rca'
                     ? 'RCA 조사'
                     : str(j.kind) === 'report'
-                      ? '보고서'
+                      ? '운영 분석 보고서'
                       : str(j.kind)}
                 </td>
               )}
@@ -541,10 +559,10 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                   ? reportRequestTime(str(j.created_at))
                   : formatDate(str(j.created_at))}
               </td>
-              <td>
+              <td className="job-state-cell">
                 <Badge status={str(j.status)} />
               </td>
-              <td>
+              <td className="job-state-cell">
                 <Badge status={str(j.result_status) || null} />
               </td>
               {!reportsOnly && (
@@ -623,7 +641,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
         </div>
         <div>
           <dt>집계 기준</dt>
-          <dd>{groupLabel(job.group_by)}</dd>
+          <dd>{groupLabel(job.group_by, job.topic_group_by)}</dd>
         </div>
       </dl>
       {large &&
