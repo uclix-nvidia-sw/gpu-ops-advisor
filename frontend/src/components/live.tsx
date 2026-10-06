@@ -203,7 +203,7 @@ const incidentFields: Record<string, [string, string]> = {
   updated_at: ['최근 변경 시각', '이 기록을 마지막으로 변경한 시각입니다.'],
 };
 
-export function AlarmIdentity({ record }: { record: Row }) {
+export function AlarmIdentity({ record, compact = false }: { record: Row; compact?: boolean }) {
   const target = obj(record.target);
   const name =
     str(target.reason) ||
@@ -231,11 +231,11 @@ export function AlarmIdentity({ record }: { record: Row }) {
       {(target.test_alarm === true || /synthetic/i.test(name) || !!target.test_id) && (
         <Badge status={null} label="테스트 알람" />
       )}
-      {str(target.alertname) && target.alertname !== name && (
+      {!compact && str(target.alertname) && target.alertname !== name && (
         <span className="cell-sub">{str(target.alertname)}</span>
       )}
-      <span className="cell-sub">{targets.join(' · ') || '발생 대상 미확인'}</span>
-      {str(record.symptom) && record.symptom !== name && (
+      {!compact && <span className="cell-sub">{targets.join(' · ') || '발생 대상 미확인'}</span>}
+      {!compact && str(record.symptom) && record.symptom !== name && (
         <span className="cell-sub">{str(record.symptom)}</span>
       )}
     </span>

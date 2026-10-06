@@ -26,6 +26,8 @@ const render = (path = '/operator-guide') => {
         <Routes>
           <Route element={<Shell />}>
             <Route path="operator-guide" element={<OperatorGuide />} />
+            <Route path="jobs" element={<p>jobs-content-marker</p>} />
+            <Route path="jobs/:id" element={<p>job-detail-marker</p>} />
             <Route path="reports" element={<p>report-content-marker</p>} />
             <Route path="reports/:id" element={<p>report-detail-marker</p>} />
           </Route>
@@ -84,4 +86,13 @@ it('uses the saved report scope and keeps global controls on new requests', () =
   expect(saved).not.toContain('aria-label="조회 기간"');
   expect(saved).not.toContain('class="scope-button"');
   expect(render('/reports/new')).toContain('class="scope-button"');
+});
+
+it('hides the unused time selector on job history and detail while retaining scope and refresh', () => {
+  const html = render('/jobs');
+  expect(html).not.toContain('aria-label="조회 기간"');
+  expect(html).toContain('class="scope-button"');
+  expect(html).toContain('aria-label="데이터 새로고침"');
+  expect(render('/jobs/saved')).not.toContain('aria-label="조회 기간"');
+  expect(render('/reports/new')).toContain('aria-label="조회 기간"');
 });
