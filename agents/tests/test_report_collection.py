@@ -3,6 +3,7 @@
 import asyncio
 import copy
 import json
+import math
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -10,9 +11,10 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from agent_common.contracts import timestamp
+from agent_common.normalize import allocations
 from agent_common.observation import Observation, series
-from ops_agent.collection import collect_report, report_profile
-from ops_agent.workflow import calculate
+from ops_agent.collection import collect_report, collection_plan, report_profile
+from ops_agent.workflow import PLAN, calculate, query_ids
 
 
 def setup(days=7):
@@ -87,12 +89,22 @@ async def test_period_collection_preserves_original_samples_and_rca_limits(days)
     )
     assert profile == before and profile["limits"]["max_queries"] == 48
     assert summary["query_limit"] == 2048 and summary["complete"]
-    assert summary["query_calls"] == len(calls) <= 6 * (int(days) + 1)
+    expected_calls = 2 * (2 * math.ceil(days) + math.ceil(days * 12))
+    assert summary["query_calls"] == len(calls) == expected_calls
     assert all(
         s["completed_seconds"] == s["requested_seconds"] for s in summary["tasks"]
     )
     assert any(s["empty_seconds"] > 0 for s in summary["tasks"])
-    assert all("[86401s]" in a["expr"] for a in calls) if days in (1, 7, 31) else True
+    for call in calls:
+        length = int(re.search(r"\[(\d+)s\]$", call["expr"])[1])
+        cap = 7200 if call["expr"].startswith("kube_pod_info{") else 86400
+        assert length <= cap + 1
+        if days in (1, 7, 31):
+            assert length == cap + 1
+    assert all(
+        task["chunk_seconds"] == (7200 if task["query_id"] == "D06" else 86400)
+        for task in summary["tasks"]
+    )
     expected = set(
         range(
             int(timestamp(data["time_range"]["start"])),
@@ -100,8 +112,9 @@ async def test_period_collection_preserves_original_samples_and_rca_limits(days)
             3600,
         )
     )
-    for r in series(collected["D02"]):
-        assert {t for t, _ in r["samples"]} == expected
+    for query in ("D02", "D06"):
+        for r in series(collected[query]):
+            assert {t for t, _ in r["samples"]} == expected
     assert {e["id"] for e in evidence} >= {e["id"] for e in collected["D02"]}
     rca = Observation({}, profile, data, time.monotonic() + 60)
     assert rca.profile["limits"]["chunk_seconds"] == 3600
@@ -146,7 +159,7 @@ async def test_adaptive_split_matches_hourly_namespace_calculation():
 @pytest.mark.asyncio
 async def test_reservation_prevents_first_dense_source_starving_pod_and_other_cluster():
     profile, data = setup(1)
-    profile["report"]["limits"].update(max_queries=16, max_rows=3)
+    profile["report"]["limits"].update(max_queries=40, max_rows=3)
     calls = []
     collected, _, summary = await collect_report(
         {"query_prometheus": source(data, calls, dense=True)},
@@ -156,7 +169,7 @@ async def test_reservation_prevents_first_dense_source_starving_pod_and_other_cl
         ["D01", "D02", "D08", "D06"],
         True,
     )
-    assert summary["query_calls"] <= 16 and not summary["complete"]
+    assert summary["query_calls"] <= 40 and not summary["complete"]
     assert all(t["query_calls"] >= 1 for t in summary["tasks"])
     assert all(t["query_calls"] <= t["reserved_calls"] for t in summary["tasks"])
     assert {e["cluster_id"] for e in collected["D06"]} == {"cpc-1", "cpc-2"}
@@ -246,3 +259,146 @@ def test_report_override_validation_and_legacy_fallback():
         profile["report"] = {"limits": overrides}
         with pytest.raises(ValueError):
             report_profile(profile)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("days,planned_calls", [(1, 46), (7, 322), (31, 1426)])
+async def test_bounded_pod_plan_reserves_calls_and_rejects_lower_custom_budgets(
+    days, planned_calls
+):
+    profile, data = setup(days)
+    data["topic_ids"] = list(PLAN)
+    order = sorted({q for topic in PLAN for q in query_ids(topic, "1.2")})
+    tasks, reason = collection_plan(report_profile(profile), data, order)
+    assert reason is None
+    assert sum(task["planned_calls"] for task in tasks) == planned_calls
+    assert all(
+        task["planned_calls"] == days * (12 if task["query_id"] == "D06" else 1)
+        for task in tasks
+    )
+    profile["report"]["limits"]["max_queries"] = planned_calls - 1
+    calls = []
+    _, evidence, summary = await collect_report(
+        {"query_prometheus": source(data, calls)},
+        profile,
+        data,
+        time.monotonic() + 60,
+        order,
+        False,
+    )
+    assert not calls and summary["query_calls"] == 0
+    assert summary["planned_calls"] == planned_calls
+    assert summary["plan_reason"] == "collection_plan_budget_exceeded"
+    assert not summary["complete"]
+    assert all(
+        e["quality"]["reason"] == "collection_plan_budget_exceeded" for e in evidence
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_window_cap_never_enlarges_global_window_or_changes_rca():
+    profile, data = setup(1)
+    before = copy.deepcopy(profile)
+    report_calls, rca_calls = [], []
+    profile["report"]["limits"]["chunk_seconds"] = 3600
+    _, _, summary = await collect_report(
+        {"query_prometheus": source(data, report_calls)},
+        profile,
+        data,
+        time.monotonic() + 60,
+        ["D06"],
+        False,
+    )
+    assert summary["planned_calls"] == summary["query_calls"] == len(report_calls) == 48
+    assert all(task["chunk_seconds"] == 3600 for task in summary["tasks"])
+    assert all("[3601s]" in call["expr"] for call in report_calls)
+    rca = Observation(
+        {"query_prometheus": source(data, rca_calls)},
+        before,
+        data,
+        time.monotonic() + 60,
+    )
+    await rca.collect("D06")
+    assert rca.calls == len(rca_calls) == 48
+    assert all("[3601s]" in call["expr"] for call in rca_calls)
+    assert before["limits"] == profile["limits"]
+
+
+def test_query_window_override_validation_and_legacy_fallback():
+    profile, data = setup(1)
+    for invalid in (None, [], {"D06": 0}, {"D06": True}, {"D06": 1.5}, {"D99": 7200}):
+        profile["report"]["query_chunk_seconds"] = invalid
+        with pytest.raises(ValueError, match="invalid report query chunk seconds"):
+            report_profile(profile)
+    profile["report"].pop("query_chunk_seconds")
+    tasks, reason = collection_plan(report_profile(profile), data, ["D06"])
+    assert reason is None
+    assert all(task["chunk_seconds"] == 86400 for task in tasks)
+    assert all(task["planned_calls"] == 1 for task in tasks)
+
+
+@pytest.mark.asyncio
+async def test_pod_window_boundaries_preserve_uid_conflicts_and_sample_gaps():
+    profile, data = setup(1)
+    data["scope"]["clusters"] = data["scope"]["clusters"][:1]
+    start = timestamp(data["time_range"]["start"])
+    labels = dict(namespace="training", pod="reused-name", node="node")
+
+    def row(identity, offsets, value):
+        return dict(
+            metric={**labels, **identity},
+            values=[[start + offset, value] for offset in offsets],
+        )
+
+    original = {
+        query: [
+            dict(
+                id=query,
+                cluster_id="cpc-1",
+                tool_status="ok",
+                quality={"original_samples": True, "max_hold_seconds": 30},
+                snapshot={"data": rows},
+            )
+        ]
+        for query, rows in {
+            "D01": [row({"uuid": "gpu"}, [7185, 7200, 7215, 7230, 7305, 7320], "0")],
+            "D06": [
+                row({"uid": "old"}, [7185, 7200], "1"),
+                row({"uid": "new"}, [7200, 7215, 7230, 7305, 7320], "1"),
+            ],
+        }.items()
+    }
+
+    async def query(args):
+        query_id = "D06" if args["expr"].startswith("kube_pod_info{") else "D01"
+        stop = timestamp(args["endTime"])
+        length = int(re.search(r"\[(\d+)s\]$", args["expr"])[1])
+        if query_id == "D06":
+            assert length == 7201
+        rows = copy.deepcopy(original[query_id][0]["snapshot"]["data"])
+        for row in rows:
+            row["values"] = [v for v in row["values"] if stop - length < v[0] <= stop]
+        return {"data": [row for row in rows if row["values"]]}
+
+    collected, _, summary = await collect_report(
+        {"query_prometheus": query},
+        profile,
+        data,
+        time.monotonic() + 60,
+        ["D01", "D06"],
+        False,
+    )
+
+    def mapped(source):
+        return [
+            (row["gpu_uuid"], row["pod_uid"], row["start"], row["end"])
+            for row in allocations(
+                source["D01"], data["time_range"], source["D06"], observed=True
+            )
+        ]
+
+    assert summary["complete"] and summary["query_calls"] == 13
+    assert mapped(collected) == mapped(original)
+    assert {uid for _, uid, _, _ in mapped(collected)} == {"old", "new"}
+    for excluded in (start + 7205, start + 7275):
+        assert not any(a <= excluded < b for _, _, a, b in mapped(collected))

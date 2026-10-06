@@ -43,7 +43,7 @@ async def test_parallel_calls_match_serial_results_and_reduce_fixture_time():
         metrics = calculate("O01", data, collected, {}, {})["metrics"]
         for metric in metrics:
             metric.pop("evidence_refs", None)
-        assert summary["query_calls"] == len(calls) == 6
+        assert summary["query_calls"] == len(calls) == 28
         assert peak <= concurrency and active == 0 and summary["complete"]
         assert len(summary["tasks"]) == 6
         assert all(e["quality"]["sub_agent_id"] for e in evidence)
@@ -71,7 +71,7 @@ async def test_dependencies_preserve_namespace_narrowing_and_response_reuse():
         ["D06", "D01", "D02", "D08"],
         True,
     )
-    assert len(calls) == 4  # One GPU response and one narrowed Pod request per CPC.
+    assert len(calls) == 26  # One reused GPU response + twelve Pod windows per CPC.
     assert all(
         'namespace=~"training"' in a["expr"]
         for a in calls

@@ -21,6 +21,12 @@ def report_profile(profile):
         type(v) is not int or v <= 0 for v in overrides.values()
     ):
         raise ValueError("invalid report collection limits")
+    query_chunks = profile.get("report", {}).get("query_chunk_seconds", {})
+    if not isinstance(query_chunks, dict) or any(
+        query not in profile["queries"] or type(seconds) is not int or seconds <= 0
+        for query, seconds in query_chunks.items()
+    ):
+        raise ValueError("invalid report query chunk seconds")
     # Only Ops calls this. Never modify the shared/RCA profile object.
     return {
         **profile,
@@ -30,6 +36,7 @@ def report_profile(profile):
 
 def collection_plan(profile, data, order):
     limits = profile["limits"]
+    query_chunks = profile.get("report", {}).get("query_chunk_seconds", {})
     tasks = [
         dict(query_id=q, key=q, cluster=c, period=data["time_range"])
         for q in dict.fromkeys(order)
@@ -47,7 +54,11 @@ def collection_plan(profile, data, order):
         ]
     for task in tasks:
         seconds = timestamp(task["period"]["end"]) - timestamp(task["period"]["start"])
-        task["planned_calls"] = math.ceil(seconds / limits["chunk_seconds"])
+        task["chunk_seconds"] = min(
+            limits["chunk_seconds"],
+            query_chunks.get(task["query_id"], limits["chunk_seconds"]),
+        )
+        task["planned_calls"] = math.ceil(seconds / task["chunk_seconds"])
     reason = None
     if any(t["query_id"] not in profile["queries"] for t in tasks):
         reason = "collection_query_unconfigured"
@@ -124,6 +135,7 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
         query, cluster, period = task["query_id"], task["cluster"], task["period"]
         child_profile = deepcopy(profile)
         child_profile["limits"].update(
+            chunk_seconds=task["chunk_seconds"],
             max_queries=task["reserved_calls"],
             max_discovery_calls=task["reserved_discovery_calls"],
         )
@@ -202,6 +214,7 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
             sub_agent_id=task["sub_agent_id"],
             depends_on=task["depends_on"],
             planned_calls=task["planned_calls"],
+            chunk_seconds=task["chunk_seconds"],
             reserved_calls=task["reserved_calls"],
             reserved_discovery_calls=task["reserved_discovery_calls"],
             discovery_calls=obs.discovery_calls,

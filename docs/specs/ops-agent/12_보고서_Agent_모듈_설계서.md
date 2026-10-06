@@ -4,15 +4,17 @@
 
 Ops 전용 `report.limits` 예시는 `max_queries=2048`, `chunk_seconds=86400`, `max_rows=50000`, `max_concurrency=3`이다. 네 키만 양수 정수로 받으며 없는 키는 공통 limits를 사용한다. `max_concurrency=1`이면 순차 실행한다. 공통/RCA의 48회·1시간·5000표본, 응답 2MiB·전체 deadline 900초·허용 기간 31일·도구 timeout은 유지한다. 숫자는 배포 예시이며 실제 장기간 수집 성공을 보장하지 않는다.
 
-[수집 계획](../../../ops-agent/src/ops_agent/collection.py)은 중복 query를 합치고 query+CPC+절대 기간별 task를 만든다. O10 비교 기간은 별도 task다. 실제 호출 전에 설정·기간·전체 초기 호출량을 검사하며 초과 계획은 외부 조회 없이 사유를 남긴다. 초기 호출량은 기간/최대 구간 길이의 올림 × query × CPC로 계산하며 캐시 재사용·응답 밀도·추가 분할은 예측하지 않는다.
+`builtin-grafana-v7`의 별도 `report.query_chunk_seconds` 맵은 등록된 query ID별 양수 정수만 허용하며 예시는 `{"D06":7200}`이다. D06(Pod 신원 이력)의 초기 조회 구간은 최대 2시간이고, 다른 query는 위 기본 24시간을 유지한다. 각 task는 report limits를 반영한 전체 `chunk_seconds`와 query별 상한 중 작은 값을 계획·실행에 동일하게 사용한다. 맵이 없으면 기존 전체 구간 설정을 따른다. 사용자 정의 `configuration.agents`는 전체 객체 교체이므로 맵과 최상위 revision을 직접 반영해야 한다. 공통/RCA 프로필에는 이 Ops 전용 맵을 적용하지 않는다.
+
+[수집 계획](../../../ops-agent/src/ops_agent/collection.py)은 중복 query를 합치고 query+CPC+절대 기간별 task를 만든다. O10 비교 기간은 별도 task다. 실제 호출 전에 설정·기간·전체 초기 호출량을 검사하며 초과 계획은 외부 조회 없이 사유를 남긴다. 초기 호출량은 각 task의 `ceil(기간 초 / chunk_seconds)`를 합산하며 캐시 재사용·응답 밀도·추가 분할은 예측하지 않는다. 위 예시에서 비교 기간 없는 전체 11주제·2개 클러스터의 1/7/31일 초기 호출량은 각각 46/322/1426회다. 이는 사전 계획값이며 실제 조회 횟수나 완료 보장이 아니다.
 
 의존성이 해결된 task를 동시성 상한까지 한 배치로 실행한다. 각 task는 독립 Observation 상태와 예약 query/discovery 예산을 갖는다. 모든 미완료 task의 초기 호출량을 남겨 두고 여유 예산을 배분하며, 배치가 모두 종료된 뒤 미사용 잔액만 다음 배치에 배분한다. 이미 소진한 호출은 반환하지 않는다. 시간은 남은 deadline과 예상 잔여 배치 수로 나눈다. 느린 형제 task가 다음 배치를 늦출 수 있지만 다른 task의 예약 호출량을 소비하지는 못한다.
 
 동일 CPC·기간의 같은 Prometheus metric task는 선행 응답 재사용을 위해 순서를 둔다. 실제 재사용 여부는 도구·데이터소스·범위·표현식·시각·구간이 모두 일치하는 완전한 응답으로 판단한다. O08 단독 namespace의 D06은 D01/D08 종료 후 검증된 namespace로 범위를 좁힌다. 완료된 캐시만 복사하며 실행 중 collector 상태는 공유하지 않는다. 다른 CPC와 독립 query는 함께 실행할 수 있다.
 
-원본 시각·표본을 보존하며 큰 응답은 기존 수집기의 크기 기반 분할로 다시 조회한다. 실패·시간 소진은 해당 범위에 기록하고 독립 결과는 유지한다. 취소는 상위 Worker로 전파하고 대기·실행 task를 모두 회수한다. RCA와 보고서는 공통 bounded runner를 사용하되 RCA의 Runbook·최대 1회 재조사 정책을 보고서에 복사하지 않는다.
+D06의 Pod UID를 포함한 원본 시각·표본을 보존하며 집계나 표본 생략으로 용량을 줄이지 않는다. D06의 2시간 상한은 확인한 하루 약 32MiB의 전송·처리량과 Agent의 2MiB·50000표본 한도를 고려해 첫 응답을 줄이기 위한 값이다. 아래 HTTP 5초 제한 보완과 함께 적용하며, Prometheus의 고정 10MiB 상한을 전제로 한 값이나 보편적 최적값은 아니다. 수신 응답이 Agent 한도를 넘거나 알려진 MCP 원격 크기 초과 오류를 받으면 기존 수집기의 크기 기반 분할로 다시 조회하며, 추가 호출 때문에 월간 수집도 예산이나 deadline을 소진할 수 있다. 실패·시간 소진은 해당 범위에 기록하고 독립 결과는 유지한다. 취소는 상위 Worker로 전파하고 대기·실행 task를 모두 회수한다. RCA와 보고서는 공통 bounded runner를 사용하되 RCA의 Runbook·최대 1회 재조사 정책을 보고서에 복사하지 않는다.
 
-`quality.collection`은 적용 limits·동시성·전체 경과시간·예상/실제 호출량과 task별 `sub_agent_id`, `depends_on`, 예약/실사용 query·discovery 호출량, 시작 offset·소요시간, 요청/완료/빈 응답/미완료 구간을 보존한다. evidence의 `quality.sub_agent_id`로 task에 연결한다. 완료 구간은 빈 응답도 포함하며 표본 연속성·GPU 커버리지·계산 성공과 다르다. 구 결과에 없는 진단은 추정하지 않는다. GUI의 결과/근거 상세에서 저장된 진단을 읽으며, 실시간 분산 추적이나 접수 전 서버 예산 판정 API를 추가한 것은 아니다.
+`quality.collection`은 적용 limits·동시성·전체 경과시간·예상/실제 호출량과 task별 `sub_agent_id`, `depends_on`, 초기 구간 상한 `chunk_seconds`, 예약/실사용 query·discovery 호출량, 시작 offset·소요시간, 요청/완료/빈 응답/미완료 구간을 보존한다. evidence의 `quality.sub_agent_id`로 task에 연결한다. 완료 구간은 빈 응답도 포함하며 표본 연속성·GPU 커버리지·계산 성공과 다르다. 구 결과에 없는 진단은 추정하지 않는다. GUI의 결과/근거 상세에서 저장된 진단을 읽으며, 실시간 분산 추적이나 접수 전 서버 예산 판정 API를 추가한 것은 아니다.
 
 OP-05의 최초 계획·병렬 수집은 구현했다. 판단 부족에 따른 추가 관측 라운드와 OP-06의 자유 생성형 조언은 후속 개발이다. 산식·criteria·입력/결과 schema·JC claim/lease/공개 계약은 유지한다. 실제 일간·주간·월간 자료의 호출량·소요시간·메모리·Grafana 부하는 운영 환경에서 별도 측정한다.
 
@@ -133,9 +135,11 @@ RCA 결과 DB는 이번 보고서를 위해 새 RCA를 실행하는 경로가 �
 
 주제별 query ID를 합쳐 중복 조회를 줄인 뒤 독립 Observation task로 수집한다. O02는 D08/D01/D06/D10, O08은 D08/D01/D06/D12를 조회한다. Prometheus 호환 지표는 원본 표본을 보존하는 instant range-vector로 기간을 나눠 가져온다.
 
-응답이 바이트 또는 표본 수 한도를 넘으면 같은 시작 시각에서 시간 구간을 줄여 다시 조회한다. 최소 구간은 1초이며 재조회도 기존 호출 횟수·deadline을 소모한다. Loki는 MCP 1.4.2의 원격 응답 10MiB 초과 오류도 `response_byte_limit`로 구분하여 기간을 절반으로 줄이고 재조회한다. 정상 응답의 Agent 크기 제한·요청 행 수 도달·`metadata.resultsTruncated`도 분할 대상이다. 원래 전체 기간과 query ID·대상/namespace 필터·원본 로그는 유지하며 특정 오류 종류의 로그만 남기는 방식으로 용량을 줄이지 않는다.
+응답이 바이트 또는 표본 수 한도를 넘으면 같은 시작 시각에서 시간 구간을 줄여 다시 조회한다. 최소 구간은 1초이며 재조회도 기존 호출 횟수·deadline을 소모한다. 알려진 MCP 원격 크기 초과 오류도 출처와 무관하게 `response_byte_limit`로 구분하여 기간을 절반으로 줄이고 재조회한다. 확인된 MCP 1.4.2의 원격 10MiB 상한은 Loki 경로에 한정한다. 공식 MCP 고정 응답 시험에서 Prometheus 11MiB 응답은 수신 후 Agent 한도로 분할됐으며, Prometheus 원격 크기 오류 복구는 오류 주입 fixture로만 검증했다. 정상 응답의 Agent 크기·표본 제한과 Loki 요청 행 수 도달·`metadata.resultsTruncated`도 분할 대상이다. 원래 전체 기간과 query ID·대상/namespace 필터·원본 지표/로그는 유지하며 특정 오류 종류의 로그만 남기는 방식으로 용량을 줄이지 않는다.
 
-최소 구간에서도 MCP가 응답을 거부하면 `unavailable / response_byte_limit`, 정상 응답의 Agent 바이트·행 한도 초과는 `partial / response_byte_limit` 또는 `partial / sample_limit_exceeded`로 남긴다. 원본 경고·부분 응답은 정상 계산 표본으로 사용하지 않는다. 회복 중인 큰 구간의 실패는 완성된 작은 구간 근거와 중복 저장하지 않는다. 권한·연결 등 일반 조회 오류는 이 분할 재조회 대상이 아니다. 공통 수집기를 쓰는 RCA도 동일한 조회 복구를 적용하며 Runbook·원인 판정·추가 조사 정책과 기존 한도는 변경하지 않는다.
+최소 구간에서도 MCP가 응답을 거부하면 `unavailable / response_byte_limit`, 정상 응답의 Agent 바이트·행 한도 초과는 `partial / response_byte_limit` 또는 `partial / sample_limit_exceeded`로 남긴다. 원본 경고·부분 응답은 정상 계산 표본으로 사용하지 않는다. 회복 중인 큰 구간의 실패는 완성된 작은 구간 근거와 중복 저장하지 않는다. 권한·일반 timeout·연결 등 일반 조회 오류는 이 분할 재조회 대상이 아니다. 공통 수집기를 쓰는 RCA도 동일한 조회 복구를 적용하며 Runbook·원인 판정·추가 조사 정책과 기존 한도는 변경하지 않는다.
+
+구간별 `Grafana query window` 로그는 job/attempt·조회 ID·대상 클러스터·조회 범위·경과시간·결과/사유·표본 수·수신 바이트·다음 분할 크기·캐시 여부를 남긴다. 원본 응답·조회식·Namespace 이름·인증 값은 남기지 않는다. 공통 [`grafana_mcp`](../../../shared/python/src/agent_common/grafana_mcp.py)는 NAT HTTP 제한을 `tool_call_timeout + 5초`로 설정하고 연결 수명을 별도 task에서 관리한다. 전송 실패가 Worker 실행 루프를 취소하지 않게 하되 실패한 조회를 재실행하지는 않는다. 다음 독립적인 예산 내 호출은 종료된 연결을 새로 열 수 있다. 세션 종료 404가 SDK의 `Session terminated`로 전달된 경우에도 연결을 정리하고 다음 호출에서 새 세션을 만든다. 두 Worker의 NAT 등록에 적용되는 공통 전송 변경이며 RCA 판단·계산, 도구 timeout·작업 deadline·JC lease는 유지한다.
 
 호출 한도 또는 실행시간을 소진하면 `budget_exhausted` 근거를 남기며 이미 확보한 유효 구간은 보존한다. 기본값은 [06](../06_배포_운영_인계서.md)의 설정 원본을 따른다. 수집 품질 필드는 [03 §5.1](../common/03_데이터_설계서.md), 구현은 [관측 조회](../../../shared/python/src/agent_common/observation.py)에 있다.
 

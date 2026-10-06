@@ -1,11 +1,13 @@
 import asyncio
 import copy
 import json
+import re
 import time
 
 import pytest
 
-from agent_common.observation import MCPResponseError, Observation, unwrap
+from agent_common.observation import MCPResponseError, Observation, series, unwrap
+from agent_common.runtime import attempt_context
 from agent_common.grafana_time import mcp_time
 from agent_common.contracts import timestamp
 from agent_common.parsers import log_lines
@@ -356,6 +358,7 @@ async def test_loki_requested_limit_is_positive_and_enforced(max_rows):
 async def test_mcp_failures_keep_safe_codes_instead_of_json_errors(
     query, response, code, caplog
 ):
+    caplog.set_level("INFO", logger="agent_common.observation")
     obs = observation(Grafana())
 
     async def failed(args):
@@ -582,25 +585,106 @@ async def test_loki_remote_limits_split_without_losing_scope_or_logs(query, fail
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["nat_bytes", "mcp_bytes"])
+async def test_prometheus_remote_bytes_split_preserves_samples_and_safe_logs(
+    failure, caplog
+):
+    caplog.set_level("INFO", logger="agent_common.observation")
+    obs = observation(Grafana())
+    obs.data["target"] = {"node": "private-selector-token"}
+    samples = [[timestamp(PERIOD["start"]) + offset, "1"] for offset in (900, 2700)]
+    calls = []
+
+    async def query(args):
+        calls.append(args.copy())
+        stop = timestamp(args["endTime"])
+        length = int(re.search(r"\[(\d+)s\]$", args["expr"])[1])
+        if length > 1801:
+            error = "response body exceeds maximum size of 10485760 bytes; private-error-token"
+            if failure == "nat_bytes":
+                return "MCPToolClient tool call failed: " + error
+            return {"isError": True, "content": [{"type": "text", "text": error}]}
+        return {
+            "data": [
+                {
+                    "metric": {"uid": "private-payload-token"},
+                    "values": [
+                        row for row in samples if stop - length < row[0] <= stop
+                    ],
+                }
+            ]
+        }
+
+    obs.tools["query_prometheus"] = query
+    token = attempt_context.set({"claim": {"job_id": "fixture-job", "attempt_no": 2}})
+    try:
+        result = await obs.collect("D06")
+    finally:
+        attempt_context.reset(token)
+    assert obs.calls == len(calls) == 3 and len(result) == 2
+    assert all(e["tool_status"] == "ok" and e["quality"]["complete"] for e in result)
+    assert series(result)[0]["samples"] == samples
+    assert result[0]["time_range"]["start"] == PERIOD["start"]
+    assert result[0]["time_range"]["end"] == result[1]["time_range"]["start"]
+    assert result[1]["time_range"]["end"] == PERIOD["end"]
+    assert len({args["expr"].rsplit("[", 1)[0] for args in calls}) == 1
+    messages = [
+        r.message
+        for r in caplog.records
+        if r.message.startswith("Grafana query window ")
+    ]
+    assert len(messages) == 3
+    assert all(
+        "job=fixture-job attempt=2 query=D06 source=mimir" in m for m in messages
+    )
+    assert all("cluster='cluster-a' namespace_count=1" in m for m in messages)
+    assert f"start={PERIOD['start']} end={PERIOD['end']}" in messages[0]
+    assert "outcome=split reason=response_byte_limit" in messages[0]
+    assert (
+        "sample_count=None response_bytes=None next_chunk_seconds=1800" in messages[0]
+    )
+    assert all("elapsed_seconds=" in m and "outcome=ok" in m for m in messages[1:])
+    assert all("sample_count=1 response_bytes=" in m for m in messages[1:])
+    assert not any(
+        secret in caplog.text
+        for secret in (
+            "private-selector-token",
+            "private-error-token",
+            "private-payload-token",
+        )
+    )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("exhaust", ["queries", "deadline"])
-async def test_mcp_byte_retry_preserves_complete_prefix_and_unknown_tail(exhaust):
+@pytest.mark.parametrize("query", ["D09", "D02"])
+async def test_mcp_byte_retry_preserves_complete_prefix_and_unknown_tail(
+    exhaust, query
+):
     obs = observation(Grafana())
     obs.profile["limits"].update(
         chunk_seconds=1800, max_queries=2 if exhaust == "queries" else 48
     )
+    prefix = (
+        [{"line": "retained prefix"}]
+        if query == "D09"
+        else [
+            {"metric": {"uuid": "gpu-a"}, "values": [[timestamp(PERIOD["start"]), "1"]]}
+        ]
+    )
 
     async def logs(args):
-        if args["startRfc3339"] == PERIOD["start"]:
-            return {"data": [{"line": "retained prefix"}]}
+        if obs.calls == 1:
+            return {"data": prefix}
         if exhaust == "deadline":
             obs.deadline = time.monotonic() - 1
         return "MCPToolClient tool call failed: response body exceeds maximum size of 10485760 bytes"
 
-    obs.tools["query_loki_logs"] = logs
-    result = await obs.collect("D09")
+    obs.tools["query_loki_logs" if query == "D09" else "query_prometheus"] = logs
+    result = await obs.collect(query)
     assert obs.calls == 2 and len(result) == 2
     assert result[0]["tool_status"] == "ok" and result[0]["quality"]["complete"]
-    assert result[0]["snapshot"]["data"] == [{"line": "retained prefix"}]
+    assert result[0]["snapshot"]["data"] == prefix
     assert result[1]["tool_status"] == "unavailable" and result[1]["snapshot"] == {}
     assert result[1]["quality"]["reason"] == "budget_exhausted"
     assert result[1]["quality"].get("complete") is not True
@@ -624,19 +708,43 @@ async def test_mcp_byte_failure_stops_at_minimum_window_and_redacts_details(
 
     obs.tools["query_loki_logs" if query == "D09" else "query_prometheus"] = logs
     result = await obs.collect(query)
-    assert obs.calls == (6 if query == "D09" else 1)
+    assert obs.calls == 6 and len(result) == 4
+    assert all(
+        timestamp(e["time_range"]["end"]) - timestamp(e["time_range"]["start"]) == 1
+        for e in result
+    )
+    assert result[0]["time_range"]["start"] == obs.data["time_range"]["start"]
+    assert result[-1]["time_range"]["end"] == obs.data["time_range"]["end"]
     assert all(
         e["tool_status"] == "unavailable" and e["snapshot"] == {} for e in result
     )
     assert all(e["quality"]["complete"] is False for e in result)
     assert all(e["quality"]["error_code"] == "response_byte_limit" for e in result)
-    reason = "response_byte_limit" if query == "D09" else "query_failed"
-    assert all(e["quality"]["reason"] == reason for e in result)
+    assert all(e["quality"]["reason"] == "response_byte_limit" for e in result)
     assert "private-test-token" not in json.dumps(result) + caplog.text
 
 
 @pytest.mark.asyncio
-async def test_loki_size_retry_propagates_cancellation():
+async def test_query_timeout_is_not_retried_as_size_error(caplog):
+    caplog.set_level("INFO", logger="agent_common.observation")
+    obs = observation(Grafana())
+
+    async def timeout(args):
+        raise TimeoutError("private-test-token")
+
+    obs.tools["query_prometheus"] = timeout
+    result = await obs.collect("D02")
+    assert obs.calls == len(result) == 1
+    assert result[0]["tool_status"] == "unavailable"
+    assert result[0]["quality"]["reason"] == "query_failed"
+    assert result[0]["quality"]["error_type"] == "TimeoutError"
+    assert result[0]["time_range"] == PERIOD
+    assert "private-test-token" not in json.dumps(result) + caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["D09", "D02"])
+async def test_remote_size_retry_propagates_cancellation(query):
     obs = observation(Grafana())
     retry_started = asyncio.Event()
 
@@ -646,8 +754,8 @@ async def test_loki_size_retry_propagates_cancellation():
         retry_started.set()
         await asyncio.Future()
 
-    obs.tools["query_loki_logs"] = logs
-    task = asyncio.create_task(obs.collect("D09"))
+    obs.tools["query_loki_logs" if query == "D09" else "query_prometheus"] = logs
+    task = asyncio.create_task(obs.collect(query))
     try:
         await asyncio.wait_for(retry_started.wait(), timeout=1)
     finally:

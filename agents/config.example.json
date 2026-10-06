@@ -1,5 +1,5 @@
 {
-  "revision": "builtin-grafana-v6",
+  "revision": "builtin-grafana-v7",
   "rca": {
     "general_runbook_key": "RB-GENERAL-GPU-NODE"
   },
@@ -21,6 +21,9 @@
       "max_queries": 2048,
       "chunk_seconds": 86400,
       "max_rows": 50000
+    },
+    "query_chunk_seconds": {
+      "D06": 7200
     }
   },
   "clusters": {},
