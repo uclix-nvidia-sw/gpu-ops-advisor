@@ -206,8 +206,13 @@ export function OperatorGuide() {
           </button>
         ))}
       </nav>
-      <section id="guide-start" hidden={selected !== 'start'} aria-label="시작 방법">
-        <Panel title="처음에는 이렇게 요청하세요" className="guide-section">
+      <section
+        id="guide-start"
+        hidden={selected !== 'start'}
+        className="guide-menu-section"
+        aria-label="시작 방법"
+      >
+        <Panel title="처음에는 이렇게 요청하세요" className="guide-menu-panel">
           <div className="guide-body">
             <ol>
               <li>
@@ -222,11 +227,9 @@ export function OperatorGuide() {
                 LLM 추론 부하는 해당 보고서 수치에 포함되지 않습니다.
               </li>
               <li>
-                <strong>반복 보고서는 자동 보고서 설정에서 등록하세요.</strong> 일간·주간·월간 중
-                고르며 직전 완료된 달력 기간을 분석합니다. 즉시 보고서는 시작일과 종료일을 날짜로
-                정합니다. 종료일을 포함하며 같은 날짜면 1일(24시간)입니다. 기본값은 어제 하루이고
-                최대 31일까지 선택합니다. 긴 기간도 요청할 수 있지만 적용된 기간·조회·시간 한도와
-                데이터 양에 따라 일부 수집이 끝나지 않을 수 있습니다.
+                <strong>즉시 보고서는 시작일과 종료일을 날짜로 정합니다.</strong>
+                종료일을 포함하며 같은 날짜면 1일(24시간)입니다. 기본값은 어제 하루이고 최대
+                31일까지 선택합니다.
               </li>
               <li>
                 <strong>접수 후 실행 상태와 결과 품질을 따로 확인하세요.</strong> 작업 이력의 종류는
@@ -235,6 +238,17 @@ export function OperatorGuide() {
                 있으므로 소주제별 이유를 확인하세요.
               </li>
             </ol>
+            <section className="guide-reading-group">
+              <h3>반복 보고서와 긴 기간 요청</h3>
+              <p>
+                <strong>반복 보고서는 자동 보고서 설정에서 등록하세요.</strong> 일간·주간·월간 중
+                고르며 직전 완료된 달력 기간을 분석합니다.
+              </p>
+              <p>
+                긴 기간도 요청할 수 있지만 적용된 기간·조회·시간 한도와 데이터 양에 따라 일부 수집이
+                끝나지 않을 수 있습니다.
+              </p>
+            </section>
             <Link className="text-link" to="/reports">
               보고서 이력으로 이동
             </Link>
@@ -244,238 +258,309 @@ export function OperatorGuide() {
       <section
         id="guide-topics"
         hidden={selected !== 'topics'}
-        aria-labelledby="guide-topics-title"
+        className="guide-menu-section"
+        aria-label="보고서 종류·분석 내용"
       >
-        <h2 id="guide-topics-title">궁금한 보고서 종류를 고르세요</h2>
-        <p>종류를 누르면 해당 설명과 포함된 분석만 아래에 표시합니다.</p>
-        <div className="guide-kind-picker" role="group" aria-label="설명할 보고서 종류">
-          {reportKinds.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="button"
-              aria-pressed={kind.id === item.id}
-              aria-controls="guide-kind-content"
-              onClick={() => setKindId(item.id)}
-            >
-              <strong>{item.name}</strong>
-            </button>
-          ))}
-        </div>
-        <section id="guide-kind-content" aria-labelledby="guide-kind-title" key={kind.id}>
-          <Panel className="guide-section guide-kind-panel">
-            <header className="guide-kind-header">
-              <div>
-                <h3 id="guide-kind-title">{kind.name}</h3>
-                <p>{kind.description}</p>
+        <Panel
+          title="궁금한 보고서 종류를 고르세요"
+          description="종류를 선택하면 해당 설명과 포함된 분석만 표시합니다."
+          className="guide-menu-panel"
+        >
+          <div className="guide-menu-body">
+            <label className="guide-kind-select">
+              <span>설명할 보고서 종류</span>
+              <select value={kindId} onChange={(event) => setKindId(event.target.value)}>
+                {reportKinds.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="guide-kind-layout">
+              <div className="guide-kind-picker" role="group" aria-label="설명할 보고서 종류">
+                {reportKinds.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="button"
+                    aria-pressed={kind.id === item.id}
+                    aria-controls="guide-kind-content"
+                    onClick={() => setKindId(item.id)}
+                  >
+                    <strong>{item.name}</strong>
+                  </button>
+                ))}
               </div>
-              <Link className="button primary" to={`/reports/new?kind=${kind.id}`}>
-                이 종류로 보고서 만들기
-              </Link>
-            </header>
-            <table className="guide-kind-table" aria-label={`${kind.name} 안내`}>
-              <tbody>
-                <tr>
-                  <th scope="row">이런 판단에 도움</th>
-                  <td>{kind.insight}</td>
-                </tr>
-                <tr>
-                  <th scope="row">필요한 자료</th>
-                  <td>{kind.requirement}</td>
-                </tr>
-                <tr>
-                  <th scope="row">해석할 때 주의</th>
-                  <td>{kind.limit}</td>
-                </tr>
-                <tr>
-                  <th scope="row">포함된 세부 분석 · {kind.topicIds.length}개</th>
-                  <td>
-                    <p>질문 예시를 보고, 펼치면 계산 기준과 필요한 자료를 확인할 수 있습니다.</p>
-                    {topics.map((name, i) => {
-                      if (!kind.topicIds.includes(topicId(i))) return null;
-                      const guide = topicGuides[i];
-                      return (
-                        <details key={topicId(i)} className="guide-topic">
-                          <summary>
-                            <span className="guide-topic-id">{topicId(i)}</span>
-                            <span>
-                              <strong>{name}</strong>
-                              <span className="guide-topic-purpose">{guide.purpose}</span>
-                              <span className="guide-topic-examples">
-                                <span className="guide-topic-examples-label">
-                                  이런 게 궁금할 때 선택하세요
-                                </span>
-                                {guide.examples.map((question) => (
-                                  <span key={question}>• {question}</span>
-                                ))}
-                              </span>
-                            </span>
-                          </summary>
-                          <dl className="guide-topic-fields">
-                            <dt>표시 기준</dt>
-                            <dd>{topicDisplayBases[topicId(i)]}</dd>
-                            <dt>현재 나오는 결과</dt>
-                            <dd>{guide.result}</dd>
-                            <dt>필요한 데이터</dt>
-                            <dd>{guide.inputs}</dd>
-                            <dt>해석할 때 주의</dt>
-                            <dd>{guide.limit}</dd>
-                            <dt>운영자가 확인할 것</dt>
-                            <dd>{guide.next}</dd>
-                          </dl>
-                          <details className="guide-technical">
-                            <summary>개발·수집 기준 확인</summary>
-                            <p>{guide.queries}</p>
-                          </details>
-                        </details>
-                      );
-                    })}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Panel>
-        </section>
-        <Notice>
-          여기서는 한 종류씩 설명을 봅니다. 실제 보고서 요청에서는 7개 종류를 여러 개 선택하거나
-          전체 종합으로 11개 소주제를 한 장에 담을 수 있습니다. 전체 선택이 수집량 감소를 뜻하지는
-          않으며, 자료가 부족한 소주제도 이유와 함께 남습니다.
-        </Notice>
+              <section id="guide-kind-content" aria-labelledby="guide-kind-title" key={kind.id}>
+                <div className="guide-kind-panel">
+                  <header className="guide-kind-header">
+                    <div>
+                      <h3 id="guide-kind-title">{kind.name}</h3>
+                      <p>{kind.description}</p>
+                    </div>
+                    <Link className="button primary" to={`/reports/new?kind=${kind.id}`}>
+                      이 종류로 보고서 만들기
+                    </Link>
+                  </header>
+                  <table className="guide-kind-table" aria-label={`${kind.name} 안내`}>
+                    <tbody>
+                      <tr>
+                        <th scope="row">이런 판단에 도움</th>
+                        <td>{kind.insight}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">필요한 자료</th>
+                        <td>{kind.requirement}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">해석할 때 주의</th>
+                        <td>{kind.limit}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan={2} className="guide-kind-analyses">
+                          <h4>포함된 세부 분석 · {kind.topicIds.length}개</h4>
+                          <p>
+                            질문 예시를 보고, 펼치면 계산 기준과 필요한 자료를 확인할 수 있습니다.
+                          </p>
+                          {topics.map((name, i) => {
+                            if (!kind.topicIds.includes(topicId(i))) return null;
+                            const guide = topicGuides[i];
+                            return (
+                              <details key={topicId(i)} className="guide-topic">
+                                <summary>
+                                  <span className="guide-topic-id">{topicId(i)}</span>
+                                  <span>
+                                    <strong>{name}</strong>
+                                    <span className="guide-topic-purpose">{guide.purpose}</span>
+                                    <span className="guide-topic-examples">
+                                      <span className="guide-topic-examples-label">
+                                        이런 게 궁금할 때 선택하세요
+                                      </span>
+                                      {guide.examples.map((question) => (
+                                        <span key={question}>• {question}</span>
+                                      ))}
+                                    </span>
+                                  </span>
+                                </summary>
+                                <dl className="guide-topic-fields">
+                                  <dt>표시 기준</dt>
+                                  <dd>{topicDisplayBases[topicId(i)]}</dd>
+                                  <dt>현재 나오는 결과</dt>
+                                  <dd>{guide.result}</dd>
+                                  <dt>필요한 데이터</dt>
+                                  <dd>{guide.inputs}</dd>
+                                  <dt>해석할 때 주의</dt>
+                                  <dd>{guide.limit}</dd>
+                                  <dt>운영자가 확인할 것</dt>
+                                  <dd>{guide.next}</dd>
+                                </dl>
+                                <details className="guide-technical">
+                                  <summary>개발·수집 기준 확인</summary>
+                                  <p>{guide.queries}</p>
+                                </details>
+                              </details>
+                            );
+                          })}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+            <Notice>
+              여기서는 한 종류씩 설명을 봅니다. 실제 보고서 요청에서는 7개 종류를 여러 개 선택하거나
+              전체 종합으로 11개 소주제를 한 장에 담을 수 있습니다. 전체 선택이 수집량 감소를
+              뜻하지는 않으며, 자료가 부족한 소주제도 이유와 함께 남습니다.
+            </Notice>
+          </div>
+        </Panel>
       </section>
       <section
         id="guide-values"
         hidden={selected !== 'values'}
-        className="guide-section"
+        className="guide-menu-section"
         aria-label="수치 읽는 법"
       >
-        <Panel title="수치를 이렇게 읽으세요">
-          <dl className="guide-body guide-topic-fields">
-            <dt>0% / 산출 불가 / 미계산</dt>
-            <dd>
-              0%는 유효한 관측으로 계산된 값입니다. 아주 작은 값은 표시 자릿수에서 반올림될 수
-              있습니다. 산출 불가는 필요한 데이터·조건을 충족하지 못한 값(null), 미계산은 저장
-              결과에 해당 지표가 없는 경우입니다. 모델이 메모리에 올라와 있거나 Pod가 Running이어도
-              분석 기간의 활동률은 0%일 수 있습니다.
-            </dd>
-            <dt>연결 GPU 평균 활동률</dt>
-            <dd>
-              귀속을 확인할 수 있는 연결 구간과 활동 표본을 겹쳐 시간 가중으로 계산합니다. 짧은
-              부하가 평균에서 작게 보일 수 있으며 Namespace의 실제 연산 소비 비율과는 다릅니다.
-            </dd>
-            <dt>연결 GPU 수</dt>
-            <dd>
-              기간 중 한 번이라도 연결이 확인된 고유 GPU 대수입니다. 동시에 사용한 최대 대수가
-              아닙니다.
-            </dd>
-            <dt>GPU·시간</dt>
-            <dd>
-              GPU별 시간을 누적한 단위입니다. 예를 들어 GPU 4대가 2시간 연결됐다면 8 GPU·시간입니다.
-              2시간 보고서에서 약 8 GPU·시간이 나와도 기간 오류는 아닙니다. 관측 공백·제외 구간으로
-              값이 줄 수 있고, 공유 GPU는 Namespace 사이에 중복될 수 있습니다.
-            </dd>
-            <dt>소주제별 표시 기준</dt>
-            <dd>
-              한 보고서 안에서도 기준이 다릅니다. Namespace 현황은 클러스터·Namespace별,
-              메모리·온도는 GPU 장비별, 에너지는 선택 범위 전체 GPU의 합계입니다. 모든 수치를
-              Namespace별 사용량으로 읽거나 서로 다른 단위끼리 더하지 마세요.
-            </dd>
-            <dt>실행 상태</dt>
-            <dd>
-              실행 대기·실행 중·재시도 대기·실행 완료는 작업의 진행 상태입니다. 실행 실패·기한
-              만료는 상세 화면에서 종료 사유를 확인하세요. 실행 완료가 모든 분석의 성공을 뜻하지는
-              않습니다.
-            </dd>
-            <dt>결과 품질</dt>
-            <dd>
-              산출 가능은 해당 계산의 근거가 충족됐다는 뜻이며 장비가 정상이라는 판정은 아닙니다.
-              부분 산출은 일부 값이나 판단에 제한이 있고, 근거 부족은 계산에 필요한 자료·조건이
-              부족한 상태입니다. 미발행은 아직 공개 결과가 없다는 뜻입니다. 예를 들어 ‘실행 완료’와
-              ‘부분 산출’이 함께 나올 수 있습니다. 자료가 없다는 사실을 정상 또는 0으로 바꾸지
-              않습니다.
-            </dd>
-            <dt>AI 해석과 권고</dt>
-            <dd>
-              현재 수치는 코드가 계산하고 AI는 검증된 문장의 우선순위를 정합니다. AI 편집 실패 시
-              기본 보고서를 사용할 수 있습니다. 판단 보류 권고는 조치 승인이나 수행 완료가 아니며
-              GPU 회수·설정 변경은 자동 실행하지 않습니다.
-            </dd>
-          </dl>
+        <Panel title="수치를 이렇게 읽으세요" className="guide-menu-panel">
+          <div className="guide-body">
+            <section className="guide-reading-group">
+              <h3>숫자와 단위</h3>
+              <table className="guide-kind-table guide-values-table" aria-label="숫자와 단위">
+                <tbody>
+                  <tr>
+                    <th scope="row">0% / 산출 불가 / 미계산</th>
+                    <td>
+                      0%는 유효한 관측으로 계산된 값입니다. 아주 작은 값은 표시 자릿수에서 반올림될
+                      수 있습니다. 산출 불가는 필요한 데이터·조건을 충족하지 못한 값(null), 미계산은
+                      저장 결과에 해당 지표가 없는 경우입니다. 모델이 메모리에 올라와 있거나 Pod가
+                      Running이어도 분석 기간의 활동률은 0%일 수 있습니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">연결 GPU 평균 활동률</th>
+                    <td>
+                      귀속을 확인할 수 있는 연결 구간과 활동 표본을 겹쳐 시간 가중으로 계산합니다.
+                      짧은 부하가 평균에서 작게 보일 수 있으며 Namespace의 실제 연산 소비 비율과는
+                      다릅니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">연결 GPU 수</th>
+                    <td>
+                      기간 중 한 번이라도 연결이 확인된 고유 GPU 대수입니다. 동시에 사용한 최대
+                      대수가 아닙니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">GPU·시간</th>
+                    <td>
+                      GPU별 시간을 누적한 단위입니다. 예를 들어 GPU 4대가 2시간 연결됐다면 8
+                      GPU·시간입니다. 2시간 보고서에서 약 8 GPU·시간이 나와도 기간 오류는 아닙니다.
+                      관측 공백·제외 구간으로 값이 줄 수 있고, 공유 GPU는 Namespace 사이에 중복될 수
+                      있습니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">소주제별 표시 기준</th>
+                    <td>
+                      한 보고서 안에서도 기준이 다릅니다. Namespace 현황은 클러스터·Namespace별,
+                      메모리·온도는 GPU 장비별, 에너지는 선택 범위 전체 GPU의 합계입니다. 모든
+                      수치를 Namespace별 사용량으로 읽거나 서로 다른 단위끼리 더하지 마세요.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section className="guide-reading-group">
+              <h3>실행 상태와 결과 품질</h3>
+              <table
+                className="guide-kind-table guide-values-table"
+                aria-label="실행 상태와 결과 품질"
+              >
+                <tbody>
+                  <tr>
+                    <th scope="row">실행 상태</th>
+                    <td>
+                      실행 대기·실행 중·재시도 대기·실행 완료는 작업의 진행 상태입니다. 실행
+                      실패·기한 만료는 상세 화면에서 종료 사유를 확인하세요. 실행 완료가 모든 분석의
+                      성공을 뜻하지는 않습니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">결과 품질</th>
+                    <td>
+                      산출 가능은 해당 계산의 근거가 충족됐다는 뜻이며 장비가 정상이라는 판정은
+                      아닙니다. 부분 산출은 일부 값이나 판단에 제한이 있고, 근거 부족은 계산에
+                      필요한 자료·조건이 부족한 상태입니다. 미발행은 아직 공개 결과가 없다는
+                      뜻입니다. 예를 들어 ‘실행 완료’와 ‘부분 산출’이 함께 나올 수 있습니다. 자료가
+                      없다는 사실을 정상 또는 0으로 바꾸지 않습니다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section className="guide-reading-group">
+              <h3>AI 해석과 권고</h3>
+              <table className="guide-kind-table guide-values-table" aria-label="AI 해석과 권고">
+                <tbody>
+                  <tr>
+                    <th scope="row">해석과 실행의 구분</th>
+                    <td>
+                      현재 수치는 코드가 계산하고 AI는 검증된 문장의 우선순위를 정합니다. AI 편집
+                      실패 시 기본 보고서를 사용할 수 있습니다. 판단 보류 권고는 조치 승인이나 수행
+                      완료가 아니며 GPU 회수·설정 변경은 자동 실행하지 않습니다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
         </Panel>
       </section>
       <section
         id="guide-missing"
         hidden={selected !== 'missing'}
-        className="guide-section"
-        aria-labelledby="guide-missing-title"
+        className="guide-menu-section"
+        aria-label="근거 부족 확인"
       >
-        <h2 id="guide-missing-title">근거 부족이면 무엇부터 확인하나요?</h2>
-        <p>
-          보고서 본문의 <strong>분석 진행 상세</strong>를 펼쳐 해당 주제의 부족 사유와 query·CPC별
-          수집 구간을 확인하세요. 근거 부족만으로 연결 장애를 단정할 수 없습니다.
-        </p>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>확인한 상태</th>
-                <th>뜻과 다음 확인</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>조회 오류·연결 실패</td>
-                <td>기록된 오류 코드와 대상 데이터 소스·접속 설정을 확인합니다.</td>
-              </tr>
-              <tr>
-                <td>빈 응답</td>
-                <td>
-                  조회는 끝났지만 조건에 맞는 표본이 없었습니다. 기간·Namespace·지표 이름과 보존
-                  기간을 대조합니다.
-                </td>
-              </tr>
-              <tr>
-                <td>조회 한도·시간 소진</td>
-                <td>
-                  계획 중단 또는 일부 구간 미완료입니다. 저장된 적용 한도·실제 호출 수·미완료 기간을
-                  확인합니다. 연결 실패와 구분하고 범위를 줄이거나 운영 설정을 점검합니다.
-                </td>
-              </tr>
-              <tr>
-                <td>할당 이력·신원·활동 부족</td>
-                <td>
-                  필요한 지표, 동일 시각의 GPU–Pod UID 연결, 활동률 단위를 확인합니다. 연결 관측이
-                  있어도 독점 할당 근거는 없을 수 있습니다.
-                </td>
-              </tr>
-              <tr>
-                <td>조치 기록·비교 기간 미지정</td>
-                <td>
-                  조치 전후 비교의 입력 조건이 없는 상태이며 연결 장애가 아닙니다. 직접 요청에서
-                  수행한 조치 ID와 비교 기간을 입력하세요. 자동보고서는 이 조건을 임의로 만들지 않고
-                  부족 사유를 남기며 다른 소주제 분석을 계속합니다.
-                </td>
-              </tr>
-              <tr>
-                <td>공유·모델 혼합·값 충돌</td>
-                <td>
-                  관측은 있지만 귀속이나 평균 비교 조건이 맞지 않습니다. 제외 사유와 유효시간을
-                  확인하며 억지로 평균을 채우지 않습니다.
-                </td>
-              </tr>
-              <tr>
-                <td>현재 미지원·미구현</td>
-                <td>
-                  선택한 주제·집계와 위 주제별 제한을 확인합니다. 데이터나 연결을 복구해도 아직
-                  구현하지 않은 분석이 생기지는 않습니다.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="muted">
-          수집 응답 완료는 표본이 연속적이거나 계산·권고가 가능하다는 뜻이 아닙니다. 구 보고서에
-          수집 진단이 없으면 조회 여부를 추정하지 않습니다.
-        </p>
+        <Panel title="근거 부족이면 무엇부터 확인하나요?" className="guide-menu-panel">
+          <div className="guide-body">
+            <p>
+              보고서 본문의 <strong>분석 진행 상세</strong>를 펼쳐 해당 주제의 부족 사유와
+              query·CPC별 수집 구간을 확인하세요. 근거 부족만으로 연결 장애를 단정할 수 없습니다.
+            </p>
+            <div className="table-wrap">
+              <table className="guide-help-table">
+                <thead>
+                  <tr>
+                    <th>확인한 상태</th>
+                    <th>뜻과 다음 확인</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">조회 오류·연결 실패</th>
+                    <td>기록된 오류 코드와 대상 데이터 소스·접속 설정을 확인합니다.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">빈 응답</th>
+                    <td>
+                      <p>조회는 끝났지만 조건에 맞는 표본이 없었습니다.</p>
+                      <p>기간·Namespace·지표 이름과 보존 기간을 대조합니다.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">조회 한도·시간 소진</th>
+                    <td>
+                      <p>계획 중단 또는 일부 구간 미완료입니다.</p>
+                      <p>
+                        저장된 적용 한도·실제 호출 수·미완료 기간을 확인합니다. 연결 실패와 구분하고
+                        범위를 줄이거나 운영 설정을 점검합니다.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">할당 이력·신원·활동 부족</th>
+                    <td>
+                      <p>필요한 지표, 동일 시각의 GPU–Pod UID 연결, 활동률 단위를 확인합니다.</p>
+                      <p>연결 관측이 있어도 독점 할당 근거는 없을 수 있습니다.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">조치 기록·비교 기간 미지정</th>
+                    <td>
+                      <p>조치 전후 비교의 입력 조건이 없는 상태이며 연결 장애가 아닙니다.</p>
+                      <p>
+                        직접 요청에서 수행한 조치 ID와 비교 기간을 입력하세요. 자동보고서는 이
+                        조건을 임의로 만들지 않고 부족 사유를 남기며 다른 소주제 분석을 계속합니다.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">공유·모델 혼합·값 충돌</th>
+                    <td>
+                      <p>관측은 있지만 귀속이나 평균 비교 조건이 맞지 않습니다.</p>
+                      <p>제외 사유와 유효시간을 확인하며 억지로 평균을 채우지 않습니다.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">현재 미지원·미구현</th>
+                    <td>
+                      <p>선택한 주제·집계와 위 주제별 제한을 확인합니다.</p>
+                      <p>데이터나 연결을 복구해도 아직 구현하지 않은 분석이 생기지는 않습니다.</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="muted">
+              수집 응답 완료는 표본이 연속적이거나 계산·권고가 가능하다는 뜻이 아닙니다. 구 보고서에
+              수집 진단이 없으면 조회 여부를 추정하지 않습니다.
+            </p>
+          </div>
+        </Panel>
       </section>
       <details className="guide-sources">
         <summary>안내 기준과 개발 범위 · 2026-10-06</summary>

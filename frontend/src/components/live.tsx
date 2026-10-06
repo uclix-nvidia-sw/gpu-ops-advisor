@@ -554,10 +554,11 @@ export function JobRows({ items, preferResult = false }: { items: Row[]; preferR
                       : str(j.kind)}
                 </td>
               )}
-              <td>
-                {j.kind === 'report'
+              <td className="job-received-time">
+                {(j.kind === 'report'
                   ? reportRequestTime(str(j.created_at))
-                  : formatDate(str(j.created_at))}
+                  : formatDate(str(j.created_at))
+                ).replace(/ (?=\d{2}:)/, '\n')}
               </td>
               <td className="job-state-cell">
                 <Badge status={str(j.status)} />
