@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { Schedules } from './Schedules';
 import { Reports, ReportForm } from './Reports';
+import { reportKinds } from '../lib/reportKinds';
 import { OperationsReports } from './Operations';
 
 const publication = vi.hoisted(() => ({
@@ -141,14 +142,12 @@ it.each(['/reports/new', '/reports/new?schedule=true'])(
         <ReportForm />
       </MemoryRouter>,
     );
-    expect(html).toContain(
-      '<option value="namespace" selected="">Namespace별 GPU 사용 분석</option>',
-    );
-    expect(html).toContain('<details><summary>세부 분석 설정');
-    expect(html.match(/type="checkbox" checked=""/g)).toHaveLength(
-      path.includes('schedule') ? 2 : 1,
-    );
-    expect(html).toContain('value="namespace" selected="">Namespace');
+    expect(html).toContain('Namespace별 GPU 사용 현황');
+    expect(html.match(/type="radio"/g)).toHaveLength(7);
+    expect(html).toContain('name="report-kind" checked="" value="namespace"');
+    expect(html).not.toContain('세부 분석 설정');
+    expect(html).not.toContain('type="checkbox" checked="" value="O');
+    expect(html).toContain('클러스터·Namespace별 연결 관측');
     if (path.includes('schedule')) {
       expect(html).toContain('직전 완료된 하루');
       expect(html).not.toContain('yearly');
@@ -211,3 +210,38 @@ it('previews the complete requested period and explains worker preflight before 
   expect(html).toContain('24시간');
   expect(html).toContain('수집 시작 전 서버');
 });
+
+const expectedKinds = [
+  ['namespace', ['O08'], 'namespace'],
+  ['health', ['O01', 'O09', 'O05'], 'cluster'],
+  ['allocation', ['O02', 'O03', 'O04'], 'cluster'],
+  ['incident-workloads', ['O06'], 'cluster'],
+  ['waiting', ['O07'], 'cluster'],
+  ['comparison', ['O10'], 'cluster'],
+  ['monitoring', ['O11'], 'cluster'],
+] as const;
+it.each(expectedKinds)(
+  'prepares %s with explicit topics, scope and required inputs',
+  (id, ids, group) => {
+    const kind = reportKinds.find((k) => k.id === id)!;
+    expect(kind.topicIds).toEqual(ids);
+    expect(kind.groupBy).toBe(group);
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={[`/reports/new?kind=${id}&schedule=true`]}>
+        <ReportForm />
+      </MemoryRouter>,
+    );
+    expect(html).toContain(`name="report-kind" checked="" value="${id}"`);
+    expect(html).toContain(kind.requirement);
+    if (id === 'comparison') {
+      expect(html).toContain('<textarea required=""');
+      expect(html.match(/type="date"/g)).toHaveLength(4);
+      expect(html).toContain('type="checkbox" disabled=""');
+      expect(html).not.toContain('자동 생성 설정 저장');
+    } else {
+      expect(html).not.toContain('<textarea');
+      expect(html).toContain('자동 생성 설정 저장');
+    }
+    expect(html.includes('자원 조건 지정 (선택)')).toBe(id === 'waiting');
+  },
+);

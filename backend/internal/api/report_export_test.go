@@ -12,7 +12,7 @@ import (
 
 func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 	var body Object
-	err := json.Unmarshal([]byte(`{"result_status":"partial","topics":[{"metrics":[{"id":"O02.mapped_gpu_hours","target":{"namespace":"=CMD()"},"value":1.5,"unit":"<script>alert(1)</script>","method":"observed_gpu_pod_interval_union","quality":{},"evidence_refs":["e1"]},{"id":"O02.allocated_gpu_hours","value":null,"quality":{"reason":"required_data_missing"}}],"missing_inputs":["observed_mapping_not_exclusive_allocation"]}],"limitations":["<script>bad</script>"]}`), &body)
+	err := json.Unmarshal([]byte(`{"result_status":"partial","topics":[{"metrics":[{"id":"O02.mapped_gpu_hours","target":{"namespace":"=CMD()"},"value":1.5,"unit":"<script>alert(1)</script>","method":"observed_gpu_pod_interval_union","quality":{},"evidence_refs":["e1"]},{"id":"O02.allocated_gpu_hours","value":null,"quality":{"reason":"allocation_contract_missing"}}],"missing_inputs":["observed_mapping_not_exclusive_allocation"]}],"limitations":["<script>bad</script>"]}`), &body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 	if err := exportMetrics(html, "report-id", "html", body, metrics); err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"최종 보고서", "분석 범위와 결과", "기본 보고서", "<table>", "GPU–Pod 연결 관측 시간", "1.5", "산출 불가", "독점 할당량이나 실제 연산 시간이 아닙니다", "&lt;script&gt;"} {
+	for _, expected := range []string{"최종 보고서", "분석 범위와 결과", "기본 보고서", "<table>", "GPU–Pod 연결 관측 시간", "검증된 GPU 할당 이력이 부족합니다", "1.5", "산출 불가", "독점 할당량이나 실제 연산 시간이 아닙니다", "&lt;script&gt;"} {
 		if !strings.Contains(html.Body.String(), expected) {
 			t.Errorf("missing %q", expected)
 		}

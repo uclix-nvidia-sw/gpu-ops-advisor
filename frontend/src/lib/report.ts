@@ -79,7 +79,8 @@ const reasons: Record<string, string> = {
   discovery_deadline_exhausted: '데이터소스 탐색 중 실행시간 제한에 도달했습니다.',
   range_budget_exhausted: '요청한 기간이 허용된 조회 범위를 초과했습니다.',
 
-  allocation_contract_missing: '독점·공유·MIG 할당 이력이 없어 정확한 할당량을 확정할 수 없습니다.',
+  allocation_contract_missing:
+    '검증된 GPU 할당 이력이 부족합니다. GPU–Pod 연결 관측만으로는 독점 할당·저활동·작업 편차를 확정하지 않습니다.',
   allocation_mode_unverified: '독점·공유·MIG 할당 방식을 확인할 수 없습니다.',
   gpu_pod_identity_missing: 'GPU는 관측됐지만 같은 시점의 Pod 고유 ID를 연결하지 못했습니다.',
   observed_mapping_not_exclusive_allocation:

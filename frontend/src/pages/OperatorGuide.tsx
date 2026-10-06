@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Notice, PageHead, Panel } from '../components/ui';
 import { topicId, topics } from '../lib/live';
+import { reportKinds } from '../lib/reportKinds';
 
 // Keep current behavior distinct from the development goals in specification 12.
 const topicGuides = [
@@ -139,7 +140,7 @@ const topicGuides = [
     inputs: '실제 수행 조치 기록 ID, 비교 기간, 분석 기간, 각 기간의 전력 관측이 필요합니다.',
     limit:
       '권고는 수행 조치가 아닙니다. 기간 길이·관측 범위·업무량 차이 때문에 변화가 생길 수 있으므로 인과적 개선 효과나 절감 성과를 확정하지 않습니다.',
-    next: '세부 설정에서 조치 ID와 비교 기간을 넣고 작업량·기간·대상 조건을 맞춰 검토하세요.',
+    next: '조치 전후 비교를 선택해 조치 ID와 비교 기간을 넣고 작업량·기간·대상 조건을 맞춰 검토하세요.',
     queries: 'DB 조치 기록 + D11 · D02 · D13 · D09; 비교 기간 전력은 별도 수집',
   },
   {
@@ -160,7 +161,7 @@ const topicGuides = [
 
 const guideSections = [
   ['start', '시작 방법'],
-  ['topics', '분석 주제 11개'],
+  ['topics', '보고서 종류·분석 내용'],
   ['values', '수치 읽는 법'],
   ['missing', '근거 부족 확인'],
 ];
@@ -220,9 +221,9 @@ export function OperatorGuide() {
                 일부 수집이 끝나지 않을 수 있습니다.
               </li>
               <li>
-                <strong>추가 질문이 있을 때 세부 분석 설정에서 주제를 선택하세요.</strong> 현재 요청
-                집계가 명시적으로 반영되는 경로는 O08의 Namespace 분석입니다. 다른 주제까지 모두
-                Namespace별로 묶인다고 해석하지 마세요.
+                <strong>궁금한 내용에 맞는 보고서 종류를 선택하세요.</strong> 7개 종류에 기존 11개
+                분석 주제를 묶었습니다. 데이터 준비 조건과 실제 계산 대상을 확인하세요. 장비·에너지
+                결과가 모두 Namespace별로 나뉘는 것은 아닙니다.
               </li>
             </ol>
             <Link className="text-link" to="/reports">
@@ -236,11 +237,41 @@ export function OperatorGuide() {
         hidden={selected !== 'topics'}
         aria-labelledby="guide-topics-title"
       >
-        <h2 id="guide-topics-title">분석 주제 11개</h2>
+        <h2 id="guide-topics-title">보고서 종류 7개</h2>
+        <p>
+          확인하려는 내용으로 고르세요. 아래 필요 조건은 안내이며 현재 연결 상태나 데이터 보유
+          여부를 확인한 결과는 아닙니다.
+        </p>
+        <div className="report-kind-grid">
+          {reportKinds.map((kind) => (
+            <article className="guide-topic" key={kind.id}>
+              <div className="guide-body">
+                <h3>{kind.name}</h3>
+                <p>{kind.description}</p>
+                <p>
+                  <strong>얻을 수 있는 판단</strong>
+                  <br />
+                  {kind.insight}
+                </p>
+                <p>
+                  <strong>필요한 자료</strong>
+                  <br />
+                  {kind.requirement}
+                </p>
+                <p>{kind.limit}</p>
+                <p>포함 주제 · {kind.topicIds.join(' · ')}</p>
+                <Link className="text-link" to={`/reports/new?kind=${kind.id}`}>
+                  이 종류로 보고서 만들기
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+        <h2>세부 분석 주제 11개</h2>
         <p>
           11개는 개발명세에 정의된 운영 질문입니다. 장비 상태, 할당·활동·배분, 사건과 작업 관계,
-          에너지·조치 효과, 데이터 품질을 각각 확인하기 위해 나뉘었습니다. 주제명은 요청 화면과
-          같습니다. 펼치면 현재 제공하는 결과와 제한을 함께 볼 수 있습니다.
+          에너지·조치 효과, 데이터 품질을 각각 확인하기 위해 나뉘었습니다. 기존 ID와 과거 결과는
+          유지합니다. 펼치면 각 세부 분석의 현재 결과와 제한을 볼 수 있습니다.
         </p>
         <div className="guide-topic-list">
           {topics.map((name, i) => {

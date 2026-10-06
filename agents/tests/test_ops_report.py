@@ -96,3 +96,36 @@ async def test_cluster_summary_narrative_keeps_unlabeled_observation_limit():
     assert "Pod 연결 라벨 없는 GPU: 1" in text
     assert "유휴 상태나 회수 가능 여부는 확인되지" in text
     assert result["result_status"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_prerequisite_and_transport_failure_are_explained_without_rewriting_values():
+    from types import SimpleNamespace
+
+    result = dict(
+        time_range={"start": "2026-10-01T00:00:00Z", "end": "2026-10-02T00:00:00Z"},
+        scope={"clusters": [{"cluster_id": "fixture"}]},
+        result_status="blocked",
+        quality={},
+        limitations=[],
+        topics=[
+            dict(
+                topic_id="O04",
+                status="blocked",
+                metrics=[],
+                recommendations=[],
+                evidence_refs=["d08", "d06"],
+                missing_inputs=[
+                    "allocation_contract_missing",
+                    "incomplete_observation",
+                ],
+            )
+        ],
+    )
+    before = copy.deepcopy(result["topics"])
+    await write_report(result, SimpleNamespace(configured=False))
+    text = " ".join(s["text"] for s in result["narrative"])
+    assert "검증된 GPU 할당 이력이 부족" in text
+    assert "조회 실패 또는 일부 기간" in text
+    assert result["topics"] == before
+    assert result["result_status"] == "blocked"

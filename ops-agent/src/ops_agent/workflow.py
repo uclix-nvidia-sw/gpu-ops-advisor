@@ -130,6 +130,15 @@ def calculate(
         for e in all_refs
     ]
 
+    observed_allocation = topic_id in {"O02", "O03", "O04", "O06"} and any(
+        e.get("quality", {}).get("allocation_semantics") == "observed_pod_labels"
+        for e in collected.get("D08", [])
+    )
+    if observed_allocation:
+        # Pod labels prove an observed connection, not an allocation contract.
+        # Keep per-cluster source failures in observations as a separate diagnosis.
+        topic["missing_inputs"].append("allocation_contract_missing")
+
     def put(
         name,
         value,
@@ -456,7 +465,9 @@ def calculate(
                 None,
                 "GPU-hours",
                 "allocation_activity_interval_intersection",
-                "exclusive_episode_or_activity_missing",
+                "allocation_contract_missing"
+                if observed_allocation and not mapping
+                else "exclusive_episode_or_activity_missing",
             )
         topic["recommendations"].append(
             dict(
@@ -531,7 +542,9 @@ def calculate(
                 None,
                 "percentage_points",
                 "same_workload_common_interval",
-                "multi_gpu_workload_history_missing",
+                "allocation_contract_missing"
+                if observed_allocation and not mapping
+                else "multi_gpu_workload_history_missing",
             )
     elif topic_id == "O05":
         incidents = {i["id"]: i for i in context["incidents"]}
@@ -608,7 +621,9 @@ def calculate(
             len(relations) if relations else None,
             "relations",
             "incident_timestamp_identity_join",
-            "incident_time_mapping_missing",
+            "allocation_contract_missing"
+            if observed_allocation and not mapping
+            else "incident_time_mapping_missing",
             evidence=all_refs + [db_evidence],
         )
         topic["missing_inputs"].append("verified_workload_disruption_evidence")

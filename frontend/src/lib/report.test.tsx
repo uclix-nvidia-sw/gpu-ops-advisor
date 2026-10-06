@@ -70,7 +70,7 @@ describe('report presentation', () => {
     expect(html).toContain('GPU–Pod 연결 관측 시간');
     expect(html).toContain('7.986');
     expect(html).toContain('산출 불가');
-    expect(html).toContain('정확한 할당량을 확정할 수 없습니다');
+    expect(html).toContain('검증된 GPU 할당 이력이 부족합니다');
     expect(html).not.toContain('<script>');
     expect(html).toContain('<details><summary>원본 결과 보기');
   });

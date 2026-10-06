@@ -4,7 +4,7 @@ import { Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, topicId, topics, useCommand, useList } from '../lib/live';
 import { scopeLabel } from '../lib/domain';
-import { groupLabel } from '../lib/report';
+import { reportKind, reportKinds } from '../lib/reportKinds';
 import { useReportListPosition } from '../lib/reportNavigation';
 import {
   previousReportDay,
@@ -73,31 +73,47 @@ export function ReportForm() {
     navigate = useNavigate(),
     [params] = useSearchParams(),
     cmd = useCommand();
-  const [selected, setSelected] = useState(['O08']),
-    [group, setGroup] = useState('namespace'),
-    [purpose, setPurpose] = useState('namespace'),
-    [scheduled, setScheduled] = useState(params.get('schedule') === 'true'),
+  const [kindId, setKindId] = useState(reportKind(params.get('kind')).id),
+    [scheduled, setScheduled] = useState(
+      params.get('schedule') === 'true' && reportKind(params.get('kind')).id !== 'comparison',
+    ),
     [frequency, setFrequency] = useState('daily'),
     [localTime, setLocalTime] = useState('09:00'),
     [weekday, setWeekday] = useState(1),
     [day, setDay] = useState(1),
     [start, setStart] = useState(previousReportDay()),
     [end, setEnd] = useState(previousReportDay()),
-    [compare, setCompare] = useState(false),
     [compareStart, setCompareStart] = useState(''),
     [compareEnd, setCompareEnd] = useState('');
   const [actionRefs, setActionRefs] = useState(''),
     [resourceName, setResourceName] = useState(''),
     [resourceUnit, setResourceUnit] = useState(''),
     [resourceCluster, setResourceCluster] = useState(app.scope.clusters[0]?.cluster_id || '');
+  const kind = reportKind(kindId);
+  const compare = kind.id === 'comparison';
+  const waiting = kind.id === 'waiting';
+  const chooseKind = (id: string) => {
+    setKindId(id);
+    setActionRefs('');
+    setCompareStart('');
+    setCompareEnd('');
+    setResourceName('');
+    setResourceUnit('');
+    if (id === 'comparison') setScheduled(false);
+  };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      if (compare && (scheduled || !actionRefs.trim())) {
+        throw new Error(
+          '조치 전후 비교는 수행한 조치 기록 ID와 비교 기간을 입력해 직접 요청하세요.',
+        );
+      }
       const template = {
         scope: app.scope,
-        topic_ids: selected,
-        group_by: [group],
-        ...(actionRefs.trim()
+        topic_ids: kind.topicIds,
+        group_by: [kind.groupBy],
+        ...(compare && actionRefs.trim()
           ? {
               action_record_ids: actionRefs
                 .split('\n')
@@ -105,7 +121,7 @@ export function ReportForm() {
                 .filter(Boolean),
             }
           : {}),
-        ...(resourceName.trim()
+        ...(waiting && resourceName.trim()
           ? {
               resource_selectors: [
                 {
@@ -154,115 +170,103 @@ export function ReportForm() {
       <PageHead
         eyebrow="NEW REPORT"
         title="새 운영 보고서"
-        description="기본 분석은 Namespace별 GPU 사용 분석입니다. 대상과 기간을 확인하고 요청하세요."
+        description="궁금한 내용에 맞는 보고서 종류를 고르고 대상과 기간을 확인하세요."
       />
       <NavTabs items={reportTabs} />
       <ReportTimeNote />
       <form className="stack" onSubmit={submit}>
-        <Field label="보고서 목적">
-          <select
-            value={purpose}
-            onChange={(e) => {
-              setPurpose(e.target.value);
-              if (e.target.value === 'namespace') {
-                setSelected(['O08']);
-                setGroup('namespace');
-                setActionRefs('');
-                setResourceName('');
-                setResourceUnit('');
-                setCompare(false);
-              }
-            }}
-          >
-            <option value="namespace">Namespace별 GPU 사용 분석</option>
-            <option value="custom">직접 분석 조건 선택</option>
-          </select>
-        </Field>
-        <Notice>
-          {purpose === 'namespace'
-            ? 'GPU 연결 시간과 연결 GPU의 평균 활동률을 분석합니다. 독점 할당량이나 회수 가능량을 뜻하지 않습니다.'
-            : '분석 주제마다 필요한 데이터와 지원 집계가 다릅니다. 세부 설정에서 조건을 확인하세요.'}
-        </Notice>
-        <details open={purpose === 'custom'}>
-          <summary>
-            세부 분석 설정 · {selected.length}개 주제 · {groupLabel([group])}
-          </summary>
-          <Panel title="분석 주제">
-            <div className="live-check-grid">
-              {topics.map((t, i) => (
-                <label className="check" key={t}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(topicId(i))}
-                    onChange={(e) => {
-                      setPurpose('custom');
-                      setSelected(
-                        e.target.checked
-                          ? [...selected, topicId(i)]
-                          : selected.filter((x) => x !== topicId(i)),
-                      );
-                    }}
-                  />
-                  <span>
-                    <small>{topicId(i)}</small> {t}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </Panel>
-          <details>
-            <summary>조치 기록·자원 조건</summary>
-            <div className="stack">
+        <fieldset className="report-kind-fieldset">
+          <legend>어떤 내용을 확인할까요?</legend>
+          <p>한 가지를 선택하면 필요한 분석 주제를 함께 요청합니다.</p>
+          <div className="report-kind-grid">
+            {reportKinds.map((item) => (
+              <label
+                key={item.id}
+                className={`report-kind-card${kind.id === item.id ? ' selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="report-kind"
+                  value={item.id}
+                  checked={kind.id === item.id}
+                  onChange={() => chooseKind(item.id)}
+                />
+                <span>
+                  <strong>{item.name}</strong>
+                  <span className="report-kind-description">{item.description}</span>
+                  <small>포함 주제 · {item.topicIds.join(' · ')}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <section className="report-kind-detail" aria-label="선택한 보고서 안내" aria-live="polite">
+          <h2>{kind.name}</h2>
+          <p>{kind.insight}</p>
+          <dl>
+            <dt>필요한 자료</dt>
+            <dd>{kind.requirement}</dd>
+            <dt>해석할 때 주의</dt>
+            <dd>{kind.limit}</dd>
+            <dt>계산 범위</dt>
+            <dd>
+              {kind.groupBy === 'namespace'
+                ? '클러스터·Namespace별 연결 관측'
+                : '장비·작업별 수치와 선택 범위 합계가 함께 나옵니다. 각 지표의 대상을 확인하세요.'}
+            </dd>
+          </dl>
+          <p className="cell-sub">
+            자료 보유 여부는 실행 후 확인됩니다. 모든 보고서에서 조회 실패·누락 자료를 확인할 수
+            있습니다.
+          </p>
+          <Link className="text-link" to="/operator-guide#guide-topics">
+            보고서 종류와 세부 분석 안내
+          </Link>
+        </section>
+        {compare && (
+          <Panel title="비교할 운영 조치">
+            <div className="live-padding">
               <Field
-                label="조치 기록 ID"
-                hint="조치 전후 비교에 사용할 서버 기록 ID를 한 줄에 하나씩 입력합니다."
+                label="수행한 조치 기록 ID"
+                hint="서버에 수행됨으로 기록된 조치 ID를 한 줄에 하나씩 입력하세요."
               >
                 <textarea
+                  required
                   rows={2}
                   value={actionRefs}
                   onChange={(e) => setActionRefs(e.target.value)}
                 />
               </Field>
-              <div className="form-grid">
-                <Field label="자원 CPC">
-                  <select
-                    value={resourceCluster}
-                    onChange={(e) => setResourceCluster(e.target.value)}
-                  >
-                    {app.scope.clusters.map((c) => (
-                      <option key={c.cluster_id}>{c.cluster_id}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="등록된 자원 이름">
-                  <input value={resourceName} onChange={(e) => setResourceName(e.target.value)} />
-                </Field>
-                <Field label="자원 단위" hint="수집된 자원 카탈로그의 이름·단위를 사용합니다.">
-                  <input
-                    required={!!resourceName.trim()}
-                    value={resourceUnit}
-                    onChange={(e) => setResourceUnit(e.target.value)}
-                  />
-                </Field>
-              </div>
+            </div>
+          </Panel>
+        )}
+        {waiting && (
+          <details>
+            <summary>자원 조건 지정 (선택)</summary>
+            <div className="form-grid">
+              <Field label="자원 클러스터">
+                <select
+                  value={resourceCluster}
+                  onChange={(e) => setResourceCluster(e.target.value)}
+                >
+                  {app.scope.clusters.map((c) => (
+                    <option key={c.cluster_id}>{c.cluster_id}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="등록된 자원 이름">
+                <input value={resourceName} onChange={(e) => setResourceName(e.target.value)} />
+              </Field>
+              <Field label="자원 단위" hint="수집된 자원 카탈로그의 이름·단위를 사용합니다.">
+                <input
+                  required={!!resourceName.trim()}
+                  value={resourceUnit}
+                  onChange={(e) => setResourceUnit(e.target.value)}
+                />
+              </Field>
             </div>
           </details>
-          <Field label="집계 기준">
-            <select
-              value={group}
-              onChange={(e) => {
-                setPurpose('custom');
-                setGroup(e.target.value);
-              }}
-            >
-              {['cluster', 'model', 'node', 'namespace', 'pod', 'workload'].map((v) => (
-                <option key={v} value={v}>
-                  {groupLabel([v])}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </details>
+        )}
         <Panel title="범위와 실행 조건">
           <div className="live-padding stack">
             <Notice>{scopeLabel(app.scope)}</Notice>
@@ -270,6 +274,7 @@ export function ReportForm() {
               <input
                 type="checkbox"
                 checked={scheduled}
+                disabled={compare}
                 onChange={(e) => setScheduled(e.target.checked)}
               />
               자동 생성 설정
@@ -344,16 +349,8 @@ export function ReportForm() {
                     />
                   </Field>
                 </div>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={compare}
-                    onChange={(e) => setCompare(e.target.checked)}
-                  />
-                  이전 기간과 비교
-                </label>
                 {compare && (
-                  <div className="form-grid">
+                  <div className="form-grid" role="group" aria-label="조치 이전 비교 기간">
                     <Field label="비교 시작일">
                       <input
                         required
@@ -404,10 +401,7 @@ export function ReportForm() {
           <Link className="button" to="/reports">
             돌아가기
           </Link>
-          <button
-            className="button primary"
-            disabled={cmd.busy || !selected.length || !app.canOperate}
-          >
+          <button className="button primary" disabled={cmd.busy || !app.canOperate}>
             {cmd.busy ? '접수 확인 중…' : scheduled ? '자동 생성 설정 저장' : '보고서 요청'}
           </button>
         </div>

@@ -441,3 +441,131 @@ async def test_fleet_bindings_preserve_gpu_identity_units_and_sample_gaps():
     assert power["quality"]["observed_gpu_seconds"] == 90
     assert power["quality"]["coverage_scope"] == "observed_devices_only"
     assert set(power["evidence_refs"]) == {e["id"] for e in collected["D11"]}
+
+
+@pytest.mark.parametrize("topic", ["O02", "O03", "O04", "O06"])
+@pytest.mark.parametrize("failed", [False, True])
+def test_observed_labels_distinguish_allocation_prerequisite_from_query_failure(
+    topic, failed
+):
+    source = collected()
+    source["D08"] = [
+        evidence(
+            "D08", [row({"uuid": "GPU-1", "pod": "worker", "pod_uid": "pod-1"}, "70")]
+        )
+    ]
+    source["D08"][0]["quality"]["allocation_semantics"] = profile()["queries"]["D08"][
+        "allocation_semantics"
+    ]
+    source["D02"] = [evidence("D02", [] if failed else [row({"uuid": "GPU-1"}, "70")])]
+    if failed:
+        # D06 belongs to every topic in this test; failures and semantics can coexist.
+        source["D06"][0]["tool_status"] = "unavailable"
+        source["D06"][0]["snapshot"] = {"data": []}
+        source["D06"][0]["quality"]["reason"] = "query_failed"
+    before = copy.deepcopy(source)
+    result = calculate(topic, DATA, source, {"incidents": []}, {"id": "db"})
+    assert "allocation_contract_missing" in result["missing_inputs"]
+    assert ("incomplete_observation" in result["missing_inputs"]) == failed
+    assert (
+        any(
+            o.get("reason") == "query_failed" for o in result["quality"]["observations"]
+        )
+        == failed
+    )
+    if topic == "O02":
+        assert result["status"] == "partial"
+        assert (
+            next(m for m in result["metrics"] if m["id"] == "O02.observed_gpu_count")[
+                "value"
+            ]
+            == 1
+        )
+        if not failed:
+            assert (
+                next(m for m in result["metrics"] if m["id"] == "O02.mapped_gpu_hours")[
+                    "value"
+                ]
+                == 1
+            )
+    else:
+        assert result["status"] == "blocked"
+        assert all(
+            m["value"] is None
+            and m["quality"]["reason"] == "allocation_contract_missing"
+            for m in result["metrics"]
+        )
+    assert source == before
+
+
+def test_declared_unknown_mode_allows_multi_gpu_zero_activity_but_not_low_activity():
+    source = {
+        "D08": [
+            evidence(
+                "D08",
+                [
+                    row(
+                        {
+                            "uuid": gpu,
+                            "pod": "worker",
+                            "pod_uid": "pod-1",
+                            "allocation_mode": "unknown",
+                        },
+                        "1",
+                    )
+                    for gpu in ("GPU-1", "GPU-2")
+                ],
+            )
+        ],
+        "D02": [
+            evidence("D02", [row({"uuid": gpu}, "0") for gpu in ("GPU-1", "GPU-2")])
+        ],
+    }
+    result = calculate("O04", DATA, source, {}, {})
+    assert result["status"] == "ready"
+    assert result["metrics"] and all(m["value"] == 0 for m in result["metrics"])
+    low = calculate("O03", DATA, source, {}, {})
+    assert low["status"] == "blocked"
+    assert "exclusive_episode_or_activity_missing" in low["missing_inputs"]
+    assert "allocation_contract_missing" not in low["missing_inputs"]
+
+    observed = evidence(
+        "D08",
+        [row({"uuid": "GPU-3", "pod": "worker", "pod_uid": "pod-2"}, "60")],
+        "cpc-2",
+    )
+    observed["quality"]["allocation_semantics"] = "observed_pod_labels"
+    source["D08"].append(observed)
+    multi = copy.deepcopy(DATA)
+    multi["scope"]["clusters"].append({"cluster_id": "cpc-2", "namespaces": None})
+    mixed = calculate("O04", multi, source, {}, {})
+    assert mixed["status"] == "partial"
+    assert [(m["id"], m["value"]) for m in mixed["metrics"]] == [
+        (m["id"], m["value"]) for m in result["metrics"]
+    ]
+    assert "allocation_contract_missing" in mixed["missing_inputs"]
+
+
+def test_empty_declared_allocation_does_not_claim_config_or_transport_failure():
+    result = calculate("O04", DATA, {"D08": [evidence("D08", [])]}, {}, {})
+    assert result["status"] == "blocked"
+    assert result["missing_inputs"] == ["multi_gpu_workload_history_missing"]
+    assert result["quality"]["observations"][0]["tool_status"] == "empty"
+
+
+def test_energy_keeps_request_scope_total_when_cluster_grouping_is_requested():
+    data = copy.deepcopy(DATA)
+    data["group_by"] = ["cluster"]
+    data["scope"]["clusters"].append({"cluster_id": "cpc-2", "namespaces": None})
+    source = {
+        "D11": [
+            evidence("D11", [row({"uuid": "GPU-1"}, "1000")], cluster)
+            for cluster in ("cpc-1", "cpc-2")
+        ]
+    }
+    for e in source["D11"]:
+        e["quality"]["unit"] = "W"
+    result = calculate("O09", data, source, {}, {})
+    assert len(result["metrics"]) == 1
+    assert result["metrics"][0]["value"] == pytest.approx(2)
+    assert result["metrics"][0]["target"] == data["scope"]

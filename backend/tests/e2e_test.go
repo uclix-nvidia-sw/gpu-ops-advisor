@@ -353,6 +353,35 @@ func TestBackendE2E(t *testing.T) {
 		if occurrences["items"].([]any)[0].(map[string]any)["status"] != "accepted" {
 			t.Fatal("pause cancelled accepted job")
 		}
+		// A later report selection must not reinterpret a reserved job or old revisions.
+		before, e := store.One(ctx, db.Pool, "SELECT input_snapshot FROM enqueue_outbox WHERE id=$1", occ["outbox_id"])
+		must(t, e)
+		replacement := Object{}
+		for k, v := range template {
+			replacement[k] = v
+		}
+		replacement["topic_ids"] = []string{"O08"}
+		replacement["group_by"] = []string{"namespace"}
+		updated := call("PATCH", "/schedules/"+id, Object{"report_spec": replacement}, 200, "Idempotency-Key", "change-report-selection", "If-Match", "2")
+		if Number(updated, "revision") != 3 || updated["enabled"] != false || updated["local_time"] != current["local_time"] {
+			t.Fatal("report selection changed schedule timing or enabled state", updated)
+		}
+		for revision := 1; revision <= 3; revision++ {
+			stored, e := store.One(ctx, db.Pool, "SELECT report_spec FROM schedule_revisions WHERE schedule_id=$1 AND revision=$2", id, revision)
+			must(t, e)
+			expected := template
+			if revision == 3 {
+				expected = replacement
+			}
+			if Hash(stored) != Hash(expected) {
+				t.Fatal("schedule revision changed topics or grouping", revision, stored)
+			}
+		}
+		after, e := store.One(ctx, db.Pool, "SELECT input_snapshot FROM enqueue_outbox WHERE id=$1", occ["outbox_id"])
+		must(t, e)
+		if Hash(before) != Hash(after) {
+			t.Fatal("existing report job input was rewritten")
+		}
 	})
 
 	t.Run("calendar_catchup_limits_duplicates_and_pending_delivery_during_pause", func(t *testing.T) {

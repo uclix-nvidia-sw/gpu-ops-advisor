@@ -4534,3 +4534,98 @@ body:has(dialog[open]) {
 .report-cluster-filter p {
   flex-basis: 100%;
 }
+
+/* Report purpose selection; preserve visible native radio and keyboard focus. */
+.report-kind-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.report-kind-fieldset legend {
+  font-size: 20px;
+  font-weight: 700;
+}
+.report-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.report-kind-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+}
+.report-kind-card input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin: 3px 0 0;
+  accent-color: var(--green);
+}
+.report-kind-card.selected {
+  background: #e0efe5;
+  border: 2px solid var(--green);
+  padding: 19px;
+}
+.report-kind-card:focus-within {
+  outline: 3px solid #548a69;
+  outline-offset: 3px;
+}
+.report-kind-card strong,
+.report-kind-description,
+.report-kind-card small {
+  display: block;
+}
+.report-kind-card strong {
+  font-size: 16px;
+}
+.report-kind-description {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+.report-kind-card small {
+  color: #53635a;
+}
+.report-kind-detail {
+  padding: 24px;
+  border: 1px solid #8fb8a0;
+  border-radius: 12px;
+  background: #f4f9f5;
+}
+.report-kind-detail h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+.report-kind-detail dl {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 12px 20px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  line-height: 1.7;
+}
+.report-kind-detail dt {
+  font-weight: 700;
+}
+.report-kind-detail dd {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .report-kind-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-kind-detail dl {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .report-kind-detail dd + dt {
+    margin-top: 12px;
+  }
+}
