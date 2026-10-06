@@ -412,14 +412,14 @@ Agent가 없으면 JC는 RCA 잡을 queued로 보존한다. 데이터 부족은 
 | D01 | Mimir · `DCGM_FI_DEV_GPU_UTIL` | 관측된 GPU의 활용률/라벨. 미관측 GPU의 존재·접근 불가를 확정하지 못함 |
 | D02 | Mimir · `DCGM_FI_DEV_GPU_UTIL` + `gpu_uuid→UUID`, `node→node` 필터 | 특정 대상 활동. 실제 라벨·신원 일치 검증 필요 |
 | D03 | Mimir · `DCGM_FI_DEV_FB_USED` | VRAM 사용량. ECC·remap 오류를 대신하지 않음 |
-| D04 | Mimir · `DCGM_FI_DEV_GPU_TEMP` | 온도. 모델별 기준·동시 throttle 증거 없이 열 원인 확정 불가 |
+| D04 | Mimir · `dcgm_fi_dev_gpu_temp` (Fleet, builtin-v6) + `gpu_uuid→uuid`, `node→node` 필터 | 온도. 모델별 기준·동시 throttle 증거 없이 열 원인 확정 불가 |
 | D05 | Loki · scope selector | health 파서 대상. producer 계약이 맞는 JSON 로그인지 별도 확인 |
 | D06 | Mimir · `kube_pod_info` | 시점별 Pod 신원. 이것만으로 직접 GPU 할당 관계를 만들지 않음 |
 | D07 | Mimir · `gpu_ops_effective_unbound_request` | 검증된 recording rule 또는 동등 원본에 매핑할 정규화 계약 예시 |
 | D08 | Mimir · `gpu_ops_allocation_info` | GPU–Pod 정규화 관계. 실제 데이터·UID·유효 구간·공유/MIG 의미 검증 필요 |
 | D09 | Loki · scope + 대상 `node` selector | 노드 로그, health 파서 대상. 현재 Xid/event별 LogQL 필터가 구현됐다는 뜻은 아님 |
 | D10 | Mimir · `up` | 해당 scrape target 관측. `up=1`을 GPU 정상 상태로 승격하지 않음 |
-| D11 | Mimir · `DCGM_FI_DEV_POWER_USAGE` | 전력 W. power violation/throttle 원인과 별개 |
+| D11 | Mimir · `dcgm_fi_dev_power_usage` (Fleet, builtin-v6) + `gpu_uuid→uuid`, `node→node` 필터 | 전력 W. power violation/throttle 원인과 별개 |
 | D12 | Mimir · `kube_node_status_allocatable` | 자원 종류·단위·라벨을 확인한 allocatable. 전체 토폴로지나 실제 잔여 GPU와 다름 |
 | D13 | Loki · scope selector | workload 자료 수집 입구. 조회 성공만으로 중단/재개 fact가 생기지 않음 |
 

@@ -4,6 +4,16 @@ RCA/Ops 근거를 생성할 때 `collected_at`과 프로세스 공통 단조 증
 
 # RCA·보고서 Worker v1.3
 
+## 온도·전력의 실제 저장 이름 — 2026-10-02
+
+기본 프로필 `builtin-grafana-v6`의 D04/D11(`builtin-v6`)은 Fleet가 Mimir에 저장하는 `dcgm_fi_dev_gpu_temp`(섭씨), `dcgm_fi_dev_power_usage`(W)를 각각 조회합니다. GPU/Node 요청 조건은 실제 라벨 `uuid`/`node`에 연결합니다. 동일 DCGM field라는 [소스 대조](../docs/specs/rca-agent/references/domain-category-metric-mapping.md)와 10월 1일 전체 기간의 CPC-1/CPC-2 Grafana 읽기 조회를 확인했습니다. 해당 기간에는 두 소문자 지표가 있고 기존 대문자 온도·전력 지표는 없었습니다. 활동·메모리·GPU–Pod 관측(D01/D02/D03/D08)은 기존 Exporter 이름과 작업 라벨을 유지합니다. 두 생산자를 동시에 합산하거나 이름을 자동 추측하지 않습니다.
+
+Fleet의 `uuid`는 기존 계산기가 이미 지원합니다. 실제 일부 표본에는 60/120/180초 간격의 공백이 있었으므로 최대 유지시간은 보수적인 기존 30초를 유지합니다. 에너지는 유효 관측 구간만 적분하고 `observed_gpu_seconds`를 함께 남깁니다. 하루를 조회했다고 하루 전체 소비량이 확보된 것은 아니며 공백을 0이나 직전 값으로 메우지 않습니다. 수집 주기 변경과 유지시간 확대는 별도 검증이 필요합니다.
+
+확인한 Fleet 온도·전력에는 Namespace 라벨이 없습니다. **전체 Namespace 범위에서 조회할 수 있으며, 특정 Namespace만 선택한 경우 기존 Namespace 조건을 유지하므로 빈 근거/null로 남습니다.** 이를 Namespace 소비량으로 해석하거나 전체 클러스터로 몰래 넓히지 않습니다. Namespace GPU의 UUID와 유효시간을 투영하는 기능은 별도 구현 대상입니다. D07의 유효 대기 요청과 D12의 Node 할당 가능 용량 역시 해당 기간에 원본이 확인되지 않았습니다. Container 원시 요청량이나 `up`으로 대체하지 않습니다.
+
+`configuration.agents`를 직접 지정한 배포는 내장 설정으로 자동 교체되지 않습니다. 전체 기존 객체에서 D04/D11의 `metric`, `target_labels`, query revision과 최상위 revision을 같이 반영해야 합니다. Exporter 전용 환경은 확인된 대문자 이름과 해당 UUID 라벨을 명시적으로 설정합니다. 배포 후 새 보고서의 저장된 조회식·표본·단위·유효시간을 확인해야 하며 과거 결과는 자동 재계산하지 않습니다. 이번 변경에는 D 구조 통합/신규 D 추가나 RCA 판단·Ops 산식 변경이 없습니다.
+
 ## Ops 전용 관측 limits — 2026-10-01
 
 `report.limits`는 Ops만 적용하는 부분 override다. 예시는 max_queries=2048, chunk_seconds=86400, max_rows=50000, max_concurrency=3이며 공통/RCA limits는 48/3600/5000을 유지한다. 사용자 정의 `configuration.agents`는 전체 객체 교체이므로 새 블록을 직접 포함해야 한다. 없는 경우 기존 limits를 사용한다. 보고서도 의존성·예약 예산을 계획한 독립 Observation task를 병렬 실행하며 max_concurrency=1이면 순차 실행한다. 응답 크기·deadline·timeout·범위와 RCA 로직은 바꾸지 않는다. 자세한 계획·검수 계약은 [Ops 명세](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다. 이 설정은 예시이지 주간·월간 수집 성공의 보장이 아니다.
@@ -33,7 +43,7 @@ Grafana MCP 1.4.2는 Loki 결과의 잘림 여부를 확인하려고 요청한 `
 
 요청한 행 수에 도달하거나 MCP의 `metadata.resultsTruncated=true`이면 같은 조회 조건에서 시간 구간을 줄여 다시 조회합니다. 최소 1초 구간에서도 잘리면 `partial`, `quality.complete=false`, `reason=sample_limit_exceeded`로 보존합니다. 조회 한도를 줄여 받은 일부 로그를 완전한 근거로 취급하지 않습니다.
 
-기본 프로필 `builtin-grafana-v5`에서 D05는 D09 원본으로 파생하며 D09는 Fleet 알림의 `k8s_node_name`·`component` 단서를 JSON 본문 필터에 사용합니다. `json_target_fields`가 각각 `resources["k8s.node.name"]`, `attributes["component"]`를 지정하며, `| json`으로 본문 값을 추출한 뒤 문자열 동등 조건으로 필터링합니다. 기존 라벨과 충돌해 잘못된 값을 비교하지 않도록 임시 별칭과 `_extracted` 이름을 먼저 제거하고, JSON이 채운 쪽을 검사합니다. 이 값을 Loki에 저장된 stream label로 가정하지 않습니다. cluster/namespace와 배포 프로필의 기존 selector는 유지합니다. 대응하는 JSON 노드 단서가 있으면 D09의 기본 `node` stream label 조건 대신 JSON 조건을 사용하며, 단서가 없거나 해당 query에 JSON 필드 구성이 없으면 기존 selector 동작을 유지합니다.
+기본 프로필 `builtin-grafana-v6`에서 D05는 D09 원본으로 파생하며 D09는 Fleet 알림의 `k8s_node_name`·`component` 단서를 JSON 본문 필터에 사용합니다. `json_target_fields`가 각각 `resources["k8s.node.name"]`, `attributes["component"]`를 지정하며, `| json`으로 본문 값을 추출한 뒤 문자열 동등 조건으로 필터링합니다. 기존 라벨과 충돌해 잘못된 값을 비교하지 않도록 임시 별칭과 `_extracted` 이름을 먼저 제거하고, JSON이 채운 쪽을 검사합니다. 이 값을 Loki에 저장된 stream label로 가정하지 않습니다. cluster/namespace와 배포 프로필의 기존 selector는 유지합니다. 대응하는 JSON 노드 단서가 있으면 D09의 기본 `node` stream label 조건 대신 JSON 조건을 사용하며, 단서가 없거나 해당 query에 JSON 필드 구성이 없으면 기존 selector 동작을 유지합니다.
 
 알림 단서는 수집에만 사용하며 원본 Incident snapshot·해시는 바꾸지 않습니다. 새 Incident target에는 `machine_id/component/k8s_node_name`을 투영하지만 component는 검색 메타데이터이며 장비 식별 비교에서는 제외합니다. 이 투영만으로 검증된 건강 상태가 되지는 않습니다. 라벨과 annotation이 충돌한 단서는 필터에 사용하지 않습니다. 보고서 Worker처럼 알림 단서가 없는 호출에는 이 JSON 필터를 추가하지 않습니다.
 

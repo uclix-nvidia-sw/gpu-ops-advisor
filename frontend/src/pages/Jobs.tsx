@@ -5,7 +5,12 @@ import { CommandError, DataView, JobRows, More, QueryState } from '../components
 import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
 import { reportRequestTime } from '../lib/reportPeriod';
-import { ReportOrigin, ReportTimeNote, ReportPeriod } from '../components/ReportMeta';
+import {
+  ReportExecution,
+  ReportOrigin,
+  ReportTimeNote,
+  ReportPeriod,
+} from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportReturnPath } from '../lib/reportNavigation';
@@ -178,6 +183,14 @@ export function JobDetail() {
                   )}
                   <dt>실행 시각</dt>
                   <dd>{formatDate(str(j.started_at))}</dd>
+                  {j.kind === 'report' && (
+                    <>
+                      <dt>보고서 실행시간</dt>
+                      <dd>
+                        <ReportExecution job={j} />
+                      </dd>
+                    </>
+                  )}
                   <dt>기한</dt>
                   <dd>{formatDate(str(j.deadline_at))}</dd>
                   <dt>종료 사유</dt>

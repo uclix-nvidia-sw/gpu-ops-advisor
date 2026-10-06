@@ -381,3 +381,53 @@ async def test_scoped_collection_reduces_large_pod_history_without_changing_name
     assert outputs[0] == outputs[1]
     assert calls[0] > 10
     assert calls[1] == 2  # D01/D02/D08 share the same observed DCGM source.
+
+
+@pytest.mark.asyncio
+async def test_fleet_bindings_preserve_gpu_identity_units_and_sample_gaps():
+    data = copy.deepcopy(DATA)
+    data["target"] = {"gpu_uuid": "GPU-1", "node": "node-1"}
+    observations = {
+        "dcgm_fi_dev_gpu_temp": ["40", "80", "0"],
+        "dcgm_fi_dev_power_usage": ["100", "200", "0"],
+    }
+
+    async def query(args):
+        metric = args["expr"].split("{", 1)[0]
+        assert 'cluster_id="cpc-1"' in args["expr"]
+        assert 'uuid="GPU-1"' in args["expr"]
+        assert 'node="node-1"' in args["expr"]
+        assert args["queryType"] == "instant"
+        assert args["endTime"] == PERIOD["end"]
+        return {
+            "data": [
+                {
+                    "metric": {
+                        "__name__": metric,
+                        "uuid": "GPU-1",
+                        "node": "node-1",
+                        "job": "fleet-intelligence-agent",
+                    },
+                    "values": list(
+                        zip([START, START + 60, START + 180], observations[metric])
+                    ),
+                }
+            ]
+        }
+
+    obs = Observation(
+        {"query_prometheus": query}, profile(), data, time.monotonic() + 30
+    )
+    collected = {q: await obs.collect(q) for q in ("D04", "D11")}
+    temperature = calculate("O01", data, collected, {}, [])
+    metric = next(m for m in temperature["metrics"] if m["id"] == "O01.temperature.0")
+    assert metric["value"] == 40
+    assert metric["unit"] == "celsius"
+    assert metric["target"] == {"cluster_id": "cpc-1", "gpu_uuid": "GPU-1"}
+    power = calculate("O09", data, collected, {}, [])
+    assert power["metrics"][0]["value"] == pytest.approx(0.0025)
+    assert power["metrics"][0]["unit"] == "kWh"
+    # Three 30-second holds, including a real zero; 60/120-second gaps stay unknown.
+    assert power["quality"]["observed_gpu_seconds"] == 90
+    assert power["quality"]["coverage_scope"] == "observed_devices_only"
+    assert set(power["evidence_refs"]) == {e["id"] for e in collected["D11"]}

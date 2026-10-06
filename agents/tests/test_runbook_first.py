@@ -85,7 +85,7 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
         incident_id=str(uuid4()),
         evidence_version=1,
         scope={"clusters": [{"cluster_id": "c", "namespaces": None}]},
-        target={"gpu_uuid": "GPU-1"},
+        target={"gpu_uuid": "GPU-1", "node": "node-1"},
         incident_time=period["start"],
         time_range=period,
         incident_snapshot={"alert": {"annotations": {"summary": "thermal"}}},
@@ -102,7 +102,9 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
             "data": {
                 "result": [
                     {
-                        "metric": {"UUID": "GPU-1"},
+                        "metric": {"uuid": "GPU-1", "node": "node-1"}
+                        if args["expr"].startswith("dcgm_fi_dev_gpu_temp{")
+                        else {"UUID": "GPU-1"},
                         "values": [[1789430400, "40"], [1789430415, "41"]],
                     }
                 ]
@@ -160,8 +162,21 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
         assert output["result"]["runbook_revisions"][0]["id"] == "builtin-general"
     else:
         assert "D04" in ids  # Former procedure allowlists excluded temperature.
+        temperature_queries = [
+            q for q in calls if q.startswith("dcgm_fi_dev_gpu_temp{")
+        ]
+        assert temperature_queries and all(
+            'uuid="GPU-1"' in q and 'node="node-1"' in q and "UUID=" not in q
+            for q in temperature_queries
+        )
         assert "D08" not in ids and "D06" not in ids
         assert ("D03" in ids) == (mode != "stop")
+        if mode == "specific":
+            temperature = next(e for e in output["evidence"] if e["query_id"] == "D04")
+            assert temperature["snapshot"]["data"]["result"][0]["metric"] == {
+                "uuid": "GPU-1",
+                "node": "node-1",
+            }
     if mode in ("unexpected", "failed", "stop"):
         assert "required_query:D04" in output["result"]["missing_inputs"]
 

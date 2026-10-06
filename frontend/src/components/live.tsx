@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { reportRequestTime } from '../lib/reportPeriod';
-import { ReportOrigin, ReportPeriod, ReportScope } from './ReportMeta';
+import { ReportExecution, ReportOrigin, ReportPeriod, ReportScope } from './ReportMeta';
 import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
@@ -702,6 +702,10 @@ function ReportPreview({ job }: { job: Row }) {
   ];
   return (
     <section className="report-preview" aria-label="저장된 결과 요약">
+      <div>
+        <span>보고서 실행시간</span>
+        <ReportExecution job={detail} />
+      </div>
       <h4>핵심 결과</h4>
       {topics.length ? (
         <p>
