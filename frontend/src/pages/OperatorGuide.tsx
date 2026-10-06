@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Notice, PageHead, Panel } from '../components/ui';
 import { topicId, topics } from '../lib/live';
@@ -173,6 +174,8 @@ export function OperatorGuide() {
   const location = useLocation(),
     navigate = useNavigate();
   const selected = guideSections.find(([key]) => location.hash === `#guide-${key}`)?.[0] ?? 'start';
+  const [kindId, setKindId] = useState(reportKinds[0].id);
+  const kind = reportKinds.find((item) => item.id === kindId) || reportKinds[0];
   return (
     <div className="page operator-guide">
       <PageHead
@@ -243,88 +246,101 @@ export function OperatorGuide() {
         hidden={selected !== 'topics'}
         aria-labelledby="guide-topics-title"
       >
-        <h2 id="guide-topics-title">보고서 종류 7개</h2>
-        <p>
-          전체 종합 또는 확인하려는 종류를 여러 개 고르세요. 각 소주제의 표시 기준은 요청 카드와 각
-          소주제 제목 아래에서 확인할 수 있습니다. 아래 필요 조건은 안내이며 현재 연결 상태나 데이터
-          보유 여부를 확인한 결과는 아닙니다.
-        </p>
-        <Notice>
-          7개는 선택 메뉴의 묶음이고 실제 분석은 기존 11개 소주제입니다. 전체 선택이 수집량 감소를
-          뜻하지는 않습니다. Namespace 현황만 필요하면 해당 종류만 선택하세요. 자료가 부족한
-          소주제도 보고서에 남겨 계산하지 못한 이유를 표시합니다.
-        </Notice>
-        <div className="report-kind-grid">
-          {reportKinds.map((kind) => (
-            <article className="guide-topic" key={kind.id}>
-              <div className="guide-body">
-                <h3>{kind.name}</h3>
-                <p>{kind.description}</p>
-                <p>
-                  <strong>얻을 수 있는 판단</strong>
-                  <br />
-                  {kind.insight}
-                </p>
-                <p>
-                  <strong>필요한 자료</strong>
-                  <br />
-                  {kind.requirement}
-                </p>
-                <p>{kind.limit}</p>
-                <p>포함 주제 · {kind.topicIds.join(' · ')}</p>
-                <Link className="text-link" to={`/reports/new?kind=${kind.id}`}>
-                  이 종류로 보고서 만들기
-                </Link>
-              </div>
-            </article>
+        <h2 id="guide-topics-title">궁금한 보고서 종류를 고르세요</h2>
+        <p>종류를 누르면 해당 설명과 포함된 분석만 아래에 표시합니다.</p>
+        <div className="guide-kind-picker" role="group" aria-label="설명할 보고서 종류">
+          {reportKinds.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="button"
+              aria-pressed={kind.id === item.id}
+              aria-controls="guide-kind-content"
+              onClick={() => setKindId(item.id)}
+            >
+              <strong>{item.name}</strong>
+            </button>
           ))}
         </div>
-        <h2>세부 분석 주제 11개</h2>
-        <p>
-          11개는 개발명세에 정의된 운영 질문입니다. 장비 상태, 할당·활동·배분, 사건과 작업 관계,
-          에너지·조치 효과, 데이터 품질을 각각 확인하기 위해 나뉘었습니다. 기존 ID와 과거 결과는
-          유지합니다. 펼치면 각 세부 분석의 현재 결과와 제한을 볼 수 있습니다.
-        </p>
-        <div className="guide-topic-list">
-          {topics.map((name, i) => {
-            const guide = topicGuides[i];
-            return (
-              <details key={topicId(i)} className="guide-topic" open={i === 7}>
-                <summary>
-                  <span className="guide-topic-id">{topicId(i)}</span>
-                  <span>
-                    <strong>{name}</strong>
-                    <span className="guide-topic-purpose">{guide.purpose}</span>
-                    <span className="guide-topic-examples">
-                      <span className="guide-topic-examples-label">
-                        이런 게 궁금할 때 선택하세요
-                      </span>
-                      {guide.examples.map((question) => (
-                        <span key={question}>• {question}</span>
-                      ))}
-                    </span>
-                  </span>
-                </summary>
-                <dl className="guide-topic-fields">
-                  <dt>표시 기준</dt>
-                  <dd>{topicDisplayBases[topicId(i)]}</dd>
-                  <dt>현재 나오는 결과</dt>
-                  <dd>{guide.result}</dd>
-                  <dt>필요한 데이터</dt>
-                  <dd>{guide.inputs}</dd>
-                  <dt>해석할 때 주의</dt>
-                  <dd>{guide.limit}</dd>
-                  <dt>운영자가 확인할 것</dt>
-                  <dd>{guide.next}</dd>
-                </dl>
-                <details className="guide-technical">
-                  <summary>개발·수집 기준 확인</summary>
-                  <p>{guide.queries}</p>
-                </details>
-              </details>
-            );
-          })}
-        </div>
+        <section id="guide-kind-content" aria-labelledby="guide-kind-title" key={kind.id}>
+          <Panel className="guide-section guide-kind-panel">
+            <header className="guide-kind-header">
+              <div>
+                <h3 id="guide-kind-title">{kind.name}</h3>
+                <p>{kind.description}</p>
+              </div>
+              <Link className="button primary" to={`/reports/new?kind=${kind.id}`}>
+                이 종류로 보고서 만들기
+              </Link>
+            </header>
+            <table className="guide-kind-table" aria-label={`${kind.name} 안내`}>
+              <tbody>
+                <tr>
+                  <th scope="row">이런 판단에 도움</th>
+                  <td>{kind.insight}</td>
+                </tr>
+                <tr>
+                  <th scope="row">필요한 자료</th>
+                  <td>{kind.requirement}</td>
+                </tr>
+                <tr>
+                  <th scope="row">해석할 때 주의</th>
+                  <td>{kind.limit}</td>
+                </tr>
+                <tr>
+                  <th scope="row">포함된 세부 분석 · {kind.topicIds.length}개</th>
+                  <td>
+                    <p>질문 예시를 보고, 펼치면 계산 기준과 필요한 자료를 확인할 수 있습니다.</p>
+                    {topics.map((name, i) => {
+                      if (!kind.topicIds.includes(topicId(i))) return null;
+                      const guide = topicGuides[i];
+                      return (
+                        <details key={topicId(i)} className="guide-topic">
+                          <summary>
+                            <span className="guide-topic-id">{topicId(i)}</span>
+                            <span>
+                              <strong>{name}</strong>
+                              <span className="guide-topic-purpose">{guide.purpose}</span>
+                              <span className="guide-topic-examples">
+                                <span className="guide-topic-examples-label">
+                                  이런 게 궁금할 때 선택하세요
+                                </span>
+                                {guide.examples.map((question) => (
+                                  <span key={question}>• {question}</span>
+                                ))}
+                              </span>
+                            </span>
+                          </summary>
+                          <dl className="guide-topic-fields">
+                            <dt>표시 기준</dt>
+                            <dd>{topicDisplayBases[topicId(i)]}</dd>
+                            <dt>현재 나오는 결과</dt>
+                            <dd>{guide.result}</dd>
+                            <dt>필요한 데이터</dt>
+                            <dd>{guide.inputs}</dd>
+                            <dt>해석할 때 주의</dt>
+                            <dd>{guide.limit}</dd>
+                            <dt>운영자가 확인할 것</dt>
+                            <dd>{guide.next}</dd>
+                          </dl>
+                          <details className="guide-technical">
+                            <summary>개발·수집 기준 확인</summary>
+                            <p>{guide.queries}</p>
+                          </details>
+                        </details>
+                      );
+                    })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Panel>
+        </section>
+        <Notice>
+          여기서는 한 종류씩 설명을 봅니다. 실제 보고서 요청에서는 7개 종류를 여러 개 선택하거나
+          전체 종합으로 11개 소주제를 한 장에 담을 수 있습니다. 전체 선택이 수집량 감소를 뜻하지는
+          않으며, 자료가 부족한 소주제도 이유와 함께 남습니다.
+        </Notice>
       </section>
       <section
         id="guide-values"

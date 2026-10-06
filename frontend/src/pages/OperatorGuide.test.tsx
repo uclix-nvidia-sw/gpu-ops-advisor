@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Shell } from '../components/Shell';
-import { topics, topicId } from '../lib/live';
+import { reportKinds } from '../lib/reportKinds';
 import { OperatorGuide } from './OperatorGuide';
 
 const app = vi.hoisted(() => ({
@@ -41,15 +41,14 @@ it.each(['classic', 'operations', 'developer'])(
     app.mode = mode;
     app.connection.isError = true;
     const html = render();
-    for (const [i, name] of topics.entries()) {
-      expect(html).toContain(`<strong>${name}</strong>`);
-      expect(html).toContain(`>${topicId(i)}</span>`);
-    }
+    for (const kind of reportKinds) expect(html).toContain(`<strong>${kind.name}</strong>`);
+    expect(html).toContain('id="guide-kind-content"');
+    expect(html).toContain('>O08</span>');
+    expect(html).not.toContain('>O01</span>');
+    expect(html).toContain('href="/reports/new?kind=namespace"');
     expect(html).toContain('href="/operator-guide"');
     expect(html).toContain('href="/reports/new"');
     expect(html).toContain('실시간 연결 상태나 데이터 보유 여부를 판정하는 화면은 아닙니다');
-    expect(html).toContain('전체 커버리지는 분모 부족으로 산출하지 않습니다');
-    expect(html).toContain('발생률과 전체 정비 순위는 아직 산출하지 않습니다');
     expect(html).not.toContain('fixture offline');
     expect(html).not.toContain('class="scopebar"');
   },
@@ -57,7 +56,7 @@ it.each(['classic', 'operations', 'developer'])(
 it('allows reading before cluster registration without opening report execution', () => {
   app.mode = 'classic';
   app.connection.isError = false;
-  expect(render()).toContain('분석 주제 11개');
+  expect(render()).toContain('11개 소주제');
   expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
   expect(render('/reports')).not.toContain('report-content-marker');
 });
