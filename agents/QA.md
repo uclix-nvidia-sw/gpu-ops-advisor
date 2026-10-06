@@ -1,3 +1,23 @@
+# 2026-10-06 PR 최종 재검수 — Fleet 지표와 실행시간 표시
+
+- **통과:** 새로 fetch한 `origin/main`과 작업 시작 커밋은 모두 **2d9ee8f**이며 양쪽 단독 커밋은 0개였다. 기존 로컬 Fleet 설정과 Frontend 실행시간 표시를 함께 검토했다. 아래 10월 2일 기록은 당시 기능별 검수 범위를 뜻한다.
+- **통과:** 저장소 루트의 격리 로컬 DB·실제 두 Worker·공식 MCP E2E를 포함해 **364 passed, 0 skipped, 61.85초**. Python 3.11.16, 앞선 검사와 같은 로컬 도구/외부 DB 환경 제거 조건이며 결과는 `.local/report-usability/pr-fleet-execution-results.xml`이다. Grafana/LLM 상위 응답은 fixture, 기존 MCP deprecation warning 3건이다.
+- **통과:** Ruff check/format, Helm 계약·설정 미러, CI 도구 unittest 5건, 문서 링크·diff와 독립 검토. Frontend **136 passed**·format/build와 상세 표시 검수는 [Frontend QA](../frontend/QA.md)를 따른다.
+- **범위/미검증:** RCA 판단 코드·Ops 산식은 바꾸지 않지만 D04/D11 공통 설정은 두 Worker에 적용된다. 특정 Namespace의 온도/전력 귀속, D07/D12 원본 확보, 운영 배포/수정본 실제 재실행은 미검증·미구현이며 이번 PR 범위에 포함하지 않는다. 원격 CI 상태는 PR에서 확인한다. 기존 운영 데이터·DB schema 변경은 없다.
+
+---
+
+# 2026-10-02 Fleet 온도·전력 조회명/대상 라벨 — 로컬 검수
+
+- 기준: 최신 `origin/main` **2d9ee8f**, `fix/fleet-metric-bindings`. 기본 profile `builtin-grafana-v6`의 D04/D11을 실제 소문자 Fleet 이름과 `uuid`/`node` 필터에 연결하고 query revision을 `builtin-v6`로 변경했다. Helm 미러도 동기화했다. 공통 설정이 두 Worker에 적용되며 RCA 판단·Ops 산식·수집 코드·UI·DB/API/result schema는 변경하지 않았다.
+- **통과 — 실환경 읽기 확인:** 로그인된 Grafana Mimir-Operations에서 2026-10-01 00:00~10-02 00:00(Asia/Seoul), CPC-1/CPC-2를 조회했다. 소문자 온도/전력의 원본 존재·`uuid`/`node`·Namespace 라벨 부재, 기존 대문자 GPU_UTIL/FB_USED·Pod/up 지표의 존재를 확인했다. 대문자 GPU_UTIL에는 `UUID`와 `uuid`가 모두 있어 D02/D08 필터를 유지한다. D07/D12 및 확인한 이름 변형은 이 기간에서 없었고 원시 Container 요청은 다른 계약이므로 대체하지 않았다. 이는 해당 기간/클러스터의 확인이며 전역 가용성 보장이 아니다.
+- **통과 — 표본 공백:** 기간 끝 15분의 일부 전력 원본에는 60/120/180초 간격이 있었다. 기존 max_hold 30초를 유지하고 유효 관측 구간만 계산한다. 표본 공백을 채우거나 24시간 전체 에너지가 확보됐다고 판단하지 않는다. 단위 동등성은 [Fleet/Exporter 소스 대조](../docs/specs/rca-agent/references/domain-category-metric-mapping.md)에 근거하며 배포된 전체 producer 설정/지원 sentinel은 재검증하지 않았다.
+- **통과 — 로컬 전체:** 저장소 루트, Python 3.11.16, `RUN_AGENT_E2E=1`과 `.local/namespace-tools`의 PostgreSQL/MCP/Helm, 로컬 JC/Backend/Incident를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/fleet-bindings-results.xml` 실행: **364 passed, 0 skipped, 63.38초**, 기존 MCP deprecation warning 3건. 외부 DB 환경 변수를 제거하고 임시 loopback PostgreSQL을 사용했다. 두 Worker·공식 MCP 1.4.2는 실제 프로세스이며 Grafana/LLM 상위 응답은 fixture다.
+- **통과 — 회귀:** fixture는 잘못된 대문자 온도/전력 이름에 빈 결과를 반환한다. 전체 Namespace에서 40°C·250W×1시간=0.25kWh·GPU 신원, 특정 Namespace에서 필터 유지·빈 근거/null을 확인했다. RCA D04의 정확한 조회명·uuid/node 필터·원본 라벨, 60/120초 간격과 실제 0 표본의 총 유효 90초/0.0025kWh 계산을 검사했다. Ruff check/format, Helm 계약/미러, CI 도구 unittest 5건, 문서 링크·diff 검사도 통과했다.
+- **미수행/미검증:** 운영 설정 변경·배포·수정본으로 실제 보고서/RCA 재실행·원격 CI·커밋/푸시/PR. 특정 Namespace의 GPU 온도·전력 귀속은 미지원이며 기존 제한을 유지한다. 수집 주기 보완/유지시간 확대·D07 유효 요청 producer·D12 용량 전송·D 통합/신규 D 구현은 포함하지 않았다. DB migration·과거 결과 재작성은 해당 없음.
+
+---
+
 # 2026-10-02 Loki 응답 용량·잘림 복구 — 로컬 검수
 
 - 기준: 새로 fetch한 `origin/main` **a1d73e2**, `fix/loki-response-size-recovery`. 공통 Observation에서 MCP 본문 크기 초과와 Loki 행 잘림을 기존 기간 분할로 복구한다. 두 Worker의 수집 동작에 적용하며 RCA 판단·Ops 산식·D 정의·프로필/한도·DB/API/result schema는 유지한다.

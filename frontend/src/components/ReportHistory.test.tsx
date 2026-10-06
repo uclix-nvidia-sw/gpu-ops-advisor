@@ -128,3 +128,17 @@ it('shows origin badges on both large and small cards without KST suffixes', () 
   expect(html).toContain('생성 방식 미확인');
   expect(html).not.toContain('(KST)');
 });
+
+it('shows execution duration from the existing featured detail without fetching every card', () => {
+  Object.assign(state.data, {
+    attempt_no: 1,
+    created_at: '2026-10-02T00:00:00Z',
+    attempts: [
+      { attempt_no: 1, started_at: '2026-10-02T00:01:00Z', ended_at: '2026-10-02T00:06:00Z' },
+    ],
+  });
+  const html = render([job, { ...job, id: 'older', result_ref: 'r0' }]);
+  expect(html).toContain('보고서 실행시간');
+  expect(html).toContain('<strong>5분 0초</strong>');
+  expect(state.paths).toEqual(['/reports/latest']);
+});

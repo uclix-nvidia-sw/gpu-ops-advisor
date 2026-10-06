@@ -40,17 +40,19 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | D01 | DCGM_FI_DEV_GPU_UTIL | **D02로 통합** | 신원 labels·관측 장비 계산을 D02 결과에서 산출. O01/O02/O08의 기존 기능·출력 의미 유지 |
 | D02 | DCGM_FI_DEV_GPU_UTIL | **유지: GPU 활동 원본 쿼리** | 활동값과 신원/작업 labels를 모두 보존. 활동·관측 신원·관측 연결은 서로 다른 코드 출력 |
 | D03 | DCGM_FI_DEV_FB_USED | 유지 | 사용량 산식·출력 보존, D15/D16/D17 추가 |
-| D04 | DCGM_FI_DEV_GPU_TEMP | **쿼리 유지, 의미를 GPU 온도로 정렬** | O01 온도 계산 보존. Host CPU는 별도 D18/D19. 과거 D04 결과 재해석 금지 |
+| D04 | dcgm_fi_dev_gpu_temp (Fleet, builtin-v6) | **쿼리 유지, 의미를 GPU 온도로 정렬** | O01 온도 계산 보존. Host CPU는 별도 D18/D19. 과거 D04 결과 재해석 금지 |
 | D05 | D09의 derived view | **D09 원문 + 기존 health parser 처리로 통합** | 상태 fact·producer/freshness 검증 유지. 새 Runbook은 D09와 요구 상태 fact를 참조. 기존 D05 evidence는 열람 가능 |
 | D06 | kube_pod_info | 유지 | Pod UID·Node 관계와 시간 조인 유지 |
 | D07 | gpu_ops_effective_unbound_request | 유지 | effective-v1 생산자·유효성 gate와 O07 출력 유지. 추가 D21 원시 요청을 D07 값으로 대체하지 않음 |
 | D08 | DCGM_FI_DEV_GPU_UTIL, observed_pod_labels | **기본 관측 연결 조회를 D02로 통합** | D02 labels+D06 UID의 observed 모드로 기존 연결 계산 보존. 전용 할당 의미로 변경하지 않음 |
 | D09 | Fleet component Loki 조회 | 유지 | 원문·대상·시간·producer와 상태 파서 입력 보존 |
 | D10 | up | 유지 | 기존 수집 상태·품질 입력 유지, D22 추가 |
-| D11 | DCGM_FI_DEV_POWER_USAGE | 유지 | 기존 W 적분 보존, D48/D49를 보조 출력으로 추가 |
+| D11 | dcgm_fi_dev_power_usage (Fleet, builtin-v6) | 유지 | 기존 W 적분 보존, D48/D49를 보조 출력으로 추가 |
 | D12 | kube_node_status_allocatable | 유지, 의미를 Node allocatable로 명시 | resource별 기존 값/계획 유지. owner/제약까지 확보된 것으로 해석하지 않음 |
 | D13 | 현재 Loki 조회 | **유지** | 기존 조회·근거·업무 영향 보류 유지. 구체 업무 필터를 확보하면 새 revision에서 보완; 원본이 같아 보여도 업무 의미 미확정 상태에서 D09와 합치지 않음 |
 | D14 | 제품 DB context | 기존 DB 경로 유지 | Incident·공개 RCA·조치 참조 기능 유지. 독립 외부 D query로 만들지 않음 |
+
+2026-10-02 현행 binding 보정: D04/D11은 실제 CPC-1/CPC-2의 10월 1일 기간에서 확인한 소문자 Fleet 이름과 `uuid`/`node` 필터를 사용한다. 단위·산식·최대 유지시간 30초는 유지하며, 표본 공백이나 Namespace 귀속을 보충하지 않는다. [범위·검수 한계와 배포 override](../../../agents/README.md#온도전력의-실제-저장-이름--2026-10-02)를 따른다. 이 보정은 아래 D 통합/신규 추가 설계의 구현 완료를 뜻하지 않는다.
 
 ### 통합에 반드시 포함할 구현 조건
 

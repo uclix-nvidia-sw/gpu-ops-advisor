@@ -156,6 +156,7 @@ class Upstream(BaseHTTPRequestHandler):
             )
         if u.path.endswith("/api/v1/query"):
             expr = query.get("query", [""])[0]
+            metric = expr.split("{", 1)[0]
             start = datetime.fromisoformat(
                 PERIOD["start"].replace("Z", "+00:00")
             ).timestamp()
@@ -169,14 +170,24 @@ class Upstream(BaseHTTPRequestHandler):
                 "allocation_mode": "exclusive",
                 "allocation_episode_key": "episode-1",
             }
-            value = 250 if "POWER" in expr else (2 if "GPU_UTIL" in expr else 1)
+            fleet_values = {"dcgm_fi_dev_gpu_temp": 40, "dcgm_fi_dev_power_usage": 250}
+            if metric in fleet_values:
+                labels = {"cluster_id": "cpc-2", "uuid": "GPU-1", "node": "node-1"}
+            value = fleet_values.get(
+                metric, 2 if metric == "DCGM_FI_DEV_GPU_UTIL" else 1
+            )
             values = [[start + i * 30, str(value)] for i in range(121)]
+            rows = [{"metric": labels, "values": values}]
+            if metric in {"DCGM_FI_DEV_GPU_TEMP", "DCGM_FI_DEV_POWER_USAGE"} or (
+                metric in fleet_values and "namespace=" in expr.split("}", 1)[0]
+            ):
+                rows = []
             return self.send(
                 {
                     "status": "success",
                     "data": {
                         "resultType": "matrix",
-                        "result": [{"metric": labels, "values": values}],
+                        "result": rows,
                     },
                 }
             )
@@ -861,7 +872,7 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert plans[0]["investigation_only"] and plans[0]["analysis_guidance"]
     assert all(c["causal_status"] == "candidate" for c in rca["cause_candidates"])
     report_input = dict(
-        scope=SCOPE,
+        scope={"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
         time_range=PERIOD,
         timezone="Asia/Seoul",
         topic_ids=["O05", "O09", "O11"],
@@ -1038,7 +1049,8 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
 
 
 @pytest.mark.e2e
-def test_builtin_profile_without_datasource_configuration(stack):
+@pytest.mark.parametrize("namespaces", [None, ["dev"]])
+def test_builtin_profile_without_datasource_configuration(stack, namespaces):
     builtin_stack = {
         **stack,
         "env": {
@@ -1048,27 +1060,54 @@ def test_builtin_profile_without_datasource_configuration(stack):
     }
     request_start = len(Upstream.requests)
     data = dict(
-        scope=SCOPE,
+        scope={"clusters": [{"cluster_id": "cpc-2", "namespaces": namespaces}]},
         time_range=PERIOD,
         timezone="UTC",
-        topic_ids=["O09", "O10"],
+        topic_ids=["O01", "O09", "O10"],
         group_by=["cluster"],
     )
     jid = submit(builtin_stack, "report", data)
     report, evidence = worker_result(builtin_stack, "report", jid, "-builtin")
     energy = next(t for t in report["topics"] if t["topic_id"] == "O09")["metrics"][0]
-    assert energy["value"] == 0.25
-    assert any(q == "D11" and s == "ok" for q, s in evidence)
+    temperature = [
+        m
+        for t in report["topics"]
+        if t["topic_id"] == "O01"
+        for m in t["metrics"]
+        if m["id"].startswith("O01.temperature.")
+    ]
+    if namespaces is None:
+        assert energy["value"] == 0.25 and energy["unit"] == "kWh"
+        assert len(temperature) == 1
+        assert temperature[0]["value"] == 40 and temperature[0]["unit"] == "celsius"
+        assert temperature[0]["target"] == {"cluster_id": "cpc-2", "gpu_uuid": "GPU-1"}
+        assert all((q, "ok") in evidence for q in ("D04", "D11"))
+    else:
+        assert energy["value"] is None
+        assert energy["quality"]["reason"] == "actual_power_original_samples_missing"
+        assert not temperature
+        assert all((q, "empty") in evidence for q in ("D04", "D11"))
     assert any(q == "D09" and s == "ok" for q, s in evidence)
     requests = Upstream.requests[request_start:]
     assert any(p == "/api/datasources" for p, _ in requests)
     assert any("/label/cluster_id/values" in p for p, _ in requests)
     assert any("/label/cluster/values" in p for p, _ in requests)
+    metric_queries = [
+        args["query"][0] for path, args in requests if path.endswith("/api/v1/query")
+    ]
+    for metric in ("dcgm_fi_dev_gpu_temp", "dcgm_fi_dev_power_usage"):
+        assert any(expr.startswith(metric + "{") for expr in metric_queries)
+    assert not any(
+        expr.startswith(("DCGM_FI_DEV_GPU_TEMP{", "DCGM_FI_DEV_POWER_USAGE{"))
+        for expr in metric_queries
+    )
     for path, args in requests:
         if path.endswith("/api/v1/query"):
             assert 'cluster_id="cpc-2"' in args["query"][0]
+            assert ('namespace=~"dev"' in args["query"][0]) == (namespaces is not None)
         if path.endswith("/loki/api/v1/query_range"):
             assert 'cluster="cpc-2"' in args["query"][0]
+            assert ('namespace=~"dev"' in args["query"][0]) == (namespaces is not None)
 
 
 @pytest.mark.e2e
@@ -1142,7 +1181,7 @@ def test_llm_failure_preserves_metrics_and_independent_topics(stack):
     Upstream.logs_fail = True
     try:
         data = dict(
-            scope=SCOPE,
+            scope={"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
             time_range=PERIOD,
             timezone="UTC",
             topic_ids=["O09", "O10", "O11"],

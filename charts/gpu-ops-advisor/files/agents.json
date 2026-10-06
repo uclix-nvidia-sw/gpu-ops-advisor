@@ -1,5 +1,5 @@
 {
-  "revision": "builtin-grafana-v5",
+  "revision": "builtin-grafana-v6",
   "rca": {
     "general_runbook_key": "RB-GENERAL-GPU-NODE"
   },
@@ -76,11 +76,15 @@
     },
     "D04": {
       "source": "mimir",
-      "metric": "DCGM_FI_DEV_GPU_TEMP",
+      "metric": "dcgm_fi_dev_gpu_temp",
       "unit": "celsius",
       "max_hold_seconds": 30,
-      "revision": "builtin-v1",
-      "validated": true
+      "revision": "builtin-v6",
+      "validated": true,
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      }
     },
     "D05": {
       "source": "loki",
@@ -144,11 +148,15 @@
     },
     "D11": {
       "source": "mimir",
-      "metric": "DCGM_FI_DEV_POWER_USAGE",
+      "metric": "dcgm_fi_dev_power_usage",
       "unit": "W",
       "max_hold_seconds": 30,
-      "revision": "builtin-v1",
-      "validated": true
+      "revision": "builtin-v6",
+      "validated": true,
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      }
     },
     "D12": {
       "source": "mimir",

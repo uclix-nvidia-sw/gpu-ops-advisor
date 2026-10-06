@@ -528,3 +528,27 @@ it('keeps every requested cluster visible and separates zero connections from mi
   expect(summary).toContain('저장된 클러스터 요약이 없습니다');
   expect(summary).toContain('유휴 여부는 미확인');
 });
+
+it('shows report execution duration beside request metadata, separate from the analyzed day', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      request={{
+        status: 'succeeded',
+        attempt_no: 1,
+        created_at: '2026-10-02T00:00:00Z',
+        attempts: [
+          { attempt_no: 1, started_at: '2026-10-02T00:01:00Z', ended_at: '2026-10-02T00:06:00Z' },
+        ],
+      }}
+      value={{
+        time_range: { start: '2026-09-30T15:00:00Z', end: '2026-10-01T15:00:00Z' },
+        topics: [],
+      }}
+    />,
+  );
+  expect(html).toContain('<dt>보고서 실행시간</dt>');
+  expect(html).toContain('<strong>5분 0초</strong>');
+  expect(html).toContain('접수부터 완료까지 6분 0초');
+  expect(html).toContain('1일(24시간)');
+});

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ReportPeriod, ReportScope } from './ReportMeta';
+import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { obj, rows, str, strings } from '../lib/live';
 import { formatDate } from '../lib/domain';
@@ -110,6 +110,12 @@ export function ReportContent({
           <div>
             <dt>요청 접수 시각</dt>
             <dd>{reportRequestTime(str(obj(request).created_at))}</dd>
+          </div>
+          <div>
+            <dt>보고서 실행시간</dt>
+            <dd>
+              <ReportExecution job={obj(request)} />
+            </dd>
           </div>
           <div>
             <dt>분석 대상 기간</dt>
