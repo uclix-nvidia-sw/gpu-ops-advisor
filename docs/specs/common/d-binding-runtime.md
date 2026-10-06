@@ -45,6 +45,8 @@ Runbook 공통 변경은 원본 267개와 패키지 사본만 대상으로 한�
 
 ## 검증 경계
 
+2026-10-06 후속 [환경 조사 원장](../../evidence/d-binding-cpc-20261006.md)은 실환경 표본 확인과 아직 부족한 활성화 근거를 구분한다. D19의 `window`, D20의 `condition/status` 매핑은 verified binding의 필수 소비 차원이며, 대상 신원과 서로 다른 원본 label을 가리켜야 한다.
+
 재현 명령과 결과는 [Agent QA](../../../agents/QA.md)에 기록한다. `test_binding_contract.py`는 계약·수집·소비 산식을 합성 입력으로 검증한다. `test_e2e.py`의 binding profile 사례는 실제 Worker·JC·공식 MCP·격리 PostgreSQL로 조회와 결과 발행을 검증하지만 Grafana/LLM 응답은 fixture다.
 
 실환경 Grafana/LLM 검수, P1 환경 원장, 전체 P2 소비 계약, 전체 신규 계산·조건부 조사, Runbook 발행과 배포는 완료되지 않았다. DB 스키마·JC의 lease/publication 계약 변경은 이 단계에 필요하지 않아 수행하지 않았다.

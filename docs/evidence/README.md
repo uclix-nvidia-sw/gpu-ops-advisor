@@ -2,6 +2,10 @@
 
 현행 설계의 데이터 가용성 판단에 필요한 기록과 DCGM Field catalog를 보존한다. 과거 명세·화면 시안·중복 ZIP은 Git 이력으로 확인한다.
 
+- [2026-10-06 CPC-1/CPC-2 binding 조사](d-binding-cpc-20261006.md): 45개 D × 두 환경의 원본 표본 대조와 활성화 보류 사유. [기계 판독 원장](d-binding-cpc-20261006.json). 실행 가능한 환경 설정이 아니다.
+
+- [Fleet/DCGM 비교 PDF 재검증](fleet-dcgm-pdf-audit-20261006.md): 제공 PDF의 내부 일관성·버전별 생산 정의·현재 런북 대조와 원본 재현 한계.
+
 - CPC-2 기록: Alloy 직접 수집·GPU↔Pod UID 검증, 마지막 재배포 뒤 Loki 확인 대기 등 실제 확인 범위.
 - 메트릭 대조 목록: Exporter/Fleet 필드의 이름·출처·표본 등장 여부. 현재 활성 지표 전체 목록을 뜻하지 않는다.
 - [CPC-1](dcgm/cpc-1-dcgm-dmon-field-catalog.txt)·[CPC-2](dcgm/cpc-2-dcgm-dmon-field-catalog.txt) DCGM Field catalog: `dcgmi dmon --list` 출력. 실제 수집된 sample이나 Mimir 시계열 목록을 뜻하지 않는다.

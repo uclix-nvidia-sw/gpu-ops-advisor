@@ -159,6 +159,18 @@ def _verified(binding, query):
         "L": {"node"},
     }[scope]
     _require(required_labels <= labels.keys(), "scope entity labels")
+    # These dimensions are consumed by O01 and must survive producer mapping.
+    # Fleet calls the load window load_duration; KSM splits condition/status.
+    dimensions = {
+        "D19": {"window"},
+        "D20": {"condition", "status"},
+    }.get(binding["query_id"], set())
+    _require(dimensions <= labels.keys(), "consumer dimension labels")
+    _require(
+        len({labels[key] for key in required_labels | dimensions})
+        == len(required_labels | dimensions),
+        "distinct entity and dimension labels",
+    )
     expected = BASE_UNITS.get(binding["query_id"])
     _require(not expected or binding["unit"] == expected, "base consumer unit mismatch")
     if binding["query_id"] in BASE_UNITS:

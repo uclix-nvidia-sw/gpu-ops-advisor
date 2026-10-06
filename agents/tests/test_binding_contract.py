@@ -397,6 +397,61 @@ def test_o01_optional_capacity_calculates_and_failure_preserves_vram():
     assert topic["status"] == after["status"]
 
 
+@pytest.mark.parametrize(
+    "query,unit,sample_type,dimensions",
+    [
+        ("D19", "load", "gauge", {"window": "load_duration"}),
+        ("D20", "info", "info", {"condition": "condition", "status": "status"}),
+    ],
+)
+def test_o01_binding_requires_consumed_dimensions(query, unit, sample_type, dimensions):
+    config = profile()
+    binding = verified(config, query, unit=unit, sample_type=sample_type)
+    with pytest.raises(ValueError, match="consumer dimension"):
+        validate_profile(config)
+    binding["target_labels"].update(dimensions)
+    validate_profile(config)
+    binding["target_labels"][next(iter(dimensions))] = binding["target_labels"]["node"]
+    with pytest.raises(ValueError, match="distinct entity and dimension"):
+        validate_profile(config)
+
+
+async def test_fleet_load_duration_reaches_o01_without_merging_windows():
+    config = profile()
+    binding = verified(config, "D19", unit="load")
+    binding["target_labels"] = {"node": "node", "window": "load_duration"}
+    snapshot = {
+        "data": {
+            "result": [
+                {
+                    "metric": {"node": "fixture-node", "load_duration": window},
+                    "values": [[START, value], [START + 30, value]],
+                }
+                for window, value in (("1m0s", "2"), ("15m0s", "6"))
+            ]
+        }
+    }
+    original = copy.deepcopy(snapshot)
+
+    async def query(args):
+        assert args["expr"].startswith("cpu_load_average{")
+        return copy.deepcopy(snapshot)
+
+    obs = Observation({"query_prometheus": query}, config, DATA, time.monotonic() + 30)
+    collected = {"D19": await obs.collect("D19")}
+    topic = calculate(
+        "O01", {**DATA, "group_by": ["cluster"]}, collected, {}, {}, profile=config
+    )
+    metrics = [m for m in topic["metrics"] if m["id"] == "O01.node_load_by_window"]
+    assert {m["target"]["window"]: m["value"] for m in metrics} == {
+        "1m0s": 2,
+        "15m0s": 6,
+    }
+    assert all(m["unit"] == "load" and m["evidence_refs"] for m in metrics)
+    assert snapshot == original
+    assert collected["D19"][0]["snapshot"] == original
+
+
 def test_optional_budget_does_not_reject_core_collection():
     from ops_agent.collection import collection_plan
 
