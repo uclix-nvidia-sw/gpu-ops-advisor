@@ -42,6 +42,8 @@ METRIC_NAMES = {
 
 
 REASON_NAMES = {
+    "allocation_contract_missing": "검증된 GPU 할당 이력이 부족합니다. GPU–Pod 연결 관측만으로는 독점 할당·저활동·작업 편차를 확정하지 않습니다.",
+    "incomplete_observation": "조회 실패 또는 일부 기간의 불완전한 응답이 있습니다. 수집 근거에서 대상·기간·오류 사유를 확인하세요.",
     "gpu_pod_labels_absent": "Namespace·Pod 라벨이 없는 GPU 관측입니다. 유휴 상태나 회수 가능 여부는 확인되지 않았습니다.",
     "gpu_inventory_missing": "해당 클러스터의 GPU 관측 또는 연결 집계 근거가 부족합니다.",
     "unattributed_gpu_observation": "GPU의 작업 라벨과 Pod 신원·시간 구간을 연결하지 못한 관측이 있습니다.",

@@ -1,3 +1,16 @@
+# 2026-10-06 보고서 선택 개편 전 분석 조건·호환성 — 로컬 검수
+
+- 기준: 새로 fetch한 `origin/main` **baf6722**. UI 개편 전 7개 종류의 topic_ids/group_by 기본값, 실제 집계 단위, 자료 준비 조건과 기존 일정/결과 보존 기준을 [12번 설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#보고서-선택-개편-전-확정-기준--2026-10-06)에 확정했다. 7개 선택 화면과 일반 group_by 계산을 새로 구현한 것은 아니다.
+- 변경: Ops는 D08 `observed_pod_labels`를 할당 계약으로 사용하지 못하는 O02/O03/O04/O06에 기존 `allocation_contract_missing` 사유를 표시한다. 수집 실패·빈 응답·독점 episode 부족과 구분하고, O02 관측 수치·다른 클러스터의 유효 수치를 보존한다. Worker 문장·Frontend·Backend 내보내기의 사유 설명을 맞췄다. RCA/공통 Python/JC/DB/실행 프로필/일정 로직은 변경하지 않았다.
+- **통과 — 집중 사례:** 저장소 루트 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests/test_report_observation.py agents/tests/test_ops_report.py agents/tests/test_namespace_usage.py -q`: **69 passed**. 계약 미준비와 조회 실패 동시 표시, 빈 응답, unknown 모드의 실제 할당 + 활동률 0%, 다중 클러스터 O09 전체 범위 합계, O08 기존 집계를 확인했다.
+- **통과 — 두 Worker 회귀:** Python 3.11.16, `RUN_AGENT_E2E=1`과 로컬 `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `GRAFANA_MCP_BINARY`, `HELM_BINARY`를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/report-prerequisites/agents.xml` 실행. 실제 프로세스는 새로 빌드한 서비스/Worker/공식 Grafana MCP이며 Grafana·모델 응답은 fixture다. 외부 DB 환경변수를 제거하고 loopback 임시 PostgreSQL을 만들었다. **400 tests, 0 failures, 0 errors, 0 skipped; 68.10초**를 확인했다. 기존 MCP deprecation warning 3건이 남는다.
+- **통과 — Backend:** `backend/`에서 로컬 Go 1.26.2로 `go vet ./...`, `go test -race ./...`, `go build ./...`; 별도 임시 PostgreSQL에서 `go test -tags=e2e ./tests -run '^TestBackendE2E$' -v -count=1 -timeout=5m`의 10개 사례 통과. 일정 주제 변경 시 새 revision만 생기고 이전 revision/예약된 outbox 입력/실행 시각/중지 상태가 보존됨을 추가 확인했다. 재시작 후 공개 결과 조회와 HTML/CSV 내보내기도 통과했다. 원격 일정은 조회/변경하지 않았다.
+- **통과 — Frontend:** `frontend/`에서 `npm run format:check`, `npm test -- --run` **136 passed**, `npm run build`. 기존 결과의 수치/null·관측 해석·수정된 사유 문구를 렌더링 테스트로 확인했다. 새 UI는 아직 구현 전이므로 브라우저 상호작용 검수 대상이 아니다.
+- **통과 — 정적:** Ruff check/format, Go formatting, UTF-8 CRLF, `git diff --check`, `.venv/bin/python tools/check_links.py`. 테스트 DB는 종료했으며 공유/운영 DB에 접근하지 않았다.
+- **미수행/미검증:** 실제 배포 프로필의 D08 의미·클러스터/기간별 실데이터 가용성, 신규 7개 선택 UI, 운영 배포, 실환경 실행시간 비교, CI. 조회 최적화(O01 D06 제거/O06 사건 0건 생략)는 후속 범위다. 로컬 수정·검증 단계이며 커밋/푸시/PR/배포는 하지 않았다.
+
+---
+
 # 2026-10-06 대용량 수집·MCP 통신 복구 — 로컬 검수
 
 - 기준: 새로 fetch한 `origin/main` **b4ca5c7**, `fix/report-collection-resilience`. 공통 MCP 전송과 크기 초과 복구, Ops D06 초기 조회 구간을 보완했다. 기본 프로필 `builtin-grafana-v7`과 Helm 미러에 `report.query_chunk_seconds={"D06":7200}`을 추가하고 계획·실행에 같은 상한을 적용한다. 다른 query는 기존 Ops 기본 24시간, RCA는 기존 1시간을 유지한다.
