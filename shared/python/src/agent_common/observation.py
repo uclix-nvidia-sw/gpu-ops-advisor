@@ -10,6 +10,7 @@ from uuid import uuid4
 from .contracts import timestamp, now
 from .discovery import Discovery, DiscoveryError
 from .grafana_time import mcp_time
+from .runtime import attempt_context
 
 log = logging.getLogger(__name__)
 _record_sequence = count()
@@ -349,6 +350,9 @@ class Observation:
                         },
                         observation_usable=False,
                     )
+                started = time.monotonic()
+                outcome, reason = "cancelled", "cancelled"
+                response_bytes = next_chunk_seconds = None
                 try:
                     if cached is not None:
                         response = cached[0]
@@ -362,6 +366,7 @@ class Observation:
                         ):
                             response = unwrap(await self.tools[name](args))
                     size = len(json.dumps(response, ensure_ascii=False).encode())
+                    response_bytes = size
                     payload = (
                         response.get("data", response)
                         if isinstance(response, dict)
@@ -401,6 +406,13 @@ class Observation:
                         chunk_seconds = max(
                             1, int((stop - cursor) * min(0.5, ratio * 0.8))
                         )
+                        outcome = "split"
+                        reason = (
+                            "response_byte_limit"
+                            if size > limits["max_bytes"]
+                            else "sample_limit_exceeded"
+                        )
+                        next_chunk_seconds = chunk_seconds
                         continue
                     if size > limits["max_bytes"]:
                         response = {}
@@ -428,6 +440,7 @@ class Observation:
                             if not quality["complete"]
                             else ("ok" if rows else "empty")
                         )
+                    outcome, reason = status, quality.get("reason")
                     out.append(
                         self._evidence(
                             query_id,
@@ -446,17 +459,13 @@ class Observation:
                     error = {"error_type": type(exc).__name__}
                     if isinstance(exc, MCPResponseError):
                         error["error_code"] = str(exc)
-                    oversized = (
-                        source == "loki"
-                        and error.get("error_code") == "response_byte_limit"
-                    )
+                    oversized = error.get("error_code") == "response_byte_limit"
+                    outcome = "unavailable"
+                    reason = "response_byte_limit" if oversized else "query_failed"
                     if oversized and stop - cursor > 1:
                         chunk_seconds = max(1, int((stop - cursor) / 2))
-                        log.info(
-                            "Grafana Loki window reduced query=%s error_code=response_byte_limit chunk_seconds=%s",
-                            query_id,
-                            chunk_seconds,
-                        )
+                        outcome = "split"
+                        next_chunk_seconds = chunk_seconds
                         continue
                     log.warning(
                         "Grafana query unavailable query=%s source=%s error_type=%s error_code=%s",
@@ -482,6 +491,29 @@ class Observation:
                             },
                             args,
                         )
+                    )
+                finally:
+                    claim = attempt_context.get({}).get("claim", {})
+                    log.info(
+                        "Grafana query window job=%s attempt=%s query=%s source=%s "
+                        "cluster=%r namespace_count=%s start=%s end=%s "
+                        "elapsed_seconds=%.3f outcome=%s reason=%s "
+                        "sample_count=%s response_bytes=%s next_chunk_seconds=%s cached=%s",
+                        claim.get("job_id"),
+                        claim.get("attempt_no"),
+                        query_id,
+                        source,
+                        scope["cluster_id"],
+                        len(namespaces) if namespaces is not None else "all",
+                        window["start"],
+                        window["end"],
+                        time.monotonic() - started,
+                        outcome,
+                        reason,
+                        quality.get("sample_count"),
+                        response_bytes,
+                        next_chunk_seconds,
+                        cached is not None,
                     )
                 cursor = stop
         self.cache[key] = out

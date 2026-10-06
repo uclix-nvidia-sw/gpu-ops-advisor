@@ -1,6 +1,6 @@
 function_groups:
   grafana:
-    _type: mcp_client
+    _type: grafana_mcp
     server:
       transport: streamable-http
       url: ${GRAFANA_MCP_URL:-http://127.0.0.1:8000/mcp}

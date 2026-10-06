@@ -1,3 +1,16 @@
+# 2026-10-06 대용량 수집·MCP 통신 복구 — 로컬 검수
+
+- 기준: 새로 fetch한 `origin/main` **b4ca5c7**, `fix/report-collection-resilience`. 공통 MCP 전송과 크기 초과 복구, Ops D06 초기 조회 구간을 보완했다. 기본 프로필 `builtin-grafana-v7`과 Helm 미러에 `report.query_chunk_seconds={"D06":7200}`을 추가하고 계획·실행에 같은 상한을 적용한다. 다른 query는 기존 Ops 기본 24시간, RCA는 기존 1시간을 유지한다.
+- **통과 — 전체 회귀:** 저장소 루트, Python **3.11.16**, NAT 1.5.0에서 `RUN_AGENT_E2E=1`과 로컬 `PG_BIN`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `GRAFANA_MCP_BINARY`, `HELM_BINARY`를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/report-usability/collection-resilience-results.xml` 실행: **388 passed, 0 skipped, 66.61초**. 외부 DB 환경변수 두 개를 제거하고 매번 새 임시 loopback PostgreSQL을 사용했다. 현재 소스로 다시 빌드한 Go 서비스·별도 두 Worker·공식 Grafana MCP 1.4.2는 실제 프로세스이며 Grafana/LLM 응답은 fixture다. 기존 MCP deprecation warning 3건이 남는다.
+- **통과 — 통신 회귀:** 실제 localhost HTTP 소켓에서 5.2초 지연 응답 성공, 연결 단절 뒤 두 Worker의 heartbeat·실패 보고·다음 실행 성공, 세션 종료 404 뒤 다음 호출 재연결을 확인했다. 실패한 조회를 자동 재전송하지 않는다. 도구 deadline·외부 취소·동시 호출 중 한 호출 취소·일반 도구 오류·종료 후 태스크 회수도 검사했다. 세션 종료 처리는 `get_tools`/`call_tool`의 공통 경로에 둔다.
+- **통과 — 큰 응답과 의미 보존:** 공식 MCP로 보낸 Prometheus 인공 응답 **11,536,878바이트**는 전송된 뒤 Agent의 2MiB 제한에서 분할됐다. 별도 단일 실행에서는 3600초 요청을 버린 뒤 523초 구간 6개와 마지막 462초, 총 8회로 수집했고 원본 121개 표본·전체 기간·대상 필터가 보존됐다. **MCP의 10MiB 제한을 모든 출처에 적용되는 것으로 해석하지 않는다.** 원격 10MiB 제한은 기존 Loki E2E에서 확인했으며, Prometheus 원격 크기 오류 분기는 오류 주입 fixture로만 검사했다.
+- **통과 — 수집 계획:** 1/7/31일 원본 표본, 2개 클러스터·11주제 초기 계획 46/322/1426회와 작은 사용자 예산의 사전 거절, Pod 이름 재사용·UID 충돌·표본 공백, 분할 중 호출/deadline 소진의 미확인 구간 보존을 검사했다. D06의 2시간은 확인한 하루 약 32MiB 응답을 줄이는 초기 상한이며 최적 구간이나 월간 완료 보장이 아니다. 구간별 소요시간·크기·표본 수·분할 사유를 새 진단 로그에 남긴다.
+- **통과 — 정적·설정 검수:** Ruff check/format, Helm lint/template/package와 설정 미러, CI 도구 unittest 5건, 문서 링크·diff·CRLF 검사. 독립 검토에서 찾은 만료 세션 재사용 문제를 수정하고 최종 전체 회귀를 다시 실행했다. 새 수집 진단은 원본 payload·조회식·인증 값을 출력하지 않지만 NAT의 기존 원문 오류 로그까지 정리한 변경은 아니다.
+- **미수행/미검증:** 운영 배포·수정본으로 같은 24시간/주간/월간 실제 보고서 재실행·운영 부하와 처리시간·원격 CI. 이번 운영 실패가 Mimir 과부하나 Prometheus 원격 10MiB 제한 때문이었다고 확정하지 않는다. 완료 단계는 로컬 파일이며 커밋·푸시·PR은 하지 않았다.
+- **해당 없음/후속:** DB migration·API/result schema·JC lease/슬롯 정책·RCA 계산/판정·UI 변경은 없다. 공통 전송 변경은 두 Worker 이미지에 적용해야 하며 사용자 정의 전체 Agent 프로필은 D06 맵과 revision을 별도로 반영해야 한다. 기존 격리 해제와 11개 주제 축소·중복 evidence 저장/보존 정책은 이번 변경에 포함하지 않았다.
+
+---
+
 # 2026-10-06 PR 최종 재검수 — Fleet 지표와 실행시간 표시
 
 - **통과:** 새로 fetch한 `origin/main`과 작업 시작 커밋은 모두 **2d9ee8f**이며 양쪽 단독 커밋은 0개였다. 기존 로컬 Fleet 설정과 Frontend 실행시간 표시를 함께 검토했다. 아래 10월 2일 기록은 당시 기능별 검수 범위를 뜻한다.

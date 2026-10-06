@@ -8,9 +8,13 @@
 
 `report.limits` 예시는 `max_queries=2048`, `chunk_seconds=86400`, `max_rows=50000`, `max_concurrency=3`이다. 네 키만 양수 정수로 받으며 미지정 키는 기존 공통 limits를 사용한다. 동시성 1은 순차 실행이다. 원본 표본·응답 크기·전체 deadline·최대 기간은 보존한다. 세부 예산·시간 배분은 [설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다.
 
+`builtin-grafana-v7`의 `report.query_chunk_seconds={"D06":7200}`은 D06(Pod 신원 이력)의 초기 조회 구간을 최대 2시간으로 제한한다. 등록된 query ID와 양수 정수만 허용하며 전체 `chunk_seconds`와 query별 값 중 작은 값을 계획·실행에 똑같이 적용한다. 맵이 없으면 기존 전체 구간 설정을 사용하고, 다른 query는 예시의 24시간을 유지한다. D06의 원본 표본·Pod UID·연결 시각을 보존한다. 2시간은 확인한 하루 약 32MiB의 전송·처리량과 Agent의 2MiB·50000표본 한도를 고려한 초기 상한이다. Prometheus의 고정 10MiB 제한을 전제로 하지 않으며, 응답 밀도·추가 분할에 따라 예산을 소진할 수 있으므로 월간 완료를 보장하지 않는다.
+
+수집기는 Mimir/Prometheus·Loki의 수신 응답 크기·표본 한도를 넘거나 알려진 MCP 원격 크기 초과 오류를 받으면 기존 예산 안에서 구간을 줄인다. 확인된 원격 10MiB 상한은 Loki에 한정하며, Prometheus 원격 오류 복구는 오류 주입 fixture 검증이다. 일반 timeout·연결 실패를 같은 구간에서 무조건 반복하지 않는다. 공통 `grafana_mcp`는 HTTP 제한을 도구 제한보다 5초 길게 두고 연결 수명을 별도 task로 관리한다. 실패한 호출은 재실행하지 않으며 다음 예산 내 호출에서 연결을 다시 열 수 있다. 세션 종료 404도 연결을 정리한 뒤 다음 호출에서 복구한다. 두 Worker에 적용되는 공통 전송 변경이며 RCA 계산 정책은 유지한다. 구간별 안전한 진단 로그와 배포 범위는 [공통 실행 문서](../agents/README.md#grafana-조회와-llm-오류-진단)를 따른다.
+
 동일 CPC·기간·metric task에는 순서를 두어 완전한 동일 Prometheus 응답을 재사용한다. 도구·데이터소스·범위·표현식·시각·구간이 모두 일치해야 하며 query/evidence ID와 `quality.reused_from_evidence`를 보존한다. 실패·부분·대용량 폐기 응답과 Loki는 재사용하지 않는다. 완료된 캐시만 복사하고 실행 중 상태는 공유하지 않는다. O08 단독 namespace의 D06은 D01/D08 완료 뒤 검증된 namespace 범위로 좁힌다. 불완전·후보 없음·복수 주제는 기존 범위를 유지한다.
 
-`quality.collection.tasks`의 `sub_agent_id`, `depends_on`, 예약/실사용 호출량, 시작 offset·소요시간, 완료/빈 응답/미완료 구간으로 웹 결과 상세에서 수집을 추적한다. 근거의 `quality.sub_agent_id`와 연결된다. 응답 완료 구간은 표본 커버리지·계산 성공을 뜻하지 않는다. 저장된 진단이며 실시간 분산 추적은 아니다.
+`quality.collection.tasks`의 `sub_agent_id`, `depends_on`, 초기 구간 상한 `chunk_seconds`, 예약/실사용 호출량, 시작 offset·소요시간, 완료/빈 응답/미완료 구간으로 웹 결과 상세에서 수집을 추적한다. 근거의 `quality.sub_agent_id`와 연결된다. 응답 완료 구간은 표본 커버리지·계산 성공을 뜻하지 않는다. 저장된 진단이며 실시간 분산 추적은 아니다.
 
 ## 계산과 보고서
 

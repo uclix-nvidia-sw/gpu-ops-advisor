@@ -47,7 +47,8 @@ def row(labels, value="0", start=START, end=END):
 
 
 @pytest.mark.asyncio
-async def test_large_pod_history_is_split_without_losing_original_samples():
+async def test_large_pod_history_is_split_without_losing_original_samples(caplog):
+    caplog.set_level("INFO", logger="agent_common.observation")
     calls = []
 
     # Same scale as the affected CPC: 286 series and a one-hour range vector.
@@ -85,6 +86,15 @@ async def test_large_pod_history_is_split_without_losing_original_samples():
     assert {t for t, _ in merged[0]["samples"]} == set(
         range(int(START), int(END) + 1, 15)
     )
+    messages = [
+        r.message
+        for r in caplog.records
+        if r.message.startswith("Grafana query window ")
+    ]
+    assert len(messages) == len(calls)
+    assert f"start={PERIOD['start']} end={PERIOD['end']}" in messages[0]
+    assert "outcome=split" in messages[0] and "sample_count=68926" in messages[0]
+    assert "response_bytes=" in messages[0] and "next_chunk_seconds=" in messages[0]
 
 
 @pytest.mark.asyncio

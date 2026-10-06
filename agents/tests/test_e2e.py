@@ -51,6 +51,7 @@ class Upstream(BaseHTTPRequestHandler):
     logs_json_target = None
     logs_max_seconds = None
     logs_padding_bytes = 16384
+    prometheus_max_seconds = None
     fleet_reports = False
 
     def log_message(self, *args):
@@ -177,6 +178,12 @@ class Upstream(BaseHTTPRequestHandler):
                 metric, 2 if metric == "DCGM_FI_DEV_GPU_UTIL" else 1
             )
             values = [[start + i * 30, str(value)] for i in range(121)]
+            if self.prometheus_max_seconds is not None:
+                length = int(expr.rsplit("[", 1)[1][:-2])
+                stop = float(query["time"][0])
+                values = [row for row in values if stop - length < row[0] <= stop]
+                if length - 1 > self.prometheus_max_seconds:
+                    labels["padding"] = "x" * (11 * 1024 * 1024)
             rows = [{"metric": labels, "values": values}]
             if metric in {"DCGM_FI_DEV_GPU_TEMP", "DCGM_FI_DEV_POWER_USAGE"} or (
                 metric in fleet_values and "namespace=" in expr.split("}", 1)[0]
@@ -740,6 +747,76 @@ async def test_fleet_json_logs_split_through_nat_and_official_mcp(
     assert all(
         'cluster="cpc-2"' in q["query"][0] and 'namespace=~"dev"' in q["query"][0]
         for q in requests
+    )
+
+
+@pytest.mark.e2e
+async def test_large_prometheus_response_splits_through_official_mcp(
+    stack, monkeypatch
+):
+    from agent_common.contracts import timestamp
+    from agent_common.grafana_mcp import GrafanaMCPClient
+    from agent_common.observation import Observation, series, unwrap
+
+    monkeypatch.setattr(Upstream, "prometheus_max_seconds", 1800)
+    request_start = len(Upstream.requests)
+    async with GrafanaMCPClient(stack["env"]["GRAFANA_MCP_URL"]) as client:
+        tools = {}
+        for name in (
+            "query_prometheus",
+            "list_datasources",
+            "list_prometheus_label_values",
+        ):
+            tools[name] = (await client.get_tool(name)).acall
+        raw_responses = []
+        query_prometheus = tools["query_prometheus"]
+
+        async def query_with_response(args):
+            raw = await query_prometheus(args)
+            raw_responses.append(raw)
+            return raw
+
+        tools["query_prometheus"] = query_with_response
+        observation = Observation(
+            tools,
+            stack["profile"],
+            {"scope": SCOPE, "time_range": PERIOD},
+            time.monotonic() + 60,
+        )
+        evidence = await observation.collect("D06")
+        assert observation.calls == len(raw_responses) > 1
+        # Official MCP returns the large Prometheus payload; Observation splits it.
+        assert len(raw_responses[0].encode()) > 10 * 1024 * 1024
+        assert unwrap(raw_responses[0])["data"]
+        assert len(evidence) > 1 and all(
+            e["tool_status"] == "ok" and e["quality"]["complete"] for e in evidence
+        ), evidence
+        assert evidence[0]["time_range"]["start"] == PERIOD["start"]
+        assert all(
+            previous["time_range"]["end"] == following["time_range"]["start"]
+            for previous, following in zip(evidence, evidence[1:])
+        )
+        assert evidence[-1]["time_range"]["end"] == PERIOD["end"]
+        rows = series(evidence)
+        assert len(rows) == 1 and "padding" not in rows[0]["labels"]
+        assert rows[0]["samples"] == [
+            [timestamp(PERIOD["start"]) + i * 30, "1"] for i in range(121)
+        ]
+    requests = [
+        args
+        for path, args in Upstream.requests[request_start:]
+        if path.endswith("/api/v1/query")
+    ]
+    expressions = [args["query"][0] for args in requests]
+    durations = [int(expr.rsplit("[", 1)[1][:-2]) - 1 for expr in expressions]
+    assert len(requests) == observation.calls
+    assert durations[0] == 3600 and all(
+        0 < seconds <= 1800 for seconds in durations[1:]
+    )
+    assert len({expr.rsplit("[", 1)[0] for expr in expressions}) == 1
+    assert all(
+        'cluster_id="cpc-2"' in expr and 'namespace=~"dev"' in expr
+        for expr in expressions
     )
 
 

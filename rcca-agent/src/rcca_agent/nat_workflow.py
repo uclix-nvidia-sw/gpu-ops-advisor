@@ -3,6 +3,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 from agent_common.runtime import nat_tools
+import agent_common.grafana_mcp  # noqa: F401 - register the shared NAT MCP group
 from .workflow import run
 
 
