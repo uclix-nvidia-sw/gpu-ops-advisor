@@ -42,6 +42,7 @@ METRIC_NAMES = {
 
 
 REASON_NAMES = {
+    "performed_action_and_comparison_required": "조치 기록·비교 기간이 없어 전후 비교를 수행하지 않았습니다",
     "allocation_contract_missing": "검증된 GPU 할당 이력이 부족합니다. GPU–Pod 연결 관측만으로는 독점 할당·저활동·작업 편차를 확정하지 않습니다.",
     "incomplete_observation": "조회 실패 또는 일부 기간의 불완전한 응답이 있습니다. 수집 근거에서 대상·기간·오류 사유를 확인하세요.",
     "gpu_pod_labels_absent": "Namespace·Pod 라벨이 없는 GPU 관측입니다. 유휴 상태나 회수 가능 여부는 확인되지 않았습니다.",
@@ -111,6 +112,9 @@ async def write_report(result, llm):
                     [r["evidence_id"] for r in task["ranges"]],
                 )
     for topic in result["topics"]:
+        basis = topic.get("quality", {}).get("display_basis")
+        if basis:
+            add("scope", f"{topic['topic_id']} 표시 기준: {basis}.")
         for omitted in topic.get("quality", {}).get("omitted_queries", []):
             if omitted.get("reason") == "no_stored_incidents_in_period":
                 add(

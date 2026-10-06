@@ -1,5 +1,7 @@
 # 공유 계약과 스키마
 
+보고서 종합·다중 선택 입력의 선택적 `topic_group_by`는 [02 계약](../docs/specs/backend/02_백엔드_API_작업명세서.md#소주제별-기준을-가진-보고서--2026-10-06)을 따른다. 기존 입력은 보존하며 새 map은 선택 주제 전체와 허용 프리셋을 검증한다. RCA 분석·JC 실행/슬롯 정책·DB 구조는 변경하지 않는다.
+
 ## Runbook-first 입력 지원 — 2026-10-02
 
 JC의 추가 migration `007_runbook_contract.sql`은 Worker 지원 계약 제약에 RCA 1.5를 추가한다. 새 테이블이나 기존 job/snapshot/hash 변경은 없다. 기존 1.3/1.4 계약은 유지한다. 신규 Incident 요청은 R 없이 1.5로 전달하고, Python Worker는 1.3/1.4/1.5를 구분해 검증한다. RCA 결과의 assessments는 Runbook 질문 기준이며 과거 purpose_id는 화면에서 읽기 호환한다.

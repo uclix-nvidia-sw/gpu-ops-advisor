@@ -19,6 +19,7 @@ from agent_common.observation import evidence_stamp
 from .report import write_report
 from .namespace_usage import namespace_usage
 from .collection import collect_report
+from .presentation import TOPIC_BASES
 
 
 log = logging.getLogger(__name__)
@@ -65,6 +66,8 @@ def add(
     )
     if target is not None:
         m["target"] = target
+    if topic["quality"].get("display_basis"):
+        m["quality"]["display_basis"] = topic["quality"]["display_basis"]
     topic["metrics"].append(m)
     if value is not None:
         topic["facts"].append(
@@ -79,7 +82,14 @@ def add(
         topic["missing_inputs"].append(reason)
 
 
-def query_ids(topic_id, criteria_version=None, *, context=None):
+def query_ids(topic_id, criteria_version=None, *, context=None, data=None):
+    if (
+        topic_id == "O10"
+        and data is not None
+        and "topic_group_by" in data
+        and (not data.get("action_record_ids") or not data.get("comparison_range"))
+    ):
+        return ()
     # Only an explicitly empty, successfully pinned DB snapshot permits omission.
     if topic_id == "O06" and context is not None and context.get("incidents") == []:
         return ("D08", "D06")
@@ -104,6 +114,13 @@ def calculate(
         evidence_refs=[],
         recommendations=[],
     )
+    if "topic_group_by" in data:
+        data = {**data, "group_by": data["topic_group_by"][topic_id]}
+        topic["quality"].update(
+            requested_group_by=data["group_by"], display_basis=TOPIC_BASES[topic_id]
+        )
+        if topic_id == "O08" and criteria_version != "1.2":
+            raise ValueError("per-topic namespace reports require criteria 1.2")
     period = data["time_range"]
     start, end = timestamp(period["start"]), timestamp(period["end"])
     namespace_draft = topic_id == "O08" and criteria_version == "1.2"
@@ -120,7 +137,7 @@ def calculate(
     )
     all_refs = [
         e
-        for q in query_ids(topic_id, criteria_version, context=context)
+        for q in query_ids(topic_id, criteria_version, context=context, data=data)
         for e in collected.get(q, [])
     ]
     topic["evidence_refs"] = refs(all_refs)
@@ -600,7 +617,9 @@ def calculate(
             for r in context["rca_results"]
         ]
     elif topic_id == "O06":
-        if "D13" not in query_ids(topic_id, criteria_version, context=context):
+        if "D13" not in query_ids(
+            topic_id, criteria_version, context=context, data=data
+        ):
             topic["quality"]["omitted_queries"] = [
                 dict(
                     query_id="D13",
@@ -805,7 +824,7 @@ async def run(tools):
     queries = {
         q
         for topic in data["topic_ids"]
-        for q in query_ids(topic, criteria_version, context=ctx["context"])
+        for q in query_ids(topic, criteria_version, context=ctx["context"], data=data)
     }
     priority = (
         ("D01", "D02", "D06", "D08")
@@ -815,7 +834,8 @@ async def run(tools):
     namespace_only = (
         criteria_version == "1.2"
         and data["topic_ids"] == ["O08"]
-        and set(data["group_by"]) in ({"namespace"}, {"cluster", "namespace"})
+        and set(data.get("topic_group_by", {}).get("O08", data["group_by"]))
+        in ({"namespace"}, {"cluster", "namespace"})
     )
     order = (
         ["D01", "D02", "D08", "D06"]
@@ -892,6 +912,11 @@ async def run(tools):
     result["quality"].update(
         requested_group_by=data["group_by"],
         collection=collection,
+        **(
+            {"topic_group_by": data["topic_group_by"]}
+            if "topic_group_by" in data
+            else {}
+        ),
     )
     if time.monotonic() >= ctx["deadline"]:
         raise TimeoutError()

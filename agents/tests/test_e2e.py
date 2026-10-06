@@ -821,7 +821,8 @@ async def test_large_prometheus_response_splits_through_official_mcp(
 
 
 @pytest.mark.e2e
-def test_namespace_report_through_backend_with_report_only_criteria(stack):
+@pytest.mark.parametrize("multi", [False, True])
+def test_namespace_report_through_backend_with_report_only_criteria(stack, multi):
     # Real Backend selects the report-only profile; global criteria stay unchanged.
     extension = ".exe" if sys.platform == "win32" else ""
     binary = Path(
@@ -850,6 +851,12 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
         topic_ids=["O08"],
         group_by=["namespace"],
     )
+    if multi:
+        data["topic_ids"] = [f"O{i:02}" for i in range(1, 12)]
+        data["group_by"] = ["cluster"]
+        data["topic_group_by"] = {
+            t: ["namespace" if t == "O08" else "cluster"] for t in data["topic_ids"]
+        }
     response = httpx.post(
         backend + "/reports", json=data, headers={"Idempotency-Key": str(uuid4())}
     )
@@ -857,24 +864,44 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack):
     jid = response.json()["job_id"]
     result, evidence = worker_result(stack, "report", jid, "-namespace")
     assert result["versions"]["execution_profile_revision"] == "report-namespace-v1"
-    assert result["quality"]["requested_group_by"] == ["namespace"]
+    assert result["quality"]["requested_group_by"] == data["group_by"]
     collection = result["quality"]["collection"]
     assert collection["plan_status"] == "accepted"
     assert collection["query_limit"] == 2048
     assert collection["complete"]
-    assert {t["query_id"] for t in collection["tasks"]} == {"D01", "D02", "D06", "D08"}
+    if multi:
+        assert result["quality"]["topic_group_by"] == data["topic_group_by"]
+        assert {t["topic_id"] for t in result["topics"]} == set(data["topic_ids"])
+        comparison = next(t for t in result["topics"] if t["topic_id"] == "O10")
+        assert comparison["status"] == "blocked"
+        assert (
+            "performed_action_and_comparison_required" in comparison["missing_inputs"]
+        )
+        assert all(t["quality"]["display_basis"] for t in result["topics"])
+        assert "D09" not in {t["query_id"] for t in collection["tasks"]}
+    else:
+        assert {t["query_id"] for t in collection["tasks"]} == {
+            "D01",
+            "D02",
+            "D06",
+            "D08",
+        }
     assert all(t["incomplete_seconds"] == 0 for t in collection["tasks"])
     html = httpx.get(backend + f"/reports/{jid}/export?format=html")
     assert html.status_code == 200
     assert "분석 범위와 결과" in html.text and "권고와 실행 조건" in html.text
     assert "연결 GPU 평균 활동률" in html.text
+    if multi:
+        assert "표시 기준" in html.text and "소주제별 기준 적용" in html.text
+        csv_response = httpx.get(backend + f"/reports/{jid}/export?format=csv")
+        assert csv_response.status_code == 200 and "display_basis" in csv_response.text
     assert "Namespace의 실제 소비량" in html.text
     with psycopg.connect(stack["url"]) as conn:
         assert conn.execute(
             "SELECT versions->>'criteria' FROM jobs WHERE kind='rca' LIMIT 1"
         ).fetchone() in (None, ("unconfigured",))
     assert result["versions"]["criteria"] == "1.2"
-    topic = result["topics"][0]
+    topic = next(t for t in result["topics"] if t["topic_id"] == "O08")
     metrics = {m["id"].split(".")[1]: m for m in topic["metrics"]}
     assert metrics["namespace_connected_gpu_count"]["value"] == 1
     assert metrics["cluster_observed_gpu_count"]["value"] == 1

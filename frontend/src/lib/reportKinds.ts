@@ -61,7 +61,8 @@ export const reportKinds = [
     groupBy: 'cluster',
     description: '기록된 운영 조치 전후의 관측 수치를 비교합니다.',
     insight: '조치 뒤 수치가 어떻게 달라졌는지 살펴봅니다.',
-    requirement: '수행한 조치 기록 ID와 비교 기간을 입력해야 합니다. 직접 요청으로만 제공합니다.',
+    requirement:
+      '전후 비교 계산에는 수행한 조치 기록 ID와 비교 기간이 필요합니다. 종합·자동보고서에서 조건이 없으면 비교하지 않은 이유를 표시합니다.',
     limit:
       '기간·관측 범위·업무량 차이도 영향을 줍니다. 조치의 인과적 효과나 절감 성과를 확정하지 않습니다.',
   },
@@ -80,4 +81,30 @@ export const reportKinds = [
 
 export function reportKind(id: string | null) {
   return reportKinds.find((kind) => kind.id === id) || reportKinds[0];
+}
+
+export const topicDisplayBases: Record<string, string> = {
+  O01: 'GPU 대수는 선택 범위 전체 · 메모리·온도는 GPU 장비별',
+  O02: 'GPU 수·연결·할당 시간은 선택 범위 전체 · 상세 지표는 표시된 대상별',
+  O03: '검증된 전용 할당 구간의 저활동 GPU 시간 합계',
+  O04: '같은 Pod·같은 시간에 연결된 GPU 간 활동률 비교',
+  O05: '선택 범위·분석 기간에 등록된 사건 기준',
+  O06: '사건 발생 시점의 GPU와 Pod 관계별',
+  O07: '미배치 Pod의 유효 GPU 요청량 · 선택 범위 합계',
+  O08: '클러스터·Namespace별 연결 관측 · 클러스터 요약 포함',
+  O09: '선택 범위 전체의 관측 GPU 에너지 합계',
+  O10: '기록된 조치와 비교 기간 · 두 기간에 공통 관측된 GPU의 에너지 합계',
+  O11: '수집 대상별 정상 응답 시간을 합산 · 전체 커버리지는 별도 근거 필요',
+};
+
+export function reportSelection(ids: string[]) {
+  const kinds = reportKinds.filter((kind) => ids.includes(kind.id));
+  const topic_ids = [...new Set(kinds.flatMap((kind) => kind.topicIds))].sort();
+  return {
+    topic_ids,
+    group_by: topic_ids.length === 1 && topic_ids[0] === 'O08' ? ['namespace'] : ['cluster'],
+    topic_group_by: Object.fromEntries(
+      kinds.flatMap((kind) => kind.topicIds.map((id) => [id, [kind.groupBy]])),
+    ),
+  };
 }

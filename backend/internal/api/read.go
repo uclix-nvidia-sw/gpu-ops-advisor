@@ -183,7 +183,7 @@ func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 		out[k] = v[k]
 	}
 	if input, ok := v["input_snapshot"].(map[string]any); ok {
-		for _, k := range []string{"target", "time_range", "timezone", "topic_ids", "purpose_ids", "group_by", "comparison_range", "incident_id", "symptom"} {
+		for _, k := range []string{"target", "time_range", "timezone", "topic_ids", "purpose_ids", "group_by", "topic_group_by", "comparison_range", "incident_id", "symptom"} {
 			if x, ok := input[k]; ok {
 				out[k] = x
 			}

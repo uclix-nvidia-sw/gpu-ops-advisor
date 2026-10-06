@@ -77,3 +77,20 @@ func TestCandidateInputContract(t *testing.T) {
 		})
 	}
 }
+
+func TestReportTopicGroupNormalization(t *testing.T) {
+	for _, valid := range []bool{true, false} {
+		groups := map[string][]string{"O01": {"cluster"}, "O08": {"namespace"}}
+		if !valid {
+			groups["O01"] = []string{"namespace"}
+		}
+		input := Object{"scope": Object{"clusters": []any{Object{"cluster_id": "cpc-1", "namespaces": nil}}}, "time_range": Object{"start": "2026-10-01T00:00:00Z", "end": "2026-10-02T00:00:00Z"}, "timezone": "UTC", "topic_ids": []string{"O01", "O08"}, "group_by": []string{"cluster"}, "topic_group_by": groups}
+		b := Object{"contract_version": "1.3", "kind": "report", "source_module": "backend", "source_key": "manual:multi", "input": input, "deadline_at": "2026-10-03T00:00:00Z"}
+		if e := normalize("report", b); (e == nil) != valid {
+			t.Fatalf("%v: %v", valid, e)
+		}
+		if valid && Hash(input["topic_group_by"]) != Hash(groups) {
+			t.Fatal("group map lost")
+		}
+	}
+}

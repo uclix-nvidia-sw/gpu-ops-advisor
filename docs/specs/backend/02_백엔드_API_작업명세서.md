@@ -1,5 +1,17 @@
 ## 일정 실행 상태 읽기 보완 — 2026-10-02
 
+## 소주제별 기준을 가진 보고서 — 2026-10-06
+
+`POST /reports`와 일정 `report_spec`은 선택적 `topic_group_by` 객체를 받는다. 예: `{"topic_ids":["O01","O08","O09"],"group_by":["cluster"],"topic_group_by":{"O01":["cluster"],"O08":["namespace"],"O09":["cluster"]}}`. 선택된 모든 topic에 정확히 하나의 축 배열이 있어야 하며 누락·추가 key·null·빈 map은 422다. 현재 지원 프리셋은 O08=`[namespace]` 또는 `[cluster,namespace]`, 나머지=`[cluster]`뿐이다. 이는 현행 계산 기준 선택이며 임의 그룹별 재집계를 새로 구현한 계약이 아니다.
+
+기존 필수 `group_by`는 유지한다. 새 map이 없으면 종전 입력·프로필·결과 처리 그대로다. map이 있으면 각 topic의 기준으로 사용하고, O08의 namespace 기준은 기존 `report-namespace-v1` 프로필(criteria 1.2)을 선택한다. Backend·JC·Ops가 모두 검증하고 Ops는 O08 기준 버전 불일치를 거부한다. RCA 입력에는 이 필드를 허용하지 않는다. DB 구조와 input schema_version 1.3은 유지하고 저장된 JSON snapshot/일정 revision/멱등 해시에 map을 포함한다. 종합·다중 선택도 하나의 job이다.
+
+새 map 요청에서 O10 조치 ID 또는 비교 기간이 없으면 해당 주제 전용 수집을 하지 않고 기존 null/blocked와 부족 사유를 남긴다. 직접 요청은 조건을 선택 입력하며 신규 자동보고서는 임의 조치·비교 기간을 만들지 않는다. 다른 주제에 필요한 같은 D 조회는 유지한다. 구 요청/일정의 비교 동작은 변경하지 않는다.
+
+결과 `quality.topic_group_by`, `topic.quality.requested_group_by/display_basis`, `metric.quality.display_basis`에 적용한 표시 기준을 보존한다. 새 결과 CSV에는 마지막 `display_basis` 열을 추가하고 HTML·UI에도 기준을 표시한다. 구 결과의 CSV 열은 유지한다.
+
+배포는 새 입력을 만드는 Frontend/Backend 활성화 전에 JC·공통 계약·Ops 소비자를 함께 갱신하고 이전 Ops Worker를 drain/교체한다. 구 Worker가 새 map을 무시할 수 있으므로 혼합 버전 실행은 보장하지 않는다. 새 버전은 구 요청/일정을 처리하지만, 구 버전이 새 요청을 처리하는 호환성은 없다. 운영 배포는 별도 검수다.
+
 `GET /schedules`는 최근 예정 회차 `latest_occurrence`와 서버 시각 기준 회차 기록 부재 `awaiting_occurrence`를 추가 제공한다. 최근 회차와 `GET /schedules/{id}/occurrences`의 `execution`은 실제 report 작업 및 최신 시도의 상태·시각·사유·공개 참조만 담는다. 접수는 실행 완료가 아니며 회차 기록 부재만으로 실패를 판정하지 않는다. 필드·null·정렬·호환 조건은 [Backend API](../../../backend/API.md)의 자동 보고서 실행 요약 계약을 따른다. 일정/outbox 쓰기와 JC 실행 소유권, DB schema는 유지한다.
 
 # 02. Backend·GUI API 및 정기 보고서
@@ -89,7 +101,7 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 
 ## 보고서 접수와 응답
 
-입력: `scope,time_range,timezone,topic_ids,group_by,comparison_range?,action_record_ids?,resource_selectors?,parent_job_id?`. topic은 O01~O11, group_by는 cluster/model/node/namespace/pod/workload다. 추가 개발의 주제별 지원 조합은 04 §5.5를 따른다. 잘못된 enum은 422, 유효하지만 미지원 조합은 접수 후 해당 topic의 blocked/unsupported_group_by로 표시한다. O10은 time_range=조치 후, comparison_range=비교 전이며 조치 기록이 없으면 단순 비교로 표시한다. O07의 resource_selectors는 등록된 이름·단위만 받는다.
+입력: `scope,time_range,timezone,topic_ids,group_by,topic_group_by?,comparison_range?,action_record_ids?,resource_selectors?,parent_job_id?`. topic은 O01~O11, group_by는 cluster/model/node/namespace/pod/workload다. 추가 개발의 주제별 지원 조합은 04 §5.5를 따른다. 잘못된 enum은 422, 유효하지만 미지원 조합은 접수 후 해당 topic의 blocked/unsupported_group_by로 표시한다. O10은 time_range=조치 후, comparison_range=비교 전이며 조치 기록이 없으면 단순 비교로 표시한다. O07의 resource_selectors는 등록된 이름·단위만 받는다.
 
 ```json
 {

@@ -134,6 +134,18 @@ def validate_input(kind, data, version="1.3"):
             "workload",
         }:
             raise ValueError("invalid group_by")
+        if "topic_group_by" in data:
+            groups = data["topic_group_by"]
+            if not isinstance(groups, dict) or not groups or set(groups) != set(ids):
+                raise ValueError("invalid topic_group_by")
+            for topic, axes in groups.items():
+                valid = (
+                    (["namespace"], ["cluster", "namespace"], ["namespace", "cluster"])
+                    if topic == "O08"
+                    else (["cluster"],)
+                )
+                if axes not in valid:
+                    raise ValueError("unsupported topic_group_by preset")
         if ("occurrence_id" in data) != ("schedule_revision" in data):
             raise ValueError("incomplete schedule snapshot")
         if "comparison_range" in data:

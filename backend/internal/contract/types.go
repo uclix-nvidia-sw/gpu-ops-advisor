@@ -20,3 +20,6 @@ var Contains = c.Contains
 var TimeRange = c.TimeRange
 
 func Decode[T any](v any) (T, error) { return c.Decode[T](v) }
+
+var ValidateTopicGroups = c.ValidateTopicGroups
+var ReportTopicGroups = c.ReportTopicGroups

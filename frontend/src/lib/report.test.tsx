@@ -8,7 +8,7 @@ import {
   collectionStatus,
   collectionNextCheck,
 } from './report';
-import { QueryState } from '../components/live';
+import { DataView, QueryState } from '../components/live';
 
 describe('report presentation', () => {
   it('shows the complete final report despite missing metrics or LLM failure', () => {
@@ -551,4 +551,17 @@ it('shows report execution duration beside request metadata, separate from the a
   expect(html).toContain('<strong>5분 0초</strong>');
   expect(html).toContain('접수부터 완료까지 6분 0초');
   expect(html).toContain('1일(24시간)');
+});
+
+it('shows each topic basis in request details instead of a misleading global cluster label', () => {
+  const html = renderToStaticMarkup(
+    <DataView
+      reportDisplay
+      value={{ group_by: ['cluster'], topic_group_by: { O08: ['namespace'], O09: ['cluster'] } }}
+    />,
+  );
+  expect(html).toContain('소주제별 표시 기준');
+  expect(html).toContain('클러스터·Namespace별 연결 관측');
+  expect(html).toContain('선택 범위 전체의 관측 GPU 에너지 합계');
+  expect(html).not.toContain('<dt>집계 기준</dt>');
 });

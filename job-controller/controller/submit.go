@@ -50,7 +50,7 @@ func normalize(kind string, b Object) error {
 	}
 	input["scope"] = scope
 	if kind == "report" {
-		if e = only(input, "scope", "time_range", "timezone", "topic_ids", "group_by", "comparison_range", "action_record_ids", "resource_selectors", "parent_job_id"); e != nil {
+		if e = only(input, "scope", "time_range", "timezone", "topic_ids", "group_by", "topic_group_by", "comparison_range", "action_record_ids", "resource_selectors", "parent_job_id"); e != nil {
 			return e
 		}
 		if e = TimeRange(input["time_range"], 366*24*time.Hour); e != nil {
@@ -87,6 +87,9 @@ func normalize(kind string, b Object) error {
 				sort.Strings(values)
 			}
 			input[k] = values
+		}
+		if e = ValidateTopicGroups(input); e != nil {
+			return e
 		}
 	} else {
 		if e := normalizeRCA(input, version); e != nil {

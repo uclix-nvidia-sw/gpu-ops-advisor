@@ -91,7 +91,7 @@ func sanitize(v any) {
 func (s *Server) envelope(input Object, source string, now time.Time) Object {
 	revision := s.Config.ExecutionRevision
 	topics, _ := Decode[[]string](input["topic_ids"])
-	groups, _ := Decode[[]string](input["group_by"])
+	groups := ReportTopicGroups(input, "O08")
 	if Has(topics, "O08") && Has(groups, "namespace") && len(groups) <= 2 && (len(groups) == 1 || Has(groups, "cluster")) {
 		revision = s.Config.NamespaceReportRevision
 		if revision == "" {

@@ -1,3 +1,15 @@
+# 2026-10-06 종합·다중 선택 보고서 — 로컬 검수
+
+- 기준: PR #67 병합 `origin/main` **d6f4ca6**에서 `feat/report-multi-selection`으로 로컬 작업했다. 7종류 다중 선택/전체 종합의 topic 합집합은 한 job이다. Backend·JC 접수·Ops 계산과 공통 입력 검증/내보내기를 수정했으며 RCA 분석, JC 실행·lease·슬롯 정책, DB 구조·배포 설정은 변경하지 않았다.
+- **통과 — 실제 접수/계산/발행:** 루트에서 Python 3.11.16으로 외부 `DATABASE_URL`/`AGENT_E2E_DATABASE_URL`을 제거하고 `RUN_AGENT_E2E=1`, 로컬 `PG_BIN/JC_BINARY/INCIDENT_BINARY/BACKEND_BINARY/GRAFANA_MCP_BINARY/HELM_BINARY`를 지정해 `.venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/report-prerequisites/multi-agents.xml`: **420 passed, 0 failures/errors/skips, 72.29초**. 임시 loopback PostgreSQL과 새로 빌드한 Backend·JC·Incident·두 Worker·공식 MCP 프로세스이며 Grafana/LLM은 fixture다. 종합 11주제의 map/criteria 1.2 보존, O08 단독과 같은 고정 수치, O10 조건 부재의 blocked/전용 D09 미조회, HTML/CSV 표시 기준을 확인했다. 기존 MCP deprecation warning 3건.
+- **통과 — Go/일정 보존:** shared/backend/job-controller/incident 각각 Go 1.26.2 `go vet ./...`, `go test -race ./...`, `go build ./...`. `.local/report-usability/save-go-e2e.py`로 별도 임시 DB에서 Backend·Incident `go test -tags=e2e ./tests -count=1 -timeout=10m` 통과. 새 map을 일정에 저장해 revision만 증가하고 이전 revision·예약 outbox·실행 시각·중지 상태가 보존된다. 이 일정 시험의 JC는 영속 접수 fixture다. 잘못된/불완전 map은 shared/JC/Python 경계 검사로 거부한다.
+- **통과 — Frontend:** `frontend/`에서 `npm run format:check`, `npm test` **145 passed / 15 files**, `npm run build`. 다중 선택 합집합/기준 map, 전체 종합 기본값, 조건 없는 O10, 구 이력·일정 렌더링과 새 요청 상세의 소주제별 표시를 확인했다.
+- **통과 — 브라우저(모의 API):** `http://127.0.0.1:5191/reports/new`에서 Namespace+장비/에너지/사건 2종류=4주제 한 요청, 전체 11주제 일간 09:00 자동 일정, topic_group_by 전달과 비교/조치값 미생성을 수신 JSON으로 확인했다. 실제 Ops 계산 함수에 합성 표본을 넣어 만든 `reports/multi-demo#final-report`는 11개 소제목·기준·null/근거 부족과 O08 유효 수치를 모두 표시한다. 화면 예시 데이터는 실제 클러스터 데이터가 아니며 모의 API의 요청은 분석을 실행하지 않는다.
+- **통과 — 정적:** Ruff check/format(77 files), Go formatting, UTF-8 CRLF, diff·문서 링크 검사. 02/04/05/07/08/12와 모듈 안내를 갱신했다. 새 필드는 선택적이며 구 입력/결과는 보존한다. 새 입력을 구 Worker가 무시하지 않도록 소비자 교체/drain 후 생산자 활성화 순서를 02에 명시했다.
+- **미수행/미검증:** 실환경 배포·실제 Grafana/LLM 보고서·성능/부하·원격 CI. 전체 종합은 O08 단독보다 수집량이 늘 수 있으며 일반 group_by(OP-01), 클러스터별 O09 분해, D 통합을 새로 구현한 것은 아니다. 로컬 파일·검수 단계이며 커밋·푸시·PR·배포는 하지 않았다.
+
+---
+
 # 2026-10-06 Ops 불필요한 수집 제거 — 로컬 검수
 
 - 기준: `origin/main` **baf6722**와 PR #66의 UI 커밋 **3d87983** 위에서 검증했다. PR 준비 시 #66이 병합된 최신 `origin/main` **6087d14**와 검증 기준의 파일 트리가 동일함을 확인했다. `fix/report-query-pruning`은 이 main 위에 수집 최적화만 올린다.
