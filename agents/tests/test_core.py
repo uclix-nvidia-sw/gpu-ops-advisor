@@ -248,7 +248,7 @@ async def test_llm_http_error_logs_status_without_body_or_quarantine(caplog):
 
 @pytest.mark.asyncio
 async def test_query_scope_budget_and_failure_independence():
-    profile = json.load(open("agents/config.example.json", encoding="utf-8"))
+    profile = json.load(open("agents/tests/fixtures/config-v7.json", encoding="utf-8"))
     profile["clusters"]["cpc-2"] = {
         "mimir_uid": "metrics",
         "metric_selector": {"cluster_id": "cpc-2"},

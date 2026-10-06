@@ -1,6 +1,7 @@
 import json
 import os
 from dataclasses import dataclass, field
+from .query_contract import validate_profile
 
 
 @dataclass
@@ -63,4 +64,4 @@ class Settings:
         ):
             if profile["limits"][key] <= 0:
                 raise ValueError("positive explicit deployment limits required")
-        return profile
+        return validate_profile(profile)

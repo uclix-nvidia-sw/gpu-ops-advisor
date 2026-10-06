@@ -99,7 +99,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         incident_snapshot={"evidence": {}},
     )
     profile = json.loads(
-        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text()
+        (
+            Path(__file__).resolve().parents[2] / "agents/tests/fixtures/config-v7.json"
+        ).read_text()
     )
     profile["clusters"] = {
         "c": {
@@ -392,7 +394,9 @@ async def test_fleet_query_clues_preserve_claim_and_semantic_health_target(
         },
     )
     profile = json.loads(
-        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text()
+        (
+            Path(__file__).resolve().parents[2] / "agents/tests/fixtures/config-v7.json"
+        ).read_text()
     )
     profile["clusters"] = {"c": {"loki_uid": "logs", "loki_selector": {}}}
     profile["queries"]["D09"]["max_hold_seconds"] = 30

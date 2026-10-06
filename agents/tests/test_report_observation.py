@@ -20,7 +20,7 @@ DATA = {
 
 
 def profile():
-    with open("agents/config.example.json", encoding="utf-8") as file:
+    with open("agents/tests/fixtures/config-v7.json", encoding="utf-8") as file:
         config = json.load(file)
     config["clusters"] = {
         "cpc-1": {"mimir_uid": "metrics", "metric_selector": {"cluster_id": "cpc-1"}}

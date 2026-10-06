@@ -496,7 +496,9 @@ def stack():
             "mcp",
         )
         wait_http(f"http://127.0.0.1:{mcp_port}/healthz", mp)
-        profile = json.loads((ROOT / "agents/config.example.json").read_text())
+        profile = json.loads(
+            (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
+        )
         profile["health_contracts"] = {
             "fixture-v1": {
                 "producer_contract": "fixture-v1",
@@ -593,6 +595,104 @@ def worker_result(stack, kind, jid, suffix=""):
     assert content_hash(body) == digest
     assert body["result_schema_version"] == "1.1"
     return body, evidence
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("activate", [False, True])
+def test_binding_profile_through_both_real_workers(stack, activate):
+    from test_binding_contract import profile, verified
+
+    config = profile()
+    config["health_contracts"] = stack["profile"]["health_contracts"]
+    if activate:
+        for query, unit in (
+            ("D02", "percent"),
+            ("D03", "MiB"),
+            ("D04", "celsius"),
+            ("D06", "info"),
+            ("D10", "boolean"),
+            ("D11", "W"),
+            ("D15", "MiB"),
+        ):
+            b = verified(config, query, unit=unit, cluster="cpc-2")
+            b["environment"].update(
+                datasource_uid="mimir", selector={"cluster_id": "cpc-2"}
+            )
+            b["target_labels"]["uid"] = "pod_uid"
+            if query in {"D04", "D11"}:
+                b["target_labels"] = {"gpu_uuid": "uuid", "node": "node"}
+        b = verified(config, "D09", unit="log", cluster="cpc-2", sample_type="log")
+        b.update(
+            timestamp_basis="loki_recorded_at",
+            event_timestamp_rule="loki_recorded_at",
+            json_target_fields={},
+        )
+        b["environment"].update(datasource_uid="loki", selector={"cluster": "cpc-2"})
+        for rule in ("sample_interval", "invalid_values", "counter_reset"):
+            b[rule] = {"mode": "not_applicable", "reason": "fixture log stream"}
+    path = LOCAL / f"binding-profile-{activate}.json"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    isolated = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
+    request_start = len(Upstream.requests)
+    data = dict(
+        scope={"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
+        time_range=PERIOD,
+        timezone="UTC",
+        topic_ids=["O01", "O09"],
+        group_by=["cluster"],
+    )
+    jid = submit(stack, "report", data)
+    report, evidence = worker_result(isolated, "report", jid, f"-binding-{activate}")
+    assert not {"D01", "D05", "D08"} & {q for q, _ in evidence}
+    assert {"D02", "D15", "D16"} <= {q for q, _ in evidence}
+    metrics = [m for topic in report["topics"] for m in topic["metrics"]]
+    energy = next(m for m in metrics if m["id"].endswith("gpu_energy"))
+    assert (energy["value"] is not None) == activate
+    optional = next(m for m in metrics if m["id"].endswith("gpu_memory_used_ratio"))
+    assert optional["value"] is None and optional["quality"]["optional"]
+    with psycopg.connect(stack["url"]) as conn:
+        qualities = conn.execute(
+            "SELECT quality FROM evidence WHERE job_id=%s AND query_id='D02'", (jid,)
+        ).fetchall()
+    assert qualities
+    if activate:
+        assert all(
+            q[0]["binding_id"] == "nvidia_dcgm_exporter.D02"
+            and q[0]["binding_revision"] == "fixture-binding-1"
+            for q in qualities
+        )
+    else:
+        assert all(q[0]["reason"] == "binding_unselected" for q in qualities)
+    iid = str(uuid4())
+    rca = dict(
+        scope=SCOPE,
+        incident_id=iid,
+        evidence_version=1,
+        analysis_profile_revision="fixture-v1",
+        incident_time=PERIOD["start"],
+        time_range=PERIOD,
+        purpose_ids=["R05"],
+    )
+    snapshot = {"input": rca, "alert": {"labels": {"reason": "fixture observation"}}}
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+            (iid, Jsonb(SCOPE), rca["incident_time"]),
+        )
+        conn.execute(
+            "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+            (iid, Jsonb(snapshot), content_hash(snapshot)),
+        )
+    rid = submit(stack, "rca", rca)
+    result, evidence = worker_result(isolated, "rca", rid, f"-binding-{activate}")
+    assert not {"D01", "D05", "D08"} & {q for q, _ in evidence}
+    assert "D09" in {q for q, _ in evidence}
+    assert result["incident_id"] == iid
+    assert result["result_status"] != "resolved"
+    if not activate:
+        assert not any(
+            "/api/v1/query" in p for p, _ in Upstream.requests[request_start:]
+        )
 
 
 @pytest.mark.e2e
@@ -1038,7 +1138,9 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         )
         alert["labels"].pop("gpu_uuid")
         alert["annotations"]["error_code"] = "SXID 11001"
-        profile = json.loads((ROOT / "agents/config.example.json").read_text())
+        profile = json.loads(
+            (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
+        )
         path = LOCAL / "fleet-profile.json"
         path.write_text(json.dumps(profile))
         stack = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
@@ -1092,7 +1194,7 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
             for h in result["device_observations"]
         )
         assert result["quality"]["analysis"]["status"] == "complete"
-        assert {"D05", "D09", "D02"} <= {q for q, _ in evidence}
+        assert {"D09", "D02"} <= {q for q, _ in evidence}
         assert "purpose_plan" not in {q for q, _ in evidence}
         assert result["narrative_status"] == "complete"
     else:
@@ -1159,7 +1261,7 @@ def test_builtin_profile_without_datasource_configuration(stack, namespaces):
         **stack,
         "env": {
             **stack["env"],
-            "AGENT_CONFIG_FILE": str(ROOT / "agents/config.example.json"),
+            "AGENT_CONFIG_FILE": str(ROOT / "agents/tests/fixtures/config-v7.json"),
         },
     }
     request_start = len(Upstream.requests)
@@ -1266,7 +1368,7 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert any(r["origin"] == "builtin" for r in result["runbook_revisions"])
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
     assert len(result["narrative"]) == 5
-    assert {"D09", "D05", "investigation_plan"} <= {q for q, _ in evidence}
+    assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
     assert "XID 79" in text and "미확정" in text

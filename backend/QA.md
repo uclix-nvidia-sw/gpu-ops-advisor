@@ -1,3 +1,9 @@
+# 2026-10-06 D binding 결과 표시 — 로컬 검수
+
+[공통 검수 기록](../agents/QA.md)과 [구현 범위](../docs/specs/common/d-binding-runtime.md)를 따른다. 새 O01 메모리 여유/용량 비율·CPU/load 표시명과 binding/추가 입력 불가 사유를 추가했다. null은 0으로 바꾸지 않는다. Frontend 146건·포맷·빌드, Backend vet/race/build와 HTML/CSV 회귀, 두 Worker/서비스의 격리 DB E2E를 통과했다. Grafana/LLM/화면 데이터는 fixture이며 운영 적용·브라우저 실환경·원격 CI는 미검증이다.
+
+---
+
 # 2026-10-06 종합·다중 선택 보고서 — 로컬 검수
 
 [통합 검수 기록](../agents/QA.md)을 따른다. 소주제별 기준 map, 한 job의 종합·다중 선택, 조건 없는 O10 안내와 전용 조회 생략, 새 결과 내보내기 기준 표시, 기존 요청/일정/결과 보존을 검수했다. Frontend 145건·빌드/포맷, 네 Go 모듈 vet/race/build, Backend·Incident 임시 DB E2E, 두 Worker 420건 통과. 브라우저는 5191 모의 API, 실제 서비스 프로세스 E2E의 Grafana/LLM은 fixture다. 운영 배포·성능·원격 CI는 미검증이다.

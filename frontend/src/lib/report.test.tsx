@@ -10,6 +10,41 @@ import {
 } from './report';
 import { DataView, QueryState } from '../components/live';
 
+it('renders optional memory observations without treating missing capacity as zero', () => {
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        result_status: 'partial',
+        topics: [
+          {
+            topic_id: 'O01',
+            status: 'partial',
+            metrics: [
+              {
+                id: 'O01.gpu_memory_free_mean',
+                value: 0,
+                unit: 'MiB',
+                quality: { optional: true },
+              },
+              {
+                id: 'O01.gpu_memory_used_ratio',
+                value: null,
+                unit: 'ratio',
+                quality: { optional: true, reason: 'gpu_capacity_join_unverified' },
+              },
+            ],
+          },
+        ],
+      }}
+    />,
+  );
+  expect(html).toContain('평균 GPU 메모리 여유량');
+  expect(html).toContain('GPU 메모리 용량 대비 사용 비율');
+  expect(html).toContain('산출 불가');
+  expect(html).toContain('유효시간을 연결하지 못했습니다');
+});
+
 describe('report presentation', () => {
   it('shows the complete final report despite missing metrics or LLM failure', () => {
     const html = renderToStaticMarkup(

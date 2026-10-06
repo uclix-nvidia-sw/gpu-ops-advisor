@@ -10,6 +10,30 @@ import (
 	"testing"
 )
 
+func TestOptionalBindingMetricsExportKeepsZeroAndMissingDistinct(t *testing.T) {
+	var body Object
+	if err := json.Unmarshal([]byte(`{"topics":[{"metrics":[{"id":"O01.gpu_memory_free_mean","value":0,"unit":"MiB","quality":{"optional":true}},{"id":"O01.gpu_memory_used_ratio","value":null,"unit":"ratio","quality":{"optional":true,"reason":"gpu_capacity_join_unverified"}}]}]}`), &body); err != nil {
+		t.Fatal(err)
+	}
+	html := httptest.NewRecorder()
+	if err := exportMetrics(html, "binding-fixture", "html", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"평균 GPU 메모리 여유량", "GPU 메모리 용량 대비 사용 비율", "산출 불가", "유효시간을 연결하지 못했습니다"} {
+		if !strings.Contains(html.Body.String(), want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+	out := httptest.NewRecorder()
+	if err := exportMetrics(out, "binding-fixture", "csv", body, reportMetrics(body)); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.Body.String(), "\ufeff"))).ReadAll()
+	if err != nil || len(rows) != 3 || rows[1][2] != "0" || rows[2][2] != "산출 불가" {
+		t.Fatalf("CSV: %v %v", rows, err)
+	}
+}
+
 func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 	var body Object
 	err := json.Unmarshal([]byte(`{"result_status":"partial","topics":[{"metrics":[{"id":"O02.mapped_gpu_hours","target":{"namespace":"=CMD()"},"value":1.5,"unit":"<script>alert(1)</script>","method":"observed_gpu_pod_interval_union","quality":{},"evidence_refs":["e1"]},{"id":"O02.allocated_gpu_hours","value":null,"quality":{"reason":"allocation_contract_missing"}}],"missing_inputs":["observed_mapping_not_exclusive_allocation"]}],"limitations":["<script>bad</script>"]}`), &body)

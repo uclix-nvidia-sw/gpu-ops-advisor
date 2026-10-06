@@ -10,6 +10,7 @@ from agent_common.contracts import (
     incident_source,
 )
 from agent_common.normalize import allocations
+from agent_common.query_contract import consolidated, mapping_query
 from agent_common.observation import Observation, usable_observation, evidence_stamp
 from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
@@ -213,9 +214,13 @@ def normalized_state(obs, collected, data, profile, initial_facts):
         and all(
             0
             <= timestamp(data["incident_time"]) - timestamp(h["observed_at"])
-            <= profile["queries"]
-            .get(complete[r]["query_id"], {})
-            .get("max_hold_seconds", -1)
+            <= (
+                complete[r]["quality"].get("max_hold_seconds")
+                if consolidated(profile)
+                else profile["queries"]
+                .get(complete[r]["query_id"], {})
+                .get("max_hold_seconds", -1)
+            )
             for r in h["evidence_refs"]
         )
     ]
@@ -225,10 +230,11 @@ def normalized_state(obs, collected, data, profile, initial_facts):
         else {}
     )
     facts = {**initial_facts, **verified}
+    mapping_id = mapping_query(profile)
     mapping = allocations(
         [
             e
-            for e in collected.get("D08", [])
+            for e in collected.get(mapping_id, [])
             if e["tool_status"] == "ok" and e["quality"].get("complete")
         ],
         data["time_range"],
@@ -237,10 +243,16 @@ def normalized_state(obs, collected, data, profile, initial_facts):
             for e in collected.get("D06", [])
             if e["tool_status"] == "ok" and e["quality"].get("complete")
         ],
-        require_pod_join=profile["queries"].get("D08", {}).get("allocation_semantics")
-        == "observed_pod_labels",
-        observed=profile["queries"].get("D08", {}).get("allocation_semantics")
-        == "observed_pod_labels",
+        require_pod_join=(
+            consolidated(profile)
+            or profile["queries"].get(mapping_id, {}).get("allocation_semantics")
+            == "observed_pod_labels"
+        ),
+        observed=(
+            consolidated(profile)
+            or profile["queries"].get(mapping_id, {}).get("allocation_semantics")
+            == "observed_pod_labels"
+        ),
     )
     incident_at = timestamp(data["incident_time"])
     mapping_identity = {
@@ -503,11 +515,12 @@ async def run(tools):
                 if not (target.get("gpu_uuid") or target.get("pod_uid"))
                 else "mapping_not_observed_at_incident"
             )
-            if not all(q in collected for q in ("D08", "D06")):
+            mapping_id = mapping_query(profile)
+            if not all(q in collected for q in (mapping_id, "D06")):
                 gaps.append("mapping_queries_not_executed")
             elif not any(
                 e["tool_status"] == "ok" and e["quality"].get("complete")
-                for e in collected["D08"]
+                for e in collected[mapping_id]
             ):
                 gaps.append("mapping_source_unavailable")
         if data["identity_conflicts"]:

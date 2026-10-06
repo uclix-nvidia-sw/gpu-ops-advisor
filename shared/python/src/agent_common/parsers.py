@@ -128,7 +128,8 @@ def parse_health(evidence, contracts, queries=None):
                 e.get("cluster_id"),
                 ns,
                 line,
-                (queries or {}).get(e["query_id"], {}).get("health_contract"),
+                e["quality"].get("health_contract")
+                or (queries or {}).get(e["query_id"], {}).get("health_contract"),
                 e["tool_status"],
                 json.dumps(e["quality"].get("request_time_range", {}), sort_keys=True),
             )
@@ -145,7 +146,8 @@ def parse_health(evidence, contracts, queries=None):
             except ValueError:
                 continue
             registered = contracts.get(
-                (queries or {}).get(e["query_id"], {}).get("health_contract")
+                e["quality"].get("health_contract")
+                or (queries or {}).get(e["query_id"], {}).get("health_contract")
             )
             producer = raw.get("producer_contract")
             native = contracts.get(producer) if isinstance(producer, str) else None

@@ -1,3 +1,11 @@
+# 2026-10-06 D binding 결과 표시 — 로컬 검수
+
+PR 준비 시 최신 main `3a273f9`의 UI 변경을 함께 반영하고 포맷·**150 tests / 16 files**·빌드를 재검증했다. 아래 146건은 통합 전 결과다.
+
+[공통 검수 기록](../agents/QA.md)과 [구현 범위](../docs/specs/common/d-binding-runtime.md)를 따른다. 새 O01 메모리 여유/용량 비율·CPU/load 표시명과 binding/추가 입력 불가 사유를 추가했다. null은 0으로 바꾸지 않는다. Frontend 146건·포맷·빌드, Backend vet/race/build와 HTML/CSV 회귀, 두 Worker/서비스의 격리 DB E2E를 통과했다. Grafana/LLM/화면 데이터는 fixture이며 운영 적용·브라우저 실환경·원격 CI는 미검증이다.
+
+---
+
 # 2026-10-06 운영자 가이드 메뉴 일관성 — 로컬 검수
 
 - **통과:** Frontend format check, 149 tests/16 files, build. Impeccable 정적 탐지 결과 0건.

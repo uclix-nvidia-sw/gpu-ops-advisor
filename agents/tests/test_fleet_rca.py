@@ -17,7 +17,9 @@ from test_rca_analysis import general_runbook, analysis_reply
 
 def profile():
     return json.loads(
-        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text()
+        (
+            Path(__file__).resolve().parents[2] / "agents/tests/fixtures/config-v7.json"
+        ).read_text()
     )
 
 
@@ -291,7 +293,7 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
     collected = {
         e["query_id"] for e in output["evidence"] if e["query_id"].startswith("D")
     }
-    assert {"D05", "D09", "D08", "D06", "D02"} <= collected
+    assert {"D09", "D08", "D06", "D02"} <= collected
     assert calls.count("logs") == 1
     result = output["result"]
     assert len(result["device_observations"]) == 31

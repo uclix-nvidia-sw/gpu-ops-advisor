@@ -18,7 +18,7 @@ GUI → Backend에서 RCA 결과를 조회하고 보고서를 요청한다. Graf
 
 ### D 쿼리 통합·확장 설계
 
-[매핑 설계](common/d-query-mapping.md)는 단일 쿼리 D의 기존 통합·신규 D15~D49·메트릭·목적·O01~O11 및 RCA 소비 관계를 정의한다. 기존 분석 기능을 보존하며 D 내부 복수 metric 구조는 사용하지 않는다. [개발 계획](common/d-contract-redesign-plan.md)은 환경별 binding 검증부터 구현·검수까지의 산출물/완료 기준을 관리한다. 03 §3.3은 이 설계로 연결한다. 문서 설계이며 런타임 변경이나 실환경 검증 완료가 아니다.
+[매핑 설계](common/d-query-mapping.md)는 단일 쿼리 D의 기존 통합·신규 D15~D49·메트릭·목적·O01~O11 및 RCA 소비 관계를 정의한다. 기존 분석 기능을 보존하며 D 내부 복수 metric 구조는 사용하지 않는다. [개발 계획](common/d-contract-redesign-plan.md)은 환경별 binding 검증부터 구현·검수까지의 산출물/완료 기준을 관리한다. 03 §3.3은 이 설계로 연결한다. [공통 binding 런타임 진행 기록](common/d-binding-runtime.md)에 부분 구현과 남은 범위를 분리했다. 전체 설계와 실환경 검증 완료를 뜻하지 않는다.
 
 ### 현재 구현 분석에서 모듈 업그레이드로 이어지는 기준
 

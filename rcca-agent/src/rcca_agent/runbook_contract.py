@@ -5,6 +5,7 @@ from datetime import date
 import json
 import re
 from urllib.parse import urlsplit
+from agent_common.query_contract import query_facts
 
 SCHEMA = "gpu-rca-runbook/1.0"
 UNEXPECTED_EVENTS = {
@@ -352,6 +353,11 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
             set(_strings(step["fact_names"], "fact_names")) <= FACT_NAMES,
             "fact_names: unsupported facts",
         )
+        if "binding_candidates" in queries[query]:
+            _require(
+                set(step["fact_names"]) <= query_facts(query),
+                "query cannot produce requested facts",
+            )
         _text(step["purpose"], "observation_plan.purpose")
         for key, value in (
             ("binding", "execution_profile"),

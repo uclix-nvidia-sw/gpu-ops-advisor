@@ -9,12 +9,12 @@
     "schema": "gpu-rca-runbook/1.0",
     "required_evidence": [
       "producer_contract",
-      "error_code"
+      "error_code",
+      "normalized_health"
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09",
-      "D05"
+      "D09"
     ],
     "observation_plan": [
       {
@@ -23,22 +23,10 @@
         "required": true,
         "fact_names": [
           "producer_contract",
-          "error_code"
-        ],
-        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.",
-        "binding": "execution_profile",
-        "time_range": "incident",
-        "freshness": "query_contract"
-      },
-      {
-        "query_id": "D05",
-        "priority": 2,
-        "required": true,
-        "fact_names": [
-          "producer_contract",
+          "error_code",
           "normalized_health"
         ],
-        "purpose": "장치·서비스 상태 및 상태 변화 확인.",
+        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.; 장치·서비스 상태 및 상태 변화 확인.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
