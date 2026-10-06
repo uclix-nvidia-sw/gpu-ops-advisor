@@ -1,0 +1,5586 @@
+{
+  "schema_version": "d-binding-environment-ledger/1",
+  "date": "2026-10-06",
+  "base_commit": "2849de10205e001423d6b69e268357e975cd43e6",
+  "grafana_org_id": 2,
+  "purpose": "P1 read-only environment evidence; not an executable worker profile",
+  "limitations": [
+    "Only two clusters and bounded query windows were inspected.",
+    "Metric absence is scoped to those windows, not global absence.",
+    "User-reported Fleet image tags/digests and DCGM/Exporter tags received; KSM version, Exporter digests, collector/forwarding configuration and image-to-source provenance remain pending.",
+    "Raw production samples remain local; no production activation, DB write or deployment."
+  ],
+  "evidence_exports": [
+    {
+      "file": "inventory-initial.json",
+      "sha256": "e7cdba4fb949f90d258bc70dc70d7acaf339432611e5d7417d331cd98b1e0a28",
+      "frames": 68,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T07:12:45Z",
+        "end": "2026-10-06T08:12:59.603000Z"
+      },
+      "query": "Expr: count by (__name__, cluster) ({__name__=~\"DCGM_FI_.*|dcgm_fi_.*|cpu_used_percent|cpu_load_average|kube_pod_info|kube_node_status_allocatable|kube_node_status_condition|kube_pod_container_resource_requests|gpu_ops_effective_unbound_request|up|scrape_duration_seconds\"})\nStep: 15s"
+    },
+    {
+      "file": "inventory-clusters.json",
+      "sha256": "c020d056f3b6330b0dec58c73092e364b77b5db0ab09121ffcd145ebe189aae9",
+      "frames": 1,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T08:13:43.103000Z",
+        "end": "2026-10-06T08:13:43.103000Z"
+      },
+      "query": "Expr: count by (__name__, cluster_id) ({__name__=~\"DCGM_FI_.*|dcgm_fi_.*|cpu_used_percent|cpu_load_average|kube_pod_info|kube_node_status_allocatable|kube_node_status_condition|kube_pod_container_resource_requests|gpu_ops_effective_unbound_request|up|scrape_duration_seconds\"})\nStep: 15s"
+    },
+    {
+      "file": "core-samples.json",
+      "sha256": "4f03d3075dfa7a69c5dce979dc592dfd648bbca4da306c374b05fb1cea6969d0",
+      "frames": 146,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T08:12:49.280000Z",
+        "end": "2026-10-06T08:15:42.938000Z"
+      },
+      "query": "Expr: {__name__=~\"DCGM_FI_DEV_GPU_UTIL|DCGM_FI_DEV_FB_USED|DCGM_FI_DEV_FB_FREE|dcgm_fi_dev_gpu_temp|dcgm_fi_dev_power_usage|dcgm_fi_dev_fb_total|dcgm_fi_dev_fb_used_percent|cpu_used_percent|cpu_load_average|up|scrape_duration_seconds\",cluster_id=~\"cpc-1|cpc-2\"}[3m]\nStep: 15s"
+    },
+    {
+      "file": "ksm-samples-valid.json",
+      "sha256": "39538a87e5837ca3d8757f0f0fa78c2daf69b2643ba71f79481a35527a925a42",
+      "frames": 1223,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T08:15:34.280000Z",
+        "end": "2026-10-06T08:16:19.280000Z"
+      },
+      "query": "Expr: {__name__=~\"kube_pod_info|kube_node_status_allocatable|kube_node_status_condition|kube_pod_container_resource_requests|gpu_ops_effective_unbound_request\",cluster_id=~\"cpc-1|cpc-2\"}[1m]\nStep: 15s"
+    },
+    {
+      "file": "fleet-samples.json",
+      "sha256": "da976b8558a6ec498a50d7a58117804d40137935b665810366c0ed2123e5b920",
+      "frames": 782,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T07:58:03.493000Z",
+        "end": "2026-10-06T08:16:09.486000Z"
+      },
+      "query": "Expr: {__name__=~\"dcgm_fi_dev_.*|dcgm_fi_prof_nvlink_rx_bytes|dcgm_fi_prof_nvlink_tx_bytes|cpu_used_percent|cpu_load_average\",cluster_id=~\"cpc-1|cpc-2\"}[20m] \nStep: 15s"
+    },
+    {
+      "file": "loki-fleet-sample.json",
+      "sha256": "9be585e8f8f1837595d89024cea8104b0f493e05ab52e16a9ac0636a3471e0ce",
+      "frames": 1,
+      "storage": "local_only_not_committed",
+      "returned_timestamp_window": {
+        "start": "2026-10-06T08:17:09.376000Z",
+        "end": "2026-10-06T08:18:09.384000Z"
+      },
+      "query": "Expr: {cluster_id=~\"cpc-1|cpc-2\",job=\"fleet-intelligence-agent\"}  "
+    }
+  ],
+  "bindings": [
+    {
+      "query_id": "D02",
+      "binding_candidate": "nvidia_dcgm_exporter.D02",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_GPU_UTIL",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "container",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "namespace",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "pod",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D02",
+      "binding_candidate": "nvidia_dcgm_exporter.D02",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_GPU_UTIL",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D03",
+      "binding_candidate": "nvidia_dcgm_exporter.D03",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_FB_USED",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "container",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "namespace",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "pod",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D03",
+      "binding_candidate": "nvidia_dcgm_exporter.D03",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_FB_USED",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D04",
+      "binding_candidate": "fleet_intelligence.D04",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_gpu_temp",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D04",
+      "binding_candidate": "fleet_intelligence.D04",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_gpu_temp",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D06",
+      "binding_candidate": "kube_state_metrics.D06",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_pod_info",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 277,
+        "window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "created_by_kind",
+          "created_by_name",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "host_ip",
+          "host_network",
+          "instance",
+          "job",
+          "namespace",
+          "node",
+          "node_group",
+          "pod",
+          "pod_ip",
+          "priority_class",
+          "service",
+          "uid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D06",
+      "binding_candidate": "kube_state_metrics.D06",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_pod_info",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 137,
+        "window": {
+          "start": "2026-10-06T08:15:34.280000Z",
+          "end": "2026-10-06T08:16:19.280000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "created_by_kind",
+          "created_by_name",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "host_ip",
+          "host_network",
+          "instance",
+          "job",
+          "namespace",
+          "node",
+          "node_group",
+          "pod",
+          "pod_ip",
+          "priority_class",
+          "service",
+          "uid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D07",
+      "binding_candidate": "effective_request_producer.D07",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "effective_request_producer",
+      "producer_version": null,
+      "actual_metric_or_field": "gpu_ops_effective_unbound_request",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "required_producer_metric_not_observed",
+        "no_exact_metric_samples_in_inspected_windows"
+      ]
+    },
+    {
+      "query_id": "D07",
+      "binding_candidate": "effective_request_producer.D07",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "effective_request_producer",
+      "producer_version": null,
+      "actual_metric_or_field": "gpu_ops_effective_unbound_request",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "required_producer_metric_not_observed",
+        "no_exact_metric_samples_in_inspected_windows"
+      ]
+    },
+    {
+      "query_id": "D09",
+      "binding_candidate": "fleet_intelligence.D09",
+      "source": "loki",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "Fleet component JSON",
+      "datasource_uid": "efyev2eq0tmo0f",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "loki_recorded_at",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "bounded_log_sample_observed",
+        "row_count": 52,
+        "query_line_limit": 100,
+        "complete": false,
+        "evidence_exports": [
+          "loki-fleet-sample.json"
+        ],
+        "window": {
+          "start": "2026-10-06T08:17:09.376000Z",
+          "end": "2026-10-06T08:18:09.384000Z"
+        },
+        "attribute_names": [
+          "component",
+          "extra_info",
+          "health",
+          "log_type",
+          "reason",
+          "time"
+        ],
+        "resource_names": [
+          "gpuInfo.gpus",
+          "host.name",
+          "k8s.node.name",
+          "k8s.pod.uid",
+          "machine.id"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "producer_event_time_and_freshness_semantics_unconfirmed",
+        "limited_sample_not_complete_history",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence"
+    },
+    {
+      "query_id": "D09",
+      "binding_candidate": "fleet_intelligence.D09",
+      "source": "loki",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "Fleet component JSON",
+      "datasource_uid": "efyev2eq0tmo0f",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "loki_recorded_at",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "bounded_log_sample_observed",
+        "row_count": 48,
+        "query_line_limit": 100,
+        "complete": false,
+        "evidence_exports": [
+          "loki-fleet-sample.json"
+        ],
+        "window": {
+          "start": "2026-10-06T08:18:03.495000Z",
+          "end": "2026-10-06T08:18:06.777000Z"
+        },
+        "attribute_names": [
+          "component",
+          "extra_info",
+          "health",
+          "log_type",
+          "reason",
+          "time"
+        ],
+        "resource_names": [
+          "gpuInfo.gpus",
+          "host.name",
+          "k8s.node.name",
+          "k8s.pod.uid",
+          "machine.id"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "producer_event_time_and_freshness_semantics_unconfirmed",
+        "limited_sample_not_complete_history",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence"
+    },
+    {
+      "query_id": "D10",
+      "binding_candidate": "scrape_collector.D10",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "actual_metric_or_field": "up",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 3,
+        "window": {
+          "start": "2026-10-06T08:12:51.113000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node_group",
+          "service"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D10",
+      "binding_candidate": "scrape_collector.D10",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "actual_metric_or_field": "up",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 3,
+        "window": {
+          "start": "2026-10-06T08:12:49.280000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node_group",
+          "service"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 14.996,
+          "maximum": 15.004
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D11",
+      "binding_candidate": "fleet_intelligence.D11",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_power_usage",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D11",
+      "binding_candidate": "fleet_intelligence.D11",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_power_usage",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D12",
+      "binding_candidate": "kube_state_metrics.D12",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_node_status_allocatable",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "required_producer_metric_not_observed",
+        "no_exact_metric_samples_in_inspected_windows"
+      ]
+    },
+    {
+      "query_id": "D12",
+      "binding_candidate": "kube_state_metrics.D12",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_node_status_allocatable",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "required_producer_metric_not_observed",
+        "no_exact_metric_samples_in_inspected_windows"
+      ]
+    },
+    {
+      "query_id": "D13",
+      "binding_candidate": "workload_log_producer.D13",
+      "source": "loki",
+      "cluster": "cpc-1",
+      "producer": "workload_log_producer",
+      "producer_version": null,
+      "actual_metric_or_field": null,
+      "datasource_uid": "efyev2eq0tmo0f",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "loki_recorded_at",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_queried_no_verified_workload_stream",
+        "evidence_exports": []
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "workload_producer_selector_and_identity_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D13",
+      "binding_candidate": "workload_log_producer.D13",
+      "source": "loki",
+      "cluster": "cpc-2",
+      "producer": "workload_log_producer",
+      "producer_version": null,
+      "actual_metric_or_field": null,
+      "datasource_uid": "efyev2eq0tmo0f",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "loki_recorded_at",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_queried_no_verified_workload_stream",
+        "evidence_exports": []
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "workload_producer_selector_and_identity_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D15",
+      "binding_candidate": "nvidia_dcgm_exporter.D15",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_FB_FREE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "container",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "namespace",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "pod",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D15",
+      "binding_candidate": "nvidia_dcgm_exporter.D15",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_FB_FREE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "nvidia-dcgm-exporter"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "label_names": [
+          "DCGM_FI_DRIVER_VERSION",
+          "Hostname",
+          "UUID",
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "device",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "gpu",
+          "instance",
+          "job",
+          "modelName",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "service",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D16",
+      "binding_candidate": "fleet_intelligence.D16",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fb_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D16",
+      "binding_candidate": "fleet_intelligence.D16",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fb_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D17",
+      "binding_candidate": "fleet_intelligence.D17",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fb_used_percent",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed",
+        "reserved_adjusted_ratio_must_not_substitute_used_over_total"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "source_definition": {
+        "status": "source_verified_tag_only",
+        "type": "gauge",
+        "unit": "ratio",
+        "range": [
+          0,
+          1
+        ],
+        "formula": "Used / (Total - Reserved)",
+        "field": "DCGM_FI_DEV_FB_USED_PERCENT",
+        "reference": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/8dd8826b7604386ad667125298156ddb1d1a7865/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/mem/metrics.go",
+        "runtime_transform_verified": false
+      },
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D17",
+      "binding_candidate": "fleet_intelligence.D17",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fb_used_percent",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed",
+        "reserved_adjusted_ratio_must_not_substitute_used_over_total"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "source_definition": {
+        "status": "source_verified_tag_only",
+        "type": "gauge",
+        "unit": "ratio",
+        "range": [
+          0,
+          1
+        ],
+        "formula": "Used / (Total - Reserved)",
+        "field": "DCGM_FI_DEV_FB_USED_PERCENT",
+        "reference": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/8dd8826b7604386ad667125298156ddb1d1a7865/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/mem/metrics.go",
+        "runtime_transform_verified": false
+      },
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D18",
+      "binding_candidate": "fleet_intelligence.D18",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "cpu_used_percent",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "host_name",
+          "job",
+          "machine_id",
+          "node",
+          "node_group"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D18",
+      "binding_candidate": "fleet_intelligence.D18",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "cpu_used_percent",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "host_name",
+          "job",
+          "machine_id",
+          "node",
+          "node_group"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D19",
+      "binding_candidate": "fleet_intelligence.D19",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "cpu_load_average",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "window": "load_duration"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 6,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "host_name",
+          "job",
+          "load_duration",
+          "machine_id",
+          "node",
+          "node_group"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "window_must_map_to_load_duration",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D19",
+      "binding_candidate": "fleet_intelligence.D19",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "cpu_load_average",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "window": "load_duration"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 6,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "host_name",
+          "job",
+          "load_duration",
+          "machine_id",
+          "node",
+          "node_group"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "window_must_map_to_load_duration",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D20",
+      "binding_candidate": "kube_state_metrics.D20",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_node_status_condition",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "scrape_target": "instance",
+        "condition": "condition",
+        "status": "status"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 105,
+        "window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "condition",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node",
+          "node_group",
+          "service",
+          "status"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D20",
+      "binding_candidate": "kube_state_metrics.D20",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_node_status_condition",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "scrape_target": "instance",
+        "condition": "condition",
+        "status": "status"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 48,
+        "window": {
+          "start": "2026-10-06T08:15:34.280000Z",
+          "end": "2026-10-06T08:16:19.280000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "condition",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node",
+          "node_group",
+          "service",
+          "status"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D21",
+      "binding_candidate": "kube_state_metrics.D21",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_pod_container_resource_requests",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 452,
+        "window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "container",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "namespace",
+          "node",
+          "node_group",
+          "pod",
+          "resource",
+          "service",
+          "uid",
+          "unit"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "resource_selector_required_raw_requests_are_not_effective_requests"
+      ]
+    },
+    {
+      "query_id": "D21",
+      "binding_candidate": "kube_state_metrics.D21",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "actual_metric_or_field": "kube_pod_container_resource_requests",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "kube-state-metrics"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 204,
+        "window": {
+          "start": "2026-10-06T08:15:34.280000Z",
+          "end": "2026-10-06T08:16:19.280000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "container",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "namespace",
+          "node",
+          "node_group",
+          "pod",
+          "resource",
+          "service",
+          "uid",
+          "unit"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "ksm-samples-valid.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "resource_selector_required_raw_requests_are_not_effective_requests"
+      ]
+    },
+    {
+      "query_id": "D22",
+      "binding_candidate": "scrape_collector.D22",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "actual_metric_or_field": "scrape_duration_seconds",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 3,
+        "window": {
+          "start": "2026-10-06T08:12:51.113000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node_group",
+          "service"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 15.0,
+          "maximum": 15.0
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D22",
+      "binding_candidate": "scrape_collector.D22",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "actual_metric_or_field": "scrape_duration_seconds",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "scrape_target": "instance"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 3,
+        "window": {
+          "start": "2026-10-06T08:12:49.280000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "collection_path",
+          "compute_zone",
+          "endpoint",
+          "exporter_container",
+          "exporter_namespace",
+          "exporter_node",
+          "exporter_pod",
+          "instance",
+          "job",
+          "node_group",
+          "service"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 14.996,
+          "maximum": 15.004
+        },
+        "evidence_exports": [
+          "core-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "deployed_producer_version_unconfirmed",
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed"
+      ]
+    },
+    {
+      "query_id": "D23",
+      "binding_candidate": "nvidia_dcgm_exporter.D23",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_MEMORY_TEMP",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D23",
+      "binding_candidate": "nvidia_dcgm_exporter.D23",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_MEMORY_TEMP",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D24",
+      "binding_candidate": "nvidia_dcgm_exporter.D24",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_SM_CLOCK",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D24",
+      "binding_candidate": "nvidia_dcgm_exporter.D24",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_SM_CLOCK",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D25",
+      "binding_candidate": "nvidia_dcgm_exporter.D25",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_MEM_CLOCK",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D25",
+      "binding_candidate": "nvidia_dcgm_exporter.D25",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_MEM_CLOCK",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D26",
+      "binding_candidate": "nvidia_dcgm_exporter.D26",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_SM_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": false,
+        "declared_type": null,
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D26",
+      "binding_candidate": "nvidia_dcgm_exporter.D26",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_SM_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": false,
+        "declared_type": null,
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D27",
+      "binding_candidate": "nvidia_dcgm_exporter.D27",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_SM_OCCUPANCY",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": false,
+        "declared_type": null,
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D27",
+      "binding_candidate": "nvidia_dcgm_exporter.D27",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_SM_OCCUPANCY",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": false,
+        "declared_type": null,
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D28",
+      "binding_candidate": "nvidia_dcgm_exporter.D28",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D28",
+      "binding_candidate": "nvidia_dcgm_exporter.D28",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D29",
+      "binding_candidate": "nvidia_dcgm_exporter.D29",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_DRAM_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D29",
+      "binding_candidate": "nvidia_dcgm_exporter.D29",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_DRAM_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D30",
+      "binding_candidate": "nvidia_dcgm_exporter.D30",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D30",
+      "binding_candidate": "nvidia_dcgm_exporter.D30",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D31",
+      "binding_candidate": "nvidia_dcgm_exporter.D31",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_PCIE_RX_BYTES",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D31",
+      "binding_candidate": "nvidia_dcgm_exporter.D31",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_PCIE_RX_BYTES",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D32",
+      "binding_candidate": "nvidia_dcgm_exporter.D32",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_PROF_PCIE_TX_BYTES",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D32",
+      "binding_candidate": "nvidia_dcgm_exporter.D32",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_PROF_PCIE_TX_BYTES",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D33",
+      "binding_candidate": "fleet_intelligence.D33",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_prof_nvlink_rx_bytes",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 8,
+        "window": {
+          "start": "2026-10-06T07:58:09.385000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 120.006
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D33",
+      "binding_candidate": "fleet_intelligence.D33",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_prof_nvlink_rx_bytes",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D34",
+      "binding_candidate": "fleet_intelligence.D34",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_prof_nvlink_tx_bytes",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 8,
+        "window": {
+          "start": "2026-10-06T07:58:09.385000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 120.006
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D34",
+      "binding_candidate": "fleet_intelligence.D34",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_prof_nvlink_tx_bytes",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D35",
+      "binding_candidate": "nvidia_dcgm_exporter.D35",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_XID_ERRORS",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D35",
+      "binding_candidate": "nvidia_dcgm_exporter.D35",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_XID_ERRORS",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": false,
+        "declared_type": null,
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D36",
+      "binding_candidate": "fleet_intelligence.D36",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_vol_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D36",
+      "binding_candidate": "fleet_intelligence.D36",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_vol_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D37",
+      "binding_candidate": "fleet_intelligence.D37",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_vol_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D37",
+      "binding_candidate": "fleet_intelligence.D37",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_vol_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D38",
+      "binding_candidate": "fleet_intelligence.D38",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_agg_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D38",
+      "binding_candidate": "fleet_intelligence.D38",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_agg_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D39",
+      "binding_candidate": "fleet_intelligence.D39",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_agg_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D39",
+      "binding_candidate": "fleet_intelligence.D39",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_sbe_agg_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D40",
+      "binding_candidate": "fleet_intelligence.D40",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_vol_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D40",
+      "binding_candidate": "fleet_intelligence.D40",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_vol_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D41",
+      "binding_candidate": "fleet_intelligence.D41",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_vol_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D41",
+      "binding_candidate": "fleet_intelligence.D41",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_vol_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D42",
+      "binding_candidate": "fleet_intelligence.D42",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_agg_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D42",
+      "binding_candidate": "fleet_intelligence.D42",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_agg_dev",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D43",
+      "binding_candidate": "fleet_intelligence.D43",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_agg_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D43",
+      "binding_candidate": "fleet_intelligence.D43",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_ecc_dbe_agg_total",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D44",
+      "binding_candidate": "nvidia_dcgm_exporter.D44",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D44",
+      "binding_candidate": "nvidia_dcgm_exporter.D44",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D45",
+      "binding_candidate": "fleet_intelligence.D45",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_clocks_event_reasons",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D45",
+      "binding_candidate": "fleet_intelligence.D45",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_clocks_event_reasons",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D46",
+      "binding_candidate": "fleet_intelligence.D46",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_board_limit_violation",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D46",
+      "binding_candidate": "fleet_intelligence.D46",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_board_limit_violation",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D47",
+      "binding_candidate": "fleet_intelligence.D47",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fabric_manager_status",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D47",
+      "binding_candidate": "fleet_intelligence.D47",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_fabric_manager_status",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D48",
+      "binding_candidate": "fleet_intelligence.D48",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_enforced_power_limit",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-1",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 16,
+        "window": {
+          "start": "2026-10-06T07:58:06.924000Z",
+          "end": "2026-10-06T08:16:09.486000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.924,
+          "maximum": 180.031
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D48",
+      "binding_candidate": "fleet_intelligence.D48",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "actual_metric_or_field": "dcgm_fi_dev_enforced_power_limit",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "filters_observed": {
+        "cluster_id": "cpc-2",
+        "job": "fleet-intelligence-agent"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "samples_observed",
+        "series_count": 2,
+        "window": {
+          "start": "2026-10-06T07:58:03.493000Z",
+          "end": "2026-10-06T08:16:06.773000Z"
+        },
+        "label_names": [
+          "__name__",
+          "__tenant_id__",
+          "cluster_id",
+          "compute_zone",
+          "device",
+          "gpu",
+          "gpu_serial",
+          "host_name",
+          "job",
+          "machine_id",
+          "model_name",
+          "node",
+          "node_group",
+          "pci_bus_id",
+          "uuid"
+        ],
+        "sample_gap_seconds": {
+          "minimum": 59.9,
+          "maximum": 300.012
+        },
+        "evidence_exports": [
+          "fleet-samples.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "gauge",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D49",
+      "binding_candidate": "nvidia_dcgm_exporter.D49",
+      "source": "mimir",
+      "cluster": "cpc-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "actual_metric_or_field": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-1"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.181",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    },
+    {
+      "query_id": "D49",
+      "binding_candidate": "nvidia_dcgm_exporter.D49",
+      "source": "mimir",
+      "cluster": "cpc-2",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "actual_metric_or_field": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+      "datasource_uid": "cfyeuxpjjebcwe",
+      "type": null,
+      "unit": null,
+      "entity_keys": {},
+      "filters_observed": {
+        "cluster_id": "cpc-2"
+      },
+      "timestamp_basis": "prometheus_sample",
+      "retention_evidence": null,
+      "verification": "candidate",
+      "selected": false,
+      "observation": {
+        "status": "not_observed_in_queried_windows",
+        "instant_series_count": 0,
+        "evidence_exports": [
+          "inventory-initial.json",
+          "inventory-clusters.json"
+        ]
+      },
+      "activation_blockers": [
+        "type_unit_invalid_rules_unconfirmed",
+        "retention_and_max_hold_policy_unconfirmed",
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
+      "historical_endpoint_observation": {
+        "source": "pdf_audit.reproduction.183",
+        "metric_present": true,
+        "declared_type": "counter",
+        "explicit_sample_timestamp": false,
+        "scope": "single_pod_snapshot_not_cluster_inventory"
+      }
+    }
+  ],
+  "deployment_inventory": {
+    "cpc-1": {
+      "evidence_status": "user_provided_kubectl_output",
+      "scope": "Two Fleet pods per cluster; node names matched to local Grafana exports; not a full GPU inventory.",
+      "fleet_intelligence": {
+        "image": "ghcr.io/dsx-ai-factory/fleet-intelligence-agent:1.5.0-rc.1",
+        "image_digest": "sha256:d9a61090116f1f9a2f183c6779fb1b76f4792f6e927b60c64f33a5137577d18b",
+        "source_tag": "v1.5.0-rc.1",
+        "source_commit": "8dd8826b7604386ad667125298156ddb1d1a7865",
+        "image_source_provenance_verified": false
+      },
+      "nvidia_dcgm_hostengine": {
+        "image": "nvcr.io/nvidia/cloud-native/dcgm:4.2.3-1-ubuntu22.04",
+        "image_digest": null
+      },
+      "nvidia_dcgm_exporter": {
+        "image": "nvcr.io/nvidia/k8s/dcgm-exporter:4.2.3-4.1.3-ubuntu22.04",
+        "image_digest": null,
+        "mounted_collectors_verified": false
+      },
+      "kube_state_metrics": {
+        "pod_presence_reported": true,
+        "image": null,
+        "image_digest": null
+      }
+    },
+    "cpc-2": {
+      "evidence_status": "user_provided_kubectl_output",
+      "scope": "Two Fleet pods per cluster; node names matched to local Grafana exports; not a full GPU inventory.",
+      "fleet_intelligence": {
+        "image": "ghcr.io/dsx-ai-factory/fleet-intelligence-agent:1.5.0-rc.1",
+        "image_digest": "sha256:d9a61090116f1f9a2f183c6779fb1b76f4792f6e927b60c64f33a5137577d18b",
+        "source_tag": "v1.5.0-rc.1",
+        "source_commit": "8dd8826b7604386ad667125298156ddb1d1a7865",
+        "image_source_provenance_verified": false
+      },
+      "nvidia_dcgm_hostengine": {
+        "image": "nvcr.io/nvidia/cloud-native/dcgm:4.4.2-1-ubuntu22.04",
+        "image_digest": null
+      },
+      "nvidia_dcgm_exporter": {
+        "image": "nvcr.io/nvidia/k8s/dcgm-exporter:4.4.2-4.7.0-distroless",
+        "image_digest": null,
+        "mounted_collectors_verified": false
+      },
+      "kube_state_metrics": {
+        "pod_presence_reported": true,
+        "image": null,
+        "image_digest": null
+      }
+    }
+  },
+  "pdf_audit": {
+    "file": "fleet_dcgm_181_183_rca_coverage_20261006.pdf",
+    "sha256": "d7253680c0179212a40933e511e7844297f73954710067ac1efc701a33aee458",
+    "report": "fleet-dcgm-pdf-audit-20261006.md",
+    "scope": "One pod per environment; provided metric captures reproduced; PDF table energy error found; endpoint timestamps/reset/provenance and full cluster inventory remain unverified.",
+    "reproduction": {
+      "181": {
+        "attachment_sha256": "3eca7a20c257d73237b7d4bd9012798e11b3913158d55ccd230e2f837e99c1a5",
+        "sections": [
+          "exporter.prom",
+          "fleet.prom",
+          "exporter.names",
+          "fleet.names"
+        ],
+        "name_counts": {
+          "fleet": 99,
+          "fleet_dcgm": 57,
+          "exporter": 24,
+          "common_case_pairs": 19,
+          "fleet_only": 80,
+          "exporter_only": 5
+        },
+        "gpu_identity_count": 8,
+        "paired_values": {
+          "total": 152,
+          "equal": 133,
+          "different": 19,
+          "difference_counts_by_metric": {
+            "DCGM_FI_DEV_MEMORY_TEMP": 1,
+            "DCGM_FI_DEV_POWER_USAGE": 4,
+            "DCGM_FI_PROF_DRAM_ACTIVE": 8,
+            "DCGM_FI_PROF_PCIE_RX_BYTES": 3,
+            "DCGM_FI_PROF_PCIE_TX_BYTES": 3
+          }
+        },
+        "provided_names_match_parsed_samples": {
+          "fleet": true,
+          "exporter": true
+        },
+        "explicit_metric_timestamps": 0,
+        "type_differences": [
+          "DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL"
+        ]
+      },
+      "183": {
+        "attachment_sha256": "3b40f2b41ec5eefecfa98eef35824cd0508ad615fb6ea6afa1f63a4eeeb9dea8",
+        "sections": [
+          "exporter.prom",
+          "fleet.prom",
+          "fleet-events.json",
+          "fleet-states.json"
+        ],
+        "name_counts": {
+          "fleet": 83,
+          "fleet_dcgm": 41,
+          "exporter": 20,
+          "common_case_pairs": 15,
+          "fleet_only": 68,
+          "exporter_only": 5
+        },
+        "gpu_identity_count": 1,
+        "paired_values": {
+          "total": 15,
+          "equal": 14,
+          "different": 1,
+          "difference_counts_by_metric": {
+            "DCGM_FI_DEV_POWER_USAGE": 1
+          }
+        },
+        "provided_names_match_parsed_samples": {},
+        "explicit_metric_timestamps": 0,
+        "type_differences": [],
+        "fleet-states.json": {
+          "component_keys": 24,
+          "null_components": 0,
+          "empty_list_components": 0,
+          "rows": 24,
+          "health_counts": {
+            "Healthy": 24
+          },
+          "times": [
+            "2026-10-06T02:30:22Z",
+            "2026-10-06T02:34:06Z"
+          ],
+          "rows_without_time": 3,
+          "component_names": [
+            "accelerator-nvidia-dcgm-clock",
+            "accelerator-nvidia-dcgm-cpu",
+            "accelerator-nvidia-dcgm-inforom",
+            "accelerator-nvidia-dcgm-mem",
+            "accelerator-nvidia-dcgm-nvlink",
+            "accelerator-nvidia-dcgm-nvswitch",
+            "accelerator-nvidia-dcgm-pcie",
+            "accelerator-nvidia-dcgm-power",
+            "accelerator-nvidia-dcgm-prof",
+            "accelerator-nvidia-dcgm-thermal",
+            "accelerator-nvidia-dcgm-utilization",
+            "accelerator-nvidia-error-sxid",
+            "accelerator-nvidia-error-xid",
+            "accelerator-nvidia-infiniband",
+            "accelerator-nvidia-nccl",
+            "accelerator-nvidia-nvml",
+            "accelerator-nvidia-peermem",
+            "accelerator-nvidia-persistence-mode",
+            "cpu",
+            "disk",
+            "library",
+            "memory",
+            "network-ethernet",
+            "os"
+          ]
+        },
+        "fleet-events.json": {
+          "component_keys": 24,
+          "null_components": 18,
+          "empty_list_components": 6,
+          "rows": 0
+        }
+      },
+      "combined": {
+        "literal_metric_names": 124,
+        "case_paired_table_rows": 105,
+        "names_not_found_in_pdf_table": [],
+        "pdf_cells_checked": 420,
+        "pdf_cells_matching_presence_and_rounded_range": 419,
+        "pdf_cell_mismatches": [
+          {
+            "row": 23,
+            "environment": "181",
+            "source": "exporter.prom",
+            "metric": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+            "printed": "5,542 ~ 6,095",
+            "range": [
+              "554205031106",
+              "609520495469"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "integration_base_commit": "a3dd8c4d5c553a06193de27078ccb9b7c20d1de0"
+}

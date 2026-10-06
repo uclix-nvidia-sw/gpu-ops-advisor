@@ -1,3 +1,16 @@
+# 2026-10-06 P1 환경 조사와 소비 차원 검증 — 후속 로컬 검수
+
+- 기준: fetch 후 최신 `origin/main`과 로컬 HEAD `2849de1` 일치, PR #71 병합과 PR CI required 성공 확인. 후속 브랜치 `feat/binding-environment-validation`에서 작업했다. [실환경 조사 기록](../docs/evidence/d-binding-cpc-20261006.md)과 [90개 환경 항목 원장](../docs/evidence/d-binding-cpc-20261006.json)을 작성했다.
+- **통과 — 실제 Grafana 읽기 조사:** CPC-1/CPC-2 각 28개 D 메트릭의 원본 표본과 D09 제한 로그 표본 확보. 각 15개 후보 이름은 조회 창에서 미관측, D13은 workload 원본 미확정으로 미조회. 이름·label·원본 표본 시간·관측 공백만 확인했으며 producer 버전/단위/invalid/reset/보존 정책의 의미 검증 완료를 뜻하지 않는다. 원본은 `.local/p1-binding/`에만 보관하고 민감 신원과 로그 본문은 원장에 포함하지 않았다.
+- **통과 — 최신 main 통합:** 준비 중 추가된 PR #72의 `a3dd8c4`를 fast-forward로 반영했다. 변경은 Frontend 8개 파일이며 공통 설정·두 Worker·Go 서비스·이번 Python 검증본은 동일하다. 최종 원장/PDF 대조·문서 링크·Ruff·diff 검사를 수행했다. 이번 변경은 UI/API 결과 형식을 바꾸지 않아 main의 UI에 대한 별도 전체 재시험은 수행하지 않았다.
+- **통과 — 소비 차원:** verified D19는 `window`, D20은 `condition/status` 매핑을 요구하고 신원 라벨과 중복된 원본 필드를 거부한다. Fleet의 실제 `load_duration` 형태를 재현한 합성 입력으로 O01의 기간별 분리 출력과 원본 snapshot 보존을 확인했다. 집중 계약 검사 74 passed.
+- **통과 — 전체 두 Worker 회귀/E2E:** 루트 Python 3.12에서 `RUN_AGENT_E2E=1`로 `python -m pytest -c agents/pytest.ini agents/tests -q --tb=short --junitxml=.local/p1-binding/agents-results.xml`: **496 passed, 0 failures/errors/skips, 140.84초**, 기존 MCP deprecation warning 3건. 외부 DB 환경 변수를 제거하고 임시 loopback PostgreSQL, 로컬 JC/Incident/Backend/공식 MCP/두 Worker 바이너리를 사용했다. 이 테스트의 Grafana/LLM은 fixture이며 위 실제 읽기 조사와 구분한다.
+- **통과 — 정적/원장:** 변경 Python 2개 파일 Ruff check/format, PowerShell 읽기 조회 스크립트 문법, 45 D × 두 cluster의 누락/중복 검사, 정상 export 해시 대조, 미선택 상태와 공통 JSON/Helm 사본 byte 일치. JSON SHA-256은 기존 `85b348a142b7656a7e35058995131bbecd4a0d1b8cddf9c7bde03e28ed3bd932`를 유지한다. Helm lint/render/package와 설정 계약 검사는 통과했다. 문서 링크는 사용자 별도 checkout을 제외한 발행 대상 소스 복사본에서 검사했다. 임시 디렉터리의 최초 권한 오류는 권한을 맞춰 재검사했다.
+- **통과/부분 — PDF 재검증:** [감사 기록](../docs/evidence/fleet-dcgm-pdf-audit-20261006.md)에 105개 대응표 번호, 9/31 분류, 267개 investigation-only 런북, 수량/차이 산술과 Fleet/Exporter tag 소스 정의를 대조했다. Fleet tag/digest 및 DCGM/Exporter tag는 사용자 출력으로 원장에 추가했다. 추가 첨부로 PDF의 metrics 수량/UUID 비교를 재현했고 표 420칸 중 419칸은 일치, 에너지 1칸은 오류로 정정 기록했다. 두 번째 환경 states 24개 중 3개는 time이 없으며 events null/빈 배열은 전체 이력 부재를 입증하지 않는다. image-to-source provenance는 미검증이다.
+- **미완료/미검증:** KSM 버전·Exporter digest·collector/전송 설정 회신, 첫 환경의 이전 states/events 내용·원천 시각/이력 검증, 환경별 binding 활성화, 실제 두 Worker/LLM 결과 검수, 전체 신규/조건부 분석, 개별 Runbook 보완·발행. **검수 시점에는 로컬 수정·검수 단계였다. 사용자 요청으로 `feat/binding-environment-validation`의 후속 PR을 준비하며, 운영 활성화·배포는 별도 미완료 단계다.** UI/Go 공개 결과 형식은 변경하지 않아 해당 모듈의 별도 전체 suite는 해당 없음이며 실제 Go 서비스 연동은 위 Worker E2E에서 검사했다.
+
+---
+
 # 2026-10-06 D binding 전환 — 로컬 검수
 
 - **PR 준비:** 최신 `origin/main` `3a273f9`를 반영했다. 추가된 UI 변경과의 통합 후 Frontend 포맷·**150 tests / 16 files**·빌드를 재검증했다. 공통 Python·두 Worker·Backend·설정은 위 main 반영 전 검증본과 동일하다. 사용자 요청에 따라 `feat/d-binding-runtime`에서 PR을 준비하며, 아래 로컬 단계 기록은 검증 당시 상태다.
