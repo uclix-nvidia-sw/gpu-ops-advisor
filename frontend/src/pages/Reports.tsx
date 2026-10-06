@@ -39,7 +39,7 @@ export function Reports() {
   );
   useReportListPosition(q.items);
   return (
-    <div className="page">
+    <div className="page report-workspace">
       <PageHead
         eyebrow="OPERATIONS REPORTS"
         title="운영 분석·보고서"
@@ -178,7 +178,7 @@ export function ReportForm() {
     }
   };
   return (
-    <div className="page">
+    <div className="page report-workspace">
       <PageHead
         eyebrow="NEW REPORT"
         title="새 운영 보고서"

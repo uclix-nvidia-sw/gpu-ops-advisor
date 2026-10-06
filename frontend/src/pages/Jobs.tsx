@@ -2,7 +2,17 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Field, Modal, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, DataView, JobRows, More, QueryState } from '../components/live';
-import { num, queryPath, str, useCommand, useList, useResource } from '../lib/live';
+import {
+  num,
+  queryPath,
+  rows,
+  str,
+  strings,
+  useCommand,
+  useList,
+  useResource,
+  type Row,
+} from '../lib/live';
 import { RcaJobSummary } from '../components/RcaDebug';
 import { reportRequestTime } from '../lib/reportPeriod';
 import {
@@ -10,11 +20,14 @@ import {
   ReportOrigin,
   ReportTimeNote,
   ReportPeriod,
+  ReportScope,
 } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { obj } from '../lib/live';
+import { groupLabel, topicName } from '../lib/report';
+import { reportTitle } from '../lib/workflow';
 import { JobDebug } from '../components/JobDebug';
 import { debugPath, returnPath } from '../lib/debug';
 export function Jobs() {
@@ -130,12 +143,13 @@ export function JobDetail() {
       );
     }
   };
+  const reportView = j.kind === 'report' && app.mode !== 'developer';
   return (
-    <div className="page">
+    <div className={reportView ? 'page report-job-detail' : 'page'}>
       <PageHead
-        eyebrow="JOB DETAIL"
-        title={app.mode === 'developer' ? '작업 디버깅' : '작업 상세'}
-        description={id || ''}
+        eyebrow={reportView ? '운영 분석 보고서 · 작업 상세' : 'JOB DETAIL'}
+        title={app.mode === 'developer' ? '작업 디버깅' : reportView ? reportTitle(j) : '작업 상세'}
+        description={reportView ? `작업 ID · ${id || '미확인'}` : id || ''}
         actions={
           <Link className="button" to={from} state={{ reportRow: obj(location.state).reportRow }}>
             {from === '/jobs' ? '작업 목록' : '이전 목록·기록으로'}
@@ -155,16 +169,49 @@ export function JobDetail() {
         ) : (
           <>
             {j.kind === 'report' && <ReportTimeNote />}
-            <Panel title="실행 상태">
+            <Panel
+              title={j.kind === 'report' ? '실행 상태와 시도 이력' : '실행 상태'}
+              className={j.kind === 'report' ? 'report-job-execution' : ''}
+              action={j.kind === 'report' ? <ReportOrigin value={j.report_origin} /> : undefined}
+            >
               <div className="live-padding stack">
                 <div className="head-actions">
-                  {j.kind === 'report' && <ReportOrigin value={j.report_origin} />}
-                  <Badge status={str(j.status)} />
-                  <Badge status={str(j.result_status) || null} />
-                  <span>
-                    시도 {num(j.attempt_no)} · {str(j.stage, '단계 미확인')}
-                  </span>
+                  {j.kind === 'report' ? (
+                    <div className="report-job-status">
+                      <div>
+                        <span>실행 상태</span>
+                        <Badge status={str(j.status) || 'unknown'} />
+                      </div>
+                      <div>
+                        <span>결과 품질</span>
+                        <Badge status={str(j.result_status) || 'unknown'} />
+                      </div>
+                      <div>
+                        <span>현재 시도</span>
+                        <strong>
+                          {typeof j.attempt_no === 'number'
+                            ? j.attempt_no === 0
+                              ? '아직 시작 전'
+                              : `${j.attempt_no}차`
+                            : '미확인'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>마지막 기록 단계</span>
+                        <strong>{executionLabel(j.stage)}</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Badge status={str(j.status)} />
+                      <Badge status={str(j.result_status) || null} />
+                      <span>
+                        시도 {num(j.attempt_no)} · {str(j.stage, '단계 미확인')}
+                      </span>
+                    </>
+                  )}
                 </div>
+                {j.kind === 'report' && <ReportAttempts job={j} />}
                 {j.kind === 'rca' && <RcaJobSummary job={j} />}
                 <dl className="details">
                   <dt>{j.kind === 'report' ? '요청 접수 시각' : '접수 시각'}</dt>
@@ -182,7 +229,11 @@ export function JobDetail() {
                     </>
                   )}
                   <dt>실행 시각</dt>
-                  <dd>{formatDate(str(j.started_at))}</dd>
+                  <dd>
+                    {j.kind === 'report'
+                      ? reportRequestTime(str(j.started_at))
+                      : formatDate(str(j.started_at))}
+                  </dd>
                   {j.kind === 'report' && (
                     <>
                       <dt>보고서 실행시간</dt>
@@ -192,9 +243,17 @@ export function JobDetail() {
                     </>
                   )}
                   <dt>기한</dt>
-                  <dd>{formatDate(str(j.deadline_at))}</dd>
+                  <dd>
+                    {j.kind === 'report'
+                      ? reportRequestTime(str(j.deadline_at))
+                      : formatDate(str(j.deadline_at))}
+                  </dd>
                   <dt>종료 사유</dt>
-                  <dd>{str(j.termination_reason, '—')}</dd>
+                  <dd>
+                    {j.kind === 'report'
+                      ? executionLabel(j.termination_reason)
+                      : str(j.termination_reason, '—')}
+                  </dd>
                 </dl>
                 {j.queue_reason != null && (
                   <Notice>{labels[str(j.queue_reason)] || str(j.queue_reason)}</Notice>
@@ -229,7 +288,7 @@ export function JobDetail() {
                     <Link
                       className="button primary"
                       state={location.state}
-                      to={`/${j.kind === 'report' ? 'reports' : 'analyses'}/${id}`}
+                      to={`/${j.kind === 'report' ? 'reports' : 'analyses'}/${id}${j.kind === 'report' ? '#final-report' : ''}`}
                     >
                       저장된 결과 보기
                     </Link>
@@ -242,34 +301,40 @@ export function JobDetail() {
                 </div>
               </div>
             </Panel>
-            <Panel title="요청 조건">
-              <div className="live-padding">
-                <DataView
-                  reportDisplay={j.kind === 'report'}
-                  value={Object.fromEntries(
-                    [
-                      'scope',
-                      'target',
-                      'time_range',
-                      'timezone',
-                      'purpose_ids',
-                      'topic_ids',
-                      'group_by',
-                      'topic_group_by',
-                      'comparison_range',
-                      'symptom',
-                    ]
-                      .filter((k) => j[k] != null)
-                      .map((k) => [k, j[k]]),
-                  )}
-                />
-              </div>
-            </Panel>
-            <Panel title="시도 이력">
-              <div className="live-padding">
-                <DataView reportDisplay={j.kind === 'report'} value={j.attempts} />
-              </div>
-            </Panel>
+            {j.kind === 'report' ? (
+              <ReportJobRequest job={j} />
+            ) : (
+              <>
+                <Panel title="요청 조건">
+                  <div className="live-padding">
+                    <DataView
+                      reportDisplay={j.kind === 'report'}
+                      value={Object.fromEntries(
+                        [
+                          'scope',
+                          'target',
+                          'time_range',
+                          'timezone',
+                          'purpose_ids',
+                          'topic_ids',
+                          'group_by',
+                          'topic_group_by',
+                          'comparison_range',
+                          'symptom',
+                        ]
+                          .filter((k) => j[k] != null)
+                          .map((k) => [k, j[k]]),
+                      )}
+                    />
+                  </div>
+                </Panel>
+                <Panel title="시도 이력">
+                  <div className="live-padding">
+                    <DataView reportDisplay={j.kind === 'report'} value={j.attempts} />
+                  </div>
+                </Panel>
+              </>
+            )}
           </>
         )}
       </QueryState>
@@ -293,5 +358,137 @@ export function JobDetail() {
         </Modal>
       )}
     </div>
+  );
+}
+
+const executionLabels: Record<string, string> = {
+  validating: '입력 검증',
+  workflow: '자료 수집·분석',
+  saving: '결과 저장',
+  completing: '완료 처리',
+  complete: '처리 완료',
+  timeout: '시간 초과',
+  transient_error: '일시적 오류',
+  dependency_unavailable: '연결 서비스 사용 불가',
+  invalid_input: '입력 검증 실패',
+  invalid_result: '결과 검증 실패',
+};
+function executionLabel(value: unknown) {
+  const code = str(value);
+  return executionLabels[code] || labels[code] || code || '미확인';
+}
+function ReportAttempts({ job }: { job: Row }) {
+  const attempts = rows(job.attempts).sort((a, b) => num(b.attempt_no) - num(a.attempt_no));
+  return (
+    <section className="report-job-attempts" aria-label="시도 이력">
+      <h3>
+        시도 이력 <span>최근 시도부터</span>
+      </h3>
+      {attempts.length ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>시도</th>
+                <th>시작 시각</th>
+                <th>종료 시각</th>
+                <th>마지막 단계</th>
+                <th>종료 사유</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attempts.map((a, i) => (
+                <tr key={i}>
+                  <th scope="row">
+                    {typeof a.attempt_no === 'number' ? `${a.attempt_no}차` : '미확인'}
+                    {a.attempt_no === job.attempt_no && <small>현재 회차</small>}
+                  </th>
+                  <td>{reportRequestTime(str(a.started_at))}</td>
+                  <td>
+                    {a.ended_at
+                      ? reportRequestTime(str(a.ended_at))
+                      : a.attempt_no === job.attempt_no && job.status === 'running'
+                        ? '실행 중'
+                        : '종료 기록 없음'}
+                  </td>
+                  <td title={str(a.stage)}>{executionLabel(a.stage)}</td>
+                  <td title={str(a.termination_reason)}>{executionLabel(a.termination_reason)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p>
+          {Array.isArray(job.attempts) && job.attempt_no === 0
+            ? '아직 실행을 시작하지 않아 시도 이력이 없습니다.'
+            : '시도 이력 미확인 · 서버에 기록된 내역을 확인할 수 없습니다.'}
+        </p>
+      )}
+      <details>
+        <summary>시도 원본 기록</summary>
+        <DataView reportDisplay value={job.attempts} />
+      </details>
+    </section>
+  );
+}
+function ReportJobRequest({ job }: { job: Row }) {
+  const ids = strings(job.topic_ids);
+  const groups = obj(job.topic_group_by);
+  return (
+    <Panel title="분석 대상과 주제">
+      <div className="live-padding stack">
+        <ReportScope job={job} />
+        <section className="report-job-topics" aria-label="요청한 분석 주제">
+          <h3>요청한 분석 주제{ids.length > 0 && ` · ${ids.length}개`}</h3>
+          <p>
+            요청한 내용입니다. 주제별 산출 여부와 근거 부족 사유는 완성된 보고서에서 확인하세요.
+          </p>
+          {ids.length ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>분석 주제</th>
+                    <th>주제 ID</th>
+                    <th>요청 집계 기준</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ids.map((id, i) => (
+                    <tr key={i}>
+                      <th scope="row">{/^O(0[1-9]|1[01])$/.test(id) ? topicName(id) : id}</th>
+                      <td>{id}</td>
+                      <td>{groupLabel(job.topic_group_by != null ? groups[id] : job.group_by)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Notice>분석 주제 미확인</Notice>
+          )}
+        </section>
+        <details>
+          <summary>요청 조건 원본</summary>
+          <DataView
+            reportDisplay
+            value={Object.fromEntries(
+              [
+                'scope',
+                'time_range',
+                'timezone',
+                'topic_ids',
+                'group_by',
+                'topic_group_by',
+                'comparison_range',
+              ]
+                .filter((k) => job[k] != null)
+                .map((k) => [k, job[k]]),
+            )}
+          />
+        </details>
+      </div>
+    </Panel>
   );
 }

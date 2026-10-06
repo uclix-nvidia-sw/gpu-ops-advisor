@@ -66,7 +66,7 @@ export function ResultPage({ kind }: { kind: string }) {
     );
   }
   return (
-    <div className="page">
+    <div className={kind === 'report' ? 'page report-workspace' : 'page'}>
       <PageHead
         eyebrow={kind === 'incident' ? 'INCIDENT DETAIL' : 'SAVED RESULT'}
         title={
@@ -76,6 +76,11 @@ export function ResultPage({ kind }: { kind: string }) {
         actions={
           <>
             {kind === 'report' && r.result_ref != null && <ReportExports id={id!} />}
+            {kind === 'report' && (
+              <Link className="button" to={`/jobs/${id}`} state={state}>
+                작업 상태·시도 이력
+              </Link>
+            )}
             <Link
               className="button"
               to={returnPath(state?.from, kind === 'report' ? reportReturnPath(state) : '/cases')}
