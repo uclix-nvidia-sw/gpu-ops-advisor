@@ -4698,3 +4698,103 @@ th.job-state-cell {
   width: 8px;
   height: 8px;
 }
+
+.guide-kind-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 28px;
+}
+.guide-kind-picker .button {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 16px;
+  text-align: left;
+  white-space: normal;
+  background: #e8f1eb;
+  color: #294c3d;
+  border: 1px solid #9cb7a6;
+  font-size: 15px;
+}
+.guide-kind-picker .button[aria-pressed='true'] {
+  background: #286851;
+  color: #fff;
+  border-color: #286851;
+}
+@media (max-width: 760px) {
+  .guide-kind-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+.guide-kind-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+}
+.guide-kind-header h3 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+.guide-kind-header p {
+  margin: 0;
+  line-height: 1.7;
+}
+.guide-kind-header > .button {
+  flex-shrink: 0;
+}
+.guide-kind-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.guide-kind-table th,
+.guide-kind-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  padding: 20px 24px;
+  font-size: 14px;
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+}
+.guide-kind-table th {
+  width: 180px;
+  font-weight: 700;
+  color: var(--text);
+  background: #f0f5f1;
+}
+.guide-kind-table td > p {
+  margin: 0 0 12px;
+}
+.guide-kind-table .guide-topic {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.guide-kind-table .guide-topic + .guide-topic {
+  border-top: 1px solid var(--border);
+}
+.guide-kind-table .guide-topic > summary,
+.guide-kind-table .guide-topic > .guide-topic-fields {
+  padding: 16px 0;
+}
+@media (max-width: 760px) {
+  .guide-kind-header {
+    flex-wrap: wrap;
+  }
+  .guide-kind-header > .button {
+    margin-left: auto;
+  }
+  .guide-kind-table th,
+  .guide-kind-table td {
+    display: block;
+    width: auto;
+    padding: 16px;
+  }
+  .guide-kind-table td {
+    border-top: 0;
+  }
+}
