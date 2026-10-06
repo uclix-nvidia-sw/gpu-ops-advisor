@@ -18,7 +18,7 @@ from ops_agent.workflow import PLAN, calculate, query_ids
 
 
 def setup(days=7):
-    profile = json.load(open("agents/config.example.json"))
+    profile = json.load(open("agents/tests/fixtures/config-v7.json"))
     profile["queries"]["D08"].update(
         metric="gpu_ops_allocation_info", allocation_semantics="normalized_allocation"
     )

@@ -8,6 +8,7 @@ import time
 from agent_common.contracts import timestamp
 from agent_common.observation import Observation
 from agent_common.parallel import run_bounded
+from agent_common.query_contract import inventory_query, mapping_query, query_definition
 
 from .namespace_usage import pod_namespace_scope
 
@@ -34,7 +35,7 @@ def report_profile(profile):
     }
 
 
-def collection_plan(profile, data, order):
+def collection_plan(profile, data, order, core_queries=None):
     limits = profile["limits"]
     query_chunks = profile.get("report", {}).get("query_chunk_seconds", {})
     tasks = [
@@ -57,12 +58,22 @@ def collection_plan(profile, data, order):
             for c in data["scope"]["clusters"]
         ]
     for task in tasks:
+        task["optional"] = (
+            core_queries is not None and task["query_id"] not in core_queries
+        )
         seconds = timestamp(task["period"]["end"]) - timestamp(task["period"]["start"])
         task["chunk_seconds"] = min(
             limits["chunk_seconds"],
             query_chunks.get(task["query_id"], limits["chunk_seconds"]),
         )
         task["planned_calls"] = math.ceil(seconds / task["chunk_seconds"])
+        if (
+            query_definition(
+                profile, task["query_id"], task["cluster"]["cluster_id"]
+            ).get("availability")
+            == "unavailable"
+        ):
+            task["planned_calls"] = 0
     reason = None
     if any(t["query_id"] not in profile["queries"] for t in tasks):
         reason = "collection_query_unconfigured"
@@ -73,8 +84,19 @@ def collection_plan(profile, data, order):
         for t in tasks
     ):
         reason = "range_budget_exhausted"
-    elif sum(t["planned_calls"] for t in tasks) > limits["max_queries"]:
+    elif (
+        sum(t["planned_calls"] for t in tasks if not t["optional"])
+        > limits["max_queries"]
+    ):
         reason = "collection_plan_budget_exceeded"
+    reserved = sum(t["planned_calls"] for t in tasks if not t["optional"])
+    for task in tasks:
+        if task["optional"]:
+            if reserved + task["planned_calls"] > limits["max_queries"]:
+                task["omitted"] = "optional_query_budget_exhausted"
+                task["planned_calls"] = 0
+            else:
+                reserved += task["planned_calls"]
     return tasks, reason
 
 
@@ -96,7 +118,9 @@ def covered_ranges(evidence, statuses):
 def dependencies(tasks, profile, namespace_only):
     """Order response reuse and namespace narrowing before dispatch, not by timing."""
     for index, task in enumerate(tasks):
-        definition = profile["queries"].get(task["query_id"], {})
+        definition = query_definition(
+            profile, task["query_id"], task["cluster"]["cluster_id"]
+        )
         # Same metric requests run in order so the collector can reuse complete
         # responses. The exact scope/period/arguments cache still decides reuse.
         task["depends_on"] = [
@@ -105,7 +129,9 @@ def dependencies(tasks, profile, namespace_only):
             if previous["cluster"] == task["cluster"]
             and previous["period"] == task["period"]
             and definition.get("source") == "mimir"
-            and profile["queries"].get(previous["query_id"], {}).get("metric")
+            and query_definition(
+                profile, previous["query_id"], task["cluster"]["cluster_id"]
+            ).get("metric")
             == definition.get("metric")
         ]
         if namespace_only and task["query_id"] == "D06":
@@ -114,17 +140,20 @@ def dependencies(tasks, profile, namespace_only):
                 for previous in tasks
                 if previous["cluster"] == task["cluster"]
                 and previous["period"] == task["period"]
-                and previous["query_id"] in ("D01", "D08")
+                and previous["query_id"]
+                in (inventory_query(profile), mapping_query(profile))
             ]
 
 
-async def collect_report(tools, profile, data, deadline, order, namespace_only):
+async def collect_report(
+    tools, profile, data, deadline, order, namespace_only, core_queries=None
+):
     profile = report_profile(profile)
     limits = profile["limits"]
     concurrency = limits.get("max_concurrency", 3)
     if type(concurrency) is not int or concurrency < 1:
         raise ValueError("positive observation concurrency required")
-    tasks, rejected = collection_plan(profile, data, order)
+    tasks, rejected = collection_plan(profile, data, order, core_queries)
     for index, task in enumerate(tasks):
         task["sub_agent_id"] = f"report-observation-{index}"
         task["plan_order"] = index
@@ -134,6 +163,7 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
     finished = {}
     pending = list(tasks)
     collection_start = time.monotonic()
+    optional_deadline = None
 
     async def observe(task):
         query, cluster, period = task["query_id"], task["cluster"], task["period"]
@@ -164,18 +194,18 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
         started = time.monotonic()
         obs.deadline = min(deadline, started + task["time_budget_seconds"])
         try:
-            if rejected:
+            if rejected or task.get("omitted"):
                 obs._evidence(
                     query,
                     cluster["cluster_id"],
                     period,
                     {},
                     "unavailable",
-                    {"reason": rejected},
+                    {"reason": rejected or task["omitted"]},
                 )
             else:
                 narrowed = (
-                    pod_namespace_scope(collected)
+                    pod_namespace_scope(collected, profile)
                     if namespace_only and query == "D06"
                     else None
                 )
@@ -243,13 +273,28 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
         return task, obs, batch, summary
 
     while pending:
-        ready = [t for t in pending if all(key in finished for key in t["depends_on"])][
+        # Extra inputs cannot take the base plan's retries or deadline share.
+        active = [t for t in pending if not t["optional"]] or pending
+        phase_deadline = deadline
+        if all(t["optional"] for t in active):
+            if optional_deadline is None:
+                now = time.monotonic()
+                optional_deadline = now + max(0, deadline - now) / 2
+            phase_deadline = optional_deadline
+            remaining = max(0, limits["max_queries"] - calls)
+            for task in active:
+                if task["planned_calls"] > remaining:
+                    task["omitted"] = "optional_query_budget_exhausted"
+                    task["planned_calls"] = 0
+                else:
+                    remaining -= task["planned_calls"]
+        ready = [t for t in active if all(key in finished for key in t["depends_on"])][
             :concurrency
         ]
         if not ready:
             raise ValueError("cyclic report observation plan")
         spare = max(
-            0, limits["max_queries"] - calls - sum(t["planned_calls"] for t in pending)
+            0, limits["max_queries"] - calls - sum(t["planned_calls"] for t in active)
         )
         discovery_left = max(0, limits.get("max_discovery_calls", 64) - discovery_calls)
         # ponytail: batch barriers can delay ready work behind a slow sibling;
@@ -261,15 +306,15 @@ async def collect_report(tools, profile, data, deadline, order, namespace_only):
                 0
                 if rejected
                 else task["planned_calls"]
-                + spare // len(pending)
-                + (index < spare % len(pending))
+                + spare // len(active)
+                + (index < spare % len(active))
             )
-            task["reserved_discovery_calls"] = discovery_left // len(pending) + (
-                index < discovery_left % len(pending)
+            task["reserved_discovery_calls"] = discovery_left // len(active) + (
+                index < discovery_left % len(active)
             )
             task["time_budget_seconds"] = max(
-                0, deadline - time.monotonic()
-            ) / math.ceil(len(pending) / concurrency)
+                0, phase_deadline - time.monotonic()
+            ) / math.ceil(len(active) / concurrency)
         outcomes = await run_bounded(ready, observe, concurrency)
         for task, obs, batch, summary in outcomes:
             calls += obs.calls

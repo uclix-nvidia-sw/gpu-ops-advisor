@@ -1,3 +1,18 @@
+# 2026-10-06 D binding 전환 — 로컬 검수
+
+- **PR 준비:** 최신 `origin/main` `3a273f9`를 반영했다. 추가된 UI 변경과의 통합 후 Frontend 포맷·**150 tests / 16 files**·빌드를 재검증했다. 공통 Python·두 Worker·Backend·설정은 위 main 반영 전 검증본과 동일하다. 사용자 요청에 따라 `feat/d-binding-runtime`에서 PR을 준비하며, 아래 로컬 단계 기록은 검증 당시 상태다.
+- 기준: 원격 `main`과 로컬 HEAD `05bb4f69aec024ed72da72e266d63fa267be8f9a`, 사용자 확인 JSON `d-contract-restart-20261006-r1`. [구현 범위·전환 순서](../docs/specs/common/d-binding-runtime.md). 업로드 2개·공통 원본·Helm 사본 SHA-256은 `85b348a142b7656a7e35058995131bbecd4a0d1b8cddf9c7bde03e28ed3bd932`로 동일하다.
+- **통과 — 두 Worker 전체 회귀/E2E:** Python 3.12.14, 루트에서 `.local/d-contract-venv/Scripts/python.exe -m pytest -c agents/pytest.ini agents/tests --junitxml=.local/binding-all.xml -q`: **492 passed, 0 failures/errors/skips**. `RUN_AGENT_E2E=1`, `PG_BIN/JC_BINARY/INCIDENT_BINARY/BACKEND_BINARY/GRAFANA_MCP_BINARY/HELM_BINARY`를 로컬 테스트 도구로 지정하고 외부 `DATABASE_URL/AGENT_E2E_DATABASE_URL`을 제거했다. 임시 loopback PostgreSQL 16.15, 실제 JC/Incident/Backend/두 Worker 및 공식 Grafana MCP 1.4.2를 사용했다. Grafana/LLM은 fixture다. 기존 MCP deprecation warning 3건.
+- **통과 — 새 계약:** 45개 미선택 D의 원격 호출 0, verified 필수 필드/참조·클러스터 override·대안 동등성 검사, source UID/selector/label·binding revision 보존, Namespace 범위 확대 거부, 원본 snapshot 보존, sentinel 시각의 연속성 중단, counter reset/gap 거부 함수, D02/D06 UID 연결, O08 두 기준의 기존 값, O01 여유량 12MiB·용량 비율 0.25 및 D16 실패 시 기존 VRAM 보존, 추가 입력의 기본 수집/재시도 예산 보호. 실제 두 Worker의 미선택/선택 profile로 JC 결과 발행과 저장된 binding 근거를 검사했다.
+- **통과 — D09 추가 집중검사:** 위 전체 실행 이후 추가한 producer 시각/freshness gate 테스트 1건을 `pytest .../test_binding_contract.py -k freshness`로 별도 실행했다. 보고 관측은 유지하되 시각 의미 승인 전에는 상태 fact를 만들지 않고, 명시적 승인 후에도 freshness를 벗어나면 fact를 보류한다. 결과 `.local/binding-freshness.xml`.
+- **통과 — 작성 원본/사본:** 267개 Runbook을 HEAD와 구조 대조해 D05→D09 필수 조회·fact·목적 병합 외 변경이 없음을 확인했다. `knowledge_key`, compatibility, 문헌·지침·조건 등 보존, 일반 패키지 content와 표시 label 사본 일치. 로컬 원장 `.local/binding-identity-and-runbooks.json`. 개별 Runbook의 신규 분석 의미나 DB 발행 검수가 아니다.
+- **통과 — 소비자:** `frontend/`에서 `npm run format:check`, `npm test` **146 passed / 15 files**, `npm run build`. 합성 결과의 새 metric/단위·null 사유 렌더링을 검증했다. `backend/`에서 Go 1.26.2 `go vet ./...`, `CGO_ENABLED=1 go test -race ./...`, `go build ./...`: 통과. HTML/CSV의 새 metric 및 0/null 구별을 단위검사하고 기존 실제 Backend 보고서 흐름은 위 Python E2E로 검증했다. 브라우저 실환경 검수는 수행하지 않았다.
+- **통과 — 배포 정적 검사:** 루트의 `tools/ci/check_chart.py`(Helm lint/render/package 포함)와 `python -m unittest discover -s tools/ci/tests -v` **5 passed**. Windows에서는 `PYTHONUTF8=1`과 Helm/Git Bash PATH를 사용했다. 최초 cp949/Bash 경로 문제는 환경을 바로잡고 재검사했다.
+- **통과 — 정적 코드:** Ruff check/format **82 files**, UTF-8 CRLF와 `git diff --check` 통과. 루트 `tools/check_links.py`는 사용자 소유의 별도 미추적 checkout `_codex_dcgm_publish/frontend/index.html`의 Vite root 경로 2건만 오류로 보고했다. 해당 checkout은 변경하지 않았으며, 추적 파일과 이번 신규 파일만 복사한 소스 트리로 동일 checker를 실행해 **103개 문서·1311개 링크/자산, 오류 0건**을 확인했다.
+- **미완료/미검증:** 실제 Grafana의 binding 증거·선택, 실환경 LLM, 전체 신규/조건부 분석, counter별 결과 연결, 267개 개별 추가 의미 검토·비코드 Runbook, DB draft/발행, 부하/성능, 원격 CI와 배포. JSON은 후보 예제이고 전체 설계의 P1~P4 완료가 아니다. 로컬 수정/검수 단계이며 커밋·push·배포는 하지 않았다.
+
+---
+
 # 2026-10-06 종합·다중 선택 보고서 — 로컬 검수
 
 - 기준: PR #67 병합 `origin/main` **d6f4ca6**에서 `feat/report-multi-selection`으로 로컬 작업했다. 7종류 다중 선택/전체 종합의 topic 합집합은 한 job이다. Backend·JC 접수·Ops 계산과 공통 입력 검증/내보내기를 수정했으며 RCA 분석, JC 실행·lease·슬롯 정책, DB 구조·배포 설정은 변경하지 않았다.

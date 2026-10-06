@@ -1,8 +1,12 @@
+# D binding 설정 사본 — 2026-10-06
+
+내장 `files/agents.json`은 공통 원본과 동일한 `d-contract-restart-20261006-r1` 후보 registry다. 두 Worker의 새 런타임과 함께 적용해야 하며, **기본 binding은 미선택이라 관측을 실행하지 않는다.** 기존 운영 설정을 이 후보 예제로 단독 교체하지 않는다. [환경별 선택·전환·회수 순서](../../docs/specs/common/d-binding-runtime.md)를 따른다. 아래 v3 절은 이전 전환 기록이다.
+
 # GPU Ops Advisor Helm chart
 
 ## Fleet RCA profile v3 (2026-09-30)
 
-내장 Agent 프로필은 `builtin-grafana-v3`이며 D05/D09 `builtin-v3`의 JSON 필터·`health_contract`와 `health_contracts.fleet-component-log-v1`을 포함한다. `configuration.agents` 전체 override를 쓰는 설치는 새 설정을 직접 병합해야 한다. 기본 계약은 로그 기록 관측만 제공하며 실제 장비 시각/freshness fact 승격은 비활성이다. [RCA 설정 계약](../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 확인한다.
+당시 내장 Agent 프로필은 `builtin-grafana-v3`이며 D05/D09 `builtin-v3`의 JSON 필터·`health_contract`와 `health_contracts.fleet-component-log-v1`을 포함한다. `configuration.agents` 전체 override를 쓰는 설치는 새 설정을 직접 병합해야 한다. 기본 계약은 로그 기록 관측만 제공하며 실제 장비 시각/freshness fact 승격은 비활성이다. [RCA 설정 계약](../../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 확인한다.
 
 공통 Python 변경으로 RCA/Ops 이미지를 모두 재빌드하고 target 투영에는 Incident, 최종 보고서 표시에는 Frontend의 새 이미지가 필요하다. DB migration·기존 snapshot 재작성은 없다. 배포 승인 후 새 작업의 수집·분석·보고서 공개를 검수하고 기존 PVC를 보존한다. 로컬 검사는 운영 배포 검증이 아니다.
 
@@ -82,7 +86,7 @@ artifacts:
 
 기본 실행 프로필은 `local-v1` 하나이며, 입력·출력을 포함해 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. `llm.synthesisMaxTokens`만 바꿔서는 실행 예산이 늘어나지 않습니다. 기존 설치는 [토큰 예산 업데이트](../../docs/helm-install.md#기존-설치의-llm-토큰-예산-업데이트)에 따라 업그레이드하고 새 보고서를 요청합니다.
 
-`configuration.agents: {}`는 내장 수집 프로필을 사용합니다. 별도 `agents.json`을 만들거나 datasource UID, Mimir/Loki 접속 정보를 입력할 필요가 없습니다. Agent가 Grafana MCP의 `list_datasources`와 label 조회 도구로 작업 대상 클러스터에 해당하는 Prometheus 호환/Mimir 및 Loki datasource와 selector를 찾습니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. 기본 쿼리의 `validated`는 모두 `true`이며 수집 차단 스위치로 사용하지 않습니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
+`configuration.agents: {}`는 내장 후보 프로필을 사용하므로 기본 관측은 실행하지 않습니다. 실행하려면 환경별로 검증된 전체 설정을 `configuration.agents`에 지정합니다. 새 binding은 Grafana datasource UID, selector, producer/version, 단위·시간·대상 규칙과 검증 근거를 명시해야 합니다. 구 profile에서만 기존 datasource/label 자동 탐색을 사용합니다. Mimir/Loki 접속과 인증은 Grafana datasource가 담당합니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
 
 탐색은 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 라벨 순서로 수행합니다. 첫 번째로 값이 존재하는 라벨에서 작업의 cluster ID와 정확히 일치하는 대상을 찾습니다. 일치하는 datasource가 하나일 때만 조회하며, 후보가 여러 개거나 클러스터 라벨이 없거나 권한/통신 오류가 있으면 원인을 evidence와 Worker 로그에 남깁니다. `cpc-2`와 `cpc2` 같은 별칭을 임의로 동일시하거나 전체 클러스터로 조회 범위를 넓히지 않습니다. 표준 배포에서는 Grafana에 올바른 데이터소스와 클러스터 라벨이 준비되어 있어야 합니다.
 

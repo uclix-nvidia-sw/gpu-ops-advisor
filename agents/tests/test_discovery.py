@@ -48,7 +48,7 @@ def test_mcp_time_requires_timezone():
 
 
 def profile():
-    with open("agents/config.example.json", encoding="utf-8") as f:
+    with open("agents/tests/fixtures/config-v7.json", encoding="utf-8") as f:
         return json.load(f)
 
 

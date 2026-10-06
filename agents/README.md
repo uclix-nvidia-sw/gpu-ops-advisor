@@ -1,3 +1,7 @@
+# D binding 공통 설정 전환 — 2026-10-06
+
+현재 공통 예제는 사용자 확인본 `d-contract-restart-20261006-r1`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **45개 binding은 모두 미선택 후보이며 자동 조회하지 않는다.** 환경별로 검증된 binding을 선택해야 한다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
+
 ## 근거 기록 시각·순번 — 2026-10-02
 
 RCA/Ops 근거를 생성할 때 `collected_at`과 프로세스 공통 단조 증가 `record_sequence`를 부여한다. 병렬 수집 결과를 병합하거나 DB에 일괄 저장할 때 새로 매기지 않는다. 저장 시 기존 `quality` JSON에 `recorded_at`·`record_sequence`를 보존하고 계획된 조회에는 `plan_order`를 기록한다. `recorded_at`은 근거 생성 시각이며 조회 시작·소요시간이나 장비 이벤트 시각이 아니다. 기존 데이터는 수정하지 않는다.
@@ -105,9 +109,9 @@ Copy-Item agents/.env.example agents/.env
 
 `/chat/completions`의 300초 요청 상한, 기본 4096/설명 16384/insight 1024 토큰 설정과 JC attempt budget·deadline 제한은 유지합니다. 키는 코드·이미지·작업 본문에 넣지 않습니다. 모델 라우팅이 없고 환경의 모델/주소/키도 없으면 기존처럼 LLM 설명을 생략하고 유효한 결정적 결과는 유지합니다. [키 배포와 검증](../docs/model-connection.md).
 
-기본 실행은 포함된 `agents/config.example.json` 프로필을 그대로 사용하며 별도 파일 작성이 필요 없습니다. 기본 쿼리는 모두 `validated: true`이고 이 필드는 수집 차단 스위치로 사용하지 않습니다. Grafana MCP로 datasource 목록과 클러스터 label 값을 탐색해 UID/selector를 자동으로 결정합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
+기본 실행은 `agents/config.example.json`을 읽지만 현재 예제의 미선택 binding은 실행하지 않습니다. `AGENT_CONFIG_FILE`에 환경별 전체 설정을 지정하고 `selected_binding` 또는 cluster별 binding을 선택해야 합니다. 새 계약은 verified binding의 명시적 datasource UID/selector만 사용합니다. 구 profile은 기존 Grafana MCP 탐색을 유지합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
 
-Mimir tenant와 인증은 기존 Grafana 데이터소스 설정을 사용합니다. Worker에 Mimir/Loki 직접 주소·계정·UID를 주지 않습니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. `cpc-2`와 `cpc2` 같은 서로 다른 cluster ID는 자동으로 동일시하지 않습니다. 고급 환경의 명시적 매핑·생산자별 의미 계약이 필요하면 `AGENT_CONFIG_FILE`로 전체 프로필을 선택적으로 지정할 수 있습니다. C07 숫자는 예시이며 운영 확정값이 아닙니다.
+Mimir tenant와 인증은 기존 Grafana 데이터소스 설정을 사용합니다. Worker에 Mimir/Loki 직접 주소·계정을 주지 않습니다. 새 binding의 datasource UID는 Grafana에 등록된 UID입니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. `cpc-2`와 `cpc2` 같은 서로 다른 cluster ID는 자동으로 동일시하지 않습니다. 고급 환경의 명시적 매핑·생산자별 의미 계약이 필요하면 `AGENT_CONFIG_FILE`로 전체 프로필을 선택적으로 지정할 수 있습니다. C07 숫자는 예시이며 운영 확정값이 아닙니다.
 
 ```powershell
 $env:GRAFANA_URL='https://your-grafana'
@@ -163,10 +167,10 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 
 코드가 모든 R/O ID를 받아 주제별 결과와 부족 입력을 반환하지만, 실제 생산자 의미를 추정하지 않습니다. 다음 입력이 없으면 해당 판단은 `partial/blocked` 또는 null입니다.
 
-- 기본 `D08`은 `DCGM_FI_DEV_GPU_UTIL`의 Pod 라벨을 사건 구간의 D06 `kube_pod_info`와 연결하는 **관측 관계**입니다(`allocation_semantics=observed_pod_labels`). 값 0도 관측된 연결일 수 있지만 Pod/namespace가 없거나 UID가 중첩되면 관계를 만들지 않습니다. 노드가 있으면 D06/D08을 해당 노드로 제한합니다. 원본 시각과 최대 유지시간의 교집합만 사용합니다.
-- 이 기본 D08은 Ops의 독점/공유 할당량·할당 episode를 증명하지 않습니다. 실제 정규화 할당 producer를 배포한 환경은 D08 metric과 `allocation_semantics`를 함께 재정의하고 `allocation_mode`, `allocation_episode_key`, MIG 신원을 검증해야 합니다. episode가 없으면 장시간 저활동 후보를 만들지 않습니다.
-- 기본 D05는 D09의 파생 보기입니다. 같은 수집 라운드에서 Loki는 한 번 조회하며 원본 근거 ID를 `quality.derived_from`에 보존합니다. 같은 클러스터·시각·로그·해석 계약의 관측은 한 번 세고 근거 참조를 합칩니다. `DCGM_FI_DEV_XID_ERRORS`의 사건 구간 존재와 의미를 확인하지 못해 기본 원천으로 채택하지 않았습니다.
-- O02·O08은 이 정규화 metric이 없어도 기존 DCGM 활용률(D01)과 `kube_pod_info`(D06)의 동시 구간을 연결해 관측 GPU 수, GPU–Pod 연결 관측 시간, Namespace별 연결 관측 시간을 산출합니다. 같은 이름의 Pod UID가 중첩되는 구간은 제외합니다. 이 수치는 독점 할당량·실제 연산 시간과 구분하며 공유 GPU의 Namespace별 시간을 합산해 전체 할당량으로 사용하지 않습니다.
+- 새 profile의 `D02`(구 profile의 `D08`)는 `DCGM_FI_DEV_GPU_UTIL`의 Pod 라벨을 사건 구간의 D06 `kube_pod_info`와 연결하는 **관측 관계**입니다(`allocation_semantics=observed_pod_labels`). 값 0도 관측된 연결일 수 있지만 Pod/namespace가 없거나 UID가 중첩되면 관계를 만들지 않습니다. 노드가 있으면 D06과 해당 관측 query를 해당 노드로 제한합니다. 원본 시각과 최대 유지시간의 교집합만 사용합니다.
+- 이 기본 관측 연결은 Ops의 독점/공유 할당량·할당 episode를 증명하지 않습니다. 실제 정규화 할당 producer를 배포한 환경은 검증된 구 D08 override를 유지하거나 별도 할당 D의 소비 계약을 확정하고 `allocation_mode`, `allocation_episode_key`, MIG 신원을 검증해야 합니다. episode가 없으면 장시간 저활동 후보를 만들지 않습니다.
+- 새 profile은 D09에서 상태를 파싱합니다. 구 profile에서 D05는 D09의 파생 보기입니다. 같은 수집 라운드에서 Loki는 한 번 조회하며 원본 근거 ID를 `quality.derived_from`에 보존합니다. 같은 클러스터·시각·로그·해석 계약의 관측은 한 번 세고 근거 참조를 합칩니다. `DCGM_FI_DEV_XID_ERRORS`의 사건 구간 존재와 의미를 확인하지 못해 기본 원천으로 채택하지 않았습니다.
+- O02·O08은 이 정규화 metric이 없어도 DCGM 활용률(새 D02, 구 D01)과 `kube_pod_info`(D06)의 동시 구간을 연결해 관측 GPU 수, GPU–Pod 연결 관측 시간, Namespace별 연결 관측 시간을 산출합니다. 같은 이름의 Pod UID가 중첩되는 구간은 제외합니다. 이 수치는 독점 할당량·실제 연산 시간과 구분하며 공유 GPU의 Namespace별 시간을 합산해 전체 할당량으로 사용하지 않습니다.
 - Prometheus 원본 표본 수 또는 응답 크기가 한도를 넘으면 시간 구간을 자동으로 줄여 다시 조회합니다. `max_queries`와 실행시간 한도는 재조회에도 적용되며, 끝내 수집하지 못한 구간·원본 경고는 부분 수집으로 남깁니다. 결과의 주제별 관측 품질에는 조회별 상태와 표본 수가 저장됩니다.
 - `D07`의 `gpu_ops_effective_unbound_request` 역시 검증된 recording rule/원본으로 교체해야 합니다. scheduler 버전별 effective request 규칙, terminal/binding, resource 단위를 확인해야 합니다.
 - Fleet 상태는 `health_contracts`에 producer별 `checks`/`health`/revision 매핑을 등록한 JSON에만 의미를 부여합니다. 원본 여러 incidents 항목을 각각 보존합니다. 미등록 상태는 unknown입니다.

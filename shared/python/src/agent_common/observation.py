@@ -11,6 +11,8 @@ from .contracts import timestamp, now
 from .discovery import Discovery, DiscoveryError
 from .grafana_time import mcp_time
 from .runtime import attempt_context
+from .query_contract import consolidated, query_definition, validate_profile
+from .binding_samples import sample_value
 
 log = logging.getLogger(__name__)
 _record_sequence = count()
@@ -71,6 +73,7 @@ def unwrap(response):
 
 class Observation:
     def __init__(self, tools, profile, data, deadline, *, reuse_queries=False):
+        validate_profile(profile)
         self.tools, self.profile, self.data, self.deadline = (
             tools,
             profile,
@@ -137,6 +140,8 @@ class Observation:
             return self.cache[key]
         definition = self.profile["queries"].get(query_id)
         if not definition:
+            if consolidated(self.profile):
+                raise ValueError("unregistered query in execution profile: " + query_id)
             return []
         source_query = definition.get("derived_from")
         if source_query:
@@ -171,12 +176,45 @@ class Observation:
             ]
         out = []
         for scope in self.data["scope"]["clusters"]:
+            definition = query_definition(self.profile, query_id, scope["cluster_id"])
+            if consolidated(self.profile):
+                reason = definition.get("reason")
+                target = (
+                    self.data.get("target") or self.data.get("resource_selectors") or {}
+                )
+                labels = definition.get("target_labels") or {}
+                if (
+                    not reason
+                    and scope["namespaces"] is not None
+                    and "namespace" not in labels
+                ):
+                    reason = "binding_scope_unavailable"
+                if not reason and any(
+                    target.get(key) and key not in labels
+                    for key in ("gpu_uuid", "node", "pod_uid", "pod", "namespace")
+                ):
+                    reason = "binding_scope_unavailable"
+                if reason:
+                    out.append(
+                        self._evidence(
+                            query_id,
+                            scope["cluster_id"],
+                            period,
+                            {},
+                            "unavailable",
+                            {"reason": reason, "complete": False},
+                        )
+                    )
+                    continue
             source = definition["source"]
             cluster = self.profile.get("clusters", {}).get(scope["cluster_id"], {})
             uid_key = "loki_uid" if source == "loki" else "mimir_uid"
             selector_key = "loki_selector" if source == "loki" else "metric_selector"
             try:
-                if cluster.get(uid_key) and selector_key in cluster:
+                if consolidated(self.profile):
+                    uid = definition["environment"]["datasource_uid"]
+                    selector = dict(definition["environment"]["selector"])
+                elif cluster.get(uid_key) and selector_key in cluster:
                     # Optional legacy/expert overrides; normal deployments discover both.
                     uid, selector = cluster[uid_key], dict(cluster[selector_key])
                 else:
@@ -209,7 +247,7 @@ class Observation:
             log_target = self.data.get("log_query_target") or {}
             json_filters = {
                 field: (path, log_target[field])
-                for field, path in definition.get("json_target_fields", {}).items()
+                for field, path in (definition.get("json_target_fields") or {}).items()
                 if source == "loki"
                 and re.fullmatch("[a-zA-Z_][a-zA-Z0-9_]*", field)
                 and isinstance(log_target.get(field), str)
@@ -218,6 +256,8 @@ class Observation:
             if isinstance(target, dict):
                 for field, label in definition.get("target_labels", {}).items():
                     if target.get(field) and field not in json_filters:
+                        if label in selector and selector[label] != str(target[field]):
+                            raise ValueError("target conflicts with binding selector")
                         selector[label] = str(target[field])
             filters = [
                 f"{k}={json.dumps(v)}"
@@ -233,8 +273,17 @@ class Observation:
                     raise ValueError("query outside authorized namespace scope")
                 namespaces = narrowed
             if namespaces is not None:
+                namespace_label = definition.get("target_labels", {}).get(
+                    "namespace", "namespace"
+                )
+                if (
+                    namespace_label in selector
+                    and selector[namespace_label] not in namespaces
+                ):
+                    raise ValueError("namespace conflicts with binding selector")
                 filters.append(
-                    "namespace=~"
+                    namespace_label
+                    + "=~"
                     + json.dumps("|".join(re.escape(x) for x in sorted(namespaces)))
                 )
             # Query strings come only from reviewed configuration and escaped scope labels.
@@ -520,6 +569,28 @@ class Observation:
         return out
 
     def _evidence(self, query, cluster, period, snapshot, status, quality, args=None):
+        if consolidated(self.profile):
+            definition = query_definition(self.profile, query, cluster)
+            metadata = {
+                key: definition.get(key)
+                for key in (
+                    "binding_id",
+                    "binding_revision",
+                    "producer",
+                    "producer_version",
+                    "source",
+                    "unit",
+                    "sample_type",
+                    "timestamp_basis",
+                    "target_labels",
+                    "invalid_values",
+                    "counter_reset",
+                    "max_hold_seconds",
+                    "health_contract",
+                    "allocation_semantics",
+                )
+            }
+            quality = {**metadata, **quality}
         e = dict(
             id=str(uuid4()),
             query_id=query,
@@ -561,8 +632,29 @@ def series(evidence):
         if not isinstance(raw, list):
             continue
         for row in raw:
-            labels = row.get("metric", {})
-            key = (e["cluster_id"], json.dumps(labels, sort_keys=True))
+            labels = dict(row.get("metric", {}))
+            quality = e["quality"]
+            bound = bool(quality.get("binding_id"))
+            if bound:
+                label_map = quality.get("target_labels") or {}
+                if any(
+                    key in labels and label in labels and labels[key] != labels[label]
+                    for key, label in label_map.items()
+                ):
+                    continue
+                labels.update(
+                    {
+                        key: labels[label]
+                        for key, label in label_map.items()
+                        if label in labels
+                    }
+                )
+            key = (
+                e["cluster_id"],
+                json.dumps(labels, sort_keys=True),
+                quality.get("binding_id"),
+                quality.get("binding_revision"),
+            )
             entry = combined.setdefault(
                 key,
                 dict(
@@ -571,8 +663,19 @@ def series(evidence):
                     samples=[],
                     evidence_refs=[],
                     max_hold_seconds=e["quality"].get("max_hold_seconds", 0),
+                    sample_type=quality.get("sample_type"),
+                    unit=quality.get("unit"),
+                    binding_id=quality.get("binding_id"),
+                    binding_revision=quality.get("binding_revision"),
                 ),
             )
-            entry["samples"].extend(row.get("values", []))
+            entry["samples"].extend(
+                [
+                    [at, sample_value(value, quality)]
+                    for at, value in row.get("values", [])
+                ]
+                if bound
+                else row.get("values", [])
+            )
             entry["evidence_refs"].append(e["id"])
     return list(combined.values())

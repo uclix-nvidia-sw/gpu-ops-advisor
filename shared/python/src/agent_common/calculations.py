@@ -27,16 +27,24 @@ def sample_intervals(samples, start, end, max_hold):
     points = defaultdict(set)
     for t, value in samples:
         try:
+            t = float(t)
+            if not isfinite(t):
+                continue
+            points[t]
             v = float(value)
             if isfinite(v):
-                points[float(t)].add(v)
+                points[t].add(v)
+            else:
+                points[t].add(None)
         except (TypeError, ValueError):
+            if isinstance(t, float) and isfinite(t):
+                points[t].add(None)
             continue
     times = sorted(points)
     out = []
     for i, t in enumerate(times):
         stop = min(end, t + max_hold, times[i + 1] if i + 1 < len(times) else end)
-        if len(points[t]) == 1 and stop > max(t, start):
+        if len(points[t]) == 1 and None not in points[t] and stop > max(t, start):
             out.append((max(t, start), stop, next(iter(points[t]))))
     return out
 

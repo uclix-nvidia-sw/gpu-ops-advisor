@@ -16,10 +16,12 @@ from agent_common.contracts import base_result, result_status, metric, timestamp
 from agent_common.normalize import allocations, gpu_intervals, intervals
 from agent_common.runtime import attempt_context
 from agent_common.observation import evidence_stamp
+from agent_common.query_contract import consolidated, inventory_query, mapping_query
 from .report import write_report
 from .namespace_usage import namespace_usage
 from .collection import collect_report
 from .presentation import TOPIC_BASES
+from .additional_inputs import ADDITIONS, apply_additional_inputs
 
 
 log = logging.getLogger(__name__)
@@ -82,7 +84,28 @@ def add(
         topic["missing_inputs"].append(reason)
 
 
-def query_ids(topic_id, criteria_version=None, *, context=None, data=None):
+def query_ids(
+    topic_id,
+    criteria_version=None,
+    *,
+    context=None,
+    data=None,
+    profile=None,
+    include_additions=True,
+):
+    if consolidated(profile):
+        previous = query_ids(topic_id, criteria_version, context=context, data=data)
+        roles = {"D01": inventory_query(profile), "D08": mapping_query(profile)}
+        base = list(dict.fromkeys(roles.get(q, q) for q in previous))
+        if not base:
+            return ()
+        if topic_id == "O01":
+            base.append("D06")
+        return tuple(
+            dict.fromkeys(
+                base + (list(ADDITIONS[topic_id]) if include_additions else [])
+            )
+        )
     if (
         topic_id == "O10"
         and data is not None
@@ -101,7 +124,14 @@ def query_ids(topic_id, criteria_version=None, *, context=None, data=None):
 
 
 def calculate(
-    topic_id, data, collected, context, db_evidence, *, criteria_version=None
+    topic_id,
+    data,
+    collected,
+    context,
+    db_evidence,
+    *,
+    criteria_version=None,
+    profile=None,
 ):
     topic = dict(
         topic_id=topic_id,
@@ -121,11 +151,12 @@ def calculate(
         )
         if topic_id == "O08" and criteria_version != "1.2":
             raise ValueError("per-topic namespace reports require criteria 1.2")
+    inventory_id, mapping_id = inventory_query(profile), mapping_query(profile)
     period = data["time_range"]
     start, end = timestamp(period["start"]), timestamp(period["end"])
     namespace_draft = topic_id == "O08" and criteria_version == "1.2"
     mapping = (
-        allocations(collected.get("D08", []), period, collected.get("D06", []))
+        allocations(collected.get(mapping_id, []), period, collected.get("D06", []))
         if topic_id in {"O02", "O03", "O04", "O06"}
         or (topic_id == "O08" and not namespace_draft)
         else []
@@ -137,7 +168,14 @@ def calculate(
     )
     all_refs = [
         e
-        for q in query_ids(topic_id, criteria_version, context=context, data=data)
+        for q in query_ids(
+            topic_id,
+            criteria_version,
+            context=context,
+            data=data,
+            profile=profile,
+            include_additions=False,
+        )
         for e in collected.get(q, [])
     ]
     topic["evidence_refs"] = refs(all_refs)
@@ -154,7 +192,7 @@ def calculate(
 
     observed_allocation = topic_id in {"O02", "O03", "O04", "O06"} and any(
         e.get("quality", {}).get("allocation_semantics") == "observed_pod_labels"
-        for e in collected.get("D08", [])
+        for e in collected.get(mapping_id, [])
     )
     if observed_allocation:
         # Pod labels prove an observed connection, not an allocation contract.
@@ -199,7 +237,9 @@ def calculate(
             ]
             return topic
         topic["quality"]["applied_group_by"] = requested
-        summaries, unattributed, clusters = namespace_usage(data, collected)
+        summaries, unattributed, clusters = namespace_usage(
+            data, collected, profile=profile
+        )
         topic["quality"]["unattributed_series_count"] = unattributed
         if unattributed:
             topic["missing_inputs"].append("unattributed_gpu_observation")
@@ -308,7 +348,7 @@ def calculate(
         # The observed-connection interpretation is a limitation, not a failed input.
         # Actual missing allocation queries still retain incomplete_observation below.
     elif topic_id == "O01":
-        rows = intervals(collected.get("D01", []), period)
+        rows = intervals(collected.get(inventory_id, []), period)
         devices = {
             (r["cluster_id"], r["labels"].get("gpu_uuid", r["labels"].get("UUID")))
             for r in rows
@@ -348,9 +388,13 @@ def calculate(
         topic["missing_inputs"].append("inventory_completeness_and_change_events")
     elif topic_id in {"O02", "O08"}:
         observed = allocations(
-            collected.get("D01", []), period, collected.get("D06", []), observed=True
+            collected.get(inventory_id, []),
+            period,
+            collected.get("D06", []),
+            observed=True,
+            require_pod_join=consolidated(profile),
         )
-        observed_rows = intervals(collected.get("D01", []), period)
+        observed_rows = intervals(collected.get(inventory_id, []), period)
         devices = {
             (
                 r["cluster_id"],
@@ -368,10 +412,10 @@ def calculate(
                 len(devices),
                 "physical_gpu",
                 "unique_observed_inventory",
-                evidence=collected.get("D01", []),
+                evidence=collected.get(inventory_id, []),
             )
         if observed:
-            observed_refs = collected.get("D01", []) + collected.get("D06", [])
+            observed_refs = collected.get(inventory_id, []) + collected.get("D06", [])
             put(
                 "mapped_gpu_count",
                 len({(m["cluster_id"], m["gpu_uuid"]) for m in observed}),
@@ -428,7 +472,7 @@ def calculate(
                     allocation_hours(rows, "unknown"),
                     "GPU-hours",
                     "observed_gpu_pod_interval_union",
-                    evidence=collected.get("D01", []) + collected.get("D06", []),
+                    evidence=collected.get(inventory_id, []) + collected.get("D06", []),
                     target={"cluster_id": key[0], "namespace": key[1]},
                 )
             if observed:
@@ -800,6 +844,8 @@ def calculate(
         if useful:
             topic["status"] = "partial"
     topic["missing_inputs"] = list(dict.fromkeys(topic["missing_inputs"]))
+    if consolidated(profile):
+        apply_additional_inputs(topic, data, collected)
     return topic
 
 
@@ -824,7 +870,13 @@ async def run(tools):
     queries = {
         q
         for topic in data["topic_ids"]
-        for q in query_ids(topic, criteria_version, context=ctx["context"], data=data)
+        for q in query_ids(
+            topic,
+            criteria_version,
+            context=ctx["context"],
+            data=data,
+            profile=ctx["profile"],
+        )
     }
     priority = (
         ("D01", "D02", "D06", "D08")
@@ -842,6 +894,13 @@ async def run(tools):
         if namespace_only
         else sorted(queries, key=lambda q: (q not in priority, int(q[1:])))
     )
+    if consolidated(ctx["profile"]):
+        roles = {
+            "D01": inventory_query(ctx["profile"]),
+            "D08": mapping_query(ctx["profile"]),
+        }
+        order = list(dict.fromkeys(roles.get(q, q) for q in order))
+        order += sorted(queries - set(order))
     started = time.monotonic()
     log.info(
         "report collection started job=%s attempt=%s",
@@ -849,7 +908,24 @@ async def run(tools):
         claim.get("attempt_no"),
     )
     collected, evidence, collection = await collect_report(
-        tools, ctx["profile"], data, ctx["deadline"], order, namespace_only
+        tools,
+        ctx["profile"],
+        data,
+        ctx["deadline"],
+        order,
+        namespace_only,
+        {
+            q
+            for topic in data["topic_ids"]
+            for q in query_ids(
+                topic,
+                criteria_version,
+                context=ctx["context"],
+                data=data,
+                profile=ctx["profile"],
+                include_additions=False,
+            )
+        },
     )
     log.info(
         "report collection complete job=%s attempt=%s elapsed_seconds=%.3f evidence_count=%s",
@@ -879,6 +955,7 @@ async def run(tools):
                 ctx["context"],
                 db_evidence,
                 criteria_version=criteria_version,
+                profile=ctx["profile"],
             )
         )
         try:

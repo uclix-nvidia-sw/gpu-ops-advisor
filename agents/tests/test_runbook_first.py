@@ -39,7 +39,9 @@ def test_input_without_purposes_preserves_snapshot():
 )
 async def test_runbook_controls_queries_and_unknown_policy(mode):
     root = Path(__file__).resolve().parents[2]
-    profile = json.loads((root / "agents/config.example.json").read_text("utf-8"))
+    profile = json.loads(
+        (root / "agents/tests/fixtures/config-v7.json").read_text("utf-8")
+    )
     profile["clusters"] = {
         "c": {
             "mimir_uid": "m",

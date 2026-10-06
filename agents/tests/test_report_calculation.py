@@ -121,7 +121,14 @@ async def test_calculation_keeps_lease_and_drains_before_attempt_ends(
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
         await asyncio.wait_for(
             Worker(
-                Settings("report", artifact_dir=str(tmp_path)), run, store, http
+                Settings(
+                    "report",
+                    artifact_dir=str(tmp_path),
+                    config_path="agents/tests/fixtures/config-v7.json",
+                ),
+                run,
+                store,
+                http,
             ).execute(c),
             5,
         )

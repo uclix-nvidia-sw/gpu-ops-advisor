@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import hashlib
 import shutil
+import sys
 from unittest.mock import patch
 
 import jsonschema
@@ -14,6 +15,9 @@ import yaml
 import package_chart
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "shared/python/src"))
+from agent_common.query_contract import validate_profile  # noqa: E402
+
 CHART = ROOT / "charts/gpu-ops-advisor"
 HELM = os.getenv("HELM_BINARY", "helm")
 
@@ -153,8 +157,11 @@ def main():
         env = deployments[name]["spec"]["template"]["spec"]["containers"][0]["env"]
         assert next(e["value"] for e in env if e["name"] == flag) == "true"
     agent_profile = json.loads(config["agents.json"])
-    assert agent_profile["clusters"] == {}, "Default installs must discover sources"
-    assert all(q["validated"] is True for q in agent_profile["queries"].values())
+    validate_profile(agent_profile)
+    assert agent_profile["clusters"] == {}, (
+        "Example has no verified environment selection"
+    )
+    assert all(q["selected_binding"] is None for q in agent_profile["queries"].values())
     assert "REPLACE_" not in config["agents.json"]
     assert "http://verify-backend:8080" in config["nginx.conf"]
     assert all(

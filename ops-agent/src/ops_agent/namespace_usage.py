@@ -6,21 +6,29 @@ from agent_common.calculations import allocation_hours, seconds, union
 from agent_common.contracts import timestamp
 from agent_common.normalize import allocations, intervals
 from agent_common.observation import series
+from agent_common.query_contract import consolidated, inventory_query, mapping_query
 
 
-def namespace_usage(data, collected):
+def namespace_usage(data, collected, *, profile=None):
+    inventory_id, mapping_id = inventory_query(profile), mapping_query(profile)
     period = data["time_range"]
     scope = {c["cluster_id"]: c["namespaces"] for c in data["scope"]["clusters"]}
     usable = {
         q: [
             e for e in collected.get(q, []) if e["quality"].get("complete") is not False
         ]
-        for q in ("D01", "D02", "D06", "D08")
+        for q in dict.fromkeys((inventory_id, "D02", "D06", mapping_id))
     }
-    observed = allocations(usable["D01"], period, usable["D06"], observed=True)
+    observed = allocations(
+        usable[inventory_id],
+        period,
+        usable["D06"],
+        observed=True,
+        require_pod_join=consolidated(profile),
+    )
     # An instance UUID cannot be counted as a physical GPU without its parent history.
     observed = [r for r in observed if not r["gpu_uuid"].startswith("MIG-")]
-    allocated = allocations(usable["D08"], period, usable["D06"])
+    allocated = allocations(usable[mapping_id], period, usable["D06"])
     mapped_windows = defaultdict(list)
     for r in observed:
         mapped_windows[
@@ -81,7 +89,7 @@ def namespace_usage(data, collected):
             [(row["start"], row["end"])],
         )
 
-    for query in ("D01", "D02"):
+    for query in dict.fromkeys((inventory_id, "D02")):
         units = {e["id"]: e["quality"].get("unit") for e in usable[query]}
         for row in intervals(usable[query], period):
             labels, cluster = row["labels"], row["cluster_id"]
@@ -89,7 +97,7 @@ def namespace_usage(data, collected):
             namespace = labels.get("namespace")
             if cluster not in scope:
                 continue
-            if query == "D01" and allowed(cluster, namespace):
+            if query == inventory_id and allowed(cluster, namespace):
                 spans = [(a, b) for a, b, value in row["intervals"] if value >= 0]
                 if not spans:
                     inventory[cluster]["invalid"] = True
@@ -144,7 +152,7 @@ def namespace_usage(data, collected):
             mappings = [r for t, r in active.items() if t[0] == "mapping"]
             if not mappings:
                 continue
-            sources = [r for t, r in active.items() if t[0] in {"D01", "D02"}]
+            sources = [r for t, r in active.items() if t[0] in {inventory_id, "D02"}]
             activity = [r for t, r in active.items() if t[0] == "D02"]
             allocation = [r for t, r in active.items() if t[0] == "allocation"]
             identities = {(r["namespace"], r["pod_uid"]) for r in mappings}
@@ -232,7 +240,7 @@ def namespace_usage(data, collected):
     cluster_output = []
     for cluster in sorted(scope):
         state = inventory[cluster]
-        es = [e for e in collected.get("D01", []) if e["cluster_id"] == cluster]
+        es = [e for e in collected.get(inventory_id, []) if e["cluster_id"] == cluster]
         # Successful empty collection can establish zero observed devices; a missing
         # query or incomplete requested range cannot. This is not fleet coverage.
         complete = (
@@ -291,14 +299,15 @@ def namespace_usage(data, collected):
     return output, unattributed, cluster_output
 
 
-def pod_namespace_scope(collected):
+def pod_namespace_scope(collected, profile=None):
     """Narrow only complete namespace-report inputs; missing clues retain the full scope."""
+    inventory_id, mapping_id = inventory_query(profile), mapping_query(profile)
     out = {}
-    clusters = {e["cluster_id"] for e in collected.get("D01", [])}
+    clusters = {e["cluster_id"] for e in collected.get(inventory_id, [])}
     for cluster in clusters:
         sources = {
             q: [e for e in collected.get(q, []) if e["cluster_id"] == cluster]
-            for q in ("D01", "D08")
+            for q in dict.fromkeys((inventory_id, mapping_id))
         }
         if any(
             not es

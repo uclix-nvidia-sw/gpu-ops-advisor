@@ -34,6 +34,10 @@ METRIC_NAMES = {
     "allocation_group": "그룹별 독점 할당 시간",
     "vram": "평균 GPU 메모리 사용량",
     "temperature": "평균 GPU 온도",
+    "gpu_memory_free_mean": "평균 GPU 메모리 여유량",
+    "gpu_memory_used_ratio": "GPU 메모리 용량 대비 사용 비율",
+    "node_cpu_used_mean": "평균 Node CPU 사용률",
+    "node_load_by_window": "시간창별 Node load 평균",
     "gpu_energy": "관측 GPU 에너지",
     "incident_count": "사건 수",
     "total_coverage": "전체 관측률",
@@ -42,6 +46,13 @@ METRIC_NAMES = {
 
 
 REASON_NAMES = {
+    "binding_unselected": "이 환경에서 사용할 데이터 binding이 선택되지 않았습니다.",
+    "binding_unverified": "데이터 binding의 타입·단위·대상·시간 계약이 검증되지 않았습니다.",
+    "binding_environment_mismatch": "선택한 binding의 환경과 요청 클러스터가 다릅니다.",
+    "binding_scope_unavailable": "승인된 대상 범위로 조회할 수 있는 라벨·관계가 없습니다.",
+    "binding_semantics_or_samples_missing": "검증된 단위·타입 또는 유효한 원본 표본이 부족합니다.",
+    "gpu_capacity_join_unverified": "같은 GPU의 사용량·전체 용량·단위·유효시간을 연결하지 못했습니다.",
+    "optional_query_budget_exhausted": "기존 필수 조회 예산을 보존하기 위해 추가 조회를 보류했습니다.",
     "performed_action_and_comparison_required": "조치 기록·비교 기간이 없어 전후 비교를 수행하지 않았습니다",
     "allocation_contract_missing": "검증된 GPU 할당 이력이 부족합니다. GPU–Pod 연결 관측만으로는 독점 할당·저활동·작업 편차를 확정하지 않습니다.",
     "incomplete_observation": "조회 실패 또는 일부 기간의 불완전한 응답이 있습니다. 수집 근거에서 대상·기간·오류 사유를 확인하세요.",

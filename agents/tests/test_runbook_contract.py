@@ -31,9 +31,7 @@ class RunbookContractTests(unittest.TestCase):
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])
                 plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-                self.assertEqual(
-                    [step["query_id"] for step in plan], ["D09", "D05", "D02"]
-                )
+                self.assertEqual([step["query_id"] for step in plan], ["D09", "D02"])
                 self.assertFalse(plan[-1]["required"])
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(row["content"]["applicability_conditions"], [])
@@ -54,10 +52,10 @@ class RunbookContractTests(unittest.TestCase):
         row["compatibility"] = {"producer_contract": "fixture-only-v1"}
         row["content"]["observation_plan"].reverse()
         plan = validate_runbook(row, QUERIES, ALLOWED)
-        self.assertEqual([step["query_id"] for step in plan], ["D09", "D05", "D02"])
-        plan[0]["fact_names"].append("severity")
+        self.assertEqual([step["query_id"] for step in plan], ["D09", "D02"])
+        plan[0]["fact_names"].append("incident_history")
         self.assertNotIn(
-            "severity", row["content"]["observation_plan"][-1]["fact_names"]
+            "incident_history", row["content"]["observation_plan"][-1]["fact_names"]
         )
 
     def test_schema_dispatch_never_silently_accepts_unknown(self):
@@ -110,7 +108,7 @@ class RunbookContractTests(unittest.TestCase):
             validate_runbook(row, QUERIES, ALLOWED, authoring=True)
         del row["content"]["observation_plan"]
         plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-        self.assertEqual([step["query_id"] for step in plan], ["D09", "D05"])
+        self.assertEqual([step["query_id"] for step in plan], ["D09"])
         self.assertEqual(plan[0]["fact_names"], [])
 
     def test_compatibility_unknown_and_mismatch(self):

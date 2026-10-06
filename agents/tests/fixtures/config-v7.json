@@ -1,0 +1,178 @@
+{
+  "revision": "builtin-grafana-v7",
+  "rca": {
+    "general_runbook_key": "RB-GENERAL-GPU-NODE"
+  },
+  "limits": {
+    "max_queries": 48,
+    "max_rows": 5000,
+    "max_bytes": 2097152,
+    "max_range_seconds": 2678400,
+    "chunk_seconds": 3600,
+    "max_followups": 2,
+    "max_concurrency": 3,
+    "deadline_seconds": 900,
+    "query_timeout_seconds": 30,
+    "max_discovery_calls": 64
+  },
+  "report": {
+    "limits": {
+      "max_concurrency": 3,
+      "max_queries": 2048,
+      "chunk_seconds": 86400,
+      "max_rows": 50000
+    },
+    "query_chunk_seconds": {
+      "D06": 7200
+    }
+  },
+  "clusters": {},
+  "health_contracts": {
+    "fleet-component-log-v1": {
+      "producer_contract": "fleet-component-log-v1",
+      "revision": "fleet-log-report-v1",
+      "adapter": "fleet_component_v1",
+      "components": {
+        "accelerator-nvidia-error-xid": "xid",
+        "accelerator-nvidia-error-sxid": "sxid"
+      },
+      "checks": {
+        "reported": "valid"
+      },
+      "health": {
+        "Unhealthy": {
+          "normalized_health": "unhealthy",
+          "severity": "unknown"
+        }
+      },
+      "loki_timestamp_is_observed_at": false
+    }
+  },
+  "queries": {
+    "D01": {
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "unit": "percent",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true
+    },
+    "D02": {
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "unit": "percent",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true,
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node"
+      }
+    },
+    "D03": {
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_USED",
+      "unit": "MiB",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true
+    },
+    "D04": {
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_gpu_temp",
+      "unit": "celsius",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v6",
+      "validated": true,
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      }
+    },
+    "D05": {
+      "source": "loki",
+      "derived_from": "D09",
+      "revision": "builtin-v4",
+      "health_contract": "fleet-component-log-v1",
+      "validated": true
+    },
+    "D06": {
+      "source": "mimir",
+      "metric": "kube_pod_info",
+      "unit": "info",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v4",
+      "validated": true,
+      "target_labels": {
+        "node": "node"
+      }
+    },
+    "D07": {
+      "source": "mimir",
+      "metric": "gpu_ops_effective_unbound_request",
+      "unit": "resource_units",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true
+    },
+    "D08": {
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "unit": "percent",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v4",
+      "validated": true,
+      "allocation_semantics": "observed_pod_labels",
+      "target_labels": {
+        "node": "node",
+        "gpu_uuid": "UUID"
+      }
+    },
+    "D09": {
+      "source": "loki",
+      "revision": "builtin-v3",
+      "health_contract": "fleet-component-log-v1",
+      "json_target_fields": {
+        "node": "resources[\"k8s.node.name\"]",
+        "component": "attributes[\"component\"]"
+      },
+      "validated": true,
+      "target_labels": {
+        "node": "node"
+      }
+    },
+    "D10": {
+      "source": "mimir",
+      "metric": "up",
+      "unit": "boolean",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true
+    },
+    "D11": {
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_power_usage",
+      "unit": "W",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v6",
+      "validated": true,
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      }
+    },
+    "D12": {
+      "source": "mimir",
+      "metric": "kube_node_status_allocatable",
+      "unit": "resource_units",
+      "max_hold_seconds": 30,
+      "revision": "builtin-v1",
+      "validated": true
+    },
+    "D13": {
+      "source": "loki",
+      "revision": "builtin-v1",
+      "validated": true
+    }
+  }
+}
