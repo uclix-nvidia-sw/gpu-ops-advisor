@@ -9,6 +9,19 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ForwardingTests(unittest.TestCase):
+    def test_state_extension_preserves_original_and_expanded_routes(self):
+        for original in (MODULE.BASE, MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS)):
+            config = (
+                f'source_labels = ["__name__"]\nregex = "{original}"\naction = "keep"'
+                '\nrule { target_label = "cluster_id" replacement = "new-site" }'
+            )
+            after = MODULE.extend(config, include_pod_state=True)
+            final = MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS + MODULE.POD_STATE)
+            self.assertEqual(after.replace(final, original), config)
+            self.assertEqual(MODULE.extend(after, include_pod_state=True), after)
+            self.assertEqual(MODULE.extend(after), after)
+            self.assertNotIn("kube_pod_resource_request|", after)
+
     def test_only_metric_keep_changes_and_retry_is_idempotent(self):
         config = (
             'prometheus.relabel "gpuops_direct" {\n  rule {\n'
