@@ -102,7 +102,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -150,7 +150,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
@@ -188,7 +188,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -233,7 +233,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
@@ -268,7 +268,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -316,7 +316,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
@@ -354,7 +354,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -399,7 +399,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
@@ -431,7 +431,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -468,7 +468,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -500,7 +500,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -537,7 +537,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -572,7 +572,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -618,7 +618,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
@@ -647,7 +647,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -693,7 +693,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
@@ -715,7 +715,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -729,7 +729,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
         "no_exact_metric_samples_in_inspected_windows"
       ]
@@ -750,7 +750,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -764,7 +764,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
         "no_exact_metric_samples_in_inspected_windows"
       ]
@@ -905,7 +905,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -942,7 +942,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
+        "max_hold_policy_unconfirmed"
       ]
     },
     {
@@ -963,7 +963,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1000,7 +1000,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
+        "max_hold_policy_unconfirmed"
       ]
     },
     {
@@ -1023,7 +1023,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1060,7 +1060,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -1092,7 +1092,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1129,7 +1129,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -1157,7 +1157,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1170,7 +1170,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
@@ -1194,7 +1194,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1207,7 +1207,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
@@ -1298,7 +1298,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1346,7 +1346,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
@@ -1384,7 +1384,7 @@
         "job": "nvidia-dcgm-exporter"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1429,7 +1429,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.nvidia_dcgm_exporter",
@@ -1461,7 +1461,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1498,7 +1498,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -1530,7 +1530,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1567,7 +1567,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -1599,7 +1599,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1636,7 +1636,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed",
         "reserved_adjusted_ratio_must_not_substitute_used_over_total"
       ],
@@ -1682,7 +1682,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1719,7 +1719,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed",
         "reserved_adjusted_ratio_must_not_substitute_used_over_total"
       ],
@@ -1764,7 +1764,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1795,7 +1795,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -1826,7 +1826,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1857,7 +1857,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -1889,7 +1889,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1921,7 +1921,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "window_must_map_to_load_duration",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -1954,7 +1954,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -1986,7 +1986,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "window_must_map_to_load_duration",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2021,7 +2021,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2060,7 +2060,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
@@ -2088,7 +2088,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2127,7 +2127,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
@@ -2156,7 +2156,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2199,7 +2199,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "resource_selector_required_raw_requests_are_not_effective_requests",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2229,7 +2229,7 @@
         "job": "kube-state-metrics"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2272,7 +2272,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "resource_selector_required_raw_requests_are_not_effective_requests",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2297,7 +2297,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2334,7 +2334,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
+        "max_hold_policy_unconfirmed"
       ]
     },
     {
@@ -2355,7 +2355,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2392,7 +2392,7 @@
       "activation_blockers": [
         "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
+        "max_hold_policy_unconfirmed"
       ]
     },
     {
@@ -2411,7 +2411,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2424,7 +2424,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2458,7 +2458,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2471,7 +2471,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2500,7 +2500,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2513,7 +2513,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2547,7 +2547,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2560,7 +2560,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2589,7 +2589,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2602,7 +2602,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2636,7 +2636,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2649,7 +2649,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2678,7 +2678,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2691,7 +2691,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed",
         "field_not_listed_in_reported_collector_csv"
@@ -2726,7 +2726,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2739,7 +2739,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2768,7 +2768,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2781,7 +2781,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed",
         "field_not_listed_in_reported_collector_csv"
@@ -2816,7 +2816,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2829,7 +2829,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2858,7 +2858,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2871,7 +2871,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2905,7 +2905,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2918,7 +2918,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2947,7 +2947,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -2960,7 +2960,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -2994,7 +2994,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3007,7 +3007,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3036,7 +3036,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3049,7 +3049,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3083,7 +3083,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3096,7 +3096,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3125,7 +3125,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3138,7 +3138,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3172,7 +3172,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3185,7 +3185,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3214,7 +3214,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3227,7 +3227,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3261,7 +3261,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3274,7 +3274,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3307,7 +3307,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3344,7 +3344,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -3376,7 +3376,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3413,7 +3413,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -3445,7 +3445,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3482,7 +3482,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -3514,7 +3514,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3551,7 +3551,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -3579,7 +3579,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3592,7 +3592,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3626,7 +3626,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3639,7 +3639,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -3672,7 +3672,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3709,7 +3709,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -3741,7 +3741,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3778,7 +3778,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -3810,7 +3810,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3847,7 +3847,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -3879,7 +3879,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3916,7 +3916,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -3948,7 +3948,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -3985,7 +3985,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4017,7 +4017,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4054,7 +4054,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4086,7 +4086,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4123,7 +4123,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4155,7 +4155,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4192,7 +4192,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4224,7 +4224,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4261,7 +4261,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4293,7 +4293,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4330,7 +4330,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4362,7 +4362,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4399,7 +4399,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4431,7 +4431,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4468,7 +4468,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4500,7 +4500,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4537,7 +4537,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4569,7 +4569,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4606,7 +4606,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4638,7 +4638,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4675,7 +4675,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4707,7 +4707,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4744,7 +4744,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -4772,7 +4772,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4785,7 +4785,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -4819,7 +4819,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4832,7 +4832,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -4865,7 +4865,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4902,7 +4902,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -4934,7 +4934,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -4971,7 +4971,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -5003,7 +5003,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5040,7 +5040,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -5072,7 +5072,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5109,7 +5109,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -5141,7 +5141,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5178,7 +5178,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -5210,7 +5210,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5247,7 +5247,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -5279,7 +5279,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5316,7 +5316,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.fleet_intelligence",
@@ -5348,7 +5348,7 @@
         "job": "fleet-intelligence-agent"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5385,7 +5385,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-2.fleet_intelligence",
@@ -5413,7 +5413,7 @@
         "cluster_id": "cpc-1"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5426,7 +5426,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -5460,7 +5460,7 @@
         "cluster_id": "cpc-2"
       },
       "timestamp_basis": "prometheus_sample",
-      "retention_evidence": null,
+      "retention_evidence": "followup_details.central_effective_config.mimir",
       "verification": "candidate",
       "selected": false,
       "observation": {
@@ -5473,7 +5473,7 @@
       },
       "activation_blockers": [
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed",
+        "max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
         "deployed_collection_config_and_sample_provenance_unconfirmed"
       ],
@@ -6220,6 +6220,254 @@
       "config_hashes_match_previous_preflight": true,
       "retention_status": "unverified; no matching scalar emitted, not proof of defaults or unlimited retention"
     },
-    "activation": "blocked_pending_collection_forwarding_semantics_retention_freshness_and_live_worker_acceptance"
+    "activation": "blocked_pending_collection_forwarding_semantics_retention_freshness_and_live_worker_acceptance",
+    "central_effective_config": {
+      "attachment_sha256": "76e5e77c2ab752cc6beea0669f4e57acfbeedfe7c94cd2ab69d638cf2a99bee1",
+      "collected_at": "2026-10-07T00:43:12.294822+00:00",
+      "source": "user_provided_live_endpoint_excerpts",
+      "mimir": {
+        "observed_instances": 16,
+        "selected_settings_identical": true,
+        "selected_settings": [
+          {
+            "line": 631,
+            "parents": [
+              "limits"
+            ],
+            "setting": "max_query_lookback",
+            "value": "0s"
+          },
+          {
+            "line": 644,
+            "parents": [
+              "limits"
+            ],
+            "setting": "query_ingesters_within",
+            "value": "13h"
+          },
+          {
+            "line": 701,
+            "parents": [
+              "limits"
+            ],
+            "setting": "compactor_blocks_retention_period",
+            "value": "0s"
+          },
+          {
+            "line": 1278,
+            "parents": [
+              "sha256:1675008bcde611d013ff4285966c67ffa8a1444f2aead7d54ef2da8ab094bebb",
+              "sha256:894a5618f981bf6ddfc9677657b835f0e12988bfb8126ff1ca45c778dc5829e8"
+            ],
+            "setting": "retention_period",
+            "value": "13h0m0s"
+          }
+        ],
+        "runtime_overrides_empty_on_all_observed_instances": true,
+        "config_sha256": [
+          "d774ccc420846f01ca00e1b22d79b7b235d628e4bef800e36156bcb49a3d4c6c",
+          "331cc282c5bcf8429041c3d7eab01946960c0476d077dc97159ca6413cb0f7eb",
+          "0eb8c87e08de8ab76f0a726d3981788630e24948208eeed5115b951051eceb0c",
+          "665598277e95f94697b6a291759af68285e75a62851e3bb1da72ba4ee7567c14",
+          "6a5c987264737b86397e4407a349c79dfad5542a507b2d933df13ba6fbdcbf7c",
+          "d826925b5eef247a21076c5e97fecb7e032becae7505f989b3c7d00d6d7e78b5",
+          "de66d51eefa7f909f93621502904d98412d10c8d03ce8434a8b95b5cbd82ae71",
+          "4b7dfc551625c88ec5269cbdc68ea65401738b243ff4929e336e46aaca3c4109",
+          "de9ae50ae315032b50d718d262730ab8f7311b89edd894a011293f525997812d",
+          "e764e1e53361dd44f7250d5d3a59f5290d4ffd9b4f15e26b45be9c1982075ed9",
+          "02dca0445cc9fa12503861625b1eff183f56a21fa3aa0345d88a71b9b05ddecf",
+          "b8d8862ccae2c812523a104eec9dd18cabfbf1ddbd39c1dadb2351d00dd4866e",
+          "ebef471e4ab0b44cfff7384f4d7e0cb6cb5098997b3b258acce4aa8a7e61d253",
+          "b94c889f8d16b2fadbca046962eea6f7b021d7dbbc9b932c67e8718315f64284",
+          "2de00ded417c2cb703d3626b09b1fe288e076162459b7b795c312c49da497b59",
+          "86f9fcf190efeb390608d083265c76b222aaa44bf16c7c0151fdeaa92f7ce96f"
+        ],
+        "runtime_config_sha256": "4aaa91a8c02f375b64ee5637c2334e73b4a6c7f47adf119a95d0aff7917d241f",
+        "interpretation": "Configured Mimir compactor retention deletion disabled (0s); no guarantee of object-store lifetime or historical sample availability. blocks_storage.tsdb.retention_period=13h is local TSDB retention, not long-term retention."
+      },
+      "loki": {
+        "config_excerpt": {
+          "product": "loki",
+          "replica": 1,
+          "endpoint": "config",
+          "sha256": "c8787bab56515f194e5d7c56f97cfc9c6e3dcc58b8c6420cb3282f58894086b3",
+          "selected_settings": [
+            {
+              "line": 405,
+              "parents": [
+                "sha256:20e674d22f04b6cc6421a16535c33d4a01bda67a8a67031f7b0e0a530c17bf5a"
+              ],
+              "setting": "query_ingesters_within",
+              "value": "3h0m0s"
+            },
+            {
+              "line": 2394,
+              "parents": [
+                "compactor"
+              ],
+              "setting": "retention_enabled",
+              "value": "false"
+            },
+            {
+              "line": 2552,
+              "parents": [
+                "limits_config"
+              ],
+              "setting": "max_query_lookback",
+              "value": "0s"
+            },
+            {
+              "line": 2553,
+              "parents": [
+                "limits_config"
+              ],
+              "setting": "max_query_length",
+              "value": "30d1h"
+            },
+            {
+              "line": 2604,
+              "parents": [
+                "limits_config"
+              ],
+              "setting": "retention_period",
+              "value": "0s"
+            },
+            {
+              "line": 2761,
+              "parents": [
+                "sha256:89428ecd8269fa0f5f763a0dfde8f8745ff8a330c63b3878e2a17fdb0164b998"
+              ],
+              "setting": "retention_period",
+              "value": "0s"
+            }
+          ],
+          "setting_names_present": [
+            "max_query_length",
+            "max_query_lookback",
+            "query_ingesters_within",
+            "retention_enabled",
+            "retention_period"
+          ],
+          "empty_overrides_mapping_present": false,
+          "scope": "Lexical excerpts only; aliases, lists and inline mappings require separate review",
+          "status": "read"
+        },
+        "runtime_config_status": "read_failed",
+        "interpretation": "Base compactor retention disabled; runtime overrides unresolved. max_query_length 30d1h is a query limit, not retention."
+      },
+      "errors": [
+        {
+          "stage": "loki:1/runtime_config",
+          "status": "read_failed"
+        }
+      ],
+      "scope": "Does not establish producer routing, invalid/max_hold rules, selection, Worker reload or production result acceptance."
+    }
+  },
+  "routing_review": {
+    "cpc-1": {
+      "attachment_sha256": "96f65161f632909ba671f85e97145b05928bf4f6000fd5a8d0f198ed8bc1f02d",
+      "config_sha256": "784dcabffb7823a85ea9a13bdf1cae52c6efa75fbaa34f4364c525badd6228c0",
+      "matches_prior_reported_config": true,
+      "scrape_seconds": 15,
+      "scrape_timeout_seconds": 10,
+      "honor_labels": true,
+      "direct_value_transforms": false,
+      "direct_metric_allowlist": [
+        "kube_node_status_condition",
+        "kube_pod_info",
+        "kube_pod_container_resource_requests",
+        "DCGM_FI_DEV_GPU_UTIL",
+        "DCGM_FI_DEV_FB_USED",
+        "DCGM_FI_DEV_FB_FREE",
+        "up",
+        "scrape_duration_seconds"
+      ],
+      "node_rule": "Copy nonempty Hostname; preserve KSM workload node otherwise",
+      "uuid_rule": "Copy UUID to uuid; preserve UUID",
+      "exporter_identity": "exporter_* labels distinct from workload labels",
+      "fleet_uid_scope": "Collector Pod, not workload Pod",
+      "scope": "Supplied ConfigMap matches prior hash and central samples; current reload not proven"
+    },
+    "cpc-2": {
+      "attachment_sha256": "7d8a8d495c1ba6a4150e44f0996f1e854561d4d2750f4b5c086ce89e494cb8d5",
+      "config_sha256": "85ceb29161dd1636a56043c4e66652ebd739b55720481330fe984e43a862ce47",
+      "matches_prior_reported_config": true,
+      "scrape_seconds": 15,
+      "scrape_timeout_seconds": 10,
+      "honor_labels": true,
+      "direct_value_transforms": false,
+      "direct_metric_allowlist": [
+        "kube_node_status_condition",
+        "kube_pod_info",
+        "kube_pod_container_resource_requests",
+        "DCGM_FI_DEV_GPU_UTIL",
+        "DCGM_FI_DEV_FB_USED",
+        "DCGM_FI_DEV_FB_FREE",
+        "up",
+        "scrape_duration_seconds"
+      ],
+      "node_rule": "Copy nonempty Hostname; preserve KSM workload node otherwise",
+      "uuid_rule": "Copy UUID to uuid; preserve UUID",
+      "exporter_identity": "exporter_* labels distinct from workload labels",
+      "fleet_uid_scope": "Collector Pod, not workload Pod",
+      "scope": "Supplied ConfigMap matches prior hash and central samples; current reload not proven"
+    }
+  },
+  "environment_profile": {
+    "path": "agents/config.cpc-direct.json",
+    "revision": "cpc-direct-20261007-r1",
+    "selected_queries_per_cluster": [
+      "D02",
+      "D03",
+      "D06",
+      "D10",
+      "D15",
+      "D20",
+      "D22"
+    ],
+    "scope": "Direct metrics only; no Fleet/Loki activation; not deployed",
+    "max_hold_policy_seconds": 30,
+    "note": "Historical bindings array retains original candidate audit. Current selection exists only in config.cpc-direct.json; global template unchanged.",
+    "replay_summary": [
+      {
+        "cluster": "cpc-1",
+        "queries": 7,
+        "remote_fixture_calls": 7,
+        "normalized_series": {
+          "D02": 16,
+          "D03": 16,
+          "D06": 277,
+          "D10": 3,
+          "D15": 16,
+          "D20": 105,
+          "D22": 3
+        },
+        "node_condition_observations": 105,
+        "report_status": "partial",
+        "rca_health_facts": 0,
+        "raw_evidence_preserved": true,
+        "scope": "Saved production sample replay through common collector and both consumer functions; not live jobs/LLM/JC publication"
+      },
+      {
+        "cluster": "cpc-2",
+        "queries": 7,
+        "remote_fixture_calls": 7,
+        "normalized_series": {
+          "D02": 2,
+          "D03": 2,
+          "D06": 137,
+          "D10": 3,
+          "D15": 2,
+          "D20": 48,
+          "D22": 3
+        },
+        "node_condition_observations": 48,
+        "report_status": "partial",
+        "rca_health_facts": 0,
+        "raw_evidence_preserved": true,
+        "scope": "Saved production sample replay through common collector and both consumer functions; not live jobs/LLM/JC publication"
+      }
+    ]
   }
 }

@@ -482,3 +482,14 @@ CPC-1의 두 Exporter CSV 동일성·25개 선언·D26/D27 미포함, 양쪽 Fle
 CPC-2 보고 digest의 NVIDIA 공개 OCI index/두 architecture manifest/후속 레이어를 해시 대조하여 CSV 26개 선언(gauge 20/counter 5/label 1)을 확인했다. 두 architecture의 CSV 해시가 같고, CPC-1 대비 FB_RESERVED만 추가됐다. 이미지 근거이며 실행 중 컨테이너 파일 읽기나 표본 방출 검증을 대체하지 않는다.
 
 중앙 `--effective-config` 모드는 실행 중 Mimir/Loki의 명시된 HTTP 포트를 통해 Kubernetes Pod proxy GET으로 `/config`와 `/runtime_config`를 읽는다. 발췌 결과는 tenant 부모 키를 익명화하며 YAML 의미 해석/운영 활성화를 수행하지 않는다. 회귀 4개를 추가하여 도구 전체 **16개 통과**, 변경 Python Ruff lint/format 통과. 서비스 실호출은 서버 접근이 없어 미수행이다. Worker·공통 실행 JSON·Helm은 변경하지 않았다.
+
+
+### 2026-10-07 CPC 직접 수집 환경 profile
+
+Alloy 원문 해시 일치와 직접 수집 8개 메트릭 allowlist를 확인했다. `config.cpc-direct.json`에 CPC별 7개씩 14개 binding을 선택했다. 두 Worker 공통 로더/미선택 로그 차단/미등록 cluster 차단/D20 gauge 소비의 신규 5개 fixture 검사를 통과했다. D20 gauge는 Node 상태 관측으로만 처리하며 GPU health로 해석하지 않는다.
+
+저장된 실환경 원본을 공통 Observation과 Report/RCA 소비 함수에 재생하여 CPC별 7개 쿼리·원본 불변·D20 관측·health fact 미생성을 확인했다. Report는 미선택 입력 때문에 partial이다. 신규 환경 profile의 운영 적용·실제 LLM/JC 발행 검수는 미완료다.
+
+검증: 저장소 루트의 Python 전체 suite에서 **501 passed, 0 skipped**(138.43s). `RUN_AGENT_E2E=1`, 외부 DB 환경변수 제거, 임시 로컬 PostgreSQL 16.15 및 실제 JC/Incident/두 Worker/공식 MCP 프로세스를 사용했다. Grafana·LLM은 fixture 응답이다. 최신 main `8f24bda`의 추가 변경은 UI이며 Python 검증 대상 파일은 동일하다.
+
+최종 무효값 규칙 수정 후 관련 81개(환경 profile 7개 포함)와 실제 원본 재생을 재실행해 통과했다. Helm 전체 계약 및 환경 override의 JSON 의미 동일성 검증을 통과했다. 큰 sentinel float 재직렬화 차이는 안전한 정수 범위 상한으로 해결했다. 초기 chart 검사는 Windows cp949 오류였으며 `-X utf8` 재실행으로 통과했다.

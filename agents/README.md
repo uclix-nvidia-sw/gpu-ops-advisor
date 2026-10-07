@@ -2,6 +2,12 @@
 
 현재 공통 예제는 사용자 확인본 `d-contract-restart-20261006-r1`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **45개 binding은 모두 미선택 후보이며 자동 조회하지 않는다.** 환경별로 검증된 binding을 선택해야 한다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
 
+## CPC 직접 수집 환경 profile — 2026-10-07
+
+[config.cpc-direct.json](config.cpc-direct.json)은 CPC-1/CPC-2용 완전한 공통 설정이다. 두 Worker 모두 같은 파일을 `AGENT_CONFIG_FILE`로 읽어야 한다. 검증된 직접 수집 D02/D03/D06/D10/D15/D20/D22를 각 환경에서 선택하고 Fleet·Loki 및 나머지 입력은 미선택 상태로 둔다. 이 파일만으로 전체 RCA·Report 기능이 활성화되지는 않는다. 범용 예제와 Helm 기본 사본은 변경하지 않는다.
+
+Helm에서는 이 파일 전체를 `configuration.agents` 객체로 전달한다. 환경 profile은 자동으로 포함되지 않는다. 기존 사용자 정의 limits 등은 검토 후 새 revision에 반영하고 두 Worker에 동일하게 적용한다. [전송 규칙·검증·적용 순서](../docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile)를 따른다. 실제 운영 배포와 새 작업의 결과 발행 검수는 미완료다.
+
 ## 근거 기록 시각·순번 — 2026-10-02
 
 RCA/Ops 근거를 생성할 때 `collected_at`과 프로세스 공통 단조 증가 `record_sequence`를 부여한다. 병렬 수집 결과를 병합하거나 DB에 일괄 저장할 때 새로 매기지 않는다. 저장 시 기존 `quality` JSON에 `recorded_at`·`record_sequence`를 보존하고 계획된 조회에는 `plan_order`를 기록한다. `recorded_at`은 근거 생성 시각이며 조회 시작·소요시간이나 장비 이벤트 시각이 아니다. 기존 데이터는 수정하지 않는다.

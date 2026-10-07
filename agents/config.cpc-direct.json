@@ -1,0 +1,4358 @@
+{
+  "schema_version": "d-query-profile/3-draft",
+  "query_contract": "single-query-v3-draft",
+  "revision": "cpc-direct-20261007-r1",
+  "delivery": {
+    "stage": "environment-profile-predeployment",
+    "runtime_ready": true,
+    "intended_path": "AGENT_CONFIG_FILE for both RCA and Report",
+    "note": "Seven direct metrics per CPC selected. Deployment and live Worker acceptance pending."
+  },
+  "provenance": {
+    "base_commit": "05bb4f69aec024ed72da72e266d63fa267be8f9a",
+    "upstream_config_revision": "builtin-grafana-v7",
+    "specifications": [
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/docs/specs/common/d-contract-redesign-plan.md",
+        "sha256_utf8": "5805574dbb8a46924de00f6abe4df2b73a2155ded3f371c334e75ed1a2dcb3b7"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/docs/specs/common/d-query-mapping.md",
+        "sha256_utf8": "0a838d6ac0f7ab6f678324e73e1d532e26931f2207bd6c044c4cb751e7e49962"
+      }
+    ],
+    "pull_request": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/pull/62",
+    "json_field_names": "Implementation proposal; the source MD specifies semantics, not these literal field names."
+  },
+  "rca": {
+    "general_runbook_key": "RB-GENERAL-GPU-NODE"
+  },
+  "limits": {
+    "max_queries": 48,
+    "max_rows": 5000,
+    "max_bytes": 2097152,
+    "max_range_seconds": 2678400,
+    "chunk_seconds": 3600,
+    "max_followups": 2,
+    "max_concurrency": 3,
+    "deadline_seconds": 900,
+    "query_timeout_seconds": 30,
+    "max_discovery_calls": 64
+  },
+  "report": {
+    "limits": {
+      "max_concurrency": 3,
+      "max_queries": 2048,
+      "chunk_seconds": 86400,
+      "max_rows": 50000
+    },
+    "query_chunk_seconds": {
+      "D06": 7200
+    }
+  },
+  "clusters": {
+    "cpc-1": {
+      "bindings": {
+        "D02": "cpc-1.nvidia_dcgm_exporter.D02",
+        "D03": "cpc-1.nvidia_dcgm_exporter.D03",
+        "D06": "cpc-1.kube_state_metrics.D06",
+        "D10": "cpc-1.scrape_collector.D10",
+        "D15": "cpc-1.nvidia_dcgm_exporter.D15",
+        "D20": "cpc-1.kube_state_metrics.D20",
+        "D22": "cpc-1.scrape_collector.D22"
+      }
+    },
+    "cpc-2": {
+      "bindings": {
+        "D02": "cpc-2.nvidia_dcgm_exporter.D02",
+        "D03": "cpc-2.nvidia_dcgm_exporter.D03",
+        "D06": "cpc-2.kube_state_metrics.D06",
+        "D10": "cpc-2.scrape_collector.D10",
+        "D15": "cpc-2.nvidia_dcgm_exporter.D15",
+        "D20": "cpc-2.kube_state_metrics.D20",
+        "D22": "cpc-2.scrape_collector.D22"
+      }
+    }
+  },
+  "health_contracts": {
+    "fleet-component-log-v1": {
+      "producer_contract": "fleet-component-log-v1",
+      "revision": "fleet-log-report-v1",
+      "adapter": "fleet_component_v1",
+      "components": {
+        "accelerator-nvidia-error-xid": "xid",
+        "accelerator-nvidia-error-sxid": "sxid"
+      },
+      "checks": {
+        "reported": "valid"
+      },
+      "health": {
+        "Unhealthy": {
+          "normalized_health": "unhealthy",
+          "severity": "unknown"
+        }
+      },
+      "loki_timestamp_is_observed_at": false
+    }
+  },
+  "producers": {
+    "fleet_intelligence": {
+      "component": "fleet-agent / fleet-intelligence",
+      "sources": [
+        "mimir",
+        "loki"
+      ],
+      "note": "Verify original Fleet names against names stored through OTel; never infer case conversion."
+    },
+    "nvidia_dcgm_exporter": {
+      "component": "gpu-operator / nvidia-dcgm-exporter",
+      "sources": [
+        "mimir"
+      ],
+      "note": "Verify exporter collection settings and device support separately from DCGM catalog availability."
+    },
+    "kube_state_metrics": {
+      "component": "prometheus-kube-state-metrics",
+      "sources": [
+        "mimir"
+      ],
+      "note": "Verify allowlists, forwarded series, UID labels and resource/unit labels."
+    },
+    "scrape_collector": {
+      "component": "Prometheus-compatible scrape collector",
+      "sources": [
+        "mimir"
+      ],
+      "note": "up and scrape_duration_seconds describe scrape targets, not GPU device counts."
+    },
+    "effective_request_producer": {
+      "component": "effective-v1 request producer",
+      "sources": [
+        "mimir"
+      ],
+      "note": "Preserve D07 producer validity; raw KSM D21 requests are not a replacement."
+    },
+    "workload_log_producer": {
+      "component": null,
+      "sources": [
+        "loki"
+      ],
+      "note": "D13 producer and workload filters remain unresolved; do not merge with Fleet D09."
+    }
+  },
+  "binding_policy": {
+    "selection": "exactly_one_verified_binding_per_query_per_execution_profile",
+    "unselected_or_unverified": "unavailable_without_discovery_or_query",
+    "automatic_fallback": false,
+    "merge_producers": false,
+    "alternative_producer_requires": [
+      "semantic_equivalence_evidence",
+      "explicit_profile_selection",
+      "new_revision"
+    ],
+    "different_source_query_requires": "new_D_unless_verified_equivalent_alternative",
+    "required_verified_fields": [
+      "producer_version",
+      "environment.cluster_id",
+      "environment.datasource_uid",
+      "environment.selector",
+      "target_labels",
+      "sample_type",
+      "unit",
+      "timestamp_basis",
+      "sample_interval",
+      "max_hold",
+      "invalid_values",
+      "counter_reset",
+      "verification.observed_window",
+      "verification.retention_evidence",
+      "verification.evidence_refs"
+    ],
+    "metric_requires": [
+      "metric"
+    ],
+    "log_requires": [
+      "environment.selector",
+      "json_target_fields",
+      "event_timestamp_rule"
+    ],
+    "not_applicable_rule": "sample_interval/max_hold/invalid_values/counter_reset may declare not_applicable only with a reviewed reason and evidence; null is never verified",
+    "revision_changes_on": [
+      "producer",
+      "producer_version",
+      "source",
+      "metric_or_stream",
+      "selector",
+      "target_labels",
+      "unit",
+      "sample_type",
+      "timestamp_basis",
+      "normalization_rules"
+    ],
+    "evidence_preserves": [
+      "query_id",
+      "query_revision",
+      "binding_id",
+      "binding_revision",
+      "producer_version",
+      "source",
+      "scope",
+      "time_range",
+      "unit",
+      "quality",
+      "original_samples_or_events"
+    ]
+  },
+  "scope_contracts": {
+    "G": {
+      "entities": [
+        "cluster",
+        "gpu_uuid",
+        "node"
+      ],
+      "projection": "authorized_gpu_or_node_scope",
+      "returned": "GPU UUID + original timestamp + value + original labels"
+    },
+    "N": {
+      "entities": [
+        "cluster",
+        "node"
+      ],
+      "projection": "verified_node_identity_within_authorized_scope",
+      "returned": "Node + original timestamp + value + original labels"
+    },
+    "P": {
+      "entities": [
+        "cluster",
+        "namespace",
+        "pod"
+      ],
+      "projection": "authorized_pod_scope_or_verified_bounded_join",
+      "returned": "Pod/Container UID where required + original timestamp + original labels"
+    },
+    "T": {
+      "entities": [
+        "cluster",
+        "scrape_target"
+      ],
+      "projection": "verified_scrape_target_within_authorized_scope",
+      "returned": "scrape target + original timestamp + value"
+    },
+    "L": {
+      "entities": [
+        "cluster",
+        "node",
+        "component_or_workload"
+      ],
+      "projection": "registered_label_and_json_filters",
+      "returned": "raw log + Loki timestamp + source event timestamp when present + producer + target"
+    }
+  },
+  "query_roles": {
+    "observed_gpu_identity": "D02",
+    "gpu_activity": "D02",
+    "observed_gpu_pod_labels": "D02",
+    "pod_uid_history": "D06",
+    "component_log_and_health_input": "D09"
+  },
+  "queries": {
+    "D02": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지: GPU 활동 원본 쿼리",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D02",
+        "cpc-1.nvidia_dcgm_exporter.D02",
+        "cpc-2.nvidia_dcgm_exporter.D02"
+      ],
+      "selected_binding": null,
+      "purpose": "활동값과 신원/작업 labels를 모두 보존. 활동·관측 신원·관측 연결은 서로 다른 코드 출력",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D03": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D03",
+        "cpc-1.nvidia_dcgm_exporter.D03",
+        "cpc-2.nvidia_dcgm_exporter.D03"
+      ],
+      "selected_binding": null,
+      "purpose": "사용량 산식·출력 보존, D15/D16/D17 추가",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D04": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "쿼리 유지, 의미를 GPU 온도로 정렬",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D04"
+      ],
+      "selected_binding": null,
+      "purpose": "O01 온도 계산 보존. Host CPU는 별도 D18/D19. 과거 D04 결과 재해석 금지",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D06": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지",
+      "scope_kind": "P",
+      "binding_candidates": [
+        "kube_state_metrics.D06",
+        "cpc-1.kube_state_metrics.D06",
+        "cpc-2.kube_state_metrics.D06"
+      ],
+      "selected_binding": null,
+      "purpose": "Pod UID·Node 관계와 시간 조인 유지",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D07": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지",
+      "scope_kind": "P",
+      "binding_candidates": [
+        "effective_request_producer.D07"
+      ],
+      "selected_binding": null,
+      "purpose": "effective-v1 생산자·유효성 gate와 O07 출력 유지. 추가 D21 원시 요청을 D07 값으로 대체하지 않음",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D09": {
+      "revision": "draft-1",
+      "kind": "log",
+      "meaning": "유지",
+      "scope_kind": "L",
+      "binding_candidates": [
+        "fleet_intelligence.D09"
+      ],
+      "selected_binding": null,
+      "purpose": "원문·대상·시간·producer와 상태 파서 입력 보존",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D10": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지",
+      "scope_kind": "T",
+      "binding_candidates": [
+        "scrape_collector.D10",
+        "cpc-1.scrape_collector.D10",
+        "cpc-2.scrape_collector.D10"
+      ],
+      "selected_binding": null,
+      "purpose": "기존 수집 상태·품질 입력 유지, D22 추가",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D11": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D11"
+      ],
+      "selected_binding": null,
+      "purpose": "기존 W 적분 보존, D48/D49를 보조 출력으로 추가",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D12": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "유지, 의미를 Node allocatable로 명시",
+      "scope_kind": "N",
+      "binding_candidates": [
+        "kube_state_metrics.D12"
+      ],
+      "selected_binding": null,
+      "purpose": "resource별 기존 값/계획 유지. owner/제약까지 확보된 것으로 해석하지 않음",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D13": {
+      "revision": "draft-1",
+      "kind": "log",
+      "meaning": "유지",
+      "scope_kind": "L",
+      "binding_candidates": [
+        "workload_log_producer.D13"
+      ],
+      "selected_binding": null,
+      "purpose": "기존 조회·근거·업무 영향 보류 유지. 구체 업무 필터를 확보하면 새 revision에서 보완; 원본이 같아 보여도 업무 의미 미확정 상태에서 D09와 합치지 않음",
+      "spec_ref": "d-query-mapping §3"
+    },
+    "D15": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "여유 메모리; MiB 여부 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D15",
+        "cpc-1.nvidia_dcgm_exporter.D15",
+        "cpc-2.nvidia_dcgm_exporter.D15"
+      ],
+      "selected_binding": null,
+      "purpose": "D03과 메모리 압박/점유 보조 계산, RCA·O01/O03",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D16": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "전체 FB 용량; 중앙 이름·용량 단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D16"
+      ],
+      "selected_binding": null,
+      "purpose": "D03/D15와 용량 대비 점유, RCA·O01",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D17": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "FB 점유율; 0~100 여부 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D17"
+      ],
+      "selected_binding": null,
+      "purpose": "계산 점유율 교차 확인, RCA·O01",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D18": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "Host CPU 사용률; 범위·집계 확인",
+      "scope_kind": "N",
+      "binding_candidates": [
+        "fleet_intelligence.D18"
+      ],
+      "selected_binding": null,
+      "purpose": "입력 공급/Host 제약 조사, RCA·O01/O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D19": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "load; 1m/5m/15m labels별 값",
+      "scope_kind": "N",
+      "binding_candidates": [
+        "fleet_intelligence.D19"
+      ],
+      "selected_binding": null,
+      "purpose": "Host 부하 조사, RCA·O01/O04. percent 아님",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D20": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "condition/status별 info 값",
+      "scope_kind": "N",
+      "binding_candidates": [
+        "kube_state_metrics.D20",
+        "cpc-1.kube_state_metrics.D20",
+        "cpc-2.kube_state_metrics.D20"
+      ],
+      "selected_binding": null,
+      "purpose": "Node 상태·사건 맥락, RCA·O01/O06",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D21": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "container/resource/unit별 요청량",
+      "scope_kind": "P",
+      "binding_candidates": [
+        "kube_state_metrics.D21"
+      ],
+      "selected_binding": null,
+      "purpose": "유효 요청 계산의 입력, O07",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D22": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "수집 소요시간, seconds",
+      "scope_kind": "T",
+      "binding_candidates": [
+        "scrape_collector.D22",
+        "cpc-1.scrape_collector.D22",
+        "cpc-2.scrape_collector.D22"
+      ],
+      "selected_binding": null,
+      "purpose": "수집 지연·공백 조사, D10과 O11",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D23": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "메모리 온도; Celsius/오류값 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D23"
+      ],
+      "selected_binding": null,
+      "purpose": "열 관련 RCA·O01/O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D24": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SM clock; MHz 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D24"
+      ],
+      "selected_binding": null,
+      "purpose": "활동·클록 제한 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D25": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "memory clock; MHz 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D25"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리/클록 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D26": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SM 활동; ratio/정의/지원 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D26"
+      ],
+      "selected_binding": null,
+      "purpose": "연산 활동 조사, RCA·O03/O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D27": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SM occupancy; ratio/정의 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D27"
+      ],
+      "selected_binding": null,
+      "purpose": "활동과 점유 차이 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D28": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "Tensor pipe 활동; ratio 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D28"
+      ],
+      "selected_binding": null,
+      "purpose": "작업 연산 특성, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D29": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "DRAM 활동; ratio 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D29"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리 활동 조사, RCA·O04. 용량 아님",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D30": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "engine 활동; ratio/관측 window 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D30"
+      ],
+      "selected_binding": null,
+      "purpose": "D02와 활동 의미 비교, RCA·O03/O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D31": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "PCIe 수신; 원본 rate/누적·시간 단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D31"
+      ],
+      "selected_binding": null,
+      "purpose": "통신 관측, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D32": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "PCIe 송신; 원본 rate/누적·시간 단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D32"
+      ],
+      "selected_binding": null,
+      "purpose": "통신 관측, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D33": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "NVLink 수신; rate/누적·시간 단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D33"
+      ],
+      "selected_binding": null,
+      "purpose": "GPU간 통신 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D34": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "NVLink 송신; rate/누적·시간 단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D34"
+      ],
+      "selected_binding": null,
+      "purpose": "GPU간 통신 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D35": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "XID 코드 관측; 발생 횟수 counter로 해석 금지",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D35"
+      ],
+      "selected_binding": null,
+      "purpose": "D09 로그와 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D36": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SBE volatile device 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D36"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D37": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SBE volatile total 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D37"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D38": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SBE aggregate device 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D38"
+      ],
+      "selected_binding": null,
+      "purpose": "누적 오류 맥락, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D39": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "SBE aggregate total 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D39"
+      ],
+      "selected_binding": null,
+      "purpose": "누적 오류 맥락, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D40": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "DBE volatile device 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D40"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D41": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "DBE volatile total 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D41"
+      ],
+      "selected_binding": null,
+      "purpose": "메모리 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D42": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "DBE aggregate device 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D42"
+      ],
+      "selected_binding": null,
+      "purpose": "누적 오류 맥락, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D43": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "DBE aggregate total 값; 타입/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D43"
+      ],
+      "selected_binding": null,
+      "purpose": "누적 오류 맥락, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D44": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "replay 누적값; reset-aware 증가량",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D44"
+      ],
+      "selected_binding": null,
+      "purpose": "PCIe 오류 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D45": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "clock event reason bitmask; 버전별 해석 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D45"
+      ],
+      "selected_binding": null,
+      "purpose": "D24/D25/전력·온도와 제한 조사, RCA",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D46": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "board 제한 지표; 누적 시간/단위 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D46"
+      ],
+      "selected_binding": null,
+      "purpose": "전력 제한 조사, RCA·O04",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D47": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "상태 enum; 코드표/대상 grain 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D47"
+      ],
+      "selected_binding": null,
+      "purpose": "fabric 상태 조사, RCA·O05",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D48": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "적용 전력 한도; W 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D48"
+      ],
+      "selected_binding": null,
+      "purpose": "D11 실제 소비와 비교, RCA·O09. 소비량 아님",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D49": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "누적 에너지; 단위/reset 확인",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "nvidia_dcgm_exporter.D49"
+      ],
+      "selected_binding": null,
+      "purpose": "D11 적분의 대안/교차 확인, O09/O10",
+      "spec_ref": "d-query-mapping §4"
+    }
+  },
+  "bindings": {
+    "nvidia_dcgm_exporter.D02": {
+      "query_id": "D02",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_GPU_UTIL",
+          "unit": "percent",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true,
+          "target_labels": {
+            "gpu_uuid": "UUID",
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D03": {
+      "query_id": "D03",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_USED",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_FB_USED",
+          "unit": "MiB",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D04": {
+      "query_id": "D04",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_gpu_temp",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "dcgm_fi_dev_gpu_temp",
+          "unit": "celsius",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v6",
+          "validated": true,
+          "target_labels": {
+            "gpu_uuid": "uuid",
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "kube_state_metrics.D06": {
+      "query_id": "D06",
+      "revision": "draft-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "kube_pod_info",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "kube_pod_info",
+          "unit": "info",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v4",
+          "validated": true,
+          "target_labels": {
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "effective_request_producer.D07": {
+      "query_id": "D07",
+      "revision": "draft-1",
+      "producer": "effective_request_producer",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "gpu_ops_effective_unbound_request",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "gpu_ops_effective_unbound_request",
+          "unit": "resource_units",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D09": {
+      "query_id": "D09",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "loki",
+      "metric": null,
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": "fleet-component-log-v1",
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "loki",
+          "revision": "builtin-v3",
+          "health_contract": "fleet-component-log-v1",
+          "json_target_fields": {
+            "node": "resources[\"k8s.node.name\"]",
+            "component": "attributes[\"component\"]"
+          },
+          "validated": true,
+          "target_labels": {
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "scrape_collector.D10": {
+      "query_id": "D10",
+      "revision": "draft-1",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "up",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "up",
+          "unit": "boolean",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D11": {
+      "query_id": "D11",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_power_usage",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "dcgm_fi_dev_power_usage",
+          "unit": "W",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v6",
+          "validated": true,
+          "target_labels": {
+            "gpu_uuid": "uuid",
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "kube_state_metrics.D12": {
+      "query_id": "D12",
+      "revision": "draft-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "kube_node_status_allocatable",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "kube_node_status_allocatable",
+          "unit": "resource_units",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "workload_log_producer.D13": {
+      "query_id": "D13",
+      "revision": "draft-1",
+      "producer": "workload_log_producer",
+      "producer_version": null,
+      "source": "loki",
+      "metric": null,
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "loki",
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D15": {
+      "query_id": "D15",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_FREE",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D16": {
+      "query_id": "D16",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_fb_total",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D17": {
+      "query_id": "D17",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_fb_used_percent",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D18": {
+      "query_id": "D18",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "cpu_used_percent",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D19": {
+      "query_id": "D19",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "cpu_load_average",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "kube_state_metrics.D20": {
+      "query_id": "D20",
+      "revision": "draft-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "kube_node_status_condition",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "kube_state_metrics.D21": {
+      "query_id": "D21",
+      "revision": "draft-1",
+      "producer": "kube_state_metrics",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "kube_pod_container_resource_requests",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "scrape_collector.D22": {
+      "query_id": "D22",
+      "revision": "draft-1",
+      "producer": "scrape_collector",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "scrape_duration_seconds",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D23": {
+      "query_id": "D23",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_MEMORY_TEMP",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D24": {
+      "query_id": "D24",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_SM_CLOCK",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D25": {
+      "query_id": "D25",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_MEM_CLOCK",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D26": {
+      "query_id": "D26",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_SM_ACTIVE",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D27": {
+      "query_id": "D27",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_SM_OCCUPANCY",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D28": {
+      "query_id": "D28",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D29": {
+      "query_id": "D29",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_DRAM_ACTIVE",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D30": {
+      "query_id": "D30",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D31": {
+      "query_id": "D31",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_PCIE_RX_BYTES",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D32": {
+      "query_id": "D32",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_PROF_PCIE_TX_BYTES",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D33": {
+      "query_id": "D33",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_prof_nvlink_rx_bytes",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 소스 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D34": {
+      "query_id": "D34",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_prof_nvlink_tx_bytes",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 소스 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D35": {
+      "query_id": "D35",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_XID_ERRORS",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D36": {
+      "query_id": "D36",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_sbe_vol_dev",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D37": {
+      "query_id": "D37",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_sbe_vol_total",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D38": {
+      "query_id": "D38",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_sbe_agg_dev",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D39": {
+      "query_id": "D39",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_sbe_agg_total",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D40": {
+      "query_id": "D40",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_dbe_vol_dev",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D41": {
+      "query_id": "D41",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_dbe_vol_total",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D42": {
+      "query_id": "D42",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_dbe_agg_dev",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D43": {
+      "query_id": "D43",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_ecc_dbe_agg_total",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D44": {
+      "query_id": "D44",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D45": {
+      "query_id": "D45",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_clocks_event_reasons",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D46": {
+      "query_id": "D46",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_board_limit_violation",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D47": {
+      "query_id": "D47",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_fabric_manager_status",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "fleet_intelligence.D48": {
+      "query_id": "D48",
+      "revision": "draft-1",
+      "producer": "fleet_intelligence",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_enforced_power_limit",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "nvidia_dcgm_exporter.D49": {
+      "query_id": "D49",
+      "revision": "draft-1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": null,
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+      "environment": {
+        "cluster_id": null,
+        "datasource_uid": null,
+        "selector": null
+      },
+      "target_labels": null,
+      "json_target_fields": null,
+      "sample_type": null,
+      "unit": null,
+      "timestamp_basis": null,
+      "event_timestamp_rule": null,
+      "sample_interval": null,
+      "max_hold": null,
+      "invalid_values": null,
+      "counter_reset": null,
+      "health_contract": null,
+      "verification": {
+        "status": "candidate",
+        "observed_window": null,
+        "retention_evidence": null,
+        "evidence_refs": [],
+        "limitation": "Environment-specific binding is not verified in this delivery."
+      },
+      "reference": {
+        "evidence_level": "소스/설정 후보",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      }
+    },
+    "cpc-1.nvidia_dcgm_exporter.D02": {
+      "query_id": "D02",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "percent",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 100,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D02",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_GPU_UTIL",
+          "unit": "percent",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true,
+          "target_labels": {
+            "gpu_uuid": "UUID",
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.nvidia_dcgm_exporter.D03": {
+      "query_id": "D03",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_USED",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "MiB",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D03",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_FB_USED",
+          "unit": "MiB",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.kube_state_metrics.D06": {
+      "query_id": "D06",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "kube_state_metrics",
+      "producer_version": "v2.17.0",
+      "source": "mimir",
+      "metric": "kube_pod_info",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "job": "kube-state-metrics",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "info",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 1,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D06",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "kube_pod_info",
+          "unit": "info",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v4",
+          "validated": true,
+          "target_labels": {
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.scrape_collector.D10": {
+      "query_id": "D10",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "scrape_collector",
+      "producer_version": "v1.19.2",
+      "source": "mimir",
+      "metric": "up",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "boolean",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:51.113000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D10",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "up",
+          "unit": "boolean",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.nvidia_dcgm_exporter.D15": {
+      "query_id": "D15",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.2.3-4.1.3-ubuntu22.04",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_FREE",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "MiB",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D15",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.kube_state_metrics.D20": {
+      "query_id": "D20",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "kube_state_metrics",
+      "producer_version": "v2.17.0",
+      "source": "mimir",
+      "metric": "kube_node_status_condition",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "job": "kube-state-metrics",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "node": "node",
+        "scrape_target": "instance",
+        "condition": "condition",
+        "status": "status"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "boolean",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D20",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-1.scrape_collector.D22": {
+      "query_id": "D22",
+      "revision": "cpc-1-direct-20261007-r1",
+      "producer": "scrape_collector",
+      "producer_version": "v1.19.2",
+      "source": "mimir",
+      "metric": "scrape_duration_seconds",
+      "environment": {
+        "cluster_id": "cpc-1",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-1",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "seconds",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": null,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:51.113000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-1:D22",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-1",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.nvidia_dcgm_exporter.D02": {
+      "query_id": "D02",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_GPU_UTIL",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "percent",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 100,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D02",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_GPU_UTIL",
+          "unit": "percent",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true,
+          "target_labels": {
+            "gpu_uuid": "UUID",
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.nvidia_dcgm_exporter.D03": {
+      "query_id": "D03",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_USED",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "MiB",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D03",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "DCGM_FI_DEV_FB_USED",
+          "unit": "MiB",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.kube_state_metrics.D06": {
+      "query_id": "D06",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "kube_state_metrics",
+      "producer_version": "v2.18.0",
+      "source": "mimir",
+      "metric": "kube_pod_info",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "job": "kube-state-metrics",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "info",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 1,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:15:34.280000Z",
+          "end": "2026-10-06T08:16:19.280000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D06",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "kube_pod_info",
+          "unit": "info",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v4",
+          "validated": true,
+          "target_labels": {
+            "node": "node"
+          }
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.scrape_collector.D10": {
+      "query_id": "D10",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "scrape_collector",
+      "producer_version": "v1.19.2",
+      "source": "mimir",
+      "metric": "up",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "boolean",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:49.280000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D10",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "mimir",
+          "metric": "up",
+          "unit": "boolean",
+          "max_hold_seconds": 30,
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.nvidia_dcgm_exporter.D15": {
+      "query_id": "D15",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "nvidia_dcgm_exporter",
+      "producer_version": "4.4.2-4.7.0-distroless",
+      "source": "mimir",
+      "metric": "DCGM_FI_DEV_FB_FREE",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "MiB",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:52.099000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D15",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.kube_state_metrics.D20": {
+      "query_id": "D20",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "kube_state_metrics",
+      "producer_version": "v2.18.0",
+      "source": "mimir",
+      "metric": "kube_node_status_condition",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "job": "kube-state-metrics",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "node": "node",
+        "scrape_target": "instance",
+        "condition": "condition",
+        "status": "status"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "boolean",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:15:34.280000Z",
+          "end": "2026-10-06T08:16:19.280000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D20",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    },
+    "cpc-2.scrape_collector.D22": {
+      "query_id": "D22",
+      "revision": "cpc-2-direct-20261007-r1",
+      "producer": "scrape_collector",
+      "producer_version": "v1.19.2",
+      "source": "mimir",
+      "metric": "scrape_duration_seconds",
+      "environment": {
+        "cluster_id": "cpc-2",
+        "datasource_uid": "cfyeuxpjjebcwe",
+        "selector": {
+          "cluster_id": "cpc-2",
+          "collection_path": "alloy-direct"
+        }
+      },
+      "target_labels": {
+        "scrape_target": "instance"
+      },
+      "json_target_fields": null,
+      "sample_type": "gauge",
+      "unit": "seconds",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": null,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:49.280000Z",
+          "end": "2026-10-06T08:15:41.467000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-cpc-20261006.json#followup_details.central_effective_config.mimir",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+          "docs/evidence/d-binding-cpc-20261006.json#bindings:cpc-2:D22",
+          "docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile"
+        ],
+        "limitation": "Saved observations and supplied deployment evidence; live Worker acceptance pending."
+      },
+      "reference": {
+        "evidence_level": "CPC-2 과거 수집",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "equivalence_evidence_refs": [
+        "docs/evidence/d-binding-cpc-20261006.json#routing_review.cpc-2",
+        "Same metric and producer as default candidate; environment specialization only."
+      ]
+    }
+  },
+  "transition": {
+    "retired_default_queries": {
+      "D01": {
+        "replacement": "D02",
+        "preserve": "observed GPU identity calculation",
+        "automatic_id_rewrite": false
+      },
+      "D05": {
+        "replacement": "D09",
+        "preserve": "health parser, required facts, producer, freshness, source-position and evidence references",
+        "automatic_id_rewrite": false
+      },
+      "D08": {
+        "replacement": "D02",
+        "preserve": "observed GPU-Pod labels joined with D06 UID and valid time",
+        "automatic_id_rewrite": false
+      }
+    },
+    "before_consolidating": [
+      "compare datasource/producer revision/filter/scope/period/unit",
+      "preserve each consumer authorized target arguments",
+      "reuse only identical approved calls"
+    ],
+    "dedicated_allocation_override": "Keep its old profile or define a separately reviewed allocation D before migration; never replace it with observed GPU_UTIL labels.",
+    "historical_evidence": "Preserve old query IDs, versions, snapshots, hashes and published Runbook revisions without rewriting.",
+    "old_jobs": "Remain pinned to the old profile and compatible Worker until drained; do not execute retired IDs via this new default registry.",
+    "runbook_transition": "Review the 267 authored sources and applicable published revisions; preserve required health facts, authoring compatibility and investigation-only status. Publish a new revision only through the existing workflow."
+  },
+  "consumer_invariants": {
+    "shared_profile": "RCA and Report load this same profile; RCA Runbook query IDs and required facts resolve through the shared registry.",
+    "fact_support": "Binding verification alone does not establish fact support; the registered parser/calculation and consumer must support the requested fact.",
+    "d02_outputs": [
+      "identity from labels",
+      "activity series",
+      "observed connection labels; zero activity remains a valid observation"
+    ],
+    "d02_pod_join": "D06 UID and valid-time agreement required; never infer exclusive allocation or MIG allocation from utilization.",
+    "d09_health": "Use fleet-component-log-v1; missing producer, source time or freshness never becomes a valid state fact.",
+    "d14": "Product DB context only; not an external query or binding.",
+    "selection": "Only O/Runbook-selected queries and bounded dependencies; do not query all catalog entries.",
+    "failure_isolation": "Unavailable optional inputs block only dependent new outputs; preserve independent existing calculations.",
+    "scope": "Never widen to an entire cluster when authorized entity projection is unavailable.",
+    "calculation": "Deterministic registered code; preserve empty/failure/zero distinctions; no LLM arithmetic or data invention.",
+    "non_equivalence": [
+      "D07 effective requests != D21 raw requests",
+      "D35 XID code != event counter",
+      "D11 energy integral and D49 counter delta must not be double-counted",
+      "ECC device/total and volatile/aggregate must not be blindly summed",
+      "D19 load != percent",
+      "D48 power limit != consumed power"
+    ]
+  },
+  "catalog_dispositions": {
+    "source": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/docs/specs/common/d-query-mapping.md#L253",
+    "scope": "All identifiers in mapping section 9, not an inventory of all deployed metrics",
+    "items": {
+      "DCGM_EXP_CLOCK_EVENTS_COUNT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_EXP_GPU_HEALTH_STATUS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_EXP_P2P_STATUS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_EXP_XID_ERRORS_COUNT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BANKS_REMAP_ROWS_AVAIL_HIGH": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BANKS_REMAP_ROWS_AVAIL_LOW": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BANKS_REMAP_ROWS_AVAIL_MAX": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BANKS_REMAP_ROWS_AVAIL_NONE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BANKS_REMAP_ROWS_AVAIL_PARTIAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BOARD_LIMIT_VIOLATION": {
+        "status": "mapped",
+        "query_ids": [
+          "D46"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_BRAND": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_C2C_LINK_ERROR_REPLAY": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CLOCKS_EVENT_REASONS": {
+        "status": "mapped",
+        "query_ids": [
+          "D45"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CPU_POWER_LIMIT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CPU_POWER_UTIL_CURRENT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CPU_TEMP_CRITICAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CPU_TEMP_CURRENT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_CPU_TEMP_WARNING": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_DEC_UTIL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_DBE_AGG_DEV": {
+        "status": "mapped",
+        "query_ids": [
+          "D42"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_DBE_AGG_TOTAL": {
+        "status": "mapped",
+        "query_ids": [
+          "D43"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_DBE_VOL_DEV": {
+        "status": "mapped",
+        "query_ids": [
+          "D40"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_DBE_VOL_TOTAL": {
+        "status": "mapped",
+        "query_ids": [
+          "D41"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_INFOROM_VER": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_SBE_AGG_DEV": {
+        "status": "mapped",
+        "query_ids": [
+          "D38"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_SBE_AGG_TOTAL": {
+        "status": "mapped",
+        "query_ids": [
+          "D39"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_SBE_VOL_DEV": {
+        "status": "mapped",
+        "query_ids": [
+          "D36"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ECC_SBE_VOL_TOTAL": {
+        "status": "mapped",
+        "query_ids": [
+          "D37"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ENC_UTIL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ENFORCED_POWER_LIMIT": {
+        "status": "mapped",
+        "query_ids": [
+          "D48"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FABRIC_MANAGER_STATUS": {
+        "status": "mapped",
+        "query_ids": [
+          "D47"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FB_FREE": {
+        "status": "mapped",
+        "query_ids": [
+          "D15"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FB_RESERVED": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FB_TOTAL": {
+        "status": "mapped",
+        "query_ids": [
+          "D16"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FB_USED": {
+        "status": "mapped",
+        "query_ids": [
+          "D03"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_FB_USED_PERCENT": {
+        "status": "mapped",
+        "query_ids": [
+          "D17"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_GPU_TEMP": {
+        "status": "mapped",
+        "query_ids": [
+          "D04"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_GPU_TEMP_LIMIT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_GPU_UTIL": {
+        "status": "mapped",
+        "query_ids": [
+          "D02"
+        ],
+        "reason": "기본 GPU_UTIL 쿼리 기준. 별도 할당 source override는 §3의 보존 조건 적용",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_INFOROM_CONFIG_VALID": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_INFOROM_IMAGE_VER": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_LOW_UTIL_VIOLATION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_MEM_CLOCK": {
+        "status": "mapped",
+        "query_ids": [
+          "D25"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_MEM_COPY_UTIL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_MEMORY_TEMP": {
+        "status": "mapped",
+        "query_ids": [
+          "D23"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_BANDWIDTH_L0": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_EFFECTIVE_BER_FLOAT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_EFFECTIVE_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_LINK_RECOVERY_FAILED_EVENTS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_LINK_RECOVERY_SUCCESSFUL_EVENTS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_LOCAL_LINK_INTEGRITY_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_BUFFER_OVERRUN_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_GENERAL_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_MALFORMED_PACKET_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_REMOTE_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_RX_SYMBOL_ERRORS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_SYMBOL_BER_FLOAT": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_COUNT_TX_DISCARDS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_TOTAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_TOTAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_ERROR_DL_CRC": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_ERROR_DL_RECOVERY": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_ERROR_DL_REPLAY": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_RECOVERY_ERROR_COUNT_TOTAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_OEM_INFOROM_VER": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_PCIE_REPLAY_COUNTER": {
+        "status": "mapped",
+        "query_ids": [
+          "D44"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_POWER_INFOROM_VER": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_POWER_USAGE": {
+        "status": "mapped",
+        "query_ids": [
+          "D11"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_POWER_VIOLATION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_RELIABILITY_VIOLATION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_RETIRED_DBE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_RETIRED_PENDING": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_RETIRED_SBE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ROW_REMAP_FAILURE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_ROW_REMAP_PENDING": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_SERIAL": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_SLOWDOWN_TEMP": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_SM_CLOCK": {
+        "status": "mapped",
+        "query_ids": [
+          "D24"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_SYNC_BOOST_VIOLATION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_THERMAL_VIOLATION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION": {
+        "status": "mapped",
+        "query_ids": [
+          "D49"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_VBIOS_VERSION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_VGPU_LICENSE_STATUS": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DEV_XID_ERRORS": {
+        "status": "mapped",
+        "query_ids": [
+          "D35"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_DRIVER_VERSION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_NVML_VERSION": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_DRAM_ACTIVE": {
+        "status": "mapped",
+        "query_ids": [
+          "D29"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_GR_ENGINE_ACTIVE": {
+        "status": "mapped",
+        "query_ids": [
+          "D30"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_NVLINK_RX_BYTES": {
+        "status": "mapped",
+        "query_ids": [
+          "D33"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_NVLINK_TX_BYTES": {
+        "status": "mapped",
+        "query_ids": [
+          "D34"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PCIE_RX_BYTES": {
+        "status": "mapped",
+        "query_ids": [
+          "D31"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PCIE_TX_BYTES": {
+        "status": "mapped",
+        "query_ids": [
+          "D32"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_FP16_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_FP32_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_FP64_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_INT_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE": {
+        "status": "mapped",
+        "query_ids": [
+          "D28"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_TENSOR_DFMA_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_TENSOR_HMMA_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_PIPE_TENSOR_IMMA_ACTIVE": {
+        "status": "deferred",
+        "query_ids": [],
+        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_SM_ACTIVE": {
+        "status": "mapped",
+        "query_ids": [
+          "D26"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      },
+      "DCGM_FI_PROF_SM_OCCUPANCY": {
+        "status": "mapped",
+        "query_ids": [
+          "D27"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
+        "executable_metric_name": false
+      }
+    }
+  }
+}
