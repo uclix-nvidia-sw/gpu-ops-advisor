@@ -2,11 +2,12 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, JobRows, More, QueryState } from '../components/live';
-import { queryPath, str, topicId, topics, useCommand, useList } from '../lib/live';
+import { queryPath, str, topics, useCommand, useList } from '../lib/live';
 import { scopeLabel } from '../lib/domain';
 import { reportKind, reportKinds, reportSelection, topicDisplayBases } from '../lib/reportKinds';
-import { useReportListPosition } from '../lib/reportNavigation';
+import { reportTabs, useReportListPosition } from '../lib/reportNavigation';
 import {
+  reportReceivedRange,
   previousReportDay,
   reportDayRange,
   reportDaySummary,
@@ -16,21 +17,22 @@ import {
 } from '../lib/reportPeriod';
 import { ReportTimeNote } from '../components/ReportMeta';
 import { useApp } from '../lib/store';
-export const reportTabs = [
-  { to: '/reports', label: '보고서 이력' },
-  { to: '/schedules', label: '자동 보고서 설정' },
-  { to: '/operator-guide', label: '운영자 가이드' },
-];
 export function Reports() {
   const app = useApp();
   const [filterParams] = useSearchParams();
   const topic = filterParams.get('topic') || '';
   const finalOnly = filterParams.get('tab') === 'final';
+  const received = reportReceivedRange(filterParams);
+  const filtered = ['status', 'topic', 'tab', 'received_from', 'received_to'].some((key) =>
+    filterParams.has(key),
+  );
   const q = useList(
-    app.ready
+    app.ready && !received.error
       ? queryPath('/reports', {
           scope: app.scope,
           topic_id: topic,
+          from: received.from,
+          to: received.to,
           status: filterParams.get('status') || (finalOnly ? 'succeeded' : ''),
           limit: 30,
         })
@@ -39,11 +41,11 @@ export function Reports() {
   );
   useReportListPosition(q.items);
   return (
-    <div className="page report-workspace">
+    <div className="page report-workspace report-list-page">
       <PageHead
-        eyebrow="OPERATIONS REPORTS"
+        eyebrow=""
         title="운영 분석·보고서"
-        description="저장된 근거를 바탕으로 운영 분석을 요청하고 결과를 확인합니다. 작성 중인 보고서도 같은 화면에서 진행 상태를 확인할 수 있습니다."
+        description="기간과 대상을 확인하고 보고서를 읽으세요. 작성 중인 보고서도 여기에서 확인할 수 있습니다."
         actions={
           <Link className="button primary" to="/reports/new">
             새 보고서 만들기
@@ -51,8 +53,8 @@ export function Reports() {
         }
       />
       <NavTabs items={reportTabs} />
-      <ReportTimeNote />
-      <Panel title={finalOnly ? '공개된 Ops 최종 보고서' : '보고서 목록'}>
+      <Panel>
+        {finalOnly && <h2 className="live-padding">공개된 Ops 최종 보고서</h2>}
         {finalOnly && (
           <p>
             완료된 보고서를 바로 읽을 수 있습니다. 자료 부족·부분 분석 여부는 결과 품질에서
@@ -60,10 +62,37 @@ export function Reports() {
           </p>
         )}
         <ReportFilters />
-        <QueryState query={q} empty={!q.items.length}>
-          <JobRows items={q.items} />
-        </QueryState>
-        <More query={q} />
+        {received.error ? (
+          <p className="live-padding" role="alert">
+            {received.error}
+          </p>
+        ) : (
+          <>
+            {!q.isPending && !q.isError && (
+              <div className="report-list-info">
+                <span>
+                  불러온 보고서 {q.items.length}건{q.hasNextPage ? ' · 더 보기 가능' : ''}
+                </span>
+                <span>접수 시각 최신순 · 모든 시각은 한국 시간 기준</span>
+              </div>
+            )}
+            <QueryState
+              query={q}
+              empty={!q.items.length}
+              emptyTitle={
+                filtered ? '조건에 맞는 보고서가 없습니다.' : '아직 요청한 보고서가 없습니다.'
+              }
+              emptyDescription={
+                filtered
+                  ? '위의 필터 해제로 다른 보고서를 확인하세요.'
+                  : '새 보고서 만들기에서 분석을 요청하세요.'
+              }
+            >
+              <JobRows items={q.items} />
+            </QueryState>
+            <More query={q} />
+          </>
+        )}
       </Panel>
     </div>
   );
@@ -497,32 +526,99 @@ export function ReportFilters() {
     setParams(next);
   };
   return (
-    <div className="live-toolbar">
-      <Field label="실행 상태">
-        <select
-          value={params.get('status') || (params.get('tab') === 'final' ? 'succeeded' : '')}
-          onChange={(e) => filter('status', e.target.value)}
+    <div className="report-list-filters">
+      <div className="live-toolbar">
+        <Field label="실행 상태">
+          <select
+            value={params.get('status') || (params.get('tab') === 'final' ? 'succeeded' : '')}
+            onChange={(e) => filter('status', e.target.value)}
+          >
+            <option value="">전체 이력</option>
+            <option value="succeeded">실행 완료</option>
+            <option value="queued">대기 중</option>
+            <option value="running">실행 중</option>
+            <option value="retry_wait">재시도 대기</option>
+            <option value="failed">실패</option>
+            <option value="cancelled">취소됨</option>
+            <option value="expired">기한 만료</option>
+          </select>
+        </Field>
+        <Field label="종류별 세부 분석">
+          <select
+            value={params.get('topic') || ''}
+            onChange={(e) => filter('topic', e.target.value)}
+          >
+            <option value="">전체 주제</option>
+            {reportKinds.map((kind) => (
+              <optgroup key={kind.id} label={kind.name}>
+                {kind.topicIds.map((id) => (
+                  <option key={id} value={id}>
+                    {topics[Number(id.slice(1)) - 1]}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </Field>
+        <button
+          className="button"
+          disabled={
+            !['status', 'topic', 'tab', 'received_from', 'received_to'].some((key) =>
+              params.has(key),
+            )
+          }
+          onClick={() => {
+            const next = new URLSearchParams(params);
+            ['status', 'topic', 'tab', 'received_from', 'received_to'].forEach((key) =>
+              next.delete(key),
+            );
+            setParams(next);
+          }}
         >
-          <option value="">전체 이력</option>
-          <option value="succeeded">실행 완료</option>
-          <option value="queued">대기 중</option>
-          <option value="running">실행 중</option>
-          <option value="retry_wait">재시도 대기</option>
-          <option value="failed">실패</option>
-          <option value="cancelled">취소됨</option>
-          <option value="expired">기한 만료</option>
-        </select>
-      </Field>
-      <Field label="분석 주제">
-        <select value={params.get('topic') || ''} onChange={(e) => filter('topic', e.target.value)}>
-          <option value="">전체 주제</option>
-          {topics.map((name, i) => (
-            <option key={topicId(i)} value={topicId(i)}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </Field>
+          필터 해제
+        </button>
+      </div>
+      <details
+        className="report-date-filter"
+        open={params.has('received_from') || params.has('received_to') || undefined}
+      >
+        <summary>
+          요청 접수일로 찾기
+          {params.has('received_from') || params.has('received_to')
+            ? ` · ${params.get('received_from') || '시작 제한 없음'} ~ ${params.get('received_to') || '종료 제한 없음'}`
+            : ''}
+        </summary>
+        <p>분석 대상 기간이 아니라 보고서를 요청한 날짜로 찾습니다. 종료일까지 포함합니다.</p>
+        <form
+          className="report-date-form"
+          key={`${params.get('received_from')}-${params.get('received_to')}`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const values = new FormData(event.currentTarget);
+            const next = new URLSearchParams(params);
+            for (const key of ['received_from', 'received_to']) {
+              const value = String(values.get(key) || '');
+              if (value) next.set(key, value);
+              else next.delete(key);
+            }
+            setParams(next);
+          }}
+        >
+          <Field label="접수 시작일">
+            <input
+              type="date"
+              name="received_from"
+              defaultValue={params.get('received_from') || ''}
+            />
+          </Field>
+          <Field label="접수 종료일">
+            <input type="date" name="received_to" defaultValue={params.get('received_to') || ''} />
+          </Field>
+          <button className="button" type="submit">
+            접수일 적용
+          </button>
+        </form>
+      </details>
     </div>
   );
 }

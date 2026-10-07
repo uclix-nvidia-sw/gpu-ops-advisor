@@ -14,13 +14,14 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom';
+import { Link, Outlet, useLocation, matchPath } from 'react-router-dom';
 import { obj, useResource } from '../lib/live';
 import { reportScopeClusters } from '../lib/workflow';
+import { reportTabs } from '../lib/reportNavigation';
 import { scopeLabel } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
-import { Empty, Field, Modal, PageHead } from './ui';
+import { Empty, Field, Modal, NavTabs, PageHead } from './ui';
 import { ViewMode } from './ViewMode';
 import { ApiInspector, DeveloperContext } from './DeveloperContext';
 const nav = [
@@ -28,7 +29,6 @@ const nav = [
   { to: '/fleet/assets', label: '자산·관측', icon: Server },
   { to: '/cases', label: 'RCA 조사', icon: ScanSearch },
   { to: '/reports', label: '운영 분석·보고서', icon: ChartNoAxesCombined },
-  { to: '/operator-guide', label: '운영자 가이드', icon: BookOpen },
   { to: '/jobs', label: '작업 이력', icon: History },
   { to: '/knowledge', label: '지식·Runbook', icon: BookOpen },
   { to: '/settings/models', label: '연결·설정', icon: Settings2 },
@@ -50,7 +50,6 @@ export function Shell() {
           '자산 탐색',
           '사건 대응',
           '분석 서재',
-          '운영자 가이드',
           '요청 진행',
           '운영 지식',
           '환경 관리',
@@ -61,7 +60,6 @@ export function Shell() {
             '관측·신원',
             '사건·RCA',
             '보고서·일정',
-            '운영자 가이드',
             '작업 디버깅',
             'Runbook·revision',
             '연결·구성',
@@ -75,14 +73,20 @@ export function Shell() {
   useEffect(() => {
     setMobile(false);
     window.scrollTo(0, 0);
-    requestAnimationFrame(() =>
-      document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true }),
-    );
+    requestAnimationFrame(() => {
+      // The report list restores focus to the selected report on return.
+      if (
+        location.pathname === '/reports' &&
+        document.activeElement?.closest('[id^="report-row-"]')
+      )
+        return;
+      document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+    });
   }, [location.pathname]);
   const active = (to: string) =>
     location.pathname.startsWith(to.split('/').slice(0, 2).join('/')) ||
     (to === '/cases' && /analyses|incidents/.test(location.pathname)) ||
-    (to === '/reports' && location.pathname.startsWith('/schedules'));
+    (to === '/reports' && (isGuide || location.pathname.startsWith('/schedules')));
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
@@ -104,10 +108,15 @@ export function Shell() {
       <div className="nav-label">{app.mode === 'developer' ? 'INSPECT' : 'WORKSPACE'}</div>
       <nav className="main-nav" aria-label="주 메뉴">
         {menus.map((n) => (
-          <NavLink key={n.to} to={n.to} className={`nav-item ${active(n.to) ? 'active' : ''}`}>
+          <Link
+            key={n.to}
+            to={n.to}
+            className={`nav-item ${active(n.to) ? 'active' : ''}`}
+            aria-current={active(n.to) ? 'page' : undefined}
+          >
             <n.icon size={19} />
             <span>{n.label}</span>
-          </NavLink>
+          </Link>
         ))}
       </nav>
       <div className="sidebar-bottom">
@@ -203,7 +212,7 @@ export function Shell() {
                 </div>
                 <div className="scope-right">
                   <span className="time-zone">Asia/Seoul</span>
-                  {!isJobHistory && (
+                  {!isJobHistory && !location.pathname.startsWith('/reports') && (
                     <select
                       aria-label="조회 기간"
                       value={app.period}
@@ -228,6 +237,12 @@ export function Shell() {
         )}
         <main id="main-content">
           {app.mode === 'developer' && <DeveloperContext />}
+          {location.pathname === '/reports' &&
+            (me.isPending || me.isError || !app.registeredScope.clusters.length) && (
+              <div className="live-padding">
+                <NavTabs items={reportTabs} />
+              </div>
+            )}
           {isGuide ? (
             <Outlet />
           ) : (

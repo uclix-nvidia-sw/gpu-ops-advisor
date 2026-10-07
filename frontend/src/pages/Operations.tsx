@@ -6,8 +6,9 @@ import { ReportOrigin, ReportTimeNote, ReportScope } from '../components/ReportM
 import { formatDate, labels } from '../lib/domain';
 import { reportPeriodLabel, reportRequestTime } from '../lib/reportPeriod';
 import { reportTitle, reportTopics } from '../lib/workflow';
-import { reportTabs, ReportFilters } from './Reports';
-import { useReportListPosition } from '../lib/reportNavigation';
+import { ReportFilters } from './Reports';
+import { reportReceivedRange } from '../lib/reportPeriod';
+import { reportTabs, useReportListPosition } from '../lib/reportNavigation';
 import { groupLabel } from '../lib/report';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { Badge, NavTabs } from '../components/ui';
@@ -278,11 +279,14 @@ export function OperationsReports() {
     [params] = useSearchParams();
   const topic = params.get('topic') || '';
   const finalOnly = params.get('tab') === 'final';
+  const received = reportReceivedRange(params);
   const q = useList(
-    app.canOperate
+    app.canOperate && !received.error
       ? queryPath('/reports', {
           scope: app.scope,
           topic_id: topic,
+          from: received.from,
+          to: received.to,
           status: params.get('status') || (finalOnly ? 'succeeded' : ''),
           limit: 30,
         })
@@ -316,49 +320,59 @@ export function OperationsReports() {
         </section>
       )}
       <ReportFilters />
-      <QueryState query={q} empty={!q.items.length}>
-        <div className="ops-library">
-          {q.items.map((r, i) => (
-            <Link
-              className="ops-report-book"
-              id={`report-row-${str(r.id)}`}
-              state={{ reportList, reportRow: str(r.id) }}
-              key={str(r.id)}
-              to={`/reports/${str(r.id)}#final-report`}
-            >
-              <div className="ops-book-spine">
-                <FileChartColumn size={32} />
-                <span>{String(i + 1).padStart(2, '0')}</span>
-              </div>
-              <div>
-                <div className="head-actions">
-                  <Badge status={str(r.status) || null} />
-                  <Badge status={str(r.result_status, 'unpublished')} />
+      {received.error ? (
+        <p role="alert">{received.error}</p>
+      ) : (
+        <QueryState
+          query={q}
+          empty={!q.items.length}
+          emptyTitle="조건에 맞는 보고서가 없습니다."
+          emptyDescription="필터 해제로 다른 보고서를 확인하거나 새 보고서를 요청하세요."
+        >
+          <div className="ops-library">
+            {q.items.map((r, i) => (
+              <Link
+                className="ops-report-book"
+                id={`report-row-${str(r.id)}`}
+                state={{ reportList, reportRow: str(r.id) }}
+                key={str(r.id)}
+                to={`/reports/${str(r.id)}#final-report`}
+              >
+                <div className="ops-book-spine">
+                  <FileChartColumn size={32} />
+                  <span>{String(i + 1).padStart(2, '0')}</span>
                 </div>
-                <h2 className="report-title-with-origin">
-                  <ReportOrigin value={r.report_origin} />
-                  {reportTitle(r)}
-                </h2>
-                <p className="muted">{reportTopics(r)}</p>
-                <ReportScope job={r} />
-                <dl>
-                  <dt>요청 집계</dt>
-                  <dd>{groupLabel(r.group_by, r.topic_group_by)}</dd>
-                  <dt>분석 대상 기간</dt>
-                  <dd>
-                    {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}
-                  </dd>
-                  <dt>요청 접수 시각</dt>
-                  <dd>{reportRequestTime(str(r.created_at))}</dd>
-                </dl>
-                <span className="ops-link">
-                  {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'} <ArrowRight size={16} />
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </QueryState>
+                <div>
+                  <div className="head-actions">
+                    <Badge status={str(r.status) || null} />
+                    <Badge status={str(r.result_status, 'unpublished')} />
+                  </div>
+                  <h2 className="report-title-with-origin">
+                    <ReportOrigin value={r.report_origin} />
+                    {reportTitle(r)}
+                  </h2>
+                  <p className="muted">{reportTopics(r)}</p>
+                  <ReportScope job={r} />
+                  <dl>
+                    <dt>요청 집계</dt>
+                    <dd>{groupLabel(r.group_by, r.topic_group_by)}</dd>
+                    <dt>분석 대상 기간</dt>
+                    <dd>
+                      {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}
+                    </dd>
+                    <dt>요청 접수 시각</dt>
+                    <dd>{reportRequestTime(str(r.created_at))}</dd>
+                  </dl>
+                  <span className="ops-link">
+                    {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'}{' '}
+                    <ArrowRight size={16} />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </QueryState>
+      )}
       <More query={q} />
     </div>
   );

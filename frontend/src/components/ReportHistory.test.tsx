@@ -81,7 +81,7 @@ it('keeps the newest request first even while an older published report exists',
   expect(html.indexOf('id="report-row-pending"')).toBeLessThan(
     html.indexOf('id="report-row-latest"'),
   );
-  expect(html).toContain('가장 최근 요청');
+  expect(html).toContain('현재 목록의 최근 요청');
   expect(html).toContain('2026. 10. 02. 11:37:18');
   expect(html).toContain('2026. 10. 01. 하루 · 1일(24시간)');
   expect(html).toContain('아직 실행 시작 기록이 없습니다');
@@ -96,7 +96,12 @@ it('keeps the newest request first even while an older published report exists',
 it('shows a saved summary only when the newest request is published', () => {
   const html = render([job]);
   expect(state.paths).toEqual(['/reports/latest']);
-  for (const text of ['0 %', '산출 불가', '자료 부족·주의사항', 'GPU 공유 구간'])
+  for (const text of [
+    '확인 가능한 분석',
+    'Namespace·프로젝트 배분',
+    '해석 시 주의',
+    'GPU 공유 구간',
+  ])
     expect(html).toContain(text);
 });
 it('keeps the report link and retry available when summary retrieval fails', () => {
@@ -144,4 +149,15 @@ it('shows execution duration from the existing featured detail without fetching 
   expect(html).toContain('보고서 실행시간');
   expect(html).toContain('<strong>5분 0초</strong>');
   expect(state.paths).toEqual(['/reports/latest']);
+});
+
+it('uses saved prose without presenting the first namespace as a representative metric', () => {
+  state.data.result = {
+    ...(state.data.result as Row),
+    summary: '저장된 근거로 작성된 보고서 요약',
+  };
+  const html = render([job]);
+  expect(html).toContain('저장된 근거로 작성된 보고서 요약');
+  expect(html).not.toContain('연결 GPU 평균 활동률:');
+  expect(html).toContain('GPU 공유 구간');
 });

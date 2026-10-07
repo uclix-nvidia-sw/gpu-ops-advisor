@@ -87,7 +87,10 @@ describe('Ops report landing', () => {
         expect(html).toContain('<strong>cpc-2</strong>');
         expect(html).toContain('Namespace 범위</span><span>training</span>');
         expect(html).toContain('<dt>집계 기준</dt><dd>Namespace</dd>');
-        expect(html).toContain('title="published">ID publishe</span>');
+        expect(html).not.toContain('ID publishe');
+        expect(html).toContain(
+          '<details class="report-history-details"><summary>기간·대상·요청 상세</summary>',
+        );
         expect(html).toContain('<article class="report-history-card report-history-featured"');
         expect(html).not.toContain('<table');
         expect(html).toContain('<code>published</code>');
@@ -250,3 +253,43 @@ it('maps multiple kinds to one deduplicated request with per-topic bases', () =>
   expect(reportSelection(reportKinds.map((k) => k.id)).topic_ids).toHaveLength(11);
   expect(reportSelection([]).topic_ids).toEqual([]);
 });
+
+it.each([Reports, OperationsReports])(
+  'filters request dates with KST boundaries through the existing list API',
+  (Page) => {
+    renderToStaticMarkup(
+      <MemoryRouter
+        initialEntries={['/reports?received_from=2026-09-01&received_to=2026-10-06&topic=O08']}
+      >
+        <Page />
+      </MemoryRouter>,
+    );
+    const query = new URL(paths.at(-1)!, 'http://localhost').searchParams;
+    expect(query.get('from')).toBe('2026-08-31T15:00:00.000Z');
+    expect(query.get('to')).toBe('2026-10-06T15:00:00.000Z');
+    expect(query.get('topic_id')).toBe('O08');
+  },
+);
+it('groups all existing topic options by the seven report kinds without inventing a category API', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <Reports />
+    </MemoryRouter>,
+  );
+  expect(html.match(/<optgroup /g)).toHaveLength(7);
+  expect(html.match(/value="O[0-9]{2}"/g)).toHaveLength(11);
+  expect(html).toContain('분석 대상 기간이 아니라 보고서를 요청한 날짜');
+});
+
+it.each([Reports, OperationsReports])(
+  'rejects invalid reception dates instead of silently loading all reports',
+  (Page) => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/reports?received_from=2026-10-08&received_to=2026-10-07']}>
+        <Page />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('접수 종료일은 시작일과 같거나 이후여야 합니다.');
+    expect(paths.at(-1)).toBeNull();
+  },
+);

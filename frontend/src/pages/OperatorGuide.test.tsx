@@ -43,12 +43,20 @@ it.each(['classic', 'operations', 'developer'])(
     app.mode = mode;
     app.connection.isError = true;
     const html = render();
-    for (const kind of reportKinds) expect(html).toContain(`<strong>${kind.name}</strong>`);
+    for (const kind of reportKinds) {
+      const label = kind.id === 'health' ? 'GPU 상태·에너지·장애' : kind.name;
+      expect(html).toContain(`<strong>${label}</strong>`);
+    }
     expect(html).toContain('id="guide-kind-content"');
     expect(html).toContain('>O08</span>');
     expect(html).not.toContain('>O01</span>');
     expect(html).toContain('href="/reports/new?kind=namespace"');
-    expect(html).toContain('href="/operator-guide"');
+    const sidebar = html.match(/<nav class="main-nav"[^>]*>(.*?)<\/nav>/s)?.[1];
+    expect(sidebar).toBeDefined();
+    expect(sidebar).not.toContain('href="/operator-guide"');
+    expect(sidebar).toMatch(/class="nav-item active" aria-current="page" href="\/reports"/);
+    expect(html).toMatch(/class="active" aria-current="page" href="\/operator-guide"/);
+    expect(html).toContain('href="/schedules"');
     expect(html).toContain('href="/reports/new"');
     expect(html).toContain('실시간 연결 상태나 데이터 보유 여부를 판정하는 화면은 아닙니다');
     expect(html).not.toContain('fixture offline');
@@ -61,6 +69,7 @@ it('allows reading before cluster registration without opening report execution'
   expect(render()).toContain('11개 소주제');
   expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
   expect(render('/reports')).not.toContain('report-content-marker');
+  expect(render('/reports')).toContain('href="/operator-guide"');
 });
 
 it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
@@ -94,5 +103,14 @@ it('hides the unused time selector on job history and detail while retaining sco
   expect(html).toContain('class="scope-button"');
   expect(html).toContain('aria-label="데이터 새로고침"');
   expect(render('/jobs/saved')).not.toContain('aria-label="조회 기간"');
-  expect(render('/reports/new')).toContain('aria-label="조회 기간"');
+  expect(render('/reports/new')).not.toContain('aria-label="조회 기간"');
+  expect(render('/reports')).not.toContain('aria-label="조회 기간"');
+});
+
+it('keeps a guide entry on reports when the connection fails', () => {
+  app.connection.isError = true;
+  const html = render('/reports');
+  expect(html).toContain('href="/operator-guide"');
+  expect(html).toContain('fixture offline');
+  expect(html).not.toContain('report-content-marker');
 });

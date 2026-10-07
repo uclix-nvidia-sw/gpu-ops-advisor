@@ -1,6 +1,6 @@
 import { ArrowUpRight, Inbox, Info, Search, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { labels } from '../lib/domain';
 export function Badge({ status, label }: { status: string | null; label?: string }) {
   return (
@@ -61,10 +61,16 @@ export function Panel({
   );
 }
 export function NavTabs({ items }: { items: { label: string; to: string }[] }) {
+  const { pathname } = useLocation();
   return (
     <nav className="tabs" aria-label="하위 메뉴">
       {items.map((i) => (
-        <Link key={i.to} className={location.pathname === i.to ? 'active' : ''} to={i.to}>
+        <Link
+          key={i.to}
+          className={pathname === i.to ? 'active' : ''}
+          aria-current={pathname === i.to ? 'page' : undefined}
+          to={i.to}
+        >
           {i.label}
         </Link>
       ))}
