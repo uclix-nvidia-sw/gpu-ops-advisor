@@ -1,3 +1,14 @@
+# 2026-10-07 Shared binding MCP discovery — 공통 알림 경로 검수
+
+- 기준: 원격 main `85eae1fc87056e0fff4326001b5e6439ee5ea117` (PR #78 병합). 이전 Worker 출력은 candidate/UID null로 D02·D09가 `binding_unselected`였으며, 발행 성공을 유효한 원인 분석으로 해석하지 않았다.
+- 구현: 공통 `shared-grafana-discovery-20261007-r1`, D02·D09의 검토된 관측 계약만 활성화하고 나머지 43개는 차단한다. 요청 cluster_id → 승인된 후보 라벨 → 유일한 datasource UID를 MCP로 해석한다. 값 별칭·CPC 목록·CPC별 profile을 추가하지 않는다. Fleet machine_id는 JSON 수집 조건에 전달한다. 시각/health fact 제한은 유지한다.
+- 검증 결과: 루트에서 `RUN_AGENT_E2E=1` 및 격리 localhost DB로 `python -m pytest -c agents/pytest.ini agents/tests -q` 실행: **544 passed, 0 skipped**, MCP deprecation warning 3건. 실제 Incident/JC/Backend/두 Worker·공식 MCP와 fixture Grafana/LLM을 사용했다. 임의의 신규 등록 cluster_id 알림 → Incident snapshot → JC → RCA 실제 발행, D02·D09의 UID/라벨/자동 선택 evidence, Report 발견 경로 및 후보 차단을 확인했다. 최초 전체 검사에서 발견한 machine_id JSON 조건 누락을 보완한 뒤 전체 재검사 통과.
+- 통과: 전체 Python Ruff check/format, Helm lint/render/package와 source/mirror 계약, CI helper unittest 16개. Git Bash PATH 누락으로 처음 실패한 helper 검사는 경로 보완 후 통과했다. 추적 파일과 신규 문서만 복사한 트리에서 106개 문서·1341개 링크/자산 오류 0건(사용자 미추적 checkout 제외).
+- 실환경 근거: [관측 계약 검토](../docs/evidence/d-binding-discovery-20261007.md). 기존 XID79 발행본의 D05 참조를 D09 계약으로 변경한 revision 2를 공식 검토·발행 API로 별도 게시하고 저장된 incident snapshot과 매칭했다. 정규화 health 요구와 investigation_only는 유지했다.
+- 미검증: 새 코드의 운영 배포, 두 Worker의 실제 새 profile 적용 및 새 Fleet 사건의 조회·Runbook·결과 검수. Grafana/LLM fixture 검사는 실환경 인과 분석 품질을 증명하지 않는다. 기존 Helm 전체 override가 기본 설정을 가리는지도 배포 시 확인한다. 알림식의 CPC 확장과 Report invalid_result 수정은 이번 범위에서 제외했다.
+
+---
+
 # 2026-10-07 공통 cluster_id 파라미터 — 로컬 검수
 
 - 기준: 원격 main `bfe59478c19701ac3aa254276d6956d7e1496416`과 작업 기준 일치 확인. 브랜치 `feat/parameterized-cluster-bindings`.

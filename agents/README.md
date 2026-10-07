@@ -1,6 +1,33 @@
 # D binding 공통 설정 전환 — 2026-10-06
 
-현재 공통 예제 revision은 `shared-cluster-parameter-20261007-r1`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **45개 binding은 모두 미선택 후보이며 자동 조회하지 않는다.** 환경별로 검증된 binding을 선택해야 한다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
+현재 공통 예제 revision은 `shared-grafana-discovery-20261007-r1`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **D02·D09는 검토된 관측 계약으로 자동 선택하며 나머지 43개 binding은 후보로 차단한다.** datasource UID·클러스터 라벨은 MCP로 찾고 요청 cluster_id 값만 사용한다. [검증 범위와 제한](../docs/evidence/d-binding-discovery-20261007.md)을 따른다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
+
+## Datasource UID discovery / UID 자동 발견 — 2026-10-07
+
+검증된 파라미터 binding에서 아래 environment 형식으로 Grafana datasource UID를
+발견할 수 있다. 이는 **environment 부분 예시**이며 전체 실행 설정이 아니다.
+기존 producer/type/unit/time/verification 계약도 완성돼 있어야 한다.
+
+```json
+{
+  "datasource_mode": "discover",
+  "datasource_uid": null,
+  "scope_labels": {"cluster_id": ["cluster_id", "cluster", "k8s_cluster_name", "kubernetes_cluster", "k8s_cluster"]},
+  "selector": {"job": "nvidia-dcgm-exporter", "collection_path": "alloy-direct"}
+}
+```
+
+source는 binding의 `mimir`/`loki`로 결정된다. Fleet 로그에는 실제 로그의 cluster 라벨과
+job/전송 조건을 사용해야 한다. UID 고정 모드는 `datasource_mode` 생략 또는 `pinned`이며
+자동 발견과 동시에 지정할 수 없다. 후보는 여전히 실행되지 않는다. 동일 cluster가 여러
+datasource에 있으면 임의 선택하지 않으며, 확인한 UID를 고정하는 방법으로 모호성을 해소한다.
+[계약·운영 검수](../docs/specs/common/d-binding-runtime.md#datasource-uid-discovery--datasource-uid-자동-발견).
+
+라벨 후보는 지정 순서로 조회한다. 앞선 라벨에 값이 없을 때만 다음 이름을 시도하며,
+값이 있는데 요청 cluster_id가 없으면 다른 이름으로 우회하지 않는다. 클러스터 값의
+별칭 변환은 하지 않는다. 실제 UID와 `resolved_cluster_selector`를 evidence에 저장한다.
+Grafana 알림의 cluster_id → Incident의 불변 입력 → JC 작업 scope → RCA 조회로 전달한다.
+클러스터는 기존 registry에 등록되어 있어야 한다. 알림식의 클러스터 확장은 후속 범위다.
 
 ## 공통 cluster_id 파라미터 — 2026-10-07
 
@@ -18,11 +45,11 @@
 
 `scope_labels`는 요청 파라미터 이름을 실제 소스 라벨 이름에 연결한다. Loki 등에서 소스 라벨이 `cluster`이면 값만 `cluster`로 지정한다. 수집기가 요청 값을 JSON 문자열로 이스케이프하여 정확 일치 selector에 넣는다. 누락·공백 cluster_id, 고정 selector와의 충돌, 대상 라벨이 cluster 라벨을 덮는 설정은 거부한다. 요청별 복사본만 해석하여 병렬 CPC 조회 사이에 값이 섞이지 않는다.
 
-`auto_select_verified_bindings=true`이면 명시적으로 선택하지 않은 D에서 적용 가능한 verified 파라미터 binding이 정확히 하나일 때 자동 선택한다. 후보 0개는 미선택, 복수는 `multiple_verified_candidates` 사유로 차단한다. 대안 producer는 기존 동등성 근거가 필요하다. 명시적 선택이 우선하며 `clusters[cluster_id].bindings[D]=null`은 해당 범위에서 자동 선택도 차단한다. 정책을 false로 하면 기존 수동 선택 방식이다. 실제 자동 선택은 evidence의 `selection_method=automatic_verified` 및 binding ID/revision으로 확인한다. 예제의 45개 binding은 여전히 candidate이므로 이 정책만으로 원격 조회를 켜지 않는다.
+`auto_select_verified_bindings=true`이면 명시적으로 선택하지 않은 D에서 적용 가능한 verified 파라미터 binding이 정확히 하나일 때 자동 선택한다. 후보 0개는 미선택, 복수는 `multiple_verified_candidates` 사유로 차단한다. 대안 producer는 기존 동등성 근거가 필요하다. 명시적 선택이 우선하며 `clusters[cluster_id].bindings[D]=null`은 해당 범위에서 자동 선택도 차단한다. 정책을 false로 하면 기존 수동 선택 방식이다. 실제 자동 선택은 evidence의 `selection_method=automatic_verified` 및 binding ID/revision으로 확인한다. 공통 예제에서는 D02·D09만 이 조건을 만족한다. 나머지 후보를 발견 성공만으로 활성화하지 않는다.
 
 파라미터화는 producer 의미 검증이나 클러스터 자동 등록이 아니다. 공통 binding을 선택하려면 기존 검증 필드와 함께 `verification.applicability`에 해당 datasource·고정 selector에서 계약이 적용되는 근거와 범위를 명시한다. 기존 CPC의 producer/version·단위·시간 검증을 신규 CPC에 자동 복사하지 않는다. 미검증 후보는 계속 차단한다. CPC 발견·Backend/JC 등록 정책은 이번 변경에 포함하지 않는다. 이전 literal `environment.cluster_id` 및 명시적 cluster override는 기존 배포 호환용으로 읽을 수 있지만 공통 예제는 사용하지 않는다.
 
-배포 전 기존 Helm `configuration.agents` 전체 override를 확인한다. 새 예제는 후보 상태이므로 운영 override를 빈 객체로 지우면 조회가 비활성화된다. 검증된 공통 source 계약·limits를 유지한 전체 설정을 새 revision으로 작성해 두 Worker에 동시에 적용해야 한다. 코드/설정만으로 현재 운영 설정은 바뀌지 않으며, 새 작업의 실제 selector·binding 근거·결과 발행을 따로 검수한다. [과거 직접 수집 조사](../docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile)는 당시 환경의 기록이다.
+배포 전 기존 Helm `configuration.agents` 전체 override를 확인한다. 기존 후보 profile 전체 override가 남으면 새 차트의 공통 설정을 가릴 수 있다. 검증된 공통 source 계약·limits를 유지한 전체 설정을 새 revision으로 작성해 두 Worker에 동시에 적용해야 한다. 코드/설정만으로 현재 운영 설정은 바뀌지 않으며, 새 작업의 실제 selector·binding 근거·결과 발행을 따로 검수한다. [과거 직접 수집 조사](../docs/evidence/d-binding-cpc-20261006.md#cpc-direct-environment-profile)는 당시 환경의 기록이다.
 
 ## 근거 기록 시각·순번 — 2026-10-02
 
@@ -131,7 +158,7 @@ Copy-Item agents/.env.example agents/.env
 
 `/chat/completions`의 300초 요청 상한, 기본 4096/설명 16384/insight 1024 토큰 설정과 JC attempt budget·deadline 제한은 유지합니다. 키는 코드·이미지·작업 본문에 넣지 않습니다. 모델 라우팅이 없고 환경의 모델/주소/키도 없으면 기존처럼 LLM 설명을 생략하고 유효한 결정적 결과는 유지합니다. [키 배포와 검증](../docs/model-connection.md).
 
-기본 실행은 `agents/config.example.json`을 읽지만 현재 예제의 미선택 binding은 실행하지 않습니다. `AGENT_CONFIG_FILE`에 환경별 전체 설정을 지정하고 `selected_binding` 또는 cluster별 binding을 선택해야 합니다. 새 계약은 verified binding의 명시적 datasource UID·고정 selector와 요청 cluster_id의 scope label을 사용합니다. 구 profile은 기존 Grafana MCP 탐색을 유지합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
+기본 실행은 `agents/config.example.json`을 읽고 검토된 D02·D09를 자동 선택합니다. `AGENT_CONFIG_FILE`은 같은 계약을 따르는 전체 설정으로 대체할 수 있습니다. verified binding은 명시적 datasource UID 또는 discover 모드·고정 selector와 요청 cluster_id의 scope label을 사용합니다. 구 profile은 기존 Grafana MCP 탐색을 유지합니다. 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 순으로 첫 번째 값이 있는 라벨을 사용하고 작업 cluster ID와 정확히 일치시킵니다. 중복 후보·라벨 부재·조회 오류는 evidence와 Worker 로그에 원인을 남기며 전체 데이터로 범위를 넓히지 않습니다. 탐색은 작업별 캐시, 64회 기본 호출 한도, 응답 크기·타임아웃·작업 deadline 제한을 적용합니다.
 
 Mimir tenant와 인증은 기존 Grafana 데이터소스 설정을 사용합니다. Worker에 Mimir/Loki 직접 주소·계정을 주지 않습니다. 새 binding의 datasource UID는 Grafana에 등록된 UID입니다. Grafana 토큰에는 datasource 목록과 데이터 조회 권한이 필요합니다. `cpc-2`와 `cpc2` 같은 서로 다른 cluster ID는 자동으로 동일시하지 않습니다. 고급 환경의 명시적 매핑·생산자별 의미 계약이 필요하면 `AGENT_CONFIG_FILE`로 전체 프로필을 선택적으로 지정할 수 있습니다. C07 숫자는 예시이며 운영 확정값이 아닙니다.
 

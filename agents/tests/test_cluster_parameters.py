@@ -29,10 +29,10 @@ def parameterized(config, query="D02", **kwargs):
 
 def test_both_workers_load_shared_parameter_template():
     config = Settings("rca").profile()
-    assert config == Settings("report").profile() == profile()
+    assert config == Settings("report").profile() == profile(active_defaults=True)
     assert config["clusters"] == {}
     for binding in config["bindings"].values():
-        assert binding["environment"]["scope_labels"] == {"cluster_id": "cluster_id"}
+        assert set(binding["environment"]["scope_labels"]) == {"cluster_id"}
         assert "cluster_id" not in binding["environment"]
 
 

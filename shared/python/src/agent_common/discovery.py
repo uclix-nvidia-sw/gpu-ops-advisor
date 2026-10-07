@@ -38,7 +38,7 @@ class Discovery:
             raise result
         return result
 
-    async def resolve(self, source, cluster_id, period):
+    async def resolve(self, source, cluster_id, period, *, cluster_labels=None):
         source_type = "loki" if source == "loki" else "prometheus"
         candidates = []
         offset = 0
@@ -71,7 +71,8 @@ class Discovery:
 
         matches = []
         for uid in sorted({row["uid"] for row in candidates}):
-            for label in self.CLUSTER_LABELS:
+            # Only approved label names are tried; cluster values are never aliased.
+            for label in cluster_labels or self.CLUSTER_LABELS:
                 args = dict(
                     datasourceUid=uid,
                     labelName=label,

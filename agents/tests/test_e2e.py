@@ -53,6 +53,7 @@ class Upstream(BaseHTTPRequestHandler):
     logs_padding_bytes = 16384
     prometheus_max_seconds = None
     fleet_reports = False
+    cluster_id = "cpc-2"
 
     def log_message(self, *args):
         pass
@@ -136,7 +137,10 @@ class Upstream(BaseHTTPRequestHandler):
             label = u.path.split("/label/", 1)[1].split("/", 1)[0]
             expected = "cluster" if "/loki/" in u.path else "cluster_id"
             return self.send(
-                {"status": "success", "data": ["cpc-2"] if label == expected else []}
+                {
+                    "status": "success",
+                    "data": [self.cluster_id] if label == expected else [],
+                }
             )
         if (
             "/api/datasources/uid/" in u.path
@@ -292,7 +296,10 @@ class Upstream(BaseHTTPRequestHandler):
                         "resultType": "streams",
                         "result": [
                             {
-                                "stream": {"cluster": "cpc-2", "namespace": "dev"},
+                                "stream": {
+                                    "cluster": self.cluster_id,
+                                    "namespace": "dev",
+                                },
                                 "values": [
                                     [str(start + i), line]
                                     for i in range(31 if self.fleet_reports else 1)
@@ -599,7 +606,7 @@ def worker_result(stack, kind, jid, suffix=""):
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("activate", [False, True])
-@pytest.mark.parametrize("parameter_scope", [False, True])
+@pytest.mark.parametrize("parameter_scope", [False, True, "discover"])
 def test_binding_profile_through_both_real_workers(stack, activate, parameter_scope):
     from test_binding_contract import profile, verified
 
@@ -639,6 +646,12 @@ def test_binding_profile_through_both_real_workers(stack, activate, parameter_sc
                 b["environment"].pop("cluster_id")
                 b["environment"]["selector"] = {}
                 b["environment"]["scope_labels"] = {"cluster_id": label}
+                if parameter_scope == "discover":
+                    b["environment"].update(
+                        datasource_mode="discover",
+                        datasource_uid=None,
+                        scope_labels={"cluster_id": ["cluster_id", "cluster"]},
+                    )
                 b["verification"]["applicability"] = "Shared synthetic source contract"
             config["auto_select_verified_bindings"] = True
             for query in config["queries"].values():
@@ -678,6 +691,12 @@ def test_binding_profile_through_both_real_workers(stack, activate, parameter_sc
             assert all(
                 q[0]["selection_method"] == "automatic_verified" for q in qualities
             )
+        if parameter_scope == "discover":
+            assert all(
+                q[0]["datasource_resolution"] == "discover"
+                and q[0]["datasource_uid"] == "mimir"
+                for q in qualities
+            )
     else:
         assert all(q[0]["reason"] == "binding_unselected" for q in qualities)
     iid = str(uuid4())
@@ -706,6 +725,18 @@ def test_binding_profile_through_both_real_workers(stack, activate, parameter_sc
     assert "D09" in {q for q, _ in evidence}
     assert result["incident_id"] == iid
     assert result["result_status"] != "resolved"
+    if activate and parameter_scope == "discover":
+        with psycopg.connect(stack["url"]) as conn:
+            logs = conn.execute(
+                "SELECT quality FROM evidence WHERE job_id=%s AND query_id='D09'",
+                (rid,),
+            ).fetchall()
+        assert logs and all(
+            q[0]["datasource_resolution"] == "discover"
+            and q[0]["datasource_uid"] == "loki"
+            and q[0]["selection_method"] == "automatic_verified"
+            for q in logs
+        )
     if not activate:
         assert not any(
             "/api/v1/query" in p for p, _ in Upstream.requests[request_start:]
@@ -1120,7 +1151,7 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("fleet_reports", [False, True])
+@pytest.mark.parametrize("fleet_reports", [False, True, "discovery"])
 def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
     stack, monkeypatch, fleet_reports
 ):
@@ -1162,6 +1193,20 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         path.write_text(json.dumps(profile))
         stack = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
         monkeypatch.setattr(Upstream, "fleet_reports", True)
+    if fleet_reports == "discovery":
+        cluster_id = "new-site-" + uuid4().hex
+        alert["labels"]["cluster_id"] = cluster_id
+        alert["labels"].pop("namespace")
+        monkeypatch.setattr(Upstream, "cluster_id", cluster_id)
+        with psycopg.connect(stack["url"], autocommit=True) as conn:
+            conn.execute("INSERT INTO cluster_registry(id) VALUES(%s)", (cluster_id,))
+        stack = {
+            **stack,
+            "env": {
+                **stack["env"],
+                "AGENT_CONFIG_FILE": str(ROOT / "agents/config.example.json"),
+            },
+        }
     response = httpx.post(
         stack["incident"] + "/webhooks/grafana", json={"alerts": [alert]}, timeout=10
     )
@@ -1191,6 +1236,10 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         "logs_json_target",
         {"node": "node-1", "component": alert["labels"]["component"]},
     )
+    if fleet_reports == "discovery":
+        # The shared profile also filters machine/node aliases; inspect those
+        # expressions below instead of applying the legacy two-field fixture.
+        monkeypatch.setattr(Upstream, "logs_json_target", None)
     request_start = len(Upstream.requests)
     result, evidence = worker_result(stack, "rca", str(jid), "-incident-webhook")
     assert snapshot["input"]["target"]["component"] == alert["labels"]["component"]
@@ -1219,6 +1268,25 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
             row["check_status"] == row["normalized_health"] == "unknown"
             for row in result["device_observations"]
         )
+    if fleet_reports == "discovery":
+        assert snapshot["input"]["scope"]["clusters"][0]["cluster_id"] == cluster_id
+        assert all(
+            f'cluster="{cluster_id}"' in args["query"][0] for args in log_requests
+        )
+        assert all(
+            'resources[\\"machine.id\\"]' in args["query"][0] for args in log_requests
+        )
+        with psycopg.connect(stack["url"]) as conn:
+            resolved = conn.execute(
+                "SELECT query_id,quality FROM evidence WHERE job_id=%s AND query_id IN ('D02','D09')",
+                (jid,),
+            ).fetchall()
+        assert {q for q, _ in resolved} == {"D02", "D09"}
+        for query, quality in resolved:
+            label = "cluster" if query == "D09" else "cluster_id"
+            assert quality["resolved_cluster_selector"] == {label: cluster_id}
+            assert quality["datasource_resolution"] == "discover"
+            assert quality["selection_method"] == "automatic_verified"
     assert result["incident_id"] == item["incident_id"]
     assert result["assessments"] and all(
         "purpose_id" not in a for a in result["assessments"]

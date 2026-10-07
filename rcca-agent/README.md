@@ -1,3 +1,12 @@
+# Datasource routing and RCA evidence / 조회 경로와 RCA 근거 — 2026-10-07
+
+검증된 공통 binding은 `environment.datasource_mode="discover"`로 Grafana UID를
+발견할 수 있다. 승인된 후보 라벨·요청 cluster_id의 정확한 값·요청 기간에서 유일한 datasource만 사용하며
+candidate를 활성화하지 않는다. 결과 발행 성공이어도 D02/D09가 `binding_unselected`면
+실제 조회 전 차단된 것이므로 LLM 재시도보다 적용 설정의 verification/selection을 먼저
+확인한다. 발행 Runbook 부재는 별도 문제이며 일반 템플릿으로 원인을 확정하지 않는다.
+[계약과 운영 검수 순서](../docs/specs/common/d-binding-runtime.md#datasource-uid-discovery--datasource-uid-자동-발견).
+
 # D binding RCA 연결 — 2026-10-06
 
 RCA와 Report는 공통 `agents/config.example.json`의 query/binding registry를 검증한다. Runbook의 D는 이 registry에서만 실행하며, 미선택 후보·생산 불가능한 fact 요구를 실행하지 않는다. 267개 작성 원본의 D05 요구를 D09와 필수 fact로 병합하고 일반 패키지 사본을 맞췄다. D02의 관측 연결은 D06 UID/시간과 함께 확인한다. [구현·적용 순서와 남은 범위](../docs/specs/common/d-binding-runtime.md). 개별 추가 분석·비코드 Runbook과 DB 등록/발행은 미완료다.
