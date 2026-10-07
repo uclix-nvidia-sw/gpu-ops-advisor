@@ -171,5 +171,56 @@ class BindingDetailsTests(unittest.TestCase):
         self.assertTrue(all("unverified" in c["scope"] for c in result["configmaps"]))
 
 
+class EffectiveConfigTests(unittest.TestCase):
+    def test_excerpt_redacts_credentials_and_tenant_names(self):
+        raw = "limits:\n  compactor_blocks_retention_period: 720h\noverrides:\n  private-tenant:\n    retention_period: 48h\n    password: secret-value\n"
+        out = details.config_excerpt(raw)
+        self.assertEqual(
+            [x["value"] for x in out["selected_settings"]], ["720h", "48h"]
+        )
+        self.assertEqual(out["selected_settings"][1]["parents"][0], "overrides")
+        self.assertNotIn("private-tenant", json.dumps(out))
+        self.assertNotIn("secret-value", json.dumps(out))
+        self.assertFalse(out["empty_overrides_mapping_present"])
+
+    def test_empty_overrides_and_unsupported_inline_are_distinct(self):
+        self.assertTrue(
+            details.config_excerpt("overrides: {}\n")["empty_overrides_mapping_present"]
+        )
+        out = details.config_excerpt("limits: {retention_period: 24h}\n")
+        self.assertEqual(out["selected_settings"], [])
+        self.assertIn("Lexical", out["scope"])
+
+    def test_runtime_failure_preserves_live_base_config(self):
+        def run(args):
+            if args[1] == "pods":
+                product = "mimir" if "mimir-test" in args else "loki"
+                item = pod("grafana/" + product + ":1", [])
+                item["spec"]["containers"][0]["ports"] = [
+                    {"name": "http-metrics", "containerPort": 8080}
+                ]
+                return json.dumps({"items": [item]})
+            self.assertEqual(args[:2], ["get", "--raw"])
+            if args[-1].endswith("/runtime_config"):
+                raise details.ReadFailure("forbidden")
+            return "limits_config:\n  retention_period: 720h\n"
+
+        with patch.object(details, "run", side_effect=run):
+            out = details.effective_config()
+        self.assertEqual(out["collection_status"], "partial")
+        self.assertEqual(len(out["errors"]), 2)
+        self.assertEqual(sum(x["status"] == "read" for x in out["endpoints"]), 2)
+
+    def test_ambiguous_port_does_not_probe(self):
+        item = pod("grafana/loki:1", [])
+        with patch.object(
+            details, "run", return_value=json.dumps({"items": [item]})
+        ) as run:
+            out = details.effective_config()
+        self.assertEqual(len(out["endpoints"]), 0)
+        self.assertTrue(out["errors"])
+        self.assertTrue(all(call.args[0][1] == "pods" for call in run.call_args_list))
+
+
 if __name__ == "__main__":
     unittest.main()

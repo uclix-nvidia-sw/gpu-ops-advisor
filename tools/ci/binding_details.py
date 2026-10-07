@@ -252,14 +252,127 @@ def main(environment):
     return out
 
 
+def effective_config():
+    """Read live service config through the existing Kubernetes API credentials.
+
+    Output is a lexical allowlist, not a YAML evaluator or tenant resolver.
+    Unknown parent keys are hashed; raw config and error text never leave memory.
+    """
+    out = {
+        "schema_version": "binding-effective-config/1",
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "scope": "Live endpoint excerpts; tenant precedence requires review",
+        "endpoints": [],
+        "errors": [],
+    }
+    for namespace, product in (("mimir-test", "mimir"), ("loki", "loki")):
+        response = read_json(
+            ["get", "pods", "-n", namespace, "-o", "json"],
+            out["errors"],
+            f"pods:{namespace}",
+        )
+        pods = response.get("items", []) if response else []
+        targets = []
+        for pod in pods:
+            if pod.get("status", {}).get("phase") != "Running":
+                continue
+            for container in pod.get("spec", {}).get("containers", []):
+                if not re.search(
+                    r"/" + product + r"(?::|@)", container.get("image", "")
+                ):
+                    continue
+                ports = {
+                    port["containerPort"]
+                    for port in container.get("ports", [])
+                    if port.get("name") in {"http", "http-metrics"}
+                    and isinstance(port.get("containerPort"), int)
+                    and 0 < port["containerPort"] < 65536
+                }
+                if len(ports) != 1:
+                    out["errors"].append(
+                        {"stage": product, "status": "ambiguous_http_port"}
+                    )
+                    continue
+                targets.append((pod["metadata"]["name"], ports.pop()))
+        if not targets:
+            out["errors"].append({"stage": product, "status": "no_http_targets"})
+        if len(targets) > 32:
+            out["errors"].append({"stage": product, "status": "target_limit_exceeded"})
+            continue
+        for replica, (name, port) in enumerate(sorted(targets), 1):
+            for endpoint in ("config", "runtime_config"):
+                record = {"product": product, "replica": replica, "endpoint": endpoint}
+                path = f"/api/v1/namespaces/{namespace}/pods/{name}:{port}/proxy/{endpoint}"
+                try:
+                    raw = run(["get", "--raw", path])
+                    record.update(config_excerpt(raw))
+                    record["status"] = "read"
+                except ReadFailure as exc:
+                    record["status"] = str(exc)
+                    out["errors"].append(
+                        {"stage": f"{product}:{replica}/{endpoint}", "status": str(exc)}
+                    )
+                out["endpoints"].append(record)
+    out["collection_status"] = "partial" if out["errors"] else "completed"
+    return out
+
+
+def config_excerpt(raw):
+    """Keep duration/boolean scalars and hashed parent paths; never infer defaults."""
+    parents = []
+    values = []
+    safe_parents = {
+        "limits",
+        "limits_config",
+        "compactor",
+        "overrides",
+        "runtime_config",
+    }
+    names = set()
+    for number, line in enumerate(raw.splitlines(), 1):
+        match = re.fullmatch(r"( *)([^:#]+):(?:\s*(.*))?", line)
+        if not match:
+            continue
+        indent, key, value = len(match[1]), match[2].strip(), (match[3] or "").strip()
+        while parents and parents[-1][0] >= indent:
+            parents.pop()
+        if key in KEYS:
+            names.add(key)
+            scalar = value.split("#", 1)[0].strip().strip("\"'")
+            if DURATION.fullmatch(scalar):
+                values.append(
+                    {
+                        "line": number,
+                        "parents": [p[1] for p in parents],
+                        "setting": key,
+                        "value": scalar,
+                    }
+                )
+        if not value or value.startswith("#"):
+            safe_key = key if key in safe_parents else "sha256:" + digest(key)
+            parents.append((indent, safe_key))
+    return {
+        "sha256": digest(raw),
+        "selected_settings": values,
+        "setting_names_present": sorted(names),
+        "empty_overrides_mapping_present": bool(
+            re.search(r"(?m)^overrides:\s*\{\}\s*$", raw)
+        ),
+        "scope": "Lexical excerpts only; aliases, lists and inline mappings require separate review",
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--environment", required=True, choices=["cpc-1", "cpc-2", "advisor-central"]
     )
+    parser.add_argument("--effective-config", action="store_true")
     args = parser.parse_args()
+    if args.effective_config and args.environment != "advisor-central":
+        parser.error("--effective-config requires advisor-central")
     try:
-        result = main(args.environment)
+        result = effective_config() if args.effective_config else main(args.environment)
     except (ReadFailure, OSError, ValueError, KeyError, TypeError):
         print(
             json.dumps({"environment": args.environment, "status": "collection_failed"})

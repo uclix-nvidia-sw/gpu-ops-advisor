@@ -475,3 +475,10 @@ Grafana datasource HTTP 응답과 OpenAI 호환 LLM endpoint만 고정 데이터
 CPC-1의 두 Exporter CSV 동일성·25개 선언·D26/D27 미포함, 양쪽 Fleet 1m 설정, CPC-2 CSV 읽기 실패와 중앙 보존 미확인을 환경 원장에 추가했다. 실행 JSON과 Helm 사본은 변경하지 않았다. 새 `tools/ci/binding_details.py`는 부분 실패에도 성공 근거를 유지하고 오류 단계를 출력한다. 도구 회귀는 로컬 fixture이며 실제 서버에서 새 버전을 실행한 결과가 아니다. 두 Worker 런타임은 변경하지 않았고 실환경 활성화/LLM/Runbook 발행/배포는 미완료다.
 
 검증: 저장소 루트에서 `python -m unittest discover -s tools/ci/tests -v` **12개 통과**(신규 진단 7개 포함), 변경 Python 두 파일 Ruff lint/format 통과. Windows 첫 시도의 Bash 경로 누락은 설치된 Git Bash를 PATH에 연결한 재실행으로 해결했다. 원장/원본 해시·90개 candidate/82개 버전·JSON/Helm 불변 검사를 통과했고, 추적 소스 사본의 링크 검사 **105개 문서 / 1,332개 링크 / 오류 0개**를 확인했다. 기존 제품 Worker 회귀는 런타임 불변이므로 재실행하지 않았다.
+
+
+### 2026-10-07 정확한 이미지 CSV 및 실제 설정 조회 준비
+
+CPC-2 보고 digest의 NVIDIA 공개 OCI index/두 architecture manifest/후속 레이어를 해시 대조하여 CSV 26개 선언(gauge 20/counter 5/label 1)을 확인했다. 두 architecture의 CSV 해시가 같고, CPC-1 대비 FB_RESERVED만 추가됐다. 이미지 근거이며 실행 중 컨테이너 파일 읽기나 표본 방출 검증을 대체하지 않는다.
+
+중앙 `--effective-config` 모드는 실행 중 Mimir/Loki의 명시된 HTTP 포트를 통해 Kubernetes Pod proxy GET으로 `/config`와 `/runtime_config`를 읽는다. 발췌 결과는 tenant 부모 키를 익명화하며 YAML 의미 해석/운영 활성화를 수행하지 않는다. 회귀 4개를 추가하여 도구 전체 **16개 통과**, 변경 Python Ruff lint/format 통과. 서비스 실호출은 서버 접근이 없어 미수행이다. Worker·공통 실행 JSON·Helm은 변경하지 않았다.

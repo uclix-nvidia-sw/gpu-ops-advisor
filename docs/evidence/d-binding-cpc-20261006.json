@@ -6050,7 +6050,167 @@
           "scope": "No default or effective cadence inferred when absent"
         }
       ],
-      "retry_scope": "User reported successful metadata collection under root after earlier collection_failed under nvidia; original cause not established."
+      "retry_scope": "User reported successful metadata collection under root after earlier collection_failed under nvidia; original cause not established.",
+      "image_csv_followup": {
+        "source": "NVIDIA public OCI registry; exact reported image index digest",
+        "image_index_digest": "sha256:7c0ac4430bb0a5868b7404a0e06c47e02b0375b61aadd614385ad0bc2d43815a",
+        "csv_path": "/etc/dcgm-exporter/dcp-metrics-included.csv",
+        "csv_sha256": "b2d1031d43d3776f52f8bd150db6d9708572c0807c0eb627ff433860ac766a88",
+        "architectures_identical": [
+          "amd64",
+          "arm64"
+        ],
+        "architecture_evidence": [
+          {
+            "architecture": "amd64",
+            "verified_layers_from_top": [
+              "sha256:a645a6e2f878e9393b27b0b911627e5b050d7c95fa86db69757867e6bd4162da",
+              "sha256:bfda23741c19fd3350bb45c535681065805a85de2227999c89e53f9fb01b6d9a",
+              "sha256:5b1b3862364bcffe7ef061d526c16b8ed0fd1f2b272413e552312b574ef38b1f",
+              "sha256:273f45d492a8345725a8f46926f8d308561feed3bbbbe75ffbbb4e9938d7c724",
+              "sha256:f95d4ddce7078dd6d749f9ddacdb266e2405cbb1602919f3e91f907d4f7735f1",
+              "sha256:97ee2fdb7fc903aa199f5240575f6aef7cda0609266bcc75abd091cf990dbf04",
+              "sha256:f9d6156270d86ece6eaa268ab2c73b1edc4914eed31aa8631e81ff1d031d458f",
+              "sha256:7e230badf22f8de0573850c58347921ec2c38c42ec3e00fa18cbc324f95f6bab",
+              "sha256:247343f08ff52ee489c8e03e985ee8e06e348ea291735ce70ac0eb7d85d29bff",
+              "sha256:b366d2db0da57bac62713caea211f82e4d94ab3e704c6ac817f5f18e01c37c0c",
+              "sha256:2d28f677d075712a086f30ba4db0d522eb72d8f5e32619570624f598c70d7862",
+              "sha256:0f658235227406eb59b2761d208f2a38a5fe0b3fde3bffc610bb16179e8b040e",
+              "sha256:e62723d456751268facef2f7575dbfb6bb4ca0ea7da224bd0022cf56c6b3b891",
+              "sha256:fa1ce334e3c5fe6df6ea394c78b49e081f550f63d4af2e6b30076f16d2efa46e",
+              "sha256:1ebee8f2392fa6ed4a192d4f28985aa792d1948d7cc53990b382ad507b80a16f"
+            ]
+          },
+          {
+            "architecture": "arm64",
+            "verified_layers_from_top": [
+              "sha256:6af803159f25b64d0fe635dfaade1ab7e2f84e94d08fa95f91e8aee15ab39204",
+              "sha256:0493cf669c5ce5f7361a9a4622af0609de6f20461fa94783e9581a95e7ba832e",
+              "sha256:cd43a7b54adf17d7fd5aef2f8152a6be748f4cdf3809bf234f643a33ddad2565",
+              "sha256:8467c8582f99d6410112d1611897dc80adc8f979bce8309aeea33754a9627471",
+              "sha256:f451ed6ba0b43f299bbe4cd8bde2a51706bfdf32fc45fbe2160a5faf69a0bc17",
+              "sha256:b6ebe84e28b006a090606e633bb7168096828dbd7f0e54a1920cec783beabd63",
+              "sha256:6a45fc301080a9f598ad55e72697e1f4e0134319760c8fe68853bd37f1b50735",
+              "sha256:60af44cecbdfc15cb64c2ed6c0a6deceb10746f315ca74aa14a22ee5dca11cbe",
+              "sha256:4bbb15cb2a5952e797e7ee6fdb20ecbca916f3dcba7ea89132bb4d54b3fe508b",
+              "sha256:ebef72d2a8b917b2c2e1e5670a1e2c5c66828c0b85311eba9072981e7b7f7cbc",
+              "sha256:a156ee59b4f8171f712e30c8d7eb00d4b7134cace6fbfb5c78dd16f598388697",
+              "sha256:0f658235227406eb59b2761d208f2a38a5fe0b3fde3bffc610bb16179e8b040e",
+              "sha256:a570b47a3cba02dbd407bd387533e341a69ecbc2776016d0a3fd85870b5e6e78",
+              "sha256:ed96b8c58f7912a3c36d4bb3c2d75a62c0f5ac5ca9d40cf35d87e5bde6d62318",
+              "sha256:5974b135f5364d69b7858991a631b222d3782d7b228495576ba5ab66e5a0f4a6"
+            ]
+          }
+        ],
+        "active_fields": [
+          {
+            "field": "DCGM_FI_DEV_SM_CLOCK",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEM_CLOCK",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEMORY_TEMP",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_GPU_TEMP",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_POWER_USAGE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_GPU_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEM_COPY_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_ENC_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_DEC_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_XID_ERRORS",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_FB_FREE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_FB_USED",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_FB_RESERVED",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_VGPU_LICENSE_STATUS",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_ROW_REMAP_FAILURE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DRIVER_VERSION",
+            "type": "label"
+          },
+          {
+            "field": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_DRAM_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PCIE_TX_BYTES",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PCIE_RX_BYTES",
+            "type": "gauge"
+          }
+        ],
+        "reported_pod_mount_overlap": false,
+        "scope": "Image content and reported Pod mount configuration, not a live filesystem read or proof of active sampling. No binding selected."
+      }
     },
     "advisor-central": {
       "source": "user_message_structured_facts",

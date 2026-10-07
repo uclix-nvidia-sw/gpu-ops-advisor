@@ -97,3 +97,19 @@ python3 ./binding_details.py --environment advisor-central | tee binding-details
 2. 해당 버전의 Fleet metric 생산 코드/OTel 변환, CPC-2 DCGM collectors CSV, KSM allowlist와 Alloy 전송 선별 규칙 확인. CPC-1 CSV 선언과 양쪽 Fleet 주기는 위 후속 기록에 추가했다. Secret/토큰은 수집하지 않는다.
 3. 기본 D부터 타입·단위·신원·시각·invalid/reset·max_hold·보존 근거를 채우고, 검증을 충족하는 환경별 binding만 선택한 revision 작성. 실행 예제와 Helm 사본의 동기화 규칙을 지킨다.
 4. 두 Worker와 O01의 실제 원본 재생/결과 검수 후, 남은 신규·조건부 분석과 개별 Runbook의 소비 계약을 구현한다. 배포와 DB 발행은 별도 단계다.
+
+
+## CPC-2 이미지 CSV 대조 및 중앙 실제 설정 읽기
+
+CPC-2가 보고한 정확한 Exporter image index digest `7c0ac4430bb0a5868b7404a0e06c47e02b0375b61aadd614385ad0bc2d43815a`를 NVIDIA 공개 OCI registry에서 읽었다. amd64/arm64 manifest와 CSV까지의 상위 레이어 각각 SHA-256을 검증했다. 각 아키텍처에서 위부터 15개 레이어를 확인했고 CSV 경로를 지우거나 덮는 후속 항목이 없었다. 두 이미지의 `/etc/dcgm-exporter/dcp-metrics-included.csv`는 동일하며 SHA-256은 `b2d1031d43d3776f52f8bd150db6d9708572c0807c0eb627ff433860ac766a88`이다. 원장에 검증 레이어 digest를 기록했다.
+
+선언은 **26개(gauge 20, counter 5, label 1)**이며 CPC-1의 25개에 `DCGM_FI_DEV_FB_RESERVED`가 추가된 구성이다. D26/27 SM_ACTIVE/SM_OCCUPANCY는 여전히 없고 PCIe RX/TX는 gauge다. 제공된 두 Pod mount 목록에는 CSV 경로를 덮는 mount가 없다. 이는 정확한 이미지 내용과 보고된 mount의 대조이며 실행 중 파일 변조 여부·실제 표본 방출의 증명은 아니다. 기존 CSV 읽기 실패 기록을 지우거나 binding을 승격하지 않는다.
+
+중앙의 ConfigMap 재수집 대신 다음 명령으로 실행 중인 서비스의 `/config`와 `/runtime_config`를 읽는다. 기존 Kubernetes 자격증명으로 Pod proxy의 GET만 사용한다. 명시된 HTTP 포트가 모호하면 추측하지 않고 실패를 기록한다. 원문 설정/인증 값은 출력하지 않으며 기간·boolean 필드와 익명화한 부모 경로만 반환한다. YAML alias/list/inline mapping을 해석하지 않는 제한된 발췌이며, 성공 응답만으로 tenant 우선순위나 보존 정책 검증 완료를 표시하지 않는다.
+
+```bash
+set -o pipefail
+python3 ./binding_details.py --environment advisor-central --effective-config | tee binding-effective-central.json
+```
+
+실행 대상은 중앙 dell-l40s이며 서버 변경이나 설치는 없다. `--effective-config`는 중앙 전용이고 기존 수집 모드와 별개다. 근거: [Mimir HTTP API](https://grafana.com/docs/mimir/latest/references/http-api/), [Loki HTTP API](https://grafana.com/docs/loki/latest/reference/loki-http-api/). 실제 적용된 중앙 보존·tenant 정책, Alloy 경로, 환경별 binding 선택과 두 Worker 검수는 계속 미완료다.
