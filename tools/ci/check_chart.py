@@ -158,15 +158,20 @@ def main():
         assert next(e["value"] for e in env if e["name"] == flag) == "true"
     agent_profile = json.loads(config["agents.json"])
     validate_profile(agent_profile)
-    assert agent_profile["clusters"] == {}, (
-        "Example has no verified environment selection"
-    )
+    assert agent_profile["clusters"] == {}, "Shared profile must not enumerate clusters"
     assert all(q["selected_binding"] is None for q in agent_profile["queries"].values())
     assert all(
-        b["environment"].get("scope_labels") == {"cluster_id": "cluster_id"}
+        set(b["environment"].get("scope_labels", {})) == {"cluster_id"}
         and "cluster_id" not in b["environment"]
+        and b["environment"].get("datasource_uid") is None
         for b in agent_profile["bindings"].values()
     ), "Shared example must take cluster_id from the job scope"
+    verified = {
+        b["query_id"]
+        for b in agent_profile["bindings"].values()
+        if b["verification"]["status"] == "verified"
+    }
+    assert verified == {"D02", "D09"}, "Only reviewed observation contracts are enabled"
     assert "REPLACE_" not in config["agents.json"]
     assert "http://verify-backend:8080" in config["nginx.conf"]
     assert all(

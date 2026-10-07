@@ -379,6 +379,8 @@ async def run(tools):
         log_query_target["node"] = target["node"]
     if clues.get("component"):
         log_query_target["component"] = clues["component"]
+    if clues.get("machine_id"):
+        log_query_target["machine_id"] = clues["machine_id"]
     data = {
         **data,
         "target": target,

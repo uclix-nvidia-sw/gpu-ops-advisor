@@ -50,6 +50,11 @@ def _number(value):
     return type(value) in (int, float) and math.isfinite(value)
 
 
+def scope_label_names(environment):
+    value = environment["scope_labels"]["cluster_id"]
+    return [value] if isinstance(value, str) else value
+
+
 def _labels(value, *, nonempty=False):
     return (
         isinstance(value, dict)
@@ -69,7 +74,8 @@ def _verified(binding, query):
     parameterized = "scope_labels" in environment
     if not parameterized:
         _require(_text(environment.get("cluster_id")), "cluster_id")
-    _require(_text(environment.get("datasource_uid")), "datasource_uid")
+    if environment.get("datasource_mode", "pinned") == "pinned":
+        _require(_text(environment.get("datasource_uid")), "datasource_uid")
     _require(
         _labels(environment.get("selector"), nonempty=not parameterized), "selector"
     )
@@ -83,7 +89,7 @@ def _verified(binding, query):
             "shared source contract applicability",
         )
         _require(
-            environment["scope_labels"]["cluster_id"] not in labels.values(),
+            not set(scope_label_names(environment)) & set(labels.values()),
             "scope label cannot be a target label",
         )
     refs = verification.get("evidence_refs")
@@ -289,21 +295,40 @@ def validate_profile(profile):
     for binding_id, binding in bindings.items():
         environment = binding.get("environment") or {}
         _require(isinstance(environment, dict), "environment")
+        mode = environment.get("datasource_mode", "pinned")
+        _require(mode in ("pinned", "discover"), "datasource_mode")
+        if mode == "discover":
+            _require(
+                "scope_labels" in environment, "discovery requires parameter scope"
+            )
+            _require(
+                environment.get("datasource_uid") is None,
+                "discovery cannot also pin datasource_uid",
+            )
         if "scope_labels" in environment:
             scope_labels = environment["scope_labels"]
             _require(
-                isinstance(scope_labels, dict)
-                and set(scope_labels) == {"cluster_id"}
-                and isinstance(scope_labels["cluster_id"], str)
-                and re.fullmatch(LABEL, scope_labels["cluster_id"]),
-                "scope_labels must map cluster_id to one label",
+                isinstance(scope_labels, dict) and set(scope_labels) == {"cluster_id"},
+                "scope_labels must map cluster_id",
+            )
+            labels = scope_label_names(environment)
+            _require(
+                isinstance(labels, list)
+                and 1 <= len(labels) <= 8
+                and all(isinstance(v, str) and re.fullmatch(LABEL, v) for v in labels)
+                and len(set(labels)) == len(labels),
+                "scope label candidates must be distinct valid labels",
+            )
+            _require(
+                isinstance(scope_labels["cluster_id"], str) or mode == "discover",
+                "label candidates require datasource discovery",
             )
             _require(
                 "cluster_id" not in environment, "mixed literal and parameter scope"
             )
             _require(_labels(environment.get("selector")), "selector")
             _require(
-                scope_labels["cluster_id"] not in environment["selector"],
+                not set(labels) & set(environment["selector"]),
                 "static selector conflicts with scope label",
             )
         query_id = binding.get("query_id")
@@ -410,9 +435,9 @@ def query_definition(profile, query_id, cluster_id=None):
         return {**definition, "reason": "binding_environment_mismatch"}
     resolved = deepcopy(binding)
     if "scope_labels" in environment:
-        resolved["environment"]["selector"][
-            environment["scope_labels"]["cluster_id"]
-        ] = cluster_id
+        label = environment["scope_labels"]["cluster_id"]
+        if isinstance(label, str):
+            resolved["environment"]["selector"][label] = cluster_id
         resolved["environment"]["cluster_id"] = cluster_id
     resolved.update(definition)
     resolved.update(

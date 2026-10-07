@@ -25,8 +25,13 @@ DATA = {
 START = 1790812800
 
 
-def profile():
-    return json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))
+def profile(*, active_defaults=False):
+    config = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))
+    if not active_defaults:
+        # Tests opt into their own synthetic verification, never deployed evidence.
+        for binding in config["bindings"].values():
+            binding["verification"]["status"] = "candidate"
+    return config
 
 
 def verified(
@@ -72,7 +77,7 @@ def verified(
 
 def test_same_uploaded_schema_and_worker_loader_and_chart():
     a = Settings("rca").profile()
-    assert a == Settings("report").profile() == profile()
+    assert a == Settings("report").profile() == profile(active_defaults=True)
     assert len(a["queries"]) == len(a["bindings"]) == 45
     assert not {"D01", "D05", "D08", "D14"} & a["queries"].keys()
     assert (ROOT / "agents/config.example.json").read_bytes() == (

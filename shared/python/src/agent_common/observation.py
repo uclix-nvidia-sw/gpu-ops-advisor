@@ -11,7 +11,12 @@ from .contracts import timestamp, now
 from .discovery import Discovery, DiscoveryError
 from .grafana_time import mcp_time
 from .runtime import attempt_context
-from .query_contract import consolidated, query_definition, validate_profile
+from .query_contract import (
+    consolidated,
+    query_definition,
+    scope_label_names,
+    validate_profile,
+)
 from .binding_samples import sample_value
 
 log = logging.getLogger(__name__)
@@ -225,8 +230,18 @@ class Observation:
             selector_key = "loki_selector" if source == "loki" else "metric_selector"
             try:
                 if consolidated(self.profile):
-                    uid = definition["environment"]["datasource_uid"]
-                    selector = dict(definition["environment"]["selector"])
+                    environment = definition["environment"]
+                    selector = dict(environment["selector"])
+                    if environment.get("datasource_mode", "pinned") == "discover":
+                        uid, discovered_scope = await self.discovery.resolve(
+                            source,
+                            scope["cluster_id"],
+                            period,
+                            cluster_labels=scope_label_names(environment),
+                        )
+                        selector.update(discovered_scope)
+                    else:
+                        uid = environment["datasource_uid"]
                 elif cluster.get(uid_key) and selector_key in cluster:
                     # Optional legacy/expert overrides; normal deployments discover both.
                     uid, selector = cluster[uid_key], dict(cluster[selector_key])
@@ -392,6 +407,21 @@ class Observation:
                     "allocation_semantics": definition.get("allocation_semantics"),
                     "unit": definition.get("unit"),
                     "datasource_uid": uid,
+                    "datasource_resolution": (
+                        definition["environment"].get("datasource_mode", "pinned")
+                        if consolidated(self.profile)
+                        else "legacy"
+                    ),
+                    "resolved_cluster_selector": (
+                        {
+                            label: selector[label]
+                            for label in scope_label_names(definition["environment"])
+                            if label in selector
+                        }
+                        if consolidated(self.profile)
+                        and "scope_labels" in definition["environment"]
+                        else None
+                    ),
                     "query_revision": definition["revision"],
                     "metric": definition.get("metric"),
                 }

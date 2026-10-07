@@ -10,13 +10,38 @@
 
 `d-query-profile/3-draft`, `single-query-v3-draft`, `d-contract-restart-20261006-r1`은 전달 파일의 스키마·계약·revision 식별자다. MD가 정한 릴리스 번호가 아니다. 원본의 `delivery.runtime_ready=false`도 유지했다. 런타임 코드가 이 구조를 읽는 것과 환경별 binding이 준비되는 것은 별개다.
 
-45개 논리 D와 45개 후보 binding, Fleet Intelligence·NVIDIA DCGM Exporter·KSM 생산자 목록을 유지한다. 기본 실행 registry에는 D01/D05/D08/D14가 없다. 등록 정보·과거 참조는 실행 정의로 사용하지 않는다. 모든 `selected_binding`은 아직 null이다. **이 예제를 환경 검증 없이 그대로 운영에 적용하면 관측 기반 결과는 미확인/불충분 상태가 된다.**
+최초 전달본은 45개 논리 D와 45개 후보 binding, Fleet Intelligence·NVIDIA DCGM Exporter·KSM 생산자 목록을 유지한다. 기본 실행 registry에는 D01/D05/D08/D14가 없다. 등록 정보·과거 참조는 실행 정의로 사용하지 않는다. 모든 `selected_binding`은 아직 null이다. **이 예제를 환경 검증 없이 그대로 운영에 적용하면 관측 기반 결과는 미확인/불충분 상태가 된다.**
 
 ## 구현된 공통 계약
 
+### Datasource UID discovery / datasource UID 자동 발견
+
+검증된 파라미터 binding은 `environment.datasource_mode="discover"`와
+`datasource_uid=null`을 명시해 Grafana MCP에서 UID를 찾을 수 있다. 모드를 생략하면
+기존 `pinned` 동작이며 정확한 UID가 필요하다. `discover`와 고정 UID를 함께 지정하거나
+literal cluster binding에 discovery를 지정하면 설정 검증에서 거부한다.
+
+조회할 source 타입의 datasource 목록을 읽고, 요청 기간에 계약의
+`scope_labels.cluster_id` 라벨에 요청 `cluster_id`가 존재하는 datasource가 정확히
+하나일 때만 조회한다. `scope_labels.cluster_id`는 단일 라벨 또는 discover 모드의 순서 있는 후보 목록이다. 앞선 라벨에 값이 없을 때만 다음 후보로 이동한다. 값이 있는데 요청 cluster가 없으면 중단하며 값의 별칭 변환은 없다. 0개·여러 개·응답 오류·예산
+소진은 기존 discovery 사유로 unavailable 처리한다. 원래 producer/job/collection_path
+selector와 대상·시간 조건은 유지한다. 실제 UID·`resolved_cluster_selector`와 `datasource_resolution`을 evidence에
+저장하며 설정 원본을 수정하지 않는다.
+
+이 기능은 **조회 경로 발견**이다. metric·로그의 존재/의미·producer 버전·단위·시각·보존
+계약을 검증하거나 candidate를 verified로 바꾸지 않는다. 현재 공통 예제 `shared-grafana-discovery-20261007-r1`은 D02·D09만 검토된 관측 계약으로 자동 선택하고 나머지 43개는 차단한다. [범위·근거](../../evidence/d-binding-discovery-20261007.md)를 따른다.
+실제 소스 계약을 검토한 운영 설정이 필요하며, `configuration.agents`는 전체 객체로 적용한다.
+
+2026-10-07 운영 RCA 검수에서는 결과가 발행됐지만 D02·D09 모두
+`binding_unselected`, `no_usable_evidence`였다. Worker의 적용 revision은
+`shared-cluster-parameter-20261007-r1`, 두 binding은 candidate/UID null이었다.
+또한 기존 발행 Runbook은 구 D05 계약 때문에 매칭되지 않아 builtin 일반 조사를 사용했다. 후속 운영 검수에서 D09 계약의 XID79 revision 2를 공식 검토·발행 경로로 게시하고 저장된 incident snapshot과의 매칭을 확인했다. 원인 분석 성공이나
+LLM 연결 실패로 해석하지 않는다. 순서는 검증된 공통 binding 설정 → UID/실제 근거 확인 →
+검토된 Runbook 발행/매칭 확인 → 새 RCA 결과 검수다. 과거 공개 결과는 재작성하지 않는다.
+
 - RCA와 Report 모두 `Settings.profile()` → `validate_profile()`을 사용한다. `Observation`도 같은 검사를 거친다. 선택된 candidate, 등록되지 않은 producer/source, 여러 메트릭을 합친 표현식, 누락된 검증 규칙은 거부한다.
 - `queries[D].selected_binding` 또는 `clusters[cluster_id].bindings[D]`로 하나를 선택한다. 클러스터의 명시적 null은 기본 선택을 해제한다. 첫 후보 외 대안은 의미·단위 등 동등성을 확인한 `equivalence_evidence_refs`가 있어야 선택할 수 있다. `auto_select_verified_bindings`가 true이면 미선택 D에 대해 동등성 근거를 충족한 verified 파라미터 후보가 정확히 하나일 때만 선택한다. 명시적 선택/null이 우선하며 모호한 후보는 차단한다. 서로 다른 producer 표본의 병합은 없다.
-- verified binding에는 producer/version, revision, 정확한 datasource UID, cluster scope label mapping(구 설정은 literal cluster), 고정 selector, 대상 label mapping, 단위/타입, 시간 기준, 표본 간격, 최대 유지 시간, invalid/reset 규칙, 조사 기간·보존·근거 참조가 필요하다. 파라미터 binding은 공통 source 계약의 적용 범위도 명시한다. 이 필드 검사는 실제 운영 증거의 진실성을 대신 검증하지 않는다.
+- verified binding에는 producer/version, revision, 정확한 datasource UID 또는 명시적 discover 모드, cluster scope label mapping(구 설정은 literal cluster), 고정 selector, 대상 label mapping, 단위/타입, 시간 기준, 표본 간격, 최대 유지 시간, invalid/reset 규칙, 조사 기간·보존·근거 참조가 필요하다. 파라미터 binding은 공통 source 계약의 적용 범위도 명시한다. 이 필드 검사는 실제 운영 증거의 진실성을 대신 검증하지 않는다.
 - metric은 원본 Prometheus 표본 시간만 지원한다. log는 Loki 기록 시간을 명시한다. counter reset은 현재 `reject_decrease`만 지원한다. log에 적용되지 않는 표본/invalid/reset 규칙도 `not_applicable`과 사유를 명시한다. 기존 숫자 산식이 소비하는 기본 D는 그 산식의 단위·타입과 일치해야 한다.
 - 미선택 binding은 datasource 탐색과 원격 조회를 모두 수행하지 않는다. 선택 환경과 요청 cluster가 다르거나, Namespace/target을 표현할 label이 없으면 불가 사유를 남긴다. Host/GPU 관측을 위해 요청 범위를 임의로 확대하지 않는다. 관계를 통한 Host 범위 투영은 아직 지원하지 않는다.
 - evidence에 query/binding revision, producer/version, 단위·타입·시간·label·invalid/reset·freshness 규칙을 보존한다. 원본 snapshot은 그대로 두고 계산용 사본만 canonical label과 무효 표본 규칙을 적용한다. 무효 표본 시각을 건너뛰어 이전 값을 계속 유지하지 않는다.
