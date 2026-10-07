@@ -43,7 +43,7 @@ export function Reports() {
       <PageHead
         eyebrow="OPERATIONS REPORTS"
         title="운영 분석·보고서"
-        description="저장된 근거를 바탕으로 운영 분석을 요청하고 결과를 확인합니다."
+        description="저장된 근거를 바탕으로 운영 분석을 요청하고 결과를 확인합니다. 작성 중인 보고서도 같은 화면에서 진행 상태를 확인할 수 있습니다."
         actions={
           <Link className="button primary" to="/reports/new">
             새 보고서 만들기
@@ -61,7 +61,7 @@ export function Reports() {
         )}
         <ReportFilters />
         <QueryState query={q} empty={!q.items.length}>
-          <JobRows items={q.items} preferResult />
+          <JobRows items={q.items} />
         </QueryState>
         <More query={q} />
       </Panel>
@@ -167,7 +167,7 @@ export function ReportForm() {
       });
       if (result) {
         const id = str(result.job_id, str(result.id, str(result.schedule_id)));
-        if (id) navigate(scheduled ? `/schedules/${id}` : `/jobs/${id}`);
+        if (id) navigate(scheduled ? `/schedules/${id}` : `/reports/${id}`);
         else {
           app.notify('서버가 요청을 처리했습니다. 목록에서 확인해 주세요.');
           navigate(scheduled ? '/schedules' : '/reports');

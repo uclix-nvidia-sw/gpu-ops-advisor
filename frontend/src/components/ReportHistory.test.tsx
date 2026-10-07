@@ -86,6 +86,9 @@ it('keeps the newest request first even while an older published report exists',
   expect(html).toContain('2026. 10. 01. 하루 · 1일(24시간)');
   expect(html).toContain('아직 실행 시작 기록이 없습니다');
   expect(html).toContain('이전 추론의 종료 확인');
+  expect(html).toContain(
+    'class="text-link report-history-title" href="/reports/pending#final-report"',
+  );
   expect(html).toContain('/jobs/pending');
   expect(html).toContain('/reports/older#final-report');
   expect(html).not.toContain('핵심 결과');

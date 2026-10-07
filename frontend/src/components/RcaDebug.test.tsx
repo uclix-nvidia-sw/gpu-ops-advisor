@@ -94,7 +94,10 @@ describe('RCA diagnostics', () => {
     );
     expect(html).toContain('/analyses/rca-ready#final-report');
     expect(html).toContain('href="/jobs/rca-ready"');
-    expect(html).not.toContain('href="/jobs/ops-ready"');
+    expect(html).toContain('href="/jobs/ops-ready"');
+    expect(html).toMatch(
+      /href="\/analyses\/rca-ready#final-report"[^>]*><span class="alarm-identity"/,
+    );
     expect(html).toContain('/reports/ops-ready#final-report');
     expect(html).not.toContain('/analyses/pending#final-report');
     expect(html).toContain('미발행');

@@ -1,4 +1,4 @@
-import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Badge, Field, PageHead, Panel } from '../components/ui';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, useList } from '../lib/live';
@@ -18,7 +18,7 @@ export function Cases() {
     setParams(next);
   };
   const q = useList(
-    app.ready && !(app.mode === 'developer' && tab !== 'incidents')
+    app.ready
       ? queryPath('/' + (tab === 'reports' ? 'analyses' : tab), {
           scope: app.scope,
           status: tab === 'reports' ? 'succeeded' : status,
@@ -27,20 +27,12 @@ export function Cases() {
       : null,
     true,
   );
-  if (app.mode === 'developer' && tab !== 'incidents') {
-    return (
-      <Navigate
-        replace
-        to={`/jobs?kind=rca${tab === 'reports' ? '&status=succeeded' : status ? `&status=${encodeURIComponent(status)}` : ''}`}
-      />
-    );
-  }
   return (
     <div className="page">
       <PageHead
         eyebrow="ROOT CAUSE ANALYSIS"
         title={app.mode === 'developer' ? '사건·RCA 연결' : 'RCA 조사'}
-        description="사건에 연결된 RCA 조사와 발행된 결과를 확인합니다."
+        description="사건에 연결된 RCA 조사와 발행된 결과를 확인합니다. 미발행 조사 제목은 실행 상태로 연결됩니다."
         actions={
           app.mode === 'developer' ? (
             <Link className="button" to="/jobs?kind=rca">
@@ -53,28 +45,26 @@ export function Cases() {
           )
         }
       />
-      {app.mode !== 'developer' && (
-        <div className="tabs">
-          {[
-            ['incidents', '사건'],
-            ['analyses', '조사 이력'],
-            ['reports', '최종 보고서'],
-          ].map(([v, l]) => (
-            <button
-              className={tab === v ? 'active' : ''}
-              key={v}
-              onClick={() => {
-                const next = new URLSearchParams(params);
-                next.set('tab', v);
-                next.delete('status');
-                setParams(next);
-              }}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="tabs">
+        {[
+          ['incidents', '사건'],
+          ['analyses', '조사 이력'],
+          ['reports', '최종 보고서'],
+        ].map(([v, l]) => (
+          <button
+            className={tab === v ? 'active' : ''}
+            key={v}
+            onClick={() => {
+              const next = new URLSearchParams(params);
+              next.set('tab', v);
+              next.delete('status');
+              setParams(next);
+            }}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
       <Panel
         title={
           tab === 'incidents' ? '사건 목록' : tab === 'reports' ? '공개된 RCA 보고서' : '조사 목록'
@@ -99,7 +89,7 @@ export function Cases() {
         )}
         <QueryState query={q} empty={!q.items.length}>
           {tab !== 'incidents' ? (
-            <JobRows items={q.items} preferResult={tab === 'reports'} />
+            <JobRows items={q.items} />
           ) : (
             <div className="table-wrap">
               <table className="incident-list">

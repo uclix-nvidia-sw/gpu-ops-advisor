@@ -54,7 +54,7 @@ export function Jobs() {
       <PageHead
         eyebrow=""
         title={app.mode === 'developer' ? '작업 디버깅' : '작업 이력'}
-        description="작업의 진행 상태와 결과 품질을 확인하세요. 제목을 누르면 시도 이력과 상세 기록을 볼 수 있습니다."
+        description="작업의 진행 상태와 결과 품질을 확인하세요. 보고서 제목은 보고서 화면으로 연결됩니다. 실행 기록은 작업 상태·시도 이력에서 확인하세요."
       />
       {app.mode === 'developer' && (
         <form
@@ -165,7 +165,7 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
             <th scope="col">실행 상태</th>
             <th scope="col">결과 품질</th>
             <th scope="col">접수 시각</th>
-            <th scope="col">결과</th>
+            <th scope="col">보기</th>
           </tr>
         </thead>
         <tbody>
@@ -182,7 +182,15 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
             return (
               <tr key={id}>
                 <td>
-                  <Link className="text-link jobs-title" to={`/jobs/${id}`} state={{ from }}>
+                  <Link
+                    className="text-link jobs-title"
+                    to={
+                      isReport || job.result_ref != null
+                        ? `/${job.kind === 'rca' ? 'analyses' : 'reports'}/${id}#final-report`
+                        : `/jobs/${id}`
+                    }
+                    state={{ from }}
+                  >
                     {isReport ? (
                       reportTitle(job)
                     ) : job.kind === 'rca' ? (
@@ -254,8 +262,17 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
                       결과 보기
                     </Link>
                   ) : (
-                    <span className="jobs-unpublished">미발행</span>
+                    <span className="jobs-unpublished">결과 미발행</span>
                   )}
+                  <div>
+                    <Link
+                      className="text-link jobs-result-link"
+                      to={`/jobs/${id}`}
+                      state={{ from }}
+                    >
+                      작업 상태·시도 이력
+                    </Link>
+                  </div>
                 </td>
               </tr>
             );

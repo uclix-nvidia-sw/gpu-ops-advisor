@@ -324,9 +324,7 @@ export function OperationsReports() {
               id={`report-row-${str(r.id)}`}
               state={{ reportList, reportRow: str(r.id) }}
               key={str(r.id)}
-              to={
-                r.result_ref != null ? `/reports/${str(r.id)}#final-report` : `/jobs/${str(r.id)}`
-              }
+              to={`/reports/${str(r.id)}#final-report`}
             >
               <div className="ops-book-spine">
                 <FileChartColumn size={32} />

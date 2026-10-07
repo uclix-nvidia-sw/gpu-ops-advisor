@@ -80,7 +80,7 @@ describe('Ops report landing', () => {
         expect(html).not.toContain('<th>최종 보고서</th>');
       }
       expect(html).toContain('/reports/published#final-report');
-      expect(html).not.toContain('href="/jobs/published"');
+      if (Page === Reports) expect(html).toContain('href="/jobs/published"');
       expect(html).toContain('Namespace·프로젝트 배분 · GPU 에너지');
       if (Page === Reports) {
         expect(html).toContain('<dt>분석 대상</dt>');
@@ -114,8 +114,8 @@ describe('Ops report landing', () => {
           <Page />
         </MemoryRouter>,
       );
-      expect(html).toContain('href="/jobs/published"');
-      expect(html).not.toContain('href="/reports/published');
+      expect(html).toContain('href="/reports/published#final-report"');
+      if (Page === Reports) expect(html).toContain('href="/jobs/published"');
     }
   });
   it.each([Reports, OperationsReports])(
