@@ -1,3 +1,10 @@
+# 2026-10-07 Shared core observations — 로컬 검수
+
+- 기준: main `0af217c`, `feat/rca-core-observation-bindings`. 기존 원장·표본·CSV·Alloy 경로를 재대조하여 D03/D06/D10을 공통 MCP 발견 계약으로 전환했다. 공통 JSON과 Helm 사본이 같으며 CPC 이름·UID 고정은 없다. 후보 40개는 유지한다. XID48 작성 원본에 선택 D03을 추가하고 필수 D09 상태 근거와 investigation_only를 보존했다.
+- 통과: 루트 Python 3.12, `RUN_AGENT_E2E=1`, 격리 localhost DB에서 전체 `agents/tests`: **551 passed, 0 skipped**, 기존 MCP deprecation warning 3건. 두 Worker/JC/Incident/Backend/공식 MCP 프로세스와 fixture Grafana/LLM 검사다. 새 클러스터의 D03/D06/D10 자동 탐색·필터·단위·원본 값·RCA 입력 전달을 별도 검사했다.
+- 통과: Ruff check/format, Helm lint/패키징/설정 사본 검사, CI helper 16 tests, 추적 파일과 신규 문서의 링크 검사 107 documents / 1347 links. CI helper 최초 실행은 Git Bash PATH 누락으로 실패했고 경로 지정 후 통과했다. Runbook 계획 검사는 기존 두 D 가정을 XID48 선택 D03으로 갱신한 뒤 전체 통과했다.
+- 미검증: 새 공통 profile의 운영 배포·실제 Worker 결과, XID48 신규 DB revision 발행. D04/D11 의미 검토 및 D07/D12/D13 원천 연결은 남아 있다. 메모리 사용량·Pod 배치·scrape 상태를 장비 정상/오류 원인/직접 GPU 할당으로 승격하지 않는다. 이전 266개 발행 준비 목록은 실제 발행 전에 이번 XID48 변경을 포함해 다시 대조해야 한다.
+
 # 2026-10-07 RCA Runbook 선택·보완 진단 — 로컬 검수
 
 - 기준: main `9b634c8`, 브랜치 `fix/rca-runbook-diagnostics`. 발행 Runbook과 builtin 일반 템플릿이 함께 사용됐는데 보고서가 발행본 부재로 설명하던 오류를 수정했다. 선택/추가 조사 근거를 참조하고 normalized_health/unknown_value 설명을 추가했다. 판단·상태 fact·조치 적격성 계약은 변경하지 않았다.

@@ -1,13 +1,13 @@
 {
   "schema_version": "d-query-profile/3-draft",
   "query_contract": "single-query-v3-draft",
-  "revision": "shared-grafana-discovery-20261007-r1",
+  "revision": "shared-core-observations-20261007-r1",
   "auto_select_verified_bindings": true,
   "delivery": {
     "stage": "shared-discovery-observation-contract",
     "runtime_ready": true,
     "intended_path": "agents/config.example.json for both RCA and Report",
-    "note": "D02 and D09 use reviewed source observation contracts with MCP datasource/cluster-label discovery and request cluster_id. Other 43 bindings remain candidates. Discovery does not attest arbitrary producer versions, current health, causal conclusions, or full-window retention."
+    "note": "D02, D03, D06, D09 and D10 use reviewed source observation contracts with MCP datasource/cluster-label discovery and request cluster_id. Other 40 bindings remain candidates. Discovery does not attest arbitrary producer versions, current health, causal conclusions, or full-window retention."
   },
   "provenance": {
     "base_commit": "05bb4f69aec024ed72da72e266d63fa267be8f9a",
@@ -861,36 +861,68 @@
     },
     "nvidia_dcgm_exporter.D03": {
       "query_id": "D03",
-      "revision": "draft-1",
+      "revision": "shared-core-observations-20261007-r1",
       "producer": "nvidia_dcgm_exporter",
-      "producer_version": null,
+      "producer_version": "reviewed variants: 4.2.3-4.1.3-ubuntu22.04; 4.4.2-4.7.0-distroless",
       "source": "mimir",
       "metric": "DCGM_FI_DEV_FB_USED",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "job": "nvidia-dcgm-exporter",
+          "collection_path": "alloy-direct"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "gauge",
+      "unit": "MiB",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:57.938000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.md",
+          "docs/evidence/d-core-observations-20261007.md"
+        ],
+        "applicability": "Direct Alloy DCGM exporter framebuffer-used gauge in MiB; UUID/node identity; no Pod allocation claim. Request cluster parameter and MCP datasource discovery. Onboarding requires the reviewed producer and routing contract.",
+        "limitation": "Saved bounded samples and supplied image/routing evidence; max_hold is an analysis cap. New shared profile live Worker acceptance pending."
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -959,36 +991,70 @@
     },
     "kube_state_metrics.D06": {
       "query_id": "D06",
-      "revision": "draft-1",
+      "revision": "shared-core-observations-20261007-r1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "reviewed variants: v2.17.0; v2.18.0",
       "source": "mimir",
       "metric": "kube_pod_info",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "job": "kube-state-metrics",
+          "collection_path": "alloy-direct"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "node": "node",
+        "namespace": "namespace",
+        "pod": "pod",
+        "uid": "uid",
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "gauge",
+      "unit": "info",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 1,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:15:36.113000Z",
+          "end": "2026-10-06T08:16:06.113000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.md",
+          "docs/evidence/d-core-observations-20261007.md"
+        ],
+        "applicability": "Direct Alloy kube-state-metrics kube_pod_info gauge equal to 1 with Pod uid/node/namespace/name; placement observation only, not GPU ownership. Request cluster parameter and MCP datasource discovery. Onboarding requires the reviewed producer and routing contract.",
+        "limitation": "Saved bounded samples and supplied image/routing evidence; max_hold is an analysis cap. New shared profile live Worker acceptance pending."
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1141,36 +1207,65 @@
     },
     "scrape_collector.D10": {
       "query_id": "D10",
-      "revision": "draft-1",
+      "revision": "shared-core-observations-20261007-r1",
       "producer": "scrape_collector",
-      "producer_version": null,
+      "producer_version": "reviewed variants: v1.19.2",
       "source": "mimir",
       "metric": "up",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "collection_path": "alloy-direct"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "gauge",
+      "unit": "boolean",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap of two configured scrape intervals, not a measured guarantee."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 1,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Gauge; counter deltas forbidden."
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-06T08:12:51.113000Z",
+          "end": "2026-10-06T08:15:42.938000Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.md",
+          "docs/evidence/d-core-observations-20261007.md"
+        ],
+        "applicability": "Direct Alloy scrape up gauge 0 or 1 by instance; scrape health only, not device health. No inference of continuity from absence. Request cluster parameter and MCP datasource discovery. Onboarding requires the reviewed producer and routing contract.",
+        "limitation": "Saved bounded samples and supplied image/routing evidence; max_hold is an analysis cap. New shared profile live Worker acceptance pending."
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
