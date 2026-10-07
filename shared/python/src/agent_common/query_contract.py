@@ -66,13 +66,26 @@ def _verified(binding, query):
         _require(_text(binding.get(key)) and binding[key] != "unknown", key)
     environment = binding.get("environment", {})
     _require(isinstance(environment, dict), "environment")
-    _require(_text(environment.get("cluster_id")), "cluster_id")
+    parameterized = "scope_labels" in environment
+    if not parameterized:
+        _require(_text(environment.get("cluster_id")), "cluster_id")
     _require(_text(environment.get("datasource_uid")), "datasource_uid")
-    _require(_labels(environment.get("selector"), nonempty=True), "selector")
+    _require(
+        _labels(environment.get("selector"), nonempty=not parameterized), "selector"
+    )
     labels = binding.get("target_labels")
     _require(_labels(labels, nonempty=True), "target_labels")
     _require(all(re.fullmatch(LABEL, v) for v in labels.values()), "target label name")
     verification = binding["verification"]
+    if parameterized:
+        _require(
+            _text(verification.get("applicability")),
+            "shared source contract applicability",
+        )
+        _require(
+            environment["scope_labels"]["cluster_id"] not in labels.values(),
+            "scope label cannot be a target label",
+        )
     refs = verification.get("evidence_refs")
     _require(
         isinstance(refs, list) and bool(refs) and all(_text(r) for r in refs),
@@ -190,6 +203,10 @@ def validate_profile(profile):
         return profile
     _require(contract == CONTRACT, "unsupported query contract")
     _require(
+        type(profile.get("auto_select_verified_bindings", False)) is bool,
+        "auto_select_verified_bindings must be boolean",
+    )
+    _require(
         profile.get("schema_version") == "d-query-profile/3-draft", "schema_version"
     )
     queries, bindings = profile.get("queries"), profile.get("bindings")
@@ -270,6 +287,25 @@ def validate_profile(profile):
                         "alternative binding requires equivalence evidence",
                     )
     for binding_id, binding in bindings.items():
+        environment = binding.get("environment") or {}
+        _require(isinstance(environment, dict), "environment")
+        if "scope_labels" in environment:
+            scope_labels = environment["scope_labels"]
+            _require(
+                isinstance(scope_labels, dict)
+                and set(scope_labels) == {"cluster_id"}
+                and isinstance(scope_labels["cluster_id"], str)
+                and re.fullmatch(LABEL, scope_labels["cluster_id"]),
+                "scope_labels must map cluster_id to one label",
+            )
+            _require(
+                "cluster_id" not in environment, "mixed literal and parameter scope"
+            )
+            _require(_labels(environment.get("selector")), "selector")
+            _require(
+                scope_labels["cluster_id"] not in environment["selector"],
+                "static selector conflicts with scope label",
+            )
         query_id = binding.get("query_id")
         _require(
             query_id in queries
@@ -309,20 +345,51 @@ def query_definition(profile, query_id, cluster_id=None):
     query = profile["queries"].get(query_id, {})
     if not consolidated(profile):
         return query
-    selected = (
+    cluster_selections = (
         profile.get("clusters", {})
-        .get(cluster_id, {})
+        .get(cluster_id if isinstance(cluster_id, str) else None, {})
         .get("bindings", {})
-        .get(query_id, query.get("selected_binding"))
     )
+    selected = cluster_selections.get(query_id, query.get("selected_binding"))
     definition = {
         "revision": query.get("revision", "unconfigured"),
         "scope_kind": query.get("scope_kind"),
         "availability": "unavailable",
         "reason": "binding_unselected",
     }
+    if (
+        not selected
+        and query_id not in cluster_selections
+        and profile.get("auto_select_verified_bindings", False)
+    ):
+        candidates = query.get("binding_candidates", [])
+        eligible = [
+            bid
+            for bid in candidates
+            if profile["bindings"][bid]["verification"]["status"] == "verified"
+            and "scope_labels" in profile["bindings"][bid]["environment"]
+            and (
+                bid == candidates[0]
+                or (
+                    isinstance(
+                        profile["bindings"][bid].get("equivalence_evidence_refs"), list
+                    )
+                    and bool(profile["bindings"][bid]["equivalence_evidence_refs"])
+                    and all(
+                        _text(ref)
+                        for ref in profile["bindings"][bid]["equivalence_evidence_refs"]
+                    )
+                )
+            )
+        ]
+        if len(eligible) == 1:
+            selected = eligible[0]
+            definition["selection_method"] = "automatic_verified"
+        elif len(eligible) > 1:
+            return {**definition, "selection_reason": "multiple_verified_candidates"}
     if not selected:
         return definition
+    definition.setdefault("selection_method", "explicit")
     binding = profile["bindings"][selected]
     definition.update(
         binding_id=selected,
@@ -332,9 +399,21 @@ def query_definition(profile, query_id, cluster_id=None):
     )
     if binding["verification"]["status"] != "verified":
         return {**definition, "reason": "binding_unverified"}
-    if cluster_id is not None and binding["environment"]["cluster_id"] != cluster_id:
+    environment = binding["environment"]
+    if "scope_labels" in environment and not _text(cluster_id):
+        return {**definition, "reason": "binding_scope_unavailable"}
+    if (
+        "scope_labels" not in environment
+        and cluster_id is not None
+        and environment["cluster_id"] != cluster_id
+    ):
         return {**definition, "reason": "binding_environment_mismatch"}
     resolved = deepcopy(binding)
+    if "scope_labels" in environment:
+        resolved["environment"]["selector"][
+            environment["scope_labels"]["cluster_id"]
+        ] = cluster_id
+        resolved["environment"]["cluster_id"] = cluster_id
     resolved.update(definition)
     resolved.update(
         availability="verified",

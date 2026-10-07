@@ -1,18 +1,13 @@
 {
   "schema_version": "d-query-profile/3-draft",
   "query_contract": "single-query-v3-draft",
-  "revision": "d-contract-restart-20261006-r1",
+  "revision": "shared-cluster-parameter-20261007-r1",
+  "auto_select_verified_bindings": true,
   "delivery": {
-    "stage": "config_first",
-    "runtime_ready": false,
-    "intended_path": "agents/config.example.json",
-    "requires": [
-      "shared binding validator/resolver",
-      "RCA and Report consumer transition",
-      "environment-specific binding verification",
-      "Helm mirror and contract CI update"
-    ],
-    "note": "This is the proposed shared profile itself, not an executable profile for current v7/v8 workers. All bindings are unverified until explicitly evidenced; existing behavior must be preserved by migration before deployment."
+    "stage": "shared-parameter-contract",
+    "runtime_ready": true,
+    "intended_path": "agents/config.example.json for both RCA and Report",
+    "note": "Cluster scope comes from each job input. Candidate bindings remain unselected until their source contract and applicability are verified; parameterization is not environment verification."
   },
   "provenance": {
     "base_commit": "05bb4f69aec024ed72da72e266d63fa267be8f9a",
@@ -789,9 +784,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_GPU_UTIL",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -809,7 +806,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -837,9 +835,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_FB_USED",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -857,7 +857,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -881,9 +882,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_gpu_temp",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -901,7 +904,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -929,9 +933,11 @@
       "source": "mimir",
       "metric": "kube_pod_info",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -949,7 +955,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -976,9 +983,11 @@
       "source": "mimir",
       "metric": "gpu_ops_effective_unbound_request",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -996,7 +1005,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1020,9 +1030,11 @@
       "source": "loki",
       "metric": null,
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1040,7 +1052,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1069,9 +1082,11 @@
       "source": "mimir",
       "metric": "up",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1089,7 +1104,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1113,9 +1129,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_power_usage",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1133,7 +1151,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1161,9 +1180,11 @@
       "source": "mimir",
       "metric": "kube_node_status_allocatable",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1181,7 +1202,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1205,9 +1227,11 @@
       "source": "loki",
       "metric": null,
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1225,7 +1249,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1246,9 +1271,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_FB_FREE",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1266,7 +1293,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "CPC-2 과거 수집",
@@ -1283,9 +1311,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_fb_total",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1303,7 +1333,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -1320,9 +1351,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_fb_used_percent",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1340,7 +1373,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -1357,9 +1391,11 @@
       "source": "mimir",
       "metric": "cpu_used_percent",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1377,7 +1413,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -1394,9 +1431,11 @@
       "source": "mimir",
       "metric": "cpu_load_average",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1414,7 +1453,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -1431,9 +1471,11 @@
       "source": "mimir",
       "metric": "kube_node_status_condition",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1451,7 +1493,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "CPC-2 과거 수집",
@@ -1468,9 +1511,11 @@
       "source": "mimir",
       "metric": "kube_pod_container_resource_requests",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1488,7 +1533,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "CPC-2 과거 수집",
@@ -1505,9 +1551,11 @@
       "source": "mimir",
       "metric": "scrape_duration_seconds",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1525,7 +1573,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "CPC-2 과거 수집",
@@ -1542,9 +1591,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_MEMORY_TEMP",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1562,7 +1613,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1579,9 +1631,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_SM_CLOCK",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1599,7 +1653,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1616,9 +1671,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_MEM_CLOCK",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1636,7 +1693,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1653,9 +1711,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_SM_ACTIVE",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1673,7 +1733,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1690,9 +1751,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_SM_OCCUPANCY",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1710,7 +1773,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1727,9 +1791,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1747,7 +1813,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1764,9 +1831,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_DRAM_ACTIVE",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1784,7 +1853,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1801,9 +1871,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1821,7 +1893,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1838,9 +1911,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_PCIE_RX_BYTES",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1858,7 +1933,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1875,9 +1951,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_PROF_PCIE_TX_BYTES",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1895,7 +1973,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -1912,9 +1991,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_prof_nvlink_rx_bytes",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1932,7 +2013,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 소스 후보",
@@ -1949,9 +2031,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_prof_nvlink_tx_bytes",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -1969,7 +2053,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 소스 후보",
@@ -1986,9 +2071,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_XID_ERRORS",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2006,7 +2093,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -2023,9 +2111,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_sbe_vol_dev",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2043,7 +2133,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2060,9 +2151,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_sbe_vol_total",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2080,7 +2173,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2097,9 +2191,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_sbe_agg_dev",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2117,7 +2213,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2134,9 +2231,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_sbe_agg_total",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2154,7 +2253,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2171,9 +2271,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_dbe_vol_dev",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2191,7 +2293,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2208,9 +2311,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_dbe_vol_total",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2228,7 +2333,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2245,9 +2351,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_dbe_agg_dev",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2265,7 +2373,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2282,9 +2391,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_ecc_dbe_agg_total",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2302,7 +2413,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2319,9 +2431,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2339,7 +2453,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
@@ -2356,9 +2471,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_clocks_event_reasons",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2376,7 +2493,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2393,9 +2511,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_board_limit_violation",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2413,7 +2533,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2430,9 +2551,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_fabric_manager_status",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2450,7 +2573,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2467,9 +2591,11 @@
       "source": "mimir",
       "metric": "dcgm_fi_dev_enforced_power_limit",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2487,7 +2613,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "Fleet 과거 표본 이름",
@@ -2504,9 +2631,11 @@
       "source": "mimir",
       "metric": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
       "environment": {
-        "cluster_id": null,
         "datasource_uid": null,
-        "selector": null
+        "scope_labels": {
+          "cluster_id": "cluster_id"
+        },
+        "selector": {}
       },
       "target_labels": null,
       "json_target_fields": null,
@@ -2524,7 +2653,8 @@
         "observed_window": null,
         "retention_evidence": null,
         "evidence_refs": [],
-        "limitation": "Environment-specific binding is not verified in this delivery."
+        "limitation": "Environment-specific binding is not verified in this delivery.",
+        "applicability": null
       },
       "reference": {
         "evidence_level": "소스/설정 후보",

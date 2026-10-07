@@ -2,6 +2,8 @@
 
 기준: 2026-10-06, `main`의 `05bb4f69aec024ed72da72e266d63fa267be8f9a`와 사용자 확인 JSON. [개발 계획](d-contract-redesign-plan.md)과 [매핑 설계](d-query-mapping.md)의 구현 진행 기록이다. 두 문서의 전체 완료 기준을 대체하지 않는다.
 
+2026-10-07 추가: 공통 예제는 `shared-cluster-parameter-20261007-r1`로 갱신하고 CPC별 direct 전체 설정은 제거했다. `environment.scope_labels`로 작업의 `cluster_id`를 실제 소스 라벨에 연결한다. 고정 selector와 충돌하거나 요청 값이 없으면 범위를 넓히지 않고 거부한다. 파라미터 binding을 verified로 선택하려면 기존 검증 근거 외에 `verification.applicability`로 해당 datasource·selector의 공통 source 계약 적용 범위를 명시한다. 이전 literal cluster binding은 배포 호환성 때문에 지원한다. [현재 설정·적용 방법](../../../agents/README.md#공통-cluster_id-파라미터--2026-10-07)을 따른다. 아래 업로드 해시는 최초 입력의 이력이며 현재 파일 해시가 아니다.
+
 ## 입력 파일 확인
 
 사용자가 제공한 `config.example 3.json`과 보관본 `config.example.json`은 byte 단위로 같았다. SHA-256은 `85b348a142b7656a7e35058995131bbecd4a0d1b8cddf9c7bde03e28ed3bd932`이다. [공통 원본](../../../agents/config.example.json)과 [Helm 사본](../../../charts/gpu-ops-advisor/files/agents.json)에 그 파일을 그대로 적용했다.
@@ -13,8 +15,8 @@
 ## 구현된 공통 계약
 
 - RCA와 Report 모두 `Settings.profile()` → `validate_profile()`을 사용한다. `Observation`도 같은 검사를 거친다. 선택된 candidate, 등록되지 않은 producer/source, 여러 메트릭을 합친 표현식, 누락된 검증 규칙은 거부한다.
-- `queries[D].selected_binding` 또는 `clusters[cluster_id].bindings[D]`로 하나를 선택한다. 클러스터의 명시적 null은 기본 선택을 해제한다. 첫 후보 외 대안은 의미·단위 등 동등성을 확인한 `equivalence_evidence_refs`가 있어야 선택할 수 있다. 자동 대체·서로 다른 producer 표본의 병합은 없다.
-- verified binding에는 producer/version, revision, 정확한 datasource UID, cluster, selector, 대상 label mapping, 단위/타입, 시간 기준, 표본 간격, 최대 유지 시간, invalid/reset 규칙, 조사 기간·보존·근거 참조가 필요하다. 이 필드 검사는 실제 운영 증거의 진실성을 대신 검증하지 않는다.
+- `queries[D].selected_binding` 또는 `clusters[cluster_id].bindings[D]`로 하나를 선택한다. 클러스터의 명시적 null은 기본 선택을 해제한다. 첫 후보 외 대안은 의미·단위 등 동등성을 확인한 `equivalence_evidence_refs`가 있어야 선택할 수 있다. `auto_select_verified_bindings`가 true이면 미선택 D에 대해 동등성 근거를 충족한 verified 파라미터 후보가 정확히 하나일 때만 선택한다. 명시적 선택/null이 우선하며 모호한 후보는 차단한다. 서로 다른 producer 표본의 병합은 없다.
+- verified binding에는 producer/version, revision, 정확한 datasource UID, cluster scope label mapping(구 설정은 literal cluster), 고정 selector, 대상 label mapping, 단위/타입, 시간 기준, 표본 간격, 최대 유지 시간, invalid/reset 규칙, 조사 기간·보존·근거 참조가 필요하다. 파라미터 binding은 공통 source 계약의 적용 범위도 명시한다. 이 필드 검사는 실제 운영 증거의 진실성을 대신 검증하지 않는다.
 - metric은 원본 Prometheus 표본 시간만 지원한다. log는 Loki 기록 시간을 명시한다. counter reset은 현재 `reject_decrease`만 지원한다. log에 적용되지 않는 표본/invalid/reset 규칙도 `not_applicable`과 사유를 명시한다. 기존 숫자 산식이 소비하는 기본 D는 그 산식의 단위·타입과 일치해야 한다.
 - 미선택 binding은 datasource 탐색과 원격 조회를 모두 수행하지 않는다. 선택 환경과 요청 cluster가 다르거나, Namespace/target을 표현할 label이 없으면 불가 사유를 남긴다. Host/GPU 관측을 위해 요청 범위를 임의로 확대하지 않는다. 관계를 통한 Host 범위 투영은 아직 지원하지 않는다.
 - evidence에 query/binding revision, producer/version, 단위·타입·시간·label·invalid/reset·freshness 규칙을 보존한다. 원본 snapshot은 그대로 두고 계산용 사본만 canonical label과 무효 표본 규칙을 적용한다. 무효 표본 시각을 건너뛰어 이전 값을 계속 유지하지 않는다.

@@ -1,3 +1,15 @@
+# 2026-10-07 공통 cluster_id 파라미터 — 로컬 검수
+
+- 기준: 원격 main `bfe59478c19701ac3aa254276d6956d7e1496416`과 작업 기준 일치 확인. 브랜치 `feat/parameterized-cluster-bindings`.
+- 변경: CPC별 direct 전체 설정을 제거하고 공통 원본/Helm 사본의 45개 후보 binding에 `environment.scope_labels`를 적용했다. 요청 cluster_id를 정확 일치 selector로 주입하며 고정 범위·target 충돌과 누락값을 거부한다. 공통 verified source 계약은 `verification.applicability`가 필요하다. 기존 literal 설정 호환은 유지한다. `auto_select_verified_bindings`가 켜진 경우 유일한 verified 파라미터 후보만 자동 선택하고 명시적 선택/null·모호성 차단·대안 동등성 조건을 지킨다. 자동 선택 방식은 evidence에 기록한다.
+- 통과: 루트에서 `python -m pytest -c agents/pytest.ini agents/tests -q`를 `RUN_AGENT_E2E=1`로 실행해 **518 passed / 0 skipped**, MCP deprecation warning 3건. 임시 loopback PostgreSQL 16.15, 실제 JC/Incident/Backend/두 Worker 및 공식 MCP를 사용했고 Grafana/LLM은 fixture다. `DATABASE_URL`과 외부 E2E DB 설정을 제거하여 운영 DB에는 연결하지 않았다. 파라미터/기존 literal·선택/미선택 조합의 두 Worker 결과 발행을 포함한다.
+- 통과: 새 CPC 이름·특수문자 escaping·다중 CPC selector 분리·원본 설정 불변·누락 scope·정적 selector/target 충돌·후보 실행 차단·D20 gauge 소비와 기존 binding 검사 **94 passed**. 전체 테스트에 포함된다.
+- 통과: `python tools/ci/check_chart.py`의 Helm lint/render/package, source/mirror 및 배포 계약 검사. `python -m unittest discover -s tools/ci/tests -v` **16 passed**. 전체 Python Ruff check/format 통과.
+- 문서: 루트 `tools/check_links.py`는 사용자 소유 미추적 `_codex_dcgm_publish/frontend/index.html`의 Vite 경로 2건만 실패했다. 해당 디렉터리는 보존했으며 현재 추적 파일만 복사한 트리에서 **105 문서 / 1336 링크·자산 / 오류 0건**을 확인했다.
+- 미실행: 운영 배포·실제 새 job의 조회 및 발행 검수. 공통 예제 binding은 모두 후보/미선택이며 기존 운영 Helm override는 변경하지 않았다. 신규 CPC 자동 발견·등록 기능은 이 파라미터 전달 변경에 포함하지 않는다. Report 발행 결함 수정은 사용자 요청으로 보류·분리했다.
+
+---
+
 # 2026-10-06 P1 환경 조사와 소비 차원 검증 — 후속 로컬 검수
 
 - 기준: fetch 후 최신 `origin/main`과 로컬 HEAD `2849de1` 일치, PR #71 병합과 PR CI required 성공 확인. 후속 브랜치 `feat/binding-environment-validation`에서 작업했다. [실환경 조사 기록](../docs/evidence/d-binding-cpc-20261006.md)과 [90개 환경 항목 원장](../docs/evidence/d-binding-cpc-20261006.json)을 작성했다.
