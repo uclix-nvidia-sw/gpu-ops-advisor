@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import {
+  reportReceivedRange,
   reportPeriodLabel,
   reportRequestTime,
   previousReportDay,
@@ -52,4 +53,17 @@ it('keeps older hourly and non-midnight 24-hour ranges exact', () => {
 it('shows request receipt seconds in KST without confusing it with the analyzed date', () => {
   expect(reportRequestTime('2026-10-02T02:37:18.885847+00:00')).toBe('2026. 10. 02. 11:37:18');
   expect(reportRequestTime('')).toBe('미확인');
+});
+
+it('allows long request-date history while validating inclusive boundaries and malformed ranges', () => {
+  expect(
+    reportReceivedRange(new URLSearchParams('received_from=2026-01-01&received_to=2026-10-07')),
+  ).toEqual({ from: '2025-12-31T15:00:00.000Z', to: '2026-10-07T15:00:00.000Z', error: '' });
+  expect(reportReceivedRange(new URLSearchParams('received_to=2026-10-07')).from).toBeUndefined();
+  for (const query of [
+    'received_from=2026-02-30',
+    'received_from=wrong',
+    'received_from=2026-10-08&received_to=2026-10-07',
+  ])
+    expect(reportReceivedRange(new URLSearchParams(query)).error).not.toBe('');
 });

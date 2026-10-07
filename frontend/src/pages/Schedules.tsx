@@ -8,7 +8,7 @@ import { formatDate, labels } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { reportTitle } from '../lib/workflow';
 import { ReportTimeNote, ReportScope } from '../components/ReportMeta';
-import { reportTabs } from './Reports';
+import { reportTabs } from '../lib/reportNavigation';
 export function Schedules() {
   const { id } = useParams();
   return id ? <ScheduleDetail key={id} id={id} /> : <ScheduleList />;

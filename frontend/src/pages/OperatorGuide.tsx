@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Notice, PageHead, Panel } from '../components/ui';
+import { NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { topicId, topics } from '../lib/live';
 import { reportKinds, topicDisplayBases } from '../lib/reportKinds';
+import { reportTabs } from '../lib/reportNavigation';
 
 // Keep current behavior distinct from the development goals in specification 12.
 const topicGuides = [
@@ -188,6 +189,7 @@ export function OperatorGuide() {
           </Link>
         }
       />
+      <NavTabs items={reportTabs} />
       <Notice>
         현재 코드·개발명세 기준 안내입니다. 실시간 연결 상태나 데이터 보유 여부를 판정하는 화면은
         아닙니다. 실제 보고서의 기간·계산 기준·부족 사유를 함께 확인하세요.
@@ -288,7 +290,7 @@ export function OperatorGuide() {
                     aria-controls="guide-kind-content"
                     onClick={() => setKindId(item.id)}
                   >
-                    <strong>{item.name}</strong>
+                    <strong>{item.id === 'health' ? 'GPU 상태·에너지·장애' : item.name}</strong>
                   </button>
                 ))}
               </div>
