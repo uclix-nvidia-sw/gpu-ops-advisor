@@ -113,3 +113,36 @@ python3 ./binding_details.py --environment advisor-central --effective-config | 
 ```
 
 실행 대상은 중앙 dell-l40s이며 서버 변경이나 설치는 없다. `--effective-config`는 중앙 전용이고 기존 수집 모드와 별개다. 근거: [Mimir HTTP API](https://grafana.com/docs/mimir/latest/references/http-api/), [Loki HTTP API](https://grafana.com/docs/loki/latest/reference/loki-http-api/). 실제 적용된 중앙 보존·tenant 정책, Alloy 경로, 환경별 binding 선택과 두 Worker 검수는 계속 미완료다.
+
+
+## 중앙 실제 적용 설정 — 2026-10-07 00:43 UTC
+
+사용자 첨부의 `binding-effective-config/1` JSON을 파싱했다. Mimir 16개 인스턴스의 `/config` 선택 필드는 전부 일치하며 `/runtime_config` 16개 모두 `overrides: {}`를 보고한다. `limits.compactor_blocks_retention_period=0s`는 Mimir compactor의 기간 기반 삭제 비활성 설정이다. object storage 자체 lifecycle이나 과거 표본 가용성을 보증하지 않는다. `max_query_lookback=0s`, `query_ingesters_within=13h`도 확인했다.
+
+익명화된 부모 키를 알려진 설정명 SHA-256과 대조하면 별도의 `13h0m0s`는 `blocks_storage.tsdb.retention_period`다. 장기 보존기간으로 해석하지 않는다. 원장의 Mimir 항목에 보존 근거 참조를 연결하고 남은 max_hold 정책 미확인과 분리했다. binding의 검증/선택 상태는 바꾸지 않았다. [Mimir 보존 설정](https://grafana.com/docs/mimir/latest/configure/configure-metrics-storage-retention/).
+
+Loki 기본 설정은 `compactor.retention_enabled=false`, `limits_config.retention_period=0s`, `max_query_lookback=0s`, `max_query_length=30d1h`다. 마지막 값은 조회 길이 제한이며 보존기간이 아니다. `/runtime_config` 실패 1건은 그대로 미해결이다. Mimir 메트릭 검증과 Loki 로그 검증을 분리한다.
+
+전송 대조에는 현재 CPC-1/CPC-2 Alloy 설정의 필터·relabel·OTel 변환 경로가 필요하다. 기존 수집의 해시/15s 주기만으로 해당 의미를 확정할 수 없다. 이 자료 없이 producer 원본 선언을 중앙 표본의 의미로 자동 승격하지 않는다. 실환경 두 Worker 검수도 아직 실행하지 않았다.
+
+
+## CPC direct environment profile
+
+두 Alloy 원문의 LF SHA-256이 기존 수집 해시와 정확히 일치한다. 직접 수집 경로는 EndpointSlice discovery → service/port 선별 → 15s scrape → 8개 이름 allowlist → 신원 relabel → Mimir remote_write다. 값·단위 변환은 없으며 `honor_labels=true`, `Hostname→node`, `UUID→uuid`를 확인했다. KSM의 workload node와 exporter_node는 구분된다. Fleet는 별도 OTLP 경로이며 그 `k8s.pod.uid`는 수집기 Pod 신원이다.
+
+[환경별 공통 JSON](../../agents/config.cpc-direct.json)은 두 Worker가 함께 읽는 완전한 profile이다. 범용 `config.example.json`과 Helm 기본 사본은 미선택 템플릿으로 유지한다. 환경 파일에는 CPC별 D02/D03/D06/D10/D15/D20/D22, 총 14개 binding을 선택했다. 미등록 cluster와 나머지 D는 계속 차단한다. D12 메트릭은 allowlist에 있지만 조사 구간 원본 표본이 없어 선택하지 않았다.
+
+타입·단위는 Exporter CSV, KSM 및 Alloy metric 계약과 값 변환 없는 경로를 대조했다. D02는 0~100%, D03/D15는 0~(2^53−1) MiB 범위로 제한하여 DCGM INT64 blank 계열을 제외, D06은 info 값 1, D10/D20은 0~1 gauge, D22는 비음수 seconds로 제한한다. NaN/Inf는 공통 코드에서 제외한다. max_hold 30s는 15s 간격 두 번까지만 유지하는 명시적 분석 정책이며 관측된 무누락 보장이 아니다. counter 계산은 적용하지 않는다.
+
+- [NVIDIA DCGM sentinel 정의](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-enums.html)
+- [KSM Pod metric 계약](https://github.com/kubernetes/kube-state-metrics/blob/v2.18.0/docs/metrics/workload/pod-metrics.md)
+- [KSM Node metric 계약](https://github.com/kubernetes/kube-state-metrics/blob/v2.18.0/docs/metrics/cluster/node-metrics.md)
+- [Alloy scrape 계약](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.scrape/)
+
+D20 producer의 실제 gauge를 Report가 info 전용 조건으로 제외하던 문제를 수정했다. 기존 info 호환성은 유지하고 Node condition을 GPU health fact로 승격하지 않는다.
+
+보관된 실제 Grafana 원본의 재생에서 CPC별 7개 쿼리의 collector→Report O01 및 RCA normalization을 실행했다. CPC-1/CPC-2의 D02 정규화 series는 각각 16/2, D06은 277/137, D20은 105/48개다. 이는 저장 표본 범위이며 클러스터 전체 GPU 총합이 아니다. 원본 불변, 미검증 health fact 0개, Report partial을 확인했다. 실제 서버의 새 job·LLM·JC 발행 검수는 아니다.
+
+적용 시 두 Worker의 `AGENT_CONFIG_FILE`에 같은 환경 JSON을 사용하거나 Helm `configuration.agents` 전체 객체로 전달한다. 부분 merge하지 않는다. 기존 설정/이미지/revision을 보관하고 진행 중 작업을 drain한 후, 통과한 CI의 배포 artifact로 전환한다. 새 RCA·Report 작업의 profile revision/binding revision, 실제 조회·계산·최종 발행을 각각 검수하고 실패 시 기존 조합으로 회수한다. 신규 파일 생성과 로컬 재생은 배포 완료를 뜻하지 않는다.
+
+Helm 검증에서 큰 float sentinel의 JSON 재직렬화 반올림을 발견하여 범위 기반 무효값 처리로 고정했다. D03/D15의 상한은 장비 용량 추정이 아니라 정확한 정수 표현 범위 제한이다. 원본 JSON과 Helm 렌더링 의미의 일치를 검증한다.

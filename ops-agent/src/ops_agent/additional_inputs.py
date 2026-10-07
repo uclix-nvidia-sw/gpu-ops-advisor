@@ -157,7 +157,7 @@ def apply_additional_inputs(topic, data, collected):
             "evidence_refs": row["evidence_refs"],
         }
         for row in intervals(collected.get("D20", []), period)
-        if row.get("sample_type") == "info"
+        if row.get("sample_type") in {"gauge", "info"}
         and row["labels"].get("node")
         and row["labels"].get("condition")
         and row["labels"].get("status")
