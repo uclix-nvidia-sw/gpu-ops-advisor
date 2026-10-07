@@ -7,7 +7,7 @@
   "limitations": [
     "Only two clusters and bounded query windows were inspected.",
     "Metric absence is scoped to those windows, not global absence.",
-    "User-reported Fleet image tags/digests and DCGM/Exporter tags received; KSM version, Exporter digests, collector/forwarding configuration and image-to-source provenance remain pending.",
+    "User-provided preflight confirms Fleet, DCGM/Exporter and KSM image tags/digests. Active CSV contents, forwarding semantics, central retention, freshness policy and image-to-source provenance remain unverified. Metadata is not binding activation evidence.",
     "Raw production samples remain local; no production activation, DB write or deployment."
   ],
   "evidence_exports": [
@@ -160,6 +160,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -321,6 +326,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -545,7 +555,7 @@
       "source": "mimir",
       "cluster": "cpc-1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.17.0",
       "actual_metric_or_field": "kube_pod_info",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -607,10 +617,12 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
-      ]
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D06",
@@ -618,7 +630,7 @@
       "source": "mimir",
       "cluster": "cpc-2",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.18.0",
       "actual_metric_or_field": "kube_pod_info",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -680,10 +692,12 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
-      ]
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D07",
@@ -1133,7 +1147,7 @@
       "source": "mimir",
       "cluster": "cpc-1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.17.0",
       "actual_metric_or_field": "kube_node_status_allocatable",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -1155,12 +1169,14 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
-        "no_exact_metric_samples_in_inspected_windows"
-      ]
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D12",
@@ -1168,7 +1184,7 @@
       "source": "mimir",
       "cluster": "cpc-2",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.18.0",
       "actual_metric_or_field": "kube_node_status_allocatable",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -1190,12 +1206,14 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
         "required_producer_metric_not_observed",
-        "no_exact_metric_samples_in_inspected_windows"
-      ]
+        "no_exact_metric_samples_in_inspected_windows",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D13",
@@ -1338,6 +1356,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -1982,7 +2005,7 @@
       "source": "mimir",
       "cluster": "cpc-1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.17.0",
       "actual_metric_or_field": "kube_node_status_condition",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -2036,10 +2059,12 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
-      ]
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D20",
@@ -2047,7 +2072,7 @@
       "source": "mimir",
       "cluster": "cpc-2",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.18.0",
       "actual_metric_or_field": "kube_node_status_condition",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -2101,10 +2126,12 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
-        "retention_and_max_hold_policy_unconfirmed"
-      ]
+        "retention_and_max_hold_policy_unconfirmed",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D21",
@@ -2112,7 +2139,7 @@
       "source": "mimir",
       "cluster": "cpc-1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.17.0",
       "actual_metric_or_field": "kube_pod_container_resource_requests",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -2171,11 +2198,13 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
-        "resource_selector_required_raw_requests_are_not_effective_requests"
-      ]
+        "resource_selector_required_raw_requests_are_not_effective_requests",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-1.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D21",
@@ -2183,7 +2212,7 @@
       "source": "mimir",
       "cluster": "cpc-2",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.18.0",
       "actual_metric_or_field": "kube_pod_container_resource_requests",
       "datasource_uid": "cfyeuxpjjebcwe",
       "type": null,
@@ -2242,11 +2271,13 @@
         ]
       },
       "activation_blockers": [
-        "deployed_producer_version_unconfirmed",
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
-        "resource_selector_required_raw_requests_are_not_effective_requests"
-      ]
+        "resource_selector_required_raw_requests_are_not_effective_requests",
+        "deployed_collection_config_and_sample_provenance_unconfirmed"
+      ],
+      "producer_version_evidence": "deployment_inventory.cpc-2.kube_state_metrics",
+      "producer_version_verification": "user_provided_preflight_image_tag_and_digest"
     },
     {
       "query_id": "D22",
@@ -2404,6 +2435,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2488,6 +2524,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2572,6 +2613,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2647,7 +2693,8 @@
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
-        "deployed_collection_config_and_sample_provenance_unconfirmed"
+        "deployed_collection_config_and_sample_provenance_unconfirmed",
+        "field_not_listed_in_reported_collector_csv"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
       "historical_endpoint_observation": {
@@ -2656,6 +2703,11 @@
         "declared_type": null,
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "not_listed",
+        "type": null,
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2731,7 +2783,8 @@
         "type_unit_invalid_rules_unconfirmed",
         "retention_and_max_hold_policy_unconfirmed",
         "no_exact_metric_samples_in_inspected_windows",
-        "deployed_collection_config_and_sample_provenance_unconfirmed"
+        "deployed_collection_config_and_sample_provenance_unconfirmed",
+        "field_not_listed_in_reported_collector_csv"
       ],
       "producer_version_evidence": "deployment_inventory.cpc-1.nvidia_dcgm_exporter",
       "historical_endpoint_observation": {
@@ -2740,6 +2793,11 @@
         "declared_type": null,
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "not_listed",
+        "type": null,
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2824,6 +2882,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2908,6 +2971,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -2992,6 +3060,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -3076,6 +3149,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -3160,6 +3238,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -3520,6 +3603,11 @@
         "declared_type": "gauge",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "gauge",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -4708,6 +4796,11 @@
         "declared_type": "counter",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "counter",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -5344,6 +5437,11 @@
         "declared_type": "counter",
         "explicit_sample_timestamp": false,
         "scope": "single_pod_snapshot_not_cluster_inventory"
+      },
+      "collector_csv_declaration": {
+        "status": "listed",
+        "type": "counter",
+        "evidence_ref": "followup_details.cpc-1.exporter_csv"
       }
     },
     {
@@ -5392,52 +5490,152 @@
   "deployment_inventory": {
     "cpc-1": {
       "evidence_status": "user_provided_kubectl_output",
-      "scope": "Two Fleet pods per cluster; node names matched to local Grafana exports; not a full GPU inventory.",
+      "scope": "User-provided pod metadata: two Fleet, two Exporter, two HostEngine and one KSM pods; not a full GPU inventory or image-source attestation.",
       "fleet_intelligence": {
         "image": "ghcr.io/dsx-ai-factory/fleet-intelligence-agent:1.5.0-rc.1",
         "image_digest": "sha256:d9a61090116f1f9a2f183c6779fb1b76f4792f6e927b60c64f33a5137577d18b",
         "source_tag": "v1.5.0-rc.1",
         "source_commit": "8dd8826b7604386ad667125298156ddb1d1a7865",
-        "image_source_provenance_verified": false
+        "image_source_provenance_verified": false,
+        "observed_pod_count": 2,
+        "configured_collect_interval": "1m",
+        "configured_check_interval": "1m",
+        "interval_evidence": "followup_details.cpc-1.fleet_intervals"
       },
       "nvidia_dcgm_hostengine": {
         "image": "nvcr.io/nvidia/cloud-native/dcgm:4.2.3-1-ubuntu22.04",
-        "image_digest": null
+        "image_digest": "sha256:b66c0972a7c029799419d5920ff0953af25b418d541c59ca096f4103312539ce",
+        "observed_pod_count": 2
       },
       "nvidia_dcgm_exporter": {
         "image": "nvcr.io/nvidia/k8s/dcgm-exporter:4.2.3-4.1.3-ubuntu22.04",
-        "image_digest": null,
-        "mounted_collectors_verified": false
+        "image_digest": "sha256:76281f16b132e0f6ddb16a1b8adfe523ea3d5ce290f623f4734d50906c8770a7",
+        "mounted_collectors_verified": false,
+        "observed_pod_count": 2,
+        "reported_collectors_path": "/etc/dcgm-exporter/dcp-metrics-included.csv",
+        "collector_contents_status": "User-provided CSV read from both pods; identical content",
+        "collector_contents_evidence": "followup_details.cpc-1.exporter_csv"
       },
       "kube_state_metrics": {
         "pod_presence_reported": true,
-        "image": null,
-        "image_digest": null
+        "image": "kube-state-metrics/kube-state-metrics:v2.17.0",
+        "image_digest": "sha256:2bbc915567334b13632bf62c0a97084aff72a36e13c4dabd5f2f11c898c5bacd",
+        "observed_pod_count": 1,
+        "image_registry_omitted": true,
+        "selected_args": [
+          {
+            "flag": "--resources",
+            "value": "certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments"
+          },
+          {
+            "flag": "--metric-labels-allowlist",
+            "value": "nodes=[*],namespaces=[*],deployments=[*],statefulsets=[*],daemonsets=[*],pods=[*]"
+          }
+        ]
+      },
+      "preflight_evidence": "preflight.sources.cpc-1",
+      "alloy": {
+        "image": "docker.io/grafana/alloy:v1.19.2",
+        "image_digest": "sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839",
+        "observed_pod_count": 2,
+        "config_evidence": {
+          "sha256": "784dcabffb7823a85ea9a13bdf1cae52c6efa75fbaa34f4364c525badd6228c0",
+          "bytes_utf8": 7256,
+          "duration_settings": [
+            {
+              "line": 209,
+              "setting": "scrape_interval",
+              "value": "15s"
+            },
+            {
+              "line": 210,
+              "setting": "scrape_timeout",
+              "value": "10s"
+            }
+          ],
+          "routing_line_numbers": [
+            206,
+            208,
+            221,
+            222,
+            271
+          ],
+          "routing_content_verified": false
+        },
+        "interval_scope": "A matching config line, not proof of every producer cadence or routing."
       }
     },
     "cpc-2": {
       "evidence_status": "user_provided_kubectl_output",
-      "scope": "Two Fleet pods per cluster; node names matched to local Grafana exports; not a full GPU inventory.",
+      "scope": "User-provided pod metadata: two Fleet, two Exporter, two HostEngine and one KSM pods; not a full GPU inventory or image-source attestation.",
       "fleet_intelligence": {
         "image": "ghcr.io/dsx-ai-factory/fleet-intelligence-agent:1.5.0-rc.1",
         "image_digest": "sha256:d9a61090116f1f9a2f183c6779fb1b76f4792f6e927b60c64f33a5137577d18b",
         "source_tag": "v1.5.0-rc.1",
         "source_commit": "8dd8826b7604386ad667125298156ddb1d1a7865",
-        "image_source_provenance_verified": false
+        "image_source_provenance_verified": false,
+        "observed_pod_count": 2,
+        "configured_collect_interval": "1m",
+        "configured_check_interval": "1m",
+        "interval_evidence": "followup_details.cpc-2.fleet_intervals"
       },
       "nvidia_dcgm_hostengine": {
         "image": "nvcr.io/nvidia/cloud-native/dcgm:4.4.2-1-ubuntu22.04",
-        "image_digest": null
+        "image_digest": "sha256:becae9b24707d2bdfce87cb72626e24b2fbfbca812329ca52540ad0e0d955717",
+        "observed_pod_count": 2
       },
       "nvidia_dcgm_exporter": {
         "image": "nvcr.io/nvidia/k8s/dcgm-exporter:4.4.2-4.7.0-distroless",
-        "image_digest": null,
-        "mounted_collectors_verified": false
+        "image_digest": "sha256:7c0ac4430bb0a5868b7404a0e06c47e02b0375b61aadd614385ad0bc2d43815a",
+        "mounted_collectors_verified": false,
+        "observed_pod_count": 2,
+        "reported_collectors_path": "/etc/dcgm-exporter/dcp-metrics-included.csv",
+        "collector_contents_status": "Both CSV reads failed; exact cause unknown",
+        "collector_contents_evidence": "followup_details.cpc-2.exporter_csv"
       },
       "kube_state_metrics": {
         "pod_presence_reported": true,
-        "image": null,
-        "image_digest": null
+        "image": "kube-state-metrics/kube-state-metrics:v2.18.0",
+        "image_digest": "sha256:1545919b72e3ae035454fc054131e8d0f14b42ef6fc5b2ad5c751cafa6b2130e",
+        "observed_pod_count": 1,
+        "image_registry_omitted": true,
+        "selected_args": [
+          {
+            "flag": "--resources",
+            "value": "certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpointslices,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments"
+          }
+        ]
+      },
+      "preflight_evidence": "preflight.sources.cpc-2",
+      "alloy": {
+        "image": "docker.io/grafana/alloy:v1.19.2",
+        "image_digest": "sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839",
+        "observed_pod_count": 2,
+        "config_evidence": {
+          "sha256": "85ceb29161dd1636a56043c4e66652ebd739b55720481330fe984e43a862ce47",
+          "bytes_utf8": 7988,
+          "duration_settings": [
+            {
+              "line": 240,
+              "setting": "scrape_interval",
+              "value": "15s"
+            },
+            {
+              "line": 241,
+              "setting": "scrape_timeout",
+              "value": "10s"
+            }
+          ],
+          "routing_line_numbers": [
+            153,
+            237,
+            239,
+            252,
+            253
+          ],
+          "routing_content_verified": false
+        },
+        "interval_scope": "A matching config line, not proof of every producer cadence or routing."
       }
     }
   },
@@ -5582,5 +5780,286 @@
       }
     }
   },
-  "integration_base_commit": "a3dd8c4d5c553a06193de27078ccb9b7c20d1de0"
+  "integration_base_commit": "a3dd8c4d5c553a06193de27078ccb9b7c20d1de0",
+  "preflight": {
+    "evidence_status": "user_provided_read_only_preflight",
+    "sources": {
+      "advisor-central": {
+        "attachment_sha256": "2a991e1452b6062adcb22200230d1a16637e7957323ed0e1ddd593fb74cf9707",
+        "collected_at": "2026-10-06T08:53:59.315111+00:00",
+        "raw_storage": "local_only_not_committed",
+        "collection_error_count": 0
+      },
+      "cpc-1": {
+        "attachment_sha256": "ef50501e338dfd6fd534aaf5aa010ed95177e5a03d987335b4474a6eb315f78b",
+        "collected_at": "2026-10-06T08:55:26.207672+00:00",
+        "raw_storage": "local_only_not_committed",
+        "collection_error_count": 0,
+        "collection_errors": [],
+        "retention_settings_scope": "Source Prometheus retention is not central Mimir retention.",
+        "source_prometheus_retention": [
+          "7d"
+        ]
+      },
+      "cpc-2": {
+        "attachment_sha256": "42bcd65a885c86314308865f5d20b9e911646ae6211a7509e36046b596ea4054",
+        "collected_at": "2026-10-06T08:55:42.822281+00:00",
+        "raw_storage": "local_only_not_committed",
+        "collection_error_count": 4,
+        "collection_errors": [
+          {
+            "resource": "configmap",
+            "namespace": "monitoring",
+            "name": "prometheus-prometheus-kube-prometheus-prometheus-rulefiles-1",
+            "status": "unreadable"
+          },
+          {
+            "resource": "configmap",
+            "namespace": "monitoring",
+            "name": "prometheus-prometheus-kube-prometheus-prometheus-rulefiles-2",
+            "status": "unreadable"
+          },
+          {
+            "resource": "configmap",
+            "namespace": "runai",
+            "name": "prometheus-runai-rulefiles-1",
+            "status": "unreadable"
+          },
+          {
+            "resource": "configmap",
+            "namespace": "runai",
+            "name": "prometheus-runai-rulefiles-2",
+            "status": "unreadable"
+          }
+        ],
+        "retention_settings_scope": "Source Prometheus retention is not central Mimir retention.",
+        "source_prometheus_retention": [
+          "10d"
+        ]
+      }
+    },
+    "central_profile": {
+      "schema_version": "d-query-profile/3-draft",
+      "revision": "d-contract-restart-20261006-r1",
+      "query_contract": "single-query-v3-draft",
+      "query_count": 45,
+      "cluster_ids": [],
+      "selected_queries": [],
+      "sha256_lf": "fd157a7de21c870e83619a56b925bb38bf246c6a6036e23e9859a07ab18d7b4b",
+      "bytes_utf8_lf": 114026,
+      "matches_repository_after_crlf_to_lf": true,
+      "scope": "ConfigMap content only; does not prove running Workers reloaded it or image source revision."
+    },
+    "central_runtime": {
+      "ops-agent": [
+        {
+          "image": "ghcr.io/uclix-nvidia-sw/gpu-ops-advisor-ops-agent@sha256:6d2a9da6369de48cfef4d8f1890618baf6e4a159dc8a912702e807e86afc4e5f",
+          "image_digest": "sha256:6d2a9da6369de48cfef4d8f1890618baf6e4a159dc8a912702e807e86afc4e5f"
+        }
+      ],
+      "rcca-agent": [
+        {
+          "image": "ghcr.io/uclix-nvidia-sw/gpu-ops-advisor-rcca-agent@sha256:d100ad5a5a4feb245601610d52266c1fa45ed883ea36dd9f42a27c14a15c5e1d",
+          "image_digest": "sha256:d100ad5a5a4feb245601610d52266c1fa45ed883ea36dd9f42a27c14a15c5e1d"
+        }
+      ],
+      "mimir": [
+        {
+          "image": "docker.io/grafana/mimir:3.2.0",
+          "image_digest": "sha256:736f7459913d262444e70813565e3ca24b64dce24343da20af554ae6ee5268e8"
+        }
+      ],
+      "loki": [
+        {
+          "image": "docker.io/grafana/loki:3.7.7",
+          "image_digest": "sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500"
+        }
+      ]
+    },
+    "central_retention": {
+      "status": "unverified",
+      "reason": "No supported duration field was emitted; absence does not establish defaults or unlimited retention."
+    }
+  },
+  "followup_details": {
+    "date": "2026-10-07",
+    "integration_base_commit": "c69957340239ca912d31aff73e8f61f12997788b",
+    "cpc-1": {
+      "source": "user_provided_attachment",
+      "attachment_sha256": "6684c008857a05bd903df5f172fa7747c29239953f1f43621f60f8384ba6d713",
+      "collected_at": "2026-10-07T00:14:34.978173+00:00",
+      "raw_storage": "local_only_not_committed",
+      "alloy_config_sha256": "784dcabffb7823a85ea9a13bdf1cae52c6efa75fbaa34f4364c525badd6228c0",
+      "exporter_csv": {
+        "observed_replicas": 2,
+        "identical": true,
+        "sha256": "9728e45c9d733bd0d8807f9d82c005e07a180dbf10fba21df4ad451c9c8eb900",
+        "active_fields": [
+          {
+            "field": "DCGM_FI_DEV_SM_CLOCK",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEM_CLOCK",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEMORY_TEMP",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_GPU_TEMP",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_POWER_USAGE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_PCIE_REPLAY_COUNTER",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_GPU_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_MEM_COPY_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_ENC_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_DEC_UTIL",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_XID_ERRORS",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_FB_FREE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_FB_USED",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_VGPU_LICENSE_STATUS",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS",
+            "type": "counter"
+          },
+          {
+            "field": "DCGM_FI_DEV_ROW_REMAP_FAILURE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_DRIVER_VERSION",
+            "type": "label"
+          },
+          {
+            "field": "DCGM_FI_PROF_GR_ENGINE_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_DRAM_ACTIVE",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PCIE_TX_BYTES",
+            "type": "gauge"
+          },
+          {
+            "field": "DCGM_FI_PROF_PCIE_RX_BYTES",
+            "type": "gauge"
+          }
+        ],
+        "scope": "CSV declaration only; sample emission, central forwarding and units need separate evidence"
+      },
+      "fleet_intervals": [
+        {
+          "replica": 1,
+          "explicit_interval_env": {
+            "FLEETINT_CHECK_INTERVAL": "1m",
+            "FLEETINT_COLLECT_INTERVAL": "1m"
+          },
+          "env_from_present": false,
+          "scope": "No default or effective cadence inferred when absent"
+        },
+        {
+          "replica": 2,
+          "explicit_interval_env": {
+            "FLEETINT_CHECK_INTERVAL": "1m",
+            "FLEETINT_COLLECT_INTERVAL": "1m"
+          },
+          "env_from_present": false,
+          "scope": "No default or effective cadence inferred when absent"
+        }
+      ]
+    },
+    "cpc-2": {
+      "source": "user_message_structured_facts",
+      "collected_at": "2026-10-07T00:21:50.801496+00:00",
+      "alloy_config_sha256": "85ceb29161dd1636a56043c4e66652ebd739b55720481330fe984e43a862ce47",
+      "scrape_interval_config_line": "15s",
+      "scrape_timeout_config_line": "10s",
+      "exporter_csv": {
+        "observed_replicas": 2,
+        "status": "unreadable_or_cat_unavailable_no_fallback_executed",
+        "cause": "unverified; original diagnostic suppressed stderr"
+      },
+      "fleet_intervals": [
+        {
+          "replica": 1,
+          "explicit_interval_env": {
+            "FLEETINT_CHECK_INTERVAL": "1m",
+            "FLEETINT_COLLECT_INTERVAL": "1m"
+          },
+          "env_from_present": false,
+          "scope": "No default or effective cadence inferred when absent"
+        },
+        {
+          "replica": 2,
+          "explicit_interval_env": {
+            "FLEETINT_CHECK_INTERVAL": "1m",
+            "FLEETINT_COLLECT_INTERVAL": "1m"
+          },
+          "env_from_present": false,
+          "scope": "No default or effective cadence inferred when absent"
+        }
+      ],
+      "retry_scope": "User reported successful metadata collection under root after earlier collection_failed under nvidia; original cause not established."
+    },
+    "advisor-central": {
+      "source": "user_message_structured_facts",
+      "collected_at": "2026-10-07T00:14:23.636520+00:00",
+      "configmap_reads": 4,
+      "selected_settings_count": 0,
+      "config_hashes_match_previous_preflight": true,
+      "retention_status": "unverified; no matching scalar emitted, not proof of defaults or unlimited retention"
+    },
+    "activation": "blocked_pending_collection_forwarding_semantics_retention_freshness_and_live_worker_acceptance"
+  }
 }

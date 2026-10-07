@@ -463,3 +463,15 @@ Grafana datasource HTTP 응답과 OpenAI 호환 LLM endpoint만 고정 데이터
 - 실제 사건 구간 D02에는 GPU UUID/node는 있지만 Pod·namespace 라벨이 없다. D08을 DCGM으로 바꾸어도 해당 사건의 Pod를 확정할 수 없다. inventory 로그도 장비 사건 시각·freshness 계약이 없어 신원 후보로만 보존한다.
 - `DCGM_FI_DEV_XID_ERRORS`의 해당 구간 가용성은 미검증. 기본 D05는 D09 파생 보기를 사용한다. 전역 metric 부재나 모든 GPUAlert의 R01/R02 충족 불가를 주장하지 않는다.
 - 운영 배포·동일 incident의 운영 재실행·실제 모델 품질 검증은 미실행. 과거 evidence/result와 hash는 변경하지 않았다.
+
+### 2026-10-06 후속 preflight 근거 대조
+
+세 서버의 사용자 제공 preflight를 [환경 원장](../docs/evidence/d-binding-cpc-20261006.md)에 반영했다. KSM 버전·Exporter/HostEngine digest와 중앙 ConfigMap JSON의 LF 해시 일치를 확인했다. 90개 환경 항목은 모두 미선택 candidate이며 82개에 버전 근거가 있다. CPC-2 rulefiles ConfigMap 읽기 실패 4건과 중앙 보존·실제 CSV/전송 설정·Worker 로드 검수의 한계는 유지한다.
+
+이 후속 변경은 원장/문서만 수정한다. 첨부 파싱·버전 및 해시 대조, 후보 상태·공통 JSON/Helm 불변, 문서 링크를 검증했다. 제품 코드·배포·DB는 변경하지 않아 기존 496개 회귀/E2E를 다시 실행하지 않았다. 새 서버 출력은 fixture E2E를 실환경 Worker/LLM 검수로 승격하지 않는다.
+
+### 2026-10-07 수집 설정 후속 근거와 진단 도구
+
+CPC-1의 두 Exporter CSV 동일성·25개 선언·D26/D27 미포함, 양쪽 Fleet 1m 설정, CPC-2 CSV 읽기 실패와 중앙 보존 미확인을 환경 원장에 추가했다. 실행 JSON과 Helm 사본은 변경하지 않았다. 새 `tools/ci/binding_details.py`는 부분 실패에도 성공 근거를 유지하고 오류 단계를 출력한다. 도구 회귀는 로컬 fixture이며 실제 서버에서 새 버전을 실행한 결과가 아니다. 두 Worker 런타임은 변경하지 않았고 실환경 활성화/LLM/Runbook 발행/배포는 미완료다.
+
+검증: 저장소 루트에서 `python -m unittest discover -s tools/ci/tests -v` **12개 통과**(신규 진단 7개 포함), 변경 Python 두 파일 Ruff lint/format 통과. Windows 첫 시도의 Bash 경로 누락은 설치된 Git Bash를 PATH에 연결한 재실행으로 해결했다. 원장/원본 해시·90개 candidate/82개 버전·JSON/Helm 불변 검사를 통과했고, 추적 소스 사본의 링크 검사 **105개 문서 / 1,332개 링크 / 오류 0개**를 확인했다. 기존 제품 Worker 회귀는 런타임 불변이므로 재실행하지 않았다.
