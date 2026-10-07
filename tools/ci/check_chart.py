@@ -302,6 +302,124 @@ def main():
         "@" + digest
     )
     assert not any(d["kind"] == "PersistentVolumeClaim" for d in pinned)
+    # Record retention in an earlier release while the original PVC still exists.
+    original_claim = next(d for d in docs if d["kind"] == "PersistentVolumeClaim")
+    assert "annotations" not in original_claim["metadata"]
+    retained = render("--set", "artifacts.persistence.retainOnDelete=true")
+    retained_claim = next(d for d in retained if d["kind"] == "PersistentVolumeClaim")
+    assert retained_claim["spec"] == original_claim["spec"]
+    assert retained_claim["metadata"]["name"] == original_claim["metadata"]["name"]
+    assert retained_claim["metadata"]["annotations"] == {
+        "helm.sh/resource-policy": "keep"
+    }
+    assert next(d for d in retained if d["kind"] == "StatefulSet") == next(
+        d for d in docs if d["kind"] == "StatefulSet"
+    )
+    # An external claim removes the old manifest; keep cannot protect it retroactively.
+    switched = render(
+        "--set",
+        "artifacts.persistence.retainOnDelete=true,artifacts.persistence.existingClaim=existing-artifacts",
+    )
+    assert not any(d["kind"] == "PersistentVolumeClaim" for d in switched)
+    report_volumes = next(
+        d
+        for d in switched
+        if d["kind"] == "Deployment" and d["metadata"]["name"] == "verify-ops-agent"
+    )["spec"]["template"]["spec"]["volumes"]
+    assert (
+        next(v for v in report_volumes if v["name"] == "artifacts")[
+            "persistentVolumeClaim"
+        ]["claimName"]
+        == "existing-artifacts"
+    )
+    # Multi-worker deployment is explicit and must preserve external artifact storage.
+    assert next(d for d in docs if d["kind"] == "PersistentVolumeClaim")["spec"][
+        "accessModes"
+    ] == ["ReadWriteOnce"]
+    independent_file = CHART / "values-independent-agents.yaml"
+    independent = yaml.safe_load(independent_file.read_text())
+    baseline = json.loads((ROOT / "job-controller/config.example.json").read_text())
+    assert independent["configuration"]["jobController"] == baseline | {
+        "shared_limit": 6,
+        "kind_limits": {"rca": 3, "report": 3},
+    }, "Independent preset must preserve non-capacity JC configuration"
+    independent_args = (
+        "-f",
+        str(independent_file),
+        "--set",
+        "artifacts.persistence.existingClaim=fixture-rwx",
+    )
+    scaled = render(*independent_args)
+    assert not any(d["kind"] == "PersistentVolumeClaim" for d in scaled)
+    for d in scaled:
+        if d["kind"] != "Deployment":
+            continue
+        component = d["metadata"]["labels"]["app.kubernetes.io/component"]
+        assert d["spec"]["replicas"] == (
+            3 if component in ("rcca-agent", "ops-agent") else 1
+        )
+        if component == "ops-agent":
+            volumes = d["spec"]["template"]["spec"]["volumes"]
+            assert (
+                next(v for v in volumes if v["name"] == "artifacts")[
+                    "persistentVolumeClaim"
+                ]["claimName"]
+                == "fixture-rwx"
+            )
+    scaled_config = json.loads(
+        next(d for d in scaled if d["kind"] == "ConfigMap")["data"][
+            "job-controller.json"
+        ]
+    )
+    assert scaled_config == independent["configuration"]["jobController"]
+    # Applying an already-installed configuration is optional; the operator verifies its revision.
+    render(*independent_args, "--set", "configuration.applyJobController=false")
+    render(*independent_args, "--set", "components.ops-agent.enabled=false")
+    rejected = [
+        ("artifacts.persistence.existingClaim=", "existingClaim"),
+        ("artifacts.persistence.retainOnDelete=invalid", "retainOnDelete"),
+        (
+            "artifacts.persistence.existingClaimAccessMode=ReadWriteOnce",
+            "ReadWriteMany",
+        ),
+        ("artifacts.persistence.enabled=false", "persistent artifacts"),
+        (
+            "artifacts.persistence.existingClaimAccessMode=null",
+            "existingClaimAccessMode",
+        ),
+        ("configuration.jobController.shared_limit=5", "shared_limit"),
+        ("configuration.jobController.kind_limits.report=2", "kind_limits.report"),
+        ("configuration.jobController.kind_limits.rca=2", "kind_limits.rca"),
+        ("configuration.jobController.worker_profiles.report-v1.slots=2", "slots=1"),
+        ("configuration.jobController.worker_profiles.rca-v1.kind=report", "kind rca"),
+        ("components.ops-agent.env.CAPACITY_PROFILE_ID=missing", "profile missing"),
+        ("components.ops-agent.env.CAPACITY_PROFILE_ID=", "capacity profile"),
+        ("components.ops-agent.env.WORKER_ID=shared", "WORKER_ID"),
+        ("components.rcca-agent.env.WORKER_ID=shared", "WORKER_ID"),
+        ("components.ops-agent.replicas=0", "replicas"),
+    ] + [
+        (f"components.{component}.replicas=2", "replicas")
+        for component in names - {"rcca-agent", "ops-agent"}
+    ]
+    for setting, error in rejected:
+        failed = subprocess.run(
+            [
+                HELM,
+                "template",
+                "verify",
+                str(CHART),
+                *independent_args,
+                "--set",
+                setting,
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        assert failed.returncode != 0 and error in failed.stderr, (
+            setting,
+            failed.stderr,
+        )
     with tempfile.TemporaryDirectory() as temp:
         subprocess.run([HELM, "package", str(CHART), "-d", temp], check=True)
         package = next(Path(temp).glob("*.tgz"))

@@ -1,3 +1,10 @@
+# 2026-10-08 종류별 독립 실행 용량 — 두 Worker 회귀
+
+- 기준: 원격 main `5570a0e`, `feat/independent-agent-capacity`. JC의 종류별 배분 조건과 선택 Helm 구성을 바꿨으며 RCA/Ops 분석 코드와 공통 Python Worker는 변경하지 않았다.
+- 통과: Python 3.11.16(지원 범위), PostgreSQL 16.9, Go 1.26.2, 공식 Grafana MCP 1.4.2에서 `RUN_AGENT_E2E=1 .venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/independent-capacity/agents-results.xml` — **598 passed / 0 skipped, 89.32초**, 기존 MCP deprecation 경고 3건. `PG_BIN`, `GRAFANA_MCP_BINARY`, `JC_BINARY`, `INCIDENT_BINARY`, `BACKEND_BINARY`, `HELM_BINARY`는 로컬 도구/새 빌드 경로를 지정했고 외부 DB 환경변수를 제거했다. 새 localhost 임시 DB·실제 두 Worker/NAT/JC/Incident/Backend/공식 MCP 프로세스와 Grafana/LLM 응답 fixture 검사다.
+- 통과: `ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci`와 동일 경로 `ruff format --check`. 종류별 3+3 인수·한도·늦은 결과 거절 및 Helm 검수는 [JC 검증 기록](../job-controller/QA.md)을 따른다.
+- 미검증: 실제 Kubernetes 6개 Agent Pod 동시 발행, 기존 RWX claim의 mount/쓰기, 운영 Dynamo/Mimir/DB 부하. 전체 Worker 회귀는 6개 실제 Pod 부하 시험이 아니며 실제 모델의 잔여 추론 종료도 증명하지 않는다. 위 로컬 검수 시점에는 커밋·푸시·PR·운영 배포·운영 DB/PVC 변경을 수행하지 않았다.
+
 # 2026-10-07 D07/D13 source contracts — 원문 조회 보존
 
 ## 2026-10-07 실패 보고와 실행 슬롯 반환 회귀

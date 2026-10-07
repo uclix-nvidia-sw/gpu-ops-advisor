@@ -1,5 +1,19 @@
 # Job Controller 검증 기록
 
+## 2026-10-08 종류별 독립 실행 용량 — 로컬 검수
+
+**기준:** 최신 원격 main `5570a0e`(PR 85)에서 `feat/independent-agent-capacity`로 분리했다. 기본 한도/차트의 1개씩 구성은 유지하며, 선택 구성은 RCA/Ops 각 3개·Worker당 1·종류별 3·전체 6이다. 신규 DB migration·Agent 분석/공통 Worker·재시도/lease 정책 변경은 없다.
+
+**통과:** Go 1.26.2·PostgreSQL 16.9에서 JC/Backend/Incident 각각 `go vet ./...`, `go test -race ./...`, `go build ./...`; 새 localhost 임시 DB의 Backend/Incident `go test -tags=e2e ./tests -v -count=1 -timeout=10m`. 운영 DB 환경변수를 제거하고 고유 임시 DB로 실행·종료했다. 상대 종류가 fresh·대기 중이어도 보고서 3개를 먼저 인수하고 RCA 3개도 실행되는지, 같은 Worker 추가 인수/종류별 4번째 제한, 원격 unknown 실패 후 재시도·늦은 결과 거부·RCA 예약 보존을 확인했다. 기존 공유 1개 교대·동시 claim·설정 축소·기존 격리 반환과 원래/PR 85 정책 revision 차단도 통과했다.
+
+**Helm 통과:** Python 3.12.14·Helm 3.17.3으로 `tools/ci/check_chart.py`의 렌더·lint·패키지 검사, 3+3 정상 구성 및 한도/프로필/신원/저장소/비Worker 복제 오류 20개 거절, CI 도구 `unittest` 22개. 기존 기본 RWO PVC와 원본 설정 미러는 그대로이며 예시는 확인된 기존 RWX claim 없이는 렌더링을 거절한다. RWX 설정은 운영자의 선언으로 실제 서버 검증을 대신하지 않는다.
+
+**보고서 PVC 보존 추가 검수:** 운영자가 제공한 Trident NAS/RWO·Helm 소유·Delete 정책을 대조해 `retainOnDelete` 선택 옵션과 단계별 전환 문서를 추가했다. Python 3.12.14·Helm 3.17.3으로 전체 Chart 검사·CI 도구 22개·Ruff·문서 링크/diff 검사를 재실행했다. 기본값 무변경, 보존 시 기존 PVC 이름/spec·DB StatefulSet 불변과 keep annotation, 외부 claim 전환의 mount, 잘못된 옵션 거절을 확인했다. 실제 Helm 업그레이드의 PVC 보존·RWX 생성·다중 노드 쓰기·파일 복사는 미실행이다. 이번 추가분은 Chart/검수/문서만 바뀌어 Go·Worker 전체 검사는 앞선 통과 결과를 유지하고 재실행하지 않았다.
+
+**Worker 회귀 통과:** 지원 Python 3.11.16에서 실제 두 Worker/NAT/MCP와 fixture Grafana/LLM을 사용한 전체 Agent 검사 **598 passed / 0 skipped**, 기존 경고 3건. Ruff lint/format도 통과했다. 실행 환경과 한계는 [Agent QA](../agents/QA.md)의 2026-10-08 기록을 따른다.
+
+**로컬 검수 시점 미수행/미검증:** 커밋·푸시·PR·배포·운영 DB/PVC 변경, 실제 6개 Pod 동시 발행과 저장소 mount/쓰기, Dynamo/Mimir/DB 운영 부하. Go 동시 인수 검수는 프로토콜 클라이언트이며 6개 실제 Kubernetes Pod 검수가 아니다. 독립 코드 검토에서 추가 수정 필요 사항은 발견하지 못했다.
+
 ## 2026-10-07 실패한 실행 슬롯 반환
 
 **통과:** 원격 main `b8621a6` 기반 로컬 변경. JC·Backend·Incident 각각 `go vet ./...`, `go test -race ./...`, `go build ./...`; 새 임시 PostgreSQL에서 Backend·Incident `go test -tags=e2e ./tests -v -count=1 -timeout=10m`. Go 1.26.2, PostgreSQL 16.9, macOS. 기존 DB 환경변수를 제거하고 loopback 임시 DB만 사용한 뒤 종료했다.

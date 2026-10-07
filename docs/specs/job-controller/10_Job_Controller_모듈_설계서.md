@@ -62,7 +62,7 @@ Agent가 여유 슬롯이 있을 때 pull하고 Job Controller가 claim 응답�
 3. 공통 capacity 행을 잠그고, 등록 Worker의 kind·지원 입력 계약에 맞는 오래된 실행 가능 요청부터 jobs 행 잠금으로 선택한다(추가 개발 계약은 14). 동일 트랜잭션에서 attempt 증가·claim_token·lease·슬롯 예약을 확정한다.
 4. 반환 전 커밋한다. 적격 잡이나 슬롯이 없으면 204이며 잡은 queued/retry_wait로 유지한다. Agent는 backoff+jitter로 다시 인수한다.
 
-초기 배분 정책은 종류별 `(eligible_at,created_at,id)` FIFO다. 공유 슬롯 경합은 두 종류에 실행 가능한 잡과 최근 유효 Worker가 있으면 번갈아 기회를 주며, 상대 종류가 실행 불가하면 현재 종류를 막지 않는다. `last_granted_kind`와 Worker freshness를 같은 capacity 잠금에서 평가한다. 긴급 우선순위·선점·동적 용량 산정은 추가하지 않는다.
+배분 정책은 종류별 `(eligible_at,created_at,id)` FIFO다. `shared_limit < kind_limits.rca + kind_limits.report`인 공유 용량 구성에서만 두 종류에 실행 가능한 잡과 최근 유효 Worker가 있으면 번갈아 기회를 주며, 상대 종류가 실행 불가하면 현재 종류를 막지 않는다. 공유 한도가 종류별 합계 이상이면 자기 종류의 여유를 상대 종류의 차례 때문에 막지 않는다. RCA/Ops Worker 각 3개·Worker당 1·종류별 3·전체 6은 서로 빌려 쓰지 않는 독립 용량 구성이다. `last_granted_kind`와 Worker freshness는 같은 capacity 잠금에서 평가하며 중복 인수 방지 잠금을 유지한다. `dispatch_policy=independent-kind-capacity-v1`도 config revision에 포함한다. 긴급 우선순위·선점·동적 용량 산정은 추가하지 않는다.
 
 설정 한도를 낮추면 실행 중 잡을 강제 종료하지 않고 신규 claim을 멈춘다. 점유가 새 한도 아래로 내려가면 재개한다. Agent가 0개인 종류는 worker_unavailable, 슬롯 부족은 capacity_wait로 조회한다. inference_quarantined는 구 기록 호환 값이며 종료된 격리는 새 정책의 Sweep에서 반환한다.
 
