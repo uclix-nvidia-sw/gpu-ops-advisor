@@ -244,7 +244,6 @@ def test_shared_defaults_activate_only_reviewed_observation_contracts():
         }
         assert available == set(config["queries"]) - {
             "D07",
-            "D13",
             "D46",
         }
     assert config["bindings"]["fleet_intelligence.D09"]["max_hold"]["seconds"] == 0

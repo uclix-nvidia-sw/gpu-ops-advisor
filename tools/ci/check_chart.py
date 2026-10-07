@@ -173,7 +173,6 @@ def main():
     }
     assert verified == set(agent_profile["queries"]) - {
         "D07",
-        "D13",
         "D46",
     }, "Only reviewed observation contracts are enabled"
     assert "REPLACE_" not in config["agents.json"]

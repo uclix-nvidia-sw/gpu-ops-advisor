@@ -1,3 +1,10 @@
+# 2026-10-07 D07/D13 source contracts — 원문 조회 보존
+
+- 기준: main 8bd727e, 공통 cluster_id와 MCP 탐색 유지. D13 원문 로그 문맥 binding을 추가하고 업무/상태 fact 승격을 차단한다. 미검증 대상 필터는 전체 클러스터로 확대하지 않는다. D07은 기존 scheduler 원천을 먼저 검토하며 별도 서비스 설치를 전제하지 않는다.
+- 통과: Python 3.12, 격리 localhost DB, RUN_AGENT_E2E=1 전체 검사 580 passed / 0 skipped, 기존 MCP 경고 3건. 대상 별칭 차단 후 집중 검사 128 passed. Ruff, Helm 계약/패키징, CI helper 18개, 문서 109개/링크 1356개 오류 0건. 두 Worker E2E의 Grafana/LLM은 fixture다.
+- 미검증: D07 scheduler 버전·실제 원천·UID/시간/상태 연결, D46 단위, 새 설정 배포와 실제 Worker 결과. 제공된 KSM Pod YAML은 D07 유효 요청량 존재를 증명하지 않는다.
+- 상세: [D07/D13 원천 검토](../docs/evidence/d07-d13-source-review-20261007.md).
+
 # 2026-10-07 Shared observation expansion — 공통 조회 확장
 
 - 기준: main `566ec4a` (PR #81 병합), `feat/shared-observation-expansion`. 전체 45개 D를 대조했고 공통 profile에서 42개 관측 조회를 선택한다. 원래 exporter 후보를 보존하며 Fleet 대체 binding 11개를 추가했다. cluster registry는 비어 있고 이름·UID 고정이 없다.
