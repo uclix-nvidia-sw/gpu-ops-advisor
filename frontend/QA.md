@@ -1,3 +1,8 @@
+# 2026-10-07 RCA Runbook 선택 설명 — 로컬 검수
+
+- 통과: `frontend/`에서 `npm test` **173 tests / 17 files**, `npm run build`, `npm run format:check`. JSX 렌더링 fixture로 발행본만/builtin만/혼합/선택 없음, 기존 narrative 보존, normalized_health/unknown_value 사유 표시를 확인했다.
+- 참조 Runbook의 origin을 근거로 발행본 선택과 일반 조사 추가 사용을 구분한다. 과거 저장 보고서 문장은 수정하지 않는다. API·스키마 변경은 없으며 수정 UI의 운영 배포·브라우저 검수는 아직 수행하지 않았다.
+
 # 2026-10-07 운영자 가이드 하위 탭 통합 — 로컬 검수
 
 PR 준비 시 최신 원격 main `c699573`(PR #74 포함) 기준 `feat/report-list-guide-polish`로 분리했다. 기존 브랜치와 main의 파일 내용이 같아 충돌 없이 로컬 변경을 보존했다. 로컬 디자인 기록과 모의 서버·스크린샷은 커밋에서 제외한다.

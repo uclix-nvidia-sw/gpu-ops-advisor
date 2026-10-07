@@ -1,3 +1,10 @@
+# 2026-10-07 RCA Runbook 선택·보완 진단 — 로컬 검수
+
+- 기준: main `9b634c8`, 브랜치 `fix/rca-runbook-diagnostics`. 발행 Runbook과 builtin 일반 템플릿이 함께 사용됐는데 보고서가 발행본 부재로 설명하던 오류를 수정했다. 선택/추가 조사 근거를 참조하고 normalized_health/unknown_value 설명을 추가했다. 판단·상태 fact·조치 적격성 계약은 변경하지 않았다.
+- 통과: 저장소 루트에서 격리 localhost DB와 `RUN_AGENT_E2E=1`로 `python -m pytest -c agents/pytest.ini agents/tests -q`: **548 passed, 0 skipped**, MCP deprecation warning 3건. 실제 Worker/JC/Incident/Backend/MCP 프로세스와 fixture Grafana/LLM을 사용하는 회귀검사이며 운영 통합 검수와 구분한다. Ruff check/format 및 diff 검사 통과.
+- 운영 읽기 검수: XID79 발행 revision 2 선택 → D09/D02 조회 → missing_evidence/unknown_value 일반 조사 보완 → partial 발행을 확인했다. 당시 선택 진단의 267개 invalid_contract를 현재 발행본에 대조했으며 모두 observation_plan 미등록/비허용 조회 검사에서 탈락했다. 저장소 원본 변경으로 DB 발행본이 갱신되지 않는 문제이며 무검토 일괄 발행으로 해결하지 않았다.
+- 미검증: 수정 코드 운영 배포와 새 RCA 결과. 과거 불변 보고서·DB 발행본은 변경하지 않았다. producer 시각/상태 fact 검증과 기존 Runbook 새 revision 검토·발행은 남아 있다. Ops Report 실패 조사 범위는 포함하지 않았다.
+
 # 2026-10-07 Shared binding MCP discovery — 공통 알림 경로 검수
 
 - 기준: 원격 main `85eae1fc87056e0fff4326001b5e6439ee5ea117` (PR #78 병합). 이전 Worker 출력은 candidate/UID null로 D02·D09가 `binding_unselected`였으며, 발행 성공을 유효한 원인 분석으로 해석하지 않았다.

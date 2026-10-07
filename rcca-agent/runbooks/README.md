@@ -1,6 +1,6 @@
 # Runbook 개발 및 RCA 연계
 
-> 2026-10-02 후속 설계: 이 폴더의 JSON은 추후 DB에 등록할 작성 원본이다. D 통합·확장에 따른 원본 수정, 오류 코드 없는 조사, DB 초안 등록·검토·발행의 순서는 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑)과 [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md)을 따른다. 현재 JSON과 아래 실행 절차는 아직 변경하지 않았으며, 신규 D가 구현·검증된 것으로 읽지 않는다.
+> 2026-10-07: 이 폴더의 JSON은 DB에 등록할 작성 원본이며 D05 요구를 D09와 필수 fact로 전환했다. 저장소 변경은 기존 DB 발행본을 갱신하지 않는다. D 통합·확장과 새 revision의 초안 등록·검토·발행 순서는 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑), [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md), [DB 등록 절차](DB-WORKFLOW.md)를 따른다. 원본의 D 등록은 운영 binding이나 상태 fact 검증 완료를 뜻하지 않는다.
 
 ## R 없는 조사 계획과 예상 밖 근거 — 2026-10-02
 
