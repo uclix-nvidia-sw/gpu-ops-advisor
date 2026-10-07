@@ -18,25 +18,27 @@ ADDITIONS = (
     "DCGM_FI_DEV_XID_ERRORS",
     "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
 )
+POD_STATE = ("kube_pod_status_phase",)
 
 
-def extend(config):
+def extend(config, *, include_pod_state=False):
     """Fail closed on an unfamiliar rule; only replace one exact regex value."""
     pattern = re.compile(
         r'(source_labels\s*=\s*\["__name__"\]\s+regex\s*=\s*")'
         r'([^"\n]+)("\s+action\s*=\s*"keep")'
     )
+    standard = BASE + "|" + "|".join(ADDITIONS)
+    with_state = standard + "|" + "|".join(POD_STATE)
     matches = [
-        m
-        for m in pattern.finditer(config)
-        if m[2] in (BASE, BASE + "|" + "|".join(ADDITIONS))
+        m for m in pattern.finditer(config) if m[2] in (BASE, standard, with_state)
     ]
     if len(matches) != 1:
         raise ValueError(
             "Expected exactly one reviewed metric-name keep rule; no changes made"
         )
     match = matches[0]
-    expanded = BASE + "|" + "|".join(ADDITIONS)
+    # Running the old/default mode must never remove a reviewed state extension.
+    expanded = with_state if include_pod_state or match[2] == with_state else standard
     return config[: match.start(2)] + expanded + config[match.end(2) :]
 
 
@@ -53,16 +55,26 @@ def main():
     parser.add_argument("--configmap", default="alloy")
     parser.add_argument("--key", default="config.alloy")
     parser.add_argument(
-        "--apply", action="store_true", help="Apply the reviewed three-name extension"
+        "--include-pod-state",
+        action="store_true",
+        help="Also forward KSM Pod phase for D07 source validation; no scheduler scrape or binding activation",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply the selected reviewed metric extension",
     )
     args = parser.parse_args()
     cm = json.loads(
         kubectl("-n", args.namespace, "get", "configmap", args.configmap, "-o", "json")
     )
     before = cm["data"][args.key]
-    after = extend(before)
+    after = extend(before, include_pod_state=args.include_pod_state)
+    requested = ADDITIONS + (POD_STATE if args.include_pod_state else ())
     summary = {
-        "metric_names_added": list(ADDITIONS),
+        "metric_names_added": [
+            name for name in requested if after.count(name) > before.count(name)
+        ],
         "changed": before != after,
         "cluster_labels_modified": False,
         "applied": False,

@@ -74,6 +74,10 @@ recovery, throughput or business impact.
 
 ## Acceptance
 
+Follow-up source preparation and live name inventory are recorded in
+[D07 forwarding preflight](d07-forwarding-preflight-20261007.md). This adds an
+optional common KSM phase forwarding step without activating D07.
+
 Local regression tests cover arbitrary cluster discovery, exact LogQL, candidate
 preservation, unsupported target rejection and prohibited fact promotion. Both
 workers and their existing fixture E2E remain required before push. Live Worker
