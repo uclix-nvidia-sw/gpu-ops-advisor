@@ -357,6 +357,85 @@ func TestRealJobController(t *testing.T) {
 		cl = call("/claims", rw, 200)
 		finish(cl)
 	})
+	t.Run("independent_kind_capacity_three_each_without_cross_kind_poll_wait", func(t *testing.T) {
+		activeTest = t
+		reset()
+		independent := jc.DefaultConfig()
+		independent.SharedLimit = 6
+		independent.KindLimits = map[string]int{"rca": 3, "report": 3}
+		expanded, e := jc.New(db.Pool, independent)
+		must(t, e)
+		must(t, expanded.Prepare(ctx, true))
+		t.Cleanup(func() { must(t, controller.Prepare(ctx, true)) })
+		server := httptest.NewServer(expanded)
+		defer server.Close()
+		call := func(path string, b Object, status int) Object {
+			method := "POST"
+			if b == nil {
+				method = "GET"
+			}
+			return request(t, server.URL+"/internal/v1"+path, method, b, status)
+		}
+		workers := map[string][]Object{}
+		for _, kind := range []string{"rca", "report"} {
+			// The fourth registered worker probes the kind limit, not worker exhaustion.
+			for range 4 {
+				w := Object{"worker_id": ID(), "boot_id": ID(), "kind": kind, "capacity_profile_id": kind + "-v1"}
+				call("/workers/register", w, 200)
+				delete(w, "capacity_profile_id")
+				workers[kind] = append(workers[kind], w)
+			}
+		}
+		for range 4 {
+			call("/jobs/report", Object{"contract_version": "1.3", "source_module": "backend", "source_key": "manual:" + ID(), "kind": "report", "input": input(), "deadline_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), "execution_profile_revision": "local-v1"}, 202)
+			incident := ID()
+			exec("INSERT INTO incidents(id,cluster_id,scope) VALUES($1,'cpc-1',$2)", incident, scope)
+			data := Object{"scope": scope, "incident_id": incident, "evidence_version": 1, "analysis_profile_revision": "incident-v1", "incident_time": "2026-09-15T12:00:00Z", "time_range": Object{"start": "2026-09-15T00:00:00Z", "end": "2026-09-16T00:00:00Z"}, "purpose_ids": []string{"R01"}}
+			snapshot := Object{"input": data, "evidence": Object{"summary": "capacity fixture"}}
+			exec("INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES($1,1,$2,$3)", incident, snapshot, Hash(snapshot))
+			call("/jobs/rca", Object{"contract_version": "1.3", "source_module": "incident", "source_key": "incident:" + incident + ":1", "kind": "rca", "input": data, "deadline_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), "dispatch_deadline": time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano), "snapshot_ref": Object{"incident_id": incident, "revision": 1}, "execution_profile_revision": "local-v1"}, 202)
+		}
+		claims := map[string][]Object{}
+		for _, kind := range []string{"report", "rca"} {
+			// Reports fill their three seats while fresh RCA workers have not claimed at all.
+			for i := range 3 {
+				claims[kind] = append(claims[kind], call("/claims", workers[kind][i], 200))
+				call("/claims", workers[kind][i], 204)
+			}
+			call("/claims", workers[kind][3], 204)
+		}
+		var active int
+		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM slot_reservations WHERE state='active'").Scan(&active))
+		if active != 6 {
+			t.Fatalf("expected three active attempts per kind, got %d total", active)
+		}
+		old := claims["report"][0]
+		id := String(old, "job_id")
+		oldResult := candidate(old)
+		call("/jobs/"+id+"/fail", Object{"attempt_no": old["attempt_no"], "claim_token": old["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "unknown"}, 200)
+		assertReleased(old, "unknown", true)
+		call("/jobs/"+id+"/complete", oldResult, 409)
+		exec("UPDATE jobs SET eligible_at=created_at-interval '1 second' WHERE id=$1", id)
+		replacement := call("/claims", workers["report"][0], 200)
+		if replacement["job_id"] != id || Number(replacement, "attempt_no") != 2 {
+			t.Fatal("released report seat did not admit its eligible replacement", replacement)
+		}
+		call("/jobs/"+id+"/complete", oldResult, 409)
+		currentResult := candidate(replacement)
+		call("/jobs/"+id+"/complete", currentResult, 200)
+		call("/jobs/"+id+"/complete", oldResult, 409)
+		call("/jobs/"+id+"/heartbeat", Object{"attempt_no": old["attempt_no"], "claim_token": old["claim_token"], "stage": "late", "remote_call_state": "terminated"}, 409)
+		call("/jobs/"+id+"/fail", Object{"attempt_no": old["attempt_no"], "claim_token": old["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "terminated"}, 409)
+		published := call("/jobs/"+id, nil, 200)
+		if published["published_result_id"] != currentResult["candidate_id"] || published["status"] != "succeeded" {
+			t.Fatal("late result replaced the current publication", published)
+		}
+		var rcaActive int
+		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM slot_reservations WHERE kind='rca' AND state='active'").Scan(&rcaActive))
+		if rcaActive != 3 {
+			t.Fatalf("report failure changed RCA reservations: %d", rcaActive)
+		}
+	})
 	t.Run("input_contract_intake_mixed_workers_and_publication", func(t *testing.T) {
 		activeTest = t
 		reset()
@@ -722,19 +801,21 @@ func TestRealJobController(t *testing.T) {
 		w := worker("report")
 		cl := call("/claims", w, 200)
 		done := candidate(cl)
-		legacy, e := jc.New(db.Pool, cfg)
-		must(t, e)
-		legacy.Revision = Hash(cfg)
-		if legacy.Revision == controller.Revision {
-			t.Fatal("execution policy must participate in the revision fence")
+		for _, previousRevision := range []string{Hash(cfg), Hash(Object{"config": cfg, "execution_policy": "release-ended-attempt-v1"})} {
+			legacy, e := jc.New(db.Pool, cfg)
+			must(t, e)
+			legacy.Revision = previousRevision
+			if legacy.Revision == controller.Revision {
+				t.Fatal("release and dispatch policies must participate in the revision fence")
+			}
+			oldHTTP := httptest.NewServer(legacy)
+			defer oldHTTP.Close()
+			request(t, oldHTTP.URL+"/internal/v1/health/ready", "GET", nil, 503)
+			request(t, oldHTTP.URL+"/internal/v1/claims", "POST", w, 503)
+			request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/complete", "POST", done, 503)
+			request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/heartbeat", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "stage": "late", "remote_call_state": "unknown"}, 503)
+			request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/fail", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "unknown"}, 503)
 		}
-		oldHTTP := httptest.NewServer(legacy)
-		defer oldHTTP.Close()
-		request(t, oldHTTP.URL+"/internal/v1/health/ready", "GET", nil, 503)
-		request(t, oldHTTP.URL+"/internal/v1/claims", "POST", w, 503)
-		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/complete", "POST", done, 503)
-		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/heartbeat", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "stage": "late", "remote_call_state": "unknown"}, 503)
-		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/fail", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "unknown"}, 503)
 		finish(cl)
 	})
 	t.Run("database_failure_fails_closed", func(t *testing.T) {

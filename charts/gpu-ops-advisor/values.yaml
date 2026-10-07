@@ -63,6 +63,8 @@ artifacts:
   persistence:
     enabled: true
     existingClaim: ""
+    # Apply with the current managed PVC before switching to an external claim.
+    retainOnDelete: false
     # Keep the existing chart-managed PVC name when shortening workload names.
     nameOverride: ""
     size: 10Gi

@@ -107,9 +107,9 @@ Frontend Service는 기본적으로 NodePort `30006`을 사용하며 `http://<�
 
 GHCR 이미지가 비공개라면 `global.imagePullSecrets: [{name: ghcr-pull}]`과 동일 namespace의 registry Secret이 필요합니다. CI 패키지에 들어 있는 이미지 digest는 유지하고, 직접 소스로 설치할 때는 `global.imageNamespace`와 각 `components.<name>.image.tag`에 실제 발행된 이미지를 지정합니다.
 
-PostgreSQL 데이터 PVC와 보고서 파일 PVC는 각각 기본 10Gi입니다. StorageClass 기본값은 클러스터 기본 StorageClass를 사용합니다. 보고서 PVC는 `artifacts.persistence.existingClaim`으로 기존 PVC를 지정할 수 있습니다. PostgreSQL StatefulSet의 PVC는 삭제 시 자동 정리되지 않지만 **chart가 만든 보고서 PVC는 Helm uninstall 시 삭제됩니다**. 보고서를 보존할 배포는 기존 PVC를 사용하고 DB·파일을 함께 백업하세요. `persistence.enabled=false`는 재시작 시 데이터를 잃는 임시 저장소입니다.
+PostgreSQL 데이터 PVC와 보고서 파일 PVC는 각각 기본 10Gi입니다. StorageClass 기본값은 클러스터 기본 StorageClass를 사용합니다. 보고서 PVC는 `artifacts.persistence.existingClaim`으로 기존 PVC를 지정할 수 있습니다. PostgreSQL StatefulSet의 PVC는 삭제 시 자동 정리되지 않지만 **chart가 만든 보고서 PVC는 기본적으로 Helm uninstall 시 삭제됩니다**. `artifacts.persistence.retainOnDelete: true`를 적용하면 해당 PVC에 `helm.sh/resource-policy: keep`을 기록해 Helm의 삭제를 건너뛰도록 합니다. 외부 PVC로 전환하기 전에 기존 PVC를 그대로 관리하는 중간 업그레이드에서 먼저 적용·확인하세요. 전환 후 보존된 PVC는 Helm 관리에서 벗어나므로 정리는 별도 작업입니다. 이 옵션은 PV의 reclaim policy를 바꾸거나 백업을 만들지 않습니다. DB·파일을 함께 백업하세요. `persistence.enabled=false`는 재시작 시 데이터를 잃는 임시 저장소입니다.
 
-현재 chart는 서비스별 1 replica를 schema로 제한하고, 업그레이드는 Recreate 방식이라 잠깐의 중단이 있습니다. 수동 확장이 필요한 경우 JC capacity/worker profile과 공유 파일 저장 방식을 함께 설계한 뒤 replica 제한을 변경합니다. Kubernetes HTTP probe는 HTTP 서비스에만 있으며 Worker는 JC와 Grafana MCP readiness를 기다린 후 시작하고 JC heartbeat로 상태를 관리합니다.
+기본값은 서비스별 1 replica이며, Backend·Frontend·JC·Incident·MCP는 schema로 1개를 유지합니다. RCA/Ops Worker만 아래 조건에 따라 수동 확장할 수 있습니다. 업그레이드는 Recreate 방식이라 잠깐의 중단이 있습니다. Kubernetes HTTP probe는 HTTP 서비스에만 있으며 Worker는 JC와 Grafana MCP readiness를 기다린 후 시작하고 JC heartbeat로 상태를 관리합니다.
 
 Grafana MCP에는 내부 Service DNS와 포트가 포함된 `-allowed-hosts`를 전달하고 probe의 `Host` 헤더도 맞춥니다. Pod IP를 사용하는 기본 probe는 공식 MCP의 Host 검증에서 403으로 거부됩니다. HTTP 서비스의 startup/liveness는 생존 여부를, readiness는 의존성과 설정 준비 여부를 확인합니다. 새 이미지가 포함된 chart로 기존 긴 이름 설치를 업그레이드하는 절차는 [기존 설치 안내](../../docs/helm-upgrade-existing.md)를 참고하세요.
 
@@ -128,3 +128,18 @@ Helm 3.17.3을 PATH에 설치하거나 `HELM_BINARY`를 지정합니다. 기본/
 클러스터가 없는 최초 설치에서도 Backend가 Ready가 되고 화면에 “등록된 클러스터가 없습니다”가 표시된다. **클러스터 등록하기 → 연결·설정 → 데이터 연결 → 클러스터 등록**에서 실제 클러스터 ID를 입력한다. Grafana에서 조회하는 메트릭·로그의 클러스터 라벨 값과 일치해야 하며, Mimir/Loki URL이나 datasource UID는 입력하지 않는다. 등록 후 목록과 관측 범위가 갱신되며 서버 재시작은 필요 없다. 등록 전에는 분석 화면 대신 등록 안내를 표시한다.
 
 이 흐름은 수정된 Backend와 Frontend 이미지가 모두 포함된 새 chart에 적용된다. 실제 클러스터에 데이터가 없거나 Grafana 권한이 부족한 경우 등록 자체는 가능하지만 수집 결과는 별도로 확인해야 한다.
+
+
+## RCA·Ops 각각 3개 실행 — 선택 배포 구성
+
+[values-independent-agents.yaml](values-independent-agents.yaml)은 RCA Pod 3개와 Ops Pod 3개, Pod당 실행 슬롯 1개의 선택 구성입니다. JC는 `kind_limits.rca=3`, `kind_limits.report=3`, `shared_limit=6`으로 각각 최대 3개 작업을 실행합니다. 한 종류가 다른 종류의 몫을 빌려 4개 이상 실행하지 않습니다. 이 구성을 지원하는 JC 버전은 공유 한도가 종류별 한도 합계 이상이면 종류 간 교대 대기를 적용하지 않습니다. 모델 서버·MCP·DB 자원은 계속 공유하며, 6개 동시 작업의 실제 성능을 보장하는 값은 아닙니다.
+
+기존 1개씩 설치와 RWO PVC 기본값은 바꾸지 않습니다. 이 예제의 `existingClaim`은 비어 있어 그대로 렌더링하면 실패합니다. Ops 3개가 여러 노드에서 파일을 보존하려면 실제로 사용 가능한 기존 RWX PVC 이름을 지정하고 `existingClaimAccessMode: ReadWriteMany`로 선언해야 합니다. 이 값은 운영자의 선언이며 Helm이 서버의 PVC 상태를 확인했다는 뜻은 아닙니다. 실제 accessModes·StorageClass 지원·UID/GID 10001 쓰기 권한·용량을 배포 전에 확인하세요. chart는 새 RWX PVC를 만들거나 기존 PVC의 accessModes·이름·내용을 변경하지 않습니다.
+
+**기존 설치에 예제의 전체 `configuration.jobController`를 그대로 덮어쓰지 마세요.** 현재 환경의 전체 객체와 실행 프로필·revision·예산·기타 값을 유지하고 `shared_limit`, 두 `kind_limits`, 사용 중인 Worker profile의 `slots=1`만 옮겨 적용하세요. `configuration.agents`의 검증된 binding도 그대로 유지합니다. `applyJobController=false`를 쓰는 환경은 같은 capacity 설정이 JC에 먼저 적용되어 있어야 하며, Helm 렌더링만으로 DB 적용 여부를 보증하지 않습니다.
+
+복제 수가 2개 이상인 Worker가 하나라도 있으면 chart는 두 종류의 설정된 replicas와 kind_limits 일치, shared_limit이 종류별 한도 합계 이상인지, 활성 Worker의 선택한 capacity profile이 같은 kind·slots=1인지 검사합니다. 복제 Worker에 같은 `WORKER_ID` 환경변수를 지정하면 거절합니다. 기본 Worker ID와 boot ID는 프로세스마다 생성되어 서로의 등록을 교체하지 않습니다. `CAPACITY_PROFILE_ID`를 바꿨다면 해당 프로필도 위 조건을 만족해야 합니다.
+
+기존 chart 관리 보고서 PVC를 단순히 `existingClaim`으로 옮기면 Helm에서 원래 PVC가 삭제될 수 있습니다. `retainOnDelete`를 먼저 적용하는 보존 단계·파일 백업·필요한 복사·복구 계획을 준비하고 [기존 설치 업그레이드](../../docs/helm-upgrade-existing.md)를 따르세요. 기존 DB PVC도 유지합니다. `persistence.enabled=false`로 저장소 조건을 우회하지 않습니다. 기본 리소스 기준으로 Worker 4개 추가는 CPU 요청 1core, 메모리 요청 2Gi·한도 8Gi 증가이며 총 Pod 수는 기본 8개에서 12개가 됩니다.
+
+렌더링·검사 후 배포는 별도 승인으로 진행합니다. 실제 검수는 Worker 6개 고유 등록, 종류별 동시 3개·4번째 대기, 같은 Pod 중복 실행 차단, Ops 3개의 저장소 쓰기와 보고서 발행·다운로드, RCA 실행, 실패 시 슬롯 반환·늦은 결과 차단을 확인해야 합니다. 축소할 때 진행 작업을 강제로 성공/취소 처리하지 않으며 저장소를 삭제하지 않습니다.

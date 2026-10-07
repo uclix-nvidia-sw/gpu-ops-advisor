@@ -24,7 +24,7 @@ Backend와 같은 PostgreSQL을 사용하는 독립 프로세스입니다. 보�
 
 ## 구성과 동작
 
-- `controller/`: 접수, FIFO/종류 간 교대 배분, Worker/lease, 결과 발행, 취소·재시도, 격리 복구, 읽기 API.
+- `controller/`: 접수, 종류별 FIFO/공유 용량 경합 시 교대 배분, Worker/lease, 결과 발행, 취소·재시도, 격리 복구, 읽기 API.
 - `cmd/server`: HTTP 서버와 2초 복구 루프. `cmd/admin`: 종료 근거를 기록하는 격리 해제 CLI.
 - `../shared/contract`: 공통 DTO·정규화·hash. `../shared/migrations`: 유일한 SQL 원본.
 - `../backend/tests/job_controller_test.go`: 실제 Backend + JC + PostgreSQL 통합 검사.
@@ -54,6 +54,16 @@ RCA 접수는 1.3/1.4를 구분하고, 보고서는 1.3을 유지합니다. 새 
 query/parser/criteria의 개발 기본 revision은 `unconfigured`입니다. Agent와 연결할 때 실제 배포 revision을 설정해야 합니다. model snapshot은 Backend routing의 참조이고 미설정이면 null입니다. 설정 누락을 Agent가 실제 분석 성공으로 처리하면 안 됩니다.
 
 `JC_APPLY_CONFIG`는 미지정 시 `true`이며, 시작할 때 전달한 설정을 DB에 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 기본 실행 프로필은 `local-v1`과 보고서 전용 `report-namespace-v1`이며 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. 예산 변경은 새로 접수되는 작업에 적용하고, 기존 작업은 접수 시 저장한 실행 설정 스냅샷을 사용합니다. 자동 적용을 끄려면 `JC_APPLY_CONFIG=false`를 명시합니다.
+
+## 종류별 독립 실행 용량 — 2026-10-08
+
+RCA 3개와 Ops 3개의 Worker를 배포하고 각 Worker profile의 `slots=1`, `kind_limits={"rca":3,"report":3}`, `shared_limit=6`으로 설정하면 각 종류가 자기 3자리 안에서 실행한다. 다른 종류의 빈자리를 빌리지 않는다. Worker 한 개는 현재 실행을 끝낸 뒤 다음 작업을 인수하며, 복제본 수를 늘려도 보고서 한 건을 나눠 처리하지 않는다.
+
+공유 한도가 종류별 한도 합계보다 작을 때만 종류 간 교대를 적용한다. 합계 이상이면 상대 종류의 대기 작업이나 늦은 claim 때문에 자기 여유 슬롯을 기다리지 않는다. 기존 `1/1/1` 공유 설정의 FIFO·교대 동작은 유지한다. 공통 capacity 행의 짧은 트랜잭션 잠금은 중복 배분 방지용으로 보존하며 분석 전체를 잠그는 방식은 아니다. 한도를 실행 점유보다 낮추는 전환 중에는 기존 실행을 강제 종료하지 않고 전체/종류별 점유가 내려갈 때까지 해당 한도 검사를 유지한다.
+
+설정 파일만 바꾸어 구 JC를 사용하면 빈자리가 있어도 교대 대기가 남는다. 새 `dispatch_policy=independent-kind-capacity-v1`을 config revision에 포함해 같은 설정의 구 배분 코드를 차단한다. PR 85의 `execution_policy=release-ended-attempt-v1`과 실패 슬롯 반환·늦은 결과 거부는 유지한다. 모든 JC를 같은 버전·설정으로 교체하고 `JC_APPLY_CONFIG=false` 환경은 새 revision 적용을 따로 준비한다.
+
+[독립 Agent Helm 예시](../charts/gpu-ops-advisor/values-independent-agents.yaml)는 기본 1개 배포와 분리된 명시적 선택이다. 기본 소스/Helm 미러 설정은 그대로이며, 커스텀 전체 JC 설정은 실행 프로필·revision·예산을 보존한 채 위 용량 값만 맞춘다. 슬롯 분리는 JC·DB·Mimir·모델 서버의 물리적 분리가 아니고, 이전 실패 추론까지 포함한 실제 모델 동시성 6을 보장하지 않는다. [배포 전환 조건](../docs/helm-upgrade-existing.md#종류별-agent-3개-배포-전환--2026-10-08)을 함께 따른다.
 
 ## 저장 중 lease 갱신 — 2026-10-02
 

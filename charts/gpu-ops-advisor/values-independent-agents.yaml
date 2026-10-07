@@ -1,0 +1,53 @@
+# Opt-in: three RCA workers and three Ops workers, one active job per worker.
+# Supply an EXISTING verified RWX claim; the empty name intentionally blocks rendering.
+# Existing installations: retain the current full jobController configuration and
+# copy only shared_limit/kind_limits/worker slots from this example.
+# Do not replace a chart-managed PVC with existingClaim without a preservation plan.
+components:
+  rcca-agent:
+    replicas: 3
+  ops-agent:
+    replicas: 3
+artifacts:
+  persistence:
+    enabled: true
+    existingClaim: ''
+    existingClaimAccessMode: ReadWriteMany
+configuration:
+  jobController:
+    shared_limit: 6
+    kind_limits:
+      rca: 3
+      report: 3
+    worker_profiles:
+      rca-v1:
+        kind: rca
+        slots: 1
+      report-v1:
+        kind: report
+        slots: 1
+    execution_profiles:
+      local-v1:
+        max_attempts: 3
+        token_budget: 98304
+        attempt_budget: 32768
+        lease_seconds: 30
+        heartbeat_seconds: 5
+        retry_seconds: 5
+        result_schema: '1.3'
+      report-namespace-v1:
+        max_attempts: 3
+        token_budget: 98304
+        attempt_budget: 32768
+        lease_seconds: 30
+        heartbeat_seconds: 5
+        retry_seconds: 5
+        result_schema: '1.3'
+        kind: report
+        criteria: '1.2'
+    worker_fresh_seconds: 90
+    versions:
+      query: unconfigured
+      parser: unconfigured
+      criteria: unconfigured
+      result_schema: '1.3'

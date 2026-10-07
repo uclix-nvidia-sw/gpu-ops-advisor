@@ -37,16 +37,16 @@
       ],
       "properties": {
         "backend": {
-          "$ref": "#/definitions/component"
+          "$ref": "#/definitions/singletonComponent"
         },
         "frontend": {
-          "$ref": "#/definitions/component"
+          "$ref": "#/definitions/singletonComponent"
         },
         "job-controller": {
-          "$ref": "#/definitions/component"
+          "$ref": "#/definitions/singletonComponent"
         },
         "incident": {
-          "$ref": "#/definitions/component"
+          "$ref": "#/definitions/singletonComponent"
         },
         "rcca-agent": {
           "$ref": "#/definitions/component"
@@ -55,7 +55,7 @@
           "$ref": "#/definitions/component"
         },
         "grafana-mcp": {
-          "$ref": "#/definitions/component"
+          "$ref": "#/definitions/singletonComponent"
         }
       }
     },
@@ -172,6 +172,13 @@
         "persistence": {
           "type": "object",
           "properties": {
+            "retainOnDelete": {
+              "type": "boolean"
+            },
+            "existingClaimAccessMode": {
+              "type": "string",
+              "enum": ["ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany", "ReadWriteOncePod"]
+            },
             "nameOverride": {
               "$ref": "#/definitions/resourceNameOverride"
             }
@@ -181,6 +188,12 @@
     }
   },
   "definitions": {
+    "singletonComponent": {
+      "allOf": [
+        {"$ref": "#/definitions/component"},
+        {"properties": {"replicas": {"maximum": 1}}}
+      ]
+    },
     "component": {
       "type": "object",
       "additionalProperties": false,
@@ -197,8 +210,7 @@
         },
         "replicas": {
           "type": "integer",
-          "minimum": 1,
-          "maximum": 1
+          "minimum": 1
         },
         "image": {
           "type": "object",

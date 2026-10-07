@@ -182,7 +182,9 @@ func (c *Controller) claim(ctx context.Context, b Object) (Object, error) {
 			return err
 		}
 		eligible := `source_module IS NOT NULL AND status IN ('queued','retry_wait') AND eligible_at<=$2 AND deadline_at>$2 AND attempt_no<max_attempts AND budget_used+COALESCE((versions->'execution'->>'attempt_budget')::bigint,token_budget+1)<=token_budget AND NOT EXISTS(SELECT 1 FROM slot_reservations s WHERE s.job_id=j.id AND s.state<>'released')`
-		if last != nil && *last == kind && len(a.workers[other]) > 0 && a.kind[other] < c.Config.KindLimits[other] {
+		// Independent kind quotas do not wait for the other kind to poll for work.
+		sharedConstrained := c.Config.SharedLimit-c.Config.KindLimits["rca"] < c.Config.KindLimits["report"]
+		if sharedConstrained && last != nil && *last == kind && len(a.workers[other]) > 0 && a.kind[other] < c.Config.KindLimits[other] {
 			var waiting bool
 			if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jobs j WHERE kind=$1 AND "+eligible+" AND "+jobContractSQL+"=ANY($3::text[]))", other, now, a.workers[other]).Scan(&waiting); err != nil {
 				return err
