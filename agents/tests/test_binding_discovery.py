@@ -21,6 +21,9 @@ from test_discovery import Grafana
         ("D15", "DCGM_FI_DEV_FB_FREE", "MiB", 1024),
         ("D20", "kube_node_status_condition", "boolean", 1),
         ("D22", "scrape_duration_seconds", "seconds", 0.2),
+        ("D12", "kube_node_status_allocatable", "resource_units", 8),
+        ("D35", "DCGM_FI_DEV_XID_ERRORS", "error_code", 79),
+        ("D49", "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION", "mJ", 500000),
     ],
 )
 async def test_core_defaults_collect_for_new_cluster_and_preserve_observation(
@@ -241,10 +244,7 @@ def test_shared_defaults_activate_only_reviewed_observation_contracts():
         }
         assert available == set(config["queries"]) - {
             "D07",
-            "D12",
             "D13",
-            "D35",
             "D46",
-            "D49",
         }
     assert config["bindings"]["fleet_intelligence.D09"]["max_hold"]["seconds"] == 0

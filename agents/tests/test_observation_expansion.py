@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from agent_common.binding_samples import sample_value
+from agent_common.binding_samples import counter_delta, sample_value
 from agent_common.observation import Observation, series
 from agent_common.query_contract import query_definition
 from rcca_agent.synthesis import synthesis_input
@@ -115,3 +115,20 @@ def test_resource_dimensions_and_ratio_definition_are_not_lost():
     ratio = query_definition(config, "D17", "new-site-91")
     assert "total minus reserved" in ratio["observation_semantics"]["note"]
     assert sample_value(100, ratio) is None
+
+
+def test_forwarded_energy_and_xid_do_not_create_events_or_recovery():
+    config = profile(active_defaults=True)
+    xid = query_definition(config, "D35", "new-site-91")
+    assert xid["sample_type"] == "enum"
+    assert xid["max_hold_seconds"] == 0
+    assert sample_value(79.5, xid) is None
+    assert xid["observation_semantics"]["health_fact_eligible"] is False
+    energy = query_definition(config, "D49", "new-site-91")
+    assert energy["sample_type"] == "counter"
+    assert energy["unit"] == "mJ"
+    assert energy["counter_reset"]["mode"] == "reject_decrease"
+    assert counter_delta([(0, 500), (15, 600)], energy["max_hold_seconds"]) == 100
+    assert counter_delta([(0, 500), (15, 100)], energy["max_hold_seconds"]) is None
+    capacity = query_definition(config, "D12", "new-site-91")
+    assert capacity["target_labels"]["resource_unit"] == "unit"

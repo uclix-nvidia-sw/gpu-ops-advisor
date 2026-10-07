@@ -1,9 +1,9 @@
 # 2026-10-07 Shared observation expansion — 공통 조회 확장
 
-- 기준: main `566ec4a` (PR #81 병합), `feat/shared-observation-expansion`. 전체 45개 D를 대조했고 공통 profile에서 39개 관측 조회를 선택한다. 원래 exporter 후보를 보존하며 Fleet 대체 binding 11개를 추가했다. cluster registry는 비어 있고 이름·UID 고정이 없다.
+- 기준: main `566ec4a` (PR #81 병합), `feat/shared-observation-expansion`. 전체 45개 D를 대조했고 공통 profile에서 42개 관측 조회를 선택한다. 원래 exporter 후보를 보존하며 Fleet 대체 binding 11개를 추가했다. cluster registry는 비어 있고 이름·UID 고정이 없다.
 - 실환경 읽기: Grafana instant inventory 118개 행과 메트릭/클러스터별 대표 표본 108개 행, 제공된 배포·CSV·Alloy 자료, Fleet 1.5.0-rc.1 및 DCGM 4.2.3/4.4.2 코드를 대조했다. Fleet의 시각은 gather 시각이며 하드웨어 측정 시각을 증명하지 않으므로 forward hold=0과 한계를 RCA 입력까지 보존한다. D17 ratio, D31~D34 rate gauge, ECC counter, raw enum/bitmask를 구분한다.
-- 통과: Python 3.12, 격리 localhost DB, `RUN_AGENT_E2E=1` 전체 Agent 검사 **564 passed, 0 skipped**, 기존 MCP deprecation warning 3건. 두 Worker/JC/Incident/Backend/공식 MCP 프로세스와 fixture Grafana/LLM 검수이며 운영 활성화 완료 증거는 아니다. Ruff lint/format, Helm 계약·lint·패키징, CI helper **18 passed**, 추적 소스 링크 **108 documents / 1351 links / 0 errors** 통과. 최초 링크 사본은 Git 한글 경로 quoting 때문에 불완전했고 `ls-files -z`로 교정 후 통과했다.
-- 남은 조건: D07 effective-v1 생산자, D13 workload 로그 의미, D46 단위 근거. D12/D35/D49는 동일한 공통 Alloy 전송 helper를 준비했지만 운영 적용·재조회가 필요하다. helper는 metric keep regex 하나만 비교 후 바꾸며 클러스터 라벨·Secret·PVC를 건드리지 않는다. D16 MiB 및 D15/D20/D22 추가 회귀를 포함한 후속 집중 검사 43개도 통과했다. 새 profile 배포·두 Worker 실제 결과·Runbook DB 발행과 전체 신규 분석 계산은 미검증이다. Ops invalid-result 사건 수정은 포함하지 않았다.
+- 통과: Python 3.12, 격리 localhost DB, `RUN_AGENT_E2E=1` 전체 Agent 검사 **572 passed, 0 skipped**, 기존 MCP deprecation warning 3건. 두 Worker/JC/Incident/Backend/공식 MCP 프로세스와 fixture Grafana/LLM 검수이며 운영 활성화 완료 증거는 아니다. Ruff lint/format, Helm 계약·lint·패키징, CI helper **18 passed**, 추적 소스 링크 **108 documents / 1351 links / 0 errors** 통과. 최초 링크 사본은 Git 한글 경로 quoting 때문에 불완전했고 `ls-files -z`로 교정 후 통과했다.
+- 남은 조건: D07 effective-v1 생산자, D13 workload 로그 의미, D46 단위 근거. 사용자가 동일한 공통 Alloy 전송 helper를 적용했고 실제 저장 표본 D12 720개, D35 120개, D49 135개를 재조회했다. 세 binding을 r2에 반영했다. D35가 없는 환경은 unknown이며 예외 분기가 없다. helper는 metric keep regex 하나만 비교 후 바꾸며 클러스터 라벨·Secret·PVC를 건드리지 않는다. D16 MiB 및 D15/D20/D22 추가 회귀를 포함한 후속 집중 검사 43개도 통과했다. 새 profile 배포·두 Worker 실제 결과·Runbook DB 발행과 전체 신규 분석 계산은 미검증이다. Ops invalid-result 사건 수정은 포함하지 않았다.
 - 상세: [전체 관측 검수·공통 전송 절차](../docs/evidence/d-observation-expansion-20261007.md).
 
 # 2026-10-07 Shared core observations — 로컬 검수

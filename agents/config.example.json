@@ -1,13 +1,13 @@
 {
   "schema_version": "d-query-profile/3-draft",
   "query_contract": "single-query-v3-draft",
-  "revision": "shared-observation-expansion-20261007-r1",
+  "revision": "shared-observation-expansion-20261007-r2",
   "auto_select_verified_bindings": true,
   "delivery": {
     "stage": "shared-discovery-observation-contract",
     "runtime_ready": true,
     "intended_path": "agents/config.example.json for both RCA and Report",
-    "note": "39 observation queries have reviewed shared bindings; six query contracts remain candidates pending upstream or unit evidence. This is not all-D analysis or production acceptance."
+    "note": "42 observation queries have reviewed shared bindings. D07/D13 need producer contracts; D46 needs deployed unit evidence. Not all-D analysis or production Worker acceptance."
   },
   "provenance": {
     "base_commit": "05bb4f69aec024ed72da72e266d63fa267be8f9a",
@@ -1417,36 +1417,69 @@
     },
     "kube_state_metrics.D12": {
       "query_id": "D12",
-      "revision": "draft-1",
+      "revision": "shared-forwarded-observation-20261007-r1",
       "producer": "kube_state_metrics",
-      "producer_version": null,
+      "producer_version": "v2.17.0; v2.18.0",
       "source": "mimir",
       "metric": "kube_node_status_allocatable",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "collection_path": "alloy-direct",
+          "job": "kube-state-metrics"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "node": "node",
+        "resource": "resource",
+        "resource_unit": "unit",
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "gauge",
+      "unit": "resource_units",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap, not guaranteed continuity."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Node capacity gauge."
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "Allocatable excluded by current direct Alloy keep rule; forwarding and live samples required.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-07T06:32:49.280Z",
+          "end": "2026-10-07T06:34:36.113Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-observation-expansion-20261007.md#forwarding-acceptance",
+          "docs/evidence/d-binding-cpc-20261006.md"
+        ],
+        "applicability": "Shared direct Alloy source contract for the reviewed producer versions. Request cluster_id and discovered datasource; no per-cluster branches. Post-forwarding bounded live samples verify name/target/unit routing. A missing series remains empty/unknown.",
+        "limitation": "Bounded post-forwarding observation only; live Worker acceptance pending. Scrape time does not prove device event time."
       },
       "reference": {
         "evidence_level": "Upstream profile reference; not environment verification for this new binding",
@@ -1460,6 +1493,12 @@
         },
         "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
         "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "measurement_time_verified": false,
+        "forward_fill_allowed": true,
+        "health_fact_eligible": false,
+        "note": "Scraped allocatable capacity by resource/unit; no placement feasibility or effective-request inference."
       }
     },
     "workload_log_producer.D13": {
@@ -2677,42 +2716,80 @@
     },
     "nvidia_dcgm_exporter.D35": {
       "query_id": "D35",
-      "revision": "draft-1",
+      "revision": "shared-forwarded-observation-20261007-r1",
       "producer": "nvidia_dcgm_exporter",
-      "producer_version": null,
+      "producer_version": "reviewed exporter variants: 4.2.3-4.1.3-ubuntu22.04; 4.4.2-4.7.0-distroless",
       "source": "mimir",
       "metric": "DCGM_FI_DEV_XID_ERRORS",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "collection_path": "alloy-direct",
+          "job": "nvidia-dcgm-exporter"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "enum",
+      "unit": "error_code",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 0,
+        "policy": "A last error code has no event-time or health-validity interval."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Not a cumulative counter. XID codes must never be differenced or counted as events."
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "XID exporter field is present in CSV but not forwarded by current direct Alloy keep rule.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-07T06:32:44.335Z",
+          "end": "2026-10-07T06:34:29.335Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-observation-expansion-20261007.md#forwarding-acceptance",
+          "docs/evidence/d-binding-cpc-20261006.md"
+        ],
+        "applicability": "Shared direct Alloy source contract for the reviewed producer versions. Request cluster_id and discovered datasource; no per-cluster branches. Post-forwarding bounded live samples verify name/target/unit routing. A missing series remains empty/unknown.",
+        "limitation": "Observed routing is not full hardware coverage or live Worker acceptance. XID series were observed in only one of the two inspected environments; the other returns no series."
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
         "legacy_definition": null,
         "legacy_definition_url": null,
         "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "measurement_time_verified": false,
+        "forward_fill_allowed": false,
+        "health_fact_eligible": false,
+        "note": "Last XID code observation, not an event count or proof of recovery. Missing series is unknown, not code zero. Device measurement time is not supplied."
       }
     },
     "fleet_intelligence.D36": {
@@ -3625,42 +3702,79 @@
     },
     "nvidia_dcgm_exporter.D49": {
       "query_id": "D49",
-      "revision": "draft-1",
+      "revision": "shared-forwarded-observation-20261007-r1",
       "producer": "nvidia_dcgm_exporter",
-      "producer_version": null,
+      "producer_version": "reviewed exporter variants: 4.2.3-4.1.3-ubuntu22.04; 4.4.2-4.7.0-distroless",
       "source": "mimir",
       "metric": "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
       "environment": {
         "datasource_uid": null,
         "scope_labels": {
-          "cluster_id": "cluster_id"
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
         },
-        "selector": {}
+        "selector": {
+          "collection_path": "alloy-direct",
+          "job": "nvidia-dcgm-exporter"
+        },
+        "datasource_mode": "discover"
       },
-      "target_labels": null,
+      "target_labels": {
+        "gpu_uuid": "UUID",
+        "node": "node",
+        "scrape_target": "instance"
+      },
       "json_target_fields": null,
-      "sample_type": null,
-      "unit": null,
-      "timestamp_basis": null,
+      "sample_type": "counter",
+      "unit": "mJ",
+      "timestamp_basis": "prometheus_sample",
       "event_timestamp_rule": null,
-      "sample_interval": null,
-      "max_hold": null,
-      "invalid_values": null,
-      "counter_reset": null,
+      "sample_interval": {
+        "seconds": 15
+      },
+      "max_hold": {
+        "seconds": 30,
+        "policy": "Analysis cap, not guaranteed continuity."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "reject_decrease"
+      },
       "health_contract": null,
       "verification": {
-        "status": "candidate",
-        "observed_window": null,
-        "retention_evidence": null,
-        "evidence_refs": [],
-        "limitation": "Energy exporter field is present in CSV but not forwarded by current direct Alloy keep rule.",
-        "applicability": null
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-07T06:32:44.335Z",
+          "end": "2026-10-07T06:34:37.099Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-observation-expansion-20261007.md#forwarding-acceptance",
+          "docs/evidence/d-binding-cpc-20261006.md"
+        ],
+        "applicability": "Shared direct Alloy source contract for the reviewed producer versions. Request cluster_id and discovered datasource; no per-cluster branches. Post-forwarding bounded live samples verify name/target/unit routing. A missing series remains empty/unknown.",
+        "limitation": "Bounded post-forwarding observation only; live Worker acceptance pending. Scrape time does not prove device event time."
       },
       "reference": {
         "evidence_level": "소스/설정 후보",
         "legacy_definition": null,
         "legacy_definition_url": null,
         "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "measurement_time_verified": false,
+        "forward_fill_allowed": true,
+        "health_fact_eligible": false,
+        "note": "Cumulative mJ from reviewed exporter CSV. Reject decreases and gaps; no per-Pod energy attribution or double counting with D11 integration."
       }
     },
     "fleet_intelligence.D23": {

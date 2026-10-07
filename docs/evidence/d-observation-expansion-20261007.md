@@ -29,7 +29,7 @@ and cannot establish current hardware health or uninterrupted measurement.
 
 ## Typed observations
 
-39 of 45 logical queries now resolve to a reviewed shared observation binding.
+42 of 45 logical queries now resolve to a reviewed shared observation binding.
 There are 56 bindings because eleven explicit Fleet alternatives retain their
 original exporter candidates. This does not enable every D in every RCA: the
 Runbook/query plan still chooses relevant queries within its budget. Nor does it
@@ -44,6 +44,7 @@ complete all new report calculations or publish database Runbook revisions.
 | D17 | gauge, ratio 0..1 | Used/(total-reserved), not percent 0..100 and not used/total |
 | D18, D19 | gauge, percent / load | Preserve load_duration; load is not a percentage |
 | D20 | gauge, 0/1 | Preserve condition/status; Node condition is not GPU health |
+| D12 | gauge, resource_units | Node allocatable, preserving resource/unit; no placement feasibility assertion |
 | D21 | gauge, resource_units | Preserve resource/unit/container/Pod UID; raw requests are not effective requests |
 | D22 | gauge, seconds | Scrape duration, not application latency |
 | D24, D25 | gauge, MHz | Clock observations, no throttling diagnosis from value alone |
@@ -51,6 +52,8 @@ complete all new report calculations or publish database Runbook revisions.
 | D31–D34 | gauge, bytes/second | Already rates; never counter-differentiate or combine directions implicitly |
 | D36–D44 | counter, count | Reject decreases; preserve ECC device/total and volatile/aggregate distinctions |
 | D45, D47 | bitmask / enum | Preserve raw integer codes; no automatic health mapping |
+| D35 | enum, error_code | Last XID code, not event count or recovery; empty is unknown |
+| D49 | counter, mJ | Reject decreases/gaps; no Pod attribution or double counting with power integration |
 
 The [NVIDIA profiling reference](https://docs.nvidia.com/datacenter/dcgm/latest/learn/modules/profiling.html)
 identifies PCIe/NVLink fields as rates. Native field semantics are cross-checked
@@ -75,11 +78,8 @@ exporter candidates remain unselected, avoiding hidden source substitution.
 | Query | Concrete missing prerequisite |
 |---|---|
 | D07 | A verified effective-v1 producer; Run:ai workload-exporter presence does not prove this contract |
-| D12 | Forward kube_node_status_allocatable through the direct Alloy keep rule and verify stored dimensions/values |
 | D13 | Workload log producer, stream selector and outcome meaning; never substitute Fleet health logs |
-| D35 | Forward the existing CSV XID field; it is a last-code observation, not an event counter |
 | D46 | Resolve deployed board-limit violation counter unit; observed zeros cannot establish ns versus another unit |
-| D49 | Forward the existing CSV energy field and verify mJ/counter continuity/reset handling |
 
 The common [forwarding helper](../../tools/ci/extend_observation_forwarding.py) is documented below.
 It adds only the three missing names to the exact reviewed Alloy metric-name keep
@@ -91,12 +91,60 @@ The identical script works for every cluster. It fails on unfamiliar/ambiguous
 rules, uses a compare-and-swap JSON patch, and stores private apply/rollback files.
 Rollback uses `kubectl -n alloy patch configmap alloy --type=json --patch-file
 <private_backup>/rollback.json`; it refuses to overwrite subsequent edits.
-Confirm Alloy reload and new Mimir samples before selecting D12/D35/D49.
+For new installations, confirm Alloy reload and new Mimir samples; forwarding
+alone cannot establish that every device supports every field.
+
+## Forwarding acceptance
+
+The operator applied the same helper to both supplied environments, with
+`cluster_labels_modified=false`. ConfigMap read-back succeeded. Subsequent
+Grafana queries confirm new stored samples on `collection_path=alloy-direct`:
+
+| Query | Bounded live evidence on 2026-10-07 UTC |
+|---|---|
+| D12 | 90 resource series, 720 samples, 06:32:49.280–06:34:36.113; both environments; node/resource/unit preserved |
+| D35 | 16 GPU series, 120 samples, 06:32:44.335–06:34:29.335; only one environment, all observed values zero |
+| D49 | 18 GPU series, 135 samples, 06:32:44.335–06:34:37.099; both environments; all sampled transitions nondecreasing |
+
+Observed adjacent samples were 15 seconds apart. D49's mJ/counter definition is
+declared in both reviewed exporter CSVs; future decreases still withhold deltas.
+D35's absence in the other environment is **not** zero or healthy. Both versions
+declare a last-XID-code field, so the shared query is enabled with zero hold and
+unknown/empty behavior when no series exists. No cluster-specific exception was
+added. D12 preserves KSM resource/unit dimensions and is not a scheduling verdict.
+This advances source routing and shared query configuration, not post-deployment
+Worker acceptance.
 
 ## Acceptance boundary
 
 Local tests cover arbitrary cluster discovery, alternative source selection,
 typed invalid values, preservation through RCA synthesis inputs, and absence of
 health promotion. Both Worker fixture E2E and chart checks must pass before push.
-Deployment, actual Worker results and the six prerequisites remain separately
+Deployment, actual Worker results and the three prerequisites remain separately
 unverified. All-D activation is **not complete**.
+
+## Remaining source implementation order
+
+The operator does not know of a separate effective-request or workload-log
+producer. Treat their existence as unverified; do not enable placeholder bindings.
+The next work is a common source contract, not a per-cluster profile:
+
+1. D07: establish a versioned producer from authoritative Pod resource semantics,
+   including ordinary/restartable init containers, overhead, UID, binding and
+   terminal state. Reject unsupported resource semantics. Export the existing
+   effective-v1 identity and validity contract; raw D21 sums are insufficient.
+2. D13: define an explicit workload opt-in selection and collect its Pod logs
+   with cluster, namespace, Pod UID, container and source timestamp. Reuse the
+   existing Alloy/Loki route. Keep log observations separate from verified
+   workload interruption/recovery facts; Fleet logs do not supply this source.
+3. D46: resolve field 243's unit for the deployed versions before enabling it.
+   Their Python field comments say microseconds, whereas adjacent fields and
+   other NVML APIs mention nanoseconds. Neither adjacency nor a zero sample
+   resolves that conflict.
+4. Validate new source samples through MCP using an arbitrary request cluster_id,
+   then update both shared config copies and test both workers. Deployment and
+   real result acceptance remain required after the PR and release build.
+
+No cluster-name condition, cluster registry or fixed datasource UID is needed
+for these steps. Source rollout still occurs in each Kubernetes installation,
+using the same contract and deployment template.
