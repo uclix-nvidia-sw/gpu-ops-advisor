@@ -1,5 +1,9 @@
 # 2026-10-06 D binding 결과 표시 — 로컬 검수
 
+## 2026-10-07 실패 슬롯 반환 소비와 시도 상태
+
+**통과:** Backend·JC·Incident Go vet/race/build, 새 임시 PostgreSQL Backend·Incident 전체 E2E. 시도 DTO의 `remote_call_state`, `slot_state`, `slot_released_at`을 RCA/report 경로에서 확인했다. JC 테이블/예약이 없는 Backend 단독 실행은 슬롯 필드를 null로 보존하며 다른 시도의 예약을 연결하거나 claim token·boot/worker ID·반환 근거를 노출하지 않는다. 실패 슬롯 반환·늦은 결과 거부·기존 격리 전환 검증은 [JC QA](../job-controller/QA.md)를 따른다. **미검증:** 운영 배포·실제 모델 부하. API 추가 필드는 선택적이며 DB schema 변경은 없다.
+
 [공통 검수 기록](../agents/QA.md)과 [구현 범위](../docs/specs/common/d-binding-runtime.md)를 따른다. 새 O01 메모리 여유/용량 비율·CPU/load 표시명과 binding/추가 입력 불가 사유를 추가했다. null은 0으로 바꾸지 않는다. Frontend 146건·포맷·빌드, Backend vet/race/build와 HTML/CSV 회귀, 두 Worker/서비스의 격리 DB E2E를 통과했다. Grafana/LLM/화면 데이터는 fixture이며 운영 적용·브라우저 실환경·원격 CI는 미검증이다.
 
 ---

@@ -214,7 +214,16 @@ func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 		}
 	}
 	if detail {
-		result, e := store.One(q.R.Context(), s.DB.Pool, "SELECT jsonb_build_object('items',COALESCE(jsonb_agg(jsonb_build_object('attempt_no',attempt_no,'started_at',started_at,'ended_at',ended_at,'stage',stage,'termination_reason',termination_reason) ORDER BY attempt_no),'[]')) FROM job_attempts WHERE job_id::text=$1", String(v, "id"))
+		var reservations bool
+		if e := s.DB.Pool.QueryRow(q.R.Context(), "SELECT to_regclass('slot_reservations') IS NOT NULL").Scan(&reservations); e != nil {
+			return nil, e
+		}
+		slotFields, slotJoin := "'slot_state',NULL,'slot_released_at',NULL", ""
+		if reservations {
+			slotFields = "'slot_state',s.state,'slot_released_at',s.released_at"
+			slotJoin = " LEFT JOIN slot_reservations s ON s.job_id=a.job_id AND s.attempt_no=a.attempt_no"
+		}
+		result, e := store.One(q.R.Context(), s.DB.Pool, "SELECT jsonb_build_object('items',COALESCE(jsonb_agg(jsonb_build_object('attempt_no',a.attempt_no,'started_at',a.started_at,'ended_at',a.ended_at,'stage',a.stage,'termination_reason',a.termination_reason,'remote_call_state',a.remote_call_state,"+slotFields+") ORDER BY a.attempt_no),'[]')) FROM job_attempts a"+slotJoin+" WHERE a.job_id::text=$1", String(v, "id"))
 		if e != nil {
 			return nil, e
 		}

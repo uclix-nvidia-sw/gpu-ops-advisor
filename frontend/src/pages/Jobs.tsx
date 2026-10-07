@@ -315,6 +315,12 @@ export function JobDetail() {
     }
   };
   const reportView = j.kind === 'report' && app.mode !== 'developer';
+  const unresolved = rows(j.attempts).filter(
+    (attempt) =>
+      attempt.ended_at != null &&
+      attempt.slot_state === 'released' &&
+      ['running', 'unknown'].includes(str(attempt.remote_call_state)),
+  );
   return (
     <div className={reportView ? 'page report-job-detail' : 'page'}>
       <PageHead
@@ -328,6 +334,13 @@ export function JobDetail() {
         }
       />
       <QueryState query={q}>
+        {unresolved.length > 0 && (
+          <Notice>
+            종료된 {unresolved.map((attempt) => `${num(attempt.attempt_no)}차`).join(', ')} 시도의
+            실행 자리는 반환됐습니다. 모델 서버의 추론 종료 여부는 미확인입니다. 해당 시도의 늦은
+            결과는 발행하지 않습니다.
+          </Notice>
+        )}
         {app.mode === 'developer' ? (
           <JobDebug
             key={id}

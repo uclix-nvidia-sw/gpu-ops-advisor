@@ -49,9 +49,9 @@ Backend가 클라이언트 멱등 키와 원본 deadline을 저장한 뒤 보냅
 
 JC가 등록 당시 저장한 지원 계약에 맞는 작업만 배분합니다. claim body에 capability를 넣으면 422입니다. `versions.input_contract`는 접수 버전이며, 이 필드가 없는 과거 job만 응답에서 1.3으로 해석합니다. DB의 기존 input/hash/versions는 재작성하지 않습니다. 명시적인 null·빈 문자열·알 수 없는 버전은 1.3으로 해석하지 않고 배분하지 않습니다. 호환 Worker가 없으면 `worker_unavailable`, 호환 Worker가 있지만 슬롯이 부족하면 `capacity_wait`입니다. 호환되지 않는 선두 작업은 뒤의 실행 가능한 작업이나 다른 종류의 교대 배분을 막지 않습니다.
 
-heartbeat: `{attempt_no,claim_token,stage,remote_call_state}`. remote_call_state는 `not_started | running | terminated | unknown`입니다. 추론이 시작된 뒤 not_started로 되돌릴 수 없습니다. 취소를 받으면 새 호출을 중단하고 실제 종료 확인 뒤 fail을 보냅니다.
+heartbeat: `{attempt_no,claim_token,stage,remote_call_state}`. remote_call_state는 `not_started | running | terminated | unknown`입니다. 추론이 시작된 뒤 not_started로 되돌릴 수 없습니다. 취소를 받으면 새 호출을 중단하고 관측한 원격 상태와 함께 fail을 보냅니다. 로컬 취소만으로 terminated라고 보고하지 않습니다.
 
-fail: `{attempt_no,claim_token,code,retryable,remote_call_state}`. code는 transient_error/dependency_unavailable/timeout/invalid_input/invalid_result/insufficient_data/budget_exhausted/cancelled/internal_error입니다. 앞의 일시 오류 3종만 retryable=true일 때 자동 재시도합니다. not_started/terminated만 슬롯 반환 근거로 취급하고 running/unknown은 격리합니다. insufficient_data를 부분 결과로 발행하려면 실패 대신 유효한 partial/blocked candidate를 저장하고 complete합니다.
+fail: `{attempt_no,claim_token,code,retryable,remote_call_state}`. code는 transient_error/dependency_unavailable/timeout/invalid_input/invalid_result/insufficient_data/budget_exhausted/cancelled/internal_error입니다. 앞의 일시 오류 3종만 retryable=true일 때 자동 재시도합니다. 실패한 attempt의 실행 슬롯은 항상 반환합니다. 유효한 fail의 not_started/terminated는 보존하고 running/unknown은 unknown으로 기록하며 정책 반환 감사 이력을 남깁니다. 종료 미확인 건수는 배분 차단 조건이 아닙니다. insufficient_data를 부분 결과로 발행하려면 실패 대신 유효한 partial/blocked candidate를 저장하고 complete합니다.
 
 complete: `{attempt_no,claim_token,candidate_id,content_hash}`. Agent가 먼저 result_candidates에 같은 job/attempt/kind, schema_version=고정 profile schema, validation_status=valid인 결과를 저장합니다. content_hash는 공통 `contract.Hash(body)`의 Go JSON 직렬화 SHA-256입니다. JC는 저장 body의 hash까지 다시 확인합니다. 같은 candidate/hash 재전송은 최초 성공 응답, 다른 후보나 오래된 토큰은 409입니다. published_result_id 외 후보는 Backend가 공개하지 않습니다.
 
@@ -69,4 +69,4 @@ complete: `{attempt_no,claim_token,candidate_id,content_hash}`. Agent가 먼저 
 
 헤더 `Idempotency-Key`, `If-Match: "<version>"`. body는 `{contract_version:"1.3",source_module:"backend",input:{reason:"..."}}`. Incident는 source_module=incident 및 input.incident_id가 자기 RCA와 일치해야 합니다. 같은 명령 재전송은 최초 If-Match를 그대로 사용하세요. receipt를 먼저 확인하므로 이후 version 증가 때문에 재전송을 거절하지 않습니다.
 
-queue-status 형식은 `{kinds:{rca:{waiting,running,failed,expired,worker_unavailable,capacity_wait,inference_quarantined,capacity_limit,reserved_slots,worker_available},report:{...}},shared:{limit,reserved_slots,quarantined_slots},config_revision,observed_at}`입니다. Backend의 `/api/v1/service-status`가 이를 읽기 전용 `queue`로 반환합니다.
+queue-status 형식은 `{kinds:{rca:{waiting,running,failed,expired,worker_unavailable,capacity_wait,inference_quarantined,capacity_limit,reserved_slots,worker_available},report:{...}},shared:{limit,reserved_slots,quarantined_slots},config_revision,observed_at}`입니다. Backend의 `/api/v1/service-status`가 이를 읽기 전용 `queue`로 반환합니다. `quarantined_slots`와 `inference_quarantined`는 구 기록 호환 필드이며 새 정책은 종료된 격리를 Sweep에서 반환합니다. 반환된 종료 미확인 추론의 수를 의미하지 않습니다. `config_revision`은 설정과 실행 정책 버전을 함께 반영합니다.

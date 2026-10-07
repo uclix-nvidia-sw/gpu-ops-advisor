@@ -1,4 +1,5 @@
 import asyncio
+from builtins import BaseExceptionGroup
 from datetime import datetime, timedelta, timezone
 import json
 from uuid import uuid4
@@ -12,11 +13,11 @@ from agent_common.runtime import attempt_context
 from agent_common.contracts import base_result
 
 
-def claim():
+def claim(kind="report"):
     deadline = (datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat()
-    return dict(
+    value = dict(
         job_id=str(uuid4()),
-        kind="report",
+        kind=kind,
         attempt_no=1,
         claim_token="fixture",
         input={
@@ -35,6 +36,18 @@ def claim():
         versions={},
         budget={"attempt_limit": 10000},
     )
+    if kind == "rca":
+        data = value["input"]
+        for key in ("topic_ids", "group_by", "timezone"):
+            data.pop(key)
+        data.update(
+            incident_id=str(uuid4()),
+            evidence_version=1,
+            analysis_profile_revision="fixture",
+            incident_time=data["time_range"]["start"],
+        )
+        data["incident_snapshot"] = {"input": dict(data), "evidence": {}}
+    return value
 
 
 class MemoryStore:
@@ -155,3 +168,156 @@ async def test_cancellation_during_save_rolls_back_without_completion(
         )
     assert stopped.is_set()
     assert not any(path.endswith("/complete") for path in calls)
+
+
+@pytest.mark.parametrize("kind", ["rca", "report"])
+@pytest.mark.parametrize(
+    "remote_state", ["not_started", "running", "unknown", "terminated"]
+)
+async def test_mixed_exception_group_fails_attempt_and_next_claim_completes(
+    tmp_path, kind, remote_state, caplog
+):
+    failed, succeeding = claim(kind), claim(kind)
+    claims = iter((failed, succeeding))
+    calls = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append((request.url.path, body))
+        if request.url.path.endswith("/claims"):
+            return httpx.Response(200, json=next(claims))
+        return httpx.Response(
+            200, json={"lease_expires_at": failed["lease_expires_at"]}
+        )
+
+    async def run(c):
+        if c["job_id"] == failed["job_id"]:
+            attempt_context.get()["llm"].state(remote_state)
+            raise BaseExceptionGroup(
+                "sensitive upstream message",
+                [
+                    RuntimeError("sensitive cause"),
+                    BaseExceptionGroup("cleanup", [asyncio.CancelledError()]),
+                ],
+            )
+        return base_result(c, c["deadline_at"]), []
+
+    store = MemoryStore()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        worker = Worker(Settings(kind, artifact_dir=str(tmp_path)), run, store, http)
+        assert await worker.once()
+        assert await worker.once()
+    failures = [(path, body) for path, body in calls if path.endswith("/fail")]
+    assert failures == [
+        (
+            f"/internal/v1/jobs/{failed['job_id']}/fail",
+            {
+                "attempt_no": 1,
+                "claim_token": "fixture",
+                "code": "internal_error",
+                "retryable": False,
+                "remote_call_state": remote_state,
+            },
+        )
+    ]
+    assert [path for path, _ in calls if path.endswith("/complete")] == [
+        f"/internal/v1/jobs/{succeeding['job_id']}/complete"
+    ]
+    assert store.saved == 1
+    assert "sensitive" not in caplog.text
+
+
+@pytest.mark.parametrize("kind", ["rca", "report"])
+@pytest.mark.parametrize("external_cancel", [False, True])
+async def test_cancellation_cleanup_group_still_reports_final_remote_state(
+    tmp_path, kind, external_cancel
+):
+    entered = asyncio.Event()
+    c = claim(kind)
+    calls = []
+
+    def handler(request):
+        calls.append((request.url.path, json.loads(request.content)))
+        return httpx.Response(
+            200,
+            json={
+                "lease_expires_at": c["lease_expires_at"],
+                "cancel_requested": entered.is_set() and not external_cancel,
+            },
+        )
+
+    async def run(c):
+        attempt_context.get()["llm"].state("running")
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            attempt_context.get()["llm"].state("unknown")
+            raise BaseExceptionGroup(
+                "cleanup", [RuntimeError(), asyncio.CancelledError()]
+            )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        task = asyncio.create_task(
+            Worker(
+                Settings(kind, artifact_dir=str(tmp_path)), run, MemoryStore(), http
+            ).execute(c)
+        )
+        await asyncio.wait_for(entered.wait(), 2)
+        if external_cancel:
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, 2)
+        else:
+            await asyncio.wait_for(task, 2)
+    assert calls[-1][0].endswith("/fail")
+    assert calls[-1][1]["code"] == "cancelled"
+    assert calls[-1][1]["remote_call_state"] == "unknown"
+    assert not any(path.endswith("/complete") for path, _ in calls)
+
+
+@pytest.mark.parametrize(
+    "signal,during_cleanup",
+    [
+        (KeyboardInterrupt, False),
+        (SystemExit, False),
+        (asyncio.CancelledError, False),
+        (KeyboardInterrupt, True),
+        (SystemExit, True),
+    ],
+)
+async def test_control_signal_group_is_reported_but_not_swallowed(
+    tmp_path, signal, during_cleanup
+):
+    c = claim()
+    calls = []
+    entered = asyncio.Event()
+
+    def handler(request):
+        calls.append((request.url.path, json.loads(request.content)))
+        return httpx.Response(
+            200,
+            json={
+                "lease_expires_at": c["lease_expires_at"],
+                "cancel_requested": entered.is_set() and during_cleanup,
+            },
+        )
+
+    async def run(c):
+        if during_cleanup:
+            entered.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                raise BaseExceptionGroup("control", [signal()])
+        raise BaseExceptionGroup("control", [signal()])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(BaseExceptionGroup) as caught:
+            await Worker(
+                Settings("report", artifact_dir=str(tmp_path)), run, MemoryStore(), http
+            ).execute(c)
+    assert isinstance(caught.value.exceptions[0], signal)
+    assert calls[-1][0].endswith("/fail")
+    assert calls[-1][1]["remote_call_state"] == "not_started"
+    assert not any(path.endswith("/complete") for path, _ in calls)

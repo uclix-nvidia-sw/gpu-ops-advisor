@@ -64,20 +64,20 @@ Agent가 여유 슬롯이 있을 때 pull하고 Job Controller가 claim 응답�
 
 초기 배분 정책은 종류별 `(eligible_at,created_at,id)` FIFO다. 공유 슬롯 경합은 두 종류에 실행 가능한 잡과 최근 유효 Worker가 있으면 번갈아 기회를 주며, 상대 종류가 실행 불가하면 현재 종류를 막지 않는다. `last_granted_kind`와 Worker freshness를 같은 capacity 잠금에서 평가한다. 긴급 우선순위·선점·동적 용량 산정은 추가하지 않는다.
 
-설정 한도를 낮추면 실행 중 잡을 강제 종료하지 않고 신규 claim을 멈춘다. 점유가 새 한도 아래로 내려가면 재개한다. Agent가 0개인 종류는 worker_unavailable, 슬롯 부족은 capacity_wait, 공유 추론 격리는 inference_quarantined로 조회한다.
+설정 한도를 낮추면 실행 중 잡을 강제 종료하지 않고 신규 claim을 멈춘다. 점유가 새 한도 아래로 내려가면 재개한다. Agent가 0개인 종류는 worker_unavailable, 슬롯 부족은 capacity_wait로 조회한다. inference_quarantined는 구 기록 호환 값이며 종료된 격리는 새 정책의 Sweep에서 반환한다.
 
 ## 상태와 복구
 
-`queued → running → succeeded|retry_wait|failed`. retry_wait는 eligible_at 이후 running으로 전이한다. queued/retry_wait는 cancelled/expired로 종료할 수 있다. running 취소는 요청 플래그를 먼저 기록하고 종료 확인 후 cancelled, deadline 도달은 expired다. terminal 결과는 불변이다.
+`queued → running → succeeded|retry_wait|failed`. retry_wait는 eligible_at 이후 running으로 전이한다. queued/retry_wait는 cancelled/expired로 종료할 수 있다. running 취소는 요청 플래그를 먼저 기록하고 fail 또는 lease 복구로 시도를 닫으면 원격 종료 불명이어도 cancelled, deadline 도달은 expired다. terminal 결과는 불변이다.
 
 재시도는 같은 job의 새 attempt이며 original deadline·누적 예산·max_attempts를 초기화하지 않는다. 실패 소진은 failed이고 데이터 부족만으로 재시도하지 않는다. 수동 retry도 남은 예산과 재시도 가능한 오류가 있을 때만 허용한다. succeeded/cancelled/expired는 같은 job으로 재시도하지 않는다.
 
 현재 attempt/claim_token/lease/deadline/취소 조건이 유효할 때만 complete를 받는다. 늦은 결과는 409 stale_attempt이며 새 attempt와 final을 덮어쓸 수 없다. 동일 완료 재전송은 같은 candidate/hash일 때 기존 응답을 반환한다.
 
-DB 장애 시 신규 claim·lease 갱신·성공 확정을 중단한다. Agent는 lease를 유지하지 못하면 새 도구/추론 호출을 멈추고 재연결 뒤 유효성을 확인한다. 오래된 Worker가 실행 중일 수 있으면 공유 추론 점유를 자동 해제하지 않는다. 원격 종료 불명은 quarantine으로 남겨 운영 확인 또는 검증된 원격 최대 수명 이후 해제한다.
+DB 장애 시 신규 claim·lease 갱신·성공 확정을 중단한다. Agent는 lease를 유지하지 못하면 새 도구/추론 호출을 멈추고 재연결 뒤 유효성을 확인한다. 실패·취소·lease 만료·boot 교체로 종료한 시도의 실행 슬롯은 반환한다. 원격 종료 불명은 unknown으로 남기고 이전 원격 상태와 정책 반환 사유를 감사 기록에 보존한다. 기존 종료된 격리도 Sweep에서 한 번만 반환한다. 종료 미확인 건수로 신규 배분을 막지 않는다. 상세 전환·배포 조건은 [14](../common/14_모듈간_호출과_공통실행_계약.md#실패취소마감)를 따른다.
 
-## 용량의 보수적 기준
+## 실행 용량과 원격 추론의 구분
 
-초기에는 job 한 개가 실행되는 동안 공유 추론 슬롯 하나를 예약하고 한 job의 모델 호출을 직렬 실행한다. 관측 조회 중에도 슬롯을 잡으므로 처리량에 한계가 있지만 동시 추론 한도를 단순하게 보장한다. job 내부 병렬 LLM 호출이나 예약 없이 모델을 부르는 경로는 금지한다. 필요성이 측정되면 별도 변경에서 호출 단위 예약을 설계한다.
+job 한 개의 유효한 attempt가 실행되는 동안 공유 실행 슬롯 하나를 예약하고 해당 attempt의 모델 호출을 직렬 실행한다. 관측 조회 중에도 슬롯을 잡는다. 실패한 attempt의 원격 추론이 남으면 다음 작업과 겹칠 수 있으므로 실행 슬롯 한도가 모델 서버의 실제 동시 추론 한도를 보장하지 않는다. job 내부 병렬 LLM 호출이나 예약 없이 모델을 부르는 경로는 금지한다. 필요성이 측정되면 별도 변경에서 호출 단위 예약을 설계한다.
 
 운영자가 배포 수·worker_slots·kind_limit·shared_limit을 정한다. Job Controller는 그 숫자 안에서 배분만 한다. 수동 변경 절차는 [06](../06_배포_운영_인계서.md), 경합 시험은 [05](../05_테스트_검수_기준서.md)다.
