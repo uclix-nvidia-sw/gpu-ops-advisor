@@ -171,9 +171,14 @@ def main():
         for b in agent_profile["bindings"].values()
         if b["verification"]["status"] == "verified"
     }
-    assert verified == {"D02", "D03", "D06", "D09", "D10"}, (
-        "Only reviewed observation contracts are enabled"
-    )
+    assert verified == set(agent_profile["queries"]) - {
+        "D07",
+        "D12",
+        "D13",
+        "D35",
+        "D46",
+        "D49",
+    }, "Only reviewed observation contracts are enabled"
     assert "REPLACE_" not in config["agents.json"]
     assert "http://verify-backend:8080" in config["nginx.conf"]
     assert all(

@@ -633,6 +633,7 @@ class Observation:
                     "max_hold_seconds",
                     "health_contract",
                     "allocation_semantics",
+                    "observation_semantics",
                 )
             }
             quality = {**metadata, **quality}
@@ -712,6 +713,7 @@ def series(evidence):
                     unit=quality.get("unit"),
                     binding_id=quality.get("binding_id"),
                     binding_revision=quality.get("binding_revision"),
+                    observation_semantics=quality.get("observation_semantics"),
                 ),
             )
             entry["samples"].extend(

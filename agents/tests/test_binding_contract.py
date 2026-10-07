@@ -78,7 +78,8 @@ def verified(
 def test_same_uploaded_schema_and_worker_loader_and_chart():
     a = Settings("rca").profile()
     assert a == Settings("report").profile() == profile(active_defaults=True)
-    assert len(a["queries"]) == len(a["bindings"]) == 45
+    assert len(a["queries"]) == 45
+    assert len(a["bindings"]) == 56
     assert not {"D01", "D05", "D08", "D14"} & a["queries"].keys()
     assert (ROOT / "agents/config.example.json").read_bytes() == (
         ROOT / "charts/gpu-ops-advisor/files/agents.json"
