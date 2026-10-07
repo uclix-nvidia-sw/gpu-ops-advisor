@@ -599,7 +599,8 @@ def worker_result(stack, kind, jid, suffix=""):
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("activate", [False, True])
-def test_binding_profile_through_both_real_workers(stack, activate):
+@pytest.mark.parametrize("parameter_scope", [False, True])
+def test_binding_profile_through_both_real_workers(stack, activate, parameter_scope):
     from test_binding_contract import profile, verified
 
     config = profile()
@@ -630,7 +631,19 @@ def test_binding_profile_through_both_real_workers(stack, activate):
         b["environment"].update(datasource_uid="loki", selector={"cluster": "cpc-2"})
         for rule in ("sample_interval", "invalid_values", "counter_reset"):
             b[rule] = {"mode": "not_applicable", "reason": "fixture log stream"}
-    path = LOCAL / f"binding-profile-{activate}.json"
+        if parameter_scope:
+            for b in config["bindings"].values():
+                if b["verification"]["status"] != "verified":
+                    continue
+                label = "cluster" if b["source"] == "loki" else "cluster_id"
+                b["environment"].pop("cluster_id")
+                b["environment"]["selector"] = {}
+                b["environment"]["scope_labels"] = {"cluster_id": label}
+                b["verification"]["applicability"] = "Shared synthetic source contract"
+            config["auto_select_verified_bindings"] = True
+            for query in config["queries"].values():
+                query["selected_binding"] = None
+    path = LOCAL / f"binding-profile-{activate}-{parameter_scope}.json"
     path.write_text(json.dumps(config), encoding="utf-8")
     isolated = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
     request_start = len(Upstream.requests)
@@ -661,6 +674,10 @@ def test_binding_profile_through_both_real_workers(stack, activate):
             and q[0]["binding_revision"] == "fixture-binding-1"
             for q in qualities
         )
+        if parameter_scope:
+            assert all(
+                q[0]["selection_method"] == "automatic_verified" for q in qualities
+            )
     else:
         assert all(q[0]["reason"] == "binding_unselected" for q in qualities)
     iid = str(uuid4())

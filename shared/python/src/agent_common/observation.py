@@ -74,6 +74,19 @@ def unwrap(response):
 class Observation:
     def __init__(self, tools, profile, data, deadline, *, reuse_queries=False):
         validate_profile(profile)
+        if consolidated(profile):
+            scopes = data.get("scope", {}).get("clusters")
+            if (
+                not isinstance(scopes, list)
+                or not scopes
+                or any(
+                    not isinstance(scope, dict)
+                    or not isinstance(scope.get("cluster_id"), str)
+                    or not scope["cluster_id"].strip()
+                    for scope in scopes
+                )
+            ):
+                raise ValueError("explicit cluster_id required for every scope")
         self.tools, self.profile, self.data, self.deadline = (
             tools,
             profile,
@@ -576,6 +589,8 @@ class Observation:
                 for key in (
                     "binding_id",
                     "binding_revision",
+                    "selection_method",
+                    "selection_reason",
                     "producer",
                     "producer_version",
                     "source",

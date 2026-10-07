@@ -6428,7 +6428,7 @@
     ],
     "scope": "Direct metrics only; no Fleet/Loki activation; not deployed",
     "max_hold_policy_seconds": 30,
-    "note": "Historical bindings array retains original candidate audit. Current selection exists only in config.cpc-direct.json; global template unchanged.",
+    "note": "Historical validation record only. The CPC-specific profile was removed; use agents/config.example.json with request cluster_id scope_labels. This record does not verify applicability to new clusters.",
     "replay_summary": [
       {
         "cluster": "cpc-1",
@@ -6468,6 +6468,7 @@
         "raw_evidence_preserved": true,
         "scope": "Saved production sample replay through common collector and both consumer functions; not live jobs/LLM/JC publication"
       }
-    ]
+    ],
+    "status": "historical_profile_removed"
   }
 }

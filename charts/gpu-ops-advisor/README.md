@@ -86,7 +86,7 @@ artifacts:
 
 기본 실행 프로필은 `local-v1` 하나이며, 입력·출력을 포함해 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. `llm.synthesisMaxTokens`만 바꿔서는 실행 예산이 늘어나지 않습니다. 기존 설치는 [토큰 예산 업데이트](../../docs/helm-install.md#기존-설치의-llm-토큰-예산-업데이트)에 따라 업그레이드하고 새 보고서를 요청합니다.
 
-`configuration.agents: {}`는 내장 후보 프로필을 사용하므로 기본 관측은 실행하지 않습니다. 실행하려면 환경별로 검증된 전체 설정을 `configuration.agents`에 지정합니다. 새 binding은 Grafana datasource UID, selector, producer/version, 단위·시간·대상 규칙과 검증 근거를 명시해야 합니다. 구 profile에서만 기존 datasource/label 자동 탐색을 사용합니다. Mimir/Loki 접속과 인증은 Grafana datasource가 담당합니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
+`configuration.agents: {}`는 내장 후보 프로필을 사용하므로 기본 관측은 실행하지 않습니다. 실행하려면 환경별로 검증된 전체 설정을 `configuration.agents`에 지정합니다. 새 binding은 Grafana datasource UID, 고정 selector, `scope_labels`의 cluster_id 라벨 매핑, producer/version, 단위·시간·대상 규칙과 검증 근거를 명시해야 합니다. CPC 이름은 작업 입력에서 받으며 CPC별 전체 JSON을 만들지 않습니다. 공통 binding 선택에는 검증 계약의 적용 범위인 `verification.applicability`가 필요합니다. 구 profile에서만 기존 datasource/label 자동 탐색을 사용합니다. Mimir/Loki 접속과 인증은 Grafana datasource가 담당합니다. 데이터가 없거나 의미를 해석할 계약이 부족하면 해당 결과는 `empty/unavailable` 또는 `partial/blocked`로 남습니다.
 
 탐색은 작업 시간 범위에서 `cluster_id`, `cluster`, `k8s_cluster_name`, `kubernetes_cluster`, `k8s_cluster` 라벨 순서로 수행합니다. 첫 번째로 값이 존재하는 라벨에서 작업의 cluster ID와 정확히 일치하는 대상을 찾습니다. 일치하는 datasource가 하나일 때만 조회하며, 후보가 여러 개거나 클러스터 라벨이 없거나 권한/통신 오류가 있으면 원인을 evidence와 Worker 로그에 남깁니다. `cpc-2`와 `cpc2` 같은 별칭을 임의로 동일시하거나 전체 클러스터로 조회 범위를 넓히지 않습니다. 표준 배포에서는 Grafana에 올바른 데이터소스와 클러스터 라벨이 준비되어 있어야 합니다.
 

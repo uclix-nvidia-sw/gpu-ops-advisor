@@ -162,6 +162,11 @@ def main():
         "Example has no verified environment selection"
     )
     assert all(q["selected_binding"] is None for q in agent_profile["queries"].values())
+    assert all(
+        b["environment"].get("scope_labels") == {"cluster_id": "cluster_id"}
+        and "cluster_id" not in b["environment"]
+        for b in agent_profile["bindings"].values()
+    ), "Shared example must take cluster_id from the job scope"
     assert "REPLACE_" not in config["agents.json"]
     assert "http://verify-backend:8080" in config["nginx.conf"]
     assert all(

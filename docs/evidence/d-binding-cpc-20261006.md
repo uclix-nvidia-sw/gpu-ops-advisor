@@ -130,7 +130,7 @@ Loki 기본 설정은 `compactor.retention_enabled=false`, `limits_config.retent
 
 두 Alloy 원문의 LF SHA-256이 기존 수집 해시와 정확히 일치한다. 직접 수집 경로는 EndpointSlice discovery → service/port 선별 → 15s scrape → 8개 이름 allowlist → 신원 relabel → Mimir remote_write다. 값·단위 변환은 없으며 `honor_labels=true`, `Hostname→node`, `UUID→uuid`를 확인했다. KSM의 workload node와 exporter_node는 구분된다. Fleet는 별도 OTLP 경로이며 그 `k8s.pod.uid`는 수집기 Pod 신원이다.
 
-[환경별 공통 JSON](../../agents/config.cpc-direct.json)은 두 Worker가 함께 읽는 완전한 profile이다. 범용 `config.example.json`과 Helm 기본 사본은 미선택 템플릿으로 유지한다. 환경 파일에는 CPC별 D02/D03/D06/D10/D15/D20/D22, 총 14개 binding을 선택했다. 미등록 cluster와 나머지 D는 계속 차단한다. D12 메트릭은 allowlist에 있지만 조사 구간 원본 표본이 없어 선택하지 않았다.
+당시 `config.cpc-direct.json`은 두 Worker가 함께 읽는 완전한 profile이었다. 이 파일은 2026-10-07 공통 cluster_id 파라미터 전환으로 제거했다. 현재 구성은 [공통 설정 문서](../../agents/README.md#공통-cluster_id-파라미터--2026-10-07)를 따른다. 아래 내용은 전환 전 조사·설정의 이력이며 현재 활성화 목록이 아니다. 범용 `config.example.json`과 Helm 기본 사본은 미선택 템플릿으로 유지한다. 환경 파일에는 CPC별 D02/D03/D06/D10/D15/D20/D22, 총 14개 binding을 선택했다. 미등록 cluster와 나머지 D는 계속 차단한다. D12 메트릭은 allowlist에 있지만 조사 구간 원본 표본이 없어 선택하지 않았다.
 
 타입·단위는 Exporter CSV, KSM 및 Alloy metric 계약과 값 변환 없는 경로를 대조했다. D02는 0~100%, D03/D15는 0~(2^53−1) MiB 범위로 제한하여 DCGM INT64 blank 계열을 제외, D06은 info 값 1, D10/D20은 0~1 gauge, D22는 비음수 seconds로 제한한다. NaN/Inf는 공통 코드에서 제외한다. max_hold 30s는 15s 간격 두 번까지만 유지하는 명시적 분석 정책이며 관측된 무누락 보장이 아니다. counter 계산은 적용하지 않는다.
 
