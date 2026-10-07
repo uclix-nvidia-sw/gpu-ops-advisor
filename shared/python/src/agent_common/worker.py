@@ -79,6 +79,7 @@ class Worker:
         run_task = None
         code = "internal_error"
         token = None
+        completed = False
         try:
             if claim["kind"] != self.settings.kind:
                 raise ValueError("wrong worker kind")
@@ -155,6 +156,7 @@ class Worker:
                 for attempt in range(3):
                     try:
                         await self.post(path + "/complete", body)
+                        completed = True
                         return
                     except httpx.TransportError:
                         if attempt == 2:
@@ -162,6 +164,8 @@ class Worker:
                         await asyncio.sleep(0.25 * 2**attempt)
         except asyncio.CancelledError:
             code = "cancelled"
+            if asyncio.current_task().cancelling():
+                raise
         except TimeoutError:
             code = "timeout"
         except RemoteUncertain:
@@ -170,30 +174,55 @@ class Worker:
             code = (
                 "invalid_input" if state["stage"] == "validating" else "invalid_result"
             )
-        except Exception as exc:
+        except (Exception, BaseExceptionGroup) as exc:
+            if isinstance(exc, BaseExceptionGroup):
+                _, fatal = exc.split((Exception, asyncio.CancelledError))
+                if fatal is not None:
+                    raise
+                if asyncio.current_task().cancelling() or not exc.subgroup(Exception):
+                    code = "cancelled"
+                    raise
             log.error(
                 "attempt failed job=%s type=%s", claim["job_id"], type(exc).__name__
             )
         finally:
-            if run_task and not run_task.done():
-                run_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError, Exception):
-                    await run_task
-            heartbeat_task.cancel()
-            cancel_task.cancel()
-            await asyncio.gather(heartbeat_task, cancel_task, return_exceptions=True)
-            if token is not None:
-                attempt_context.reset(token)
-        with contextlib.suppress(httpx.HTTPError):
-            await self.post(
-                path + "/fail",
-                {
-                    **fence,
-                    "code": code,
-                    "retryable": code == "timeout",
-                    "remote_call_state": state["remote_call_state"],
-                },
-            )
+            try:
+                if run_task and not run_task.done():
+                    run_task.cancel()
+                    (error,) = await asyncio.gather(run_task, return_exceptions=True)
+                    if isinstance(error, BaseExceptionGroup):
+                        _, fatal = error.split((Exception, asyncio.CancelledError))
+                        if fatal is not None:
+                            raise error
+                    if isinstance(error, (Exception, BaseExceptionGroup)):
+                        log.error(
+                            "attempt cleanup failed job=%s type=%s",
+                            claim["job_id"],
+                            type(error).__name__,
+                        )
+            finally:
+                heartbeat_task.cancel()
+                cancel_task.cancel()
+                try:
+                    await asyncio.gather(
+                        heartbeat_task, cancel_task, return_exceptions=True
+                    )
+                finally:
+                    if token is not None:
+                        attempt_context.reset(token)
+                    # Cleanup may update the LLM state; report it even when cleanup fails.
+                    # A successful completion must never be followed by a failure report.
+                    if not completed:
+                        with contextlib.suppress(httpx.HTTPError):
+                            await self.post(
+                                path + "/fail",
+                                {
+                                    **fence,
+                                    "code": code,
+                                    "retryable": code == "timeout",
+                                    "remote_call_state": state["remote_call_state"],
+                                },
+                            )
 
     async def serve(self, once=False):
         async with httpx.AsyncClient() as client:

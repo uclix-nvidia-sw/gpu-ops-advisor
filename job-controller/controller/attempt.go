@@ -21,10 +21,6 @@ func (c *Controller) finish(ctx context.Context, tx pgx.Tx, j Object, now time.T
 	if j["cancel_requested_at"] != nil {
 		status = "cancelled"
 		code = "cancelled"
-		if !remoteEnded {
-			status = "running"
-			code = "cancellation_pending_remote_termination"
-		}
 	}
 	if !instant(j, "deadline_at").After(now) {
 		status = "expired"
@@ -42,17 +38,71 @@ func (c *Controller) finish(ctx context.Context, tx pgx.Tx, j Object, now time.T
 	if e != nil {
 		return e
 	}
-	state := "quarantined"
-	var released any
-	if remoteEnded {
-		state = "released"
-		released = now
+	return c.releaseFailedSlot(ctx, tx, String(j, "id"), Number(j, "attempt_no"), now, remoteEnded)
+}
+
+// A released execution slot is not evidence that remote inference has stopped.
+func (c *Controller) releaseFailedSlot(ctx context.Context, tx pgx.Tx, id string, attempt int, now time.Time, remoteEnded bool) error {
+	var reason any
+	if !remoteEnded {
+		reason = "release-ended-attempt-v1: remote termination unconfirmed; late results rejected"
 	}
-	_, e = tx.Exec(ctx, "UPDATE slot_reservations SET state=$3,released_at=$4 WHERE job_id=$1 AND attempt_no=$2 AND state='active'", j["id"], j["attempt_no"], state, released)
+	tag, e := tx.Exec(ctx, "UPDATE slot_reservations SET state='released',released_at=$3,release_evidence=$4 WHERE job_id=$1 AND attempt_no=$2 AND state IN ('active','quarantined')", id, attempt, now, reason)
+	if e != nil || tag.RowsAffected() == 0 || remoteEnded {
+		return e
+	}
+	var previous *string
+	if e = tx.QueryRow(ctx, "SELECT remote_call_state FROM job_attempts WHERE job_id=$1 AND attempt_no=$2", id, attempt).Scan(&previous); e != nil {
+		return e
+	}
+	if _, e = tx.Exec(ctx, "UPDATE job_attempts SET remote_call_state='unknown' WHERE job_id=$1 AND attempt_no=$2", id, attempt); e != nil {
+		return e
+	}
+	_, e = tx.Exec(ctx, "INSERT INTO audit_events(id,actor,action,resource_type,resource_id,request_id,after_ref) VALUES($1,'job-controller','release_unconfirmed_slot','job',$2,$3,$4)", ID(), id, ID(), Object{"attempt_no": attempt, "previous_remote_call_state": previous, "remote_call_state": "unknown", "policy": "release-ended-attempt-v1"})
 	return e
 }
+
+// Migrate ended reservations from the old policy without inventing termination proof
+// or changing their attempt history, retry budget or original deadline.
+func (c *Controller) releaseLegacyQuarantines(ctx context.Context, tx pgx.Tx, now time.Time) error {
+	rows, e := tx.Query(ctx, "SELECT s.job_id::text,s.attempt_no FROM slot_reservations s JOIN jobs j ON j.id=s.job_id JOIN job_attempts a ON a.job_id=s.job_id AND a.attempt_no=s.attempt_no WHERE s.state='quarantined' AND a.ended_at IS NOT NULL ORDER BY s.job_id,s.attempt_no FOR NO KEY UPDATE OF j,a")
+	if e != nil {
+		return e
+	}
+	type reservation struct {
+		id      string
+		attempt int
+	}
+	reservations := []reservation{}
+	for rows.Next() {
+		var r reservation
+		if e = rows.Scan(&r.id, &r.attempt); e != nil {
+			rows.Close()
+			return e
+		}
+		reservations = append(reservations, r)
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return e
+	}
+	for _, r := range reservations {
+		if e = c.releaseFailedSlot(ctx, tx, r.id, r.attempt, now, false); e != nil {
+			return e
+		}
+		if _, e = tx.Exec(ctx, "UPDATE jobs SET status=CASE WHEN deadline_at<=$3 THEN 'expired' ELSE 'cancelled' END,stage=CASE WHEN deadline_at<=$3 THEN 'expired' ELSE 'cancelled' END,termination_reason=CASE WHEN deadline_at<=$3 THEN 'deadline_exceeded' ELSE 'cancelled' END,retryable=false,queue_reason=NULL,version=version+1 WHERE id=$1 AND attempt_no=$2 AND status='running' AND cancel_requested_at IS NOT NULL", r.id, r.attempt, now); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 func (c *Controller) Sweep(ctx context.Context) error {
 	return c.transaction(ctx, func(tx pgx.Tx, now time.Time) error {
+		if e := c.releaseLegacyQuarantines(ctx, tx, now); e != nil {
+			return e
+		}
 		rows, e := tx.Query(ctx, `SELECT to_jsonb(j) FROM jobs j JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no WHERE j.source_module IS NOT NULL AND j.status='running' AND (a.ended_at IS NULL OR j.deadline_at<=$1) AND (j.deadline_at<=$1 OR a.lease_expires_at<=$1 OR NOT EXISTS(SELECT 1 FROM workers w WHERE w.worker_id=a.worker_id AND w.boot_id::text=a.boot_id AND NOT retired)) ORDER BY j.id FOR NO KEY UPDATE OF j,a`, now)
 		if e != nil {
 			return e

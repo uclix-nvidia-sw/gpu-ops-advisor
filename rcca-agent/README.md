@@ -68,7 +68,7 @@ RCA 첫 페이지의 `최종 보고서` 버튼/탭과 공개 작업의 바로가
 
 `narrative`에 보고서를 저장하고 공개 RCA 화면에 표시한다. `narrative_status=complete/failed/omitted`는 모델 편집 상태이며 `quality.report.status=complete`는 보고서 구성 완료다. 원인 Synthesis 상태인 `quality.analysis`, 목적별 assessment와 `result_status`는 변경하지 않는다. 원천 `REBOOT_SYSTEM` 등은 미검증·미수행 제안으로 표시한다.
 
-모델 미설정·확정된 HTTP 오류·잘못된 응답·예산 소진으로 편집을 못 하면 코드 기본 보고서를 남긴다. 실제 네트워크 호출 횟수는 모델 설정·남은 token/deadline·전송 재시도에 따라 달라진다. 원격 추론 종료 불명, 취소·lease 상실·실행 deadline 초과는 기존 fail/격리 계약이 우선이며 보고서로 우회 공개하지 않는다. 입력 검증·저장 등 기술 실패까지 공개 보고서를 보장하지 않는다.
+모델 미설정·확정된 HTTP 오류·잘못된 응답·예산 소진으로 편집을 못 하면 코드 기본 보고서를 남긴다. 실제 네트워크 호출 횟수는 모델 설정·남은 token/deadline·전송 재시도에 따라 달라진다. 원격 추론 종료 불명, 취소·lease 상실·실행 deadline 초과는 기존 fail·슬롯 반환 계약이 우선이며 보고서로 우회 공개하지 않는다. 입력 검증·저장 등 기술 실패까지 공개 보고서를 보장하지 않는다.
 
 DB migration·결과 스키마 버전 변경은 없고 기존 snapshot/hash와 공개 결과는 재작성하지 않는다. 재배포 후 새 실행에 적용하며 운영 검증 상태는 [Agent QA](../agents/QA.md)를 따른다.
 

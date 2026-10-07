@@ -27,7 +27,8 @@ func New(db *pgxpool.Pool, c Config) (*Controller, error) {
 	if e := c.Validate(); e != nil {
 		return nil, e
 	}
-	return &Controller{db, c, Hash(c)}, nil
+	// Fence replicas running the old quarantine policy even with identical settings.
+	return &Controller{db, c, Hash(Object{"config": c, "execution_policy": "release-ended-attempt-v1"})}, nil
 }
 func (c *Controller) Prepare(ctx context.Context, apply bool) error {
 	tx, e := c.DB.Begin(ctx)

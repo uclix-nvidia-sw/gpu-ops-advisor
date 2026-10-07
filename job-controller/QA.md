@@ -1,5 +1,13 @@
 # Job Controller 검증 기록
 
+## 2026-10-07 실패한 실행 슬롯 반환
+
+**통과:** 원격 main `b8621a6` 기반 로컬 변경. JC·Backend·Incident 각각 `go vet ./...`, `go test -race ./...`, `go build ./...`; 새 임시 PostgreSQL에서 Backend·Incident `go test -tags=e2e ./tests -v -count=1 -timeout=10m`. Go 1.26.2, PostgreSQL 16.9, macOS. 기존 DB 환경변수를 제거하고 loopback 임시 DB만 사용한 뒤 종료했다.
+
+실패·원격 unknown·취소·lease/deadline·Worker boot 교체 뒤 실행 슬롯 반환, RCA↔report 다음 배분, 미확인 2건 초과 누적에도 배분 유지, 기존 backoff·예산·최대 시도 유지, 늦은 heartbeat/fail/complete 거부와 새 공개 결과 보존을 검사했다. 과거 격리의 빈 원격 상태·취소/만료 전환, 원래 ended_at/deadline/예산 보존, Sweep 재실행의 감사 기록 멱등성, 구 정책 config revision 차단도 통과했다. 최초 통합 실패는 새 테스트가 Backend의 `result_ref`를 JC의 `published_result_id`로 비교한 문제였으며 실제 DTO로 수정한 뒤 전체 재검증했다.
+
+**미검증:** 운영 배포, 실제 Dynamo 잔여 추론의 지속 시간·중첩 부하. fixture 검사는 원격 모델 종료 증명이 아니다. DB 구조·결과 스키마·기본 최대 시도(처음 포함 3회)는 그대로다. **미수행:** 운영 슬롯 변경. 원격 CI는 PR 제출 후 별도 확인한다.
+
 ## 2026-10-02 저장과 heartbeat 잠금 경합
 
 **통과:** `origin/main` 5ddfe21 기반 로컬 변경. JC/Backend/Incident 각각 Go vet/race/server build 및 격리 PostgreSQL Backend·Incident E2E. Agent 전체 315건에서 실제 JC와 Store로 2초 lease 중 2.6초 저장 지연·heartbeat 갱신·최종 공개·취소/만료/시도 교체 rollback·잠금 대기 후 만료된 heartbeat 409를 확인했다. non-key 잠금으로 FK KEY SHARE와 공존하며 JC 변경끼리의 배타성과 capacity 잠금은 보존한다. 상세 환경은 [Agent QA](../agents/QA.md)의 같은 날짜 대량 저장 기록을 따른다. **미수행:** 운영 반영·격리 해제·원격 CI. DB migration·lease 설정 변경 없음.

@@ -13,6 +13,7 @@ import (
 	"gpu-ops-advisor/backend/internal/config"
 	. "gpu-ops-advisor/backend/internal/contract"
 	"gpu-ops-advisor/backend/internal/store"
+	sharedmigrations "gpu-ops-advisor/shared/migrations"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -488,6 +489,50 @@ func TestBackendE2E(t *testing.T) {
 		outage := httptest.NewServer(api.New(db, config.Config{}))
 		defer outage.Close()
 		request(t, outage.URL+"/api/v1/reports", "POST", report(), 503, "Idempotency-Key", "outage")
+	})
+	t.Run("attempt_remote_state_and_optional_slot_metadata", func(t *testing.T) {
+		jobs := map[string]string{}
+		for _, kind := range []string{"report", "rca"} {
+			id, source := ID(), "backend"
+			if kind == "rca" {
+				source = "incident"
+			}
+			jobs[kind] = id
+			_, e = db.Pool.Exec(ctx, "INSERT INTO jobs(id,kind,source_module,source_key,scope,input_snapshot,request_hash,status,deadline_at) VALUES($1,$2,$3,$4,$5,'{}','fixture','failed',now()+interval '1 day')", id, kind, source, id, sc)
+			must(t, e)
+			_, e = db.Pool.Exec(ctx, "INSERT INTO job_attempts(job_id,attempt_no,started_at,ended_at,termination_reason,claim_token,remote_call_state) VALUES($1,1,now()-interval '2 minutes',now(),'timeout',$2,'unknown')", id, "private-"+id)
+			must(t, e)
+			detail := call("GET", "/jobs/"+id, nil, 200)
+			attempt := detail["attempts"].([]any)[0].(map[string]any)
+			if attempt["remote_call_state"] != "unknown" || attempt["slot_state"] != nil || attempt["slot_released_at"] != nil {
+				t.Fatal("missing JC schema must not imply slot release", attempt)
+			}
+		}
+		_, e = db.Pool.Exec(ctx, sharedmigrations.Queue)
+		must(t, e)
+		for kind, id := range jobs {
+			_, e = db.Pool.Exec(ctx, "INSERT INTO slot_reservations(id,job_id,attempt_no,worker_id,boot_id,kind,state,reserved_at,released_at,release_evidence) VALUES($1,$2,1,'fixture-worker',$3,$4,'released',now()-interval '2 minutes',now(),'private-release-evidence')", ID(), id, ID(), kind)
+			must(t, e)
+			for _, route := range []string{"/jobs/", map[string]string{"report": "/reports/", "rca": "/analyses/"}[kind]} {
+				detail := call("GET", route+id, nil, 200)
+				attempt := detail["attempts"].([]any)[0].(map[string]any)
+				if attempt["remote_call_state"] != "unknown" || attempt["slot_state"] != "released" || attempt["slot_released_at"] == nil || detail["result_ref"] != nil {
+					t.Fatal(attempt)
+				}
+				for _, key := range []string{"claim_token", "boot_id", "worker_id", "release_evidence"} {
+					if _, exists := attempt[key]; exists {
+						t.Fatal("private execution field exposed", key)
+					}
+				}
+			}
+			_, e = db.Pool.Exec(ctx, "INSERT INTO job_attempts(job_id,attempt_no,started_at,remote_call_state) VALUES($1,2,now(),'not_started')", id)
+			must(t, e)
+			detail := call("GET", "/jobs/"+id, nil, 200)
+			attempt := detail["attempts"].([]any)[1].(map[string]any)
+			if attempt["remote_call_state"] != "not_started" || attempt["slot_state"] != nil || attempt["slot_released_at"] != nil {
+				t.Fatal("reservation must match the same attempt", attempt)
+			}
+		}
 	})
 }
 

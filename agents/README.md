@@ -113,11 +113,11 @@ NAT 1.5.0은 MCP 조회 오류를 문자열로 반환할 수 있습니다. 수�
 
 두 Worker의 NAT 등록은 공통 [`grafana_mcp`](../shared/python/src/agent_common/grafana_mcp.py)를 사용합니다. NAT 1.5.0의 기본 HTTPX 읽기 제한 5초 대신 HTTP 제한을 `tool_call_timeout + 5초`(예시 30 + 5초)로 맞춥니다. 실제 조회에는 기존 도구 timeout과 남은 작업 deadline도 적용되며 LLM timeout·JC lease·전체 deadline은 늘리지 않습니다. MCP 연결의 수명을 별도 task에서 관리하여 전송 실패의 취소가 Worker 실행 루프까지 전파되지 않도록 합니다. 실패한 조회를 재실행하지 않으며, 이후 별도 예산을 배정받은 호출에서 종료된 연결을 새로 열 수 있습니다. 서버의 세션 종료 404가 SDK의 `Session terminated` 오류로 전달된 경우에도 기존 연결을 정리하고 다음 호출에서 새로 연결합니다. 이 변경은 공통 전송 경로와 양 Worker 등록에 적용되며 RCA 계산·판단 정책은 변경하지 않습니다.
 
-등록된 상태 해석 규칙이나 유효한 관측이 없으면 `no_usable_evidence`로 원인 Synthesis를 생략할 수 있습니다. 최종 보고서는 별도로 항상 구성하고 모델 편집을 시도하며, 미설정·확정 실패에는 코드 기본 보고서를 제공합니다. 원격 종료 불명은 기존 fail/격리 계약을 유지합니다. 로그 조회 성공과 장애 원인 분석 성공은 따로 확인합니다.
+등록된 상태 해석 규칙이나 유효한 관측이 없으면 `no_usable_evidence`로 원인 Synthesis를 생략할 수 있습니다. 최종 보고서는 별도로 항상 구성하고 모델 편집을 시도하며, 미설정·확정 실패에는 코드 기본 보고서를 제공합니다. 원격 종료 불명은 fail로 처리하고 JC가 실행 슬롯을 반환하되 unknown을 기록합니다. 로그 조회 성공과 장애 원인 분석 성공은 따로 확인합니다.
 
 Grafana MCP 1.4.2의 Prometheus·Loki 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. 두 Worker의 공통 수집기는 MCP 탐색·조회 요청 시각을 UTC 밀리초로 변환합니다. 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며 원본 Incident snapshot·해시·증거 시각을 유지합니다. Loki 조회 경계의 정밀도가 줄면 `quality.reason=time_precision_reduced`, `complete=false`, 실제 `request_time_range`를 기록하고 부분 근거로 처리합니다. 조회 성공·미잘림·경고 없음이면 `observation_usable=true`로 실제 요청 구간 안의 개별 health 관측을 RCA Synthesis에 사용할 수 있습니다. 기간 전체의 완전성·오류 부재·집계는 보장하지 않으며 다른 partial 사유는 제외합니다. 밀리초 단위 조회창이 남지 않으면 조회하지 않습니다.
 
-LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사가 성공해도 기존 `inference_quarantined`는 자동 해제되지 않습니다. 원격 추론 종료를 확인한 뒤 [Job Controller 운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따릅니다.
+LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사 성공은 이전 원격 추론의 종료 증거가 아닙니다. [Job Controller 실행 정책](../job-controller/README.md#추론-격리와-취소)에 따라 실패한 실행 슬롯을 반환하고 종료 미확인 이력을 보존합니다.
 
 이 처리는 공유 Python 모듈에 있으므로 배포할 때 `rcca-agent`와 `ops-agent` 이미지를 함께 다시 빌드합니다.
 
@@ -130,9 +130,9 @@ timeout은 모델에 보낸 요청의 통신 대기 제한, deadline은 분석 �
 1. [현재 협업 규칙](../docs/team-development.md)에 따라 변경 담당자를 지정하고 추가 리뷰가 필요하면 요청한다. 담당자는 두 Agent의 호출과 deadline·슬롯·격리 정책 영향을 검증하고, C-1/C-2·B에게 관련 내용을 공유한다.
 2. 변경할 원본 설정, 실제 배포에 쓰는 override, 목표 시간, 적용·복구 순서를 작업 대화·Issue 또는 PR에 적는다. 외부 모델 서버·프록시·Ingress·LiteLLM 등을 사용하는 환경이라면 해당 설정을 소유한 별도 저장소·담당자도 기록한다. 이 저장소가 그 외부 설정까지 관리한다고 가정하지 않는다.
 3. 사용자 요청·승인 범위에서 main 반영과 CI 발행을 마친 뒤 지정한 사람이 별도로 승인된 배포를 수행한다. 실제 Worker 설정값, RCA·보고서 작업의 ID·상태·소요 시간·결과 공개 여부와 슬롯 상태를 확인한다. HTTP 성공만으로 검증을 끝내지 않는다.
-4. timeout 뒤 원격 추론의 종료가 불명확하면 슬롯이 격리될 수 있다. 이후 요청이 성공했다고 이전 격리가 해제된 것은 아니다. [추론 격리와 취소](../job-controller/README.md#추론-격리와-취소)에 따라 원격 종료를 확인한 뒤 처리한다.
+4. timeout 뒤 실패한 실행 슬롯은 반환하지만 원격 추론 종료는 unknown으로 기록한다. [실행 슬롯 반환과 취소 정책](../job-controller/README.md#추론-격리와-취소)에 따라 늦은 결과를 거부한다. 이전 추론과 다음 작업의 추론이 겹칠 수 있다.
 
-연결이 끊겼다고 모델 서버의 계산까지 멈췄다고 단정할 수는 없다. 슬롯 격리는 “기존 계산이 끝났는지 모르니 이 자리를 바로 다른 작업에 내주지 말자”는 안전장치다. 설정을 바꾸거나 새 요청을 성공시키는 것과 기존 작업의 종료 확인은 별개다.
+연결이 끊겼다고 모델 서버의 계산까지 멈췄다고 단정할 수는 없다. 2026-10-07 정책은 종료 미확인 추론이 남아도 다음 작업을 배분하며 누적 미확인 건수만으로 큐를 막지 않는다. 작업별 재시도·시간·예산 제한은 실제 서버의 전체 동시 추론 한도가 아니다. 실제 모델 부하를 별도로 관측해야 한다.
 
 공유 기록 예시이며, 실제 적용 결과는 아니다:
 
@@ -199,7 +199,7 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 
 저장 시작에는 실행 유효성을 읽고, 대량 INSERT 동안 jobs/attempts의 명시적 공유 잠금을 유지하지 않는다. 커밋 직전에 jobs → attempt 순서로 잠근 뒤 실제 현재 시각(`clock_timestamp`)으로 claim_token·현재 attempt·lease·deadline·취소를 다시 확인한다. 무효하면 evidence와 candidate 전체를 롤백한다. JC의 최종 complete 검증과 동일 candidate/hash 재전송은 유지한다. 저장 중에도 Worker는 취소·lease 상실을 감시해 저장 task를 취소하고 DB rollback을 기다린다. 취소된 준비 스레드는 계산을 마칠 수 있지만 DB 저장·공개는 수행하지 않는다.
 
-저장 성공 로그는 job ID·evidence 건수·`prepare_seconds`·`db_seconds`만 남긴다. 원본 snapshot·claim token·접속 정보는 출력하지 않는다. JC의 FK 호환 잠금 변경과 함께 반영해야 하며 JC를 먼저 반영한 뒤 두 Worker를 교체한다. lease 시간·공유 슬롯·원격 추론 격리 정책은 바꾸지 않는다. 기존 운영 격리는 자동 해제하지 않으며 모델 서버 종료 확인 후 [운영 해제 절차](../job-controller/README.md#추론-격리와-취소)를 따른다.
+저장 성공 로그는 job ID·evidence 건수·`prepare_seconds`·`db_seconds`만 남긴다. 원본 snapshot·claim token·접속 정보는 출력하지 않는다. JC의 FK 호환 잠금 변경과 함께 반영해야 하며 JC를 먼저 반영한 뒤 두 Worker를 교체한다. 당시 변경은 lease 시간·공유 슬롯·격리 정책을 유지했다. 현재 실패 슬롯 반환과 기존 격리 전환은 후속 [2026-10-07 실행 정책](../job-controller/README.md#추론-격리와-취소)을 따른다.
 
 ## 결과·관측 계약
 
@@ -209,7 +209,7 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 - 보고서는 REPEATABLE READ에서 data cutoff, Incident, 공개된 RCA ID/hash, 실제 조치 기록을 고정합니다. RCA 원인 수준은 인용한 결과 수준을 유지합니다.
 - 보고서 LLM 설명은 검증된 사실 ID 선택으로 제한하고 저장된 `value_refs`로 렌더링합니다. RCA Synthesis는 수집이 끝난 뒤 도구 없이 근거 참조가 있는 원인 후보·한계를 생성합니다. 자유 문장의 숫자는 거부하고 모델의 인과 수준은 candidate로 제한합니다. 참조·형식 검증이 모델 문장 의미의 진실성을 보장하지는 않습니다.
 - RCA는 승인 Runbook 계획의 query를 병렬 실행하며 `limits.max_concurrency` 기본값은 3입니다. 최대 1회 재조사 후 Synthesis하고, 조회 실패·부분 수집은 degraded로 남깁니다. 전용 Runbook 미일치는 `rca.general_runbook_key`의 승인 발행본으로 대체하며 일반 발행본까지 없으면 조사하지 않습니다. [RCA 실행 안내](../rcca-agent/README.md)와 [보완 계획](../docs/specs/rca-agent/implementation-plan-20260928.md)을 따릅니다.
-- timeout/cancel 이후 추론 종료가 확인되지 않으면 `remote_call_state=unknown`으로 fail을 보내 JC의 격리 정책에 맡깁니다. 저장 실패는 succeeded가 아닙니다.
+- timeout/cancel 이후 추론 종료가 확인되지 않으면 `remote_call_state=unknown`으로 fail을 보냅니다. JC는 실행 슬롯을 반환하고 원격 종료 미확인 감사 이력을 남깁니다. 저장 실패는 succeeded가 아닙니다.
 - Agent는 HTML·CSV 파일과 checksum을 저장합니다. Backend 다운로드 API는 발행된 결과에서 HTML 표와 항목별 CSV를 렌더링하며 새 조회·분석은 하지 않습니다. HTML escape와 CSV 수식 방어를 적용합니다. 화면 상단의 HTML·CSV 다운로드 버튼으로 받을 수 있습니다.
 
 ## 배포 입력이 필요한 부분

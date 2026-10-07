@@ -1,5 +1,13 @@
 # 2026-10-07 D07/D13 source contracts — 원문 조회 보존
 
+## 2026-10-07 실패 보고와 실행 슬롯 반환 회귀
+
+**통과:** `.venv/bin/ruff check shared/python/src rcca-agent/src ops-agent/src agents/tests tools/ci`, 동일 경로 `ruff format --check`; `RUN_AGENT_E2E=1 .venv/bin/python -m pytest -c agents/pytest.ini agents/tests -q --junitxml=.local/slot-release/agents-results.xml` — **598 passed**, MCP SDK deprecation 경고 3건. Python 3.11.16(지원 범위, CI는 3.12), PostgreSQL 16.9, Go 1.26.2, 공식 Grafana MCP 1.4.2. `PG_BIN`과 JC/Incident/Backend/MCP 바이너리를 로컬 도구 경로로 지정하고 운영 DB 환경변수를 제거했다. 격리 DB·실제 양 Worker/NAT/MCP 프로세스와 Grafana/LLM 응답 fixture를 사용했다.
+
+혼합 예외 그룹·cleanup 오류가 fail 보고를 건너뛰지 않는지, 정상 complete 뒤 fail을 보내지 않는지, 외부 취소·치명적 종료 신호 전파, 원격 상태 보존, 후속 작업 완료를 RCA/report에 확인했다. 저장 중 heartbeat·취소/만료/시도 교체 rollback과 기존 보고서/RCA 계산 회귀 포함. 초기 sandbox에서는 임시 서버 bind/shared-memory 권한으로 실패했으며 격리 로컬 실행을 허용한 뒤 전체 통과했다.
+
+**미검증:** 운영 Worker 종료의 실제 원인, 실제 Dynamo 요청의 종료·지속 시간·중첩 부하. 이 변경은 원격 종료를 입증하지 않으며 새 JC는 unknown을 기록한 채 실행 슬롯을 반환한다. **미수행:** 배포·운영 DB 변경. 원격 CI는 PR 제출 후 별도 확인한다.
+
 - 기준: main 8bd727e, 공통 cluster_id와 MCP 탐색 유지. D13 원문 로그 문맥 binding을 추가하고 업무/상태 fact 승격을 차단한다. 미검증 대상 필터는 전체 클러스터로 확대하지 않는다. D07은 기존 scheduler 원천을 먼저 검토하며 별도 서비스 설치를 전제하지 않는다.
 - 통과: Python 3.12, 격리 localhost DB, RUN_AGENT_E2E=1 전체 검사 580 passed / 0 skipped, 기존 MCP 경고 3건. 대상 별칭 차단 후 집중 검사 128 passed. Ruff, Helm 계약/패키징, CI helper 18개, 문서 109개/링크 1356개 오류 0건. 두 Worker E2E의 Grafana/LLM은 fixture다.
 - 미검증: D07 scheduler 버전·실제 원천·UID/시간/상태 연결, D46 단위, 새 설정 배포와 실제 Worker 결과. 제공된 KSM Pod YAML은 D07 유효 요청량 존재를 증명하지 않는다.

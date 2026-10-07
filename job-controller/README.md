@@ -47,13 +47,13 @@ RCA 접수는 1.3/1.4를 구분하고, 보고서는 1.3을 유지합니다. 새 
 
 ### 실행 한도
 
-`JC_CONFIG_FILE`에 `config.example.json` 형식의 파일 경로를 지정합니다. 기본 개발 프로필은 종류별 슬롯 1, 공유 슬롯 1, Worker 슬롯 1, lease 30초, heartbeat 5초, 최대 3회, 총 토큰 예산 3,000, attempt 예산 1,000입니다. 재시도는 지수 backoff(최대 300초) + 1초 미만 jitter를 적용합니다.
+`JC_CONFIG_FILE`에 `config.example.json` 형식의 파일 경로를 지정합니다. 기본 개발 프로필은 종류별 슬롯 1, 공유 슬롯 1, Worker 슬롯 1, lease 30초, heartbeat 5초, 처음 시도를 포함해 최대 3회, 총 토큰 예산 98,304, attempt 예산 32,768입니다. 재시도는 지수 backoff(최대 300초) + 1초 미만 jitter를 적용합니다.
 
 **예산은 보수적인 예약 방식**입니다. claim 때 attempt 예산 전체를 누적 차감하고 잔여분을 환급하지 않습니다. 실측 LLM 사용량을 뜻하지 않습니다. Agent는 반환된 `budget.attempt_limit` 안에서 모델 호출을 직렬 실행해야 합니다. JC만으로 외부 모델 서버의 실제 토큰 소비를 강제할 수는 없습니다.
 
 query/parser/criteria의 개발 기본 revision은 `unconfigured`입니다. Agent와 연결할 때 실제 배포 revision을 설정해야 합니다. model snapshot은 Backend routing의 참조이고 미설정이면 null입니다. 설정 누락을 Agent가 실제 분석 성공으로 처리하면 안 됩니다.
 
-`JC_APPLY_CONFIG`는 미지정 시 `true`이며, 시작할 때 전달한 설정을 DB에 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 기본 실행 프로필은 `local-v1` 하나이며 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. 예산 변경은 새로 접수되는 작업에 적용하고, 기존 작업은 접수 시 저장한 실행 설정 스냅샷을 사용합니다. 자동 적용을 끄려면 `JC_APPLY_CONFIG=false`를 명시합니다.
+`JC_APPLY_CONFIG`는 미지정 시 `true`이며, 시작할 때 전달한 설정을 DB에 적용합니다. DB config revision과 다른 구 프로세스는 readiness·claim·heartbeat·complete를 503으로 막으므로 모든 JC replica를 같은 설정으로 교체해야 합니다. 한도 감소는 기존 실행을 죽이지 않고 점유가 새 한도 아래로 내려갈 때까지 신규 인수만 중단합니다. 기본 실행 프로필은 `local-v1`과 보고서 전용 `report-namespace-v1`이며 시도당 32,768, 작업 전체 98,304의 예산을 사용합니다. 예산 변경은 새로 접수되는 작업에 적용하고, 기존 작업은 접수 시 저장한 실행 설정 스냅샷을 사용합니다. 자동 적용을 끄려면 `JC_APPLY_CONFIG=false`를 명시합니다.
 
 ## 저장 중 lease 갱신 — 2026-10-02
 
@@ -63,7 +63,17 @@ Agent의 evidence/candidate INSERT는 외래 키 검사 때문에 jobs 행에 KE
 
 ## 추론 격리와 취소
 
-lease 만료나 boot 교체 시 원격 추론 종료를 증명할 수 없으면 reservation을 quarantined로 유지합니다. 해당 job과 점유된 공유/종류/Worker 슬롯은 다시 사용하지 않습니다. HTTP timeout만으로 슬롯을 반환하지 않습니다. 현재 검증된 원격 최대 수명 설정은 없으므로 운영 확인 해제만 제공합니다.
+**2026-10-07 정책 변경:** 실패·취소·lease 만료·boot 교체로 attempt를 종료하면 원격 추론 종료 여부와 관계없이 실행 reservation을 `released`로 반환합니다. 원격 종료가 불명확하면 `job_attempts.remote_call_state=unknown`, `release_evidence`의 정책 사유와 `release_unconfirmed_slot` 감사 기록을 남깁니다. 감사 기록에는 이전 원격 상태를 보존합니다. 마지막 heartbeat의 `not_started` 또는 `terminated`도 만료 시점의 종료 증명이 아니므로 Sweep에서는 `unknown`으로 기록합니다.
+
+다음 작업은 기존 Worker/종류/공유 **유효 실행** 한도 안에서 배분합니다. 한도 1은 모델 서버의 실제 동시 추론 1을 보장하지 않습니다. 이전 추론과 새 추론이 겹칠 수 있고, 종료 미확인 누적 건수만으로 새 작업을 막지 않습니다. 기존 재시도 횟수·backoff·deadline·누적 예산은 유지하지만 이는 작업별 제한이며 모든 잔여 추론의 총량 제한은 아닙니다. 실제 모델 서버 과부하 여부는 별도 운영 관측 대상입니다.
+
+현재 attempt/token/lease/deadline/취소/Worker boot 검사와 저장 직전 검증은 유지합니다. 늦은 heartbeat·fail·complete는 409이며 이전 candidate를 새 결과로 공개하지 않습니다. 이미 성공한 동일 complete 재전송은 기존 성공 응답을 반환하는 멱등 동작을 유지합니다.
+
+새 JC의 첫 Sweep은 종료된 attempt의 기존 `quarantined` 예약도 같은 정책으로 반환합니다. 원래 attempt 종료 시각·deadline·예산·입력·공개 결과는 유지하며, 이전 취소 대기는 마감 전이면 `cancelled`, 마감 후이면 `expired`로 마무리합니다. 반복 Sweep은 중복 감사 기록을 만들지 않습니다. 이것은 **정책상 반환이지 모델 종료 확인이 아닙니다**.
+
+`config_revision`은 설정과 `release-ended-attempt-v1` 정책 버전을 함께 hash합니다. JC replica를 같은 버전으로 교체한 뒤 두 Worker, Backend/Frontend를 반영합니다. `JC_APPLY_CONFIG=false`인 배포는 새 revision 적용을 운영 절차로 준비해야 합니다. 혼합 버전의 구 JC는 503으로 차단되지만, 구 버전 재시작이 설정을 재적용하면 revision을 되돌릴 수 있으므로 구 replica를 남기지 않습니다. DB schema migration은 없습니다. 롤백 시 이미 반환된 reservation을 추론 종료로 간주하거나 무조건 다시 점유시키지 말고, 모델 상태를 확인하고 구 JC 설정 revision을 모든 replica에 일관되게 적용합니다.
+
+아래 CLI는 구 정책의 격리 기록에 대해 독립적으로 확인한 종료 근거를 남기는 호환 기능입니다. 새 정책에서는 정상 실행을 위해 이 CLI를 반복할 필요가 없습니다.
 
 ```powershell
 cd job-controller
@@ -71,7 +81,7 @@ $env:DATABASE_URL = 'postgres://dsx:local-development-only@127.0.0.1:55432/dsx?s
 go run ./cmd/admin -job <job-uuid> -attempt 1 -evidence "모델 서버 request ID ... 종료 확인, 확인 시각 ..."
 ```
 
-실제로 모델 서버의 종료를 확인한 뒤 실행합니다. CLI는 근거와 audit event를 저장합니다. 운영 설정 파일을 쓰는 환경에서는 동일 `JC_CONFIG_FILE`도 지정해야 합니다. 실행 중 취소는 먼저 플래그를 기록하며, Agent의 종료 확인 또는 운영 확인 후 cancelled가 됩니다. 종료 불명인 취소는 running + cancellation_pending_remote_termination으로 남고 deadline이면 expired가 되더라도 슬롯은 격리를 유지합니다.
+CLI는 실제 종료 확인 근거가 있을 때만 사용하며, 이미 정책으로 반환한 예약에는 `not_quarantined`를 반환합니다. 실행 중 취소는 먼저 플래그를 기록하고, Worker의 fail 또는 lease 복구로 시도를 닫으면 원격 상태가 unknown이어도 cancelled와 슬롯 반환을 확정합니다. deadline이 먼저 지나면 expired입니다. 모델 서버를 강제로 종료하거나 끝까지 실행하도록 보장하지 않습니다.
 
 ## 검사와 이미지
 

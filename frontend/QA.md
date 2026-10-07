@@ -1,5 +1,9 @@
 # 2026-10-07 RCA Runbook 선택 설명 — 로컬 검수
 
+## 2026-10-07 원격 종료 미확인 안내
+
+**통과:** `frontend/`에서 `npm test` **182건/17파일**, `npm run build`, `npm run format:check`. RCA/report 작업 상세에서 종료된 시도·슬롯 반환·원격 unknown/running 조합만 안내하고 시도 번호와 늦은 결과 미발행을 표시한다. 슬롯 필드 없는 구 응답, 진행 중 시도, 실제 종료/미시작 상태, 구 격리에는 반환을 주장하지 않는다. 기존 레이아웃·분석 및 보고서 링크를 유지한다. **미검증:** 운영 화면 배포·실제 Dynamo 종료 상태.
+
 - 통과: `frontend/`에서 `npm test` **173 tests / 17 files**, `npm run build`, `npm run format:check`. JSX 렌더링 fixture로 발행본만/builtin만/혼합/선택 없음, 기존 narrative 보존, normalized_health/unknown_value 사유 표시를 확인했다.
 - 참조 Runbook의 origin을 근거로 발행본 선택과 일반 조사 추가 사용을 구분한다. 과거 저장 보고서 문장은 수정하지 않는다. API·스키마 변경은 없으며 수정 UI의 운영 배포·브라우저 검수는 아직 수행하지 않았다.
 

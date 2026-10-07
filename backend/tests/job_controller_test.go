@@ -138,6 +138,29 @@ func TestRealJobController(t *testing.T) {
 		exec("INSERT INTO result_candidates(id,job_id,attempt_no,kind,schema_version,body,content_hash,validation_status) VALUES($1,$2,$3,$4,'1.3',$5,$6,'valid')", cid, cl["job_id"], cl["attempt_no"], cl["kind"], body, hash)
 		return Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "candidate_id": cid, "content_hash": hash}
 	}
+	assertReleased := func(cl Object, remote string, audited bool) {
+		activeTest.Helper()
+		var state, actualRemote string
+		var released, ended bool
+		var evidence *string
+		var audits int
+		must(activeTest, db.Pool.QueryRow(ctx, `SELECT s.state,s.released_at IS NOT NULL,a.ended_at IS NOT NULL,a.remote_call_state,s.release_evidence,
+ (SELECT count(*) FROM audit_events e WHERE e.resource_id=s.job_id AND e.action='release_unconfirmed_slot' AND (e.after_ref->>'attempt_no')::int=s.attempt_no)
+ FROM slot_reservations s JOIN job_attempts a ON a.job_id=s.job_id AND a.attempt_no=s.attempt_no WHERE s.job_id=$1 AND s.attempt_no=$2`, cl["job_id"], cl["attempt_no"]).Scan(&state, &released, &ended, &actualRemote, &evidence, &audits))
+		if state != "released" || !released || !ended || actualRemote != remote {
+			activeTest.Fatalf("reservation=%s released=%v ended=%v remote=%s want=%s", state, released, ended, actualRemote, remote)
+		}
+		if audited && (audits != 1 || evidence == nil || *evidence == "") {
+			activeTest.Fatalf("unconfirmed release must preserve exactly one audit and explanation: audits=%d evidence=%v", audits, evidence)
+		}
+	}
+	assertStale := func(cl, done Object) {
+		activeTest.Helper()
+		id := String(cl, "job_id")
+		call("/jobs/"+id+"/complete", done, 409)
+		call("/jobs/"+id+"/heartbeat", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "stage": "late", "remote_call_state": "terminated"}, 409)
+		call("/jobs/"+id+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "terminated"}, 409)
+	}
 	t.Run("backend_receipt_cancel_and_conflict", func(t *testing.T) {
 		activeTest = t
 		reset()
@@ -256,7 +279,7 @@ func TestRealJobController(t *testing.T) {
 			t.Fatal(v)
 		}
 	})
-	t.Run("lease_quarantine_restart_stale_attempt_retry_budget", func(t *testing.T) {
+	t.Run("lease_release_restart_stale_attempt_retry_budget", func(t *testing.T) {
 		activeTest = t
 		reset()
 		id := submit()
@@ -265,19 +288,14 @@ func TestRealJobController(t *testing.T) {
 		done := candidate(cl)
 		exec("UPDATE job_attempts SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE job_id=$1", id)
 		must(t, controller.Sweep(ctx))
-		call("/jobs/"+id+"/complete", done, 409)
+		assertReleased(cl, "unknown", true)
+		assertStale(cl, done)
 		exec("UPDATE jobs SET eligible_at=clock_timestamp()-interval '1 second' WHERE id=$1", id)
-		call("/claims", w, 204)
-		job := apiCall("GET", "/jobs/"+id, nil, 200)
-		if job["queue_reason"] != "inference_quarantined" {
-			t.Fatal(job)
-		}
-		must(t, controller.ReleaseQuarantine(ctx, id, 1, "E2E remote endpoint verified terminated"))
 		cl2 := call("/claims", w, 200)
 		if Number(cl2, "attempt_no") != 2 || cl2["claim_token"] == cl["claim_token"] {
 			t.Fatal(cl2)
 		}
-		call("/jobs/"+id+"/complete", done, 409)
+		assertStale(cl, done)
 		oldBoot := w["boot_id"]
 		w["boot_id"] = ID()
 		reg := Object{"worker_id": w["worker_id"], "boot_id": w["boot_id"], "kind": "report", "capacity_profile_id": "report-v1"}
@@ -285,7 +303,7 @@ func TestRealJobController(t *testing.T) {
 		call("/claims", w, 204)
 		reg["boot_id"] = oldBoot
 		call("/workers/register", reg, 409)
-		must(t, controller.ReleaseQuarantine(ctx, id, 2, "E2E old boot inference verified stopped"))
+		assertReleased(cl2, "unknown", true)
 		exec("UPDATE jobs SET eligible_at=clock_timestamp()-interval '1 second' WHERE id=$1", id)
 		cl3 := call("/claims", w, 200)
 		v := call("/jobs/"+id+"/fail", Object{"attempt_no": cl3["attempt_no"], "claim_token": cl3["claim_token"], "code": "transient_error", "retryable": true, "remote_call_state": "terminated"}, 200)
@@ -322,7 +340,8 @@ func TestRealJobController(t *testing.T) {
 		if cl["job_id"] != r2 {
 			t.Fatal("absent RCA worker blocked report")
 		}
-		finish(cl)
+		call("/jobs/"+String(cl, "job_id")+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "internal_error", "retryable": false, "remote_call_state": "unknown"}, 200)
+		assertReleased(cl, "unknown", true)
 		submit()
 		aw := worker("rca")
 		call("/claims", rw, 204)
@@ -333,7 +352,8 @@ func TestRealJobController(t *testing.T) {
 		if cl["job_id"] != rca["job_id"] {
 			t.Fatal(cl)
 		}
-		finish(cl)
+		call("/jobs/"+String(cl, "job_id")+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "internal_error", "retryable": false, "remote_call_state": "running"}, 200)
+		assertReleased(cl, "unknown", true)
 		cl = call("/claims", rw, 200)
 		finish(cl)
 	})
@@ -533,7 +553,7 @@ func TestRealJobController(t *testing.T) {
 		finish(cl2)
 		finish(call("/claims", w, 200))
 	})
-	t.Run("cancel_unknown_remote_waits_for_evidence_and_manual_retry_receipt", func(t *testing.T) {
+	t.Run("cancel_unknown_remote_releases_and_manual_retry_receipt", func(t *testing.T) {
 		activeTest = t
 		reset()
 		id := submit()
@@ -542,11 +562,7 @@ func TestRealJobController(t *testing.T) {
 		v := apiCall("GET", "/jobs/"+id, nil, 200)
 		apiCall("POST", "/jobs/"+id+"/cancel", Object{"reason": "E2E"}, 200, "Idempotency-Key", ID(), "If-Match", fmt.Sprint(Number(v, "version")))
 		v = call("/jobs/"+id+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "cancelled", "retryable": false, "remote_call_state": "unknown"}, 200)
-		if v["status"] != "running" {
-			t.Fatal("unconfirmed cancellation became terminal", v)
-		}
-		must(t, controller.ReleaseQuarantine(ctx, id, 1, "E2E cancellation remote termination verified"))
-		v = apiCall("GET", "/jobs/"+id, nil, 200)
+		assertReleased(cl, "unknown", true)
 		if v["status"] != "cancelled" {
 			t.Fatal(v)
 		}
@@ -569,6 +585,156 @@ func TestRealJobController(t *testing.T) {
 		if Number(cl, "attempt_no") != 2 {
 			t.Fatal(cl)
 		}
+		finish(cl)
+	})
+	t.Run("repeated_unknown_releases_and_late_result_cannot_replace_publication", func(t *testing.T) {
+		activeTest = t
+		reset()
+		w := worker("report")
+		for range 3 {
+			id := submit()
+			cl := call("/claims", w, 200)
+			v := call("/jobs/"+id+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "internal_error", "retryable": false, "remote_call_state": "unknown"}, 200)
+			if v["status"] != "failed" {
+				t.Fatal(v)
+			}
+			assertReleased(cl, "unknown", true)
+		}
+		id := submit()
+		old := call("/claims", w, 200)
+		oldResult := candidate(old)
+		v := call("/jobs/"+id+"/fail", Object{"attempt_no": old["attempt_no"], "claim_token": old["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "running"}, 200)
+		if v["status"] != "retry_wait" {
+			t.Fatal(v)
+		}
+		assertReleased(old, "unknown", true)
+		assertStale(old, oldResult)
+		call("/claims", w, 204) // Backoff still applies despite immediate slot release.
+		exec("UPDATE jobs SET eligible_at=clock_timestamp()-interval '1 second' WHERE id=$1", id)
+		current := call("/claims", w, 200)
+		assertStale(old, oldResult)
+		currentResult := candidate(current)
+		published := call("/jobs/"+id+"/complete", currentResult, 200)
+		assertStale(old, oldResult)
+		view := apiCall("GET", "/jobs/"+id, nil, 200)
+		if view["status"] != "succeeded" || view["result_ref"] != published["published_result_id"] || view["result_ref"] == oldResult["candidate_id"] {
+			t.Fatalf("late attempt replaced current publication: %v", view)
+		}
+		assertReleased(current, "terminated", false)
+	})
+	t.Run("sweep_ignores_stale_heartbeat_termination_claim", func(t *testing.T) {
+		for _, lastRemote := range []string{"not_started", "running", "terminated", "unknown"} {
+			t.Run(lastRemote, func(t *testing.T) {
+				activeTest = t
+				reset()
+				id := submit()
+				w := worker("report")
+				cl := call("/claims", w, 200)
+				exec("UPDATE job_attempts SET remote_call_state=$2,lease_expires_at=clock_timestamp()-interval '1 second' WHERE job_id=$1", id, lastRemote)
+				must(t, controller.Sweep(ctx))
+				assertReleased(cl, "unknown", true)
+				var previous string
+				must(t, db.Pool.QueryRow(ctx, "SELECT after_ref->>'previous_remote_call_state' FROM audit_events WHERE resource_id=$1 AND action='release_unconfirmed_slot'", id).Scan(&previous))
+				if previous != lastRemote {
+					t.Fatalf("lost last heartbeat evidence: got %q want %q", previous, lastRemote)
+				}
+			})
+		}
+	})
+	t.Run("job_deadline_releases_without_retry_or_late_publication", func(t *testing.T) {
+		activeTest = t
+		reset()
+		id := submit()
+		w := worker("report")
+		cl := call("/claims", w, 200)
+		done := candidate(cl)
+		exec("UPDATE jobs SET deadline_at=clock_timestamp()-interval '1 second' WHERE id=$1", id)
+		must(t, controller.Sweep(ctx))
+		assertReleased(cl, "unknown", true)
+		assertStale(cl, done)
+		v := apiCall("GET", "/jobs/"+id, nil, 200)
+		if v["status"] != "expired" || v["termination_reason"] != "deadline_exceeded" {
+			t.Fatal(v)
+		}
+		apiCall("POST", "/jobs/"+id+"/retry", Object{"reason": "expired"}, 409, "If-Match", fmt.Sprint(Number(v, "version")), "Idempotency-Key", ID())
+		submit()
+		finish(call("/claims", w, 200))
+	})
+	t.Run("legacy_quarantine_transition_is_audited_and_idempotent", func(t *testing.T) {
+		for _, status := range []string{"retry_wait", "cancellation_pending", "cancellation_expired", "expired"} {
+			t.Run(status, func(t *testing.T) {
+				activeTest = t
+				reset()
+				id := submit()
+				w := worker("report")
+				cl := call("/claims", w, 200)
+				done := candidate(cl)
+				exec("UPDATE job_attempts SET ended_at=clock_timestamp()-interval '10 minutes',remote_call_state='not_started',termination_reason='timeout' WHERE job_id=$1", id)
+				exec("UPDATE slot_reservations SET state='quarantined',released_at=NULL WHERE job_id=$1", id)
+				if strings.HasPrefix(status, "cancellation_") {
+					exec("UPDATE jobs SET cancel_requested_at=clock_timestamp(),termination_reason='cancellation_pending_remote_termination' WHERE id=$1", id)
+				} else {
+					exec("UPDATE jobs SET status=$2,stage=$2,eligible_at=clock_timestamp()-interval '1 second' WHERE id=$1", id, status)
+				}
+				if status == "cancellation_expired" {
+					exec("UPDATE jobs SET deadline_at=clock_timestamp()-interval '1 minute' WHERE id=$1", id)
+				}
+				if status == "retry_wait" {
+					exec("UPDATE job_attempts SET remote_call_state=NULL WHERE job_id=$1", id)
+				}
+				preserved := func() string {
+					var snapshot string
+					must(t, db.Pool.QueryRow(ctx, `SELECT jsonb_build_object('attempt_no',j.attempt_no,'deadline',j.deadline_at,'budget',j.budget_used,'max_attempts',j.max_attempts,'ended',a.ended_at,'input',j.input_snapshot,'versions',j.versions)::text FROM jobs j JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no WHERE j.id=$1`, id).Scan(&snapshot))
+					return snapshot
+				}
+				before := preserved()
+				must(t, controller.Sweep(ctx))
+				assertReleased(cl, "unknown", true)
+				must(t, controller.Prepare(ctx, true))
+				must(t, controller.Sweep(ctx))
+				assertReleased(cl, "unknown", true)
+				if preserved() != before {
+					t.Fatal("legacy release reset attempt/deadline/budget/end time/input/versions")
+				}
+				v := apiCall("GET", "/jobs/"+id, nil, 200)
+				want := status
+				if status == "cancellation_pending" {
+					want = "cancelled"
+				}
+				if status == "cancellation_expired" {
+					want = "expired"
+				}
+				if v["status"] != want {
+					t.Fatalf("legacy status=%v want=%s", v, want)
+				}
+				assertStale(cl, done)
+				if status != "retry_wait" {
+					submit()
+				}
+				finish(call("/claims", w, 200))
+			})
+		}
+	})
+	t.Run("old_execution_policy_revision_is_fenced", func(t *testing.T) {
+		activeTest = t
+		reset()
+		id := submit()
+		w := worker("report")
+		cl := call("/claims", w, 200)
+		done := candidate(cl)
+		legacy, e := jc.New(db.Pool, cfg)
+		must(t, e)
+		legacy.Revision = Hash(cfg)
+		if legacy.Revision == controller.Revision {
+			t.Fatal("execution policy must participate in the revision fence")
+		}
+		oldHTTP := httptest.NewServer(legacy)
+		defer oldHTTP.Close()
+		request(t, oldHTTP.URL+"/internal/v1/health/ready", "GET", nil, 503)
+		request(t, oldHTTP.URL+"/internal/v1/claims", "POST", w, 503)
+		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/complete", "POST", done, 503)
+		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/heartbeat", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "stage": "late", "remote_call_state": "unknown"}, 503)
+		request(t, oldHTTP.URL+"/internal/v1/jobs/"+id+"/fail", "POST", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "timeout", "retryable": true, "remote_call_state": "unknown"}, 503)
 		finish(cl)
 	})
 	t.Run("database_failure_fails_closed", func(t *testing.T) {

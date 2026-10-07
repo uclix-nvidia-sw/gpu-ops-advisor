@@ -118,6 +118,43 @@ it('does not infer a successful attempt from a missing termination reason', () =
   expect(html).not.toContain('장비·Node 변화');
   expect(html).not.toContain('실행 완료');
 });
+it.each(['report', 'rca'])('shows released execution with unconfirmed inference for %s', (kind) => {
+  fixture.job = {
+    ...fixture.job,
+    kind,
+    status: 'failed',
+    attempts: [
+      {
+        attempt_no: 1,
+        ended_at: '2026-10-06T00:03:00Z',
+        termination_reason: 'timeout',
+        remote_call_state: 'unknown',
+        slot_state: 'released',
+        slot_released_at: '2026-10-06T00:03:00Z',
+      },
+    ],
+  };
+  for (const remote_call_state of ['unknown', 'running']) {
+    (fixture.job.attempts as Row[])[0].remote_call_state = remote_call_state;
+    const html = render();
+    expect(html).toContain('종료된 1차 시도의 실행 자리는 반환됐습니다.');
+    expect(html).toContain('모델 서버의 추론 종료 여부는 미확인입니다.');
+    expect(html).toContain('해당 시도의 늦은 결과는 발행하지 않습니다.');
+    expect(html).not.toContain('저장된 결과 보기');
+  }
+});
+it.each([
+  {},
+  { slot_state: 'released', remote_call_state: null },
+  { slot_state: 'released', remote_call_state: 'terminated' },
+  { slot_state: 'released', remote_call_state: 'not_started' },
+  { slot_state: 'quarantined', remote_call_state: 'unknown' },
+  { slot_state: 'active', remote_call_state: 'running' },
+  { slot_state: 'released', remote_call_state: 'unknown', ended_at: null },
+])('does not infer released unconfirmed inference from other or missing states %j', (state) => {
+  fixture.job.attempts = [{ attempt_no: 1, ended_at: '2026-10-06T00:03:00Z', ...state }];
+  expect(render()).not.toContain('실행 자리는 반환됐습니다.');
+});
 it('keeps publication quality separate from successful execution', () => {
   fixture.job = {
     ...fixture.job,

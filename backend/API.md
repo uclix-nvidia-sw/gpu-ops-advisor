@@ -1,3 +1,9 @@
+## 종료된 시도의 실행 자리와 원격 추론 상태 — 2026-10-07
+
+`GET /jobs/{id}`, `/reports/{id}`, `/analyses/{id}`의 `attempts`에 저장된 `remote_call_state`, `slot_state`, `slot_released_at`을 추가한다. 슬롯은 같은 작업·시도 번호의 예약만 연결한다. 예약 또는 JC 테이블이 없으면 슬롯 필드는 null이며 반환됐다고 추정하지 않는다. 원격 상태도 저장값이 없으면 null이다. claim token·Worker 비밀·미발행 후보 본문은 추가하지 않는다.
+
+`ended_at`이 있고 `slot_state=released`인 시도의 `remote_call_state=unknown|running`은 작업 실행 자리가 반환됐지만 원격 추론 종료를 확인하지 못한 기록이다. 현재 GPU 사용량이나 실행 중이라는 실시간 증거가 아니다. UI는 RCA·보고서 작업 상세에서 이 상태와 늦은 결과 미발행을 안내하며, 필드가 없는 구 응답의 기존 표시는 유지한다.
+
 ## Evidence ordering metadata (2026-10-02)
 
 `GET /jobs/{id}/evidence` returns `order=recorded_plan_v1`. Items include optional `recorded_at` (evidence creation time, not query start) and `order_basis` (`recorded_time`, `inferred_plan`, or `unknown`). `created_at` remains the original storage timestamp. `quality.record_sequence` preserves creation order and `quality.plan_order` identifies planned query order. Ordering is chronological, then plan order within same-time/same-round query slots; unplanned records retain their sequence positions. Legacy rows use storage time and inferred phases, with unresolved ties stabilized by ID. Sort the attempt metadata before pagination. Old-order cursors are invalid; restart pagination. Detail/raw snapshots retain their original timestamps.
