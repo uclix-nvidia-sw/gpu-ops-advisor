@@ -1,6 +1,6 @@
 # D binding 공통 설정 전환 — 2026-10-06
 
-현재 공통 예제 revision은 `shared-grafana-discovery-20261007-r1`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **D02·D09는 검토된 관측 계약으로 자동 선택하며 나머지 43개 binding은 후보로 차단한다.** datasource UID·클러스터 라벨은 MCP로 찾고 요청 cluster_id 값만 사용한다. [검증 범위와 제한](../docs/evidence/d-binding-discovery-20261007.md)을 따른다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
+현재 공통 예제 revision은 `shared-observation-expansion-20261007-r2`이다. RCA/Report는 동일한 binding 검증·수집기를 사용한다. **45개 D 중 42개는 검토된 관측 계약으로 자동 선택한다. D07·D13·D46는 원천/단위 근거가 부족하여 후보로 유지한다.** [확장 근거·공통 전송 보강·남은 작업](../docs/evidence/d-observation-expansion-20261007.md)을 따른다. Fleet 관측은 실제 장비 측정 시각을 보장하지 않으며 forward hold는 0이다. 모든 D의 계산·Runbook 적용·운영 활성화가 완료됐다는 뜻은 아니다. datasource UID·클러스터 라벨은 MCP로 찾고 요청 cluster_id 값만 사용한다. [검증 범위와 제한](../docs/evidence/d-binding-discovery-20261007.md)을 따른다. [구현 범위·수정/적용 순서](../docs/specs/common/d-binding-runtime.md)와 [검수 기록](QA.md)을 따른다. 아래 날짜별 v3~v7 설명은 구 profile의 동작 기록이며 새 예제의 자동 활성화를 뜻하지 않는다.
 
 ## Datasource UID discovery / UID 자동 발견 — 2026-10-07
 
