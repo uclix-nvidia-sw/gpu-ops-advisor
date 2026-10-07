@@ -147,7 +147,9 @@
     "binding_scope_unavailable": "승인된 대상 범위로 조회할 수 있는 라벨·관계가 없습니다.",
     "binding_semantics_or_samples_missing": "검증된 단위·타입 또는 유효한 원본 표본이 부족합니다.",
     "gpu_capacity_join_unverified": "같은 GPU의 사용량·전체 용량·단위·유효시간을 연결하지 못했습니다.",
-    "optional_query_budget_exhausted": "기존 필수 조회 예산을 보존하기 위해 추가 조회를 보류했습니다."
+    "optional_query_budget_exhausted": "기존 필수 조회 예산을 보존하기 위해 추가 조회를 보류했습니다.",
+    "normalized_health": "정규화한 장비 상태를 검증된 fact로 확인하지 못했습니다. 로그의 Healthy/Unhealthy 표기만으로 현재 상태를 확정하지 않습니다.",
+    "unknown_value": "조사에 필요한 값의 의미 또는 유효성이 미확인입니다. 원본 관측과 생산자·시각·대상 계약을 확인하세요."
   },
   "groups": {
     "design": {
@@ -170,7 +172,8 @@
       "name": "생산자 계약 미확인",
       "codes": [
         "producer_contract",
-        "error_code"
+        "error_code",
+        "normalized_health"
       ],
       "next": "로그 생산자의 시각·장비·오류 코드 의미를 검증하세요. Fleet 계약 변경은 검증 후 담당자가 결정해야 합니다."
     },

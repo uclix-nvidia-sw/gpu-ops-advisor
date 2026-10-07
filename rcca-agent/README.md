@@ -115,3 +115,11 @@ Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변�
 - R01의 공개 assessment enum은 변경하지 않습니다. `quality.analysis.reported_errors`는 보고된 코드이며 Runbook applicability, verified facts, 조치 적격성을 높이지 않습니다. 유효한 발생 시각·신원 계약 없이 `reported`를 새로운 충분성 상태로 만드는 것은 안전 계약과 충돌합니다.
 - Fleet `gpuInfo.gpus`는 시각·근거가 있는 **미검증 신원 후보**로 보존합니다. GPU 한 장이라는 로그만으로 사건 시각의 장애 GPU를 확정하지 않습니다. 검증된 inventory freshness/device-time 계약이 제공될 때까지 `mapping_target_unverified`를 유지합니다.
 - 라벨의 단일 원천은 `src/rcca_agent/report_labels.json`입니다. 수정 후 저장소 루트에서 `python tools/generate_rca_labels.py`를 실행하여 frontend JSON을 생성합니다. Python 패키지 데이터에도 포함하며 기존 mirror 일치 테스트를 유지합니다.
+
+## Runbook 선택과 근거 부족 구분 — 2026-10-07
+
+발행 Runbook 선택 후 `missing_evidence`/`unknown_value` 정책에 따라 일반 템플릿을 추가할 수 있습니다. 이 경우 보고서는 발행본 선택과 일반 조사 보완을 함께 설명합니다. builtin 기록만으로 발행 Runbook이 없었다고 판정하지 않습니다. Frontend의 참조 Runbook 설명은 저장된 revision/origin을 사용하므로 과거 결과에도 선택 기록을 보여주지만, 불변의 과거 보고서 문장을 재작성하지 않습니다.
+
+`runbook_selection` → `investigation_plan` → `unexpected_evidence` → `sufficiency` 순으로 확인하면 계약 탈락, 검색 선택, 필수 근거 부족, 추가 조회 소진을 구분할 수 있습니다. `normalized_health`와 `unknown_value`는 미검증 상태/값을 뜻하며 조회 실패나 데이터 부재와 같지 않습니다. Loki에 XID/Unhealthy 로그가 있어도 발생 시각·장비·생산자 계약이 확인되지 않으면 상태 fact와 조치 조건을 충족하지 않습니다.
+
+기존 DB 발행본은 저장소 JSON 변경으로 갱신되지 않습니다. 현재 레지스트리에서 제거된 D05 등을 참조하는 발행본은 `invalid_contract`로 제외됩니다. [DB 등록 절차](runbooks/DB-WORKFLOW.md)에 따라 현재 D09 계획으로 새 revision을 작성·검토·발행해야 합니다. 기존 발행본을 제자리 수정하거나 계약 검사를 완화하지 않습니다.

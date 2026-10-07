@@ -309,6 +309,8 @@ describe('Korean RCA report labels', () => {
               'causal_confirmation_evidence',
               'incident_mapping',
               'producer_contract',
+              'normalized_health',
+              'unknown_value',
               'synthesis_failed',
             ],
             limitations: ['고유한 분석 한계 문장'],
@@ -328,9 +330,35 @@ describe('Korean RCA report labels', () => {
       'gpu_ops_allocation_info',
       'R01 알려진 오류',
       '생산자 계약·오류 코드 확인 필요',
+      '로그의 Healthy/Unhealthy 표기만으로 현재 상태를 확정하지 않습니다.',
+      '조사에 필요한 값의 의미 또는 유효성이 미확인입니다.',
     ])
       expect(visible).toContain(text);
     expect(render(<RcaReason value="non_korean_claim" />)).toContain('한국어 문장 기준');
+  });
+  it('explains published and builtin selection without rewriting historical narrative', () => {
+    for (const origins of [[], ['builtin'], ['published'], ['published', 'builtin']]) {
+      const html = render(
+        <RcaResult
+          showEvidence={false}
+          onEvidence={() => {}}
+          job={{
+            result_ref: 'published',
+            result: {
+              narrative: [{ id: 'limits', title: '분석 한계', text: '과거 저장 문장' }],
+              runbook_revisions: origins.map((origin) => ({ origin })),
+            },
+          }}
+        />,
+      ).split('<summary>공개 결과 원본')[0];
+      expect(html).toContain('과거 저장 문장');
+      expect(html.includes('발행 Runbook 선택 기록이 있습니다.')).toBe(
+        origins.includes('published'),
+      );
+      expect(html.includes('기본 일반 조사 템플릿도 추가 사용했습니다.')).toBe(
+        origins.includes('published') && origins.includes('builtin'),
+      );
+    }
   });
   it('keeps legacy limitations and explains query names', () => {
     expect(

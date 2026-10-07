@@ -145,10 +145,23 @@ async def write_report(result, data, clues, evidence, llm):
             "next",
             "사건과 호환되는 검토·발행된 Runbook과 허용된 조사 쿼리를 등록해야 합니다.",
         )
-    if any(b.get("origin") == "builtin" for b in result.get("runbook_revisions", [])):
+    runbooks = result.get("runbook_revisions", [])
+    published = any(b.get("origin") == "published" for b in runbooks)
+    if any(b.get("origin") == "builtin" for b in runbooks):
         add(
             "limits",
-            "적용할 발행 Runbook이 없어 기본 일반 조사 템플릿을 사용했습니다. 이 템플릿은 원인 판정 규칙이나 발행된 지식이 아닙니다.",
+            (
+                "발행 Runbook을 조사에 선택하고 기본 일반 조사 템플릿을 추가 사용했습니다. "
+                "Runbook 선택은 필수 근거 충족이나 원인 확정을 의미하지 않습니다. "
+                if published
+                else "발행 Runbook 선택 기록 없이 기본 일반 조사 템플릿을 사용했습니다. "
+            )
+            + "이 템플릿은 원인 판정 규칙이나 발행된 지식이 아닙니다.",
+            [
+                e["id"]
+                for e in evidence
+                if e["query_id"] in ("runbook_selection", "unexpected_evidence")
+            ],
         )
     if "mapping_target_unverified" in result["missing_inputs"]:
         add(

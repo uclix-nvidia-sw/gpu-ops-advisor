@@ -8,6 +8,56 @@ from rcca_agent.report import write_report, TITLES
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "origins", [[], ["builtin"], ["published"], ["published", "builtin"]]
+)
+async def test_runbook_fallback_distinguishes_selection_from_fact_eligibility(origins):
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=["normalized_health", "unknown_value"],
+        limitations=[],
+        quality={},
+        runbook_revisions=[{"id": str(i), "origin": o} for i, o in enumerate(origins)],
+    )
+    original = copy.deepcopy(result)
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result,
+        {"incident_time": "2026-10-07T00:00:00Z"},
+        {},
+        [dict(id="selection", query_id="runbook_selection")],
+        Model(),
+    )
+    text = "\n".join(s["text"] for s in result["narrative"])
+    assert "의미 미확인" not in text
+    assert "적용할 발행 Runbook이 없어" not in text
+    if "builtin" in origins:
+        assert "원인 판정 규칙이나 발행된 지식이 아닙니다" in text
+        assert (
+            "selection"
+            in next(s for s in result["narrative"] if s["id"] == "limits")[
+                "evidence_refs"
+            ]
+        )
+        if "published" in origins:
+            assert "발행 Runbook을 조사에 선택하고" in text
+            assert "선택 기록 없이" not in text
+        else:
+            assert "선택 기록 없이" in text
+    else:
+        assert "기본 일반 조사 템플릿" not in text
+    for key, value in original.items():
+        if key != "quality":
+            assert result[key] == value
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "mode", ["ok", "invalid", "error", "unconfigured", "uncertain"]
 )
 async def test_final_report_preserves_missing_evidence_and_withheld_actions(mode):

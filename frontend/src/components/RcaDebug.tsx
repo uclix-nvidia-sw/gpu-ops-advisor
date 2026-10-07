@@ -527,6 +527,14 @@ export function RcaResult({
           {!!rows(result.runbook_revisions).length && (
             <section className="result-section">
               <h3>참조 Runbook</h3>
+              {rows(result.runbook_revisions).some((book) => book.origin === 'published') && (
+                <p>
+                  발행 Runbook 선택 기록이 있습니다. 선택은 필수 근거 충족이나 원인 확정을 의미하지
+                  않습니다. 조사별 판단의 부족 항목을 확인하세요.
+                  {rows(result.runbook_revisions).some((book) => book.origin === 'builtin') &&
+                    ' 기본 일반 조사 템플릿도 추가 사용했습니다. 발행 Runbook이 없었다는 의미가 아닙니다.'}
+                </p>
+              )}
               <DataView field="runbook_revisions" value={result.runbook_revisions} />
             </section>
           )}
