@@ -118,6 +118,8 @@ Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변�
 
 ## Runbook 선택과 근거 부족 구분 — 2026-10-07
 
+공통 `shared-core-observations-20261007-r1`은 D02/D09 외에 검토된 D03 메모리 사용량, D06 Pod 배치, D10 scrape 상태를 요청 cluster_id와 MCP 발견 경로로 선택합니다. [검토 범위와 남은 원천](../docs/evidence/d-core-observations-20261007.md)을 따릅니다. 등록된 D를 모두 수집하지 않으며 실행 계획에 있는 조회만 수행합니다. XID48/ECC 작성 원본에는 D03 선택 조회를 추가했습니다. DB에 새 revision을 발행하기 전에는 기존 계획이 유지됩니다. 이 관측은 메모리 오류 원인·직접 GPU 할당·현재 장비 상태를 자동 확정하지 않습니다.
+
 발행 Runbook 선택 후 `missing_evidence`/`unknown_value` 정책에 따라 일반 템플릿을 추가할 수 있습니다. 이 경우 보고서는 발행본 선택과 일반 조사 보완을 함께 설명합니다. builtin 기록만으로 발행 Runbook이 없었다고 판정하지 않습니다. Frontend의 참조 Runbook 설명은 저장된 revision/origin을 사용하므로 과거 결과에도 선택 기록을 보여주지만, 불변의 과거 보고서 문장을 재작성하지 않습니다.
 
 `runbook_selection` → `investigation_plan` → `unexpected_evidence` → `sufficiency` 순으로 확인하면 계약 탈락, 검색 선택, 필수 근거 부족, 추가 조회 소진을 구분할 수 있습니다. `normalized_health`와 `unknown_value`는 미검증 상태/값을 뜻하며 조회 실패나 데이터 부재와 같지 않습니다. Loki에 XID/Unhealthy 로그가 있어도 발생 시각·장비·생산자 계약이 확인되지 않으면 상태 fact와 조치 조건을 충족하지 않습니다.

@@ -42,6 +42,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D03",
+        "priority": 4,
+        "required": false,
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·시간의 메모리 사용량을 보조 관측으로 확인. ECC 오류 원인·메모리 정상 여부를 사용량만으로 판정하지 않음."
       }
     ],
     "sources": [
@@ -109,7 +121,8 @@
       "D09에서 같은 GPU의 48·63·64 시각을 확인한다. 조회 누락이 있으면 단독 발생이라고 단정하지 않는다. 63/64만 있는 사건에는 이 Xid 48 조사 계획을 매칭하지 않는다.",
       "Fleet 고정 카탈로그: Double Bit ECC Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "NVIDIA 적용: A100, H100, B100, GB200.",
-      "NVIDIA 조치 분류: immediate=WORKFLOW_XID_48; investigatory=WORKFLOW_XID_48; Xid154 linkage=CUDA 12.7; GPU driver R565."
+      "NVIDIA 조치 분류: immediate=WORKFLOW_XID_48; investigatory=WORKFLOW_XID_48; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+      "D03의 MiB 사용량은 용량 사용 관측이다. ECC 오류 발생·정상 여부나 오류 원인을 증명하지 않으며 사용률은 검증된 전체 용량 없이 계산하지 않는다."
     ],
     "recommendations": [
       {

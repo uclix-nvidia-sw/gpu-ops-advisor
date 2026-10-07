@@ -31,7 +31,15 @@ class RunbookContractTests(unittest.TestCase):
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])
                 plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-                self.assertEqual([step["query_id"] for step in plan], ["D09", "D02"])
+                expected = ["D09", "D02"]
+                if row["knowledge_key"] == "RB-XID-48-63-64":
+                    expected.append("D03")
+                    self.assertEqual(plan[-1]["fact_names"], ["observations"])
+                    self.assertIn(
+                        "normalized_health", row["content"]["required_evidence"]
+                    )
+                    self.assertTrue(row["content"]["investigation_only"])
+                self.assertEqual([step["query_id"] for step in plan], expected)
                 self.assertFalse(plan[-1]["required"])
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(row["content"]["applicability_conditions"], [])

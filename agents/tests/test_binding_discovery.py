@@ -5,11 +5,71 @@ import time
 
 import pytest
 
-from agent_common.observation import Observation
+from agent_common.observation import Observation, series
 from agent_common.query_contract import validate_profile
 from test_binding_contract import DATA, profile
 from test_cluster_parameters import parameterized
 from test_discovery import Grafana
+
+
+@pytest.mark.parametrize(
+    "query,metric,unit,value",
+    [
+        ("D03", "DCGM_FI_DEV_FB_USED", "MiB", 2048),
+        ("D06", "kube_pod_info", "info", 1),
+        ("D10", "up", "boolean", 0),
+    ],
+)
+async def test_core_defaults_collect_for_new_cluster_and_preserve_observation(
+    query, metric, unit, value
+):
+    from test_binding_contract import START
+    from rcca_agent.synthesis import synthesis_input
+
+    class Samples(Grafana):
+        async def call(self, name, args):
+            if name == "query_prometheus":
+                self.calls.append((name, args))
+                return {
+                    "data": {
+                        "resultType": "matrix",
+                        "result": [
+                            {
+                                "metric": {
+                                    "__name__": metric,
+                                    "UUID": "gpu-fixture",
+                                    "node": "node-fixture",
+                                    "uid": "pod-fixture",
+                                },
+                                "values": [
+                                    [START, str(value)],
+                                    [START + 15, str(value)],
+                                ],
+                            }
+                        ],
+                    }
+                }
+            return await super().call(name, args)
+
+    config = profile(active_defaults=True)
+    data = copy.deepcopy(DATA)
+    data["scope"]["clusters"][0]["cluster_id"] = "new-region-42"
+    data["incident_time"] = data["time_range"]["start"]
+    grafana = Samples()
+    grafana.labels[("metrics", "cluster_id")] = ["new-region-42"]
+    obs = Observation(grafana.tools(), config, data, time.monotonic() + 30)
+    evidence = await obs.collect(query)
+    assert evidence[0]["tool_status"] == "ok"
+    assert evidence[0]["quality"]["selection_method"] == "automatic_verified"
+    requests = [args for name, args in grafana.calls if name == "query_prometheus"]
+    assert all('cluster_id="new-region-42"' in r["expr"] for r in requests)
+    assert all('collection_path="alloy-direct"' in r["expr"] for r in requests)
+    samples = series(evidence)
+    assert samples[0]["unit"] == unit
+    assert samples[0]["samples"][0][1] == value
+    payload = synthesis_input(data, evidence, [], [], [])
+    assert payload["metric_observations"] == samples
+    assert payload["device_observations"] == []
 
 
 def discovered(config, query="D02"):
@@ -176,5 +236,5 @@ def test_shared_defaults_activate_only_reviewed_observation_contracts():
             if query_definition(config, key, cluster).get("availability")
             != "unavailable"
         }
-        assert available == {"D02", "D09"}
+        assert available == {"D02", "D03", "D06", "D09", "D10"}
     assert config["bindings"]["fleet_intelligence.D09"]["max_hold"]["seconds"] == 0
