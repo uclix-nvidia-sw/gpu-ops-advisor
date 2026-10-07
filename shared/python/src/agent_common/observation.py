@@ -201,6 +201,14 @@ class Observation:
                     self.data.get("target") or self.data.get("resource_selectors") or {}
                 )
                 labels = definition.get("target_labels") or {}
+                if definition.get("observation_semantics", {}).get(
+                    "evidence_role"
+                ) == "raw_log_context" and (
+                    any(target.values())
+                    or self.data.get("log_query_target")
+                    or (namespace_scope or {}).get(scope["cluster_id"]) is not None
+                ):
+                    reason = "binding_scope_unavailable"
                 if (
                     not reason
                     and scope["namespaces"] is not None

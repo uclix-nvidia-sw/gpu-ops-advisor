@@ -80,7 +80,20 @@ def _verified(binding, query):
         _labels(environment.get("selector"), nonempty=not parameterized), "selector"
     )
     labels = binding.get("target_labels")
-    _require(_labels(labels, nonempty=True), "target_labels")
+    raw_context = (
+        binding.get("observation_semantics", {}).get("evidence_role")
+        == "raw_log_context"
+    )
+    if raw_context:
+        _require(
+            binding["query_id"] == "D13"
+            and binding["source"] == "loki"
+            and binding.get("health_contract") is None
+            and binding["observation_semantics"].get("workload_fact_eligible") is False
+            and binding["observation_semantics"].get("health_fact_eligible") is False,
+            "raw log context cannot promote facts",
+        )
+    _require(_labels(labels, nonempty=not raw_context), "target_labels")
     _require(all(re.fullmatch(LABEL, v) for v in labels.values()), "target label name")
     verification = binding["verification"]
     if parameterized:
@@ -177,6 +190,8 @@ def _verified(binding, query):
         "T": {"scrape_target"},
         "L": {"node"},
     }[scope]
+    if raw_context:
+        required_labels = set()
     _require(required_labels <= labels.keys(), "scope entity labels")
     # These dimensions are consumed by O01 and must survive producer mapping.
     # Fleet calls the load window load_duration; KSM splits condition/status.

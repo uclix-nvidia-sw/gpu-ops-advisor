@@ -1,13 +1,13 @@
 {
   "schema_version": "d-query-profile/3-draft",
   "query_contract": "single-query-v3-draft",
-  "revision": "shared-observation-expansion-20261007-r2",
+  "revision": "shared-log-context-20261007-r1",
   "auto_select_verified_bindings": true,
   "delivery": {
     "stage": "shared-discovery-observation-contract",
     "runtime_ready": true,
     "intended_path": "agents/config.example.json for both RCA and Report",
-    "note": "42 observation queries have reviewed shared bindings. D07/D13 need producer contracts; D46 needs deployed unit evidence. Not all-D analysis or production Worker acceptance."
+    "note": "43 reviewed observation queries. D13 raw log context is not workload impact evidence. D07 effective request source and D46 units remain unresolved; production acceptance pending."
   },
   "provenance": {
     "base_commit": "05bb4f69aec024ed72da72e266d63fa267be8f9a",
@@ -108,7 +108,7 @@
       "sources": [
         "mimir"
       ],
-      "note": "Preserve D07 producer validity; raw KSM D21 requests are not a replacement."
+      "note": "Logical role, not a deployed service. Map a verified recording rule or equivalent effective Pod request source to D07; raw KSM D21 requests are not a replacement."
     },
     "workload_log_producer": {
       "component": null,
@@ -116,6 +116,13 @@
         "loki"
       ],
       "note": "D13 producer and workload filters remain unresolved; do not merge with Fleet D09."
+    },
+    "loki_recorded_streams": {
+      "component": "Loki recorded stream observations",
+      "sources": [
+        "loki"
+      ],
+      "note": "Transport-level raw context only. Stream presence does not verify workload, health or outcome semantics."
     }
   },
   "binding_policy": {
@@ -343,12 +350,13 @@
       "spec_ref": "d-query-mapping §3"
     },
     "D13": {
-      "revision": "draft-1",
+      "revision": "raw-context-20261007-r1",
       "kind": "log",
       "meaning": "유지",
       "scope_kind": "L",
       "binding_candidates": [
-        "workload_log_producer.D13"
+        "workload_log_producer.D13",
+        "loki_recorded_streams.D13"
       ],
       "selected_binding": null,
       "purpose": "기존 조회·근거·업무 영향 보류 유지. 구체 업무 필터를 확보하면 새 revision에서 보완; 원본이 같아 보여도 업무 의미 미확정 상태에서 D09와 합치지 않음",
@@ -4644,6 +4652,86 @@
         "health_fact_eligible": false,
         "note": "Recorded producer observations only; no causal, allocation or hardware health assertion. Fleet may retain a value after a failed check."
       }
+    },
+    "loki_recorded_streams.D13": {
+      "query_id": "D13",
+      "revision": "raw-log-context-20261007-r1",
+      "producer": "loki_recorded_streams",
+      "producer_version": "Loki query_range v1 stream response",
+      "source": "loki",
+      "metric": null,
+      "environment": {
+        "datasource_uid": null,
+        "scope_labels": {
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
+        },
+        "selector": {},
+        "datasource_mode": "discover"
+      },
+      "target_labels": {},
+      "json_target_fields": {},
+      "sample_type": "log",
+      "unit": "log",
+      "timestamp_basis": "loki_recorded_at",
+      "event_timestamp_rule": "loki_recorded_at",
+      "sample_interval": {
+        "mode": "not_applicable",
+        "reason": "Raw recorded log observations; no numerical sampling or counter calculation."
+      },
+      "max_hold": {
+        "seconds": 0
+      },
+      "invalid_values": {
+        "mode": "not_applicable",
+        "reason": "Raw recorded log observations; no numerical sampling or counter calculation."
+      },
+      "counter_reset": {
+        "mode": "not_applicable",
+        "reason": "Raw recorded log observations; no numerical sampling or counter calculation."
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-07T03:58:10Z",
+          "end": "2026-10-07T04:28:10Z"
+        },
+        "retention_evidence": "docs/evidence/d-binding-discovery-20261007.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-binding-cpc-20261006.md",
+          "docs/evidence/d-binding-discovery-20261007.md",
+          "docs/evidence/d07-d13-source-review-20261007.md"
+        ],
+        "applicability": "Loki recorded stream response contract only, with exact request cluster_id resolved through MCP. Reuses verified transport evidence, not a workload producer contract. No cluster names or fixed UID.",
+        "limitation": "Verified routing and recorded timestamps only. No workload outcome or source event time semantics. Unsupported namespace/node/Pod targets are blocked rather than widened."
+      },
+      "reference": {
+        "evidence_level": "Upstream profile reference; not environment verification for this new binding",
+        "legacy_definition": {
+          "source": "loki",
+          "revision": "builtin-v1",
+          "validated": true
+        },
+        "legacy_definition_url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/05bb4f69aec024ed72da72e266d63fa267be8f9a/agents/config.example.json",
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "evidence_role": "raw_log_context",
+        "measurement_time_verified": false,
+        "health_fact_eligible": false,
+        "workload_fact_eligible": false,
+        "note": "Raw recorded cluster log context only. No workload selection, interruption, recovery, progress or throughput assertion. Unsupported target scopes remain unavailable."
+      },
+      "equivalence_evidence_refs": [
+        "docs/specs/common/d-query-mapping.md#3-기존-d의-유지통합과-기능-보존",
+        "docs/evidence/d07-d13-source-review-20261007.md"
+      ]
     }
   },
   "transition": {
