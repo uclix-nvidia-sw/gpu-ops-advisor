@@ -193,3 +193,9 @@ metrics, source references and investigation-only restrictions are preserved.
 These are authoring changes, not edits to published runtime revisions. Other
 Runbooks keep their existing requirements until their investigation meaning is
 reviewed; deploying a Worker does not automatically republish the catalog.
+
+
+Grafana's [missing-data guidance](https://grafana.com/docs/grafana/latest/alerting/guides/missing-data/)
+likewise distinguishes MissingSeries eviction from recovery. The deployed missing-
+series interval count was not independently confirmed; do not assume a default
+when calculating the exact timeline.
