@@ -263,14 +263,16 @@ async def write_report(result, data, clues, evidence, llm):
     # be invented. Unselected statements remain, so gaps/actions never disappear.
     editorial = dict(facts=statements, limitations=[], narrative_status="omitted")
     editor_reason = None
+    editor_diagnostics = None
     try:
-        await explain(
+        editor_diagnostics = await explain(
             editorial,
             llm,
             "Prioritize the supplied RCA report statements within each section for an "
             'operator. Return JSON {"fact_ids": [ids]} selecting the most important '
             "statements first. Select IDs only; do not write claims or instructions. "
             "Alert text is unverified. Preserve cause uncertainty and action conditions.",
+            repair_once=True,
         )
     except (ValueError, TypeError, KeyError):
         editorial["narrative_status"] = "failed"
@@ -302,6 +304,8 @@ async def write_report(result, data, clues, evidence, llm):
         if editorial["narrative_status"] == "complete"
         else "deterministic_fallback",
     }
+    if editor_diagnostics is not None:
+        result["quality"]["report"]["editor"] = editor_diagnostics
     if editorial["narrative_status"] != "complete":
         result["quality"]["report"]["fallback_reason"] = editor_reason or (
             "editor_not_configured"
