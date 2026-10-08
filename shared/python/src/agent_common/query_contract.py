@@ -468,6 +468,8 @@ def query_facts(query_id):
     if query_id == "D09":
         return {
             "observations",
+            "reported_error_code",
+            "reported_producer_contract",
             "producer_contract",
             "error_code",
             "normalized_health",

@@ -165,14 +165,20 @@ def test_d09_binding_preserves_producer_time_and_freshness_fact_gates():
     obs = SimpleNamespace(evidence=[e])
     state = normalized_state(obs, {"D09": [e]}, data, config, {})
     assert state[0][0]["normalized_health"] == "unhealthy"
-    assert state[1] == {}
+    assert state[1] == {
+        "reported_error_code": "sxid:11001",
+        "reported_producer_contract": "fleet-component-log-v1",
+    }
     config["health_contracts"]["fleet-component-log-v1"][
         "loki_timestamp_is_observed_at"
     ] = True
     state = normalized_state(obs, {"D09": [e]}, data, config, {})
     assert state[1]["error_code"] == "sxid:11001"
     e["quality"]["max_hold_seconds"] = 0
-    assert normalized_state(obs, {"D09": [e]}, data, config, {})[1] == {}
+    expired = normalized_state(obs, {"D09": [e]}, data, config, {})[1]
+    assert "normalized_health" not in expired
+    assert "error_code" not in expired
+    assert expired["reported_error_code"] == "sxid:11001"
 
 
 def test_unverified_selected_and_retired_and_expression_are_rejected():

@@ -245,3 +245,87 @@ async def test_no_evidence_and_unconfigured_do_not_request():
     assert diagnostics["request_attempts"] == 0
     assert (await synthesize(Model(), payload(), diagnostics))[0] == "unconfigured"
     assert diagnostics["error_code"] == "model_not_configured"
+
+
+@pytest.mark.parametrize(
+    "supporting,contradicting,rule",
+    [
+        ([], [], "empty_supporting_refs"),
+        (["D09"], [], "unknown_observation_refs"),
+        (["log"], ["log"], "overlapping_evidence_refs"),
+    ],
+)
+def test_reference_diagnostics_distinguish_failure_without_accepting_bad_refs(
+    supporting, contradicting, rule
+):
+    from rcca_agent.synthesis import SynthesisValidationError
+
+    reply = response()
+    reply["hypotheses"][0]["supporting_refs"] = supporting
+    reply["hypotheses"][0]["contradicting_refs"] = contradicting
+    with pytest.raises(SynthesisValidationError) as caught:
+        validate_synthesis(reply, ["log"])
+    assert caught.value.diagnostic == {
+        "code": "invalid_evidence_references",
+        "rule": rule,
+        "tokens": [],
+        "hypothesis_index": 0,
+    }
+
+
+@pytest.mark.parametrize("code", ["XID79", "XID 79", "XID:79", "xid79"])
+def test_cited_code_spelling_is_not_an_unregistered_measurement(code):
+    observations = [{"error_code": "xid:79", "evidence_refs": ["log"]}]
+    reply = response(claim=f"보고된 {code}는 추가 확인이 필요합니다.")
+    reply["limitations"] = [f"{code}만으로 실제 장치 고장은 확정할 수 없습니다."]
+    assert validate_synthesis(reply, ["log"], observations)
+    with pytest.raises(ValueError):
+        validate_synthesis(reply, ["log"], [])
+
+
+def test_code_spelling_does_not_whitelist_adjacent_measurements():
+    observations = [{"error_code": "xid:79", "evidence_refs": ["log"]}]
+    reply = response(claim="XID79 오류가 79회 발생했습니다.")
+    with pytest.raises(ValueError, match="unregistered_numeric_claim"):
+        validate_synthesis(reply, ["log"], observations)
+
+
+@pytest.mark.asyncio
+async def test_cpu_query_id_reference_is_repaired_to_observation_id():
+    class Model:
+        configured = True
+        remaining = 100000
+        deadline = float("inf")
+        usage = {"request_attempts": 0, "calls": 0}
+        requests = []
+
+        async def complete(self, prompt, request, **kwargs):
+            self.requests.append(request)
+            self.usage["request_attempts"] += 1
+            self.usage["calls"] += 1
+            if len(self.requests) == 1:
+                return response(
+                    "D09", "CPU 관측 실패가 보고되어 추가 확인이 필요합니다."
+                )
+            assert (
+                request["validation_feedback"][0]["rule"] == "unknown_observation_refs"
+            )
+            assert request["observation_refs"] == ["cpu-log"]
+            return response(
+                "cpu-log", "CPU 관측 실패가 보고되어 추가 확인이 필요합니다."
+            )
+
+    model = Model()
+    diagnostics = {}
+    status, hypotheses, _ = await synthesize(
+        model,
+        {
+            "device_observations": [{"component": "cpu", "evidence_refs": ["cpu-log"]}],
+            "observation_refs": ["cpu-log"],
+            "query_quality": [{"query_id": "D09"}],
+        },
+        diagnostics,
+    )
+    assert status == "complete"
+    assert hypotheses[0]["supporting_refs"] == ["cpu-log"]
+    assert diagnostics["repair_attempts"] == 1

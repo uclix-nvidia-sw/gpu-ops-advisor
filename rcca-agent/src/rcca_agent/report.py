@@ -83,6 +83,17 @@ async def write_report(result, data, clues, evidence, llm):
             + ". 보고 내용과 장비 발생 시각·현재 상태 검증은 구분합니다. Runbook 필수 근거와 복구 조치 조건은 별도로 검증해야 합니다.",
             [r for h in reported for r in h["evidence_refs"]],
         )
+    for diagnostic in (
+        result.get("quality", {}).get("analysis", {}).get("requirement_diagnostics", [])
+    ):
+        if diagnostic.get("reason") == "reported_but_required_semantics_unverified":
+            add(
+                "limits",
+                f"{label('reasons', diagnostic['requirement'])}: 원본 보고는 확보했지만 "
+                "Runbook이 요구하는 대상·시각·상태의 검증 조건은 충족하지 못했습니다. "
+                "이는 해당 원본을 조회하지 못했다는 뜻이 아닙니다.",
+                diagnostic["evidence_refs"],
+            )
     candidates = result["cause_candidates"]
     if not candidates:
         add(
@@ -174,6 +185,17 @@ async def write_report(result, data, clues, evidence, llm):
             "사건 target과 알람 labels/annotations의 신원 충돌을 확인해야 합니다. 충돌한 신원으로 Runbook 조건이나 GPU–Pod 관계를 확정하지 않습니다.",
         )
     if result["missing_inputs"]:
+        add(
+            "limits",
+            "미충족 근거(missing data)는 원본 데이터가 없다는 뜻만은 아닙니다. "
+            "조회한 자료가 있어도 대상·시각·상태 의미 또는 원인 확인 조건을 충족하지 못하면 부분 산출로 남습니다.",
+        )
+        if "causal_confirmation_evidence" in result["missing_inputs"]:
+            add(
+                "limits",
+                "조사 절차와 원천 권고 조치는 원인 확정 근거가 아닙니다. "
+                "재부팅 등 원천 권고를 수집했더라도 해당 대상의 조치 적합성·수행·복구가 확인된 것은 아닙니다.",
+            )
         add(
             "next",
             "로그의 생산자 계약·관측 시각·장비 신원과 원인별 확인 조건을 점검해야 합니다. "

@@ -27,7 +27,12 @@ Do not assert "원인이다", "확정" or "physically …". Do not infer idle, f
 healthy hardware from metric samples. Do not interpret synthetic/test words in
 alert text as a cause. Numeric prose includes English/Korean number words,
 counters, percentages and quantity assertions, not just Arabic digits.
-Only reference supplied observation IDs. Every hypothesis needs supporting evidence.
+Use only IDs in observation_refs for supporting_refs and contradicting_refs.
+IDs in query_quality or runbook_plans are not citable unless also in observation_refs.
+Do not cite an omitted observation or a query ID such as D09 as an evidence ID.
+Supporting and contradicting references must be disjoint. If no supplied observation
+supports a hypothesis, omit that hypothesis; never fabricate a reference.
+Every hypothesis needs supporting evidence.
 All hypotheses remain unconfirmed candidates. An empty list is valid when evidence
 cannot support an explanation. Preserve gaps, conflicts and observation failures.
 Do not invent numbers, producer semantics, impact, recovery, or performed actions.

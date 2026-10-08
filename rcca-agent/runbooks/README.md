@@ -113,3 +113,83 @@ python -c "import sys; sys.path[:0]=['rcca-agent/src','shared/python/src','ops-a
 Backend는 생성/PATCH 시 v1 구조를 검사하고 approve/publish 시 빈 compatibility를 거부한다. `code` 필터는 legacy `content.code`와 v1 `search.codes`를 정확히 조회한다. 테이블·컬럼·인덱스 추가는 없다. 동적 query registry/procedure 허용 목록은 관리 CLI와 Worker에서 검증하며, 형식 검사만으로 운영 호환성을 승인하지 않는다. [등록 절차와 검증 책임](DB-WORKFLOW.md)을 따른다.
 
 설계 기준: [RCA 모듈 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md), [Runbook 설계 초안](../../docs/specs/rca-agent/drafts/gpu-node-rca-runbook-design.md).
+
+
+## Code-specific retrieval boundary (2026-10-08)
+
+`gpu-lexical-v3` requires an intersection between a Runbook's declared
+`search.codes` (XID/SXID) and the incident's declared search clues before lexical
+ranking can select that code-specific plan. Generic words such as "error" cannot
+select an XID plan for a code-free CPU alert, and prose cross-references cannot
+select a different error code. Code-free general plans remain searchable; matching
+multiple declared codes is supported. This is retrieval eligibility only, not
+verified error occurrence, compatibility, current device health or causality.
+
+`missing_data` can mean that retrieved observations cannot satisfy the required
+identity/time/health/causal semantics. Source advice such as `REBOOT_SYSTEM` is
+not proof of appropriate remediation, execution or recovery. Investigation-only
+plans still require independent causal confirmation; these changes do not promote
+Fleet reported events into current-health facts or change published revisions.
+
+Local regression coverage includes CPU/disk code-free alerts, XID/SXID namespace
+separation, multiple codes, the real Runbook catalog, and invalid synthesis evidence
+references. Reference failures now distinguish empty support, unknown IDs and
+support/contradiction overlap without retaining model text. Live CPU synthesis
+failure details and the rejected XID numerical limitation cannot be reconstructed
+from the previously stored generic diagnostics alone; operational revalidation is
+still required. New CPU Runbook authoring is deferred.
+
+Unmet requirement diagnostics distinguish source reports from established facts.
+Only reports matching the incident cluster and all declared target identity fields
+can explain an unmet error-code/producer/health requirement. Historical events can
+explain a reported code, never establish current health. Identity conflicts and
+missing identity fail closed. The diagnostics are explanatory metadata and do not
+change `health_facts`, required evidence, action eligibility, or result status.
+
+
+### Report-only requirements and separate gates
+
+New investigation-only drafts may require `reported_error_code` and
+`reported_producer_contract` from D09. These mean a validated, scoped source report,
+not current device health. All incident target identity fields and the cluster
+must match; conflicting codes remain unresolved. Evidence IDs alone never establish
+identity because one query snapshot can contain multiple targets.
+
+Python and Backend authoring validators reject these requirements for causal
+Runbooks and reject their use as action/applicability scalar conditions. Existing
+`error_code`, `producer_contract` and `normalized_health` requirements retain their
+previous stronger gates. The investigation plan exposes `requirement_groups` for
+reported facts, device-state evidence, causal confirmation and action conditions.
+This metadata does not bypass compatibility, freshness, causality or action checks.
+Published contents and hashes are not changed by deploying the code: opting into
+report-only requirements requires separately reviewed and published new revisions.
+
+The numeric prose validator accepts a cited typed code written as `XID79`,
+`XID 79` or `XID:79`. This does not allow uncited codes, counts or measurements.
+
+
+### CPU clear-delay read-only review (2026-10-08)
+
+The operator cleared the CPU component fault at 15:24:07 KST. Grafana rule history
+shows the CPU instance entered Normal **because of MissingSeries** at 15:40:16,
+not because a zero/Healthy sample established recovery. Its alert expression used
+a five-minute `count_over_time`, a ten-minute query range, Last reduction, a
+one-minute evaluation interval and zero keep-firing time. Historical nonempty
+range samples plus missing-series handling are consistent with the observed delay;
+the exact last Unhealthy and first Healthy sample times still need correlation.
+A later Healthy state snapshot does not establish the first recovery time.
+
+No alert configuration was changed. Review instant evaluation versus range/Last
+and define missing-data handling separately from device recovery before proposing
+a rule change. Alert resolution, Incident case closure and RCA completion remain
+separate events. This investigation does not establish a Fleet clear-command delay
+or a Job Controller issue.
+
+
+The XID79 and SXID11001 repository drafts now require reported producer/code for
+initial investigation; their D09 plans still expose the stronger health facts for
+independent validation. Current-health applicability/action conditions, optional
+metrics, source references and investigation-only restrictions are preserved.
+These are authoring changes, not edits to published runtime revisions. Other
+Runbooks keep their existing requirements until their investigation meaning is
+reviewed; deploying a Worker does not automatically republish the catalog.

@@ -30,7 +30,9 @@ def unexpected_policy(content):
 
 
 CODE = re.compile(r"(?:xid|sxid):(0|[1-9][0-9]*)")
+REPORTED_FACTS = {"reported_error_code", "reported_producer_contract"}
 FACT_NAMES = {
+    *REPORTED_FACTS,
     "producer_contract",
     "error_code",
     "incident_mapping",
@@ -261,6 +263,10 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
         content.get("required_evidence"), "required_evidence", nonempty=True
     )
     _require(set(facts) <= FACT_NAMES, "required_evidence: unsupported facts")
+    _require(
+        not (set(facts) & REPORTED_FACTS) or content.get("investigation_only") is True,
+        "reported facts require investigation_only",
+    )
     _conditions(
         content.get("applicability_conditions"),
         "applicability_conditions",
