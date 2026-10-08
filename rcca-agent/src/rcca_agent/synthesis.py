@@ -11,7 +11,9 @@ from .prompts import SYNTHESIS
 from .synthesis_context import bounded_context, encoded_size
 
 
-def synthesis_input(data, evidence, health, relations, applicable, planned=()):
+def synthesis_input(
+    data, evidence, health, relations, applicable, planned=(), events=()
+):
     # Raw logs and unregistered producer semantics cannot establish device health.
     complete = [
         e for e in evidence if e["tool_status"] == "ok" and e["quality"].get("complete")
@@ -24,6 +26,7 @@ def synthesis_input(data, evidence, health, relations, applicable, planned=()):
         and h["normalized_health"] != "unknown"
         and set(h["evidence_refs"]) <= valid_ids
     ]
+    events = [event for event in events if set(event["evidence_refs"]) <= valid_ids]
     metrics = series(complete)
     # Prefer incident-node measurements over broad Pod inventory in a bounded view.
     target = data.get("target", {})
@@ -35,13 +38,18 @@ def synthesis_input(data, evidence, health, relations, applicable, planned=()):
         )
     )
     refs = sorted(
-        {r for h in observations + relations + metrics for r in h["evidence_refs"]}
+        {
+            r
+            for h in observations + events + relations + metrics
+            for r in h["evidence_refs"]
+        }
     )
     return {
         "incident_time": data["incident_time"],
         "scope": data["scope"],
         "target": data.get("target", {}),
         "device_observations": observations,
+        "error_events": events,
         "pod_relations": relations,
         "metric_observations": metrics,
         "observation_refs": refs,
@@ -388,7 +396,7 @@ async def synthesize(llm, payload, diagnostics=None):
                 break
             args = (
                 view["observation_refs"],
-                view["device_observations"],
+                view["device_observations"] + view.get("error_events", []),
                 identifier_tokens(view),
                 view.get("query_quality", []),
             )

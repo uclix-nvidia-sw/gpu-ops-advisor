@@ -3,7 +3,12 @@
 import json
 
 
-SECTIONS = ("device_observations", "pod_relations", "metric_observations")
+SECTIONS = (
+    "error_events",
+    "device_observations",
+    "pod_relations",
+    "metric_observations",
+)
 
 
 def encoded_size(value):

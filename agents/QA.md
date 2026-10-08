@@ -590,3 +590,17 @@ Alloy 원문 해시 일치와 직접 수집 8개 메트릭 allowlist를 확인�
 검증: 저장소 루트의 Python 전체 suite에서 **501 passed, 0 skipped**(138.43s). `RUN_AGENT_E2E=1`, 외부 DB 환경변수 제거, 임시 로컬 PostgreSQL 16.15 및 실제 JC/Incident/두 Worker/공식 MCP 프로세스를 사용했다. Grafana·LLM은 fixture 응답이다. 최신 main `8f24bda`의 추가 변경은 UI이며 Python 검증 대상 파일은 동일하다.
 
 최종 무효값 규칙 수정 후 관련 81개(환경 profile 7개 포함)와 실제 원본 재생을 재실행해 통과했다. Helm 전체 계약 및 환경 override의 JSON 의미 동일성 검증을 통과했다. 큰 sentinel float 재직렬화 차이는 안전한 정수 범위 상한으로 해결했다. 초기 chart 검사는 Windows cp949 오류였으며 `-X utf8` 재실행으로 통과했다.
+# Fleet structured events — 2026-10-08
+
+`fix/fleet-state-evidence`: D09의 등록된 Fleet kmsg event를 상태 요약과 분리해
+RCA 모델 입력과 `quality.analysis.error_events`에 보존한다. 요청 대상 불일치,
+시각 누락/범위 이탈, 코드 namespace/원문 충돌, 미등록 계약, 잘린 조회는 제외한다.
+GPU inventory는 후보 연결이고 SXID를 GPU에 연결하지 않는다. 주입·실제 오류의
+공통 kmsg 경로를 소스로 비교했으며 테스트 PCI 주소 불일치를 실제 장애로 일반화하지 않는다.
+
+격리 로컬 검증: 전체 Agent 비-E2E 645 passed, 35 deselected,
+Runbook API lifecycle·RCA 발행·전체 Report topic
+선택 E2E 4 passed, 21 deselected. 공식 MCP/실제 Worker·Backend·JC 프로세스와
+로컬 PostgreSQL을 사용했으며 Grafana/LLM은 fixture다. 운영 DB에 테스트하지 않았다.
+후속 코드의 운영 배포·새 RCA 결과 검수·정상 발생 오류와 호스트 커널 기록 대조는 미완료다.
+사용자 출력으로 #87의 계약/보고서 진단은 운영 RCA Pod 3개 모두 반영 확인했다.

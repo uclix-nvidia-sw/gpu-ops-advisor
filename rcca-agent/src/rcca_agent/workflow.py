@@ -16,6 +16,7 @@ from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
 from .synthesis import synthesis_input, synthesize
+from .fleet_events import parse_events
 from .report import write_report
 from .report_labels import query_label
 from .observation_agents import collect_round
@@ -661,9 +662,14 @@ async def run(tools):
             break
         followups += 1
     synthesis_diagnostics = {}
+    error_events = (
+        []
+        if data.get("identity_conflicts")
+        else parse_events(obs.evidence, profile, data.get("target", {}))
+    )
     if not fast_path:
         payload = synthesis_input(
-            data, obs.evidence, health, relations, applicable, selected
+            data, obs.evidence, health, relations, applicable, selected, error_events
         )
         payload.update(evidence_gap=gaps, sufficiency=gate)
         analysis_status, model_candidates, analysis_limits = await synthesize(
@@ -887,6 +893,7 @@ async def run(tools):
         "sufficiency": gate,
         "remaining_budget": budget,
         "synthesis": synthesis_diagnostics,
+        "error_events": error_events,
         "reported_errors": [
             {
                 "error_code": h["error_code"],
