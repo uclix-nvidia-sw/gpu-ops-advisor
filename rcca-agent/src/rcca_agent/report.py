@@ -262,6 +262,7 @@ async def write_report(result, data, clues, evidence, llm):
     # Reuse the existing reference-only editor: prose, eligibility and facts cannot
     # be invented. Unselected statements remain, so gaps/actions never disappear.
     editorial = dict(facts=statements, limitations=[], narrative_status="omitted")
+    editor_reason = None
     try:
         await explain(
             editorial,
@@ -273,6 +274,7 @@ async def write_report(result, data, clues, evidence, llm):
         )
     except (ValueError, TypeError, KeyError):
         editorial["narrative_status"] = "failed"
+        editor_reason = "editor_exception"
     # RemoteUncertain/cancellation deliberately propagate to Worker fencing.
     ordered = editorial.get("narrative", []) + statements
     ordered = list({s["id"]: s for s in ordered}.values())
@@ -300,3 +302,11 @@ async def write_report(result, data, clues, evidence, llm):
         if editorial["narrative_status"] == "complete"
         else "deterministic_fallback",
     }
+    if editorial["narrative_status"] != "complete":
+        result["quality"]["report"]["fallback_reason"] = editor_reason or (
+            "editor_not_configured"
+            if not llm.configured
+            else "editor_response_rejected"
+            if editorial["narrative_status"] == "failed"
+            else "editor_no_selection"
+        )

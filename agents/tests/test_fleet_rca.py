@@ -126,6 +126,29 @@ def test_registered_native_health_coexists_with_fleet_adapter():
     assert health[0]["producer_contract"] == "native"
 
 
+def test_repeated_fleet_report_is_not_a_new_device_event_or_gpu_mapping():
+    p, raw = profile(), fleet()
+    raw["attributes"]["time"] = "2026-09-29T05:00:00Z"
+    raw["resources"]["gpuInfo.gpus"] = [{"uuid": "GPU-inventory-only"}]
+    first = evidence(raw)
+    second = evidence(raw, str(int(NS) + 1_000_000))
+    second["id"] = "later-report"
+    observations = parse_health([first, second], p["health_contracts"], p["queries"])
+    assert len(observations) == 2  # Reports, not two newly occurring SXID events.
+    assert all(h["error_code"] == "sxid:11001" for h in observations)
+    assert all(h["time_basis"] == "loki_recorded_at" for h in observations)
+    assert all(not h["fact_eligible"] for h in observations)
+    assert all("gpu_uuid" not in h["target"] for h in observations)
+    assert all(not h["gpu_candidates"][0]["verified"] for h in observations)
+    assert health_facts(observations, {"node": "node-1", "cluster_id": "c"}) == {}
+
+
+def test_nonregistered_disk_report_does_not_gain_xid_health_contract():
+    p, raw = profile(), fleet()
+    raw["attributes"].update(component="disk", reason="synthetic disk error")
+    assert parse_health([evidence(raw)], p["health_contracts"], p["queries"]) == []
+
+
 @pytest.mark.parametrize(
     "change",
     [

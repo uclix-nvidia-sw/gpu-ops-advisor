@@ -216,6 +216,18 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             reviewed_content_hash=content_hash(content),
         )
     if mode in ("xid", "sxid"):
+        # The current XID draft adds replay context absent from the v7 fixture.
+        # Register a fixture query; this test's model still selects D02.
+        if mode == "xid":
+            profile["queries"]["D44"] = dict(
+                source="mimir",
+                metric="fixture_pcie_replay",
+                unit="count",
+                max_hold_seconds=30,
+                revision="fixture-v1",
+                validated=True,
+                target_labels={"gpu_uuid": "UUID", "node": "node"},
+            )
         key, reason = (
             ("RB-XID-79", "Xid 79")
             if mode == "xid"

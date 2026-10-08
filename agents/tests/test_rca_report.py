@@ -8,6 +8,46 @@ from rcca_agent.report import write_report, TITLES
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "reply", [{"fact_ids": []}, {"fact_ids": ["invented"]}, "prose"]
+)
+async def test_editor_rejection_preserves_successful_analysis(reply):
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[
+            dict(
+                claim="PCIe 경로 조사 필요",
+                causal_status="candidate",
+                supporting_refs=["log-1"],
+            )
+        ],
+        recommendations=[],
+        missing_inputs=["normalized_health"],
+        limitations=[],
+        quality={"analysis": {"status": "complete"}},
+    )
+    before = copy.deepcopy(result)
+
+    class Model:
+        configured = True
+
+        async def complete(self, system, payload):
+            return reply
+
+    await write_report(
+        result, {"incident_time": "2026-10-08T00:00:00Z"}, {}, [], Model()
+    )
+    assert result["cause_candidates"] == before["cause_candidates"]
+    assert result["quality"]["analysis"] == before["quality"]["analysis"]
+    assert result["quality"]["report"]["fallback_reason"] == "editor_response_rejected"
+    cause = next(s for s in result["narrative"] if s["id"] == "cause")
+    assert "미확정 원인 후보: PCIe 경로 조사 필요" in cause["text"]
+    assert cause["evidence_refs"] == ["log-1"]
+    assert result["missing_inputs"] == ["normalized_health"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "origins", [[], ["builtin"], ["published"], ["published", "builtin"]]
 )
 async def test_runbook_fallback_distinguishes_selection_from_fact_eligibility(origins):
@@ -138,6 +178,12 @@ async def test_final_report_preserves_missing_evidence_and_withheld_actions(mode
         if mode == "unconfigured"
         else "failed"
     )
+    expected_reason = {
+        "invalid": "editor_response_rejected",
+        "error": "editor_exception",
+        "unconfigured": "editor_not_configured",
+    }.get(mode)
+    assert result["quality"]["report"].get("fallback_reason") == expected_reason
     assert {r for s in result["narrative"] for r in s["evidence_refs"]} == {
         "alert",
         "logs",

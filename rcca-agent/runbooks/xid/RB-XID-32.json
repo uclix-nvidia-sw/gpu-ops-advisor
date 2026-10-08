@@ -32,8 +32,20 @@
         "freshness": "query_contract"
       },
       {
+        "query_id": "D44",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
         "query_id": "D02",
-        "priority": 3,
+        "priority": 5,
         "required": false,
         "fact_names": [
           "observations"
@@ -66,7 +78,8 @@
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "추가 조회는 보조 원본 관측이며 실행 예산에 따라 일부만 선택된다. 노드 inventory를 장애 GPU·PCIe root port·NVLink 상대 장치의 연결 증거로 사용하지 않는다. 같은 장치 매핑이 없으면 비교·영향 범위 판정을 보류한다."
     ],
     "title": "XID 32 PCIe·장치 접근 조사",
     "description": "XID 32: Invalid or corrupted push buffer stream.",

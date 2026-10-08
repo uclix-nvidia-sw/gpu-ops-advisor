@@ -32,6 +32,14 @@ class RunbookContractTests(unittest.TestCase):
                 self.assertEqual(row["source_refs"], [])
                 plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
                 expected = ["D09", "D02"]
+                if row["knowledge_key"] == "RB-XID-54":
+                    expected = ["D09", "D11", "D02"]
+                elif row["knowledge_key"] == "RB-XID-163":
+                    expected = ["D09", "D04", "D11", "D02"]
+                elif row["knowledge_key"] in ("RB-XID-32", "RB-XID-79"):
+                    expected = ["D09", "D44", "D02"]
+                elif row["knowledge_key"] == "RB-XID-74":
+                    expected = ["D09", "D33", "D34", "D02"]
                 if row["knowledge_key"] == "RB-XID-48-63-64":
                     expected.append("D03")
                     self.assertEqual(plan[-1]["fact_names"], ["observations"])
@@ -60,7 +68,7 @@ class RunbookContractTests(unittest.TestCase):
         row["compatibility"] = {"producer_contract": "fixture-only-v1"}
         row["content"]["observation_plan"].reverse()
         plan = validate_runbook(row, QUERIES, ALLOWED)
-        self.assertEqual([step["query_id"] for step in plan], ["D09", "D02"])
+        self.assertEqual([step["query_id"] for step in plan], ["D09", "D44", "D02"])
         plan[0]["fact_names"].append("incident_history")
         self.assertNotIn(
             "incident_history", row["content"]["observation_plan"][-1]["fact_names"]

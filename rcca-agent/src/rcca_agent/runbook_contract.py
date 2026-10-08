@@ -6,6 +6,7 @@ import json
 import re
 from urllib.parse import urlsplit
 from agent_common.query_contract import query_facts
+from agent_common.contracts import content_hash
 
 SCHEMA = "gpu-rca-runbook/1.0"
 UNEXPECTED_EVENTS = {
@@ -65,9 +66,52 @@ COMPATIBILITY_TYPES = {
 }
 
 
+class RunbookContractError(ValueError):
+    """A validator-owned diagnostic that never includes submitted values."""
+
+
+def contract_reason(error):
+    return (
+        str(error)
+        if isinstance(error, RunbookContractError)
+        else "invalid_contract_value"
+    )
+
+
+def validate_published_runbook(row, profile):
+    """Check the same content/hash contract before retrieval and offline auditing.
+
+    Visibility, publication state and claim pinning remain the store's duties.
+    Passing this check does not establish applicability or verified facts.
+    """
+    _require(isinstance(row, dict), "runbook: expected object")
+    content = row.get("content")
+    kind = schema_kind(content)
+    _require(
+        bool(row.get("content_hash"))
+        and row["content_hash"] == row.get("reviewed_content_hash")
+        and content_hash(content) == row["content_hash"],
+        "unreviewed_content",
+    )
+    general = row.get("knowledge_key") == profile.get("rca", {}).get(
+        "general_runbook_key"
+    )
+    _require(not general or kind == "v1", "general_runbook_requires_v1")
+    if kind == "legacy":
+        required = _strings(content.get("required_queries", []), "required_queries")
+        _require(set(required) <= profile["queries"].keys(), "unregistered_query")
+        return kind, None
+    plan = validate_runbook(row, profile["queries"], list(profile["queries"]))
+    _require(
+        not general or content.get("investigation_only", False),
+        "general_runbook_requires_investigation_only",
+    )
+    return kind, plan
+
+
 def _require(ok, message):
     if not ok:
-        raise ValueError(message)
+        raise RunbookContractError(message)
 
 
 def _text(value, path):
