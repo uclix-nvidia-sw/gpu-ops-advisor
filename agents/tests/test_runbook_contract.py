@@ -44,7 +44,7 @@ class RunbookContractTests(unittest.TestCase):
                     expected.append("D03")
                     self.assertEqual(plan[-1]["fact_names"], ["observations"])
                     self.assertIn(
-                        "normalized_health", row["content"]["required_evidence"]
+                        "reported_error_code", row["content"]["required_evidence"]
                     )
                     self.assertTrue(row["content"]["investigation_only"])
                 self.assertEqual([step["query_id"] for step in plan], expected)

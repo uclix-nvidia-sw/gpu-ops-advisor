@@ -8,9 +8,8 @@
   "content": {
     "schema": "gpu-rca-runbook/1.0",
     "required_evidence": [
-      "producer_contract",
-      "error_code",
-      "normalized_health"
+      "reported_producer_contract",
+      "reported_error_code"
     ],
     "exclusion_conditions": [],
     "required_queries": [
@@ -22,11 +21,13 @@
         "priority": 1,
         "required": true,
         "fact_names": [
+          "reported_producer_contract",
+          "reported_error_code",
           "producer_contract",
           "error_code",
           "normalized_health"
         ],
-        "purpose": "동일 대상·기간의 Fleet 원문과 상태 보고를 조회하고 생산자·코드·상태 fact를 검증한다. 신원·발생 시각·현재 상태가 확인되지 않으면 필수 근거를 미충족으로 남긴다.",
+        "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -68,7 +69,8 @@
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "현재 D09/D02 계획은 link 번호·연결 상대·토폴로지와 양쪽 오류 카운터를 보장하지 않는다. NVLink/C2C 오류의 전파 방향과 영향 범위는 해당 원본·신원·시각이 확인되기 전 미확정이다.",
-      "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다."
+      "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
     ],
     "title": "XID 147 NVLink·연결 상대 조사",
     "description": "XID 147: NVLINK: TREX Error.",

@@ -35,6 +35,37 @@ Xid 48 Runbook에서 63·64는 추가 확인 대상이다. 해당 코드만으�
 
 JSON은 `xid/`, `sxid/`에 종류별로 보관하며 일반 조사는 상위 폴더에 둔다. 전체 검사·DB 초안 일괄 등록은 `python -m rcca_agent.runbook_import`를 사용한다. [일괄 등록 절차](DB-WORKFLOW.md)를 따른다. JSON의 반복 개발 설명은 문서로 옮기고 코드별 조사 내용만 유지한다.
 
+
+## 2026-10-08 요구 조건 분리 — 저장소 초안
+
+XID/SXID 초기 조사 266개 중 먼저 변경한 XID79·SXID11001 외 264개에도
+`reported_producer_contract`·`reported_error_code`를 초기 조사 필수 근거로 적용했다.
+일반 조사 1개는 CPU 등 XID/SXID 어댑터 밖의 컴포넌트도 다루므로 기존 요구 조건을 유지한다.
+전체 267개의 변경/유지 이유와 본문 해시는 [개별 검토 목록](requirements-review-20261008.json)에 기록했다.
+
+검토 범위는 기존 코드별 조사 지침·출처 분류와 새 필수 fact 의미의 일치다.
+출처 문헌을 새로 검증했다는 뜻은 아니다. 기존 manifest의 documented 187개,
+unused_or_legacy 63개, definition_conflict 13개, source_only 3개라는 분류를 유지한다.
+정의 미확정 코드도 보고 사실과 원문을 확인하는 조사에 한해 사용할 수 있다.
+그 코드의 의미·fatality·복구 조치를 승인한 것은 아니며, 기존 제한 사항을 유지한다.
+
+- 보고 fact는 동일 대상·클러스터·컴포넌트와 증거 참조가 확인된 원본에서만 생성된다.
+- D09 계획에 기존 상태 fact도 유지하지만, 보고 fact만으로 현재 상태를 충족시키지 않는다.
+- 모든 코드별 Runbook은 `investigation_only=true`다. 보고 확인만으로 원인 확정이나 충분한 결과가 되지 않는다.
+- 적용 조건과 권고의 `error_code` 검증은 그대로다. `reported_error_code`로 권고 조건을 대체하지 않는다.
+- ECC/row-remap, PCIe, NVLink, FM/partition, 전력·열, 앱/드라이버 등 기존 오류별 조사 지침과 추가 D 계획을 보존한다.
+- 저장소 초안 수정은 운영 revision 증가·검토·발행이 아니다. 운영 호환성 검토와 Backend API 발행 절차는 별도다.
+
+### 이 변경의 로컬 검증
+
+격리 작업 기준은 `cdb686027ad2250f4094d4c640ca23b98d0dae19`이다.
+
+- 통과: `RUN_AGENT_E2E=1 python -m pytest -c agents/pytest.ini agents/tests --ignore=agents/tests/test_e2e.py -q -rs` — 974 passed, 0 skipped. 공식 MCP deprecation warning 3건.
+- 통과: `agents/tests/test_e2e.py::test_runbook_api_lifecycle_and_real_rca_consumption` — 실제 Backend·JC·RCA Worker·공식 MCP와 임시 loopback PostgreSQL에서 전체 코드별 목록 등록 및 대표 3개 검토/발행/소비. Grafana·LLM은 fixture다. 운영 DB 연결 환경변수를 제거하고 현재 작업 트리에서 Go 바이너리를 빌드했다.
+- 통과: 264개 변경 전후 JSON 대조. 요구 fact, D09 fact 목록/목적, 제한 문구 추가 외 내용과 호환성·출처·적용/조치 조건·추가 D 계획 보존.
+- 통과: 변경 테스트 Ruff check/format, 저장소 링크 1,381개 오류 0건, `git diff --check`.
+- 미실행: 나머지 `test_e2e.py` 사례와 운영 등록·검토·발행·배포·실제 RCA 재검수. 로컬 파일 변경만으로 운영 revision 번호는 증가하지 않는다.
+
 ## 저장과 실행 경계
 
 JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성 API는 draft를 만들며, 별도 테이블·서비스·자동 seed를 추가하지 않았다. 파일을 놓았다고 Worker가 읽는 구조가 아니다. Worker는 기존 DB의 공개·고정된 revision/hash를 읽는다.
