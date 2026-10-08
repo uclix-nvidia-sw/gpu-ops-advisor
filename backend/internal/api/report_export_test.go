@@ -11,26 +11,38 @@ import (
 )
 
 func TestOptionalBindingMetricsExportKeepsZeroAndMissingDistinct(t *testing.T) {
-	var body Object
-	if err := json.Unmarshal([]byte(`{"topics":[{"metrics":[{"id":"O01.gpu_memory_free_mean","value":0,"unit":"MiB","quality":{"optional":true}},{"id":"O01.gpu_memory_used_ratio","value":null,"unit":"ratio","quality":{"optional":true,"reason":"gpu_capacity_join_unverified"}}]}]}`), &body); err != nil {
-		t.Fatal(err)
-	}
-	html := httptest.NewRecorder()
-	if err := exportMetrics(html, "binding-fixture", "html", body, reportMetrics(body)); err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{"평균 GPU 메모리 여유량", "GPU 메모리 용량 대비 사용 비율", "산출 불가", "유효시간을 연결하지 못했습니다"} {
-		if !strings.Contains(html.Body.String(), want) {
-			t.Errorf("missing %s", want)
-		}
-	}
-	out := httptest.NewRecorder()
-	if err := exportMetrics(out, "binding-fixture", "csv", body, reportMetrics(body)); err != nil {
-		t.Fatal(err)
-	}
-	rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.Body.String(), "\ufeff"))).ReadAll()
-	if err != nil || len(rows) != 3 || rows[1][2] != "0" || rows[2][2] != "산출 불가" {
-		t.Fatalf("CSV: %v %v", rows, err)
+	for _, suffix := range []string{"", ".0", ".17"} {
+		t.Run("suffix="+suffix, func(t *testing.T) {
+			body := Object{"topics": []any{Object{"metrics": []any{
+				Object{"id": "O01.gpu_memory_free_mean" + suffix, "value": 0, "unit": "MiB", "quality": Object{"optional": true}},
+				Object{"id": "O01.gpu_memory_used_ratio" + suffix, "value": nil, "unit": "ratio", "quality": Object{"optional": true, "reason": "gpu_capacity_join_unverified"}},
+				Object{"id": "O01.node_cpu_used_mean" + suffix, "value": 25, "unit": "percent"},
+				Object{"id": "O01.node_load_by_window" + suffix, "value": 1.25, "unit": "load"},
+			}}}}
+			html := httptest.NewRecorder()
+			metrics := reportMetrics(body)
+			if err := exportMetrics(html, "binding-fixture", "html", body, metrics); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"평균 GPU 메모리 여유량", "GPU 메모리 용량 대비 사용 비율", "평균 Node CPU 사용률", "시간창별 Node load 평균", "산출 불가", "유효시간을 연결하지 못했습니다"} {
+				if !strings.Contains(html.Body.String(), want) {
+					t.Errorf("missing %s", want)
+				}
+			}
+			out := httptest.NewRecorder()
+			if err := exportMetrics(out, "binding-fixture", "csv", body, metrics); err != nil {
+				t.Fatal(err)
+			}
+			rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.Body.String(), "\ufeff"))).ReadAll()
+			if err != nil || len(rows) != 5 {
+				t.Fatalf("CSV: %v %v", rows, err)
+			}
+			for i, value := range []string{"0", "산출 불가", "25", "1.25"} {
+				if rows[i+1][0] != String(metrics[i], "id") || rows[i+1][2] != value || rows[i+1][3] != String(metrics[i], "unit") {
+					t.Errorf("CSV changed stored ID/value/unit: %v", rows[i+1])
+				}
+			}
+		})
 	}
 }
 

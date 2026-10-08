@@ -3,6 +3,8 @@
 No conditional investigation is enabled without its question and consumer rules.
 """
 
+from collections import Counter
+
 from agent_common.calculations import weighted_mean
 from agent_common.contracts import metric
 from agent_common.normalize import intervals
@@ -45,11 +47,19 @@ def apply_additional_inputs(topic, data, collected):
     if topic["topic_id"] != "O01":
         return
     period = data["time_range"]
+    metric_counts = Counter()
 
     def put(name, value, unit, refs, target, method, reason):
         item = metric(
-            "O01." + name, value, unit, data, list(dict.fromkeys(refs)), method, reason
+            f"O01.{name}.{metric_counts[name]}",
+            value,
+            unit,
+            data,
+            list(dict.fromkeys(refs)),
+            method,
+            reason,
         )
+        metric_counts[name] += 1
         item["target"] = target
         item["quality"]["optional"] = True
         topic["metrics"].append(item)
