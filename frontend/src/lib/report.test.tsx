@@ -10,40 +10,53 @@ import {
 } from './report';
 import { DataView, QueryState } from '../components/live';
 
-it('renders optional memory observations without treating missing capacity as zero', () => {
-  const html = renderToStaticMarkup(
-    <ReportContent
-      onEvidence={() => {}}
-      value={{
-        result_status: 'partial',
-        topics: [
-          {
-            topic_id: 'O01',
-            status: 'partial',
-            metrics: [
-              {
-                id: 'O01.gpu_memory_free_mean',
-                value: 0,
-                unit: 'MiB',
-                quality: { optional: true },
-              },
-              {
-                id: 'O01.gpu_memory_used_ratio',
-                value: null,
-                unit: 'ratio',
-                quality: { optional: true, reason: 'gpu_capacity_join_unverified' },
-              },
-            ],
-          },
-        ],
-      }}
-    />,
-  );
-  expect(html).toContain('평균 GPU 메모리 여유량');
-  expect(html).toContain('GPU 메모리 용량 대비 사용 비율');
-  expect(html).toContain('산출 불가');
-  expect(html).toContain('유효시간을 연결하지 못했습니다');
-});
+it.each(['', '.0', '.17'])(
+  'renders optional O01 metric IDs with suffix "%s" without changing missing values',
+  (suffix) => {
+    const html = renderToStaticMarkup(
+      <ReportContent
+        onEvidence={() => {}}
+        value={{
+          result_status: 'partial',
+          topics: [
+            {
+              topic_id: 'O01',
+              status: 'partial',
+              metrics: [
+                {
+                  id: `O01.gpu_memory_free_mean${suffix}`,
+                  value: 0,
+                  unit: 'MiB',
+                  quality: { optional: true },
+                },
+                {
+                  id: `O01.gpu_memory_used_ratio${suffix}`,
+                  value: null,
+                  unit: 'ratio',
+                  quality: { optional: true, reason: 'gpu_capacity_join_unverified' },
+                },
+                { id: `O01.node_cpu_used_mean${suffix}`, value: 25, unit: 'percent' },
+                { id: `O01.node_load_by_window${suffix}`, value: 1.25, unit: 'load' },
+              ],
+            },
+          ],
+        }}
+      />,
+    ).split('<summary>원본 결과 보기')[0];
+    for (const text of [
+      '평균 GPU 메모리 여유량',
+      'GPU 메모리 용량 대비 사용 비율',
+      '평균 Node CPU 사용률',
+      '시간창별 Node load 평균',
+      '<td>0</td><td>MiB</td>',
+      '<td>25</td><td>%</td>',
+      '<td>1.25</td><td>load</td>',
+      '산출 불가',
+      '유효시간을 연결하지 못했습니다',
+    ])
+      expect(html).toContain(text);
+  },
+);
 
 describe('report presentation', () => {
   it('shows the complete final report despite missing metrics or LLM failure', () => {

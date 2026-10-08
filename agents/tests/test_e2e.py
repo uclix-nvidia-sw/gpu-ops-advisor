@@ -52,6 +52,7 @@ class Upstream(BaseHTTPRequestHandler):
     logs_max_seconds = None
     logs_padding_bytes = 16384
     prometheus_max_seconds = None
+    prometheus_rows = {}
     fleet_reports = False
     cluster_id = "cpc-2"
 
@@ -188,7 +189,9 @@ class Upstream(BaseHTTPRequestHandler):
                 values = [row for row in values if stop - length < row[0] <= stop]
                 if length - 1 > self.prometheus_max_seconds:
                     labels["padding"] = "x" * (11 * 1024 * 1024)
-            rows = [{"metric": labels, "values": values}]
+            rows = self.prometheus_rows.get(
+                metric, [{"metric": labels, "values": values}]
+            )
             if metric in {"DCGM_FI_DEV_GPU_TEMP", "DCGM_FI_DEV_POWER_USAGE"} or (
                 metric in fleet_values and "namespace=" in expr.split("}", 1)[0]
             ):
@@ -622,7 +625,9 @@ def worker_result(stack, kind, jid, suffix=""):
 @pytest.mark.e2e
 @pytest.mark.parametrize("activate", [False, True])
 @pytest.mark.parametrize("parameter_scope", [False, True, "discover"])
-def test_binding_profile_through_both_real_workers(stack, activate, parameter_scope):
+def test_binding_profile_through_both_real_workers(
+    stack, activate, parameter_scope, monkeypatch
+):
     from test_binding_contract import profile, verified
 
     config = profile()
@@ -636,14 +641,44 @@ def test_binding_profile_through_both_real_workers(stack, activate, parameter_sc
             ("D10", "boolean"),
             ("D11", "W"),
             ("D15", "MiB"),
+            ("D16", "MiB"),
+            ("D18", "percent"),
+            ("D19", "load"),
         ):
             b = verified(config, query, unit=unit, cluster="cpc-2")
             b["environment"].update(
                 datasource_uid="mimir", selector={"cluster_id": "cpc-2"}
             )
-            b["target_labels"]["uid"] = "pod_uid"
+            b["target_labels"].update(uid="pod_uid", window="load_duration")
             if query in {"D04", "D11"}:
                 b["target_labels"] = {"gpu_uuid": "uuid", "node": "node"}
+        # Multi-device synthetic observations must survive candidate validation/publication.
+        start = datetime.fromisoformat(
+            PERIOD["start"].replace("Z", "+00:00")
+        ).timestamp()
+        rows = {}
+        for query, value in (
+            ("D03", 4),
+            ("D15", 12),
+            ("D16", 16),
+            ("D18", 25),
+            ("D19", 2),
+        ):
+            binding = config["bindings"][config["queries"][query]["selected_binding"]]
+            rows[binding["metric"]] = [
+                {
+                    "metric": {
+                        "cluster_id": "cpc-2",
+                        "UUID": f"GPU-{device}",
+                        "node": f"node-{device}",
+                        "load_duration": window,
+                    },
+                    "values": [[start + i * 30, str(value)] for i in range(121)],
+                }
+                for device in (1, 2)
+                for window in (("1m", "5m", "15m") if query == "D19" else ("",))
+            ]
+        monkeypatch.setattr(Upstream, "prometheus_rows", rows)
         b = verified(config, "D09", unit="log", cluster="cpc-2", sample_type="log")
         b.update(
             timestamp_basis="loki_recorded_at",
@@ -689,8 +724,23 @@ def test_binding_profile_through_both_real_workers(stack, activate, parameter_sc
     metrics = [m for topic in report["topics"] for m in topic["metrics"]]
     energy = next(m for m in metrics if m["id"].endswith("gpu_energy"))
     assert (energy["value"] is not None) == activate
-    optional = next(m for m in metrics if m["id"].endswith("gpu_memory_used_ratio"))
-    assert optional["value"] is None and optional["quality"]["optional"]
+    assert len({m["id"] for m in metrics}) == len(metrics)
+    for name, count, value in (
+        ("gpu_memory_free_mean", 2, 12),
+        ("node_cpu_used_mean", 2, 25),
+        ("node_load_by_window", 6, 2),
+        ("gpu_memory_used_ratio", 2, 0.25),
+    ):
+        optional = [m for m in metrics if m["id"].split(".")[1] == name]
+        assert len(optional) == (count if activate else 1)
+        assert all(m["quality"]["optional"] for m in optional)
+        assert all(m["value"] == (value if activate else None) for m in optional)
+        assert {m["id"] for m in optional} == {
+            f"O01.{name}.{i}" for i in range(len(optional))
+        }
+        if activate:
+            assert all(m["target"]["cluster_id"] == "cpc-2" for m in optional)
+            assert all(m["evidence_refs"] for m in optional)
     with psycopg.connect(stack["url"]) as conn:
         qualities = conn.execute(
             "SELECT quality FROM evidence WHERE job_id=%s AND query_id='D02'", (jid,)

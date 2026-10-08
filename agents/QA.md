@@ -1,3 +1,16 @@
+# 2026-10-08 O01 optional metric IDs — 로컬 검수
+
+- 기준: 최신 원격 `origin/main` `125e06e`에서 `fix/report-metric-ids`를 생성했고 최종 fetch에서도 같은 기준을 확인했다. 제품 코드 변경은 Ops의 `additional_inputs.py`에 한정한다. 항목별 순번을 붙여 `O01.<metric_name>.<순번>`을 생성하고 값·단위·target·기간·근거·부족 사유는 유지한다. 공통 검증·Worker·RCA·JC·DB·수집 설정은 변경하지 않았다.
+- 재현: 합성 2개 클러스터에서 메모리 여유량 18행, CPU 4행, load 시간창 12행, 메모리 사용 비율 18행을 계산했다. 같은 target의 별도 원천 시리즈를 추가한 53행 사례도 포함한다. 수정 전 두 사례 모두 실제 `prepare_result()`의 `duplicate value id`로 실패했고, 수정 후 행/값/단위/대상/근거와 CSV ID를 보존하며 통과했다. 이 행 수는 합성 입력이며 운영 장비 수를 뜻하지 않는다.
+- 통과: Python 3.11.16에서 `RUN_AGENT_E2E=1`로 전체 `python -m pytest -c agents/pytest.ini agents/tests -q` 실행: **695 passed, 0 skipped**, 기존 MCP deprecation warning 3건. 테스트 전 `DATABASE_URL`, `AGENT_E2E_DATABASE_URL`, `E2E_DATABASE_URL`을 제거하고 임시 loopback PostgreSQL 16.9, 현재 트리에서 빌드한 JC/Incident, 실제 두 Worker와 공식 Grafana MCP를 사용했다. Grafana/LLM은 합성 fixture이며 운영 시스템에는 연결하지 않았다.
+- 통과: 기존 binding E2E 6개 사례를 다중 GPU·Node·load 창으로 확장했다. 활성 binding은 4종 지표 2/2/6/2행의 고유 ID·값·target·근거와 DB 후보 저장/JC 공개를 확인하며, 비활성 binding은 단일 null 행과 무조회 동작을 유지한다.
+- 통과: 전체 검사 중 기본 Backend 실행 파일을 사용하는 5개 API 연동 사례는 현재 트리의 Backend를 별도 빌드한 뒤 다시 실행했다(`test_namespace_report_through_backend_with_report_only_criteria`, `test_gui_model_auth_and_pinned_revision_reach_real_worker`, `test_runbook_api_lifecycle_and_real_rca_consumption`): **5 passed / 20 deselected**. 새 임시 DB로 보고서 접수·HTML/CSV 내보내기 및 관련 Worker 연동을 확인했다.
+- 통과: Frontend 포맷·**184 tests / 17 files**·TypeScript/Vite 빌드. Backend `go vet ./...`, `go test -race ./...`, `go build ./...`. 최초 Backend race 검사의 sandbox loopback bind 제한은 승격 후 동일 검사를 통과해 해소했다. Backend 자체 `-tags=e2e` 전체 suite는 별도로 실행하지 않았으며 위 Agent API 통합 검사와 구분한다.
+- 통과: 구형 ID/`.0`/`.17` ID에서 네 항목의 한글명·0/null·단위와 CSV 원문 보존 검사, 전체 Python Ruff check/format, 저장소 링크, `git diff --check`. Frontend/Backend 제품 코드는 변경하지 않고 기존 소비자 테스트만 확장했다. 독립 코드 검토에서 추가 수정 사항은 발견되지 않았다.
+- 미실행: 운영 배포 및 새 3개 주제/11개 주제 보고서의 실환경 재검증. 배포 후 기존 실패 요청과 같은 범위의 새 요청으로 발행·슬롯 반환을 확인해야 한다. 과거 실패 작업·결과는 재작성하지 않는다. 오전 자동보고서 timeout, D21/D22 조회 실패, 공통 Worker 상세 오류 로그 개선은 이번 검증/수정 범위에서 제외했다.
+
+---
+
 # 2026-10-08 RCA final-editor repair — 검증 범위
 
 - Passed: 658 non-E2E Agent tests / 35 deselected. Includes bounded selection repair,

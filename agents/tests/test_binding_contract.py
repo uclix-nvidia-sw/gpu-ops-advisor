@@ -379,15 +379,15 @@ def test_o01_optional_capacity_calculates_and_failure_preserves_vram():
     data = {**DATA, "group_by": ["cluster"]}
     topic = calculate("O01", data, collected, {}, {}, profile=profile())
     values = {m["id"]: m["value"] for m in topic["metrics"]}
-    assert values["O01.gpu_memory_used_ratio"] == 0.25
-    assert values["O01.gpu_memory_free_mean"] == 12
+    assert values["O01.gpu_memory_used_ratio.0"] == 0.25
+    assert values["O01.gpu_memory_free_mean.0"] == 12
     collected.pop("D16")
     after = calculate("O01", data, collected, {}, {}, profile=profile())
     assert (
         next(
             m["value"]
             for m in after["metrics"]
-            if m["id"] == "O01.gpu_memory_used_ratio"
+            if m["id"] == "O01.gpu_memory_used_ratio.0"
         )
         is None
     )
@@ -401,6 +401,106 @@ def test_o01_optional_capacity_calculates_and_failure_preserves_vram():
         if not m["quality"].get("optional")
     ]
     assert topic["status"] == after["status"]
+
+
+@pytest.mark.parametrize("duplicate_target", [False, True])
+def test_o01_optional_metrics_keep_every_row_and_pass_storage_validation(
+    duplicate_target,
+):
+    from agent_common.artifacts import render
+    from agent_common.contracts import base_result, result_status
+    from agent_common.store import prepare_result
+    from test_report_observation import evidence, row
+    import csv
+    import io
+
+    clusters = ("fixture-a", "fixture-b")
+    data = {
+        **DATA,
+        "scope": {
+            "clusters": [{"cluster_id": c, "namespaces": None} for c in clusters]
+        },
+        "group_by": ["cluster"],
+    }
+    collected = {}
+    expected = []
+    definitions = (
+        ("D03", None, "MiB", 4),
+        ("D15", "gpu_memory_free_mean", "MiB", 12),
+        ("D16", "gpu_memory_used_ratio", "MiB", 16),
+        ("D18", "node_cpu_used_mean", "percent", 25),
+        ("D19", "node_load_by_window", "load", 2),
+    )
+    for query, name, unit, value in definitions:
+        collected[query] = []
+        for cluster in clusters:
+            # Repeat local GPU/node names across clusters and keep load windows separate.
+            labels = (
+                [{"gpu_uuid": f"gpu-{i}", "node": f"node-{i % 2}"} for i in range(9)]
+                if query in {"D03", "D15", "D16"}
+                else [
+                    {"node": f"node-{i}", **({"window": w} if query == "D19" else {})}
+                    for i in range(2)
+                    for w in (("1m", "5m", "15m") if query == "D19" else (None,))
+                ]
+            )
+            if duplicate_target and query == "D18" and cluster == clusters[0]:
+                # Different source series can project to the same displayed target.
+                labels.append({"node": "node-0", "instance": "second-source"})
+            e = evidence(
+                query,
+                [
+                    row(label, str(value), start=START, end=START + 60)
+                    for label in labels
+                ],
+                cluster=cluster,
+            )
+            e.update(time_range=PERIOD)
+            e["quality"].update(complete=True, unit=unit, sample_type="gauge")
+            collected[query].append(e)
+            if name:
+                for label in labels:
+                    target = {
+                        "cluster_id": cluster,
+                        **{
+                            k: v
+                            for k, v in label.items()
+                            if k in {"gpu_uuid", "node", "window"}
+                        },
+                    }
+                    if query in {"D15", "D16"}:
+                        target.pop("node")
+                    expected.append(
+                        (
+                            name,
+                            target,
+                            0.25 if query == "D16" else value,
+                            "ratio" if query == "D16" else unit,
+                        )
+                    )
+    original = copy.deepcopy(collected)
+    topic = calculate("O01", data, collected, {}, {}, profile=profile())
+    optional = [m for m in topic["metrics"] if m["quality"].get("optional")]
+    assert len(optional) == 52 + int(duplicate_target)
+    actual = [
+        (m["id"].split(".")[1], m["target"], m["value"], m["unit"]) for m in optional
+    ]
+    assert sorted(actual, key=str) == sorted(expected, key=str)
+    assert all(m["evidence_refs"] and m["period"] == PERIOD for m in optional)
+    assert collected == original
+
+    result = base_result(
+        {"job_id": "fixture-report", "kind": "report", "input": data, "versions": {}},
+        PERIOD["end"],
+    )
+    result.update(topics=[topic], result_status=result_status([topic]))
+    evidence_rows = [e for rows in collected.values() for e in rows]
+    prepare_result(result, evidence_rows)
+    exported = list(
+        csv.DictReader(io.StringIO(render(result)["csv"].decode("utf-8-sig")))
+    )
+    assert [r["id"] for r in exported] == [m["id"] for m in topic["metrics"]]
+    assert len({r["id"] for r in exported}) == len(exported)
 
 
 @pytest.mark.parametrize(
@@ -448,7 +548,9 @@ async def test_fleet_load_duration_reaches_o01_without_merging_windows():
     topic = calculate(
         "O01", {**DATA, "group_by": ["cluster"]}, collected, {}, {}, profile=config
     )
-    metrics = [m for m in topic["metrics"] if m["id"] == "O01.node_load_by_window"]
+    metrics = [
+        m for m in topic["metrics"] if m["id"].startswith("O01.node_load_by_window.")
+    ]
     assert {m["target"]["window"]: m["value"] for m in metrics} == {
         "1m0s": 2,
         "15m0s": 6,
