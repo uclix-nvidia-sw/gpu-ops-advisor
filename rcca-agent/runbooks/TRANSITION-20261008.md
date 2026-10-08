@@ -1,6 +1,57 @@
 # Remaining Runbook transition / 잔여 Runbook 전환
 
-## 2026-10-08 status
+## 2026-10-08 batch publication completed
+
+The remaining **254** revisions were reviewed and published through the Backend
+Knowledge API. Together with the previous 13, all **267 logical Runbooks** now have
+a published transition revision. Each latest revision was reread: repository
+content and reviewed hashes match, runtime contract validation passes, and missing
+required facts remain pending in local checks using the persisted records.
+[The publication audit](publication-audit-20261008.json) records the content hashes
+and source checks without operational credentials or incident data.
+
+잔여 254개를 일괄 검토·발행했다. 기존 13개를 포함한 267개 최신 발행본 모두
+저장소 본문·검토 해시·런타임 계약을 통과했다. 이전 258개 발행본은 다시 읽어
+상태·버전·본문·검토 해시·호환성 보존을 확인했다. SQL, schema, Job/slot, 클러스터
+설정 변경은 없다. 새 작업이 새 revision을 고정하며 과거 실행 기록은 그대로다.
+
+### Review scope
+
+- NVIDIA Xid catalog, Fabric Manager guide and both pinned GPUd catalogs were
+  fetched again; all four source hashes match the original review material.
+- 95 NVLink decoder rows match the NVIDIA table field by field.
+- Per-code definitions, source conflicts, product/version limits, application
+  versus hardware distinctions, and conditional operator actions were reviewed.
+  Source-only and legacy definitions remain explicitly conditional; publishing
+  them does not assert that the deployed Fleet recognizes those codes.
+- All plans remain investigation-only. D09 is required; D02 cannot replace missing
+  topology, ECC, application, firmware or recovery evidence. Unsupported hardware
+  attribution and remediation eligibility are not enabled by publication.
+- This was user-authorized automated review, not independent human approval or
+  live validation of every error code. Missing-fact and revision-selection checks
+  used the actual persisted bodies locally, not new production RCA executions.
+
+### Operational limits and recovery
+
+Old published revisions are preserved. Their D05-related `invalid_contract`
+diagnostics may still appear in candidate/history records; the latest 267
+revisions have zero contract failures in this audit. Do not suppress old failures
+or rewrite historical results to make the display look successful.
+
+Recovery uses the Backend retirement lifecycle for an affected **new** revision
+with its current version/hash receipt. An old D05 revision is not a valid fallback
+under the new D contract. Preserve its history and prepare a corrected new revision
+if necessary; do not mutate SQL or undo unrelated publications.
+
+The SXID injection test still has a separate producer-side gap: Fleet's own
+`/v1/states` returned Healthy and `/v1/events` returned no events in the queried
+window. A successful injection response or kernel line is not proof of Fleet
+recognition, an Unhealthy report, a Grafana notification or a new RCA. No post-test
+RCA was found at the final job-list check. Watcher/process inspection remains
+pending; this audit does not claim the final editor repair is live-verified.
+
+## Earlier 2026-10-08 snapshot (superseded counts)
+
 
 The remaining 258 repository investigation plans now state their query limits by
 evidence group. D09 preserves producer, code and normalized-health requirements;
