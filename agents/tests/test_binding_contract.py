@@ -503,6 +503,66 @@ def test_o01_optional_metrics_keep_every_row_and_pass_storage_validation(
     assert len({r["id"] for r in exported}) == len(exported)
 
 
+@pytest.mark.parametrize("sample_type", ["gauge", "info"])
+@pytest.mark.parametrize("tool_status", ["ok", "empty", "unavailable"])
+def test_o01_node_conditions_survive_result_storage(sample_type, tool_status):
+    from agent_common.contracts import base_result, content_hash, result_status
+    from agent_common.store import prepare_result
+    from test_report_observation import evidence
+
+    clusters = ("fixture-a", "fixture-b")
+    data = {
+        **DATA,
+        "scope": {
+            "clusters": [{"cluster_id": c, "namespaces": None} for c in clusters]
+        },
+        "group_by": ["cluster"],
+    }
+    collected = {"D20": []}
+    expected = []
+    for cluster in clusters:
+        rows = [
+            {
+                "metric": {"node": node, "condition": "Ready", "status": status},
+                "values": [[START, "0"], [START + 30, "1"]],
+            }
+            for node, status in (("node-1", "true"), ("node-2", "false"))
+        ]
+        item = evidence("D20", rows if tool_status == "ok" else [], cluster=cluster)
+        item["tool_status"] = tool_status
+        item["quality"].update(sample_type=sample_type, unit="boolean")
+        if tool_status == "unavailable":
+            item["quality"]["reason"] = "query_failed"
+        collected["D20"].append(item)
+        if tool_status == "ok":
+            expected.extend(
+                {
+                    "cluster_id": cluster,
+                    "labels": row["metric"],
+                    "intervals": [[START, START + 30, 0], [START + 30, START + 60, 1]],
+                    "evidence_refs": [item["id"]],
+                }
+                for row in rows
+            )
+    original = copy.deepcopy(collected)
+    config = profile()
+    topic = calculate("O01", data, collected, {}, {}, profile=config)
+    result = base_result(
+        {"job_id": "fixture-report", "kind": "report", "input": data, "versions": {}},
+        PERIOD["end"],
+    )
+    result.update(topics=[topic], result_status=result_status([topic]))
+    encoded, digest = prepare_result(result, collected["D20"])
+    stored = json.loads(encoded.obj)
+    assert stored == result and content_hash(stored) == digest
+    assert topic["quality"]["node_condition_observations"] == expected
+    assert (
+        topic["status"] == calculate("O01", data, {}, {}, {}, profile=config)["status"]
+    )
+    assert topic["quality"]["additional_inputs"][-1]["statuses"] == [tool_status] * 2
+    assert collected == original
+
+
 @pytest.mark.parametrize(
     "query,unit,sample_type,dimensions",
     [

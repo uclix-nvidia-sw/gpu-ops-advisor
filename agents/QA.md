@@ -1,3 +1,15 @@
+# 2026-10-08 D20 Node condition JSON — 로컬 검수
+
+- 기준: 원격 `origin/main` `854a030`(#92 포함)에서 `fix/report-node-condition-json`을 생성했다. 제품 코드는 Ops의 `additional_inputs.py` 한 줄만 변경한다. O01의 D20 관측 구간을 JSON 배열로 구성하며 공통 정규화·해시/결과 검증·Worker·RCA·JC·DB·수집 설정은 유지한다.
+- 수정 전 재현: 실제 `prepare_result()`를 호출하는 6개 사례 중 유효 D20 gauge/info 2개가 `ValueError: not JSON`으로 실패했고, 빈 응답/조회 실패 4개는 통과했다. 수정 후 6개 모두 통과한다. 합성 두 클러스터·두 Node의 라벨, 시각 구간, 0/1 값, evidence 참조, 원본 불변, JSON 왕복/해시와 기존 주제 상태를 확인했다.
+- 통과: 관련 binding/cluster parameter 검사 **102 passed**. 전체 Python Ruff check/format와 `git diff --check` 통과. 저장소 링크 검사는 116문서·1,380개 링크/자산·오류 0건.
+- 통과: Python 3.11.16에서 `RUN_AGENT_E2E=1 python -m pytest -c agents/pytest.ini agents/tests -q` 전체 **701 passed, 0 skipped**(95.31초), 기존 MCP deprecation warning 3건. `DATABASE_URL`, `AGENT_E2E_DATABASE_URL`, `E2E_DATABASE_URL`을 제거하고 임시 loopback PostgreSQL 16.9를 생성했다. Go 1.26.2로 현재 트리에서 새로 빌드한 JC·Incident·Backend와 실제 두 Worker·공식 Grafana MCP 1.4.2를 사용했다. Grafana/LLM 응답은 합성 fixture이며 운영 서비스에 연결하지 않았다.
+- 통과: 기존 두 Worker binding E2E 6개 사례에 D20을 추가했다. 활성 literal/parameter/discovery binding에서 두 Node의 Ready true=1/false=0 총 4개 관측과 각각의 120개 30초 구간, 저장된 D20 evidence ID, JC 발행 결과와 content hash를 확인했다. 비활성 binding은 빈 관측과 무조회 동작을 유지한다. 이 사례들은 전체 701개에 포함된다.
+- 독립 검토: 직접 결과로 나가는 D20 구간을 Ops 구성 지점에서 변환하는 범위가 적절하며, 추가 수정이 필요한 결함을 찾지 못했다. Backend/Frontend가 읽는 JSON 필드와 결과 스키마는 변경되지 않는다. Frontend 단독 suite와 Go 단독 vet/race suite는 이번 Python 결과 구성 수정에서 실행하지 않았으며, 실제 Backend/JC 소비는 위 프로세스 E2E로 검증했다.
+- 미실행: 운영 배포·실제 D20을 수집한 새 보고서의 재검증. 배포 후 O01 포함 및 전체 주제 새 보고서에서 D20의 유효 관측, 최종 발행·근거·내보내기·슬롯 반환을 확인해야 한다. 과거 실패 작업은 재작성하지 않는다. 실제 운영 예외 traceback은 없으므로 운영 로그 조건이 재현 결함과 일치한다는 판단과 코드 결함 재현을 구분한다. MCP 통신 오류·공통 Worker 상세 오류 로깅은 이번 수정 범위가 아니다.
+
+---
+
 # 2026-10-08 O01 optional metric IDs — 로컬 검수
 
 - 기준: 최신 원격 `origin/main` `125e06e`에서 `fix/report-metric-ids`를 생성했고 최종 fetch에서도 같은 기준을 확인했다. 제품 코드 변경은 Ops의 `additional_inputs.py`에 한정한다. 항목별 순번을 붙여 `O01.<metric_name>.<순번>`을 생성하고 값·단위·target·기간·근거·부족 사유는 유지한다. 공통 검증·Worker·RCA·JC·DB·수집 설정은 변경하지 않았다.

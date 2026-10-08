@@ -644,6 +644,7 @@ def test_binding_profile_through_both_real_workers(
             ("D16", "MiB"),
             ("D18", "percent"),
             ("D19", "load"),
+            ("D20", "boolean"),
         ):
             b = verified(config, query, unit=unit, cluster="cpc-2")
             b["environment"].update(
@@ -652,6 +653,11 @@ def test_binding_profile_through_both_real_workers(
             b["target_labels"].update(uid="pod_uid", window="load_duration")
             if query in {"D04", "D11"}:
                 b["target_labels"] = {"gpu_uuid": "uuid", "node": "node"}
+            elif query == "D20":
+                b["target_labels"] = {
+                    key: key for key in ("node", "condition", "status")
+                }
+                b["invalid_values"]["maximum"] = 1
         # Multi-device synthetic observations must survive candidate validation/publication.
         start = datetime.fromisoformat(
             PERIOD["start"].replace("Z", "+00:00")
@@ -678,6 +684,20 @@ def test_binding_profile_through_both_real_workers(
                 for device in (1, 2)
                 for window in (("1m", "5m", "15m") if query == "D19" else ("",))
             ]
+        binding = config["bindings"][config["queries"]["D20"]["selected_binding"]]
+        rows[binding["metric"]] = [
+            {
+                "metric": {
+                    "cluster_id": "cpc-2",
+                    "node": f"node-{device}",
+                    "condition": "Ready",
+                    "status": status,
+                },
+                "values": [[start + i * 30, str(value)] for i in range(121)],
+            }
+            for device in (1, 2)
+            for status, value in (("true", 1), ("false", 0))
+        ]
         monkeypatch.setattr(Upstream, "prometheus_rows", rows)
         b = verified(config, "D09", unit="log", cluster="cpc-2", sample_type="log")
         b.update(
@@ -745,6 +765,42 @@ def test_binding_profile_through_both_real_workers(
         qualities = conn.execute(
             "SELECT quality FROM evidence WHERE job_id=%s AND query_id='D02'", (jid,)
         ).fetchall()
+        condition_refs = {
+            row[0]
+            for row in conn.execute(
+                "SELECT id::text FROM evidence WHERE job_id=%s AND query_id='D20'",
+                (jid,),
+            ).fetchall()
+        }
+    conditions = next(t for t in report["topics"] if t["topic_id"] == "O01")["quality"][
+        "node_condition_observations"
+    ]
+    if activate:
+        assert len(conditions) == 4
+        assert {
+            (c["labels"]["node"], c["labels"]["condition"], c["labels"]["status"])
+            for c in conditions
+        } == {
+            (f"node-{device}", "Ready", status)
+            for device in (1, 2)
+            for status in ("true", "false")
+        }
+        assert condition_refs
+        for condition in conditions:
+            assert (
+                condition["cluster_id"] == condition["labels"]["cluster_id"] == "cpc-2"
+            )
+            assert condition["intervals"] == [
+                [
+                    start + i * 30,
+                    start + (i + 1) * 30,
+                    float(condition["labels"]["status"] == "true"),
+                ]
+                for i in range(120)
+            ]
+            assert set(condition["evidence_refs"]) == condition_refs
+    else:
+        assert conditions == []
     assert qualities
     if activate:
         assert all(
