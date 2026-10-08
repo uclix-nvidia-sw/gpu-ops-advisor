@@ -1,3 +1,18 @@
+# 2026-10-08 RCA final-editor repair — 검증 범위
+
+- Passed: 658 non-E2E Agent tests / 35 deselected. Includes bounded selection repair,
+  safe failure reasons, rejected-prose exclusion, cancellation/remote uncertainty,
+  and the unchanged single-attempt Ops default.
+- Passed: four selected Backend/JC/Worker/official-MCP integration cases / 21 deselected,
+  using a new localhost PostgreSQL instance with external database variables removed.
+  Grafana and LLM responses are fixtures; this is not live RCA quality validation.
+- Production Runbooks: nine reviewed transition revisions have been published via
+  Backend API. Eight were re-read and selected with local Worker code. Only XID79 r3
+  has a new live RCA selection/result-publication check. See the [publication record](../rcca-agent/runbooks/REVIEW-20261008.md).
+- Pending: deploying the editor change and checking a new live result; event-source
+  completeness; eight error-specific live RCA checks; remaining 258 Runbook transitions.
+  Historical editor rejection cannot be assigned a precise cause from the stored flag.
+
 # 2026-10-08 Runbook PR preparation — 검증 범위
 
 - Passed: full non-E2E Agent regression, `pytest -c agents/pytest.ini agents/tests -m "not e2e" -q`: 623 passed / 35 deselected in 26.75s on the final PR candidate. The refinement plus Fleet parser regressions also passed 23 targeted tests, including two new time-gate cases.

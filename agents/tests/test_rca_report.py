@@ -155,7 +155,7 @@ async def test_final_report_preserves_missing_evidence_and_withheld_actions(mode
             await write_report(result, data, clues, evidence, Model())
         return
     await write_report(result, data, clues, evidence, Model())
-    assert len(calls) == (mode != "unconfigured")
+    assert len(calls) == (2 if mode == "invalid" else int(mode != "unconfigured"))
     assert [s["id"] for s in result["narrative"]] == list(TITLES)
     text = "\n".join(s["text"] for s in result["narrative"])
     for expected in [

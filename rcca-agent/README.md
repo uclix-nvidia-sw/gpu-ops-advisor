@@ -13,6 +13,20 @@ RCA와 Report는 공통 `agents/config.example.json`의 query/binding registry�
 
 # rcca-agent
 
+## Final editor validation — 2026-10-08
+
+`quality.report.editor` records a bounded reason for final statement selection:
+response shape, empty selection, invalid/unknown IDs, or an LLM budget/transport/output
+failure. RCA permits one repair of a rejected non-null selection using the original
+statements and the existing deadline/token budget. No raw rejected reply is stored or
+reinserted into the prompt. Remote uncertainty and cancellation propagate unchanged;
+transport/budget failures are not retried by the editor. Ops keeps its single-selection
+call. Every original statement and its evidence references remain in the fallback.
+
+This improves diagnostics and recoverable selection failures; it does not prove that
+the historical `editor_response_rejected` was an ID error. That result did not retain
+the specific editor failure. Production resolution requires deployment and a new RCA.
+
 ## Structured Fleet error events — 2026-10-08
 
 등록된 D09 Fleet 계약의 `log_type=event`, XID/SXID `data_source=kmsg` 표본을

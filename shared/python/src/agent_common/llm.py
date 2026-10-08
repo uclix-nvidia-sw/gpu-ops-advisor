@@ -182,28 +182,67 @@ async def explain(
     result,
     llm,
     system='Select supplied facts. Return JSON {"fact_ids": [ids]}. Do not add claims.',
+    *,
+    repair_once=False,
 ):
     if not llm.configured:
-        return
+        return {"attempts": 0, "reason": "model_not_configured"}
     # LLM selects supported, pre-rendered facts; it cannot invent numeric or causal claims.
     facts = result["facts"] + [f for t in result.get("topics", []) for f in t["facts"]]
     if not facts:
-        return
-    response = await llm.complete(
-        system,
-        {
-            "facts": [{k: f[k] for k in ("id", "text", "value_refs")} for f in facts],
-            "limitations": result["limitations"],
-        },
-    )
+        return {"attempts": 0, "reason": "no_statements"}
+    payload = {
+        "facts": [{k: f[k] for k in ("id", "text", "value_refs")} for f in facts],
+        "limitations": result["limitations"],
+    }
     allowed = {f["id"]: f for f in facts}
-    if (
-        not isinstance(response, dict)
-        or not isinstance(response.get("fact_ids"), list)
-        or not response["fact_ids"]
-        or not all(isinstance(k, str) and k in allowed for k in response["fact_ids"])
-    ):
-        result["narrative_status"] = "failed"
-        return
-    result["narrative"] = [allowed[k] for k in dict.fromkeys(response["fact_ids"])]
-    result["narrative_status"] = "complete"
+    diagnostics = {"attempts": 0, "validation_failures": []}
+    for attempt in range(2 if repair_once else 1):
+        response = await llm.complete(system, payload)
+        diagnostics["attempts"] += 1
+        if response is None:
+            # No new call after transport/budget/output failure. Never store raw replies.
+            failure = getattr(llm, "last_failure", None)
+            diagnostics["reason"] = (
+                failure
+                if failure
+                in {
+                    "model_not_configured",
+                    "llm_token_budget_exhausted",
+                    "llm_deadline_exhausted",
+                    "llm_http_error",
+                    "llm_output_truncated",
+                    "llm_invalid_output",
+                }
+                else "no_response"
+            )
+            break
+        if not isinstance(response, dict):
+            reason = "response_not_object"
+        elif not isinstance(response.get("fact_ids"), list):
+            reason = "fact_ids_not_list"
+        elif not response["fact_ids"]:
+            reason = "empty_selection"
+        elif any(not isinstance(k, str) for k in response["fact_ids"]):
+            reason = "invalid_id_type"
+        elif any(k not in allowed for k in response["fact_ids"]):
+            reason = "unknown_statement_id"
+        else:
+            result["narrative"] = [
+                allowed[k] for k in dict.fromkeys(response["fact_ids"])
+            ]
+            result["narrative_status"] = "complete"
+            diagnostics["reason"] = "repaired" if attempt else "complete"
+            return diagnostics
+        diagnostics["validation_failures"].append(reason)
+        diagnostics["reason"] = reason
+        # Reuse the original evidence and existing LLM deadline/token budget.
+        # Do not feed rejected model prose back into a prompt.
+        payload = {
+            **payload,
+            "validation_error": reason,
+            "allowed_fact_ids": list(allowed),
+        }
+        system += ' Previous selection was invalid. Return only {"fact_ids": [nonempty allowed IDs]}.'
+    result["narrative_status"] = "failed"
+    return diagnostics
