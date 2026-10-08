@@ -163,7 +163,7 @@ def apply_additional_inputs(topic, data, collected):
         {
             "cluster_id": row["cluster_id"],
             "labels": row["labels"],
-            "intervals": row["intervals"],
+            "intervals": [list(span) for span in row["intervals"]],
             "evidence_refs": row["evidence_refs"],
         }
         for row in intervals(collected.get("D20", []), period)
