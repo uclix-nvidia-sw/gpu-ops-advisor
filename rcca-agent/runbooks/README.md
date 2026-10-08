@@ -70,7 +70,7 @@ observation_plan은 다음 필드를 갖는다:
 | time_range | incident만 지원. 실제 범위는 claim·query 계약에서 결정 |
 | freshness | query_contract만 지원. 콘텐츠가 자체 임계값을 만들지 않음 |
 
-required_queries를 함께 쓰면 plan의 required=true인 ID 집합과 일치해야 한다. plan을 생략하면 required_queries의 원래 순서를 사용하며 fact_names를 추측하지 않는다. 모든 초안은 D09·D05를 필수 관측, D02를 선택 관측으로 제시한다. priority는 예산 배정 순서이며 필수 관측은 병렬 실행되므로 선행 완료 의존성을 뜻하지 않는다. 이미 유효한 증거로 목적과 원인 판정용 Runbook이 충족됐으면 RCA가 수집을 생략한다.
+required_queries를 함께 쓰면 plan의 required=true인 ID 집합과 일치해야 한다. plan을 생략하면 required_queries의 원래 순서를 사용하며 fact_names를 추측하지 않는다. 현재 조사 계획은 D09를 필수 관측으로 사용하고 producer·오류 코드·상태 등 필요한 fact를 별도로 요구한다. D02는 선택 관측이며, 일부 검토된 계획에는 오류별 추가 D가 있다. 폐기된 D05를 새 계획에 요구하지 않는다. priority는 예산 배정 순서이며 필수 관측은 병렬 실행되므로 선행 완료 의존성을 뜻하지 않는다. 이미 유효한 증거로 목적과 원인 판정용 Runbook이 충족됐으면 RCA가 수집을 생략한다.
 
 R코드는 RCA의 조사 목적이고, D코드는 등록 조회 ID다. Runbook마다 R01~R09 필드를 요구하지 않는다. 현재 D코드만으로 ECC·NVLink·IB 세부 수치나 복구를 입증할 수 없다.
 

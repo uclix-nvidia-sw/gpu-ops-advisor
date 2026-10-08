@@ -1,0 +1,2170 @@
+{
+  "checked_at": "2026-10-08T05:06:11.646241+00:00",
+  "scope": "Backend API readback plus local runtime validation of persisted Runbooks; not live RCA certification",
+  "newly_published": 254,
+  "total_latest_published": 267,
+  "prior_258_revisions_preserved": true,
+  "source_checks": [
+    {
+      "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+      "sha256": "6d807e595ec012270a80ab19cc4c3f69abc5a462d1452d376cd21c1b0edb0802",
+      "matches_catalog_source": true
+    },
+    {
+      "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+      "sha256": "1f8a4b4ee5f2ef94897ce9303ef2f4594f95710323bc91540ec4510459d751f6",
+      "matches_catalog_source": true
+    },
+    {
+      "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/sxid/sxid.go",
+      "sha256": "242ac181b2164fd56168bb18caf59fb4cb2b32fb63ca1ecbaf4a6ef646f772bf",
+      "matches_catalog_source": true
+    },
+    {
+      "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+      "sha256": "2914535820b541c087a0dcb438af4cf43e27580c47408ae930c76c91d561bb84",
+      "matches_catalog_source": true
+    }
+  ],
+  "decoder_rows_matched": 95,
+  "latest_contract_failures": 0,
+  "live_rca_verified": false,
+  "entries": [
+    {
+      "knowledge_key": "RB-GENERAL-GPU-NODE",
+      "revision": 2,
+      "content_hash": "e9697272b76709f528d57f91f5ba0a8f47c18de1c1e7aceb07484afe204f1747",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-10001",
+      "revision": 2,
+      "content_hash": "b918bb2b7a25234b20e85afcd2fc82415ab05ae5d5057cc509dd27a03fa104c2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-10002",
+      "revision": 2,
+      "content_hash": "1e36914ead042e181d820ebaef35ccafeaee7f63898a1c0c4adff58a8b5cb011",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-10003",
+      "revision": 2,
+      "content_hash": "e7c974cd36351b72e84f3d945d545f97a15d803728a8b513d962adbe00675cf5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-10004",
+      "revision": 2,
+      "content_hash": "465e521709d4fa6b34bf5f17c83bc1664180f1a8c8523b0cee6cac2cce71a0a4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-10005",
+      "revision": 2,
+      "content_hash": "4ee797e3b1a6f8d46b32b79a41abef6bd4a7c3a8b3748d856db77ab262a90b4f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11001",
+      "revision": 2,
+      "content_hash": "d1c744bb9921952a7850ad7d214027c99e3777513801a1a46f30f43bed27218b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11004",
+      "revision": 2,
+      "content_hash": "275393c048eda1e98fdc02ada97c1454beae312a5477fe52d98d96e139f2931b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11009",
+      "revision": 2,
+      "content_hash": "9791a25ad65aeaf76e006358bcc73a499e657447d19abb94bc33c829160f3d55",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11012",
+      "revision": 2,
+      "content_hash": "958ceb15149d0ae973904552f0f9deb4ec4c8dc898205cab7de33cd203ff1dd4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11013",
+      "revision": 2,
+      "content_hash": "65bf5130a6fb180d80ed846abf2f69883e1eddf2b11475990dc2f9c7118068fc",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11018",
+      "revision": 2,
+      "content_hash": "715afad4037bce7f005cc3787d9d3fd0f883d34b758d19023256e18295fb08f8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11019",
+      "revision": 2,
+      "content_hash": "c5052ebff5efeef09183e1ad96e69888c6e9917fc096b1eb22a729012fed692a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11020",
+      "revision": 2,
+      "content_hash": "d32e4ca173f51eeb1125f17cf4ce7d41ee015ad1166417fa2a48568c0fc3a59b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11021",
+      "revision": 2,
+      "content_hash": "f69f32d7a9735836908ff9bbb568e377e97d1bf0ca0fef8a713495c3c95d2cab",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11022",
+      "revision": 2,
+      "content_hash": "489bdb2b47873acf01ada6799a811d187149936ac08480f44a3609614d0941ae",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-11023",
+      "revision": 2,
+      "content_hash": "64ddd8a11d3468ffb44dfd69f5794b317b04dcdf70f4aa19559acc615c57714d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12001",
+      "revision": 2,
+      "content_hash": "6c9d2fa8deb2dd1424c11c3dfb4a2510eb58dfe377e722d500ca6d79fa1c4623",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12002",
+      "revision": 2,
+      "content_hash": "100e286b122edca47a021dfad6a1e31e878d4e4245dde3de93dcd8b576c9eca4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12020",
+      "revision": 2,
+      "content_hash": "57e9162f071a4dd7cd9e03347e66be847ed730e1b4ecd411c0c5867f0362398c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12021",
+      "revision": 2,
+      "content_hash": "1a38f82991ca89ac969166f31839e599cd1664ae22b15842000e5f4e5df08ab1",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12022",
+      "revision": 2,
+      "content_hash": "5c63f8715178c6695148028a661c55258421e8a03fe257574968ff0a5a8cbcc2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12023",
+      "revision": 2,
+      "content_hash": "f2dcfb1bcdf7094cf4130b1a3bcba223aecabfecceec388ab3dbf174d18d4028",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12024",
+      "revision": 2,
+      "content_hash": "7ed951dcc6126df25df3248658f977cd2a55ef94b2995ae780e217eb9e630311",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12025",
+      "revision": 2,
+      "content_hash": "4688f399e17e225cdb36255a021637052c523fc91fe2ab5e1435d3324cab2520",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12026",
+      "revision": 2,
+      "content_hash": "795684e7048871932d6cbcddb773b8f2bca8d2c1458c44ac8a58eb57de95ff04",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12027",
+      "revision": 2,
+      "content_hash": "d9e8b61de5f1418264e51744db4fdd0bb27c10ecee95d7745e47a63558298f63",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12028",
+      "revision": 2,
+      "content_hash": "a08188599d58c9333ea552b4e82fc5a727900e60b382405ba58331f267dae6e1",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12030",
+      "revision": 2,
+      "content_hash": "704a095b377a6151b4432e504ad0ee7c2642ae300749920f92f903ed5b40b80e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12031",
+      "revision": 2,
+      "content_hash": "904f208212da397c067e4ba0bd705fadff0c1ca182b333251a4577c54e551594",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-12032",
+      "revision": 2,
+      "content_hash": "31a124519a50f0e980385a68a8520c7e7563c137eb8065cb3ddf8f5e393ad025",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-14017",
+      "revision": 2,
+      "content_hash": "6ef7197f02bf794c089350ecf4b698df5fbd9853c8a357edfc2c565e56c87c08",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15001",
+      "revision": 2,
+      "content_hash": "49d8a0727b43b7da58d7423c148dc5752cc251503c3902ab44e42e9fa9231f93",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15006",
+      "revision": 2,
+      "content_hash": "ea913cfdaea73ec0808f4d3c29029dc3be7e8edb92a6c34bcbb4f99d361a438f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15008",
+      "revision": 2,
+      "content_hash": "97caeed97bbc8b8d104d5bf0a77fc62f1cee3eb252acb0f33473179f074f7ea8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15009",
+      "revision": 2,
+      "content_hash": "5bcc6c0cb2042d83a803f90d0d79a8606b8d0e49d92728c318cbe2bb026da571",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15010",
+      "revision": 2,
+      "content_hash": "e45992ab7d3c999dd23e0f427ee1ea78b5520edb7f70ab1e0b94a00212010c76",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15011",
+      "revision": 2,
+      "content_hash": "33a92d7591fa6b9c01df22f64496fdc987ca058b135547744b7413fce6f8fe7a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15012",
+      "revision": 2,
+      "content_hash": "2d2abc37b529115729f1da28fead349e144bc72c597e9d37b4d71007beab4312",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-15013",
+      "revision": 2,
+      "content_hash": "114963bb92b8f0a46c632b58ab62a7596bcb7840d124bbeb13ce1baeadbb730f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19047",
+      "revision": 2,
+      "content_hash": "d3ce655d3ecf5b085136aa0b68cd92642edd16fec6a5c321e1da6a016a89a607",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19048",
+      "revision": 2,
+      "content_hash": "852d379e5744d12860bc8f4e61f134fb2079d65b7b8397eb39b9a9bff118b48a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19049",
+      "revision": 2,
+      "content_hash": "47b9a128230a016efa2ba0681f3da4feb51aee92719e3027674ae7453a762829",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19054",
+      "revision": 2,
+      "content_hash": "e22f8b6b0eb09d8c7d2294f94e4f081bcd7b7e1e72bd380d421a36a0ed4cf7c5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19055",
+      "revision": 2,
+      "content_hash": "97fb9e011eaa98931452e5f57f9438b4e0ccc286451c5933b2e597e639fcad73",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19056",
+      "revision": 2,
+      "content_hash": "e05711bf99653f8fe0c4a68639c4169b9f44227855329fcd66e1a2bfd179f11a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19057",
+      "revision": 2,
+      "content_hash": "fe1fdf7b306e8962c474a58a371572a8cf603714034f06a376708ed5a5657194",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19058",
+      "revision": 2,
+      "content_hash": "4ba5560429967cce693a8a6f9f254e3a3804dc7c973d9797bfd2d5f71c6d7d92",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19059",
+      "revision": 2,
+      "content_hash": "604a2cd9d657b8b9d3c95d6d1383a733ec5f3b79c55102b02fd1b957d71bb4a9",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19060",
+      "revision": 2,
+      "content_hash": "767c269b460d6eff203910db95106e12d7593d2eee692774602c022ed6e51ad2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19061",
+      "revision": 2,
+      "content_hash": "4b4e067c9c0e770220d67ecbb4de034e77672e24edc8ca29e6b6c0c925d40cd6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19062",
+      "revision": 2,
+      "content_hash": "c5fb998178ce6571d96940badc3f99e6ab3c7577578a3a1c81d9890b1cd12f13",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19063",
+      "revision": 2,
+      "content_hash": "59a6c83daaa1a2e052cbd2a26c040160f050e2929638114ebe5f2aede3d5409b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19064",
+      "revision": 2,
+      "content_hash": "92c65849a8c7e675e7bc3ba615303a71e5fac4a1e2a5ae49519c73170b03b769",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19065",
+      "revision": 2,
+      "content_hash": "cb34d03fbe37cf666c3be9e22dabde2dffc206fb332b90d5ff7e000eb948fa72",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19066",
+      "revision": 2,
+      "content_hash": "6d200cf44bfcb705f29392d0cfc6aca195e23fb482200147fabd31f40e7e2074",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19067",
+      "revision": 2,
+      "content_hash": "dd3632ade2501e060a46184ba958e53f1962ec516726bf8d75bdbba2c6ebea3a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19068",
+      "revision": 2,
+      "content_hash": "dd73465cb57dd737e09a01fadb0518be1b9694305c9b24b6465d29cb94cd1c46",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19069",
+      "revision": 2,
+      "content_hash": "c5e19b35b7f97f109b53cf7aefde656407fe0ae991ec6a93caaa492370c8d370",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19070",
+      "revision": 2,
+      "content_hash": "1a90ed60f92dd047f762015dfb367f47a5740a47756d90f57593dbd04022a584",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19071",
+      "revision": 2,
+      "content_hash": "fd8bb3b232e368837d0d7e37f7c781b8a97b536773edce0b35a01909c1c88936",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-19084",
+      "revision": 2,
+      "content_hash": "a78071dcb45d34e9e028419fcb01cfe8918720528c50c1d2fab642a05cb9c5fa",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-20001",
+      "revision": 2,
+      "content_hash": "b92f26c38cc965c80ac77ab51f06c39368c479aa199eec2378018948b04a2df2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-20009",
+      "revision": 2,
+      "content_hash": "0912f4c6edaa5d1331f169abc843ee7d6b07e2db388667e76a932a9f4dcb4cf0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-20012",
+      "revision": 2,
+      "content_hash": "1575750e5815c317cb07ad4c608b59b992cd3ff7589244e2e5fdf8b0cbd50916",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-20034",
+      "revision": 2,
+      "content_hash": "00a8efc87361eaba7494fbe774c2e065268a3936cf98491a4d6d868a4eae445c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-22003",
+      "revision": 2,
+      "content_hash": "5ad455a323f9bf889323b9287472473749b22cda7541a3900bbc3e400916a2a4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-22011",
+      "revision": 2,
+      "content_hash": "1b6c95d144d4ec0d054bc917e53b5f711b0c1b509690d2256a0727041cc409a2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-22012",
+      "revision": 2,
+      "content_hash": "c5ce97029baacdf0d62ea68f96cfdcd9ed392aa9bb2dcbab50fc88393856fde2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-22013",
+      "revision": 2,
+      "content_hash": "cb64cb8ad8803340f2345ae31c5e4fb22d98f14ae4c580602c3e8a7eb7976347",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23001",
+      "revision": 2,
+      "content_hash": "bc6e232c317291a0a55b0840d65d53597997898bbc0a5b3ec13fd2abf14c44e3",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23002",
+      "revision": 2,
+      "content_hash": "ad9a999fe61ec63692ba64562d7e7140e009597f20b585756a7d893fe6015b17",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23003",
+      "revision": 2,
+      "content_hash": "97b9a5d2b2c4bcb1775df510ea8548f741d310f8c81f76a757c12c5350363c86",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23004",
+      "revision": 2,
+      "content_hash": "691772e51289dc6b3bf47e48ce5bdd57c06783c64e145575927e8d0b206c1e89",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23005",
+      "revision": 2,
+      "content_hash": "bd6198cc2f25777615ff735ddd1bfbfb2fa41c3e704f37c5c9b3a953622cc5bd",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23006",
+      "revision": 2,
+      "content_hash": "d2f0d67512f75f3a9ffaefb5683fa7f45f8b053641899eefb3e095d481990ca0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23007",
+      "revision": 2,
+      "content_hash": "76a2dcdc93dcd1a45ad7e0c475bb6209799a2eb9929cbf8c6b174b60d130f9a8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23008",
+      "revision": 2,
+      "content_hash": "c2885e1d85ab21b07a0c3f3e3d16ccf29bfa62b767f37713f3ae08e081dc76a0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23009",
+      "revision": 2,
+      "content_hash": "8caeafefe00260aa85c9e1dca270dfb8711c6b16f0e2d05dfe0d4881df0fd77c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23010",
+      "revision": 2,
+      "content_hash": "417f8c216d2209fa862be7a1c38af0d836ccec8a06a8bdf62d9216f36aa73239",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23011",
+      "revision": 2,
+      "content_hash": "3ee95820c811a3b391041fc57a4daaf6247ba394ef75a48fb299c929bc12d8a4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23012",
+      "revision": 2,
+      "content_hash": "8e4795496131a0c4e957a1c3c25b9f19700ad7dd42474d06c27c7bcc597897c9",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23013",
+      "revision": 2,
+      "content_hash": "d0dfd41eaf51c725c9f50adf9cc41a69d691a1a5c26d672517c01f93aef5739b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23014",
+      "revision": 2,
+      "content_hash": "b4a5cadb258334abe2258f4d08829bd95d7642a203818fc0baa51b65027be5c6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23015",
+      "revision": 2,
+      "content_hash": "a4030405040b8730e13edb664d12227da9c5c7c3514a7cedad816cee5437a34a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23016",
+      "revision": 2,
+      "content_hash": "942a4becfa8efd33f7f7877d960104abdfcd507c08101631988599c19fe6ecd1",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-23017",
+      "revision": 2,
+      "content_hash": "600d887da23f210640bcd669336cc851a7888ab87002cf417e198ae1c42d7710",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24001",
+      "revision": 2,
+      "content_hash": "1da47c70e5e4c7fb07b67a72c2b98c5f4c955f1b20159aad19a9f91b85efa69d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24002",
+      "revision": 2,
+      "content_hash": "fc6cbf75232a412452b176deafa952095943e3cfb4af18616afbad032cd4f1fe",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24003",
+      "revision": 2,
+      "content_hash": "867e42c3a62230f3b12ddc3c106bfaa3a0fadd4eeeb658f853c45e25e2cf3eeb",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24004",
+      "revision": 2,
+      "content_hash": "f0d5f44473eb5045372d02b8886ffa2ac62738b4c7296c7cc6d90bd0b40432d7",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24005",
+      "revision": 2,
+      "content_hash": "0f39db2265de406fde36ffdf8243a00be3d295b96b208ec7026f69491a72f1d5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24006",
+      "revision": 2,
+      "content_hash": "9e3d08a7107a01b199b95265e54dfb72261aa5b69cf8ad1af17451b6a4604fce",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-SXID-24007",
+      "revision": 2,
+      "content_hash": "f6330376e3562332e6dfc9fc806e57a49854927e1477dc465dc189af4ceaad37",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-1",
+      "revision": 2,
+      "content_hash": "7fea6d365f6cb3d17d3aaefe60dd525fb0ecf8ed9070270397fceb4b9cc28a58",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-10",
+      "revision": 2,
+      "content_hash": "e47bdaa58b8d35a6c657029e8fedfe1f73e127f71ce0987ab2f22f9292845f7d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-100",
+      "revision": 2,
+      "content_hash": "c00b3ca101c8795d105260cb90d81676512bed361eab17b9a31c8cb74c92875d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-101",
+      "revision": 2,
+      "content_hash": "3fd4212fc7d4b8c572127a2b329fac9fb629a926a498cee1a3264fa185e94fb5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-102",
+      "revision": 2,
+      "content_hash": "e115febc4da6305c81fa2230c3c5e9d5a2cfe1f09a2cd050d40b8dbfd71fb5cb",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-103",
+      "revision": 2,
+      "content_hash": "85b486495b75aa86d2be79677567537ef233762a3b742a90449c66b09f4e6c44",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-104",
+      "revision": 2,
+      "content_hash": "0932cd9a7316c703d019a4812ec6a875f21c9c2c6d76a93eacace1397ebb257c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-105",
+      "revision": 2,
+      "content_hash": "24aad83950a2991f5c08dc5bcd2f9bb1fb0a3f2c955d69306c16621b52b4b18d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-106",
+      "revision": 2,
+      "content_hash": "00e30d9ceed9bf7794f7439e3c02057cc3ab07e4028bf4ba937aa59234897835",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-107",
+      "revision": 2,
+      "content_hash": "54b81d52a47df826415def32440fff36c5a56b9baf96e5ec2cafbabc4c17d6e2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-108",
+      "revision": 2,
+      "content_hash": "b3e9ad41413785ce29e140a41f87ef2aa16f3b5e7ed7d36cf5cd72e4a32d1c88",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-109",
+      "revision": 2,
+      "content_hash": "c38445b8cae88878e7a78ccf4730d95bf8ecc7351d9507c0d9f99b7042472d4b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-11",
+      "revision": 2,
+      "content_hash": "1570044c0fa2cb7653249404efaf616eb54a027ab4a979b10b942be27114f2b4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-110",
+      "revision": 2,
+      "content_hash": "c4585db74799cfa20decb44d5906a18f9e5a59a6fc0bb41fd0e87c2d7c2fecdd",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-111",
+      "revision": 2,
+      "content_hash": "a9b72c6a2bfd9a7c0a341890b15f564d1b3f210d6361b7879c902f1bf39f6c1a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-112",
+      "revision": 2,
+      "content_hash": "31215e337fa175e32fb5c8637240938074c868dd8ce99bf210cb5648c5854e39",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-113",
+      "revision": 2,
+      "content_hash": "a28c6ee7b6535b5350b49ec0b7636cd3c1ffa72ea37c38d7df94431bb7754fbf",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-114",
+      "revision": 2,
+      "content_hash": "a75b01c16dbecfd75625893e3a38b3423121004690a4f4b4e2f2dc7b9f4adaf3",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-115",
+      "revision": 2,
+      "content_hash": "f69253ab6a896e20b9a2a11ecdacf00c13f96c5f4913e47ef2c32a89c842f240",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-116",
+      "revision": 2,
+      "content_hash": "59c2190f13342a649d2abef3b33c82500afe970ee396dfe12928b0292fb4f1ea",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-117",
+      "revision": 2,
+      "content_hash": "6bf18e5aa6098719ac2e4f2bd7b3a8784e5922c05a0c30f059aff8f561a98b31",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-118",
+      "revision": 2,
+      "content_hash": "0137bba7661929d2f21db365ef26c159d6d233e77e9b0d0255b0bd5016cd50d8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-119",
+      "revision": 2,
+      "content_hash": "d2f5cd0a98b27586be7b77d24671495187dd4a12096be12eb1798a58bfdc234c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-12",
+      "revision": 2,
+      "content_hash": "b8e34ad1612244ac5ec9230990f011dfc32ef74a942d5851c675f632d47404c6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-120",
+      "revision": 2,
+      "content_hash": "07472390cdd19b313110989bb8a321a0420ed9a87ac4ce2be63c096a8353226b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-121",
+      "revision": 2,
+      "content_hash": "7ca50f6d13073b84964953a17c85cebee48575899d96939aa4fc88fee2409da6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-122",
+      "revision": 2,
+      "content_hash": "69f5bc8b9aa09595f930164193b753a81a9212ade0e97c24841a79c870d4e988",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-123",
+      "revision": 2,
+      "content_hash": "c5817dc0e05fa8bc2031bddbbb0c657c69ad05ee7c55b14b48d01f45f256207b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-124",
+      "revision": 2,
+      "content_hash": "7bde7495facca6e84be55653db6d79e958238f7f41cca67096980495883d7244",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-125",
+      "revision": 2,
+      "content_hash": "7e09556f10e32df5e5e53470b5eb73c06dd3a090840b8518aa99f51e5401ccd8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-126",
+      "revision": 2,
+      "content_hash": "7910fd6c4be2ed216670a3dae6d0d342b7fbedf263453dd75768cba8f4b0d4e7",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-127",
+      "revision": 2,
+      "content_hash": "c2bba5737fd643ae52b37534151f7593040354636fe1f6f7f53d05a07848397e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-128",
+      "revision": 2,
+      "content_hash": "184daaa959992341fbdf9b9d6f13a62dcf2e913390cde83a838cbe22808d6d7a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-129",
+      "revision": 2,
+      "content_hash": "9dfa656becf6bc6610cfca4ebec38a35aa5f25d0eb07121050046136dfa19f21",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-13",
+      "revision": 2,
+      "content_hash": "eb7ad5574edd83df09ea38203f2b9137ee6bc8182abb9550732727dc9e6f6e46",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-130",
+      "revision": 2,
+      "content_hash": "1dde7ec14ca76e6c4befea17fc6597bef57f63ec7580ef3440a681864360a372",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-131",
+      "revision": 2,
+      "content_hash": "6c8e40a15a9e17d1fbcf972c7767e729863870b4526c16ba223ef95737755ae4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-132",
+      "revision": 2,
+      "content_hash": "9173cb84358a1a63fee3df0500808a2196195398146c1d5dc6a6a7f56852d386",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-133",
+      "revision": 2,
+      "content_hash": "8841abaf4741c3fd8ea34633cf662a0a993416554a53a8b17dfba44e277d018e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-134",
+      "revision": 2,
+      "content_hash": "c45b022b104d0c8e5890ffeeab40ecef9eaa88b2545755d4c31e6989a6d39be2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-135",
+      "revision": 2,
+      "content_hash": "f7441c6d24eecc8e4bf4e0d124773772ce5efd2fb78166f79e3bafea2d3edf62",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-136",
+      "revision": 2,
+      "content_hash": "f11dda8bb141cac20e473265c61b2ba24ceab9bf821c3b72b22217120c8e09d5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-137",
+      "revision": 2,
+      "content_hash": "e484ef199d18e58cf3dba4871b7c139d7c91acd7ce4519f0bbded2e40ba6ef99",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-138",
+      "revision": 2,
+      "content_hash": "4b8a28aeaa78c5c92defa1bc62889fe190b5c5df7e01b2664b5669e450f90f21",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-139",
+      "revision": 2,
+      "content_hash": "ba2de00de5c8c5cc752114a09009492a7d5e93a5706195d01bec3e704964ea56",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-14",
+      "revision": 2,
+      "content_hash": "b15c182079bc87cc2f962960a3c2c402f81e9104f922191b7b82ddf7881fb5e6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-140",
+      "revision": 2,
+      "content_hash": "12a9f04e1364f8f206958ce378c85cf976a683b80132a63dda277dd2a51e767d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-141",
+      "revision": 2,
+      "content_hash": "78200db6ea7508bc55179c44314c674cc7b10ecffbe139a9d6fb4cb6f0e24407",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-142",
+      "revision": 2,
+      "content_hash": "57c5c2d7327e4bac87ad238a0b6481fa5d1d755ea9250884f3dd89da34cca36a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-143",
+      "revision": 2,
+      "content_hash": "9661dad720b69d940a43f3d033739ea066df299e1f2500eed964b578e930c1ab",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-144",
+      "revision": 2,
+      "content_hash": "f0e86c546e10ada466e4f58973f7bf3e19a063162f3925b2a14e8dfe8d1ee43f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-145",
+      "revision": 2,
+      "content_hash": "a18ab738eebabce64b5087c5c73485e591ed8ffdcf08a07d313150a7e9b7a2f3",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-146",
+      "revision": 2,
+      "content_hash": "553949d30dbd0843e6b04bb58b98fa6488020f1bd4d27ceacbda206cbc88edd8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-147",
+      "revision": 2,
+      "content_hash": "2efa1039b1f6b01fc4348aa2a013011030384b101adf07c22b4bf10292ad306b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-148",
+      "revision": 2,
+      "content_hash": "b25a33e453a0b1df3d97ae836c5c6c19701e462b9527c9acbd1687e8484dd043",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-149",
+      "revision": 2,
+      "content_hash": "efcd9fdfc7f2cb69c2b083bf46d154be0cb569c366defb381eba29add4c0d9a9",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-15",
+      "revision": 2,
+      "content_hash": "9bea91ee198e45dd9bba77fc1184adc913177ef4382a29acd3b5616959d69600",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-150",
+      "revision": 2,
+      "content_hash": "15c713e11caf0c613cf5c4f5f2a9ac771e91b9f81796a7037617937b34074d27",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-151",
+      "revision": 2,
+      "content_hash": "7d46257c182e2300fc5aebf7c61bcd0cb200fa94ab0f4b781aa67316cfb2458a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-152",
+      "revision": 2,
+      "content_hash": "4e9286410b8dbe9afdee422eccbd8ab7c42ab388e7d387a365b9d7166f7aa84d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-153",
+      "revision": 2,
+      "content_hash": "46f578de0e42d5ce93f021f39751bbd579e849f5925c849e7d5da86e64e1a5df",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-154",
+      "revision": 2,
+      "content_hash": "1b965b18a1afaac8d7c8ac6d9118f5492561cb978fa4afbf8d3b709a651df139",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-155",
+      "revision": 2,
+      "content_hash": "38e68350d2e1a2dafbe54968460d35b6403b641d45b9564fdff65aa969585e0b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-156",
+      "revision": 2,
+      "content_hash": "d38acbe232b5adab036e374b8d13fc1a22ad7b7366cbc23257371be216ab5a15",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-157",
+      "revision": 2,
+      "content_hash": "07c41f5a9da60444981d2a107f9a7a9cb6233cd9b87fd684e00edb00843f1318",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-158",
+      "revision": 2,
+      "content_hash": "d6f1c03898f52a1984fef496ee8cea4668d8a0644e574e3a8e2b0ab5df9f6ea3",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-159",
+      "revision": 2,
+      "content_hash": "eb2c57f05cd341c33470182a6263b0f5a1bf26c287bcee07648d9453c6e8597d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-16",
+      "revision": 2,
+      "content_hash": "e3442cfa4177df09039178e4e56d7c6b2300c1e2862fa6e20ab239b45f4d746d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-160",
+      "revision": 2,
+      "content_hash": "f640159ae2a7737858f39a760a4cc84cd7cbecc29bbb109b00efd3220b68b994",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-161",
+      "revision": 2,
+      "content_hash": "872d90f338f026ed62b0b409bfb07668a301479a5bffce0c03cf5d454ca6ab8a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-162",
+      "revision": 2,
+      "content_hash": "245ab949bfde704ce986d12ac2d5be6241826e1bbf5601540f07068c8d79c62f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-163",
+      "revision": 2,
+      "content_hash": "3845d5be4e755a614e2f592581972531bf54d0911353b0eb72e291d31b0bf06c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-164",
+      "revision": 2,
+      "content_hash": "f0e0581bcf0d4dd5d6d54074d3cdbb90d2047d48a7d35aeac0a6f864f45d9648",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-165",
+      "revision": 2,
+      "content_hash": "968c373379fc4c1d32d77e9b693de58e87a5037a71414fb8c562ce8b0d96f7cb",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-166",
+      "revision": 2,
+      "content_hash": "aaf63426fa1ae9a46a7befd88b167271b6ffb58b5a5954e4fb425abb6bd61fdf",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-167",
+      "revision": 2,
+      "content_hash": "e18ac5993ccdf54f1a4d19f99b76bff9c09113c9212d6911b9e25cc19f3db3c6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-168",
+      "revision": 2,
+      "content_hash": "400a92e4eb52a6bdda2f741ebfffd32a42a759365ed379ca6333bbfb2a724b0b",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-169",
+      "revision": 2,
+      "content_hash": "f4dcc924310a5fc2487adb5920474df92778934e001a394f59c207f2bd07be64",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-17",
+      "revision": 2,
+      "content_hash": "bb0d7a25415d0db87091af419f74e1f8caed1e5147c060d9a4e7f669d78d9312",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-170",
+      "revision": 2,
+      "content_hash": "c83c1ee190daefbe67eb9812fe24637ae0cecd019307fd25ce4ef8be6ccc7c44",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-171",
+      "revision": 2,
+      "content_hash": "5981384bc82e29584e4f71789229d5bf704c534a96134e2deb8a9338342a98dd",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-172",
+      "revision": 2,
+      "content_hash": "bf4b18642556f1cef95d86ae0b6d2551f478f0a674e95930fddfa7b45b94ae40",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-173",
+      "revision": 2,
+      "content_hash": "dcf88c4008707bd5c0dea6ac106a6d68ccec04a4f783e13993140221c64fb512",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-18",
+      "revision": 2,
+      "content_hash": "49821e522514535f7b00864bad69df875ea451af1c97477c1483da2449dad6da",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-19",
+      "revision": 2,
+      "content_hash": "ffed630a349b18f6800d6a59fbe92053ba3579d214cfc14b473cdc45f7164ee6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-2",
+      "revision": 2,
+      "content_hash": "ae4e20961267138b57c002c2bac6462827bb0fa0490db9238fdda12d0498d03c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-20",
+      "revision": 2,
+      "content_hash": "423ee1619daa60d1e2448f85781faf36be2ae6ee8f2e69d9fc9d58ae0863d60c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-21",
+      "revision": 2,
+      "content_hash": "03bcae0155db91ed8e48797ceae9d3e6d04bb98c73c4d9f2db3c45d29e12a5fb",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-22",
+      "revision": 2,
+      "content_hash": "f78a9d869512bcaeb8c18e8c3f070e6c0aa9de2d3bed81cbb645b7860b8a773e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-23",
+      "revision": 2,
+      "content_hash": "bd33ce793689a98945f993773cd2e2841835c89ba40078ba90d8315387187de4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-24",
+      "revision": 2,
+      "content_hash": "518827dc22103ae18520205d1c428fa29e0ad9f177aba1fb118572deefa2e4a6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-25",
+      "revision": 2,
+      "content_hash": "89cc9eb387037ccbc631ced3986a06d9ce76102757c26aedd72752b838a21a68",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-26",
+      "revision": 2,
+      "content_hash": "ec1a24262fea33975c5ddec0201067599362bf22a81398a3db9be749495c0705",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-27",
+      "revision": 2,
+      "content_hash": "cd56ba4a4a7dfc4d3e9c15f038212c8618f1e09ee8db24adf4f29c299564bbe9",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-28",
+      "revision": 2,
+      "content_hash": "83bf7265594bfe37e5da36900ac12de45cfe04fe81cd1c29c0f3a4d706b9af47",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-29",
+      "revision": 2,
+      "content_hash": "65553537082a670a97eda2c391ef1dee58ad304876502bde2fb6e584b26b0805",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-3",
+      "revision": 2,
+      "content_hash": "bd060461fbfeccd578b7ace68a37d59b6f748ff6b5c02d05d3715de97642140e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-30",
+      "revision": 2,
+      "content_hash": "673be833a431235daf832f8c41a344f0f5065b7c7d70dc942635975ae4845d85",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-31",
+      "revision": 2,
+      "content_hash": "3c5a7e0b07c3b9719657123ec0375bfca111c35496f02b89f11b8a33ac874477",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-32",
+      "revision": 2,
+      "content_hash": "805de0a72150cc5eff53ab139fe9a2596e9bad7c1a391992b3fce342a5ae16a0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-33",
+      "revision": 2,
+      "content_hash": "0fdb21a7c2d9d31ff87315905a0c5d160c8706d51aec5eacc7f3870a5f5017cc",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-34",
+      "revision": 2,
+      "content_hash": "92873a575792e234e6395c4278cfdd0036de38b99c8bf0701f05d8f3e175fe63",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-35",
+      "revision": 2,
+      "content_hash": "ed4ccd7e9f4ecd75a88eab8e4a1756f3d558833e14a24c05cf1efffc3124e627",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-36",
+      "revision": 2,
+      "content_hash": "81a190b52b3d54391b2cb7d051ab9e3f0411417ddac7e2cf8a43176a08a7db52",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-37",
+      "revision": 2,
+      "content_hash": "b76e6e36c1d29f961316b2e4e0a9572653238987305149b723e3b66e3b490b1a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-38",
+      "revision": 2,
+      "content_hash": "de0341f5d47f928b2f9697ef2b63a657572602253497df26c6068b41beb2f8f6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-39",
+      "revision": 2,
+      "content_hash": "fe3550dc8e12b8a315ccf3d680e4c08ce5704752c0019a35561bceca346b0fb5",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-4",
+      "revision": 2,
+      "content_hash": "728c009e128a8545b7453274086d0e815cd2569ef6185de9bc9ea050de93dc53",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-40",
+      "revision": 2,
+      "content_hash": "8657168d96255c9c84392c8a0fabdb09806ae008ca284ad7399edf496acf5f10",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-41",
+      "revision": 2,
+      "content_hash": "6f2f318cc9656583f42d74fd7c276e0c5246dff9d1ec5edf1338e0c8d506840a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-42",
+      "revision": 2,
+      "content_hash": "50f60051fd5355ebf7ee51f1caea1bdf84cba7694502070291d4336c8734cc9d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-43",
+      "revision": 2,
+      "content_hash": "571839969ff6de32660410e2e890d950120f53d2b09fc07d8caa0d45844e04ac",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-44",
+      "revision": 2,
+      "content_hash": "497ecc62949daec91a6d356f38b630a8cfe38ae63d4feb22305385339c88fcb8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-45",
+      "revision": 2,
+      "content_hash": "3e34cd95a454633e4f1b0061304d298b30b808484a3c84d17b502262ce517be8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-46",
+      "revision": 2,
+      "content_hash": "58ea8fbb9f9a804edb49c7da515dab3088d29d55868760271db7e9dd99e3fde2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-47",
+      "revision": 2,
+      "content_hash": "356a9549f49c4b04589375087982b421cfcaa0bd3a6c82f0af5f6279bc02e02f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-48-63-64",
+      "revision": 2,
+      "content_hash": "bfa1dac06046a4bdcd49d2c9c4f003ad7058211b459bdaf6e558f9f83901d141",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-49",
+      "revision": 2,
+      "content_hash": "777ae918c41b9af70ba8a5012d1265e42337c2013d645e37b2051d5bb0f83a28",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-5",
+      "revision": 2,
+      "content_hash": "fb7dea5a17eb711131003320a1cb9e51e5193e5bdd95be5c42fe02fcee64de5e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-50",
+      "revision": 2,
+      "content_hash": "e346cb1c76dc8d417ac0d13f6559e108af35bd6c5c70be7f387bb4241045a379",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-51",
+      "revision": 2,
+      "content_hash": "c005d1bf9c3bd6ac770066cae402db15c6ff68187bc4862c5f69b589829da1b0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-52",
+      "revision": 2,
+      "content_hash": "0cf5e530a12de8f84e06a00b0384eece1c03473dee37ac9210e09979cebcd15e",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-53",
+      "revision": 2,
+      "content_hash": "78536e82345cde9ec7f1aa9da7ef4a9efed3711a147a0f30a32b6f170a9f6395",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-54",
+      "revision": 2,
+      "content_hash": "7cf6de8e3662a77ae2028d3af4ebf9aa5f408deb5b6cdcaa78302562dc38a4ee",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-55",
+      "revision": 2,
+      "content_hash": "ad239e32921a9ffbd3b4ddd28182a950ca26e7249d554321f7627ac7c7c6484d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-56",
+      "revision": 2,
+      "content_hash": "d4b5eadcac54e3827ff64d5409f7ec2224698295c1e7394d8f737dcacb79cf80",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-57",
+      "revision": 2,
+      "content_hash": "62f2f9f226644651e52145cf23ba1bbdb4c21fea5d00e771d1b64f0a4e209611",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-58",
+      "revision": 2,
+      "content_hash": "7f70551a2c95e6b85c7d438067ac3ac2a36f1110edde415e498f42df9d3c0546",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-59",
+      "revision": 2,
+      "content_hash": "1eaf74911762c5086a08e72fbe7d2500b33154d39189ad8b4eb5375c600a8449",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-6",
+      "revision": 2,
+      "content_hash": "f4d0185dff30911e99860dabecc9004cbf7e0a623b9822f043776bd74d9d9b32",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-60",
+      "revision": 2,
+      "content_hash": "9ac90d4436224d435673314237938d37c759dd31fcd90355b99861c3a08da462",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-61",
+      "revision": 2,
+      "content_hash": "a9aad6704d334534570d5d54abdd70b1b7a2be71b88f8a343903b9f41a443be0",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-62",
+      "revision": 2,
+      "content_hash": "38a77c5f5d2fc8f1fe54d491df0656cf068dec7ea8da09b392f4d1091ab21b59",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-63",
+      "revision": 2,
+      "content_hash": "a44d3d21e65c465101e5ca6426debea2d3f893704dc72760bcd2e3d3827bfd36",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-64",
+      "revision": 2,
+      "content_hash": "369d8af1d3bee4ae8fda62f1324c4bf112b99ae1096cb65f8f54f20d6616aa3c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-65",
+      "revision": 2,
+      "content_hash": "b4b15a06f9b9581aaa1c7c6cbab37919a78a7d50138b03f8d2091e82cd36e5fa",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-66",
+      "revision": 2,
+      "content_hash": "e40a8d322e7474cbfccfeb7855f6424d4068a31a2fe61d740802000aec18058c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-67",
+      "revision": 2,
+      "content_hash": "7a5856d6958d86988cb62849e77e622177bd41ae17702343889640c8a6bc6210",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-68",
+      "revision": 2,
+      "content_hash": "23fda6446c4e6f623ca77f66006d6e5894e9e607bdad3bbcfd3683d4180feb90",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-69",
+      "revision": 2,
+      "content_hash": "c66a65fb9130e54f246fdd67130f89a69abe69c8d72248bcc438a8c71880c995",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-7",
+      "revision": 2,
+      "content_hash": "e5c6e7402178a2cba9923c9af5bb35b9df7a0b4e2f5be1d90eb8d8ba25ae7047",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-70",
+      "revision": 2,
+      "content_hash": "02ca6360d3d7c4c29ed49236b0e469c7c47fdc8a464c224d245a3081f279106f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-71",
+      "revision": 2,
+      "content_hash": "3b19c5cd4180564a0da3baa23818155fc6ff6b71a409a8ba86212ea27ff5eb31",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-72",
+      "revision": 2,
+      "content_hash": "50530a734d45284269a71d5b62a0a8518e62d1c8fd963f7fdd3dc627a6e6ae7a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-73",
+      "revision": 2,
+      "content_hash": "f9a4357b818b2783793e2457b1a394085b3f51a11f58a549a14218f4895c4d82",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-74",
+      "revision": 2,
+      "content_hash": "bbe458cf623ea76a2b6e9ef62eed5c80242f237c0ff2a69584e880f2de4ca5c9",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-75",
+      "revision": 2,
+      "content_hash": "aa8f5f50033dd04460d10c7fcabb1482c3117a6930f859232b49c4abe66cb11c",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-76",
+      "revision": 2,
+      "content_hash": "b4b0fc2d3d3cf8cc44360437a6383a5baefb6d188ece5e5ba540f20547dd9d69",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-77",
+      "revision": 2,
+      "content_hash": "6c583cff04869f11302713f02fd40af4cc275d4977c306faa4db17cf26140529",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-78",
+      "revision": 2,
+      "content_hash": "b402e1b5199ca9cbb99dbf40148358b69c2d692b73d20b32fc44a33dbc9ff5a1",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-79",
+      "revision": 3,
+      "content_hash": "a61944fed8157d42e8df403972df6e39de68ae4afb99ca8f58f712f71246798f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-8",
+      "revision": 2,
+      "content_hash": "d2b775833e9b10ee646a8d139c40db84fc364e77f57e39c33686b434ca511aa2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-80",
+      "revision": 2,
+      "content_hash": "58d704d829af4ce13773137d0db473740b9acf04f16c586ed293caca55a7b13d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-81",
+      "revision": 2,
+      "content_hash": "da66d374e69a9a83b89e22f28e38fc079dcadb27545d1c278b9bc49605659753",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-82",
+      "revision": 2,
+      "content_hash": "3636ba50e6a65accabe0fe9e05e40eaa83e8b6e9ad2b137ade325417d3ed0e76",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-83",
+      "revision": 2,
+      "content_hash": "f17499a7fcb7e9f8765b96eb21415926c8565eee22bfe843ba1827f0c3a29ea2",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-84",
+      "revision": 2,
+      "content_hash": "5d91f2f75f181ed9ca51f8a05033b147932553901590f6397b2385fba3af2343",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-85",
+      "revision": 2,
+      "content_hash": "98970e18c2f61aa884cc9e79a17849ab70a1a594179b5d0c51b0277cf0c440dc",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-86",
+      "revision": 2,
+      "content_hash": "ef92e0ec586a8a4a0d3f768ef79cb2551f4555c9637bb58eda7893b5d0ffbff6",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-87",
+      "revision": 2,
+      "content_hash": "f9abc97aaf1c51410e7b2f35d9d296ab5b4a91dbdfeb293e46ab808c19f18279",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-88",
+      "revision": 2,
+      "content_hash": "9f8d9498bf5f6fe3d8e4e936ddc688c360e2b504a28235cd6800082c8036f93d",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-89",
+      "revision": 2,
+      "content_hash": "49e9af737d6e9d931563c5ef3f037e2670299d7db9c335a901c5a693f2869174",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-9",
+      "revision": 2,
+      "content_hash": "b6f25f8a928b0cad3db8ec8f8f921d03e64527d8062afb9a4a3c91da818beaf8",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-90",
+      "revision": 2,
+      "content_hash": "2252cbfa22c6d8f97b71fc68589ee00fed92e2714792b545d8002af16293b16f",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-91",
+      "revision": 2,
+      "content_hash": "e50332530f3e1dd8ed2d02828ce3efc0f3ee00be59ff4e9fb24eae8277eaecaf",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-92",
+      "revision": 2,
+      "content_hash": "ad7386d33fb814c2a0744470a84bf77368967b69177a71bb6305bf5d558bbcbe",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-93",
+      "revision": 2,
+      "content_hash": "5d9678d6cb5c2c55a3eb9a1676fc925592cfadf4ed1a60ece3a61e6c0204f943",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-94",
+      "revision": 2,
+      "content_hash": "0b854a27461d5dad7c3dd6648b8928e000da951c9748ad4f653985921b27a484",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-95",
+      "revision": 2,
+      "content_hash": "fa0e0d36a7289541ce40598a7028b9e22168512402d8eea380ad63e9ff7e91b4",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-96",
+      "revision": 2,
+      "content_hash": "c9785e8b4a09ff68cbe0a1ab3d54aae2f13592cad83d8fc59fb83c28bf5eb885",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-97",
+      "revision": 2,
+      "content_hash": "dc86bccf50e8969b3cf78f162e0149d6e20069d1b77b70ea2a85e547b58dcc5a",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-98",
+      "revision": 2,
+      "content_hash": "1854f53dcf5df4f4cba6238846154c858544bb8cf1ed70d12b42aab4305a8bfc",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    },
+    {
+      "knowledge_key": "RB-XID-99",
+      "revision": 2,
+      "content_hash": "d55b2db27b83030219f221b2dd7ed6afd1d5df4899c1baa044d04eff0a883cb3",
+      "runtime_contract": "passed",
+      "missing_facts": "pending",
+      "source_matches": true
+    }
+  ]
+}
