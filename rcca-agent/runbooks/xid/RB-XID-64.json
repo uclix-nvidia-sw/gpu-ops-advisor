@@ -66,7 +66,8 @@
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "현재 D09/D02 계획은 remapping 실패의 장치별 원문·상태와 reset 가능 범위를 모두 제공하지 않는다. 추가 근거가 없으면 상세 원인과 reset 적격성은 미확정이다."
     ],
     "title": "XID 64 ECC·메모리 조사",
     "description": "XID 64: GPU memory remapping failure.",

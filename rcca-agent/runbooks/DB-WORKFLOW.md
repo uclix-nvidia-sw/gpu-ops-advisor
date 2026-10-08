@@ -1,6 +1,26 @@
 # XID·SXID Runbook 작성과 Knowledge DB 등록
 
-> 2026-10-02 후속 설계: 이 폴더의 JSON은 추후 DB에 등록할 작성 원본이다. D 통합·확장에 따른 원본 수정, 오류 코드 없는 조사, DB 초안 등록·검토·발행의 순서는 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑)과 [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md)을 따른다. 현재 JSON과 아래 실행 절차는 아직 변경하지 않았으며, 신규 D가 구현·검증된 것으로 읽지 않는다.
+> 2026-10-08 검토: 이 폴더는 DB 발행본과 별개인 작성 원본이다. 현재 원본의 D05 참조 제거와 구조 검사 통과는 오류별 내용 적합성이나 운영 발행 완료를 뜻하지 않는다. D 통합·확장 기준은 [D 매핑 설계 §7](../../docs/specs/common/d-query-mapping.md#7-rca-runbook의-통합확장-매핑)과 [개발 계획](../../docs/specs/common/d-contract-redesign-plan.md)을 따른다.
+
+## D05 전환 후 내용 검토와 새 revision 순서
+
+운영 DB 작업이 보류된 동안에는 아래 오프라인 검토만 수행한다. 기존 발행 revision과 과거 결과는 수정하지 않는다.
+
+```sh
+python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.example.json --authoring --review-manifest rcca-agent/runbooks/catalog-manifest.json
+```
+
+종료 코드 0은 구조 검사 통과만 뜻한다. `review.findings`는 별도 검토 항목이며 `operational_approval=not_assessed`는 그대로 유지한다. 카탈로그 분류는 저장된 문헌 검토 정보로, 최신 문헌 재검증 결과가 아니다.
+
+1. 각 오류의 의미·적용 제품·드라이버/생산자 버전과 출처 충돌을 확인한다. `documented`도 운영 검증 완료는 아니다. Unused/구세대·정의 충돌·소스만 존재하는 코드는 현재 장비에 적용할 수 있는지 먼저 검토한다.
+2. 오류별 필수 증거를 현재 D의 조회 범위와 대조한다. D09의 fact 이름 허용은 실제 fact 생성 보장이 아니다. Fleet 관측 시각, 대상, 코드와 상태 의미가 검증되지 않으면 미확정으로 남긴다. D02 사용률과 D03 메모리 사용량으로 접근 회복·ECC 정상 여부를 대체하지 않는다.
+3. XID 79는 PCIe/AER 원문의 별도 수집 여부, XID 48·63·64는 동일 GPU·시간의 동반 오류와 ECC/row-remap 정보, SXID 11001은 switch/port·access/trunk·partition 관계를 검토한다. 현재 기본 D09/D02 계획만으로 이 자료가 모두 충족된다고 승인하지 않는다. 부족한 자료는 수집/해석 연결을 구현하거나 명시적인 미확정 조건으로 남긴다.
+4. 대표 오류의 정상·자료 누락·다른 대상·오래된 표본·합성 오류 사례를 검증한 뒤 같은 증거 유형의 나머지 원본을 검토한다. 코드별 검토 기록 없이 267건을 일괄 승인하지 않는다.
+5. DB 작업 재개 합의 후 기존 knowledge ID에 새 draft revision을 등록한다. 실제 생성된 revision 번호를 사용한다. 내용 해시와 compatibility를 검토하고 승인된 항목만 발행한 뒤 JC 고정 revision, Runbook 매칭, 실제 조회와 최종 결과를 확인한다. 구 revision의 retire는 검증 후 별도로 판단한다.
+
+현재 오프라인 검토는 자동 발행 도구가 아니며, 이 절차는 운영 DB 변경 권한을 부여하지 않는다.
+
+2026-10-08 로컬 원본 전수 점검: 267건 모두 구조 통과, compatibility 미설정, Fleet 관측 시각 검증 미완료로 확인했다. 저장된 manifest는 문헌 정의 187건·Unused/구세대 63건·정의 충돌 13건·소스만 확인 3건이며 일반 조사 1건은 오류 코드 manifest 대상이 아니다. 이는 267건의 오류별 문헌·실환경 검수가 끝났다는 뜻이 아니다. 후속 검토에서는 9개 원본의 조사 한계와 선택 조회 계획을 보강했다. DB 재개 후 새 초안 9건을 등록했으며 승인·발행은 수행하지 않았다. 대상과 검증 범위는 [검토 기록](REVIEW-20261008.md)을 따른다.
 
 2026-09-28. 다른 PC에서 대화 기록 없이 이어가기 위한 문서다. **XID 173건·SXID 93건과 일반 1건, 총 267건이며 [전체 코드 목록](CATALOG.md)을 따른다.** 기존 Backend API로 초안을 등록하고 검토·발행한다. 문헌 미정의·출처 차이는 개별 항목에 보존했다. 운영 적용에는 환경별 parser/query/compatibility 검증이 필요하다.
 
@@ -47,12 +67,12 @@ XID 79는 PCIe·장치·드라이버 후보를 구분할 근거를 요청한다.
 | 단계 | 현재 코드 | 추가로 필요한 연결 |
 |---|---|---|
 | 코드 검색 | `xid:N`/`sxid:N` 분리, component·reason 단서; Backend `code` 필터도 `search.codes` 검색 | 실제 Fleet 버전의 parser·상태 평가 경로 대조 |
-| 수집 계획 | D09 원본 로그, D05 상태, D02 선택 사용률 | PCIe/AER·ECC·FM 포트·토폴로지 등 실제 producer/query binding |
+| 수집 계획 | D09 로그와 검증 조건부 상태 fact, D02 및 오류별 선택 D 조회. D05는 현재 공통 설정에서 미등록 | PCIe/AER·ECC·FM 포트·토폴로지 등 실제 producer/query binding |
 | 조건 평가 | 등록 문자열 fact의 `field/equals`, 정확한 compatibility 값 | 동반 코드·조치 전후·재발 시간 조건, 상세 decoder |
 | 분석 | 코드 충분성, 제한된 재조사, 지침/한계를 Synthesis에 전달 | 실제 LLM endpoint·분석 품질 검수 |
 | 결과 | 근거·후보 저장과 JC 공개; 조사용 콘텐츠의 원인 승격 금지 | 오류 확인·원인·조치 적합성·회복의 의미 검증 확대 |
 
-`analysis_guidance`는 실행된 검사 결과가 아니다. 로그를 못 읽었으면 해당 오류가 없다고 판단하지 않는다. 기존 parser는 검증된 `error_code` fact를 생성하지 않으며 현재 초안은 그 공백을 숨기지 않는다. R코드는 조사 목적, D코드는 등록 쿼리다. 세부 지표가 필요하다고 임의의 D코드를 생성하지 않는다.
+`analysis_guidance`는 실행된 검사 결과가 아니다. 로그를 못 읽었으면 해당 오류가 없다고 판단하지 않는다. Fleet parser는 보고된 오류 코드를 추출하지만 현재 시각 검증 조건에서는 `health_facts`의 검증된 `error_code`·`normalized_health` 등으로 승격하지 않는다. 등록된 다른 producer의 조건 충족 여부와 구분하며 현재 초안은 그 공백을 숨기지 않는다. R코드는 조사 목적, D코드는 등록 쿼리다. 세부 지표가 필요하다고 임의의 D코드를 생성하지 않는다.
 
 ## 4. 검증 책임
 

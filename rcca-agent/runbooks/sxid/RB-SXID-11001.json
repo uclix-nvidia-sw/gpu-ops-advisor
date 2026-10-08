@@ -71,7 +71,8 @@
       }
     ],
     "limitations": [
-      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다."
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "현재 D09/D02 계획만으로 switch source port와 access/trunk·VM/partition 토폴로지가 확보되지는 않는다. Fleet 노드 inventory를 switch-port 연결 근거로 사용하지 않으며 관계 미확인 시 영향 범위를 보류한다."
     ],
     "title": "SXid 11001 NVSwitch 이벤트 조사",
     "description": "SXid 11001 단서에서 NVSwitch 원본 이벤트와 포트·장비·Fabric Manager 맥락을 확인하는 초기 조사.",

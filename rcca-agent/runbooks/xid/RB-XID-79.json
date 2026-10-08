@@ -26,14 +26,26 @@
           "error_code",
           "normalized_health"
         ],
-        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.; 장치·서비스 상태 및 상태 변화 확인.",
+        "purpose": "동일 대상·기간의 Fleet 오류 관측을 확인한다. 상태·오류 fact 사용은 생산자·대상·관측 시각 검증을 전제로 한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D44",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
       },
       {
         "query_id": "D02",
-        "priority": 3,
+        "priority": 5,
         "required": false,
         "fact_names": [
           "observations"
@@ -78,7 +90,8 @@
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "추가 조회는 보조 원본 관측이며 실행 예산에 따라 일부만 선택된다. 노드 inventory를 장애 GPU·PCIe root port·NVLink 상대 장치의 연결 증거로 사용하지 않는다. 같은 장치 매핑이 없으면 비교·영향 범위 판정을 보류한다."
     ],
     "title": "Xid 79 GPU 접근 상실 조사",
     "description": "Xid 79 단서에서 원본 이벤트, 장치 식별 및 동시 발생 오류를 확인하는 초기 조사 Runbook.",
@@ -103,7 +116,7 @@
       ]
     },
     "analysis_guidance": [
-      "D09에서 원본 Xid와 시스템·커널 PCI/PCIe 이벤트의 대상·시각을 확인한다. PCIe 경로, GPU, 드라이버 후보를 구분하되 AER 로그가 수집되지 않았음을 오류 부재로 해석하지 않는다.",
+      "D09에서 수집된 Fleet Xid 관측의 대상·시각을 확인한다. D09가 시스템·커널 PCI/PCIe 원문 전체를 수집한다고 가정하지 않는다. AER 등 추가 원문은 수집 경로·장치·시각을 별도로 검증한 경우에만 연관 근거로 사용하고, 미수집은 오류 부재로 해석하지 않는다.",
       "GPU의 현재 접근 상태와 사건 당시 장치 매핑이 없으면 접근 회복을 판정하지 않는다. D02 사용률은 접근 가능성의 대체 증거가 아니다.",
       "Xid 154 연계가 지원되는 드라이버에서는 같은 장치·시간의 복구 action 이벤트를 추가 확인한다. 동반 이벤트 부재는 지원 버전·수집 완전성 확인 전에는 부정 근거가 아니다.",
       "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",

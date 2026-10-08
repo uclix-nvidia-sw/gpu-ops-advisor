@@ -506,6 +506,21 @@ def stack():
         profile = json.loads(
             (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
         )
+        # Current Runbook drafts include auxiliary queries absent from v7.
+        # These synthetic definitions test lifecycle/consumption, not live bindings.
+        for query_id, unit in (
+            ("D33", "bytes/s"),
+            ("D34", "bytes/s"),
+            ("D44", "count"),
+        ):
+            profile["queries"][query_id] = dict(
+                source="mimir",
+                metric="fixture_" + query_id.lower(),
+                unit=unit,
+                max_hold_seconds=30,
+                revision="fixture-v1",
+                validated=True,
+            )
         profile["health_contracts"] = {
             "fixture-v1": {
                 "producer_contract": "fixture-v1",

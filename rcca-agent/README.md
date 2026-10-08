@@ -125,3 +125,18 @@ Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변�
 `runbook_selection` → `investigation_plan` → `unexpected_evidence` → `sufficiency` 순으로 확인하면 계약 탈락, 검색 선택, 필수 근거 부족, 추가 조회 소진을 구분할 수 있습니다. `normalized_health`와 `unknown_value`는 미검증 상태/값을 뜻하며 조회 실패나 데이터 부재와 같지 않습니다. Loki에 XID/Unhealthy 로그가 있어도 발생 시각·장비·생산자 계약이 확인되지 않으면 상태 fact와 조치 조건을 충족하지 않습니다.
 
 기존 DB 발행본은 저장소 JSON 변경으로 갱신되지 않습니다. 현재 레지스트리에서 제거된 D05 등을 참조하는 발행본은 `invalid_contract`로 제외됩니다. [DB 등록 절차](runbooks/DB-WORKFLOW.md)에 따라 현재 D09 계획으로 새 revision을 작성·검토·발행해야 합니다. 기존 발행본을 제자리 수정하거나 계약 검사를 완화하지 않습니다.
+
+### Offline contract audit / DB 비접속 계약 검사
+
+`runbook_selection`의 `invalid_contract` 기록은 검색 관련성이나 적용 조건 불일치가 아니라 계약 검사 실패다. `reason`은 검증기가 정의한 첫 실패 사유를 기록하며, 원문 오류 값이나 모델 응답을 포함하지 않는다. 예전 저장 기록에는 상세 사유가 없으며 재작성하지 않는다.
+
+```bash
+# 저장된 발행본 JSON 배열/단일 객체만 검사한다. HTTP·DB 접속과 발행은 없다.
+python -m rcca_agent.runbook_audit saved-runbooks.json --profile agents/config.example.json
+# 저장소 초안: 빈 compatibility를 허용하며 발행 hash 검사는 하지 않는다.
+python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.example.json --authoring
+```
+
+종료 코드는 전부 계약 통과 0, 계약 실패 포함 1, 입력 파일 오류 2다. 결과는 revision별 첫 실패를 수집한다. `contract_valid`는 적용 가능성·원천 의미·운영 승인·현재 발행 상태의 보증이 아니다. 저장된 스냅샷의 범위와 시점을 별도로 확인해야 한다. 발행 상태·접근 범위·claim 고정은 기존 Store/JC 책임이다.
+
+최종 보고서는 코드가 만든 문장을 LLM이 우선순위 선택하는 구조다. `quality.report.fallback_reason`은 `editor_not_configured`, `editor_response_rejected`, `editor_exception`, `editor_no_selection`을 구분한다. 이는 원인 분석(`rca_synthesis`)의 성공/실패와 별개이며, 원격 실행 불확실성·취소는 계속 Worker로 전파한다. 기존 보고서는 이 필드가 없을 수 있다.

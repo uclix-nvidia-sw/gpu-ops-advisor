@@ -23,6 +23,8 @@ from .incident import alert_clues
 from .retrieval import retrieve_runbooks
 from .runbook_contract import (
     schema_kind,
+    validate_published_runbook,
+    contract_reason,
     validate_runbook,
     compatibility_status,
     unexpected_policy,
@@ -69,32 +71,20 @@ def select_runbooks(rows, source, profile, obs):
     general_key = profile.get("rca", {}).get("general_runbook_key")
     for row in rows:
         try:
-            if (
-                row["content_hash"] != row.get("reviewed_content_hash")
-                or content_hash(row["content"]) != row["content_hash"]
-            ):
-                raise ValueError("unreviewed_content")
-            kind = schema_kind(row["content"])
-            if row["knowledge_key"] == general_key and kind != "v1":
-                raise ValueError("general_runbook_requires_v1")
+            kind, plan = validate_published_runbook(row, profile)
             if kind == "legacy":
-                if (
-                    not set(row["content"].get("required_queries", []))
-                    <= profile["queries"].keys()
-                ):
-                    raise ValueError("unregistered_query")
                 legacy.append(row)
             else:
-                plans[row["id"]] = validate_runbook(
-                    row, profile["queries"], list(profile["queries"])
-                )
-                if row["knowledge_key"] == general_key and not row["content"].get(
-                    "investigation_only", False
-                ):
-                    raise ValueError("general_runbook_requires_investigation_only")
+                plans[row["id"]] = plan
                 current.append(row)
-        except ValueError:
-            diagnostics.append({"revision_id": row["id"], "status": "invalid_contract"})
+        except ValueError as exc:
+            diagnostics.append(
+                {
+                    "revision_id": row["id"],
+                    "status": "invalid_contract",
+                    "reason": contract_reason(exc),
+                }
+            )
     # Store already restricts visibility/state and pins revisions at the JC claim.
     general = [r for r in current if r["knowledge_key"] == general_key]
     ranked = retrieve_runbooks([r for r in current if r not in general], source)

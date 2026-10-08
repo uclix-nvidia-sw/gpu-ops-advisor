@@ -32,8 +32,32 @@
         "freshness": "query_contract"
       },
       {
-        "query_id": "D02",
+        "query_id": "D04",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·사건 기간의 온도(Celsius)를 보조 관측한다. GPU 온도는 평활화 회로 온도의 대체값이 아니며, 모델별 임계값·원문 원인 없이 열에 의한 비활성화로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
         "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·사건 기간의 소비 전력(W)을 보조 관측한다. 기능 비활성화 원인·회복·잔여 수명의 대체 증거로 사용하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 4,
         "required": false,
         "fact_names": [
           "observations"
@@ -66,7 +90,8 @@
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "추가 메트릭은 선택 가능한 보조 조회다. 추적 예산·선택 결과에 따라 실행되지 않을 수 있고, 같은 GPU의 검증된 표본이 없으면 해당 비교를 보류한다. 전력 평활화 상태·수명 및 전원 연결 상태를 직접 측정하지 않는다."
     ],
     "title": "XID 163 전원·열·전력 평활화 조사",
     "description": "XID 163: Power Smoothing HW Circuitry capability disengaged.",

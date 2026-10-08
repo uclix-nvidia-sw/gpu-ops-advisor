@@ -32,8 +32,20 @@
         "freshness": "query_contract"
       },
       {
+        "query_id": "D11",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·사건 기간의 소비 전력(W)을 보조 관측한다. 값이나 결측만으로 보조 전원 연결 상태를 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
         "query_id": "D02",
-        "priority": 3,
+        "priority": 4,
         "required": false,
         "fact_names": [
           "observations"
@@ -66,7 +78,8 @@
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다."
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "추가 메트릭은 선택 가능한 보조 조회다. 추적 예산·선택 결과에 따라 실행되지 않을 수 있고, 같은 GPU의 검증된 표본이 없으면 해당 비교를 보류한다. 전력 평활화 상태·수명 및 전원 연결 상태를 직접 측정하지 않는다."
     ],
     "title": "XID 54 전원·열·전력 평활화 조사",
     "description": "XID 54: Auxiliary power is not connected to the GPU board.",
