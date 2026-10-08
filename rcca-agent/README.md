@@ -13,6 +13,20 @@ RCA와 Report는 공통 `agents/config.example.json`의 query/binding registry�
 
 # rcca-agent
 
+## Structured Fleet error events — 2026-10-08
+
+등록된 D09 Fleet 계약의 `log_type=event`, XID/SXID `data_source=kmsg` 표본을
+상태 요약과 분리한다. 요청 cluster·노드/머신·component, 구조화된 코드와 메시지의
+일치, 명시된 event 시각과 실제 조회 구간을 검사한다. event와 Loki 시각을 보존하며
+관측된 차이를 임의 보정하지 않는다. 동일 의미·원본 payload의 재전송은 참조를 합치고
+상충하는 payload는 분리한다. XID의 GPU 목록 일치는 후보 연결이고, SXID의 NVSwitch를
+GPU 목록으로 연결하지 않는다. 주입 메시지의 고정 PCI 예시는 실제 장치 신원을 보장하지 않는다.
+
+결과의 `quality.analysis.error_events`와 제한된 모델 입력에 보고된 event를 남긴다.
+현재 건강 상태·복구·물리 고장·Runbook 조건 fact로 승격하지 않으며 기존 부족 근거
+판정은 유지한다. 모델의 오류 코드 인용은 선택된 event의 evidence 참조로 검증한다.
+새 쿼리, CPC별 분기, DB migration은 없다. [원천 검토와 제한](../docs/evidence/fleet-state-event-review-20261008.md).
+
 ## Runbook-first RCA — 2026-10-02
 
 신규 실행은 R01~R09, `purpose_ids`, R별 procedure/조회 허용 목록과 `purpose_plan`을 사용하지 않는다. Alert 단서 → 검토된 Runbook 검색·호환성 검사 → `observation_plan`의 필수 조회 → 근거 검사 → 최대 한 번 추가 조회 → Synthesis/보고 순서다. 이 날짜의 작업에서는 D 정의를 변경하지 않았다. 이후 D binding 전환은 위 최신 절을 따른다. 아래 이전 날짜의 R 기반 설명은 과거 동작 기록이다.

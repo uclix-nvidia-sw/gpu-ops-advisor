@@ -149,6 +149,36 @@ def test_nonregistered_disk_report_does_not_gain_xid_health_contract():
     assert parse_health([evidence(raw)], p["health_contracts"], p["queries"]) == []
 
 
+@pytest.mark.parametrize("component,code", [("xid", 79), ("sxid", 11001)])
+def test_zero_component_time_and_string_inventory_are_not_device_facts(component, code):
+    p, raw = profile(), fleet()
+    raw["attributes"].update(
+        component=f"accelerator-nvidia-error-{component}",
+        reason=f"{component.upper()} {code} detected on PCI:0000:01:00",
+        time="0001-01-01 00:00:00 +0000 UTC",
+    )
+    raw["resources"]["gpuInfo.gpus"] = json.dumps(
+        [{"uuid": "GPU-fixture", "busID": "0000:07:00.0"}]
+    )
+    observations = parse_health([evidence(raw)], p["health_contracts"], p["queries"])
+    assert observations[0]["error_code"] == f"{component}:{code}"
+    assert observations[0]["fact_eligible"] is False
+    assert "gpu_uuid" not in observations[0]["target"]
+    assert health_facts(observations, {"node": "node-1", "cluster_id": "c"}) == {}
+
+
+def test_structured_error_event_is_not_a_component_health_snapshot():
+    p, raw = profile(), fleet()
+    raw["attributes"].update(
+        log_type="event",
+        event_name="error_sxid",
+        event_type="Fatal",
+        extra_info={"data": {"time": "2026-09-30T05:08:46Z", "sxid": 11001}},
+    )
+    # Even with health/reason fields present, event severity cannot establish health.
+    assert parse_health([evidence(raw)], p["health_contracts"], p["queries"]) == []
+
+
 @pytest.mark.parametrize(
     "change",
     [
@@ -190,7 +220,8 @@ def test_fleet_rejects_missing_identity_time_and_ambiguous_codes(change):
 
 
 @pytest.mark.asyncio
-async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
+@pytest.mark.parametrize("include_event", [False, True])
+async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_event):
     p = profile()
     p["clusters"] = {
         "c": {
@@ -221,6 +252,16 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
     )
     original = copy.deepcopy(data)
     calls = []
+    from test_fleet_events import event
+
+    raw_event = event()
+    raw_event["attributes"].update(
+        component="accelerator-nvidia-error-sxid", event_name="error_sxid"
+    )
+    detail = raw_event["attributes"]["extra_info"]["data"]
+    detail.pop("xid")
+    detail.update(sxid=11001, raw_kmsg="SXID 11001")
+    event_rows = [[NS, json.dumps(raw_event)]] if include_event else []
 
     async def logs(args):
         assert (
@@ -233,7 +274,8 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
                 "result": [
                     {
                         "stream": {},
-                        "values": [
+                        "values": event_rows
+                        + [
                             [str(int(NS) + i * 1000), json.dumps(fleet())]
                             for i in range(31)
                         ],
@@ -260,6 +302,9 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
                 payload["observation_refs"]
                 and 0 < len(payload["device_observations"]) <= 31
             )
+            assert len(payload["error_events"]) == int(include_event)
+            if include_event:
+                assert payload["error_events"][0]["fact_eligible"] is False
             assert (
                 len(payload["device_observations"])
                 + payload["context_selection"]["omitted_observations"][
@@ -319,6 +364,7 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan():
     assert {"D09", "D08", "D06", "D02"} <= collected
     assert calls.count("logs") == 1
     result = output["result"]
+    assert len(result["quality"]["analysis"]["error_events"]) == int(include_event)
     assert len(result["device_observations"]) == 31
     diagnostics = result["quality"]["analysis"]["synthesis"]
     assert diagnostics["input_bytes"] <= 16000
