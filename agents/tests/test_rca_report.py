@@ -188,3 +188,28 @@ async def test_final_report_preserves_missing_evidence_and_withheld_actions(mode
         "alert",
         "logs",
     }
+
+
+@pytest.mark.asyncio
+async def test_missing_data_explains_unverified_semantics_without_promoting_actions():
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=["causal_confirmation_evidence", "normalized_health"],
+        limitations=[],
+        quality={},
+    )
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result, {"incident_time": "2026-10-08T00:00:00Z"}, {}, [], Model()
+    )
+    text = "\n".join(section["text"] for section in result["narrative"])
+    assert "원본 데이터가 없다는 뜻만은 아닙니다" in text
+    assert "조치 적합성·수행·복구가 확인된 것은 아닙니다" in text
+    assert result["result_status"] == "partial"
+    assert result["recommendations"] == []

@@ -78,7 +78,7 @@ def test_reference_to_other_code_is_not_exact_match():
     book = runbook("xid-48", "Memory ECC Xid 48", ["xid:48"])
     book["content"]["description"] = "Unlike Xid 79, this is a memory issue"
     result = retrieve_runbooks([book], {"alert": {"message": "Xid 79"}})
-    assert result[0]["exact_codes"] == []
+    assert result == []
 
 
 def test_repeating_alert_does_not_inflate_score():
@@ -111,3 +111,50 @@ def test_inputs_are_unchanged():
 def test_xid_and_sxid_are_distinct():
     rows = [runbook("xid-79", "", ["xid:79"])]
     assert retrieve_runbooks(rows, {"alert": {"message": "SXid 79"}}) == []
+
+
+@pytest.mark.parametrize("component", ["cpu", "disk"])
+def test_code_free_component_error_cannot_select_code_specific_plan(component):
+    rows = [
+        runbook("xid-100", "error calculating CPU usage", ["xid:100"]),
+        runbook("sxid-100", "error calculating CPU usage", ["sxid:100"]),
+        runbook("general", "error calculating CPU usage"),
+    ]
+    ranked = retrieve_runbooks(
+        rows,
+        {"labels": {"component": component, "reason": "error calculating CPU usage"}},
+    )
+    assert [r["runbook"]["knowledge_key"] for r in ranked] == ["general"]
+
+
+def test_matching_multiple_declared_codes_preserves_relevant_investigations():
+    rows = [
+        runbook("ecc", "GPU error", ["xid:48", "xid:63"]),
+        runbook("access", "GPU error", ["xid:79"]),
+        runbook("switch", "GPU error", ["sxid:79"]),
+    ]
+    ranked = retrieve_runbooks(rows, {"message": "GPU error Xid 48 and Xid 79"})
+    assert {r["runbook"]["knowledge_key"] for r in ranked} == {"ecc", "access"}
+
+
+def test_real_catalog_xid79_does_not_select_unrelated_codes():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2] / "rcca-agent" / "runbooks"
+    rows = [json.loads(p.read_text(encoding="utf-8")) for p in root.rglob("RB-*.json")]
+    ranked = retrieve_runbooks(
+        rows,
+        {
+            "labels": {
+                "component": "accelerator-nvidia-error-xid",
+                "reason": "XID 79 ROBUST_CHANNEL_GPU_HAS_FALLEN_OFF_THE_BUS GPU has fallen off the bus detected on GPU PCI:0000:01:00",
+            }
+        },
+    )
+    assert ranked[0]["runbook"]["knowledge_key"] == "RB-XID-79"
+    assert all(
+        not r["runbook"]["content"].get("search", {}).get("codes")
+        or r["exact_codes"] == ["xid:79"]
+        for r in ranked
+    )

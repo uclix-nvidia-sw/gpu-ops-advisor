@@ -18,6 +18,11 @@ from importlib.resources import files
 from .synthesis import synthesis_input, synthesize
 from .fleet_events import parse_events
 from .report import write_report
+from .requirement_diagnostics import (
+    unmet_requirements,
+    reported_facts,
+    requirement_groups,
+)
 from .report_labels import query_label
 from .observation_agents import collect_round
 from .incident import alert_clues
@@ -157,10 +162,23 @@ def matching_runbooks(books, legacy_facts, verified, data):
     for book in books:
         content = book["content"]
         facts = legacy_facts if schema_kind(content) == "legacy" else verified
+        compatibility_attributes = dict(attributes)
+        if (
+            content.get("investigation_only")
+            and "reported_producer_contract" in content.get("required_evidence", [])
+            and verified.get("reported_producer_contract")
+            and "producer_contract" not in compatibility_attributes
+        ):
+            # Adapter compatibility is independent of current device health.
+            # Do not add the stronger scalar to applicability/action facts.
+            compatibility_attributes["producer_contract"] = {
+                "status": "known",
+                "value": verified["reported_producer_contract"],
+            }
         status = (
             "compatible"
             if schema_kind(content) == "legacy" or book.get("origin") == "builtin"
-            else compatibility_status(book["compatibility"], attributes)
+            else compatibility_status(book["compatibility"], compatibility_attributes)
         )
         if status == "incompatible" or check_conditions(
             content.get("exclusion_conditions", []), facts
@@ -220,6 +238,13 @@ def normalized_state(obs, collected, data, profile, initial_facts):
         if len(data["scope"]["clusters"]) == 1 and not data.get("identity_conflicts")
         else {}
     )
+    # Report-only facts cannot satisfy the existing current-health scalar fields.
+    if len(data["scope"]["clusters"]) == 1 and not data.get("identity_conflicts"):
+        verified.update(
+            reported_facts(
+                valid, parse_events(obs.evidence, profile, data.get("target", {})), data
+            )
+        )
     facts = {**initial_facts, **verified}
     mapping_id = mapping_query(profile)
     mapping = allocations(
@@ -448,6 +473,7 @@ async def run(tools):
                     content_hash=content_hash(b["content"]),
                     origin=b.get("origin", "published"),
                     required_evidence=b["content"].get("required_evidence", []),
+                    requirement_groups=requirement_groups(b["content"]),
                     steps=steps(b),
                     unexpected_evidence=unexpected_policy(b["content"]),
                 )
@@ -887,6 +913,9 @@ async def run(tools):
     ]
     result["quality"]["analysis"] = {
         "status": analysis_status,
+        "requirement_diagnostics": unmet_requirements(
+            missing, health, error_events, data
+        ),
         "fast_path": fast_path,
         "followups": followups,
         "plan_evidence_id": plan_id,

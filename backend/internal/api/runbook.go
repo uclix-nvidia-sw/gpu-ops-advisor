@@ -72,13 +72,13 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if clues == 0 {
 		return Invalid("runbook.search")
 	}
-	facts := []string{"producer_contract", "error_code", "incident_mapping", "observations", "incident_history", "topology", "current_mapping", "action_policy", "action_records", "device_recovery_evidence", "workload_evidence", "normalized_health", "component", "severity"}
+	facts := []string{"reported_error_code", "reported_producer_contract", "producer_contract", "error_code", "incident_mapping", "observations", "incident_history", "topology", "current_mapping", "action_policy", "action_records", "device_recovery_evidence", "workload_evidence", "normalized_health", "component", "severity"}
 	required, ok := runbookStrings(c["required_evidence"])
 	if !ok || len(required) == 0 {
 		return Invalid("runbook.required_evidence")
 	}
 	for _, v := range required {
-		if !Has(facts, v) {
+		if !Has(facts, v) || (!investigation && (v == "reported_error_code" || v == "reported_producer_contract")) {
 			return Invalid("runbook.required_evidence")
 		}
 	}

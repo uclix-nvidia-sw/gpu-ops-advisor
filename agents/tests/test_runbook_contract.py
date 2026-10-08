@@ -165,3 +165,36 @@ class RunbookContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_reported_requirements_are_investigation_only():
+    import pytest
+
+    row = deepcopy(XID)
+    row["content"]["required_evidence"] = [
+        "reported_error_code",
+        "reported_producer_contract",
+    ]
+    row["content"]["observation_plan"][0]["fact_names"] = [
+        "reported_error_code",
+        "reported_producer_contract",
+    ]
+    validate_runbook(row, QUERIES, ALLOWED, authoring=True)
+    row["content"]["investigation_only"] = False
+    with pytest.raises(ValueError, match="reported facts require investigation_only"):
+        validate_runbook(row, QUERIES, ALLOWED, authoring=True)
+
+
+def test_reported_code_cannot_authorize_action():
+    import pytest
+
+    row = deepcopy(XID)
+    row["content"]["recommendations"] = [
+        {
+            "text": "Reboot",
+            "execution": "not_performed",
+            "preconditions": [{"field": "reported_error_code", "equals": "xid:79"}],
+        }
+    ]
+    with pytest.raises(ValueError):
+        validate_runbook(row, QUERIES, ALLOWED, authoring=True)

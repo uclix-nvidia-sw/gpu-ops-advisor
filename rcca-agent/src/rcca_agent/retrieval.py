@@ -12,7 +12,7 @@ from collections import Counter
 from agent_common.parsers import ERROR_CODE as XID
 
 TOKEN = re.compile(r"[a-z0-9가-힣]+")
-TOKENIZER_REVISION = "gpu-lexical-v2"
+TOKENIZER_REVISION = "gpu-lexical-v3"
 TEXT_FIELDS = (
     "alertname",
     "summary",
@@ -144,6 +144,14 @@ def retrieve_runbooks(rows, source, top_k=5, exact_code_boost=12.0):
     query_codes = {term for term in query if term.startswith(("xid:", "sxid:"))}
     ranked = []
     for row, document in zip(rows, documents):
+        # Declared trigger codes are an eligibility boundary for retrieval, not
+        # just a score boost. Prose overlap cannot select a different code or
+        # select a code-specific investigation for a code-free CPU/disk alert.
+        document_codes = {
+            term for term in document["codes"] if term.startswith(("xid:", "sxid:"))
+        }
+        if document_codes and not query_codes.intersection(document_codes):
+            continue
         field_scores = {}
         for field, weight in SEARCH_WEIGHTS.items():
             frequencies = Counter(document[field])
@@ -167,9 +175,6 @@ def retrieve_runbooks(rows, source, top_k=5, exact_code_boost=12.0):
             field_scores[field] = field_score * weight
         score = sum(field_scores.values())
         # A cross-reference in prose is not a declared trigger code.
-        document_codes = {
-            term for term in document["codes"] if term.startswith(("xid:", "sxid:"))
-        }
         exact_codes = sorted(query_codes & document_codes)
         exact_score = exact_code_boost * len(exact_codes)
         if score + exact_score <= 0:

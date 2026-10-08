@@ -99,6 +99,11 @@ def test_cli_audits_all_rows_and_returns_failure(tmp_path, capsys):
 
 def test_structural_success_does_not_approve_source_or_health_semantics():
     profile, row = fixtures()
+    row["content"]["required_evidence"].append("normalized_health")
+    row.update(
+        content_hash=content_hash(row["content"]),
+        reviewed_content_hash=content_hash(row["content"]),
+    )
     manifest = {
         "entries": [
             {
@@ -158,3 +163,12 @@ def test_rejected_old_revision_still_exposes_query_migration_work():
     assert "required_facts_not_in_required_plan" in rejected["review"]["findings"]
     assert malformed["status"] == "invalid_contract"
     assert malformed["review"]["findings"] == ["review_input_malformed"]
+
+
+def test_report_only_requirements_do_not_claim_current_health_approval():
+    profile, row = fixtures()
+    result = audit([row], profile, manifest={"entries": []})["results"][0]
+    assert result["status"] == "contract_valid"
+    assert result["review"]["fleet_time_gated_facts"] == []
+    assert result["review"]["operational_approval"] == "not_assessed"
+    assert "error_specific_evidence_review_required" in result["review"]["findings"]

@@ -67,3 +67,29 @@ func TestRunbookAuthoringAndPublication(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestReportedRequirementsRemainInvestigationOnly(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row Object
+	if err := json.Unmarshal(b, &row); err != nil {
+		t.Fatal(err)
+	}
+	c := row["content"].(map[string]any)
+	c["required_evidence"] = []any{"reported_error_code", "reported_producer_contract"}
+	c["observation_plan"].([]any)[0].(map[string]any)["fact_names"] = []any{"reported_error_code", "reported_producer_contract"}
+	if err := validateRunbook(c, Object{}, false); err != nil {
+		t.Fatal(err)
+	}
+	c["investigation_only"] = false
+	if validateRunbook(c, Object{}, false) == nil {
+		t.Fatal("report-only facts accepted for causal runbook")
+	}
+	c["investigation_only"] = true
+	c["recommendations"] = []any{Object{"text": "reboot", "preconditions": []any{Object{"field": "reported_error_code", "equals": "xid:79"}}, "execution": "not_performed"}}
+	if validateRunbook(c, Object{}, false) == nil {
+		t.Fatal("report-only action precondition accepted")
+	}
+}

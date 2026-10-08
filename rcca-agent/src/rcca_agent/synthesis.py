@@ -210,7 +210,7 @@ def validate_synthesis(
             return " " if code in codes else match[0]
 
         text = re.sub(
-            r"(?<![A-Za-z0-9_])(s?xid)[ :]+([0-9]+)(?![A-Za-z0-9_])",
+            r"(?<![A-Za-z0-9_])(s?xid)[ :]*([0-9]+)(?![A-Za-z0-9_])",
             replace,
             text,
             flags=re.I,
@@ -293,7 +293,16 @@ def validate_synthesis(
             or not (supporting | contradicting) <= set(refs)
             or supporting & contradicting
         ):
-            raise SynthesisValidationError("invalid_evidence_references", index=i)
+            rule = (
+                "empty_supporting_refs"
+                if not supporting
+                else "unknown_observation_refs"
+                if not (supporting | contradicting) <= set(refs)
+                else "overlapping_evidence_refs"
+            )
+            raise SynthesisValidationError(
+                "invalid_evidence_references", rule=rule, index=i
+            )
         if numeric_prose(h["claim"], supporting):
             raise SynthesisValidationError(
                 "unregistered_numeric_claim",
