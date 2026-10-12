@@ -203,7 +203,10 @@ async def test_power_followup_never_establishes_health_or_recovery(
     else:
         assert any(e["tool_status"] == "ok" for e in followup)
     assert result["result_status"] != "ready"
-    assert "normalized_health" in result["missing_inputs"]
+    # General collection no longer requires a current-state assertion. Empty
+    # health evidence still blocks cause and action confirmation independently.
+    assert "unknown_value" in result["missing_inputs"]
+    assert "causal_confirmation_evidence" in result["missing_inputs"]
     assert not any(
         c["causal_status"] == "confirmed" for c in result["cause_candidates"]
     )
