@@ -5,6 +5,8 @@ No production metrics or model-quality claims are made by this suite.
 """
 
 import contextlib
+import csv
+import io
 import hashlib
 import json
 import os
@@ -26,7 +28,7 @@ from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict
 import pytest
 
-from agent_common.contracts import content_hash
+from agent_common.contracts import content_hash, timestamp
 from rcca_agent.runbook_admin import draft, transition
 from test_rca_analysis import general_runbook, analysis_reply
 
@@ -1183,6 +1185,7 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack, multi
     assert metrics["observed_namespace_hours"]["value"] == observed_hours
     assert metrics["namespace_activity_valid_hours"]["value"] == observed_hours
     assert metrics["namespace_connected_gpu_util"]["value"] == 2
+
     assert metrics["namespace_connected_gpu_util"]["target"] == {
         "cluster_id": "cpc-2",
         "namespace": "dev",
@@ -1196,6 +1199,80 @@ def test_namespace_report_through_backend_with_report_only_criteria(stack, multi
         body = (LOCAL / "artifacts" / artifact["object_key"]).read_bytes()
         assert hashlib.sha256(body).hexdigest() == artifact["checksum"]
         assert b"O08.namespace_connected_gpu_util.0" in body
+
+
+@pytest.mark.e2e
+def test_basic_report_v2_intake_publication_and_exports(stack, monkeypatch):
+    """Real Backend/JC/Worker with synthetic upstreams and an isolated database."""
+    start = timestamp(PERIOD["start"])
+    monkeypatch.setattr(
+        Upstream,
+        "prometheus_rows",
+        {
+            "DCGM_FI_DEV_GPU_UTIL": [
+                {
+                    "metric": {
+                        "cluster_id": "cpc-2",
+                        "UUID": "GPU-1",
+                        "namespace": "dev",
+                        "pod": "training",
+                        "node": "node-1",
+                        "pod_uid": "pod-uid-1",
+                        "modelName": "fixture-model",
+                    },
+                    "values": [[start + i * 30, "2"] for i in range(121)],
+                }
+            ]
+        },
+    )
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    binary = os.environ["BACKEND_BINARY"]
+    process = stack["spawn"](
+        [binary],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "false",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+            "DSX_JOB_CONTROLLER_URL": stack["jc"].removesuffix("/internal/v1"),
+            "DSX_NAMESPACE_REPORT_PROFILE_REVISION": "report-namespace-v2",
+        },
+        "basic-backend",
+    )
+    wait_http(backend + "/health/ready", process)
+    data = dict(
+        scope=SCOPE,
+        time_range={"start": PERIOD["start"], "end": "2026-09-16T00:00:00Z"},
+        timezone="UTC",
+        topic_ids=["O01", "O08", "O11"],
+        group_by=["cluster"],
+        topic_group_by={"O01": ["cluster"], "O08": ["namespace"], "O11": ["cluster"]},
+    )
+    headers = {"Idempotency-Key": str(uuid4())}
+    response = httpx.post(backend + "/reports", json=data, headers=headers)
+    assert response.status_code == 202, response.text
+    jid = response.json()["job_id"]
+    result, evidence = worker_result(stack, "report", jid, "-basic-v2")
+    assert result["versions"]["criteria"] == "1.3"
+    assert result["versions"]["execution_profile_revision"] == "report-namespace-v2"
+    assert {t["topic_id"] for t in result["topics"]} == set(data["topic_ids"])
+    assert not {"D07", "D09", "D11", "D12", "D13"} & {q for q, _ in evidence}
+    topic = next(t for t in result["topics"] if t["topic_id"] == "O08")
+    hours = [m for m in topic["metrics"] if ".hourly_gpu_activity." in m["id"]]
+    assert hours and any(m["value"] == 2 for m in hours)
+    assert any(m["value"] is None for m in hours)
+    assert any("observed_low_activity_seconds" in m["id"] for m in topic["metrics"])
+    again = httpx.post(backend + "/reports", json=data, headers=headers)
+    assert again.json()["job_id"] == jid
+    html = httpx.get(backend + f"/reports/{jid}/export?format=html")
+    assert html.status_code == 200 and "시간대 연결 GPU 평균 활동률" in html.text
+    assert "기록/분석 시각 (UTC)" in html.text
+    exported = httpx.get(backend + f"/reports/{jid}/export?format=csv")
+    assert exported.status_code == 200
+    header = next(csv.reader(io.StringIO(exported.text.lstrip("\ufeff"))))
+    assert "period" in header and "target" in header
 
 
 @pytest.mark.e2e

@@ -5,12 +5,29 @@ import { reportReturnPath } from '../lib/reportNavigation';
 import { Schedules } from './Schedules';
 import { Reports, ReportForm } from './Reports';
 import { reportKinds, reportSelection } from '../lib/reportKinds';
+import { defaultReportKinds } from '../lib/reportKinds';
 import { OperationsReports } from './Operations';
 
 const publication = vi.hoisted(() => ({
   status: 'succeeded',
   result_ref: 'r1' as string | null | undefined,
 }));
+
+it('selects exactly the default topics and preserves old health links', () => {
+  expect(reportSelection(defaultReportKinds)).toEqual({
+    topic_ids: ['O01', 'O08', 'O11'],
+    group_by: ['cluster'],
+    topic_group_by: { O01: ['cluster'], O08: ['namespace'], O11: ['cluster'] },
+  });
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/reports/new?kind=health']}>
+      <ReportForm />
+    </MemoryRouter>,
+  );
+  for (const id of ['equipment', 'energy', 'incidents'])
+    expect(html).toContain(`name="report-kind" checked="" value="${id}"`);
+  expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(3);
+});
 beforeEach(() => {
   vi.stubGlobal('location', { pathname: '/reports' });
   publication.status = 'succeeded';
@@ -138,7 +155,7 @@ describe('Ops report landing', () => {
 });
 
 it.each(['/reports/new', '/reports/new?schedule=true'])(
-  'defaults %s to comprehensive analysis with optional comparison',
+  'defaults %s to the three-topic basic report',
   (path) => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={[path]}>
@@ -147,7 +164,7 @@ it.each(['/reports/new', '/reports/new?schedule=true'])(
     );
     expect(html).toContain('Namespace별 GPU 사용 현황');
     expect(html.match(/type="radio"/g)).toHaveLength(2);
-    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(7);
+    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(3);
     expect(html).toContain('name="report-kind" checked="" value="namespace"');
     expect(html).not.toContain('세부 분석 설정');
     expect(html).not.toContain('type="checkbox" checked="" value="O');
@@ -217,7 +234,9 @@ it('previews the complete requested period and explains worker preflight before 
 
 const expectedKinds = [
   ['namespace', ['O08'], 'namespace'],
-  ['health', ['O01', 'O09', 'O05'], 'cluster'],
+  ['equipment', ['O01'], 'cluster'],
+  ['energy', ['O09'], 'cluster'],
+  ['incidents', ['O05'], 'cluster'],
   ['allocation', ['O02', 'O03', 'O04'], 'cluster'],
   ['incident-workloads', ['O06'], 'cluster'],
   ['waiting', ['O07'], 'cluster'],
@@ -270,13 +289,13 @@ it.each([Reports, OperationsReports])(
     expect(query.get('topic_id')).toBe('O08');
   },
 );
-it('groups all existing topic options by the seven report kinds without inventing a category API', () => {
+it('groups all existing topic options by the selectable report kinds without inventing a category API', () => {
   const html = renderToStaticMarkup(
     <MemoryRouter>
       <Reports />
     </MemoryRouter>,
   );
-  expect(html.match(/<optgroup /g)).toHaveLength(7);
+  expect(html.match(/<optgroup /g)).toHaveLength(9);
   expect(html.match(/value="O[0-9]{2}"/g)).toHaveLength(11);
   expect(html).toContain('분석 대상 기간이 아니라 보고서를 요청한 날짜');
 });

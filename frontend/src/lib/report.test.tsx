@@ -10,6 +10,69 @@ import {
 } from './report';
 import { DataView, QueryState } from '../components/live';
 
+it('renders criteria 1.3 activity gaps, recorded values and monitoring with times', () => {
+  const target = { cluster_id: 'fixture', namespace: 'training', model: 'fixture-model' };
+  const period = { start: '2026-10-01T00:00:00Z', end: '2026-10-01T01:00:00Z' };
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        versions: { criteria: '1.3' },
+        topics: [
+          {
+            topic_id: 'O08',
+            metrics: [
+              { id: 'O08.hourly_gpu_activity.0', target, period, value: 0, unit: 'percent' },
+              {
+                id: 'O08.hourly_gpu_activity.1',
+                target,
+                period: { start: period.end, end: '2026-10-01T02:00:00Z' },
+                value: null,
+                unit: 'percent',
+              },
+            ],
+          },
+          {
+            topic_id: 'O01',
+            metrics: [
+              {
+                id: 'O01.recorded_temperature.0',
+                target: { node: 'node-demo' },
+                period: { at: period.start },
+                value: 45,
+                unit: 'celsius',
+              },
+            ],
+          },
+          {
+            topic_id: 'O11',
+            metrics: [
+              {
+                id: 'O11.target_unknown_seconds.0',
+                target: { job: 'scrape', instance: 'target-demo' },
+                period,
+                value: 30,
+                unit: 'seconds',
+              },
+            ],
+          },
+        ],
+      }}
+    />,
+  );
+  for (const text of [
+    'Namespace별 GPU 활동',
+    '0%',
+    '산출 불가',
+    '기록된 GPU 온도',
+    '실제 측정 시각',
+    'target-demo',
+    '미관측 시간',
+  ])
+    expect(html).toContain(text);
+  expect(html).not.toContain('id="report-topic-details" open');
+});
+
 it.each(['', '.0', '.17'])(
   'renders optional O01 metric IDs with suffix "%s" without changing missing values',
   (suffix) => {

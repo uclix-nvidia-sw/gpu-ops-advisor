@@ -5,21 +5,41 @@ export const reportKinds = [
     name: 'Namespace별 GPU 사용 현황',
     topicIds: ['O08'],
     groupBy: 'namespace',
-    description: 'Namespace별 GPU 연결 수·시간과 평균 활동률을 확인합니다.',
+    description: 'Namespace별 시간대의 GPU 대수·활동률과 저활동 구간을 확인합니다.',
     insight: '어디에서 GPU를 많이 또는 적게 사용하는지 보고 배분 정책을 검토합니다.',
     requirement: 'GPU 활동률과 같은 시각의 GPU·Pod 신원 정보가 필요합니다.',
     limit: '연결 관측이며 독점 할당량·Namespace 실사용률·회수 가능량은 아닙니다.',
   },
   {
-    id: 'health',
-    name: 'GPU 상태·에너지 사용·장애 현황',
-    topicIds: ['O01', 'O09', 'O05'],
+    id: 'equipment',
+    name: 'GPU·Node 관측 현황',
+    topicIds: ['O01'],
     groupBy: 'cluster',
-    description: 'GPU 메모리·온도, 에너지 사용량과 등록된 장애 이력을 함께 확인합니다.',
-    insight: '점검할 장비와 운영상 주의할 항목을 찾습니다.',
-    requirement: '장비 신원·메모리·온도·실제 전력 관측과 저장된 사건 기록을 사용합니다.',
+    description: '관측 GPU와 메모리·온도·Node 상태를 확인합니다.',
+    insight: '추가 점검할 장비와 관측 자료의 한계를 확인합니다.',
+    requirement: '장비 신원과 검증된 단위의 관측 자료가 필요합니다.',
     limit:
-      '에너지는 선택 범위의 관측 GPU 합계이며 클러스터별 값이 아닙니다. 장애 원인을 확정하지 않습니다.',
+      'Fleet 기록 시각과 실제 측정 시각은 다를 수 있습니다. 기록값을 현재 상태로 단정하지 않습니다.',
+  },
+  {
+    id: 'energy',
+    name: 'GPU 에너지 사용',
+    topicIds: ['O09'],
+    groupBy: 'cluster',
+    description: '선택 범위에서 관측된 GPU 에너지 사용량을 확인합니다.',
+    insight: '기간별 관측 에너지 변화를 검토합니다.',
+    requirement: '실제 전력 원본 표본과 유효 시간 계약이 필요합니다.',
+    limit: '선택 범위의 합계이며 Namespace별 소비량이나 절감 가능량은 아닙니다.',
+  },
+  {
+    id: 'incidents',
+    name: '등록된 장애 현황',
+    topicIds: ['O05'],
+    groupBy: 'cluster',
+    description: '분석 기간에 등록된 사건과 반복 발생을 확인합니다.',
+    insight: '자주 발생하는 사건의 조사 우선순위를 정합니다.',
+    requirement: '저장된 사건 기록이 필요합니다.',
+    limit: '사건이 등록되지 않았다고 장비가 정상인 것은 아닙니다.',
   },
   {
     id: 'allocation',
@@ -71,7 +91,7 @@ export const reportKinds = [
     name: '모니터링 수집 상태 점검',
     topicIds: ['O11'],
     groupBy: 'cluster',
-    description: '분석 기간에 수집 대상이 정상 응답한 시간을 확인합니다.',
+    description: '수집 대상별 정상·실패·미관측 시간과 수집 지연을 확인합니다.',
     insight: '모니터링 공백 때문에 해석에 주의할 범위를 확인합니다.',
     requirement:
       '수집 대상의 정상 응답 지표가 필요하며 전체 수집률에는 기대 대상·주기 정보가 필요합니다.',
@@ -79,7 +99,23 @@ export const reportKinds = [
   },
 ];
 
+export const defaultReportKinds = ['namespace', 'equipment', 'monitoring'];
+
+// Preserve links created before equipment, energy and incidents were separated.
+const legacyHealth = {
+  id: 'health',
+  name: 'GPU 상태·에너지 사용·장애 현황',
+  topicIds: ['O01', 'O09', 'O05'],
+  groupBy: 'cluster',
+  description: 'GPU 메모리·온도, 에너지 사용량과 등록된 장애 이력을 함께 확인합니다.',
+  insight: '점검할 장비와 운영상 주의할 항목을 찾습니다.',
+  requirement: '장비 신원·메모리·온도·실제 전력 관측과 저장된 사건 기록을 사용합니다.',
+  limit:
+    '에너지는 선택 범위의 관측 GPU 합계이며 클러스터별 값이 아닙니다. 장애 원인을 확정하지 않습니다.',
+};
+
 export function reportKind(id: string | null) {
+  if (id === 'health') return legacyHealth;
   return reportKinds.find((kind) => kind.id === id) || reportKinds[0];
 }
 
@@ -98,7 +134,7 @@ export const topicDisplayBases: Record<string, string> = {
 };
 
 export function reportSelection(ids: string[]) {
-  const kinds = reportKinds.filter((kind) => ids.includes(kind.id));
+  const kinds = [...reportKinds, legacyHealth].filter((kind) => ids.includes(kind.id));
   const topic_ids = [...new Set(kinds.flatMap((kind) => kind.topicIds))].sort();
   return {
     topic_ids,

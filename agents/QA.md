@@ -1,3 +1,13 @@
+# 2026-10-12 기본 운영분석 O01·O08·O11 — 로컬 검수
+
+- 기준: 원격 main `a0fcae2`에서 `feat/default-operations-report`로 로컬 변경했다. 기본 선택은 O01/O08/O11이며 기존 O와 저장 결과는 유지한다. `report-namespace-v2`/criteria 1.3에서 시간대별 Namespace 활동률·동시 연결 GPU 수·연속 저활동, Fleet 기록 시각, D10/D22 수집 상태를 추가한다. 기존 criteria 1.2 계산은 유지한다.
+- 통과: 전체 Agent suite **1006 passed / 0 skipped**, 기존 MCP deprecation warning 3건. `RUN_AGENT_E2E=1`로 임시 loopback PostgreSQL, 현재 트리의 Backend/JC/Incident, 실제 두 Worker와 공식 Grafana MCP를 실행했다. Grafana/LLM은 합성 fixture이며 운영 데이터·슬롯은 사용하지 않았다.
+- 통과: JC/Backend/Incident Go vet·race·build, 임시 DB의 Backend 전체 E2E, Helm 렌더링·패키징·잘못된 설정 거절, CI unittest 22개. 새 v2 발행·hash·CSV/HTML, 구 v1 호환, Namespace 이동·관측 공백·모델 분리·시간 경계·null/0 차이 및 고유 metric ID를 검사했다. 브라우저에서 발견한 모델별 미관측 시간대 누락도 수정하고, null 시간대를 보존해 그래프가 공백을 가로질러 연결되지 않는지 확인한 후 전체 suite를 재실행했다.
+- 범위: RCA 분석·슬롯 배분·DB 구조는 변경하지 않았다. 공통 artifact 출력은 report criteria 1.3에만 새 열을 적용한다. 기존 일정의 선택 주제와 접수된 작업은 보존하지만 배포 후 새로 접수되는 일정 회차는 새 Backend 기본 프로필을 사용할 수 있다.
+- 미검증: 운영 배포, 실제 D 바인딩과 수집량·시간 개선, 실제 보고서의 해석 품질. 새 기본 구성의 D 합집합은 11종이며 실환경 호출 횟수·전송량 감소를 측정한 것은 아니다.
+
+---
+
 # 2026-10-08 D20 Node condition JSON — 로컬 검수
 
 - 기준: 원격 `origin/main` `854a030`(#92 포함)에서 `fix/report-node-condition-json`을 생성했다. 제품 코드는 Ops의 `additional_inputs.py` 한 줄만 변경한다. O01의 D20 관측 구간을 JSON 배열로 구성하며 공통 정규화·해시/결과 검증·Worker·RCA·JC·DB·수집 설정은 유지한다.

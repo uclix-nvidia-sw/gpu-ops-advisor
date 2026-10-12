@@ -22,6 +22,7 @@ from .namespace_usage import namespace_usage
 from .collection import collect_report
 from .presentation import TOPIC_BASES
 from .additional_inputs import ADDITIONS, apply_additional_inputs
+from .basic_observations import basic_observations
 
 
 log = logging.getLogger(__name__)
@@ -118,7 +119,7 @@ def query_ids(
         return ("D08", "D06")
     return (
         ("D01", "D02", "D06", "D08")
-        if topic_id == "O08" and criteria_version == "1.2"
+        if topic_id == "O08" and criteria_version in {"1.2", "1.3"}
         else PLAN[topic_id]
     )
 
@@ -149,12 +150,12 @@ def calculate(
         topic["quality"].update(
             requested_group_by=data["group_by"], display_basis=TOPIC_BASES[topic_id]
         )
-        if topic_id == "O08" and criteria_version != "1.2":
-            raise ValueError("per-topic namespace reports require criteria 1.2")
+        if topic_id == "O08" and criteria_version not in {"1.2", "1.3"}:
+            raise ValueError("per-topic namespace reports require criteria 1.2 or 1.3")
     inventory_id, mapping_id = inventory_query(profile), mapping_query(profile)
     period = data["time_range"]
     start, end = timestamp(period["start"]), timestamp(period["end"])
-    namespace_draft = topic_id == "O08" and criteria_version == "1.2"
+    namespace_draft = topic_id == "O08" and criteria_version in {"1.2", "1.3"}
     mapping = (
         allocations(collected.get(mapping_id, []), period, collected.get("D06", []))
         if topic_id in {"O02", "O03", "O04", "O06"}
@@ -238,7 +239,7 @@ def calculate(
             return topic
         topic["quality"]["applied_group_by"] = requested
         summaries, unattributed, clusters = namespace_usage(
-            data, collected, profile=profile
+            data, collected, profile=profile, trends=criteria_version == "1.3"
         )
         topic["quality"]["unattributed_series_count"] = unattributed
         if unattributed:
@@ -344,6 +345,66 @@ def calculate(
                         "valid_hours": "연결 GPU 활동률 계산에 사용한 유효 관측 시간",
                         "mean": "Namespace에 연결돼 관측된 GPU의 평균 활동률이며 namespace 실사용률은 아닙니다.",
                     }[field]
+            if criteria_version == "1.3":
+                topic["quality"]["activity_criteria"] = {
+                    "threshold_percent": 5,
+                    "minimum_seconds": 1800,
+                    "interpretation": "관측 GPU의 저활동이며 전용 할당·낭비·회수 가능 여부를 판정하지 않습니다.",
+                }
+                for j, model in enumerate(summary["model_means"]):
+                    put(
+                        f"model_gpu_activity.{i}.{j}",
+                        model["mean"],
+                        "percent",
+                        "same_model_valid_gpu_time_weighted_mean",
+                        target={**summary["target"], "model": model["model"]},
+                    )
+                    topic["metrics"][-1]["denominator"] = {
+                        "value": model["valid_seconds"],
+                        "unit": "GPU-seconds",
+                    }
+                for h, hour in enumerate(summary["hourly"]):
+                    put(
+                        f"hourly_peak_gpu_count.{i}.{h}",
+                        hour["peak_gpu_count"],
+                        "physical_gpu",
+                        "max_concurrent_observed_connections",
+                        target=summary["target"],
+                    )
+                    topic["metrics"][-1]["period"] = hour["period"]
+                    observed_models = {m["model"]: m for m in hour["activity"]}
+                    for j, model_name in enumerate(
+                        [m["model"] for m in summary["model_means"]] or [None]
+                    ):
+                        model = observed_models.get(
+                            model_name,
+                            {"model": model_name, "mean": None, "valid_seconds": 0},
+                        )
+                        put(
+                            f"hourly_gpu_activity.{i}.{h}.{j}",
+                            model["mean"],
+                            "percent",
+                            "same_model_valid_gpu_time_weighted_mean",
+                            target={**summary["target"], "model": model["model"]},
+                        )
+                        topic["metrics"][-1]["period"] = hour["period"]
+                        topic["metrics"][-1]["denominator"] = {
+                            "value": model["valid_seconds"],
+                            "unit": "GPU-seconds",
+                        }
+                for w, window in enumerate(summary["low_windows"]):
+                    put(
+                        f"observed_low_activity_seconds.{i}.{w}",
+                        window["seconds"],
+                        "seconds",
+                        "activity_below_5_percent_for_at_least_1800_seconds",
+                        target={
+                            **summary["target"],
+                            "gpu_uuid": window["gpu_uuid"],
+                            "model": window["model"],
+                        },
+                    )
+                    topic["metrics"][-1]["period"] = window["period"]
             topic["missing_inputs"].extend(reasons)
         # The observed-connection interpretation is a limitation, not a failed input.
         # Actual missing allocation queries still retain incomplete_observation below.
@@ -846,6 +907,14 @@ def calculate(
     topic["missing_inputs"] = list(dict.fromkeys(topic["missing_inputs"]))
     if consolidated(profile):
         apply_additional_inputs(topic, data, collected)
+    if criteria_version == "1.3":
+        basic_observations(topic, data, collected)
+        useful = any(m["value"] is not None for m in topic["metrics"])
+        topic["status"] = (
+            "partial"
+            if useful and topic["missing_inputs"]
+            else ("ready" if useful else "blocked")
+        )
     return topic
 
 
@@ -880,11 +949,11 @@ async def run(tools):
     }
     priority = (
         ("D01", "D02", "D06", "D08")
-        if ("O08" in data["topic_ids"] and criteria_version == "1.2")
+        if ("O08" in data["topic_ids"] and criteria_version in {"1.2", "1.3"})
         else ()
     )
     namespace_only = (
-        criteria_version == "1.2"
+        criteria_version in {"1.2", "1.3"}
         and data["topic_ids"] == ["O08"]
         and set(data.get("topic_group_by", {}).get("O08", data["group_by"]))
         in ({"namespace"}, {"cluster", "namespace"})

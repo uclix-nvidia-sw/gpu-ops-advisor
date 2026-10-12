@@ -6,6 +6,22 @@ from agent_common.llm import explain
 
 
 METRIC_NAMES = {
+    "node_condition_seconds": "Node 조건 관측 시간",
+    "hourly_peak_gpu_count": "시간대 최대 동시 연결 GPU",
+    "hourly_gpu_activity": "시간대 연결 GPU 평균 활동률",
+    "model_gpu_activity": "모델별 기간 평균 활동률",
+    "observed_low_activity_seconds": "연속 저활동 관측 시간",
+    "recorded_memory_used": "기록된 GPU 메모리 사용량",
+    "recorded_memory_free": "기록된 GPU 메모리 여유량",
+    "recorded_memory_total": "기록된 GPU 메모리 총량",
+    "recorded_temperature": "기록된 GPU 온도",
+    "recorded_cpu_used": "기록된 Node CPU 사용률",
+    "recorded_node_load": "기록된 Node load",
+    "target_up_seconds": "수집 대상 정상 응답 시간",
+    "target_down_seconds": "수집 대상 실패 응답 시간",
+    "target_unknown_seconds": "수집 대상 미관측 시간",
+    "scrape_duration_mean": "평균 수집 응답 시간",
+    "scrape_duration_max": "최대 수집 응답 시간",
     "cluster_observed_gpu_count": "클러스터 관측 GPU",
     "cluster_connected_gpu_count": "클러스터 연결 확인 GPU",
     "cluster_connected_gpu_hours": "클러스터 누적 연결 시간",
@@ -137,11 +153,32 @@ async def write_report(result, llm):
                     omitted.get("evidence_refs", []),
                 )
         for metric in topic["metrics"]:
+            if result.get("versions", {}).get("criteria") == "1.3" and metric[
+                "id"
+            ].split(".")[1] in {
+                "hourly_peak_gpu_count",
+                "hourly_gpu_activity",
+                "observed_namespace_hours",
+                "namespace_activity_valid_hours",
+                "cluster_connected_gpu_hours",
+            }:
+                continue
             if metric["value"] is not None:
                 add(
                     "findings",
                     f"{METRIC_NAMES.get(metric['id'].split('.')[1], metric['id'])}: {metric['value']} {metric['unit']}; "
                     f"대상: {literal(metric.get('target', result['scope']))}. "
+                    + (
+                        f"기록/분석 시각: {literal(metric['period'])}. "
+                        if result.get("versions", {}).get("criteria") == "1.3"
+                        else ""
+                    )
+                    + (
+                        "실제 측정 시각은 미확인입니다. "
+                        if metric.get("quality", {}).get("measurement_time_verified")
+                        is False
+                        else ""
+                    )
                     + REASON_NAMES.get(metric.get("quality", {}).get("reason"), ""),
                     metric["evidence_refs"],
                     [metric["id"]],

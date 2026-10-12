@@ -4,7 +4,13 @@ import { Field, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { CommandError, JobRows, More, QueryState } from '../components/live';
 import { queryPath, str, topics, useCommand, useList } from '../lib/live';
 import { scopeLabel } from '../lib/domain';
-import { reportKind, reportKinds, reportSelection, topicDisplayBases } from '../lib/reportKinds';
+import {
+  defaultReportKinds,
+  reportKind,
+  reportKinds,
+  reportSelection,
+  topicDisplayBases,
+} from '../lib/reportKinds';
 import { reportTabs, useReportListPosition } from '../lib/reportNavigation';
 import {
   reportReceivedRange,
@@ -103,7 +109,11 @@ export function ReportForm() {
     [params] = useSearchParams(),
     cmd = useCommand();
   const [selectedIds, setSelectedIds] = useState<string[]>(
-      params.has('kind') ? [reportKind(params.get('kind')).id] : reportKinds.map((kind) => kind.id),
+      params.get('kind') === 'health'
+        ? ['equipment', 'energy', 'incidents']
+        : params.has('kind')
+          ? [reportKind(params.get('kind')).id]
+          : defaultReportKinds,
     ),
     [enableComparison, setEnableComparison] = useState(false),
     [scheduled, setScheduled] = useState(params.get('schedule') === 'true'),
@@ -121,7 +131,9 @@ export function ReportForm() {
     [resourceCluster, setResourceCluster] = useState(app.scope.clusters[0]?.cluster_id || '');
   const selectedKinds = reportKinds.filter((kind) => selectedIds.includes(kind.id));
   const selection = reportSelection(selectedIds);
-  const comprehensive = selectedKinds.length === reportKinds.length;
+  const comprehensive =
+    selectedIds.length === defaultReportKinds.length &&
+    defaultReportKinds.every((id) => selectedIds.includes(id));
   const hasComparison = selectedIds.includes('comparison');
   const compare = hasComparison && enableComparison && !scheduled;
   const waiting = selectedIds.includes('waiting');
@@ -211,7 +223,7 @@ export function ReportForm() {
       <PageHead
         eyebrow="NEW REPORT"
         title="새 운영 보고서"
-        description="전체 종합 또는 필요한 종류를 여러 개 선택해 보고서 한 장으로 확인하세요."
+        description="기본 3개 분석으로 시작하고 필요한 분석만 추가해 보고서 한 장으로 확인하세요."
       />
       <NavTabs items={reportTabs} />
       <ReportTimeNote />
@@ -224,9 +236,9 @@ export function ReportForm() {
                 type="radio"
                 name="report-mode"
                 checked={comprehensive}
-                onChange={() => setSelectedIds(reportKinds.map((kind) => kind.id))}
+                onChange={() => setSelectedIds(defaultReportKinds)}
               />
-              전체 종합보고서 · 모든 소주제
+              기본 종합보고서 · Namespace·장비·모니터링
             </label>
             <label className="check">
               <input
@@ -250,41 +262,51 @@ export function ReportForm() {
             선택한 {selectedKinds.length}개 종류 · {selection.topic_ids.length}개 분석 주제를 보고서
             한 장에 담습니다.
             <br />
-            카드의 체크를 바꾸면 직접 선택으로 전환됩니다.
+            추가 분석은 선택한 경우에만 관련 자료를 조회합니다. 체크를 바꾸면 직접 선택으로
+            전환됩니다.
           </p>
           <div className="report-kind-grid">
-            {reportKinds.map((item) => (
-              <label
-                key={item.id}
-                className={`report-kind-card${selectedIds.includes(item.id) ? ' selected' : ''}`}
-              >
-                <input
-                  type="checkbox"
-                  name="report-kind"
-                  value={item.id}
-                  checked={selectedIds.includes(item.id)}
-                  onChange={() => chooseKind(item.id)}
-                />
-                <span>
-                  <strong>{item.name}</strong>
-                  <span className="report-kind-description">{item.description}</span>
-                  <small>포함 주제 · {item.topicIds.join(' · ')}</small>
-                  <span className="report-kind-basis">
-                    표시 기준
-                    <br />
-                    {item.topicIds.map((id) => (
-                      <span key={id}>
-                        {id} · {topicDisplayBases[id]}
-                      </span>
-                    ))}
+            {[...reportKinds]
+              .sort(
+                (a, b) =>
+                  Number(defaultReportKinds.includes(b.id)) -
+                  Number(defaultReportKinds.includes(a.id)),
+              )
+              .map((item) => (
+                <label
+                  key={item.id}
+                  className={`report-kind-card${selectedIds.includes(item.id) ? ' selected' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    name="report-kind"
+                    value={item.id}
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => chooseKind(item.id)}
+                  />
+                  <span>
+                    <strong>{item.name}</strong>
+                    <span className="report-kind-description">{item.description}</span>
+                    <small>
+                      {defaultReportKinds.includes(item.id) ? '기본 분석' : '추가 분석'} ·{' '}
+                      {item.topicIds.join(' · ')}
+                    </small>
+                    <span className="report-kind-basis">
+                      표시 기준
+                      <br />
+                      {item.topicIds.map((id) => (
+                        <span key={id}>
+                          {id} · {topicDisplayBases[id]}
+                        </span>
+                      ))}
+                    </span>
                   </span>
-                </span>
-              </label>
-            ))}
+                </label>
+              ))}
           </div>
         </fieldset>
         <section className="report-kind-detail" aria-label="선택한 보고서 안내" aria-live="polite">
-          <h2>{comprehensive ? '전체 종합보고서' : '선택한 소주제 안내'}</h2>
+          <h2>{comprehensive ? '기본 종합보고서' : '선택한 소주제 안내'}</h2>
           {!selectedKinds.length && <Notice>보고서 종류를 하나 이상 선택하세요.</Notice>}
           <p>
             각 소주제는 자신의 계산 기준을 사용합니다. 자료가 부족한 소주제도 숨기지 않고 이유를

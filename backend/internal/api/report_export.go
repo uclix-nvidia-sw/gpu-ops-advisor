@@ -37,11 +37,13 @@ func reportMetrics(body Object) []Object {
 func exportMetrics(w http.ResponseWriter, id, format string, body Object, metrics []Object) error {
 	resultQuality, _ := body["quality"].(map[string]any)
 	perTopic := resultQuality["topic_group_by"] != nil
+	versions, _ := body["versions"].(map[string]any)
+	timed := String(versions, "criteria") == "1.3"
 	var data [][]string
 	for _, metric := range metrics {
 		target, _ := metric["target"].(map[string]any)
 		var parts []string
-		for _, field := range []string{"cluster_id", "namespace", "project", "gpu_uuid", "pod_uid"} {
+		for _, field := range []string{"cluster_id", "namespace", "project", "gpu_uuid", "pod_uid", "node", "condition", "status", "model", "window", "job", "instance"} {
 			if v := String(target, field); v != "" {
 				parts = append(parts, v)
 			}
@@ -59,6 +61,10 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 		if perTopic {
 			row = append(row, String(quality, "display_basis"))
 		}
+		if timed {
+			period, _ := json.Marshal(metric["period"])
+			row = append(row, string(period))
+		}
 		data = append(data, row)
 	}
 	if format == "csv" {
@@ -71,6 +77,9 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 		header := []string{"id", "target", "value", "unit", "method", "reason", "evidence_refs"}
 		if perTopic {
 			header = append(header, "display_basis")
+		}
+		if timed {
+			header = append(header, "period")
 		}
 		if err := writer.Write(header); err != nil {
 			return err
@@ -137,9 +146,8 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'")
-	page := template.Must(template.New("report").Funcs(template.FuncMap{"label": reportMetricName, "reason": reportReason}).Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPU 운영 보고서</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;color:#182434}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}th{background:#f1f5f9}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin-top:32px}.table{overflow:auto}</style></head><body><h1>GPU 운영 보고서</h1><p>{{.ID}}</p><p>결과: <strong>{{.Status}}</strong></p><p>분석 기간: {{.Period}}</p><p>계산 기준: {{.Criteria}}</p><p>요청 집계: {{.Grouping}}</p><p>연결 GPU 활동률은 Namespace의 실제 소비량·독점 할당량이 아닙니다. 공유·누락 구간은 보류하며 유효 관측 시간만 평균에 사용합니다.</p><p>누적 연결 시간은 GPU별 연결 시간을 더한 값입니다. GPU 8대가 각각 1시간 연결되면 8 GPU·시간이며, 실제 연산 시간은 아닙니다. 관측되지 않은 구간은 제외합니다. 연결 GPU 대수는 기간 중 고유 대수이며 동시 사용 대수가 아닙니다.</p><h2>아직 판단할 수 없는 내용·해석 제한</h2><ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul>{{if .Narrative}}<h2>최종 보고서</h2><p>{{.Editorial}}</p>{{range .Narrative}}<section><h3>{{.title}}</h3><pre>{{.text}}</pre></section>{{end}}{{end}}<h2>주요 수치</h2><div class="table"><table><thead><tr><th>항목</th><th>대상</th><th>값</th><th>단위</th><th>산출 제한</th>{{if .PerTopic}}<th>표시 기준</th>{{end}}</tr></thead><tbody>{{range .Rows}}<tr><td>{{label (index . 0)}}</td><td>{{index . 1}}</td><td>{{index . 2}}</td><td>{{index . 3}}</td><td>{{reason (index . 5)}}</td>{{if $.PerTopic}}<td>{{index . 7}}</td>{{end}}</tr>{{end}}</tbody></table></div><details><summary>근거·산식 및 원본 결과</summary><pre>{{.Raw}}</pre></details></body></html>`))
+	page := template.Must(template.New("report").Funcs(template.FuncMap{"label": reportMetricName, "reason": reportReason}).Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPU 운영 보고서</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;color:#182434}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}th{background:#f1f5f9}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin-top:32px}.table{overflow:auto}</style></head><body><h1>GPU 운영 보고서</h1><p>{{.ID}}</p><p>결과: <strong>{{.Status}}</strong></p><p>분석 기간: {{.Period}}</p><p>계산 기준: {{.Criteria}}</p><p>요청 집계: {{.Grouping}}</p><p>연결 GPU 활동률은 Namespace의 실제 소비량·독점 할당량이 아닙니다. 공유·누락 구간은 보류하며 유효 관측 시간만 평균에 사용합니다.</p>{{if .Timed}}<p>시간대 대수는 최대 동시 연결 대수입니다. 저활동은 GPU별 5% 미만이 30분 이상 이어진 관측이며 낭비·회수 가능 여부가 아닙니다. Fleet 기록값은 실제 측정 시각이 미확인이며 현재 장비 상태로 단정하지 않습니다.</p>{{else}}<p>누적 연결 시간은 GPU별 연결 시간을 더한 값입니다. GPU 8대가 각각 1시간 연결되면 8 GPU·시간이며, 실제 연산 시간은 아닙니다. 관측되지 않은 구간은 제외합니다. 연결 GPU 대수는 기간 중 고유 대수이며 동시 사용 대수가 아닙니다.</p>{{end}}<h2>아직 판단할 수 없는 내용·해석 제한</h2><ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul>{{if .Narrative}}<h2>최종 보고서</h2><p>{{.Editorial}}</p>{{range .Narrative}}<section><h3>{{.title}}</h3><pre>{{.text}}</pre></section>{{end}}{{end}}<h2>주요 수치</h2><div class="table"><table><thead><tr><th>항목</th><th>대상</th><th>값</th><th>단위</th><th>산출 제한</th>{{if .PerTopic}}<th>표시 기준</th>{{end}}{{if .Timed}}<th>기록/분석 시각 (UTC)</th>{{end}}</tr></thead><tbody>{{range .Rows}}<tr><td>{{label (index . 0)}}</td><td>{{index . 1}}</td><td>{{index . 2}}</td><td>{{index . 3}}</td><td>{{reason (index . 5)}}</td>{{if $.PerTopic}}<td>{{index . 7}}</td>{{end}}{{if $.Timed}}<td>{{if $.PerTopic}}{{index . 8}}{{else}}{{index . 7}}{{end}}</td>{{end}}</tr>{{end}}</tbody></table></div><details><summary>근거·산식 및 원본 결과</summary><pre>{{.Raw}}</pre></details></body></html>`))
 	period, _ := body["time_range"].(map[string]any)
-	versions, _ := body["versions"].(map[string]any)
 	quality, _ := body["quality"].(map[string]any)
 	grouping := "기록 없음"
 	if quality["requested_group_by"] != nil {
@@ -155,7 +163,7 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 	if String(body, "narrative_status") == "complete" {
 		editorial = "확인된 내용을 LLM이 정리했습니다. 보고서 작성 완료와 자료의 완전성은 별개입니다."
 	}
-	return page.Execute(w, Object{"PerTopic": perTopic, "Narrative": body["narrative"], "Editorial": editorial, "Criteria": String(versions, "criteria"), "Grouping": grouping, "ID": id, "Status": status, "Period": String(period, "start") + " – " + String(period, "end"), "Rows": data, "Limitations": limitations, "Raw": string(raw)})
+	return page.Execute(w, Object{"Timed": timed, "PerTopic": perTopic, "Narrative": body["narrative"], "Editorial": editorial, "Criteria": String(versions, "criteria"), "Grouping": grouping, "ID": id, "Status": status, "Period": String(period, "start") + " – " + String(period, "end"), "Rows": data, "Limitations": limitations, "Raw": string(raw)})
 }
 
 func reportMetricName(id string) string {
@@ -180,6 +188,22 @@ func reportMetricName(id string) string {
 		"observed_devices":                    "관측된 GPU",
 		"mapped_gpu_count":                    "Pod 연결이 확인된 GPU",
 		"mapped_gpu_hours":                    "GPU–Pod 연결 관측 시간",
+		"node_condition_seconds":              "Node 조건 관측 시간",
+		"hourly_peak_gpu_count":               "시간대 최대 동시 연결 GPU",
+		"hourly_gpu_activity":                 "시간대 연결 GPU 평균 활동률",
+		"model_gpu_activity":                  "모델별 기간 평균 활동률",
+		"observed_low_activity_seconds":       "연속 저활동 관측 시간",
+		"recorded_memory_used":                "기록된 GPU 메모리 사용량",
+		"recorded_memory_free":                "기록된 GPU 메모리 여유량",
+		"recorded_memory_total":               "기록된 GPU 메모리 총량",
+		"recorded_temperature":                "기록된 GPU 온도",
+		"recorded_cpu_used":                   "기록된 Node CPU 사용률",
+		"recorded_node_load":                  "기록된 Node load",
+		"target_up_seconds":                   "수집 대상 정상 응답 시간",
+		"target_down_seconds":                 "수집 대상 실패 응답 시간",
+		"target_unknown_seconds":              "수집 대상 미관측 시간",
+		"scrape_duration_mean":                "평균 수집 응답 시간",
+		"scrape_duration_max":                 "최대 수집 응답 시간",
 		"cluster_observed_gpu_count":          "클러스터 관측 GPU",
 		"cluster_connected_gpu_count":         "클러스터 연결 확인 GPU",
 		"cluster_connected_gpu_hours":         "클러스터 누적 연결 시간",

@@ -585,7 +585,7 @@ func TestRealJobController(t *testing.T) {
 		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM schedule_occurrences WHERE status='accepted'").Scan(&accepted))
 		var criteria, profile string
 		must(t, db.Pool.QueryRow(ctx, "SELECT versions->>'criteria', versions->>'execution_profile_revision' FROM jobs WHERE source_key LIKE 'schedule:%' ORDER BY created_at DESC LIMIT 1").Scan(&criteria, &profile))
-		if criteria != "1.2" || profile != "report-namespace-v1" {
+		if criteria != "1.3" || profile != "report-namespace-v2" {
 			t.Fatal("namespace schedule used wrong profile", criteria, profile)
 		}
 		if controller.Config.Versions["criteria"] != "unconfigured" {

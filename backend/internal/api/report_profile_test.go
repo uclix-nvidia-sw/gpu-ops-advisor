@@ -13,14 +13,14 @@ func TestReportProfileSelection(t *testing.T) {
 		topics, groups []string
 		expected       string
 	}{
-		{[]string{"O08"}, []string{"namespace"}, "report-namespace-v1"},
+		{[]string{"O08"}, []string{"namespace"}, "report-namespace-v2"},
 		{[]string{"O01", "O09", "O05"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O02", "O03", "O04"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O06"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O07"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O10"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O11"}, []string{"cluster"}, "local-v1"},
-		{[]string{"O01", "O08"}, []string{"cluster", "namespace"}, "report-namespace-v1"},
+		{[]string{"O01", "O08"}, []string{"cluster", "namespace"}, "report-namespace-v2"},
 		{[]string{"O08"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O08"}, []string{"namespace", "model"}, "local-v1"},
 		{[]string{"O02"}, []string{"namespace"}, "local-v1"},
@@ -44,8 +44,14 @@ func TestMixedReportProfile(t *testing.T) {
 	input := Object{"topic_ids": []string{"O01", "O08"}, "group_by": []string{"cluster"}, "topic_group_by": map[string][]string{"O01": {"cluster"}, "O08": {"namespace"}}}
 	before := Hash(input)
 	for _, source := range []string{"manual:fixture", "schedule:fixture"} {
-		if s.envelope(input, source, time.Now())["execution_profile_revision"] != "report-namespace-v1" {
+		if s.envelope(input, source, time.Now())["execution_profile_revision"] != "report-namespace-v2" {
 			t.Fatal("namespace criteria lost")
+		}
+	}
+	for _, topic := range []string{"O01", "O11"} {
+		solo := Object{"topic_ids": []string{topic}, "group_by": []string{"cluster"}, "topic_group_by": map[string][]string{topic: {"cluster"}}}
+		if s.envelope(solo, "manual:fixture", time.Now())["execution_profile_revision"] != "report-namespace-v2" {
+			t.Fatal("basic topic lost criteria")
 		}
 	}
 	if Hash(input) != before {
