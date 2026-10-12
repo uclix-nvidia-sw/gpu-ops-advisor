@@ -1,3 +1,12 @@
+# 2026-10-12 기본 보고서 E2E의 CI 기본 경로 수정
+
+- PR #96과 머지된 main `eccb662`의 GitHub Actions에서 새 보고서 E2E가 `KeyError: BACKEND_BINARY`로 실패했다(1 failed / 1005 passed). CI는 `.local/backend-e2e`를 빌드하지만 해당 선택 환경변수를 지정하지 않는다. 이전 로컬 검증은 변수를 지정하여 이 차이를 놓쳤다.
+- `test_e2e.py`의 해당 테스트만 기존 사례와 같은 기본 경로 처리로 수정했다. 환경변수가 있으면 사용하고 없으면 `.local/backend-e2e`(Windows는 `.exe`)를 사용한다. 제품 코드·워크플로·테스트 통과 기준은 변경하지 않았다.
+- 재검증: 기본 경로에 Backend를 새로 빌드하고 `BACKEND_BINARY` 및 외부 DB 환경변수를 제거한 상태에서 `RUN_AGENT_E2E=1` 전체 **1006 passed / 0 skipped**, 기존 MCP deprecation warning 3건. 임시 loopback PostgreSQL·실제 두 Worker·현재 서비스 실행 파일·공식 MCP를 사용했으며 Grafana/LLM은 fixture다. Ruff check/format·문서 링크·diff 검사 통과.
+- 범위: 운영 배포와 실환경 분석 검증이 아니다. 실패한 main 실행에서는 이미지·차트 발행이 건너뛰어졌다. 수정 PR의 원격 CI와 머지 후 발행 성공은 별도 확인 대상이다.
+
+---
+
 # 2026-10-12 기본 운영분석 O01·O08·O11 — 로컬 검수
 
 - 기준: 원격 main `a0fcae2`에서 `feat/default-operations-report`로 로컬 변경했다. 기본 선택은 O01/O08/O11이며 기존 O와 저장 결과는 유지한다. `report-namespace-v2`/criteria 1.3에서 시간대별 Namespace 활동률·동시 연결 GPU 수·연속 저활동, Fleet 기록 시각, D10/D22 수집 상태를 추가한다. 기존 criteria 1.2 계산은 유지한다.

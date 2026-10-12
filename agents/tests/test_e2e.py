@@ -1226,7 +1226,8 @@ def test_basic_report_v2_intake_publication_and_exports(stack, monkeypatch):
         },
     )
     backend = f"http://127.0.0.1:{port()}/api/v1"
-    binary = os.environ["BACKEND_BINARY"]
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
     process = stack["spawn"](
         [binary],
         {
