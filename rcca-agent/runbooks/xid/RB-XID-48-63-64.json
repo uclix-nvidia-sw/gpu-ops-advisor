@@ -8,9 +8,8 @@
   "content": {
     "schema": "gpu-rca-runbook/1.0",
     "required_evidence": [
-      "producer_contract",
-      "error_code",
-      "normalized_health"
+      "reported_producer_contract",
+      "reported_error_code"
     ],
     "exclusion_conditions": [],
     "required_queries": [
@@ -22,11 +21,13 @@
         "priority": 1,
         "required": true,
         "fact_names": [
+          "reported_producer_contract",
+          "reported_error_code",
           "producer_contract",
           "error_code",
           "normalized_health"
         ],
-        "purpose": "동일 대상·기간의 원본 오류와 동반 이벤트 확인.; 장치·서비스 상태 및 상태 변화 확인.",
+        "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -91,7 +92,8 @@
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
-      "현재 D09/D02/D03 계획은 ECC 카운터·row-remap·SRAM 임계 플래그를 모두 제공하지 않는다. 동일 GPU의 검증된 추가 원천이 없으면 48·63·64 동반 분기와 상세 복구 판단을 보류한다."
+      "현재 D09/D02/D03 계획은 ECC 카운터·row-remap·SRAM 임계 플래그를 모두 제공하지 않는다. 동일 GPU의 검증된 추가 원천이 없으면 48·63·64 동반 분기와 상세 복구 판단을 보류한다.",
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
     ],
     "title": "Xid 48 및 동반 ECC 이벤트 조사",
     "description": "Xid 48 단서에서 동일 GPU의 Xid 63·64 동반 여부와 모델별 추가 증거를 확인하는 초기 조사 Runbook.",
