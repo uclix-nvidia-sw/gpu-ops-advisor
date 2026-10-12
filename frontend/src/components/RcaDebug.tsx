@@ -146,7 +146,7 @@ export function RcaJobSummary({ job }: { job: Row }) {
         </strong>
         <p>
           {published
-            ? '결과 공개와 근거 충분성은 별개입니다. 결과 품질과 분석 사유를 함께 확인하세요.'
+            ? '결과 공개와 근거 충분성은 별개입니다. 판단 제한·다음 확인에서 해결할 항목을 구분해 보세요.'
             : '내부 수집·판단 근거는 워크플로우 종료 후 일괄 저장됩니다. 근거가 보이지 않는 것만으로 수집 실패를 판단할 수 없습니다.'}
         </p>
         {(result.termination_reason || job.termination_reason || job.queue_reason) != null && (
@@ -425,7 +425,7 @@ export function RcaResult({
               </dd>
               {synthesis.error_code != null && (
                 <>
-                  <dt>RCA 분석 실패 사유</dt>
+                  <dt>RCA 응답 검증 기록</dt>
                   <dd>
                     <RcaReason value={synthesis.error_code} />
                   </dd>
@@ -433,7 +433,13 @@ export function RcaResult({
               )}
               <dt>분석 상태</dt>
               <dd>
-                <RcaReason value={analysis.status} />
+                {analysis.status === 'failed' ? (
+                  <span>
+                    LLM 분석 응답 미채택 <code>failed</code>
+                  </span>
+                ) : (
+                  <RcaReason value={analysis.status} />
+                )}
               </dd>
             </dl>
             <p className="muted">
@@ -443,6 +449,7 @@ export function RcaResult({
             </p>
             <p>{str(result.summary)}</p>
           </section>
+          <RcaQualityGuidance result={result} />
           {!!rows(result.narrative).length && (
             <section id="final-report" className="result-section" aria-label="RCA 최종 보고서">
               <h3>RCA 최종 보고서</h3>
@@ -470,28 +477,6 @@ export function RcaResult({
               <DataView value={result.limitations} />
             </section>
           )}
-          <section className="result-section">
-            <h3>부족한 근거 · {strings(result.missing_inputs).length}개</h3>
-            {strings(result.missing_inputs).length ? (
-              <div>
-                {missingGroups(strings(result.missing_inputs)).map((group) => (
-                  <section key={group.id}>
-                    <h4>{group.name}</h4>
-                    <ul>
-                      {group.items.map((code) => (
-                        <li key={code}>
-                          <RcaReason value={code} />
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="muted">{group.next}</p>
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <p>보고된 부족 항목이 없습니다. 원인이 확정됐다는 의미는 아닙니다.</p>
-            )}
-          </section>
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}
@@ -504,7 +489,7 @@ export function RcaResult({
             [
               ['관측 사실', result.facts],
               ['원인 후보', result.cause_candidates],
-              ['검토 권고 · 장비 조치 미수행', result.recommendations],
+              ['권장 조치·적용 조건', result.recommendations],
               ['조사별 판단', result.assessments],
             ] as const
           ).map(([title, value]) => (
@@ -548,5 +533,107 @@ export function RcaResult({
         접수 {formatDate(str(job.created_at))} · 작업 ID {str(job.id)}
       </p>
     </div>
+  );
+}
+
+export function RcaQualityGuidance({ result }: { result: Row }) {
+  const groups = missingGroups(strings(result.missing_inputs));
+  const analysis = obj(obj(result.quality).analysis),
+    synthesis = obj(analysis.synthesis),
+    gate = obj(synthesis.repair_gate);
+  const repairNames: Record<string, string> = {
+    repaired: '수정 응답 검증 통과',
+    failed: '수정 응답을 채택하지 못함',
+    budget_exhausted: '남은 모델 예산 부족으로 수정 요청 생략',
+    deadline_exhausted: '실행 기한 만료로 수정 요청 생략',
+    budget_and_deadline_exhausted: '예산 부족·실행 기한 만료로 수정 요청 생략',
+    budget_or_deadline_exhausted: '예산 또는 기한으로 생략 · 구 기록은 구체적 원인을 구분하지 않음',
+  };
+  return (
+    <section className="result-section stack" aria-label="판단 제한과 다음 확인">
+      <h3>판단 제한·다음 확인</h3>
+      {result.termination_reason === 'missing_data' && (
+        <p>
+          missing_data는 여러 미충족 조건을 묶은 종료 코드입니다. 원본 부재뿐 아니라 상태·신원
+          미검증, 모델 분석 문제, 원인 확정에 필요한 추가 근거도 포함할 수 있습니다.
+        </p>
+      )}
+      {groups.length ? (
+        <>
+          <p>{groups.length}개 범주의 미충족 조건입니다. 저장된 결과 품질은 변경하지 않습니다.</p>
+          {groups.map((group) => (
+            <article className="data-item" key={group.id}>
+              <h4>
+                {group.name} · {group.items.length}개
+              </h4>
+              <ul>
+                {group.items.map((code) => (
+                  <li key={code}>
+                    <RcaReason value={code} />
+                  </li>
+                ))}
+              </ul>
+              <p>
+                <strong>다음 확인: </strong>
+                {group.next}
+              </p>
+            </article>
+          ))}
+        </>
+      ) : (
+        <p>
+          {Array.isArray(result.missing_inputs)
+            ? '보고된 부족 항목이 없습니다. 원인이 확정됐다는 의미는 아닙니다.'
+            : '이 결과에는 미충족 조건 목록이 없습니다. 구 결과의 분석 한계와 원본을 확인하세요.'}
+        </p>
+      )}
+      <p className="muted">
+        이 서비스는 조치를 권고하며 장비 조치를 실행하지 않습니다. 미수행 자체는 분석 실패가
+        아닙니다. 권고의 적용 조건은 별도로 검토하세요.
+      </p>
+      {(synthesis.repair_status != null || synthesis.error_code != null) && (
+        <details>
+          <summary>LLM 분석·수정 요청 진단</summary>
+          <p>
+            분석 상태:{' '}
+            {analysis.status === 'failed' ? (
+              <span>
+                LLM 분석 응답 미채택 <code>failed</code>
+              </span>
+            ) : (
+              <RcaReason value={analysis.status} />
+            )}
+          </p>
+          {synthesis.error_code != null && (
+            <p>
+              기록된 거절 사유: <RcaReason value={synthesis.error_code} />
+            </p>
+          )}
+          <p>
+            수정 요청 결과: {repairNames[str(synthesis.repair_status)] || '상세 기록 미확인'}{' '}
+            <code>{str(synthesis.repair_status)}</code>
+          </p>
+          <dl className="details">
+            {Object.entries({
+              remaining_budget: '남은 모델 예산',
+              prompt_bound: '입력 예산 추정 상한',
+              available_output_cap: '수정 응답 출력 상한',
+              remaining_seconds: '기한까지 남은 초',
+            }).map(([key, label]) =>
+              typeof gate[key] === 'number' && Number.isFinite(gate[key]) ? (
+                <div key={key}>
+                  <dt>{label}</dt>
+                  <dd>{String(gate[key])}</dd>
+                </div>
+              ) : null,
+            )}
+          </dl>
+          <p>
+            거절 기록과 조회 성공 여부는 별개입니다. 수정이 통과해도 장치 상태나 원인을 자동
+            확정하지 않습니다.
+          </p>
+        </details>
+      )}
+    </section>
   );
 }
