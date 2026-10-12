@@ -710,3 +710,27 @@ Runbook API lifecycle·RCA 발행·전체 Report topic
 | 결과 직렬화 중앙값 | 107.5 ms | 5.65 ms |
 
 운영 서버의 실제 호출 수/기간/데이터량과 다르므로 이 비율을 그대로 운영 성능 개선율로 보장하지 않는다. D06 절감폭은 제외할 Namespace가 얼마나 많은지에 따라 달라진다. 기존 보고서의 읽기 전송량/메모리 검증은 [Backend QA](../backend/QA.md)를 따른다. 운영 배포·기존 보고서의 실제 삭제·운영 환경 응답 시간 재측정은 수행하지 않았다.
+
+---
+
+## 2026-10-12 RCA general admission and bounded final editor
+
+Isolated worktree verification (Python 3.11): `pytest -c agents/pytest.ini agents/tests -m "not e2e" -q`:
+982 passed, 37 deselected. New tests use completed length-limited HTTP replies to verify
+compact retry, token/deadline refusal and original statement retention; cancellation
+and uncertain execution still propagate. General observation admission keeps old revision
+requirements unchanged and never grants health, cause or action eligibility. Existing
+power/PCIe evidence regressions confirm unknown/cause gaps without falsely requiring
+current health merely to collect general observations.
+
+`RUN_AGENT_E2E=1 ... pytest ... test_e2e.py -k "rca_without_published_runbook or rca_numeric_repair"`:
+3 passed, 24 deselected with temporary local PostgreSQL, JC, Incident, real Worker/NAT
+and official Grafana MCP; Grafana/LLM upstreams were fixtures. No production DB used.
+Frontend 199 tests, formatting and build passed (existing >900 kB bundle warning).
+Ruff check/format and documentation links passed. Production deployment, new general
+revision publication and live LLM truncation recovery remain unverified.
+
+2026-10-12 operator wording follow-up: stable headline under reversed LLM ordering,
+separate target/time/raw alert/identity and preserved references covered by a new test.
+Local publication E2E repeated: 3 passed, 24 deselected. Operational reports untouched;
+new wording requires a new RCA after deployment, not a rewrite of old published results.

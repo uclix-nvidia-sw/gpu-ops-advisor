@@ -1,3 +1,4 @@
+import { RcaNarrative } from './RcaNarrative';
 import { rcaReasons, missingGroups, purposeLabel } from '../lib/rcaLabels';
 import { queryName } from '../lib/report';
 import { useState } from 'react';
@@ -390,7 +391,10 @@ export function RcaResult({
       <RcaJobSummary job={job} />
       {job.result_ref != null && (
         <>
-          <section className="result-section">
+          <RcaNarrative result={result} />
+          <RcaQualityGuidance result={result} />
+          <details className="result-section">
+            <summary>분석 요약·LLM 실행 기록</summary>
             <h3>분석 요약</h3>
             <dl className="details">
               <dt>결과 품질</dt>
@@ -448,29 +452,7 @@ export function RcaResult({
               여부는 분석 상태와 근거를 함께 확인하세요.
             </p>
             <p>{str(result.summary)}</p>
-          </section>
-          <RcaQualityGuidance result={result} />
-          {!!rows(result.narrative).length && (
-            <section id="final-report" className="result-section" aria-label="RCA 최종 보고서">
-              <h3>RCA 최종 보고서</h3>
-              <p className="muted">
-                {result.narrative_status === 'complete'
-                  ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
-                  : 'LLM 설명을 사용하지 못해 저장된 근거와 판단으로 기본 보고서를 작성했습니다.'}{' '}
-                보고서 작성과 원인 확정은 별개입니다.
-              </p>
-              {rows(result.narrative).map((section, index) => (
-                <section key={str(section.id) || index}>
-                  <h4>{str(section.title) || '분석 설명'}</h4>
-                  {str(section.text)
-                    .split('\n\n')
-                    .map((paragraph, i) => (
-                      <p key={i}>{paragraph}</p>
-                    ))}
-                </section>
-              ))}
-            </section>
-          )}
+          </details>
           {!rows(result.narrative).length && strings(result.limitations).length > 0 && (
             <section className="result-section">
               <h3>분석 한계</h3>

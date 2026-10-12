@@ -243,7 +243,7 @@ async def test_report_all_queries_grouped_without_summing_samples(old):
     assert limits.count("관측은 원인 확정이 아닙니다.") == 1
     assert "D08(GPU–Pod 할당)" in sections["next"]
     assert "상태 fact로" in sections["next"]
-    assert "클러스터 cpc-2 · 노드 node-a" in sections["problem"]
+    assert "클러스터: cpc-2\n노드: node-a" in sections["problem"]
     assert evidence == before[1]
     for key in before[0]:
         if key != "quality":
