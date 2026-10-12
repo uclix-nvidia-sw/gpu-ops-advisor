@@ -1,0 +1,16 @@
+{
+  "scope": "Repository-only general investigation follow-up; no operational publication or revision assignment.",
+  "knowledge_key": "RB-GENERAL-GPU-NODE",
+  "before_content_sha256": "e9697272b76709f528d57f91f5ba0a8f47c18de1c1e7aceb07484afe204f1747",
+  "after_content_sha256": "57859528632061925ae45d499cbbb741ee2737cdc36c02826d53b89097e7c25d",
+  "required_evidence": [
+    "observations"
+  ],
+  "unresolved_requirements": [
+    "device_identity",
+    "current_state_semantics",
+    "causal_confirmation_evidence",
+    "action_eligibility"
+  ],
+  "reason": "General investigation admits scoped original observations, including unsupported components. Current-state facts remain separately gated in normalization and cause/action evaluation. Prior published revisions are immutable."
+}

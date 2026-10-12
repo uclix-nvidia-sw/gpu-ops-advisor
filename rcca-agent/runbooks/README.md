@@ -231,3 +231,11 @@ Grafana's [missing-data guidance](https://grafana.com/docs/grafana/latest/alerti
 likewise distinguishes MissingSeries eviction from recovery. The deployed missing-
 series interval count was not independently confirmed; do not assume a default
 when calculating the exact timeline.
+
+## 2026-10-12 일반 조사 후속 검토
+
+일반 조사에서는 원문 관측 확보와 현재 상태 판정을 분리한다. 필수 근거는
+`observations`이며, `normalized_health`·생산자 상태 의미·원인 확정·조치 조건을
+충족했다고 간주하지 않는다. 기존 2026-10-08 검토 기록은 보존하고
+[후속 본문 해시와 제한 사항](general-requirements-review-20261012.json)을 추가했다.
+운영 발행본을 수정한 것이 아니다. 새 revision 등록·검토·발행은 별도 절차다.

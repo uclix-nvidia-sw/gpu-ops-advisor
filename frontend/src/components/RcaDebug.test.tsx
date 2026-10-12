@@ -228,6 +228,12 @@ describe('RCA diagnostics', () => {
         />,
       );
       expect(html).toContain('RCA 최종 보고서');
+      expect(html.indexOf('id="final-report"')).toBeLessThan(
+        html.indexOf('<h3>판단 제한·다음 확인</h3>'),
+      );
+      expect(html.indexOf('id="final-report"')).toBeLessThan(
+        html.indexOf('분석 요약·LLM 실행 기록'),
+      );
       expect(html).toContain('권고 조치와 조건');
       expect(html).toContain('원인 미확정');
       expect(html).toContain('실행 보류·미수행');

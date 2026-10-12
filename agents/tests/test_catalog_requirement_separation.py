@@ -62,12 +62,19 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        assert digest == e["after_content_sha256"]
+        if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
+            followup = json.loads(
+                (CATALOG / "general-requirements-review-20261012.json").read_text(
+                    "utf-8"
+                )
+            )
+            assert followup["before_content_sha256"] == e["after_content_sha256"]
+            assert digest == followup["after_content_sha256"]
+        else:
+            assert digest == e["after_content_sha256"]
     general = next(r for r in ROWS if r["knowledge_key"] == "RB-GENERAL-GPU-NODE")
     assert general["content"]["required_evidence"] == [
         "observations",
-        "producer_contract",
-        "normalized_health",
     ]
     assert (
         general["content"]["required_evidence"]
@@ -75,3 +82,25 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
             (ROOT / "rcca-agent/src/rcca_agent/general_runbook.json").read_text("utf-8")
         )["required_evidence"]
     )
+
+
+def test_general_observations_do_not_require_or_establish_health():
+    book = deepcopy(
+        next(r for r in ROWS if r["knowledge_key"] == "RB-GENERAL-GPU-NODE")
+    )
+    book["compatibility"] = {"cluster_id": "fixture"}
+    data = {"scope": {"clusters": [{"cluster_id": "fixture"}]}}
+    assert matching_runbooks([book], {}, {"observations": True}, data) == ([book], [])
+    assert matching_runbooks([book], {}, {}, data) == ([], [book])
+    assert book["content"]["investigation_only"] is True
+    assert book["content"]["recommendations"] == []
+    assert not check_conditions(
+        [{"field": "normalized_health", "equals": "unhealthy"}], {}
+    )
+    old = deepcopy(book)
+    old["content"]["required_evidence"] = [
+        "observations",
+        "producer_contract",
+        "normalized_health",
+    ]
+    assert matching_runbooks([old], {}, {"observations": True}, data) == ([], [old])

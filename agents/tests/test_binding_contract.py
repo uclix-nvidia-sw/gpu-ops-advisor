@@ -294,6 +294,7 @@ def test_runbook_cannot_request_health_from_metric_binding():
     )
     row["content"]["observation_plan"][0]["query_id"] = "D15"
     row["content"]["required_queries"] = ["D15"]
+    row["content"]["observation_plan"][0]["fact_names"] = ["normalized_health"]
     with pytest.raises(ValueError, match="cannot produce"):
         validate_runbook(
             row, config["queries"], list(config["queries"]), authoring=True

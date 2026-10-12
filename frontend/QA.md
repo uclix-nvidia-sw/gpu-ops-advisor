@@ -1,3 +1,13 @@
+# 2026-10-12 RCA 최종 보고서 가독성 — 로컬 검수
+
+- 최신 origin/main 029fbed 기준. RCA 전용 RcaNarrative와 RcaResult 배치만 변경. Report·Agent·Runbook 발행·운영 DB는 변경하지 않았다.
+- 통과: Frontend 199 tests / 18 files, format:check, TypeScript/Vite build. 최종 보고서 우선 배치, 저장 문단·숫자·PCI·미확정 표현 보존, HTML escaping, 빈/미발행/구 결과, 알려지지 않은 구획, 기존 보고서 화면 회귀검사 포함. 기존 900kB 청크 경고는 유지된다.
+- 로컬 합성 자료로 실제 RcaNarrative를 브라우저에서 확인했다. 목차의 분석 한계 이동과 기본 PC/390px 너비에서 문단별 목록을 검수했으며 좁은 화면의 가로 넘침은 없었다. 모델·운영 API를 사용한 새 화면 E2E는 아니다.
+- 실제 XID 실행을 읽기 전용으로 대조: D09 36건·D44 280건 수집 성공, XID79 rev4와 일반 조사 rev2 선택. 충분성 두 회차 모두 insufficient_actionable이며 최종 결과 partial/missing_data. 일반 조사 확장의 필수 producer_contract·normalized_health는 reported_but_required_semantics_unverified. 분석 재시도는 repaired, 최종 편집은 llm_output_truncated로 기본 보고서 사용. 이것은 배포 전 UI 수정의 운영 검증을 의미하지 않는다.
+- 남은 문제: 일반 조사 요구 조건과 보고 사실/현재 상태 구분, 제한된 후속 조회 횟수 설명, 최종 편집 출력 잘림. UI가 부족 근거를 충족으로 바꾸거나 fault injection을 실제 하드웨어 장애로 확정하지 않는다. 새 UI 배포·운영 재검수는 미수행.
+
+---
+
 # 2026-10-12 RCA 판단 제한 분류 — 로컬 검수
 
 - 기준 main 24ac9d4. RCA 화면만 수정했으며 Report·운영 API·DB·Runbook 상태는 변경하지 않았다.

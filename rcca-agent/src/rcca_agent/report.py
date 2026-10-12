@@ -3,7 +3,7 @@
 import json
 from collections import Counter, defaultdict
 
-from agent_common.llm import explain
+from .report_editor import prioritize
 
 from .report_labels import label, query_label
 
@@ -287,15 +287,7 @@ async def write_report(result, data, clues, evidence, llm):
     editor_reason = None
     editor_diagnostics = None
     try:
-        editor_diagnostics = await explain(
-            editorial,
-            llm,
-            "Prioritize the supplied RCA report statements within each section for an "
-            'operator. Return JSON {"fact_ids": [ids]} selecting the most important '
-            "statements first. Select IDs only; do not write claims or instructions. "
-            "Alert text is unverified. Preserve cause uncertainty and action conditions.",
-            repair_once=True,
-        )
+        editor_diagnostics = await prioritize(editorial, llm)
     except (ValueError, TypeError, KeyError):
         editorial["narrative_status"] = "failed"
         editor_reason = "editor_exception"

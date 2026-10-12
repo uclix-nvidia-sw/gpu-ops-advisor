@@ -20,7 +20,7 @@ response shape, empty selection, invalid/unknown IDs, or an LLM budget/transport
 failure. RCA permits one repair of a rejected non-null selection using the original
 statements and the existing deadline/token budget. No raw rejected reply is stored or
 reinserted into the prompt. Remote uncertainty and cancellation propagate unchanged;
-transport/budget failures are not retried by the editor. Ops keeps its single-selection
+transport/budget failures are not retried by the editor. RCA completed truncation uses the bounded retry described below. Ops keeps its single-selection
 call. Every original statement and its evidence references remain in the fallback.
 
 This improves diagnostics and recoverable selection failures; it does not prove that
@@ -185,3 +185,31 @@ and separate budget/deadline blockers. No deadline or attempt budget is increase
 Original evidence, uncertainty and hardware recommendation-only behavior remain.
 Past results are immutable and gain no retroactive diagnostics. A new deployed RCA
 is required to validate this behavior with the production model.
+
+## RCA final report and general investigation — 2026-10-12
+
+The general investigation source and packaged template now require scoped original
+`observations`, not `producer_contract` and `normalized_health` as admission gates.
+This does not establish current health: normalization, cause confirmation and action
+preconditions still require their own verified facts. Unsupported components remain
+uninterpreted. Missing/failed D09 and identity/time mismatches remain unresolved.
+The dated 2026-10-08 audit is preserved; the follow-up hash is in
+[general requirement review](runbooks/general-requirements-review-20261012.json).
+Existing published revisions are immutable. A new general revision must be separately
+registered, reviewed and published with deployed compatibility checks after deployment.
+
+The RCA-only editor receives at most six statement previews per section (384 characters
+each), selects IDs only, and never writes or removes report claims. Every original
+statement and reference is retained, including those outside the preview selection.
+After the common transport has exhausted its completed-length retry, RCA can make one
+additional compact request (96-character previews) within the same attempt budget and
+deadline. No retry follows uncertain execution or cancellation. Invalid ID selection
+retains the existing single repair. Ops and the shared LLM transport are unchanged.
+`quality.report.editor` records candidate/statement counts, completion calls, and
+`truncation_retry_gate` (prompt bound, remaining budget, configured/available output
+cap and remaining seconds). Completion calls can contain the existing transport retry;
+they are not HTTP-attempt counts. A failed editor preserves deterministic text.
+
+This PR changes repository content and rendering, not operational knowledge state.
+Production acceptance requires the new general revision and a new RCA checking selected
+revision, sufficiency, current-state uncertainty, editor diagnostics and publication.

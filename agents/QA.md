@@ -672,3 +672,20 @@ Runbook API lifecycle·RCA 발행·전체 Report topic
 로컬 PostgreSQL을 사용했으며 Grafana/LLM은 fixture다. 운영 DB에 테스트하지 않았다.
 후속 코드의 운영 배포·새 RCA 결과 검수·정상 발생 오류와 호스트 커널 기록 대조는 미완료다.
 사용자 출력으로 #87의 계약/보고서 진단은 운영 RCA Pod 3개 모두 반영 확인했다.
+
+## 2026-10-12 RCA general admission and bounded final editor
+
+Isolated worktree verification (Python 3.11): `pytest -c agents/pytest.ini agents/tests -m "not e2e" -q`:
+982 passed, 37 deselected. New tests use completed length-limited HTTP replies to verify
+compact retry, token/deadline refusal and original statement retention; cancellation
+and uncertain execution still propagate. General observation admission keeps old revision
+requirements unchanged and never grants health, cause or action eligibility. Existing
+power/PCIe evidence regressions confirm unknown/cause gaps without falsely requiring
+current health merely to collect general observations.
+
+`RUN_AGENT_E2E=1 ... pytest ... test_e2e.py -k "rca_without_published_runbook or rca_numeric_repair"`:
+3 passed, 24 deselected with temporary local PostgreSQL, JC, Incident, real Worker/NAT
+and official Grafana MCP; Grafana/LLM upstreams were fixtures. No production DB used.
+Frontend 199 tests, formatting and build passed (existing >900 kB bundle warning).
+Ruff check/format and documentation links passed. Production deployment, new general
+revision publication and live LLM truncation recovery remain unverified.
