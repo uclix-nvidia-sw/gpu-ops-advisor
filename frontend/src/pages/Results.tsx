@@ -23,7 +23,7 @@ import { topicName } from '../lib/report';
 import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
-import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
+import { OperationsIncident } from '../components/OperationsResult';
 import { returnPath } from '../lib/debug';
 import { ReportDeleteButton, ReportDeletionNotice } from '../components/ReportDeletion';
 export function ResultPage({ kind }: { kind: string }) {
@@ -148,12 +148,7 @@ export function ResultPage({ kind }: { kind: string }) {
                 <IncidentDebug incident={r} />
               )
             ) : (
-              <>
-                {app.mode === 'operations' && <OperationsRca job={r} />}
-                <div className={app.mode === 'operations' ? 'ops-supporting-result' : ''}>
-                  <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
-                </div>
-              </>
+              <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
             )}
             <div className="head-actions">
               {kind !== 'incident' && (

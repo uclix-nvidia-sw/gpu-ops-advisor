@@ -3,6 +3,27 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaNarrative } from './RcaNarrative';
 
 describe('RCA report reading', () => {
+  it('moves repeated checks out of the primary report and explains opaque identifiers', () => {
+    const result = {
+      narrative: [
+        {
+          id: 'problem',
+          title: '감지된 문제',
+          text: '보고된 오류 코드: xid:79.\n\n대상 클러스터: sample 노드: node-a\n\n대상 식별 정보\n장비: opaque-id',
+        },
+        { id: 'next', title: '추가 확인', text: '중복 확인 문장' },
+        { id: 'limits', title: '분석 한계', text: '중복 한계 문장' },
+      ],
+    };
+    const before = JSON.stringify(result);
+    const html = renderToStaticMarkup(<RcaNarrative result={result} consolidateChecks />);
+    expect(html).toContain('노드: node-a');
+    expect(html).toContain('<summary>대상 연결용 식별자</summary>');
+    expect(html).toContain('고장 장치의 확정 정보가 아닙니다');
+    expect(html).not.toContain('중복 확인 문장');
+    expect(html).not.toContain('중복 한계 문장');
+    expect(JSON.stringify(result)).toBe(before);
+  });
   it('keeps every stored limitation and next check in distinct readable items', () => {
     const result = {
       narrative_status: 'failed',

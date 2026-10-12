@@ -278,3 +278,11 @@ RCA final reports show the detected-problem headline prominently and separate co
 paragraphs with visual boundaries. Report-generation details are collapsed. Additional
 checks/limitations show their first two stored paragraphs and an explicit remaining
 count; expansion retains all text. No Report components or global styles are changed.
+
+
+RCA result pages now use one final-report layout in both application modes. The
+`확인할 사항` section keeps stored next steps visible, explains missing-evidence
+codes in operational terms, and collapses repeated limitations and diagnostic codes.
+Opaque machine identifiers remain available under target correlation details;
+they do not establish which physical device failed. Cases defaults to RCA results,
+and incident details link directly to results. Report rendering is unchanged.
