@@ -168,3 +168,20 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 종료 코드는 전부 계약 통과 0, 계약 실패 포함 1, 입력 파일 오류 2다. 결과는 revision별 첫 실패를 수집한다. `contract_valid`는 적용 가능성·원천 의미·운영 승인·현재 발행 상태의 보증이 아니다. 저장된 스냅샷의 범위와 시점을 별도로 확인해야 한다. 발행 상태·접근 범위·claim 고정은 기존 Store/JC 책임이다.
 
 최종 보고서는 코드가 만든 문장을 LLM이 우선순위 선택하는 구조다. `quality.report.fallback_reason`은 `editor_not_configured`, `editor_response_rejected`, `editor_exception`, `editor_no_selection`을 구분한다. 이는 원인 분석(`rca_synthesis`)의 성공/실패와 별개이며, 원격 실행 불확실성·취소는 계속 Worker로 전파한다. 기존 보고서는 이 필드가 없을 수 있다.
+
+
+## Synthesis rejection diagnostics — 2026-10-12
+
+Numeric rejection diagnostics retain a SHA-256 of the rejected field, its length,
+and at most ten digit/number-word spans (zero-based Unicode codepoint offsets,
+exclusive end). Neither rejected prose nor matched values are retained. Hashes
+identify matching text; they cannot reconstruct historical replies.
+
+The single synthesis repair uses the transport's conservative UTF-8 prompt bound
+and configured synthesis output cap, reduced to the remaining attempt budget.
+It no longer requires a fixed 8192-token output reservation. `repair_gate` records
+remaining budget, prompt bound, configured/available output cap, remaining seconds,
+and separate budget/deadline blockers. No deadline or attempt budget is increased.
+Original evidence, uncertainty and hardware recommendation-only behavior remain.
+Past results are immutable and gain no retroactive diagnostics. A new deployed RCA
+is required to validate this behavior with the production model.

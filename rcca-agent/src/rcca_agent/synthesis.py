@@ -1,6 +1,8 @@
 """Bounded evidence interpretation; model output never establishes verified facts."""
 
 import re
+import hashlib
+import math
 import time
 import copy
 import json
@@ -79,9 +81,11 @@ def synthesis_input(
 class SynthesisValidationError(ValueError):
     """Fixed diagnostic codes only; never persist model text or raw exceptions."""
 
-    def __init__(self, code, *, rule="shape", index=None, tokens=()):
+    def __init__(self, code, *, rule="shape", index=None, tokens=(), numeric=None):
         super().__init__(code)
         self.diagnostic = {"code": code, "rule": rule, "tokens": list(tokens)[:10]}
+        if numeric is not None:
+            self.diagnostic["numeric_diagnostic"] = numeric
         if index is not None:
             self.diagnostic[
                 "limitation_index"
@@ -196,7 +200,7 @@ def validate_synthesis(
         else None
     )
 
-    def prose(text, evidence_refs):
+    def prose(text, evidence_refs, preserve_offsets=False):
         # Typed error codes of cited observations and identifiers copied from the
         # input may contain digits; any other digit is an unregistered number.
         codes = {
@@ -207,7 +211,11 @@ def validate_synthesis(
 
         def replace(match):
             code = f"{match[1].lower()}:{int(match[2])}"
-            return " " if code in codes else match[0]
+            return (
+                (" " * len(match[0]) if preserve_offsets else " ")
+                if code in codes
+                else match[0]
+            )
 
         text = re.sub(
             r"(?<![A-Za-z0-9_])(s?xid)[ :]*([0-9]+)(?![A-Za-z0-9_])",
@@ -216,12 +224,32 @@ def validate_synthesis(
             flags=re.I,
         )
         if identifier:
-            text = identifier.sub(" ", text)
+            text = identifier.sub(
+                lambda m: " " * len(m[0]) if preserve_offsets else " ", text
+            )
         return text
 
     def numeric_prose(text, evidence_refs):
-        text = prose(text, evidence_refs)
-        return re.search(r"\d", text) or NUMBER_WORD.search(text)
+        masked = prose(text, evidence_refs, preserve_offsets=True)
+        matches = sorted(
+            [(m.start(), m.end(), "digits") for m in re.finditer(r"\d+", masked)]
+            + [
+                (m.start(), m.end(), "number_word")
+                for m in NUMBER_WORD.finditer(masked)
+            ]
+        )
+        if not matches:
+            return None
+        return {
+            "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "text_length": len(text),
+            "offset_unit": "unicode_codepoints",
+            "matches": [
+                {"start": start, "end": end, "kind": kind}
+                for start, end, kind in matches[:10]
+            ],
+            "truncated": len(matches) > 10,
+        }
 
     def korean(text, evidence_refs):
         text = prose(text, evidence_refs)
@@ -262,7 +290,11 @@ def validate_synthesis(
             # Do not retain arbitrary model tokens (which may contain secrets).
             # Fixed offending-token classes provide bounded repair feedback.
             raise SynthesisValidationError(
-                "invalid_limitations", rule=rule, index=i, tokens=[rule]
+                "invalid_limitations",
+                rule=rule,
+                index=i,
+                tokens=[rule],
+                numeric=numeric_prose(text, refs) if rule == "numeric" else None,
             )
     candidates = []
     for i, h in enumerate(hypotheses):
@@ -309,6 +341,7 @@ def validate_synthesis(
                 rule="numeric",
                 index=i,
                 tokens=["numeric"],
+                numeric=numeric_prose(h["claim"], supporting),
             )
         if not korean(h["claim"], supporting):
             raise SynthesisValidationError(
@@ -369,21 +402,42 @@ async def synthesize(llm, payload, diagnostics=None):
             request = dict(view)
             if attempt:
                 request["validation_feedback"] = feedback
-                # Match the transport's conservative UTF-8 accounting; reserve output.
-                bound = (
+                # Use the same prompt bound and adaptive output cap as LLM.complete.
+                prompt_bound = (
                     len(
                         (
                             SYNTHESIS + json.dumps(request, ensure_ascii=False) + "[]"
                         ).encode()
                     )
                     + 256
-                    + 8192
                 )
-                if (
-                    getattr(llm, "remaining", 32768) < bound
-                    or getattr(llm, "deadline", float("inf")) <= time.monotonic()
-                ):
-                    diagnostics["repair_status"] = "budget_or_deadline_exhausted"
+                remaining = getattr(llm, "remaining", 32768)
+                configured_cap = getattr(
+                    getattr(llm, "settings", None), "llm_synthesis_max_tokens", 8192
+                )
+                output_cap = min(configured_cap, remaining - prompt_bound)
+                seconds = getattr(llm, "deadline", float("inf")) - time.monotonic()
+                budget_blocked = output_cap <= 0
+                deadline_blocked = seconds <= 0
+                diagnostics["repair_gate"] = {
+                    "remaining_budget": remaining,
+                    "prompt_bound": prompt_bound,
+                    "configured_output_cap": configured_cap,
+                    "available_output_cap": max(0, output_cap),
+                    "remaining_seconds": round(max(0, seconds), 3)
+                    if math.isfinite(seconds)
+                    else None,
+                    "budget_blocked": budget_blocked,
+                    "deadline_blocked": deadline_blocked,
+                }
+                if budget_blocked or deadline_blocked:
+                    diagnostics["repair_status"] = (
+                        "budget_and_deadline_exhausted"
+                        if budget_blocked and deadline_blocked
+                        else "budget_exhausted"
+                        if budget_blocked
+                        else "deadline_exhausted"
+                    )
                     break
                 diagnostics.update(repair_attempts=1, repair_status="failed")
             response = await llm.complete(SYNTHESIS, request, stage="synthesis")
