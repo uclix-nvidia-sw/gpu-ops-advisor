@@ -221,9 +221,10 @@ The XID79 and SXID11001 repository drafts now require reported producer/code for
 initial investigation; their D09 plans still expose the stronger health facts for
 independent validation. Current-health applicability/action conditions, optional
 metrics, source references and investigation-only restrictions are preserved.
-These are authoring changes, not edits to published runtime revisions. Other
-Runbooks keep their existing requirements until their investigation meaning is
-reviewed; deploying a Worker does not automatically republish the catalog.
+The catalog extension now applies the same reported-fact admission to all 266
+XID/SXID drafts; the general Runbook retains its existing requirements. These are
+authoring changes, not edits to published runtime revisions. Deploying a Worker
+does not automatically republish the catalog.
 
 
 Grafana's [missing-data guidance](https://grafana.com/docs/grafana/latest/alerting/guides/missing-data/)
