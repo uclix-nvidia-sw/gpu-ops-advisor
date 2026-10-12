@@ -146,13 +146,18 @@ class Observation:
             for e in sources
         ]
 
-    async def collect(self, query_id, period=None, *, namespace_scope=None):
+    async def collect(
+        self, query_id, period=None, *, namespace_scope=None, pod_scope=None
+    ):
+        if pod_scope and query_id != "D06":
+            raise ValueError("Pod collection scope is restricted to D06")
         period = period or self.data["time_range"]
         key = (
             query_id,
             period["start"],
             period["end"],
             json.dumps(namespace_scope, sort_keys=True),
+            json.dumps(pod_scope, sort_keys=True),
         )
         if key in self.cache:
             return self.cache[key]
@@ -322,6 +327,18 @@ class Observation:
                     + "=~"
                     + json.dumps("|".join(re.escape(x) for x in sorted(namespaces)))
                 )
+            pods = (pod_scope or {}).get(scope["cluster_id"])
+            pod_label = definition.get("target_labels", {}).get("pod")
+            if pods is not None and source == "mimir" and pod_label:
+                if not pods or any(not isinstance(p, str) or not p for p in pods):
+                    raise ValueError("invalid Pod collection scope")
+                filters.append(
+                    pod_label
+                    + "=~"
+                    + json.dumps("|".join(re.escape(p) for p in sorted(set(pods))))
+                )
+            else:
+                pods = None
             # Query strings come only from reviewed configuration and escaped scope labels.
             base = "{" + ",".join(filters) + "}"
             if json_filters:
@@ -435,6 +452,8 @@ class Observation:
                 }
                 if narrowed is not None:
                     quality["queried_namespaces"] = namespaces
+                if pods is not None:
+                    quality["queried_pods"] = sorted(set(pods))
                 if cached is not None:
                     quality["reused_from_evidence"] = cached[1]
                 if source == "loki" and (

@@ -178,15 +178,14 @@ async def execute_fixture(config, metrics, snapshots, topics, criteria="1.3"):
         name = metrics[args["expr"].split("{")[0]]
         calls.append((name, args["expr"]))
         response = copy.deepcopy(snapshots[name])
-        match = re.search(r'namespace=~"([^"]+)"', args["expr"])
-        if name == "D06" and match:
-            response["data"] = [
-                r
-                for r in response["data"]
-                if re.fullmatch(
-                    json.loads('"' + match[1] + '"'), r["metric"].get("namespace", "")
-                )
-            ]
+        for label in ("namespace", "pod"):
+            match = re.search(label + r'=~("(?:[^"\\]|\\.)*")', args["expr"])
+            if name == "D06" and match:
+                response["data"] = [
+                    r
+                    for r in response["data"]
+                    if re.fullmatch(json.loads(match[1]), r["metric"].get(label, ""))
+                ]
         return response
 
     data = dict(

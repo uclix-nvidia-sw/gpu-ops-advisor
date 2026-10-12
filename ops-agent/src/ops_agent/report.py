@@ -152,6 +152,12 @@ async def write_report(result, llm):
                     "등록되지 않은 장애가 없었다는 뜻은 아닙니다.",
                     omitted.get("evidence_refs", []),
                 )
+            elif omitted.get("reason") == "unused_by_report_calculation":
+                add(
+                    "scope",
+                    f"{topic['topic_id']}: 계산에 사용하지 않는 {omitted['query_id']} 원본 로그는 수집하지 않습니다. "
+                    "저장된 사건과 필요한 관측 자료로 계산하며, 작업 영향이나 원인을 확정하는 근거는 아닙니다.",
+                )
         for metric in topic["metrics"]:
             if result.get("versions", {}).get("criteria") == "1.3" and metric[
                 "id"

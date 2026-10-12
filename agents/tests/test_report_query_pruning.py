@@ -61,8 +61,8 @@ def test_health_plan_removes_twelve_pod_windows_per_cluster_day(days):
 @pytest.mark.parametrize(
     "context", [None, {}, {"incidents": None}, {"incidents": [{}]}]
 )
-def test_unknown_or_nonempty_incident_snapshot_never_skips_logs(context):
-    assert "D13" in workflow.query_ids("O06", context=context)
+def test_incident_snapshot_does_not_require_unused_logs(context):
+    assert "D13" not in workflow.query_ids("O06", context=context)
 
 
 @pytest.mark.asyncio
@@ -70,8 +70,8 @@ def test_unknown_or_nonempty_incident_snapshot_never_skips_logs(context):
     "topics,has_incident,expect_logs",
     [
         (["O06"], False, False),
-        (["O06"], True, True),
-        (["O06", "O10"], False, True),
+        (["O06"], True, False),
+        (["O06", "O10"], False, False),
         (["O01", "O09", "O05"], False, False),
         (["O01", "O02"], False, False),
     ],
@@ -139,19 +139,14 @@ async def test_workflow_prunes_actual_calls_and_records_why(
         topic = next(t for t in result["topics"] if t["topic_id"] == "O06")
         assert topic["status"] == "blocked" and topic["metrics"][0]["value"] is None
         assert "verified_workload_disruption_evidence" in topic["missing_inputs"]
-        if not has_incident:
-            omission = topic["quality"]["omitted_queries"][0]
-            db = output["evidence"][0]
-            assert omission["evidence_refs"] == [db["id"]]
-            assert db["snapshot"]["incidents"] == []
-            text = " ".join(n["text"] for n in result["narrative"])
-            assert (
-                "저장된 사건이 0건" in text
-                and "다른 주제에 필요하면 조회를 유지" in text
-            )
-            assert "등록되지 않은 장애가 없었다는 뜻은 아닙니다" in text
-            assert "D13" not in {
-                o["query_id"] for o in topic["quality"]["observations"]
-            }
-        else:
-            assert "omitted_queries" not in topic["quality"]
+        assert {o["query_id"] for o in topic["quality"]["omitted_queries"]} == {
+            "D09",
+            "D13",
+        }
+        assert all(
+            o["reason"] == "unused_by_report_calculation"
+            for o in topic["quality"]["omitted_queries"]
+        )
+        text = " ".join(n["text"] for n in result["narrative"])
+        assert "계산에 사용하지 않는 D13" in text
+        assert "D13" not in {o["query_id"] for o in topic["quality"]["observations"]}

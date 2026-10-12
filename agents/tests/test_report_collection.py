@@ -262,7 +262,7 @@ def test_report_override_validation_and_legacy_fallback():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("days,planned_calls", [(1, 46), (7, 322), (31, 1426)])
+@pytest.mark.parametrize("days,planned_calls", [(1, 42), (7, 294), (31, 1302)])
 async def test_bounded_pod_plan_reserves_calls_and_rejects_lower_custom_budgets(
     days, planned_calls
 ):
