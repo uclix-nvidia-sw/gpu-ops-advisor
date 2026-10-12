@@ -228,9 +228,7 @@ describe('RCA diagnostics', () => {
         />,
       );
       expect(html).toContain('RCA 최종 보고서');
-      expect(html.indexOf('id="final-report"')).toBeLessThan(
-        html.indexOf('<h3>판단 제한·다음 확인</h3>'),
-      );
+      expect(html.indexOf('id="final-report"')).toBeLessThan(html.indexOf('<h3>확인할 사항</h3>'));
       expect(html.indexOf('id="final-report"')).toBeLessThan(
         html.indexOf('분석 요약·LLM 실행 기록'),
       );
@@ -337,8 +335,8 @@ describe('Korean RCA report labels', () => {
       'GPU UUID',
       'R01 알려진 오류',
       '생산자 계약·오류 코드 확인 필요',
-      '로그의 Healthy/Unhealthy 표기만으로 현재 상태를 확정하지 않습니다.',
-      '조사에 필요한 값의 의미 또는 유효성이 미확인입니다.',
+      '로그의 상태 보고를 실제 장치의 현재 상태로 검증하지 못했습니다.',
+      '수집된 값을 검증 가능한 의미로 해석하지 못했다는 포괄적 사유입니다.',
     ])
       expect(visible).toContain(text);
     expect(render(<RcaReason value="non_korean_claim" />)).toContain('한국어 문장 기준');
@@ -376,7 +374,7 @@ describe('Korean RCA report labels', () => {
           job={{ result_ref: 'old', result: { limitations: ['과거 한계'] } }}
         />,
       ),
-    ).toContain('<h3>분석 한계</h3>');
+    ).toContain('분석 한계 원문');
     const html = render(
       <EvidenceRows
         items={[{ id: 'e', query_id: 'D05', tool_status: 'ok' }]}
@@ -478,4 +476,21 @@ describe('RCA quality guidance', () => {
       ),
     ).not.toContain('aria-label="판단 제한과 다음 확인"');
   });
+});
+
+it('keeps actionable next checks visible once and collapses repeated limitations', () => {
+  const html = render(
+    <RcaQualityGuidance
+      result={{
+        narrative: [
+          { id: 'next', text: '장치 연결을 확인하세요.\n\n장치 연결을 확인하세요.' },
+          { id: 'limits', text: '현재 상태는 미확정입니다.' },
+        ],
+        limitations: ['현재 상태는 미확정입니다.'],
+      }}
+    />,
+  );
+  expect(html.split('장치 연결을 확인하세요.')).toHaveLength(2);
+  expect(html.split('현재 상태는 미확정입니다.')).toHaveLength(2);
+  expect(html.indexOf('장치 연결을 확인하세요.')).toBeLessThan(html.indexOf('<details>'));
 });

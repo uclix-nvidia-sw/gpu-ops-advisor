@@ -566,3 +566,20 @@ main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 �
 local React component, including problem headline/context and limitation expansion.
 All stored paragraphs remained accessible. Frontend 199 tests and build passed;
 production deployment verification is pending.
+
+
+## 2026-10-12 RCA operator guidance follow-up
+
+- Read-only execution evidence comparison: the inspected general Runbook revision 2
+  required observations, producer_contract and normalized_health; the repository
+  general Runbook requires observations only. Deployment of code does not publish
+  a new knowledge revision. No operational knowledge records were changed here.
+- The inspected synthesis rejected non-Korean limitations on its initial response
+  and a numeric expression on repair. Repair was attempted, not blocked by budget
+  or deadline. Rejected text was not retained; the exact sentence cannot be recovered.
+  Final report editing succeeded independently.
+- Rendering tests cover contextual gaps without inventing collection success,
+  consolidated next steps and preserved limitations, collapsed correlation IDs,
+  result-first navigation, and legacy/unpublished results.
+- Passed: 229 Vitest tests, production build, Prettier check and documentation links (113 documents / 1403 links). Live deployment,
+  new RCA execution and operational Runbook publication remain unverified.

@@ -74,6 +74,21 @@ it('keeps developer RCA lists on the RCA menu', () => {
   expect(html).toContain('공개된 RCA 보고서');
 });
 
+it('starts the RCA menu with investigations while preserving explicit incident navigation', () => {
+  for (const [url, path] of [
+    ['/cases', '/analyses?'],
+    ['/cases?tab=incidents', '/incidents?'],
+  ]) {
+    fixture.paths = [];
+    renderToStaticMarkup(
+      <MemoryRouter initialEntries={[url]}>
+        <Cases />
+      </MemoryRouter>,
+    );
+    expect(fixture.paths.some((p) => p?.startsWith(path))).toBe(true);
+  }
+});
+
 it.each(['queued', 'retry_wait', 'failed', 'cancelled'])(
   'keeps an unpublished %s report on its own page with request context',
   (status) => {

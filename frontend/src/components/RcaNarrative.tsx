@@ -2,8 +2,16 @@ import { rows, str, type Row } from '../lib/live';
 import './RcaNarrative.css';
 
 // Render stored paragraphs verbatim: layout must not invent or upgrade claims.
-export function RcaNarrative({ result }: { result: Row }) {
-  const sections = rows(result.narrative);
+export function RcaNarrative({
+  result,
+  consolidateChecks = false,
+}: {
+  result: Row;
+  consolidateChecks?: boolean;
+}) {
+  const sections = rows(result.narrative).filter(
+    (s) => !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
+  );
   if (!sections.length) return null;
   return (
     <section id="final-report" className="rca-narrative" aria-label="RCA 최종 보고서">
@@ -62,7 +70,20 @@ export function RcaNarrative({ result }: { result: Row }) {
                   )}
                 </>
               ) : paragraphs.length > 0 ? (
-                paragraphs.map((text, i) => <p key={i}>{text}</p>)
+                paragraphs.map((text, i) =>
+                  str(section.id) === 'problem' && text.startsWith('대상 식별 정보') ? (
+                    <details key={i}>
+                      <summary>대상 연결용 식별자</summary>
+                      <p>
+                        아래 ID는 로그와 노드를 연결하는 식별자이며 GPU 모델명이나 고장 장치의 확정
+                        정보가 아닙니다.
+                      </p>
+                      <p>{text}</p>
+                    </details>
+                  ) : (
+                    <p key={i}>{text}</p>
+                  ),
+                )
               ) : (
                 <p className="muted">이 항목에 저장된 설명이 없습니다.</p>
               )}

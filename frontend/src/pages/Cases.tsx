@@ -8,9 +8,9 @@ export function Cases() {
   const app = useApp();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
-  const tab = ['analyses', 'reports'].includes(params.get('tab') || '')
+  const tab = ['incidents', 'analyses', 'reports'].includes(params.get('tab') || '')
       ? params.get('tab')!
-      : 'incidents',
+      : 'analyses',
     status = params.get('status') || '';
   const setStatus = (value: string) => {
     const next = new URLSearchParams(params);
@@ -32,7 +32,7 @@ export function Cases() {
       <PageHead
         eyebrow="ROOT CAUSE ANALYSIS"
         title={app.mode === 'developer' ? '사건·RCA 연결' : 'RCA 조사'}
-        description="사건에 연결된 RCA 조사와 발행된 결과를 확인합니다. 미발행 조사 제목은 실행 상태로 연결됩니다."
+        description="조사 제목을 선택하면 발행된 RCA 결과를 바로 볼 수 있습니다. 원본 사건과 실행 기록은 별도 링크에서 확인합니다."
         actions={
           app.mode === 'developer' ? (
             <Link className="button" to="/jobs?kind=rca">

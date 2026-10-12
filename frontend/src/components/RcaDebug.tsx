@@ -1,4 +1,5 @@
 import { RcaNarrative } from './RcaNarrative';
+import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons, missingGroups, purposeLabel } from '../lib/rcaLabels';
 import { queryName } from '../lib/report';
 import { useState } from 'react';
@@ -77,7 +78,7 @@ export function IncidentDebug({ incident }: { incident: Row }) {
             <table>
               <thead>
                 <tr>
-                  <th>작업 ID</th>
+                  <th>RCA 조사</th>
                   <th>실행 상태</th>
                   <th>확인</th>
                 </tr>
@@ -86,20 +87,20 @@ export function IncidentDebug({ incident }: { incident: Row }) {
                 {analyses.map((a) => (
                   <tr key={str(a.job_id)}>
                     <td>
-                      <Link className="text-link" to={`/jobs/${str(a.job_id)}`} state={{ from }}>
-                        {str(a.job_id)}
+                      <Link
+                        className="button primary"
+                        to={`/analyses/${str(a.job_id)}`}
+                        state={{ from }}
+                      >
+                        RCA 조사 결과 보기
                       </Link>
                     </td>
                     <td>
                       <Badge status={str(a.status) || null} />
                     </td>
                     <td>
-                      <Link
-                        className="text-link"
-                        to={`/analyses/${str(a.job_id)}`}
-                        state={{ from }}
-                      >
-                        결과·수집 근거
+                      <Link className="text-link" to={`/jobs/${str(a.job_id)}`} state={{ from }}>
+                        실행·디버깅 기록
                       </Link>
                     </td>
                   </tr>
@@ -147,7 +148,7 @@ export function RcaJobSummary({ job }: { job: Row }) {
         </strong>
         <p>
           {published
-            ? '결과 공개와 근거 충분성은 별개입니다. 판단 제한·다음 확인에서 해결할 항목을 구분해 보세요.'
+            ? '결과 공개와 근거 충분성은 별개입니다. 아래 확인할 사항에서 원인 미확정과 수집·검증 문제를 구분해 보세요.'
             : '내부 수집·판단 근거는 워크플로우 종료 후 일괄 저장됩니다. 근거가 보이지 않는 것만으로 수집 실패를 판단할 수 없습니다.'}
         </p>
         {(result.termination_reason || job.termination_reason || job.queue_reason) != null && (
@@ -391,7 +392,7 @@ export function RcaResult({
       <RcaJobSummary job={job} />
       {job.result_ref != null && (
         <>
-          <RcaNarrative result={result} />
+          <RcaNarrative result={result} consolidateChecks />
           <RcaQualityGuidance result={result} />
           <details className="result-section">
             <summary>분석 요약·LLM 실행 기록</summary>
@@ -453,12 +454,6 @@ export function RcaResult({
             </p>
             <p>{str(result.summary)}</p>
           </details>
-          {!rows(result.narrative).length && strings(result.limitations).length > 0 && (
-            <section className="result-section">
-              <h3>분석 한계</h3>
-              <DataView value={result.limitations} />
-            </section>
-          )}
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}
@@ -533,11 +528,25 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
   };
   return (
     <section className="result-section stack" aria-label="판단 제한과 다음 확인">
-      <h3>판단 제한·다음 확인</h3>
+      <h3>확인할 사항</h3>
+      {rows(result.narrative).some((s) => s.id === 'next' && str(s.text)) && (
+        <ul>
+          {[
+            ...new Set(
+              rows(result.narrative)
+                .filter((s) => s.id === 'next')
+                .flatMap((s) => str(s.text).split(/\n\s*\n/))
+                .filter(Boolean),
+            ),
+          ].map((text, i) => (
+            <li key={i}>{text}</li>
+          ))}
+        </ul>
+      )}
       {result.termination_reason === 'missing_data' && (
         <p>
-          missing_data는 여러 미충족 조건을 묶은 종료 코드입니다. 원본 부재뿐 아니라 상태·신원
-          미검증, 모델 분석 문제, 원인 확정에 필요한 추가 근거도 포함할 수 있습니다.
+          현재 결과만으로 확정할 수 없는 내용과 다음 확인 절차입니다. 조회 실패와 현재 상태·원인
+          미확정은 서로 다른 문제입니다.
         </p>
       )}
       {groups.length ? (
@@ -551,7 +560,13 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
               <ul>
                 {group.items.map((code) => (
                   <li key={code}>
-                    <RcaReason value={code} />
+                    {gapMeaning(code, result) ||
+                      reasons[code] ||
+                      '분류되지 않은 조건입니다. 원본 사유를 확인하세요.'}
+                    <details>
+                      <summary>진단 코드</summary>
+                      <code>{code}</code>
+                    </details>
                   </li>
                 ))}
               </ul>
@@ -573,6 +588,25 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
         이 서비스는 조치를 권고하며 장비 조치를 실행하지 않습니다. 미수행 자체는 분석 실패가
         아닙니다. 권고의 적용 조건은 별도로 검토하세요.
       </p>
+      {(rows(result.narrative).some((s) => s.id === 'limits') ||
+        strings(result.limitations).length > 0) && (
+        <details>
+          <summary>분석 한계 원문</summary>
+          <p>위 안내와 겹치는 저장 설명은 여기에서 확인할 수 있습니다.</p>
+          {[
+            ...new Set(
+              [
+                ...rows(result.narrative)
+                  .filter((s) => s.id === 'limits')
+                  .flatMap((s) => str(s.text).split(/\n\s*\n/)),
+                ...strings(result.limitations),
+              ].filter(Boolean),
+            ),
+          ].map((text, i) => (
+            <p key={i}>{text}</p>
+          ))}
+        </details>
+      )}
       {(synthesis.repair_status != null || synthesis.error_code != null) && (
         <details>
           <summary>LLM 분석·수정 요청 진단</summary>
@@ -595,6 +629,28 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
             수정 요청 결과: {repairNames[str(synthesis.repair_status)] || '상세 기록 미확인'}{' '}
             <code>{str(synthesis.repair_status)}</code>
           </p>
+          {rows(synthesis.validation_failures).map((attempt, i) => (
+            <div key={i}>
+              <h4>분석 응답 {String(attempt.attempt ?? i + 1)}회차 검사</h4>
+              {rows(attempt.violations).map((violation, j) => (
+                <p key={j}>
+                  {violation.rule === 'non_korean'
+                    ? '분석 한계 문장이 한국어 설명 기준을 충족하지 못했습니다.'
+                    : violation.rule === 'numeric'
+                      ? '등록된 근거로 검증되지 않은 숫자 표현이 분석 한계 문장에 포함됐습니다.'
+                      : str(violation.code, '응답 검증 실패')}
+                  {typeof violation.limitation_index === 'number' &&
+                    ` (한계 문장 ${violation.limitation_index + 1})`}
+                </p>
+              ))}
+            </div>
+          ))}
+          {rows(synthesis.validation_failures).length > 0 && (
+            <p>
+              거절 문장 원문은 저장되지 않아 정확한 문구는 복원할 수 없습니다. 이 진단은 최종 보고서
+              편집 성공 여부와 별개입니다.
+            </p>
+          )}
           <dl className="details">
             {Object.entries({
               remaining_budget: '남은 모델 예산',
