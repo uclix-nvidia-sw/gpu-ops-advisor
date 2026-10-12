@@ -23,6 +23,9 @@ describe('RCA report reading', () => {
     expect(html).toContain('기본 보고서');
     expect(html).not.toContain('<script>');
     expect(html).toContain('href="#rca-report-section-1"');
+    expect(html).toContain('분석 한계 1개 더 보기');
+    expect(html).not.toContain('<details open');
+    expect(html.indexOf('원인 미확정')).toBeLessThan(html.indexOf('분석 한계 1개 더 보기'));
     expect(JSON.stringify(result)).toBe(before);
   });
   it('keeps unfamiliar sections and missing text without inventing a conclusion', () => {

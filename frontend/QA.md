@@ -533,3 +533,8 @@ main `b27ed57`의 기존·운영·개발 GUI를 Namespace 보고서 개선과 �
 - `npm run format:check`, `npm test`(92 passed), `npm run build`: 통과.
 - 실제 브라우저의 1280px viewport: 상세 모달 1100px, 깊이 4 값 열 약 708px, 표 셀 최소 약 126px. 390px viewport: 모달 약 362px, 깊은 값 열 약 323px, 표 셀 최소 120px. 모바일 표는 가로 스크롤 사용. 원본 JSON은 접힌 disclosure로 보존한다.
 - Loki/Mimir/빈 응답, 깊은 객체, 테스트 알람 제목을 렌더 테스트로 검사했다. 운영 30006 화면에 새 코드를 배포한 검증은 아니다.
+
+2026-10-12 follow-up: inspected the real RCA report generator's synthetic output in the
+local React component, including problem headline/context and limitation expansion.
+All stored paragraphs remained accessible. Frontend 199 tests and build passed;
+production deployment verification is pending.

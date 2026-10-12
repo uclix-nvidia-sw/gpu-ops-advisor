@@ -57,32 +57,58 @@ async def write_report(result, data, clues, evidence, llm):
         "pod_uid": "Pod UID",
         "alertname": "알람",
     }
-    target_text = (
-        " · ".join(
-            dict.fromkeys(
-                f"{target_names.get(key, key)} {value}"
-                for key, value in target.items()
-                if value is not None
-            )
-        )
-        or "대상 미확인"
+    reported = result.get("quality", {}).get("analysis", {}).get("reported_errors", [])
+    codes = ", ".join(sorted({h["error_code"] for h in reported}))
+    headline = (
+        f"보고된 오류 코드: {codes}."
+        if codes
+        else "알람이 발생했습니다. 상세 증상은 아래 원문을 확인하세요."
     )
     add(
         "problem",
-        f"사건 시각: {data['incident_time']}. 입력 대상: {target_text}. "
-        f"알람이 보고한 증상: {clues.get('reason') or '상세 증상 미제공'}. "
-        "알람 내용은 조사 단서이며 현재 장애 상태나 근본 원인을 확정하지 않습니다.",
+        headline,
+        [r for h in reported for r in h["evidence_refs"]] or incident_refs,
+    )
+    primary = []
+    identifiers = []
+    if display_title and display_title != clues.get("reason"):
+        identifiers.append(f"알람 이름: {display_title}")
+    for key, value in target.items():
+        if value is None or key == "alertname":
+            continue
+        line = f"{target_names.get(key, key)}: {value}"
+        (
+            primary
+            if key in {"cluster_id", "node", "k8s_node_name", "namespace", "pod"}
+            else identifiers
+        ).append(line)
+    add(
+        "problem",
+        "대상\n" + "\n".join(dict.fromkeys(primary or ["대상 미확인"])),
         incident_refs,
     )
-    reported = result.get("quality", {}).get("analysis", {}).get("reported_errors", [])
-    if reported:
+    add(
+        "problem",
+        f"사건 기준 시각: {data['incident_time']}\n실제 오류 발생 시각과 같다고 단정할 수 없습니다.",
+        incident_refs,
+    )
+    add(
+        "problem",
+        "알람이 보고한 증상(원문):\n"
+        + (clues.get("reason") or display_title or "상세 증상 미제공"),
+        incident_refs,
+    )
+    if identifiers:
         add(
             "problem",
-            "보고된 오류 코드: "
-            + ", ".join(sorted({h["error_code"] for h in reported}))
-            + ". 보고 내용과 장비 발생 시각·현재 상태 검증은 구분합니다. Runbook 필수 근거와 복구 조치 조건은 별도로 검증해야 합니다.",
-            [r for h in reported for r in h["evidence_refs"]],
+            "대상 식별 정보\n" + "\n".join(dict.fromkeys(identifiers)),
+            incident_refs,
         )
+    add(
+        "problem",
+        "판단 범위: 오류가 보고된 사실과 현재 장치 상태·서비스 영향·근본 원인은 구분해서 확인해야 합니다.",
+        incident_refs,
+    )
     for diagnostic in (
         result.get("quality", {}).get("analysis", {}).get("requirement_diagnostics", [])
     ):
@@ -109,14 +135,14 @@ async def write_report(result, data, clues, evidence, llm):
     if not result["recommendations"]:
         add(
             "action",
-            "실행 조건을 검증한 복구 조치가 없습니다. 아래 추가 확인을 먼저 수행해야 합니다.",
+            "우선 할 일: 아래 추가 확인에서 부족한 근거를 확보하세요.\n실행 조건을 검증한 복구 조치는 아직 없습니다.",
         )
     for rec in result["recommendations"]:
         status = "실행 조건 충족" if rec["eligibility"] == "eligible" else "실행 보류"
         add(
             "action",
-            f"{status}: {rec['text']} / 사전 조건: {literal(rec['preconditions'])}. "
-            "조치는 수행하지 않았으며 담당자의 검토가 필요합니다.",
+            f"{status}: {rec['text']}\n사전 조건: {literal(rec['preconditions'])}\n"
+            "담당자 검토 후 수행 여부를 결정하세요. 이 시스템은 조치를 실행하지 않습니다.",
             rec["evidence_refs"],
         )
     provider = clues.get("provider_actions")
@@ -131,7 +157,8 @@ async def write_report(result, data, clues, evidence, llm):
                 for action in provider["value"]["repair_actions"]
             )
             + ". "
-            "실행 적격성 미검증·미수행이며 승인된 실행 권고가 아닙니다.",
+            "\n실행 적격성 미검증: 원천 시스템의 제안이며 이 분석이 실행을 권고한 것은 아닙니다.\n"
+            "현재 상태와 적용 조건을 먼저 확인하세요. 이 시스템은 조치를 실행하지 않습니다.",
             incident_refs,
         )
     queries = [e for e in evidence if e["query_id"].startswith("D")]
@@ -294,6 +321,10 @@ async def write_report(result, data, clues, evidence, llm):
     # RemoteUncertain/cancellation deliberately propagate to Worker fencing.
     ordered = editorial.get("narrative", []) + statements
     ordered = list({s["id"]: s for s in ordered}.values())
+    # Keep the problem headline/context in a stable reading order.
+    ordered = [s for s in statements if s["section"] == "problem"] + [
+        s for s in ordered if s["section"] != "problem"
+    ]
     result["narrative"] = [
         dict(
             id=section,

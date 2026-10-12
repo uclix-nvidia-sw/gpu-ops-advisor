@@ -689,3 +689,8 @@ and official Grafana MCP; Grafana/LLM upstreams were fixtures. No production DB 
 Frontend 199 tests, formatting and build passed (existing >900 kB bundle warning).
 Ruff check/format and documentation links passed. Production deployment, new general
 revision publication and live LLM truncation recovery remain unverified.
+
+2026-10-12 operator wording follow-up: stable headline under reversed LLM ordering,
+separate target/time/raw alert/identity and preserved references covered by a new test.
+Local publication E2E repeated: 3 passed, 24 deselected. Operational reports untouched;
+new wording requires a new RCA after deployment, not a rewrite of old published results.

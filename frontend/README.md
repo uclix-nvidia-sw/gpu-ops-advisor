@@ -259,3 +259,8 @@ RCA 관측 모달은 최대 1100px이며, 깊이 2 이상 객체는 한 열로 �
 운영 보고서의 분석 요약은 기준 시각·접수 시각·분석 기간·대상·집계를 라벨/값 행과 구분선으로 나눈다. 좁은 화면에서는 라벨과 값을 세로로 배치하고, 본문 소제목에는 구분선과 문단 여백을 적용한다. 저장 수치·기간과 RCA 화면은 바꾸지 않는다.
 
 저장된 보고서 상세의 상단 범위는 생성 당시 범위를 표시하며 전역 관측 범위·최근 시간 선택을 노출하지 않는다. Namespace GPU 현황의 `클러스터 골라 보기`는 클러스터 요약과 Namespace 활동 두 표만 필터링한다. 분석 요약·해석·상세 근거·다운로드는 전체 결과를 유지하며 화면에 이를 안내한다. 목록과 새 요청은 기존 전역 범위를 사용한다.
+
+RCA final reports show the detected-problem headline prominently and separate context
+paragraphs with visual boundaries. Report-generation details are collapsed. Additional
+checks/limitations show their first two stored paragraphs and an explicit remaining
+count; expansion retains all text. No Report components or global styles are changed.

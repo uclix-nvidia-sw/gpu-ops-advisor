@@ -213,3 +213,10 @@ they are not HTTP-attempt counts. A failed editor preserves deterministic text.
 This PR changes repository content and rendering, not operational knowledge state.
 Production acceptance requires the new general revision and a new RCA checking selected
 revision, sufficiency, current-state uncertainty, editor diagnostics and publication.
+
+### Operator-first wording
+New RCA reports keep the problem headline first even after ID prioritization. Target,
+incident reference time (not asserted as device occurrence time), verbatim alert and
+identifiers are separate paragraphs. Recommendations separate suggested action and
+conditions; producer proposals remain unverified proposals. This changes presentation
+only, preserving evidence, eligibility, causal status and historical report content.

@@ -7,6 +7,50 @@ from rcca_agent.report import write_report, TITLES
 
 
 @pytest.mark.asyncio
+async def test_operator_problem_order_preserves_alert_time_and_identity():
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=[],
+        limitations=[],
+        quality={
+            "analysis": {
+                "reported_errors": [{"error_code": "xid:79", "evidence_refs": ["log"]}]
+            }
+        },
+    )
+
+    class Model:
+        configured = True
+
+        async def complete(self, system, payload):
+            return {"fact_ids": [f["id"] for f in reversed(payload["facts"])]}
+
+    await write_report(
+        result,
+        {
+            "incident_time": "2026-10-12T05:00:00Z",
+            "target": {"node": "fixture-node", "gpu_uuid": "fixture-gpu"},
+        },
+        {"reason": "raw XID 79 event"},
+        [{"id": "alert", "query_id": "incident_snapshot"}],
+        Model(),
+    )
+    problem = result["narrative"][0]
+    paragraphs = problem["text"].split("\n\n")
+    assert paragraphs[0] == "보고된 오류 코드: xid:79."
+    assert paragraphs[1] == "대상\n노드: fixture-node"
+    assert "사건 기준 시각: 2026-10-12T05:00:00Z" in paragraphs[2]
+    assert "실제 오류 발생 시각과 같다고 단정할 수 없습니다" in paragraphs[2]
+    assert "raw XID 79 event" in paragraphs[3]
+    assert "fixture-gpu" in paragraphs[4]
+    assert set(problem["evidence_refs"]) == {"log", "alert"}
+    assert result["result_status"] == "partial"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "reply", [{"fact_ids": []}, {"fact_ids": ["invented"]}, "prose"]
 )

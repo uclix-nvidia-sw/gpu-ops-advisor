@@ -56,6 +56,19 @@
 .rca-narrative-section p:last-child {
   margin-bottom: 0;
 }
+.rca-narrative-problem p:first-of-type {
+  font-weight: 700;
+  font-size: 18px;
+}
+.rca-narrative-problem p:not(:first-of-type) {
+  padding: 12px 16px;
+  border-left: 3px solid var(--border);
+}
+.rca-narrative-method summary,
+.rca-narrative-more summary {
+  cursor: pointer;
+  padding-block: 10px;
+}
 .rca-narrative-checks ul {
   margin: 0;
   padding-left: 22px;
