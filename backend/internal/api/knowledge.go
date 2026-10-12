@@ -5,6 +5,7 @@ import (
 	. "gpu-ops-advisor/backend/internal/contract"
 	"gpu-ops-advisor/backend/internal/store"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -80,7 +81,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 			if key == "" || !Has([]string{"runbook", "policy", "data_dictionary", "reference", "case"}, kind) {
 				return Invalid("knowledge_key/kind")
 			}
-			if e := s.validateKnowledge(q, q.Body, kind); e != nil {
+			if e := s.validateKnowledge(q, tx, q.Body, kind); e != nil {
 				return e
 			}
 			revisionID := ID()
@@ -129,7 +130,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 			for k, v := range q.Body {
 				merged[k] = v
 			}
-			if e = s.validateKnowledge(q, merged, String(old, "kind")); e != nil {
+			if e = s.validateKnowledge(q, tx, merged, String(old, "kind")); e != nil {
 				return e
 			}
 			content, compatibility, refs, scope, visibility = merged["content"], merged["compatibility"], merged["source_refs"], merged["scope"], merged["visibility"]
@@ -148,7 +149,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 					return Invalid("comment")
 				}
 				if q.Body["evidence_refs"] != nil {
-					if e = s.evidenceRefs(q, q.Body["evidence_refs"], scope, visibility == "common"); e != nil {
+					if e = s.evidenceRefs(q, tx, q.Body["evidence_refs"], scope, visibility == "common"); e != nil {
 						return e
 					}
 				}
@@ -189,7 +190,7 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 				if state != "reviewed" || String(old, "reviewed_content_hash") != Hash(content) {
 					return Fail(409, "REVIEW_REQUIRED", "검토 승인된 revision만 발행할 수 있습니다.")
 				}
-				if e = s.evidenceRefs(q, refs, scope, visibility == "common"); e != nil {
+				if e = s.evidenceRefs(q, tx, refs, scope, visibility == "common"); e != nil {
 					return e
 				}
 				if String(old, "kind") == "runbook" {
@@ -242,7 +243,7 @@ func defaultArray(v any) any {
 	}
 	return v
 }
-func (s *Server) validateKnowledge(q *Request, b Object, kind string) error {
+func (s *Server) validateKnowledge(q *Request, tx pgx.Tx, b Object, kind string) error {
 	visibility := String(b, "visibility")
 	if !Has([]string{"common", "scoped"}, visibility) {
 		return Invalid("visibility")
@@ -265,9 +266,9 @@ func (s *Server) validateKnowledge(q *Request, b Object, kind string) error {
 	} else if b["scope"] != nil {
 		return Invalid("scope")
 	}
-	return s.evidenceRefs(q, b["source_refs"], b["scope"], visibility == "common")
+	return s.evidenceRefs(q, tx, b["source_refs"], b["scope"], visibility == "common")
 }
-func (s *Server) evidenceRefs(q *Request, raw, scope any, common bool) error {
+func (s *Server) evidenceRefs(q *Request, tx pgx.Tx, raw, scope any, common bool) error {
 	if raw == nil {
 		return nil
 	}
@@ -276,8 +277,10 @@ func (s *Server) evidenceRefs(q *Request, raw, scope any, common bool) error {
 		return Invalid("evidence_refs")
 	}
 	sc, _ := Decode[Scope](scope)
+	sort.Strings(refs)
 	for _, id := range refs {
-		v, e := s.resource(q, "evidence", id, false)
+		// Hold referenced rows until the writer commits, so report deletion cannot race validation.
+		v, e := store.One(q.R.Context(), tx, "SELECT jsonb_build_object('scope',scope) FROM evidence WHERE id::text=$1 FOR KEY SHARE", id)
 		if e != nil {
 			return e
 		}
@@ -346,9 +349,6 @@ func (s *Server) reviews(w http.ResponseWriter, q *Request, parts []string) erro
 			return e
 		}
 	}
-	if e = s.evidenceRefs(q, b["evidence_refs"], resource["scope"], false); e != nil {
-		return e
-	}
 	var supersedes any
 	if id := String(b, "supersedes_id"); id != "" {
 		v, e := s.resource(q, "reviews", id, false)
@@ -362,6 +362,9 @@ func (s *Server) reviews(w http.ResponseWriter, q *Request, parts []string) erro
 	}
 	var result Object
 	e = s.DB.Transaction(ctx, func(tx pgx.Tx) error {
+		if e := s.evidenceRefs(q, tx, b["evidence_refs"], resource["scope"], false); e != nil {
+			return e
+		}
 		id := ID()
 		_, e := tx.Exec(ctx, "INSERT INTO review_records(id,subject_type,subject_id,kind,author,occurred_at,body,scope,supersedes_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)", id, subject, b["subject_id"], b["kind"], "unverified", occurred, b, sc, supersedes)
 		if e != nil {

@@ -47,7 +47,8 @@ export function useResource(path: string | null, body?: unknown, poll = false) {
       if (
         path &&
         /^\/(jobs|reports|analyses)\/[^/]+$/.test(path) &&
-        ['succeeded', 'failed', 'cancelled', 'expired'].includes(str(query.state.data?.status))
+        ['succeeded', 'failed', 'cancelled', 'expired'].includes(str(query.state.data?.status)) &&
+        !['pending', 'failed'].includes(str(obj(query.state.data?.deletion).artifact_cleanup_state))
       )
         return false;
       return pollDelay(query.state.error, query.state.fetchFailureCount);

@@ -676,3 +676,75 @@ it('shows each topic basis in request details instead of a misleading global clu
   expect(html).toContain('선택 범위 전체의 관측 GPU 에너지 합계');
   expect(html).not.toContain('<dt>집계 기준</dt>');
 });
+
+it('does not traverse stored Node condition intervals while raw results are collapsed', () => {
+  let reads = 0;
+  const quality = Object.defineProperty({}, 'node_condition_observations', {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return [{ intervals: [{ start: 'RAW_INTERVAL_START', end: 'RAW_INTERVAL_END' }] }];
+    },
+  });
+  const html = renderToStaticMarkup(
+    <ReportContent
+      onEvidence={() => {}}
+      value={{
+        versions: { criteria: '1.3' },
+        summary: '저장된 장비 분석 요약',
+        topics: [{ topic_id: 'O01', quality, metrics: [] }],
+        evidence_refs: ['evidence-on-demand'],
+      }}
+    />,
+  );
+  expect(reads).toBe(0);
+  expect(html).toContain('저장된 장비 분석 요약');
+  expect(html).toContain('수집 근거 · 1건');
+  expect(html).toContain('<summary>원본 결과 보기</summary>');
+  expect(html).not.toContain('RAW_INTERVAL_START');
+});
+
+it('labels a projected response without treating omitted raw intervals as missing analysis', () => {
+  const result = {
+    versions: { criteria: '1.3' },
+    topics: [
+      {
+        topic_id: 'O01',
+        status: 'ready',
+        metrics: [
+          {
+            id: 'O01.node_condition_seconds.0',
+            target: { node: 'node-one', condition: 'Ready' },
+            value: 3600,
+            unit: 'seconds',
+          },
+        ],
+      },
+    ],
+    evidence_refs: ['evidence-on-demand'],
+  };
+  const projection = {
+    omitted_fields: ['topics[topic_id=O01].quality.node_condition_observations'],
+    stored_content_hash: 'original-stored-hash',
+  };
+  const html = renderToStaticMarkup(
+    <ReportContent
+      value={result}
+      request={{ result_projection: projection }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain('조회용 결과 보기');
+  expect(html).toContain('Node 상태의 원본 구간 기록');
+  expect(html).toContain('저장된 분석 결과는 변경하지 않았습니다');
+  expect(html).toContain('Node 조건 관측 시간');
+  expect(html).toContain('3,600');
+  expect(html).toContain('수집 근거 · 1건');
+  expect(html).not.toContain('원본 결과 보기');
+  expect(html).not.toContain('original-stored-hash');
+  expect(html).toContain('산출 완료 1개');
+
+  const legacy = renderToStaticMarkup(<ReportContent value={result} onEvidence={() => {}} />);
+  expect(legacy).toContain('원본 결과 보기');
+  expect(legacy).not.toContain('Node 상태의 원본 구간 기록');
+});

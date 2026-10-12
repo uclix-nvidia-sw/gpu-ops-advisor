@@ -71,9 +71,12 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	if status != "" && !Has([]string{"queued", "running", "retry_wait", "succeeded", "failed", "cancelled", "expired"}, status) {
 		return Invalid("status")
 	}
-	filter := Hash(Object{"scope": scope, "kind": want, "status": status, "from": values.Get("from"), "to": values.Get("to"), "target": values.Get("target"), "topic_id": values.Get("topic_id"), "incident_id": values.Get("incident_id"), "sort": values.Get("sort")})
+	filter := Hash(Object{"resource": kind, "scope": scope, "kind": want, "status": status, "from": values.Get("from"), "to": values.Get("to"), "target": values.Get("target"), "topic_id": values.Get("topic_id"), "incident_id": values.Get("incident_id"), "sort": values.Get("sort")})
 	args := []any{scope}
 	where := "dsx_scope_contains($1,scope)"
+	if kind == "reports" {
+		where += " AND NOT EXISTS(SELECT 1 FROM report_deletions d WHERE d.job_id=jobs.id)"
+	}
 	add := func(clause string, v any) { args = append(args, v); where += " AND " + fmt.Sprintf(clause, len(args)) }
 	if want != "" {
 		add("kind=$%d", want)
@@ -135,7 +138,7 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	}
 	// Page first, then read only the published candidate's list fields. Never serialize its body.
 	rows, e := s.DB.Pool.Query(q.R.Context(), `
-SELECT to_jsonb(j), jsonb_build_object('id',c.id,
+SELECT to_jsonb(j) || jsonb_build_object('deletion',to_jsonb(d)-'job_id'), jsonb_build_object('id',c.id,
  'result_status',c.body->'result_status','narrative_status',c.body->'narrative_status')
 FROM (
  SELECT id,kind,status,stage,attempt_no,created_at,started_at,deadline_at,queue_reason,
@@ -148,6 +151,7 @@ FROM (
     'topic_group_by','comparison_range','incident_id','symptom')) AS input_snapshot
  FROM jobs WHERE `+where+fmt.Sprintf(" ORDER BY created_at DESC,id DESC LIMIT $%d", len(args))+`
 ) j
+LEFT JOIN report_deletions d ON d.job_id=j.id
 LEFT JOIN result_candidates c ON c.id=j.published_result_id AND c.job_id=j.id AND c.kind=j.kind
 ORDER BY j.created_at DESC,j.id DESC`, args...)
 	if e != nil {
@@ -233,12 +237,36 @@ func jobSummary(v Object) Object {
 	out["result_ref"] = nil
 	out["result_status"] = "unpublished"
 	out["narrative_status"] = nil
+	if String(v, "kind") == "report" {
+		out["can_delete"] = String(v, "source_module") == "backend" && Has([]string{"succeeded", "failed", "cancelled", "expired"}, String(v, "status"))
+		if deletion, ok := v["deletion"].(map[string]any); ok {
+			out["deletion"] = deletion
+			out["can_cancel"], out["can_retry"], out["can_delete"] = false, false, false
+			out["result_status"] = "deleted"
+		}
+	}
 	return out
 }
+
+// Remove the duplicated legacy O01 intervals before transport and JSON decoding.
+const publishedResultSQL = `SELECT jsonb_build_object(
+ 'body',CASE WHEN p.omitted THEN jsonb_set(c.body,'{topics}',p.topics) ELSE c.body END,
+ 'content_hash',c.content_hash,'projected',COALESCE(p.omitted,false))
+FROM result_candidates c
+LEFT JOIN LATERAL (
+ SELECT jsonb_agg(CASE WHEN t.value->>'topic_id'='O01' AND jsonb_typeof(t.value->'quality')='object'
+   THEN t.value #- '{quality,node_condition_observations}' ELSE t.value END ORDER BY t.ordinality) AS topics,
+   bool_or(t.value->>'topic_id'='O01' AND jsonb_typeof(t.value->'quality')='object'
+     AND (t.value->'quality') ? 'node_condition_observations') AS omitted
+ FROM jsonb_array_elements(CASE WHEN c.kind='report' AND c.body#>>'{versions,criteria}'='1.3' AND jsonb_typeof(c.body->'topics')='array'
+   THEN c.body->'topics' ELSE '[]'::jsonb END) WITH ORDINALITY AS t(value,ordinality)
+) p ON true
+WHERE c.id::text=$1 AND c.job_id::text=$2 AND c.kind=$3`
+
 func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 	out := jobSummary(v)
-	if id := String(v, "published_result_id"); id != "" {
-		result, e := store.One(q.R.Context(), s.DB.Pool, "SELECT to_jsonb(c) FROM result_candidates c WHERE id::text=$1 AND job_id::text=$2 AND kind=$3", id, String(v, "id"), String(v, "kind"))
+	if id := String(v, "published_result_id"); id != "" && out["deletion"] == nil {
+		result, e := store.One(q.R.Context(), s.DB.Pool, publishedResultSQL, id, String(v, "id"), String(v, "kind"))
 		if e != nil {
 			return nil, e
 		}
@@ -249,6 +277,12 @@ func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 		if detail {
 			sanitize(body)
 			out["result"] = body
+			if result["projected"] == true {
+				out["result_projection"] = Object{
+					"omitted_fields":      []string{"topics[topic_id=O01].quality.node_condition_observations"},
+					"stored_content_hash": result["content_hash"],
+				}
+			}
 		}
 	}
 	if detail {

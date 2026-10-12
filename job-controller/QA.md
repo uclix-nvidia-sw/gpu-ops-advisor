@@ -1,5 +1,16 @@
 # Job Controller 검증 기록
 
+## 2026-10-12 종료 보고서 삭제 — 로컬 격리 검증
+
+**통과:** JC `go vet ./...`, `go test -race ./...`, `go build ./...`. 실제 localhost 임시 PostgreSQL과 Backend/JC HTTP 서버로 새 `TestReportDeletion`을 실행했다. 환경 변수는 allowlist로 새로 구성해 운영 DSN/PG 설정을 상속하지 않았고, 테스트 schema와 임시 DB를 끝나면 제거했다. 이전 001/002/003/006/007 스키마에서 새 migration을 JC와 Backend 각각 반복 적용하는 시작 경로도 확인했다.
+
+- 성공·실패·취소·만료 보고서의 모든 시도 candidate/evidence 제거, 삭제 수량·원래 공개 ID/hash·명령 멱등성·접수/시도/감사 기록 보존.
+- 실행 중 상태·미종료 attempt·미반환 예약·RCA 삭제 거절. 삭제 후 retry/cancel 및 과거 성공 complete 재전송 포함 늦은 Worker 호출 거절.
+- identity FK, collection/allocation, 지식 source_refs, review evidence_refs, knowledge-review audit, 다른 결과의 canonical evidence_refs가 있으면 전체 rollback. 기존 발행 candidate 직접 DELETE는 계속 차단.
+- 실제 HTTP 경합: 지식 근거 저장이 먼저이면 201/삭제 409, 삭제가 먼저이면 삭제 200/뒤늦은 지식 저장 404. 잠금 획득 순서를 실제 PG 대기로 확인했으며 근거 없는 참조가 남지 않았다. 2초 이상 근거 잠금을 기다리는 삭제는 `report_busy`로 rollback.
+
+**범위/미검증:** Agent 부분은 별도 실제 Worker E2E 기록을 따르며, 이 검사는 프로토콜·DB·HTTP 계약 검증이다. 운영 DB 삭제, PVC 파일 제거, 운영 백업 복원·대규모 참조 확인 부하는 수행하지 않았다. 실제 삭제 후에는 애플리케이션 롤백만으로 결과/근거를 복원할 수 없다. 파일 정리는 DB 삭제와 별도 상태로 확인한다.
+
 ## 2026-10-08 종류별 독립 실행 용량 — 로컬 검수
 
 **기준:** 최신 원격 main `5570a0e`(PR 85)에서 `feat/independent-agent-capacity`로 분리했다. 기본 한도/차트의 1개씩 구성은 유지하며, 선택 구성은 RCA/Ops 각 3개·Worker당 1·종류별 3·전체 6이다. 신규 DB migration·Agent 분석/공통 Worker·재시도/lease 정책 변경은 없다.

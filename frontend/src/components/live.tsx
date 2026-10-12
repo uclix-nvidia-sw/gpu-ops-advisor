@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { ReportExecution, ReportOrigin, ReportPeriod, ReportScope } from './ReportMeta';
+import { ReportDeleteButton } from './ReportDeletion';
 import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
@@ -510,7 +511,7 @@ export function JobRows({ items }: { items: Row[] }) {
                     className="text-link"
                     state={{ from }}
                     to={
-                      j.kind === 'report' || j.result_ref != null
+                      j.deletion == null && (j.kind === 'report' || j.result_ref != null)
                         ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
                         : `/jobs/${str(j.id)}`
                     }
@@ -568,7 +569,7 @@ export function JobRows({ items }: { items: Row[] }) {
               </td>
               {!reportsOnly && (
                 <td>
-                  {j.result_ref != null ? (
+                  {j.deletion == null && j.result_ref != null ? (
                     <Link
                       className="text-link"
                       state={{ from }}
@@ -576,6 +577,8 @@ export function JobRows({ items }: { items: Row[] }) {
                     >
                       최종 보고서 보기
                     </Link>
+                  ) : j.deletion != null ? (
+                    '보고서 삭제'
                   ) : (
                     '결과 미발행'
                   )}
@@ -663,6 +666,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
               <Link className="text-link" to={`/jobs/${str(job.id)}`} state={{ from }}>
                 작업 상태·시도 이력
               </Link>
+              <ReportDeleteButton job={job} />
             </div>
             <details className="report-history-details">
               <summary>기간·대상·요청 상세</summary>

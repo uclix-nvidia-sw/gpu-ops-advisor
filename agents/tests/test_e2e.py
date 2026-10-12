@@ -582,7 +582,7 @@ def stack():
             )
 
 
-def submit(stack, kind, data):
+def submit(stack, kind, data, *, execution_profile="local-v1"):
     deadline = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
     body = dict(
         contract_version="1.3",
@@ -591,7 +591,7 @@ def submit(stack, kind, data):
         kind=kind,
         input=data,
         deadline_at=deadline,
-        execution_profile_revision="local-v1",
+        execution_profile_revision=execution_profile,
     )
     if kind == "rca":
         body.update(
@@ -822,6 +822,40 @@ def test_binding_profile_through_both_real_workers(
             )
     else:
         assert all(q[0]["reason"] == "binding_unselected" for q in qualities)
+    if activate and parameter_scope == "discover":
+        minimal_data = {
+            **data,
+            "topic_ids": ["O01", "O08", "O11"],
+            "topic_group_by": {
+                "O01": ["cluster"],
+                "O08": ["namespace"],
+                "O11": ["cluster"],
+            },
+        }
+        minimal_id = submit(
+            stack, "report", minimal_data, execution_profile="report-namespace-v2"
+        )
+        minimal, minimal_evidence = worker_result(
+            isolated, "report", minimal_id, "-binding-minimal"
+        )
+        assert minimal["versions"]["criteria"] == "1.3"
+        assert not {"D15", "D18", "D19"} & {q for q, _ in minimal_evidence}
+        equipment = next(t for t in minimal["topics"] if t["topic_id"] == "O01")
+        assert "node_condition_observations" not in equipment["quality"]
+        conditions = [
+            m for m in equipment["metrics"] if ".node_condition_seconds." in m["id"]
+        ]
+        assert len(conditions) == 4
+        assert {m["value"] for m in conditions} == {0, 3600}
+        assert all(m["evidence_refs"] for m in conditions)
+        with psycopg.connect(stack["url"]) as conn:
+            assert (
+                conn.execute(
+                    "SELECT count(*) FROM evidence WHERE job_id=%s AND query_id='D20' AND snapshot IS NOT NULL",
+                    (minimal_id,),
+                ).fetchone()[0]
+                > 0
+            )
     iid = str(uuid4())
     rca = dict(
         scope=SCOPE,
@@ -1274,6 +1308,79 @@ def test_basic_report_v2_intake_publication_and_exports(stack, monkeypatch):
     assert exported.status_code == 200
     header = next(csv.reader(io.StringIO(exported.text.lstrip("\ufeff"))))
     assert "period" in header and "target" in header
+
+    # Delete a real published report through Backend -> JC, then let Ops clean its files.
+    detail = httpx.get(backend + f"/reports/{jid}").json()
+    assert detail["can_delete"]
+    folder = LOCAL / "artifacts" / jid
+    assert folder.is_dir() and list(folder.iterdir())
+    with psycopg.connect(stack["url"]) as conn:
+        preserved = conn.execute(
+            "SELECT count(*),sum(octet_length(content_hash)) FROM result_candidates WHERE job_id<>%s",
+            (jid,),
+        ).fetchone()
+        own_evidence = conn.execute(
+            "SELECT count(*) FROM evidence WHERE job_id=%s", (jid,)
+        ).fetchone()[0]
+    assert own_evidence > 0
+    delete_headers = {
+        "Idempotency-Key": str(uuid4()),
+        "If-Match": str(detail["version"]),
+    }
+    deletion = httpx.post(
+        backend + f"/jobs/{jid}/delete",
+        json={"reason": "isolated deletion regression"},
+        headers=delete_headers,
+        timeout=15,
+    )
+    assert deletion.is_success, deletion.text
+    repeated = httpx.post(
+        backend + f"/jobs/{jid}/delete",
+        json={"reason": "isolated deletion regression"},
+        headers=delete_headers,
+        timeout=15,
+    )
+    assert repeated.status_code == deletion.status_code
+    assert {k: v for k, v in repeated.json().items() if k != "request_id"} == {
+        k: v for k, v in deletion.json().items() if k != "request_id"
+    }
+    deleted = httpx.get(backend + f"/reports/{jid}").json()
+    assert deleted["result_status"] == "deleted" and deleted["result_ref"] is None
+    assert deleted["status"] == "succeeded" and deleted["attempts"]
+    assert deleted["deletion"]["evidence_count"] == own_evidence
+    assert not deleted["can_delete"]
+    assert httpx.get(backend + f"/reports/{jid}/export?format=html").status_code == 410
+    history = httpx.get(backend + f"/jobs/{jid}").json()
+    assert history["result_status"] == "deleted"
+    reports = httpx.get(backend + "/reports").json()["items"]
+    jobs = httpx.get(backend + "/jobs").json()["items"]
+    assert jid not in {row["id"] for row in reports}
+    assert next(row for row in jobs if row["id"] == jid)["result_status"] == "deleted"
+    process = stack["spawn"](
+        [sys.executable, "-m", "ops_agent.main", "--once"],
+        stack["env"],
+        "report-deletion-cleanup",
+    )
+    assert process.wait(30) == 0
+    assert folder.is_file() and folder.stat().st_size == 0
+    with psycopg.connect(stack["url"]) as conn:
+        assert conn.execute(
+            "SELECT artifact_cleanup_state FROM report_deletions WHERE job_id=%s",
+            (jid,),
+        ).fetchone() == ("complete",)
+        assert conn.execute(
+            "SELECT count(*) FROM evidence WHERE job_id=%s", (jid,)
+        ).fetchone() == (0,)
+        assert conn.execute(
+            "SELECT count(*) FROM result_candidates WHERE job_id=%s", (jid,)
+        ).fetchone() == (0,)
+        assert (
+            conn.execute(
+                "SELECT count(*),sum(octet_length(content_hash)) FROM result_candidates WHERE job_id<>%s",
+                (jid,),
+            ).fetchone()
+            == preserved
+        )
 
 
 @pytest.mark.e2e

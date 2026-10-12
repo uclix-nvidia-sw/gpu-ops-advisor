@@ -144,6 +144,9 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 
 ### O01의 입력 → 출력 계약
 
+**2026-10-12 기본 보고서 최소화:** 아래 확장 표의 D15/D18/D19 출력은 이전 계산 기준에서 유지한다. 통합 binding의 criteria 1.3 O01은 해당 조회와 지표를 제외하고 D03/D04/D16/D20 중심으로 구성한다. D20은 `node_condition_seconds`와 evidence 참조로 제공하며 전체 구간 배열을 결과에 중복 저장하지 않는다. O03/O04 등 다른 소비자가 필요한 D15와 RCA binding 정의는 유지한다. O08을 포함한 O01/O08/O11 조합은 완전한 GPU 연결 관측이 확인되는 경우에만 D06 Namespace를 좁힌다.
+
+
 | 구분 | 출력 | 사용 D | 계산·실패 처리 |
 |---|---|---|---|
 | 기능 유지 | 기존 observed_devices | D01 대신 D02 labels | cluster+GPU UUID 중복 제거, 기존 관측 범위 의미 보존 |

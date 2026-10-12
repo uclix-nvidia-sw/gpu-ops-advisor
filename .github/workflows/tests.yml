@@ -48,7 +48,7 @@ jobs:
           mkdir -p .local
           go -C backend build -o ../.local/backend-e2e ./cmd/server
           export E2E_BACKEND_BINARY="$GITHUB_WORKSPACE/.local/backend-e2e"
-          go -C "$MODULE" test -tags=e2e ./tests -v -count=1 -timeout=10m
+          go -C "$MODULE" test -tags=e2e ./... -v -count=1 -timeout=10m
 
   agents:
     name: Python / both agents + real MCP E2E

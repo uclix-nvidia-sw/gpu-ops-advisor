@@ -16,3 +16,6 @@ var WorkerContracts string
 
 //go:embed 007_runbook_contract.sql
 var RunbookContract string
+
+//go:embed 008_report_deletions.sql
+var ReportDeletions string

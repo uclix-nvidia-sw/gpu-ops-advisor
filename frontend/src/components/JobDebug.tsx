@@ -18,6 +18,7 @@ import { Badge, Notice } from './ui';
 import { RcaResult } from './RcaDebug';
 import { InputTrace, StoredEvidence, JobComparison, RawRecord } from './TraceView';
 import { ReportContent } from './ReportContent';
+import { ReportDeletionNotice } from './ReportDeletion';
 import { RecordInspector } from './RecordInspector';
 import { WorkflowGuide } from './WorkflowGuide';
 
@@ -88,7 +89,13 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
           <span>
             공개 결과{' '}
             <Badge
-              status={job.result_ref != null ? str(result.result_status, 'unknown') : 'unpublished'}
+              status={
+                job.deletion != null
+                  ? 'deleted'
+                  : job.result_ref != null
+                    ? str(result.result_status, 'unknown')
+                    : 'unpublished'
+              }
             />
           </span>
           <span>
@@ -266,8 +273,10 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
           {tab === 'result' && (
             <>
               <h2>결과와 공개 상태</h2>
-              {keyButton('result', '공개 결과 키')}
-              {job.result_ref == null ? (
+              {job.deletion == null && keyButton('result', '공개 결과 키')}
+              {job.deletion != null ? (
+                <ReportDeletionNotice job={job} />
+              ) : job.result_ref == null ? (
                 <Notice>
                   아직 공개된 결과가 없습니다. 미공개 후보는 이 화면에서 제공하지 않습니다.
                 </Notice>
@@ -297,7 +306,12 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                   {job.kind === 'report' ? (
                     <>
                       <ReportExports id={str(job.id)} />
-                      <ReportContent value={result} request={job} onEvidence={onEvidence} />
+                      <ReportContent
+                        key={`${str(job.id)}:${str(job.result_ref)}`}
+                        value={result}
+                        request={job}
+                        onEvidence={onEvidence}
+                      />
                       <Link
                         className="button"
                         to={`/reports/new?parent_job_id=${encodeURIComponent(str(job.id))}`}
@@ -310,12 +324,14 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                   )}
                 </>
               )}
-              <Reviews
-                id={str(job.id)}
-                subject="job"
-                target={obj(job.target)}
-                reportDisplay={job.kind === 'report'}
-              />
+              {job.deletion == null && (
+                <Reviews
+                  id={str(job.id)}
+                  subject="job"
+                  target={obj(job.target)}
+                  reportDisplay={job.kind === 'report'}
+                />
+              )}
             </>
           )}
         </section>
