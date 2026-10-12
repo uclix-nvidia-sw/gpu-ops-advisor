@@ -1,3 +1,33 @@
+# 2026-10-13 운영자 확인 중심 보고서 — 로컬 최종 검수
+
+- 시작 기준 원격 main `9707b15`, 작업 브랜치 `feat/operator-report-insights`. 이 절은 로컬 구현·합성 회귀 결과이며 운영 배포·원격 PR·실제 자료 검증을 뜻하지 않는다.
+- criteria 1.3의 O08/O01/O05/O11은 기존 지표·고정 DB snapshot에서 대상·기간·확인 이유·다음 확인과 유효 metric/evidence 참조를 구성한다. RCA Agent·공통 Python·JC·DB schema는 수정하지 않았다. O05는 정확한 사건 ID로 공개 RCA와 조치 기록만 연결하고, 알람 snapshot 상태와 실제 복구를 구분한다.
+- 수집은 통합 binding + criteria 1.3의 O01 D06, O05 D10/D22를 제외한다. O05 단독은 실제 fixture 원격 호출 0회를 검증했다. 기본 O01/O05/O08/O11은 다른 주제가 소비하므로 기존 D 8종이 유지되고, O05를 함께 선택해도 D06의 안전한 Namespace/Pod 제한이 유지된다. 구 criteria/구 binding/다른 D06 소비자 조합은 회귀로 보존한다.
+- Python 3.11.16, 저장소 루트 `.venv/bin/python -m pytest -c agents/pytest.ini`에서 `test_operator_insights.py`, `test_basic_report.py`, `test_report_minimization.py`, `test_report_pod_pruning.py`, `test_report_query_pruning.py`, `test_binding_contract.py`, `test_report_parallel.py` 초기 확장 검사 **160 passed**(3.75초). 이후 O05 증상 표시·상태별 다음 확인 4사례 추가 후 최종 `test_operator_insights.py` **16 passed**(0.17초). 두 실행은 겹치는 검사이며 합산하지 않는다.
+- 확인한 경계: 일부 GPU만 저활동, 짧은 저활동 사이 공백을 연속으로 연결하지 않음, 빈/실패 표본을 0% 또는 전체 정상으로 해석하지 않음, 알려진 Node 조건만 점검 후보화, 실제 측정 시각 미확인 온도를 과열로 단정하지 않음, 수집 실패/미관측 분리, 사건 ID와 subject 종류가 다른 RCA/조치 제외, 발생 중·RCA 유무·해제·미확인별 안내, 계산값·단위·상태·자료 부족 판정 보존.
+- **최종 통과:** 전체 Agent **1096 passed / 0 skipped**, 104.17초. 기존 MCP deprecation warning 3건. Python 3.11.16, 외부 DB/credential 변수를 제거한 새 loopback PostgreSQL, main 기준에서 빌드한 JC/Incident/Backend와 실제 두 Worker·공식 MCP를 사용했다. Grafana/LLM은 fixture다. 신규 확인 사항의 참조 검증·JC 발행, Backend 결과 조회·export 및 기존 RCA 회귀까지 포함한다. 최초 sandbox의 loopback bind 제한은 로컬 서버 허용 후 해소했고, 새 E2E의 '사건 없음' 단정은 실제 고정 DB snapshot의 사건 ID 집합과 대조하도록 바로잡았다.
+- 전체 Python Ruff check/format, 최종 Frontend **236 tests / 22 files**·format·build, 문서 링크·diff 검사를 통과했다. Go 구현/DB schema는 미변경이라 해당 모듈의 전체 race suite는 별도 실행하지 않았고 실제 API/발행 소비 경로는 위 Agent E2E로 검증했다.
+- **미검증:** 운영 Grafana/LLM/DB·동일 운영 데이터 전후 시간·원본 물리 저장량·실사용자의 판단 품질. 기간 이전 미해결 사건을 별도 조회하거나 이전 결과를 재작성하지 않는다. 합성 자료의 조회 수 감소를 운영 속도 향상률로 대체하지 않는다.
+
+
+## 동일 합성 자료의 이전/수정본 비교
+
+[재현 스크립트](tests/benchmark_operator_report.py)로 `9707b15`의 Ops/shared와 수정본을 비교했다. 24시간·15초 표본, GPU 연결 Pod 1개와 같은 Namespace의 일반 Pod 99개, 사건 1개, 각 3회 중앙값이다. 첫 시나리오는 기존 기본 O01/O08/O11과 새 기본 O01/O05/O08/O11을 비교하고, 나머지는 같은 단독 주제의 전후를 비교한다. 시간은 다른 부하 검사 종료 후 순차 측정했다.
+
+| 시나리오 | 원격 지표 호출 | evidence snapshot JSON | 결과 JSON | 로컬 수집+계산+고정 설명 |
+|---|---:|---:|---:|---:|
+| 기본 보고서 | 19 → 19 | 825,615 → 825,615 B | 158,399 → 143,090 B | 3.401 → 3.579초 |
+| O01 장비 단독 | 17 → 5 | 10,440,954 → 518,390 B | 35,293 → 14,510 B | 5.400 → 3.159초 |
+| O05 장애 단독 | 2 → 0 | 207,762 → 264 B | 6,908 → 4,850 B | 0.0378 → 0.0004초 |
+
+기본 보고서 설명은 4,157 → 1,439자(-65.4%), 결과 JSON은 9.7% 감소했다. 기본 조회와 원본 크기는 동일하며 처리 속도는 개선되지 않았다(+5.2%). O01 원본은 약95.0%, 로컬 처리 약41.5% 감소했지만 호출 차이는 이 fixture의 D06 분할 호출까지 포함한다. O05의 0회는 원격 지표만이며 기존 DB 사건·공개 RCA·조치 조회는 유지한다. DB context는 고정 fixture라 O05 시간은 실제 DB 조회 비용을 포함하지 않는다.
+
+공통 주제의 계산값·단위·대상·기간·산식·품질·주제 상태·누락 사유는 정확히 일치했다. 새 evidence UUID·참조 수·수집 메타데이터·확인 문장 및 새 기본의 O05 추가는 동일성 대상이 아니다. 압축 전 JSON 바이트는 PostgreSQL 물리 용량이나 네트워크 전송량이 아니다. 운영 Grafana/MCP 전송·LLM·DB·Pod 메모리의 개선률로 해석하지 않는다.
+
+재현은 스크립트 상단의 PYTHONPATH 예를 따르며 `--scenario equipment` 또는 `--scenario incidents`로 단독 주제를 비교한다. 측정 원본·전체 검사 XML·합성 미리보기는 `.local/operator-report/`의 로컬 검수 자료로 PR에 포함하지 않는다.
+
+---
+
 # 2026-10-12 보고서 D09/D13 제거·D06 Pod 범위 축소 — 로컬 검수
 
 - 시작 원격 main `4ddeff1`, 종료 확인 시 추가된 RCA UI PR #103의 `bc2577d`를 fast-forward로 반영했다. Agent/공통 Python은 두 main 사이에 변경이 없다. 검수 당시 브랜치는 `fix/report-collection-pruning`의 로컬 수정 상태였다. 이후 사용자 요청으로 같은 변경의 PR을 준비한다. 운영 배포·데이터 변경은 하지 않았다.

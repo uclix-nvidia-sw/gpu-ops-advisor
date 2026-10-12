@@ -79,6 +79,16 @@ REASON_NAMES = {
 
 
 async def write_report(result, llm):
+    insights = sorted(
+        (
+            finding
+            for topic in result["topics"]
+            for finding in topic.get("findings", [])
+            if isinstance(finding.get("next_check"), str) and finding.get("text")
+        ),
+        key=lambda finding: (finding.get("priority", 99), finding.get("id", "")),
+    )
+    selected = insights[:5]
     titles = {
         "scope": "분석 범위와 결과",
         "findings": "확인된 운영 현황",
@@ -86,6 +96,13 @@ async def write_report(result, llm):
         "next": "추가 확인",
         "limits": "분석 한계",
     }
+    if insights:
+        titles.update(
+            findings="먼저 확인할 운영 사항",
+            actions="확인 후 판단할 사항",
+            next="다음 확인",
+            limits="자료 신뢰도와 해석 범위",
+        )
     statements = []
 
     def add(section, text, evidence_refs=(), value_refs=()):
@@ -107,6 +124,25 @@ async def write_report(result, llm):
         f"분석 기간: {literal(result['time_range'])}. 대상: {literal(result['scope'])}. "
         f"결과 품질: {result['result_status']}. 보고서 작성 완료와 자료의 완전성은 별개입니다.",
     )
+    for finding in selected:
+        add(
+            "findings",
+            finding["text"],
+            finding.get("evidence_refs", []),
+            finding.get("value_refs", []),
+        )
+        add(
+            "next",
+            finding["next_check"],
+            finding.get("evidence_refs", []),
+            finding.get("value_refs", []),
+        )
+    if len(insights) > len(selected):
+        add(
+            "scope",
+            f"확인 항목 {len(insights)}건 중 우선 {len(selected)}건을 요약했습니다. "
+            "나머지 대상·기간·수치는 주제별 상세에서 확인할 수 있습니다.",
+        )
     collection = result.get("quality", {}).get("collection", {})
     if collection.get("plan_status"):
         state = (
@@ -127,7 +163,7 @@ async def write_report(result, llm):
                 "next",
                 f"수집 전 검사 사유: {collection['plan_reason']}. 보고서 수집 설정과 요청 범위를 확인하세요.",
             )
-        for task in collection.get("tasks", []):
+        for task in () if insights else collection.get("tasks", []):
             if task["incomplete_seconds"]:
                 add(
                     "next",
@@ -140,9 +176,11 @@ async def write_report(result, llm):
                 )
     for topic in result["topics"]:
         basis = topic.get("quality", {}).get("display_basis")
-        if basis:
+        if basis and not insights:
             add("scope", f"{topic['topic_id']} 표시 기준: {basis}.")
-        for omitted in topic.get("quality", {}).get("omitted_queries", []):
+        for omitted in (
+            () if insights else topic.get("quality", {}).get("omitted_queries", [])
+        ):
             if omitted.get("reason") == "no_stored_incidents_in_period":
                 add(
                     "scope",
@@ -155,10 +193,14 @@ async def write_report(result, llm):
             elif omitted.get("reason") == "unused_by_report_calculation":
                 add(
                     "scope",
-                    f"{topic['topic_id']}: 계산에 사용하지 않는 {omitted['query_id']} 원본 로그는 수집하지 않습니다. "
+                    f"{topic['topic_id']}: 계산에 사용하지 않는 {omitted['query_id']} 자료는 수집하지 않습니다. "
                     "저장된 사건과 필요한 관측 자료로 계산하며, 작업 영향이나 원인을 확정하는 근거는 아닙니다.",
                 )
-        for metric in topic["metrics"]:
+        # Verified findings replace repeated numeric prose; metrics remain in exports/details.
+        summarized = any(
+            isinstance(f.get("next_check"), str) for f in topic.get("findings", [])
+        )
+        for metric in [] if summarized else topic["metrics"]:
             if result.get("versions", {}).get("criteria") == "1.3" and metric[
                 "id"
             ].split(".")[1] in {
@@ -197,7 +239,7 @@ async def write_report(result, llm):
                 rec.get("evidence_refs", []),
                 rec.get("value_refs", []),
             )
-        if topic["missing_inputs"]:
+        if topic["missing_inputs"] and not summarized:
             add(
                 "next",
                 f"{topic['topic_id']}의 미충족 항목: {', '.join(REASON_NAMES.get(reason, reason) for reason in topic['missing_inputs'])}. "
@@ -212,7 +254,9 @@ async def write_report(result, llm):
     if not any(s["section"] == "actions" for s in statements):
         add(
             "actions",
-            "실행 조건이 확인된 운영 조치 권고가 없습니다. 추가 확인을 먼저 수행해야 합니다.",
+            "아래 다음 확인을 수행한 뒤 필요한 조치를 판단하세요. 보고서는 장비나 작업을 자동 변경하지 않습니다."
+            if insights
+            else "실행 조건이 확인된 운영 조치 권고가 없습니다. 추가 확인을 먼저 수행해야 합니다.",
         )
     if not any(s["section"] == "next" for s in statements):
         add(
@@ -272,6 +316,12 @@ async def write_report(result, llm):
             else "deterministic_fallback"
         ),
     )
+    if insights:
+        result["quality"]["report"].update(
+            presentation="operator_checks_v1",
+            finding_count=len(insights),
+            summary_count=len(selected),
+        )
     if not llm.configured:
         result["quality"]["narrative_reason"] = "model_not_configured"
     elif editorial["narrative_status"] == "failed":

@@ -825,9 +825,10 @@ def test_binding_profile_through_both_real_workers(
     if activate and parameter_scope == "discover":
         minimal_data = {
             **data,
-            "topic_ids": ["O01", "O08", "O11"],
+            "topic_ids": ["O01", "O05", "O08", "O11"],
             "topic_group_by": {
                 "O01": ["cluster"],
+                "O05": ["cluster"],
                 "O08": ["namespace"],
                 "O11": ["cluster"],
             },
@@ -839,6 +840,26 @@ def test_binding_profile_through_both_real_workers(
             isolated, "report", minimal_id, "-binding-minimal"
         )
         assert minimal["versions"]["criteria"] == "1.3"
+        assert minimal["quality"]["report"]["presentation"] == "operator_checks_v1"
+        assert any(
+            f.get("next_check") for t in minimal["topics"] for f in t["findings"]
+        )
+        assert "먼저 확인할 운영 사항" in str(minimal["narrative"])
+        incident_topic = next(t for t in minimal["topics"] if t["topic_id"] == "O05")
+        with psycopg.connect(stack["url"]) as conn:
+            snapshot = conn.execute(
+                "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='report_db_snapshot'",
+                (minimal_id,),
+            ).fetchone()[0]
+        expected_incidents = {i["id"] for i in snapshot["incidents"]}
+        assert {
+            f["incident_id"]
+            for f in incident_topic["findings"]
+            if f["category"] == "incident_followup"
+        } == expected_incidents
+        assert any(
+            f["category"] == "no_incidents" for f in incident_topic["findings"]
+        ) == (not expected_incidents)
         assert not {"D15", "D18", "D19"} & {q for q, _ in minimal_evidence}
         equipment = next(t for t in minimal["topics"] if t["topic_id"] == "O01")
         assert "node_condition_observations" not in equipment["quality"]
