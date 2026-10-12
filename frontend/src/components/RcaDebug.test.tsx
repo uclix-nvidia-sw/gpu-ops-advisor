@@ -10,6 +10,7 @@ import {
   RcaJobSummary,
   RcaReason,
   RcaResult,
+  RcaQualityGuidance,
 } from './RcaDebug';
 import { AlarmIdentity, DataView, JobRows } from './live';
 
@@ -323,11 +324,11 @@ describe('Korean RCA report labels', () => {
     const visible = html.split('<summary>공개 결과 원본')[0];
     expect(visible.match(/고유한 분석 한계 문장/g)).toHaveLength(1);
     for (const text of [
-      '설계상 항상 남음',
-      '데이터 원천 부재',
-      '생산자 계약 미확인',
-      '이번 실행의 수집·분석 품질',
-      'gpu_ops_allocation_info',
+      '원인 확정을 위한 추가 검토',
+      '장치 신원·사건 시각 연결 미확인',
+      '상태·값의 의미 검증 필요',
+      'LLM 분석·응답 검증 문제',
+      'GPU UUID',
       'R01 알려진 오류',
       '생산자 계약·오류 코드 확인 필요',
       '로그의 Healthy/Unhealthy 표기만으로 현재 상태를 확정하지 않습니다.',
@@ -377,5 +378,98 @@ describe('Korean RCA report labels', () => {
       />,
     );
     expect(html).toContain('GPU 오류·상태');
+  });
+});
+
+describe('RCA quality guidance', () => {
+  it('separates semantics, model and causal gaps without inventing query failures', () => {
+    const html = render(
+      <RcaQualityGuidance
+        result={{
+          termination_reason: 'missing_data',
+          missing_inputs: [
+            'normalized_health',
+            'unknown_value',
+            'synthesis_failed',
+            'causal_confirmation_evidence',
+            'future_reason',
+            'normalized_health',
+          ],
+        }}
+      />,
+    );
+    for (const text of [
+      '4개 범주',
+      '상태·값의 의미 검증 필요 · 2개',
+      'LLM 분석·응답 검증 문제',
+      '원인 확정을 위한 추가 검토',
+      'future_reason',
+      '미수행 자체는 분석 실패가 아닙니다',
+    ])
+      expect(html).toContain(text);
+    expect(html).not.toContain('<h4>원본 조회·수집 문제');
+  });
+  it('separates collection, identity and runbook gaps', () => {
+    const html = render(
+      <RcaQualityGuidance
+        result={{
+          missing_inputs: ['query_failed', 'mapping_target_unverified', 'approved_runbook'],
+        }}
+      />,
+    );
+    for (const text of [
+      '원본 조회·수집 문제',
+      '장치 신원·사건 시각 연결 미확인',
+      '조사 절차·Runbook 확인 필요',
+    ])
+      expect(html).toContain(text);
+  });
+  it('preserves unknown legacy fields and does not infer the repair blocker', () => {
+    const html = render(
+      <RcaQualityGuidance
+        result={{
+          quality: { analysis: { synthesis: { repair_status: 'budget_or_deadline_exhausted' } } },
+        }}
+      />,
+    );
+    expect(html).toContain('미충족 조건 목록이 없습니다');
+    expect(html).toContain('구 기록은 구체적 원인을 구분하지 않음');
+    expect(html).not.toContain('남은 모델 예산</dt>');
+    expect(render(<RcaQualityGuidance result={{ missing_inputs: [] }} />)).toContain(
+      '보고된 부족 항목이 없습니다',
+    );
+  });
+  it.each(['budget_exhausted', 'deadline_exhausted', 'budget_and_deadline_exhausted', 'repaired'])(
+    'renders stored repair state %s',
+    (repair_status) => {
+      const html = render(
+        <RcaQualityGuidance
+          result={{
+            quality: {
+              analysis: {
+                synthesis: {
+                  repair_status,
+                  repair_gate: { remaining_budget: 6500, remaining_seconds: null },
+                },
+              },
+            },
+          }}
+        />,
+      );
+      expect(html).toContain(repair_status);
+      expect(html).toContain('6500');
+      expect(html).not.toContain('기한까지 남은 초');
+    },
+  );
+  it('does not render unpublished guidance', () => {
+    expect(
+      render(
+        <RcaResult
+          showEvidence={false}
+          onEvidence={() => {}}
+          job={{ status: 'running', result: { missing_inputs: ['synthesis_failed'] } }}
+        />,
+      ),
+    ).not.toContain('aria-label="판단 제한과 다음 확인"');
   });
 });
