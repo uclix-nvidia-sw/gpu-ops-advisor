@@ -10,6 +10,9 @@ func TestReportCriteriaProfile(t *testing.T) {
 	if config.Versions["criteria"] != "unconfigured" || config.Execution["local-v1"].Criteria != "" {
 		t.Fatal("legacy criteria changed")
 	}
+	if config.Execution["report-namespace-v2"].Criteria != "1.3" {
+		t.Fatal("new report criteria missing")
+	}
 	p := config.Execution["report-namespace-v1"]
 	if p.Kind != "report" || p.Criteria != "1.2" {
 		t.Fatal(p)

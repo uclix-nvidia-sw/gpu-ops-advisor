@@ -125,9 +125,14 @@ def main():
     execution_revision = values["configuration"]["executionProfileRevision"]
     profiles = json.loads(config["job-controller.json"])["execution_profiles"]
     namespace_revision = values["configuration"]["namespaceReportProfileRevision"]
-    assert set(profiles) == {execution_revision, namespace_revision}
+    assert set(profiles) == {
+        execution_revision,
+        namespace_revision,
+        "report-namespace-v1",
+    }
+    assert profiles["report-namespace-v1"]["criteria"] == "1.2"
     assert profiles[namespace_revision]["kind"] == "report"
-    assert profiles[namespace_revision]["criteria"] == "1.2"
+    assert profiles[namespace_revision]["criteria"] == "1.3"
     assert "criteria" not in profiles[execution_revision]
     backend_env = deployments["backend"]["spec"]["template"]["spec"]["containers"][0][
         "env"

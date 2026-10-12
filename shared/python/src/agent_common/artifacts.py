@@ -2,6 +2,7 @@ import csv
 import hashlib
 import html
 import io
+import json
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -22,10 +23,14 @@ def render(result):
     ]
     buf = io.StringIO(newline="")
     writer = csv.writer(buf)
+    timed = result.get("versions", {}).get("criteria") == "1.3" and bool(
+        result.get("topics")
+    )
     per_topic = bool(result.get("quality", {}).get("topic_group_by"))
     writer.writerow(
         ["id", "value", "unit", "method", "reason"]
         + (["display_basis"] if per_topic else [])
+        + (["target", "period"] if timed else [])
     )
     rows = []
     for m in registry:
@@ -38,6 +43,11 @@ def render(result):
         ]
         if per_topic:
             cells.append(m["quality"].get("display_basis", ""))
+        if timed:
+            cells.extend(
+                json.dumps(m.get(key), ensure_ascii=False, sort_keys=True)
+                for key in ("target", "period")
+            )
         writer.writerow([safe_cell(c) for c in cells])
         rows.append(
             "<tr>"
@@ -61,6 +71,7 @@ def render(result):
         )
         + "<table><thead><tr><th>항목</th><th>값</th><th>단위</th><th>산식</th><th>제한</th>"
         + ("<th>표시 기준</th>" if per_topic else "")
+        + ("<th>대상</th><th>기록/분석 시각 (UTC)</th>" if timed else "")
         + "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>"

@@ -7,9 +7,10 @@ from agent_common.contracts import timestamp
 from agent_common.normalize import allocations, intervals
 from agent_common.observation import series
 from agent_common.query_contract import consolidated, inventory_query, mapping_query
+from .activity_trends import activity_trends
 
 
-def namespace_usage(data, collected, *, profile=None):
+def namespace_usage(data, collected, *, profile=None, trends=False):
     inventory_id, mapping_id = inventory_query(profile), mapping_query(profile)
     period = data["time_range"]
     scope = {c["cluster_id"]: c["namespaces"] for c in data["scope"]["clusters"]}
@@ -50,6 +51,7 @@ def namespace_usage(data, collected, *, profile=None):
             (cluster, namespace),
             dict(
                 rows=[],
+                valid=[],
                 seconds=0.0,
                 weighted=0.0,
                 reasons=set(),
@@ -207,6 +209,10 @@ def namespace_usage(data, collected, *, profile=None):
                     summary["weighted"] += activity[0]["value"] * (end - start)
                     summary["models"].update(models)
                     summary["gpus"].add(gpu)
+                    if trends and len(models) == 1 and None not in models:
+                        summary["valid"].append(
+                            (start, end, gpu, next(iter(models)), activity[0]["value"])
+                        )
 
     output = []
     for (cluster, namespace), summary in sorted(groups.items()):
@@ -235,6 +241,16 @@ def namespace_usage(data, collected, *, profile=None):
                 valid_hours=valid / 3600 if connected is not None else None,
                 mean=summary["weighted"] / valid if valid else None,
                 reasons=sorted(reasons),
+                **(
+                    activity_trends(
+                        summary["rows"],
+                        summary["valid"],
+                        timestamp(period["start"]),
+                        timestamp(period["end"]),
+                    )
+                    if trends
+                    else {}
+                ),
             )
         )
     cluster_output = []

@@ -92,10 +92,10 @@ func (s *Server) envelope(input Object, source string, now time.Time) Object {
 	revision := s.Config.ExecutionRevision
 	topics, _ := Decode[[]string](input["topic_ids"])
 	groups := ReportTopicGroups(input, "O08")
-	if Has(topics, "O08") && Has(groups, "namespace") && len(groups) <= 2 && (len(groups) == 1 || Has(groups, "cluster")) {
+	if (Has(topics, "O08") && Has(groups, "namespace") && len(groups) <= 2 && (len(groups) == 1 || Has(groups, "cluster"))) || (input["topic_group_by"] != nil && (Has(topics, "O01") || Has(topics, "O11"))) {
 		revision = s.Config.NamespaceReportRevision
 		if revision == "" {
-			revision = "report-namespace-v1"
+			revision = "report-namespace-v2"
 		}
 	}
 	return Object{"contract_version": "1.3", "source_module": "backend", "source_key": source, "kind": "report", "input": input, "deadline_at": now.Add(s.Config.JobDeadline).UTC().Format(time.RFC3339Nano), "execution_profile_revision": revision}

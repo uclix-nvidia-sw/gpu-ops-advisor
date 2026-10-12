@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BasicReport } from './BasicReport';
 import { topicDisplayBases } from '../lib/reportKinds';
 import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
@@ -95,6 +96,7 @@ export function ReportContent({
     blocked: topics.filter((topic) => topic.status === 'blocked').length,
   };
   const quality = obj(result.quality);
+  const basic = obj(result.versions).criteria === '1.3';
   const namespaceTopic = topics.find((topic) => topic.topic_id === 'O08');
   const namespaceQuality = obj(namespaceTopic?.quality);
   const namespaceMetrics = namespaceRows(rows(namespaceTopic?.metrics));
@@ -297,7 +299,8 @@ export function ReportContent({
           CPC·Namespace 범위 또는 분석 주제를 줄여 새 보고서를 요청할 수 있습니다.
         </Notice>
       )}
-      {namespaceTopic && (requestedNamespace || appliedNamespace) && (
+      {basic && <BasicReport topics={topics} />}
+      {!basic && namespaceTopic && (requestedNamespace || appliedNamespace) && (
         <section className="result-section">
           <h3>Namespace GPU 현황</h3>
           <p>
@@ -496,7 +499,7 @@ export function ReportContent({
       )}
       <details
         id="report-topic-details"
-        open={Object.keys(obj(quality.topic_group_by)).length > 0 ? true : undefined}
+        open={!basic && Object.keys(obj(quality.topic_group_by)).length > 0 ? true : undefined}
       >
         <summary>주제별 상세 수치 · {topics.length}개 주제</summary>
         {topics.map((topic) => (
