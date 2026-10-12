@@ -29,7 +29,7 @@ Backend와 같은 PostgreSQL을 사용하는 독립 프로세스입니다. 보�
 - `../shared/contract`: 공통 DTO·정규화·hash. `../shared/migrations`: 유일한 SQL 원본.
 - `../backend/tests/job_controller_test.go`: 실제 Backend + JC + PostgreSQL 통합 검사.
 
-capacity → job → attempt 순서로 DB 트랜잭션을 잠그며, 인수·결과 발행·명령 receipt는 커밋 후 응답합니다. 동일 source 키/정규화 hash는 기존 job, 다른 입력은 409입니다. 저장된 candidate만으로 성공하지 않고 `published_result_id`가 지정되어야 공개됩니다. 발행된 candidate와 Incident evidence snapshot은 DB에서 수정·삭제를 금지합니다.
+capacity → job → attempt 순서로 DB 트랜잭션을 잠그며, 인수·결과 발행·명령 receipt는 커밋 후 응답합니다. 동일 source 키/정규화 hash는 기존 job, 다른 입력은 409입니다. 저장된 candidate만으로 성공하지 않고 `published_result_id`가 지정되어야 공개됩니다. 발행된 candidate와 Incident evidence snapshot은 DB에서 수정·삭제를 금지합니다. 종료한 보고서의 명시적 삭제 명령만 감사 기록을 남기고 자기 공개 참조를 해제한 뒤 전용 결과·근거를 제거합니다. RCA snapshot과 다른 결과의 불변 보호는 유지합니다.
 
 작업마다 입력, deadline, execution/query/parser/criteria/result schema/knowledge/model 참조를 고정합니다. 기존 작업의 프로필과 예산은 재시도나 설정 변경으로 초기화하지 않습니다. Worker 재등록에는 시작별 새 boot UUID를 사용합니다. 이전 boot는 retired이며 재사용하지 못합니다.
 
@@ -104,3 +104,14 @@ CLI는 실제 종료 확인 근거가 있을 때만 사용하며, 이미 정책�
 통합 테스트는 실제 PostgreSQL의 고유 임시 schema를 만들고 그 schema만 정리합니다. Agent/LLM은 프로토콜 드라이버만 사용하며 실추론은 하지 않습니다. [검증 기록](QA.md), [API 예시](API.md)를 참고하세요.
 
 Docker가 있는 환경에서는 저장소 루트에서 `docker build -f job-controller/Dockerfile .` 또는 `docker compose -f backend/compose.yaml up --build`를 사용합니다. compose의 JC는 내부 네트워크에만 두고 호스트 포트를 열지 않습니다. 이 개발 PC에는 Docker가 없어 이미지 빌드/컨테이너 구동은 검증하지 않았습니다.
+
+
+## Report deletion / 종료한 보고서 삭제 — 2026-10-12
+
+JC owns the explicit terminal-report deletion command; Backend only forwards it. The command preserves job/attempt/receipt/audit history and removes all attempts' own evidence and candidates in one transaction after checking supported references. Repeated commands are idempotent. Late worker completion cannot restore a deleted report. See the [API contract](API.md#report-deletion--종료한-보고서-삭제--2026-10-12).
+
+`008_report_deletions.sql`은 새 `report_deletions` 테이블과 evidence의 job 조회 인덱스를 추가한다. JC와 Backend의 시작 시 반복 적용할 수 있으며 자동으로 기존 보고서를 삭제하지 않는다. 운영 적용은 승인된 배포에서 JC·Backend를 먼저 호환 버전으로 반영하고 Ops 파일 정리 Worker와 Frontend를 함께 반영한다. Worker가 준비되지 않아도 DB 삭제는 완료되고 파일 상태는 pending으로 남으므로 정리 완료를 별도로 확인한다.
+
+`report_deletion_policy=terminal-report-v1`을 JC config revision에 포함해 삭제를 모르는 구 JC의 heartbeat/complete/claim을 503으로 차단한다. 모든 JC를 같은 버전으로 교체하며 `JC_APPLY_CONFIG=false` 배포는 새 revision 적용을 별도로 준비한다. 구 JC 재시작의 설정 재적용은 revision을 되돌릴 수 있으므로 구 replica를 남기지 않는다.
+
+기존 DB/PVC를 삭제하거나 다시 만들지 않는다. 기능 사용 전 애플리케이션 롤백은 추가 테이블을 보존한 채 가능하다. **실제 보고서 삭제 후에는 코드 롤백만으로 내용을 복구할 수 없다.** 복원에는 별도 DB·파일 백업이 필요하며 구 Backend/JC는 삭제 표시·재시도 차단을 이해하지 못하므로 삭제 기능 사용 후 구 버전과 혼용하지 않는다. 새 스키마와 기존 데이터는 배포 전 검증·백업 절차를 따른다.

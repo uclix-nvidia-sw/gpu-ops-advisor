@@ -1,3 +1,32 @@
+## 종료된 보고서 영구 삭제 — 2026-10-12
+
+`POST /jobs/{id}/delete`는 `{ "reason": "삭제 사유" }`, `Idempotency-Key`, `If-Match`를 받아 JC의 동일 명령으로 위임한다. succeeded/failed/cancelled/expired report만 대상이다. 실제 실행 자리·lease·외부 근거 참조와 버전 충돌은 JC가 잠금 안에서 검증한다. RCA는 409이며 Backend가 직접 결과·근거를 삭제하지 않는다. 지식·검토의 정식 근거 참조는 작성 트랜잭션에서 근거 행 잠금을 커밋까지 유지해 삭제와의 경합을 막는다. 같은 키·본문 재전송은 기존 receipt를 반환한다.
+
+보고서 DTO의 `can_delete`는 `source_module=backend`인 종료 상태에서만 true다. 이 표시는 삭제 접수 가능 상태이며 외부 참조 등 최종 검증을 대신하지 않는다. 삭제된 report는 `/reports` 목록에서 제외한다. `/jobs` 작업 이력에는 삭제 메타데이터와 함께 유지하며 본문을 조회하지 않는다. 목록 cursor는 경로에 결합되어 다른 목록에 재사용할 수 없다. `/reports/{id}`, `/jobs/{id}` 직접 조회와 trace에는 `deletion`을 남기며 기존 실행 `status`와 최소 job/attempt/입력 기록을 보존한다. 상세의 `result_status`는 `deleted`, `result_ref`는 null, `result`는 없으며 `can_cancel`, `can_retry`, `can_delete`는 false다. export는 410 `report_deleted`다.
+
+`deletion`은 `deleted_at`, `reason`, 삭제 당시의 `published_result_id`와 `content_hash`, `evidence_count`, `candidate_count`, `artifact_cleanup_state`(pending/complete/failed), `artifact_cleanup_at`, `artifact_cleanup_error`를 제공한다. DB 본문·보고서 자체 근거가 삭제되어도 파일 정리는 pending일 수 있다. Ops가 파일을 지우고 늦은 저장을 막는 작은 삭제 표식을 만든 뒤 complete로 확인한다. 삭제 기록과 표식은 유지하며, 참조한 RCA/사건 원본은 삭제하지 않는다.
+
+Backend 초기화와 JC 초기화는 같은 추가 migration `008_report_deletions.sql`을 적용한다. 새 Backend readiness는 삭제 기록 테이블이 없으면 503이다. 기존 결과를 바꾸는 migration이 아니며 실제 삭제는 별도 명령이다.
+
+## 큰 기본 보고서의 조회용 본문 — 2026-10-12
+
+`GET /reports/{id}`, report의 `GET /jobs/{id}`와 HTML/CSV 다운로드는 `versions.criteria=1.3`의 O01에 한해 `quality.node_condition_observations`를 SQL에서 제외한 뒤 Backend로 전송한다. 이 배열은 이미 산출된 노드 상태 기간 지표와 저장 근거에 중복된 구간이다. 지표·facts·근거 참조·나머지 품질·narrative·주제 순서를 유지한다. criteria 1.2/미기록 결과와 RCA, 다른 주제의 같은 이름 필드는 그대로 반환한다.
+
+실제로 필드를 생략한 상세 응답에만 `result`의 형제 필드로 다음 메타데이터가 있다.
+
+```json
+{
+  "result_projection": {
+    "omitted_fields": ["topics[topic_id=O01].quality.node_condition_observations"],
+    "stored_content_hash": "<원본 candidate의 content_hash>"
+  }
+}
+```
+
+`stored_content_hash`는 DB에 보존된 전체 결과의 해시이며 조회용 `result`의 해시가 아니다. 공개 candidate·발행 참조·저장 해시를 수정하지 않는다. 원래 배열이 없는 새 보고서에는 `result_projection`이 없다. 필요한 원본 관측은 기존 `GET /jobs/{id}/evidence/{evidence_id}?attempt=N`으로 한 기록씩 조회하며 전체 결과 원본을 추가로 내려주는 우회 경로는 제공하지 않는다. `/jobs/{id}/trace`의 publication은 기존대로 본문 없이 원본 해시 등 메타데이터만 제공한다.
+
+생략된 다운로드에는 `X-Result-Projection: o01-condition-intervals-omitted`, `X-Stored-Content-Hash` 헤더가 있다. HTML의 조회용 JSON에도 생략 안내와 저장 원본 해시를 표시한다. 지표 CSV의 값·단위·근거 참조와 narrative는 유지하며, 지표 없는 과거 결과의 HTML/CSV fallback에도 같은 본문 생략을 적용한다. PostgreSQL의 기존 큰 JSON 내부 읽기·압축 해제와 개별 evidence snapshot 크기는 이 변경으로 없어지지 않는다.
+
 ## 종료된 시도의 실행 자리와 원격 추론 상태 — 2026-10-07
 
 `GET /jobs/{id}`, `/reports/{id}`, `/analyses/{id}`의 `attempts`에 저장된 `remote_call_state`, `slot_state`, `slot_released_at`을 추가한다. 슬롯은 같은 작업·시도 번호의 예약만 연결한다. 예약 또는 JC 테이블이 없으면 슬롯 필드는 null이며 반환됐다고 추정하지 않는다. 원격 상태도 저장값이 없으면 null이다. claim token·Worker 비밀·미발행 후보 본문은 추가하지 않는다.
@@ -55,7 +84,7 @@ Runbook content에 선택 필드 `unexpected_evidence`를 지원한다. `on`은 
 | PATCH /incidents/{id} | memo/review_status(unreviewed/reviewing/reviewed), Incident 메타데이터 위임 |
 | GET /analyses, /reports, /jobs 및 /{id} | scope/kind/status/from/to/incident_id/topic_id/target 필터. 안전한 잡/attempt DTO |
 | POST /reports | JC report 커밋 후 202; job_id=report_id |
-| POST /jobs/{id}/cancel, /retry | report만, reason·If-Match·키. RCA는 409 kind_not_allowed |
+| POST /jobs/{id}/cancel, /retry, /delete | report만, reason·If-Match·키. RCA는 409 kind_not_allowed |
 | GET /reports/{id}/export?format=html 또는 csv | published_result_id로 지정된 저장 결과만 렌더링. 미발행 409 |
 | GET/POST /schedules, GET/PATCH /schedules/{id} | Backend 일정 생성 201, 불변 revision·effective_at·next_run_at |
 | GET /schedules/{id}/occurrences | from/to/status/cursor, pending/accepted/missed/failed·job_id |

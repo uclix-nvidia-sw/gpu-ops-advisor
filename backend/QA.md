@@ -1,3 +1,43 @@
+# 2026-10-12 종료된 보고서 삭제와 참조 경합
+
+- **통과:** 새 임시 PostgreSQL 16.9에서 실제 Backend·JC를 연결해 `backend/`의 `go test -tags=e2e ./... -v -count=1 -timeout=10m`. 기존 전체 E2E와 상세 projection, `TestReportDeletion`을 함께 통과했다. 작업 종료 네 상태의 자체 결과·근거 정리, report 목록 제외·job 이력 유지, 발행 hash·입력·시도·receipt·감사 보존, RCA 보존, 활성/격리/미종료 시도 거부, 외부 정식 참조 거부와 rollback을 확인했다.
+- **통과:** 실제 HTTP와 DB 잠금 대기로 두 순서를 재현했다. 지식 근거 참조 작성이 먼저면 201·삭제 409, 삭제가 먼저면 200·참조 작성 404다. Backend는 지식 생성/PATCH/검토/발행 및 검토 기록 INSERT와 같은 트랜잭션에서 근거 scope만 `FOR KEY SHARE`로 읽는다. 범위 검증을 유지하며 큰 snapshot을 해석하지 않는다. 사용 중인 근거는 2초 lock timeout 뒤 `report_busy`로 전체 rollback했다.
+- **통과:** 기존 스키마에서 migration 008 업그레이드와 두 서비스 초기화 반복, 새 Backend의 삭제 테이블 누락 readiness 503. 마지막에 추가한 빈 보고서·사유·버전 경계 및 구 JC 정책 fence는 새 임시 DB에서 `go test -tags=e2e ./tests -run TestReportDeletion -v -count=1`로 별도 통과했다. 초기화 전/후 데이터 보존과 공개 candidate 불변 trigger 유지를 확인했다.
+- **통과:** Backend vet/race/build와 문서 링크/diff 검사. 전체 실행 기록은 로컬 `.local/report-projection/backend-e2e.log`, 마지막 삭제 회귀는 `deletion-regression-final.log`다. 테스트 DB는 종료·제거했다.
+- **검증 경계:** 위 Backend 검사는 DB 삭제·조회 계약을 검증한다. Ops 파일 정리·늦은 파일 저장 차단 검증은 [Agent QA](../agents/QA.md)를 따른다. 이력과 작은 삭제 기록은 남는다. PostgreSQL 행 삭제가 DB 파일 크기를 즉시 줄이지는 않으며 VACUUM FULL을 자동 실행하지 않는다. 운영 DB 삭제·배포·Kubernetes OOM 재발 여부는 **미수행/미검증**이다.
+
+---
+
+# 2026-10-12 큰 기본 보고서 상세 조회
+
+- 기준: `origin/main`의 `029fbed`, 로컬 `fix/minimal-report-evidence`. 계산 기준 1.3 보고서 O01의 중복 `quality.node_condition_observations`만 SQL에서 제외하며 DB 원본과 hash는 보존한다. 계산 기준 1.2/미기록, RCA, 다른 주제는 유지한다.
+- **통과:** Go 1.26.2의 Backend vet/race/build, 새 loopback PostgreSQL 16.9의 `TestPublishedReportProjection`와 기존 전체 `./tests` E2E. 중복 필드 외 모든 필드 동등성, 0/null·metrics·facts·참조·주제 순서, 원본 evidence 개별 조회, 저장 body/hash·불변 trigger, 공개 후보 연결과 미발행 후보 차단, malformed/missing 주제, 상세·추적·지표 및 metric-free HTML/CSV fallback을 확인했다. HTML/다운로드 헤더의 조회용 본문 안내와 원본 hash도 검사했다.
+- 동일 fixture로 SQL 결과를 수신하고 `store.One`으로 JSON을 해석하는 실제 DB benchmark를 추가했다. 운영 데이터와 DSN은 사용하지 않았다. 로컬 임시 DB는 검사 후 종료·제거했다.
+
+## 중복 구간 881,280개의 전후 측정
+
+macOS arm64 / Apple M2 / PostgreSQL 16.9 / Go 1.26.2. 합성 153개 series 각각 5,760개의 15초 구간, 총 881,280개를 저장했다. 동일 candidate·DB·connection pool에서 기존 `SELECT to_jsonb(c)`와 새 projection SQL을 각 1회 수신/해석 준비 후 비교했다. 전→후와 후→전 순서를 각각 2회 실행하고, 표의 범위는 각 실행에서 3회 측정한 **평균값 4개**의 최소~최대다. p95나 HTTP·브라우저 전체 시간은 아니다.
+
+| 항목 | 기존 전체 본문 읽기 | SQL projection |
+|---|---:|---:|
+| DB→Go 반환 JSON | 30,867,261 bytes | 638 bytes |
+| SQL+전송+JSON 해석 | 607.7–764.4 ms/op | 108.9–120.9 ms/op |
+| Go 누적 할당량 | 286,799,613–286,803,090 B/op | 6,208 B/op |
+| Go 할당 횟수 | 8,378,448–8,378,450 /op | 122 /op |
+
+638 bytes는 나머지 지표·facts·narrative·참조에 작은 sentinel 값을 둔 합성 본문이다. 구간의 개수와 배열 구조를 재현했으며 운영 보고서 전체 필드 분포·나머지 약 1MiB 본문을 복제하지 않았다. 따라서 운영의 응답 크기·전체 지연·절대 heap/RSS를 이 숫자로 예측하지 않는다. 할당량은 요청 중 누적 allocation이며 상주 메모리나 peak가 아니다. 측정 전 projection 결과와 원본에서 정확히 해당 필드만 제거한 결과를 비교하고 interval 개수도 실제 SQL로 확인했다.
+
+격리 test DB에만 `E2E_DATABASE_URL`을 설정하고 `backend/`에서 재현한다:
+
+```sh
+go test -tags=e2e ./internal/api -run TestPublishedReportProjection -v -count=1
+go test -tags=e2e ./internal/api -run '^$' -bench BenchmarkPublishedReportProjection -benchtime=3x -count=2 -timeout=10m
+```
+
+실행 보조와 로그는 로컬 `.local/report-projection/verify.py`, `projection-test.log`, `benchmark.log`, `backend-e2e.log`에 있다. 위 두 Go 검사와 합성 생성기는 저장소에 포함된다. **미검증:** 운영 배포·동시 부하·실제 요청 지연·Kubernetes OOM 재발. PostgreSQL 내부의 큰 JSON 읽기/압축 해제와 원본 evidence 크기는 남는다.
+
+---
+
 # 2026-10-12 작업·보고서 목록 조회 경량화
 
 - 기준: 최신 원격 main `49193b0`; 로컬 브랜치 `fix/lightweight-job-lists`. Backend 목록 읽기 구현·회귀 검사·문서만 변경했다. API 응답/DB schema/Frontend/Agent/JC 실행 정책은 동일하다.

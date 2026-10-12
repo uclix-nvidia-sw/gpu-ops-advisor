@@ -186,6 +186,13 @@ func (c *Controller) attempt(ctx context.Context, id, op string, b Object) (Obje
 		if err != nil {
 			return err
 		}
+		var deleted bool
+		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM report_deletions WHERE job_id=$1)", id).Scan(&deleted); err != nil {
+			return err
+		}
+		if deleted {
+			return stale()
+		}
 		a, err := one(ctx, tx, "SELECT to_jsonb(a) FROM job_attempts a WHERE job_id=$1 AND attempt_no=$2 FOR NO KEY UPDATE", id, n)
 		if err != nil {
 			if missing(err) {

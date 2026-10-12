@@ -15,6 +15,7 @@ export const labels: Record<string, string> = {
   not_applicable: '적용 대상 아님',
   queued: '실행 대기',
   unpublished: '미발행',
+  deleted: '보고서 삭제',
   worker_unavailable: '실행 가능한 Agent가 연결될 때까지 대기합니다.',
   capacity_wait: '실행 슬롯이 반환될 때까지 대기합니다.',
   inference_quarantined: '이전 추론의 종료 확인을 기다리고 있습니다.',

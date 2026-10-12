@@ -106,3 +106,45 @@ it.each(['queued', 'retry_wait', 'failed', 'cancelled'])(
     if (status === 'retry_wait') expect(html).toContain('이전 추론의 종료 확인');
   },
 );
+
+it.each(['classic', 'operations', 'developer'])(
+  'shows a deleted report and cleanup state without publishing or rerun actions in %s',
+  (mode) => {
+    fixture.mode = mode;
+    fixture.job = {
+      ...fixture.job,
+      kind: 'report',
+      result_ref: null,
+      result_status: 'deleted',
+      deletion: {
+        deleted_at: '2026-10-12T00:00:00Z',
+        reason: '오래된 보고서 정리',
+        evidence_count: 9,
+        artifact_cleanup_state: 'pending',
+      },
+    };
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/reports/saved']}>
+        <Routes>
+          <Route path="/reports/:id" element={<ResultPage kind="report" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    for (const text of [
+      '삭제된 보고서입니다',
+      '오래된 보고서 정리',
+      '정리 대기',
+      'href="/jobs/saved"',
+    ])
+      expect(html).toContain(text);
+    for (const text of [
+      '아직 발행된 보고서',
+      '새 조건으로 보고서 요청',
+      'HTML 다운로드',
+      'CSV 다운로드',
+      '원본 결과 보기',
+      '저장된 분석 내용',
+    ])
+      expect(html).not.toContain(text);
+  },
+);

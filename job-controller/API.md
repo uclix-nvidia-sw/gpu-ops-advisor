@@ -21,6 +21,7 @@ Worker는 지원하는 `supported_contract_versions`를 등록한다. 새 RCA Wo
 | POST /jobs/{id}/complete | 후보 검사 후 원자적 final 발행 |
 | POST /jobs/{id}/fail | 실패·재시도 및 종료 확인 |
 | POST /jobs/{id}/cancel, /retry | 생산자 소유 작업 명령 |
+| POST /jobs/{id}/delete | 종료한 Backend 보고서의 결과·전용 근거 삭제 |
 | GET /queue-status | kinds별 대기/실행/오류·슬롯, shared 점유·격리 |
 
 ## Backend 보고서 접수
@@ -70,3 +71,16 @@ complete: `{attempt_no,claim_token,candidate_id,content_hash}`. Agent가 먼저 
 헤더 `Idempotency-Key`, `If-Match: "<version>"`. body는 `{contract_version:"1.3",source_module:"backend",input:{reason:"..."}}`. Incident는 source_module=incident 및 input.incident_id가 자기 RCA와 일치해야 합니다. 같은 명령 재전송은 최초 If-Match를 그대로 사용하세요. receipt를 먼저 확인하므로 이후 version 증가 때문에 재전송을 거절하지 않습니다.
 
 queue-status 형식은 `{kinds:{rca:{waiting,running,failed,expired,worker_unavailable,capacity_wait,inference_quarantined,capacity_limit,reserved_slots,worker_available},report:{...}},shared:{limit,reserved_slots,quarantined_slots},config_revision,observed_at}`입니다. Backend의 `/api/v1/service-status`가 이를 읽기 전용 `queue`로 반환합니다. `quarantined_slots`와 `inference_quarantined`는 구 기록 호환 필드이며 새 정책은 종료된 격리를 Sweep에서 반환합니다. 반환된 종료 미확인 추론의 수를 의미하지 않습니다. `config_revision`은 설정과 실행 정책 버전을 함께 반영합니다.
+
+
+## Report deletion / 종료한 보고서 삭제 — 2026-10-12
+
+`POST /internal/v1/jobs/{id}/delete` uses the same command envelope, `Idempotency-Key` and `If-Match` contract. `source_module=backend`, `kind=report`, a nonblank `input.reason` (at most 2,000 UTF-8 bytes), and a terminal state (`succeeded`, `failed`, `cancelled`, `expired`) are required. Active/quarantined reservations and unfinished attempts block deletion. The response is the normal public job plus `deletion` metadata. Replaying the same key/body/original version returns the original receipt, even after artifact cleanup progresses.
+
+기존 명령 헤더·본문 형식을 재사용한다. 결과 후보와 해당 작업의 **모든 시도**에 소속된 evidence만 삭제하고, jobs·attempts·예약·접수 키·명령 receipt·감사 이력은 보존한다. 원래 공개 결과 ID/hash와 삭제 건수·사유는 `report_deletions`에 남긴다. 기존 성공/실패 상태는 바꾸지 않고 `published_result_id`를 비우며 version을 증가시킨다. 삭제 이후 cancel/retry는 `409 report_deleted`, 늦은 heartbeat/fail/complete(과거 성공 complete 재전송 포함)는 `409 stale_attempt`다. 같은 접수 키로 과거 작업을 되살리지 않는다.
+
+The command locks owned evidence rows before checking references. Backend knowledge/review writes lock their referenced evidence in the same transaction. Existing canonical result `evidence_refs`, identity foreign keys, collection/allocation reference arrays, knowledge `source_refs`, review `evidence_refs` and knowledge-review audit references block the entire deletion with `409 report_referenced`; no partial purge is committed. Agent validation requires freshly collected, job-owned evidence, and cross-job report context reads published **RCA** only. Arbitrary UUID strings in raw monitoring snapshots are not treated as references. Direct SQL writers/importers must preserve this ownership and reference-lock protocol.
+
+다른 작업의 결과·RCA·사건 원본은 삭제하지 않는다. 잠금 대기는 최대 2초, 삭제 확인·처리는 최대 5초이며 시간 초과는 `409 report_busy`로 전체 rollback한다. 삭제 과정에서도 발행된 candidate의 기존 불변 트리거는 유지한다. 감사 기록과 삭제 표시를 기록한 명시적 명령만 자기 공개 참조를 해제한 뒤 전용 결과를 제거한다.
+
+`deletion` contains `deleted_at`, `reason`, `published_result_id`, `content_hash`, `evidence_count`, `candidate_count`, `artifact_cleanup_state`, `artifact_cleanup_at`, and `artifact_cleanup_error`. Database payload deletion commits atomically; the Ops worker subsequently removes only that job's UUID artifact directory and leaves a zero-byte path barrier to prevent late writers from recreating it. Cleanup state is `pending`, `complete`, or `failed` (retryable by the existing worker loop). The delete response is not proof that disk cleanup has finished. Existing review/history metadata remains readable; stored report/export payloads do not.

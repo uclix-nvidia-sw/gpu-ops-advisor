@@ -1,3 +1,22 @@
+# 2026-10-12 수집 최소화·삭제 기능 최종 검수
+
+- 원격 main `029fbed`를 작업 시작·종료 시 재확인했다. 작업 브랜치는 `fix/minimal-report-evidence`이고 커밋·PR·운영 배포·실제 보고서 삭제는 하지 않았다.
+- 최종 전체 Agent suite **1050 passed / 0 skipped**, 기존 MCP deprecation warning 3건(110.53초). 외부 DB 환경변수를 제거하고 새 loopback PostgreSQL 16.9, 최종 소스에서 빌드한 Backend/JC/Incident, 실제 두 Worker와 공식 MCP를 사용했다. Grafana/LLM은 합성 응답이다.
+- 실제 보고서 발행→Backend 삭제→JC 전용 DB 자료 제거→Ops 프로세스 파일 정리까지 통과했다. 같은 삭제 재전송, 목록 제외·작업 이력 보존, export 410, 다른 후보 보존, 0바이트 삭제 표식, 파일 정리 완료 상태를 확인했다. 초기 테스트의 응답 전체 비교는 매 요청 바뀌는 request_id를 제외하도록 바로잡았다.
+- 삭제 표식과 POSIX 부모 디렉터리를 fsync한 뒤 완료 처리한다. flush 실패 시 failed로 남기고 재시도해 complete로 전환하는 회귀도 통과했다. 운영 NetApp RWX에 대한 쓰기·삭제 검수는 수행하지 않았다.
+- Shared/JC/Backend/Incident vet·race·build와 Backend/Incident 격리 DB E2E 통과. Backend/JC 삭제 경합·마이그레이션 검수는 각 QA 문서에 기록했다. API 테스트의 첫 sandbox 포트 제한은 로컬 테스트 서버 실행 허용 후 통과했다.
+
+---
+
+# 2026-10-12 삭제한 보고서의 Ops 파일 정리 — 로컬 검수
+
+- 구현: JC의 `report_deletions` 기록에 있는 종료 보고서만 Ops Worker가 30초마다 최대 1건 정리한다. DB 본문 삭제와 파일 정리 상태는 분리하며, 여러 Ops Pod는 행 잠금과 `SKIP LOCKED`로 같은 대상을 동시에 맡지 않는다. RCA와 공통 Python Worker의 실행 코드는 변경하지 않았다.
+- 통과: `test_report_cleanup.py` **15개**와 `test_report_cleanup_e2e.py` **1개**, 합계 **16 passed**. 후자는 외부 DB 환경변수를 제거하고 새 loopback PostgreSQL 및 현재 트리에서 빌드한 JC로 보고서 접수→취소→삭제, 정리 실패→재시도 성공, 동시에 들어온 정리 요청의 잠금 건너뛰기를 검사했다. 운영 DB/PVC는 사용하지 않았다.
+- 경로 회귀는 정규 UUID, 상위 심볼릭 링크 거절, 하위 링크의 외부 파일 보존, 누락된 저장소 루트, 지연 저장 스레드, 디렉터리 재생성 경쟁, 취소 시 파일 작업 종료까지 잠금 유지, 마이그레이션 미적용 중 분석 루프 지속을 포함한다. 정리한 경로의 0바이트 파일은 늦은 쓰기가 디렉터리를 다시 만들지 못하게 하는 삭제 표시이며 보고서 내용은 포함하지 않는다.
+- 통과: Ops 및 두 정리 테스트 파일의 Ruff check/format. 실제 보고서 발행 후 Backend/JC/Worker 삭제 연동은 전체 `test_e2e.py` 검증 기록을 따른다. 실제 RWX 볼륨·다중 Kubernetes Pod·운영 삭제는 이 로컬 검수로 확인하지 않았다.
+
+---
+
 # 2026-10-12 RCA 숫자 거절 진단 및 수정 요청 예산
 
 - RCA synthesis만 수정했다. 거절된 필드의 해시·길이·숫자 위치를 기록하며 원문이나 숫자 값은 저장하지 않는다. 수정 요청의 출력 상한은 실제 LLM 전송 계층과 동일하게 남은 예산에 맞춘다. 예산 부족과 시간 만료를 별도 진단한다.
@@ -672,6 +691,27 @@ Runbook API lifecycle·RCA 발행·전체 Report topic
 로컬 PostgreSQL을 사용했으며 Grafana/LLM은 fixture다. 운영 DB에 테스트하지 않았다.
 후속 코드의 운영 배포·새 RCA 결과 검수·정상 발생 오류와 호스트 커널 기록 대조는 미완료다.
 사용자 출력으로 #87의 계약/보고서 진단은 운영 RCA Pod 3개 모두 반영 확인했다.
+
+
+### 2026-10-12 기본 보고서 수집·본문 최소화
+
+기준은 원격 main `029fbed`이며 criteria 1.3 + 통합 binding의 기본 O01/O08/O11 구성을 대상으로 한다. O01에서 D15/D18/D19 추가 지표를 제거하고, D06 Namespace 한정을 안전한 기본 조합으로 확장했다. D02가 불완전하거나 다른 D06 소비 주제가 섞이면 넓은 조회를 유지한다. Node 상태 초 단위 요약과 원본 증거 참조는 남기되 전체 관측 구간의 결과 본문 복사는 제거했다. criteria 1.2, O03/O04의 D15, RCA 계산은 유지한다.
+
+`agents/tests/benchmark_report_minimization.py`를 기준 코드와 변경 코드에서 각각 5회 실행했다. 합성 1시간 데이터, GPU 1개, 무관한 Namespace의 Pod 200개, Node condition 153계열/36,720구간이며 네트워크·실제 MCP·DB·LLM 지연은 없다. 유지한 모든 지표의 값·단위·대상·기간·계산 방식·상태·부족 사유는 동일함을 비교 assertion으로 확인했다. 제거한 6개 추가 지표 이름과 실행마다 변하는 ID/참조는 동등성 비교에서 제외한다.
+
+| 측정 | 기준 | 변경 |
+| --- | ---: | ---: |
+| 조회 종류/호출 | 11 | 8 |
+| 수집 응답 JSON | 1,524,067 B | 667,834 B |
+| D06 응답 JSON | 839,195 B | 4,215 B |
+| 저장할 원본 snapshot JSON | 1,524,153 B | 667,920 B |
+| 결과 본문 JSON | 1,132,945 B | 147,491 B |
+| 로컬 수집/계산 전체 중앙값 | 496.9 ms | 191.4 ms |
+| 결과 직렬화 중앙값 | 107.5 ms | 5.65 ms |
+
+운영 서버의 실제 호출 수/기간/데이터량과 다르므로 이 비율을 그대로 운영 성능 개선율로 보장하지 않는다. D06 절감폭은 제외할 Namespace가 얼마나 많은지에 따라 달라진다. 기존 보고서의 읽기 전송량/메모리 검증은 [Backend QA](../backend/QA.md)를 따른다. 운영 배포·기존 보고서의 실제 삭제·운영 환경 응답 시간 재측정은 수행하지 않았다.
+
+---
 
 ## 2026-10-12 RCA general admission and bounded final editor
 

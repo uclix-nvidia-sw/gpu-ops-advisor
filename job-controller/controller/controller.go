@@ -28,7 +28,7 @@ func New(db *pgxpool.Pool, c Config) (*Controller, error) {
 		return nil, e
 	}
 	// Fence replicas running different release or dispatch policies with identical settings.
-	return &Controller{db, c, Hash(Object{"config": c, "execution_policy": "release-ended-attempt-v1", "dispatch_policy": "independent-kind-capacity-v1"})}, nil
+	return &Controller{db, c, Hash(Object{"config": c, "execution_policy": "release-ended-attempt-v1", "dispatch_policy": "independent-kind-capacity-v1", "report_deletion_policy": "terminal-report-v1"})}, nil
 }
 func (c *Controller) Prepare(ctx context.Context, apply bool) error {
 	tx, e := c.DB.Begin(ctx)
@@ -49,7 +49,7 @@ func (c *Controller) Prepare(ctx context.Context, apply bool) error {
 			return e
 		}
 	}
-	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue, migrations.WorkerContracts, migrations.RunbookContract} {
+	for _, sql := range []string{migrations.Baseline, migrations.Upgrade, migrations.Queue, migrations.WorkerContracts, migrations.RunbookContract, migrations.ReportDeletions} {
 		if _, e = tx.Exec(ctx, sql); e != nil {
 			return e
 		}
@@ -216,7 +216,7 @@ func (c *Controller) route(r *http.Request, path string, b Object) (Object, int,
 	if r.Method == "GET" && (path == "/health/live" || path == "/health/ready") {
 		if path == "/health/ready" {
 			var ready bool
-			e := c.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jc_migrations WHERE version=2) AND EXISTS(SELECT 1 FROM capacity_state WHERE config_revision=$1)", c.Revision).Scan(&ready)
+			e := c.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM jc_migrations WHERE version=4) AND EXISTS(SELECT 1 FROM capacity_state WHERE config_revision=$1)", c.Revision).Scan(&ready)
 			if e != nil {
 				return nil, 0, e
 			}
@@ -261,7 +261,7 @@ func (c *Controller) route(r *http.Request, path string, b Object) (Object, int,
 			return v, status, e
 		}
 		if len(parts) == 3 && parts[0] == "jobs" && uuid(parts[1]) {
-			if Has([]string{"cancel", "retry"}, parts[2]) {
+			if Has([]string{"cancel", "retry", "delete"}, parts[2]) {
 				v, e := c.command(ctx, parts[1], parts[2], b, r.Header)
 				return v, 200, e
 			}
@@ -279,6 +279,9 @@ func publicJob(v Object) Object {
 		o[k] = v[k]
 	}
 	o["job_id"] = v["id"]
+	if v["deletion"] != nil {
+		o["deletion"] = v["deletion"]
+	}
 	return o
 }
 func execution(job Object) Execution {

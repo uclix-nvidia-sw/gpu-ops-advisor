@@ -25,6 +25,7 @@ import { IncidentDebug, RcaResult } from '../components/RcaDebug';
 import { ReportContent } from '../components/ReportContent';
 import { OperationsIncident, OperationsRca } from '../components/OperationsResult';
 import { returnPath } from '../lib/debug';
+import { ReportDeleteButton, ReportDeletionNotice } from '../components/ReportDeletion';
 export function ResultPage({ kind }: { kind: string }) {
   const { hash, state } = useLocation();
   const { id } = useParams(),
@@ -42,6 +43,7 @@ export function ResultPage({ kind }: { kind: string }) {
     [status, setStatus] = useState(''),
     [reason, setReason] = useState('');
   const r = q.data || {};
+  const deleted = kind === 'report' && r.deletion != null;
   useEffect(() => {
     if (hash !== '#final-report' || !q.data) return;
     const frame = requestAnimationFrame(() =>
@@ -59,7 +61,8 @@ export function ResultPage({ kind }: { kind: string }) {
         description={id || ''}
         actions={
           <>
-            {kind === 'report' && r.result_ref != null && <ReportExports id={id!} />}
+            {kind === 'report' && !deleted && r.result_ref != null && <ReportExports id={id!} />}
+            {kind === 'report' && <ReportDeleteButton job={r} />}
             {kind !== 'incident' && (
               <Link className="button" to={`/jobs/${id}`} state={state}>
                 작업 상태·시도 이력
@@ -92,9 +95,11 @@ export function ResultPage({ kind }: { kind: string }) {
             r.title,
             kind === 'incident'
               ? '사건 관측'
-              : kind === 'report' && r.result_ref == null
-                ? '보고서 작성 현황'
-                : '저장된 결과',
+              : deleted
+                ? '보고서 삭제 기록'
+                : kind === 'report' && r.result_ref == null
+                  ? '보고서 작성 현황'
+                  : '저장된 결과',
           )}
         >
           <div className="live-padding stack">
@@ -104,7 +109,9 @@ export function ResultPage({ kind }: { kind: string }) {
               {kind !== 'incident' && <Badge status={str(r.result_status) || null} />}
               <span>{formatDate(str(r.created_at))}</span>
             </div>
-            {kind === 'report' ? (
+            {deleted ? (
+              <ReportDeletionNotice job={r} />
+            ) : kind === 'report' ? (
               <>
                 <div className={app.mode === 'operations' ? 'ops-report-reader' : undefined}>
                   {app.mode === 'operations' && r.result_ref != null && (
@@ -127,6 +134,7 @@ export function ResultPage({ kind }: { kind: string }) {
                     </nav>
                   )}
                   <ReportContent
+                    key={`${id}:${str(r.result_ref)}`}
                     value={r.result_ref != null ? r.result : undefined}
                     request={r}
                     onEvidence={setEvidence}
@@ -153,7 +161,7 @@ export function ResultPage({ kind }: { kind: string }) {
                   작업 상태·시도 이력
                 </Link>
               )}
-              {kind === 'report' && (
+              {kind === 'report' && !deleted && (
                 <Link className="button" to={`/reports/new?parent_job_id=${id}`}>
                   새 조건으로 보고서 요청
                 </Link>
@@ -217,12 +225,14 @@ export function ResultPage({ kind }: { kind: string }) {
             )}
           </div>
         </Panel>
-        <Reviews
-          id={id!}
-          subject={kind === 'incident' ? 'incident' : 'job'}
-          target={obj(r.target)}
-          reportDisplay={kind === 'report'}
-        />
+        {!deleted && (
+          <Reviews
+            id={id!}
+            subject={kind === 'incident' ? 'incident' : 'job'}
+            target={obj(r.target)}
+            reportDisplay={kind === 'report'}
+          />
+        )}
       </QueryState>
       {evidence && <EvidenceDialog id={evidence} onClose={() => setEvidence('')} />}
     </div>

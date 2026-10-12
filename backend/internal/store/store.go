@@ -37,7 +37,10 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if _, e := tx.Exec(ctx, migrations.Baseline); e != nil {
 			return e
 		}
-		_, e := tx.Exec(ctx, migrations.Upgrade)
+		if _, e := tx.Exec(ctx, migrations.Upgrade); e != nil {
+			return e
+		}
+		_, e := tx.Exec(ctx, migrations.ReportDeletions)
 		return e
 	})
 }
@@ -71,7 +74,11 @@ func (s *Store) Get(ctx context.Context, kind, id string) (contract.Object, erro
 	if !ok {
 		return nil, contract.Invalid("resource")
 	}
-	sql := "SELECT to_jsonb(t) FROM " + table + " t WHERE id::text=$1"
+	projection := "to_jsonb(t)"
+	if table == "jobs" {
+		projection += " || jsonb_build_object('deletion',(SELECT to_jsonb(d)-'job_id' FROM report_deletions d WHERE d.job_id=t.id))"
+	}
+	sql := "SELECT " + projection + " FROM " + table + " t WHERE id::text=$1"
 	if kind == "analyses" {
 		sql += " AND kind='rca'"
 	}

@@ -44,11 +44,14 @@ func (s *Server) jobTrace(w http.ResponseWriter, q *Request, id string) error {
 		return e
 	}
 	defer tx.Rollback(ctx)
-	job, e := store.One(ctx, tx, "SELECT to_jsonb(j) FROM jobs j WHERE id::text=$1", id)
+	job, e := store.One(ctx, tx, "SELECT to_jsonb(j) || jsonb_build_object('deletion',(SELECT to_jsonb(d)-'job_id' FROM report_deletions d WHERE d.job_id=j.id)) FROM jobs j WHERE id::text=$1", id)
 	if e != nil {
 		return e
 	}
 	out := Object{"job_id": id, "kind": job["kind"], "input_snapshot": job["input_snapshot"], "versions": job["versions"], "incident_id": job["incident_id"], "evidence_version": job["evidence_version"], "source_module": job["source_module"], "source_key": job["source_key"]}
+	if job["deletion"] != nil {
+		out["deletion"] = job["deletion"]
+	}
 	// Each section reports schema absence separately from a missing linked row.
 	sections := []struct {
 		name, table, sql string

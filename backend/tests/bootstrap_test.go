@@ -150,6 +150,13 @@ func TestFreshBackendWithoutDemoSeed(t *testing.T) {
 	request(t, base+"/health/ready", "GET", nil, 503)
 	must(t, db.EnsureDefaults(ctx))
 	request(t, base+"/health/ready", "GET", nil, 200)
+	// A new binary must not serve deletion-blind reads against an older schema.
+	_, e = db.Pool.Exec(ctx, "ALTER TABLE report_deletions RENAME TO report_deletions_unavailable")
+	must(t, e)
+	request(t, base+"/health/ready", "GET", nil, 503)
+	_, e = db.Pool.Exec(ctx, "ALTER TABLE report_deletions_unavailable RENAME TO report_deletions")
+	must(t, e)
+	request(t, base+"/health/ready", "GET", nil, 200)
 	_, e = db.Pool.Exec(ctx, "DELETE FROM schema_migrations WHERE version=2")
 	must(t, e)
 	request(t, base+"/health/ready", "GET", nil, 503)

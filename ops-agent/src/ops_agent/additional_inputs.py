@@ -24,9 +24,24 @@ ADDITIONS = {
 }
 
 
-def apply_additional_inputs(topic, data, collected):
+BASIC_OMITTED_QUERIES = {"D15", "D18", "D19"}
+
+
+def additional_queries(topic_id, criteria_version=None):
+    return tuple(
+        query
+        for query in ADDITIONS[topic_id]
+        if not (
+            topic_id == "O01"
+            and criteria_version == "1.3"
+            and query in BASIC_OMITTED_QUERIES
+        )
+    )
+
+
+def apply_additional_inputs(topic, data, collected, *, criteria_version=None):
     """Keep optional failures separate from existing topic status and metrics."""
-    selected = ADDITIONS[topic["topic_id"]]
+    selected = additional_queries(topic["topic_id"], criteria_version)
     topic["quality"]["additional_inputs"] = [
         {
             "query_id": q,
@@ -65,6 +80,8 @@ def apply_additional_inputs(topic, data, collected):
         topic["metrics"].append(item)
 
     def means(query, name, units, identity):
+        if query not in selected:
+            return
         rows = intervals(collected.get(query, []), period)
         emitted = False
         for row in rows:
@@ -158,6 +175,9 @@ def apply_additional_inputs(topic, data, collected):
             "same_gpu_time_unit_intersection",
             "gpu_capacity_join_unverified",
         )
+    # Basic reports already expose condition durations; raw intervals stay in evidence.
+    if criteria_version == "1.3":
+        return
     # Node conditions remain timestamped observations, never GPU health facts.
     topic["quality"]["node_condition_observations"] = [
         {

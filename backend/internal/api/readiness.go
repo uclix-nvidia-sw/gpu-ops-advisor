@@ -12,7 +12,7 @@ import (
 // rejects analysis requests for unregistered or disabled clusters.
 func (s *Server) readiness(ctx context.Context) error {
 	var migrated bool
-	if e := s.DB.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=2)").Scan(&migrated); e != nil {
+	if e := s.DB.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=2) AND to_regclass('report_deletions') IS NOT NULL").Scan(&migrated); e != nil {
 		return Fail(503, "DATABASE_UNAVAILABLE", "저장소 연결 또는 스키마 조회에 실패했습니다.")
 	}
 	if !migrated {

@@ -13,6 +13,7 @@ import { groupLabel } from '../lib/report';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { Badge, NavTabs } from '../components/ui';
 import { IncidentStates } from '../components/RcaDebug';
+import { ReportDeleteButton } from '../components/ReportDeletion';
 
 function SectionLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -331,13 +332,7 @@ export function OperationsReports() {
         >
           <div className="ops-library">
             {q.items.map((r, i) => (
-              <Link
-                className="ops-report-book"
-                id={`report-row-${str(r.id)}`}
-                state={{ reportList, reportRow: str(r.id) }}
-                key={str(r.id)}
-                to={`/reports/${str(r.id)}#final-report`}
-              >
+              <article className="ops-report-book" id={`report-row-${str(r.id)}`} key={str(r.id)}>
                 <div className="ops-book-spine">
                   <FileChartColumn size={32} />
                   <span>{String(i + 1).padStart(2, '0')}</span>
@@ -349,7 +344,13 @@ export function OperationsReports() {
                   </div>
                   <h2 className="report-title-with-origin">
                     <ReportOrigin value={r.report_origin} />
-                    {reportTitle(r)}
+                    <Link
+                      className="text-link report-history-title"
+                      state={{ reportList, reportRow: str(r.id) }}
+                      to={`/reports/${str(r.id)}#final-report`}
+                    >
+                      {reportTitle(r)}
+                    </Link>
                   </h2>
                   <p className="muted">{reportTopics(r)}</p>
                   <ReportScope job={r} />
@@ -363,12 +364,19 @@ export function OperationsReports() {
                     <dt>요청 접수 시각</dt>
                     <dd>{reportRequestTime(str(r.created_at))}</dd>
                   </dl>
-                  <span className="ops-link">
-                    {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'}{' '}
-                    <ArrowRight size={16} />
-                  </span>
+                  <div className="head-actions">
+                    <Link
+                      className="ops-link"
+                      state={{ reportList, reportRow: str(r.id) }}
+                      to={`/reports/${str(r.id)}#final-report`}
+                    >
+                      {r.result_ref != null ? '최종 보고서 보기' : '진행 확인'}{' '}
+                      <ArrowRight size={16} />
+                    </Link>
+                    <ReportDeleteButton job={r} />
+                  </div>
                 </div>
-              </Link>
+              </article>
             ))}
           </div>
         </QueryState>

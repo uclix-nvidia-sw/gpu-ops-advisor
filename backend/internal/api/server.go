@@ -265,7 +265,7 @@ func (s *Server) route(w http.ResponseWriter, q *Request, path string) error {
 	if path == "/reports" && r.Method == "POST" {
 		return s.submitReport(w, q)
 	}
-	if kind == "jobs" && len(parts) == 3 && r.Method == "POST" && Has([]string{"cancel", "retry"}, parts[2]) {
+	if kind == "jobs" && len(parts) == 3 && r.Method == "POST" && Has([]string{"cancel", "retry", "delete"}, parts[2]) {
 		if e := only(q.Body, "reason"); e != nil {
 			return e
 		}

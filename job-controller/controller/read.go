@@ -26,7 +26,7 @@ func (c *Controller) command(ctx context.Context, id, op string, b Object, h htt
 	if e := only(input, "reason", "incident_id"); e != nil {
 		return nil, e
 	}
-	if len(String(input, "reason")) > 2000 {
+	if len(String(input, "reason")) > 2000 || op == "delete" && strings.TrimSpace(String(input, "reason")) == "" {
 		return nil, Invalid("reason")
 	}
 	key := h.Get("Idempotency-Key")
@@ -62,7 +62,20 @@ func (c *Controller) command(ctx context.Context, id, op string, b Object, h htt
 		if Number(j, "version") != version {
 			return Fail(409, "version_conflict", "작업이 변경되었습니다.")
 		}
-		if op == "cancel" {
+		var deleted bool
+		if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM report_deletions WHERE job_id=$1)", id).Scan(&deleted); e != nil {
+			return e
+		}
+		if deleted && op != "delete" {
+			return Fail(409, "report_deleted", "삭제한 보고서는 다시 실행하거나 변경할 수 없습니다.")
+		}
+		if op == "delete" {
+			if !deleted {
+				if e = c.deleteReport(ctx, tx, j, now, String(input, "reason")); e != nil {
+					return e
+				}
+			}
+		} else if op == "cancel" {
 			if terminal(String(j, "status")) {
 				return Fail(409, "invalid_state", "종료한 작업은 취소할 수 없습니다.")
 			}
@@ -92,6 +105,13 @@ func (c *Controller) command(ctx context.Context, id, op string, b Object, h htt
 			return e
 		}
 		result = publicJob(updated)
+		if op == "delete" {
+			deletion, err := one(ctx, tx, "SELECT to_jsonb(d)-'job_id' FROM report_deletions d WHERE job_id=$1", id)
+			if err != nil {
+				return err
+			}
+			result["deletion"] = deletion
+		}
 		_, e = tx.Exec(ctx, "INSERT INTO command_receipts(job_id,operation,key,request_hash,response) VALUES($1,$2,$3,$4,$5)", id, op, key, hash, result)
 		if e != nil {
 			return e
@@ -130,7 +150,7 @@ func (c *Controller) readJobs(r *http.Request, parts []string) (Object, int, err
 		if !uuid(parts[1]) {
 			return nil, 0, Invalid("id")
 		}
-		j, e := one(ctx, c.DB, "SELECT to_jsonb(j) FROM jobs j WHERE id=$1 AND source_module IS NOT NULL", parts[1])
+		j, e := one(ctx, c.DB, "SELECT to_jsonb(j)||jsonb_build_object('deletion',(SELECT to_jsonb(d)-'job_id' FROM report_deletions d WHERE d.job_id=j.id)) FROM jobs j WHERE id=$1 AND source_module IS NOT NULL", parts[1])
 		return publicJob(j), 200, e
 	}
 	if len(parts) != 1 {
@@ -171,7 +191,7 @@ func (c *Controller) readJobs(r *http.Request, parts []string) (Object, int, err
 			return nil, 0, Invalid("cursor")
 		}
 	}
-	rows, e := c.DB.Query(ctx, "SELECT to_jsonb(j) FROM jobs j WHERE source_module IS NOT NULL AND ($1='' OR kind=$1) AND ($2='' OR status=$2) AND (created_at,id)<($3,$4::uuid) ORDER BY created_at DESC,id DESC LIMIT $5", kind, status, before, bid, limit+1)
+	rows, e := c.DB.Query(ctx, "SELECT to_jsonb(j)||jsonb_build_object('deletion',(SELECT to_jsonb(d)-'job_id' FROM report_deletions d WHERE d.job_id=j.id)) FROM jobs j WHERE source_module IS NOT NULL AND ($1='' OR kind=$1) AND ($2='' OR status=$2) AND (created_at,id)<($3,$4::uuid) ORDER BY created_at DESC,id DESC LIMIT $5", kind, status, before, bid, limit+1)
 	if e != nil {
 		return nil, 0, e
 	}

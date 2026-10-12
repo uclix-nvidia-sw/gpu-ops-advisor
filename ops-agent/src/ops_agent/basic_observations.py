@@ -8,9 +8,10 @@ from agent_common.contracts import metric, timestamp
 from agent_common.normalize import intervals
 from agent_common.observation import series
 from .activity_trends import iso
+from .additional_inputs import BASIC_OMITTED_QUERIES
 
 
-def basic_observations(topic, data, collected):
+def basic_observations(topic, data, collected, *, minimal=False):
     period = data["time_range"]
     start, end = timestamp(period["start"]), timestamp(period["end"])
 
@@ -52,6 +53,8 @@ def basic_observations(topic, data, collected):
             ("D18", "recorded_cpu_used", {"percent"}, ("node",)),
             ("D19", "recorded_node_load", {"load"}, ("node", "window")),
         ):
+            if minimal and query in BASIC_OMITTED_QUERIES:
+                continue
             for row in series(
                 [
                     e

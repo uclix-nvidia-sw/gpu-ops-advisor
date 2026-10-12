@@ -35,6 +35,10 @@ export function ReportContent({
   onEvidence: (id: string) => void;
 }) {
   const [selectedCluster, setSelectedCluster] = useState('');
+  const [rawOpen, setRawOpen] = useState(false);
+  const nodeIntervalsOmitted = strings(obj(obj(request).result_projection).omitted_fields).includes(
+    'topics[topic_id=O01].quality.node_condition_observations',
+  );
   const result = obj(value),
     topics = rows(result.topics),
     observations = reportObservations(result);
@@ -900,9 +904,16 @@ export function ReportContent({
           ))}
         </div>
       </details>
-      <details>
-        <summary>원본 결과 보기</summary>
-        <DataView value={result} />
+      <details onToggle={(event) => setRawOpen(event.currentTarget.open)}>
+        <summary>{nodeIntervalsOmitted ? '조회용 결과 보기' : '원본 결과 보기'}</summary>
+        {nodeIntervalsOmitted && (
+          <p className="muted">
+            Node 상태의 원본 구간 기록은 화면 조회에서 제외했습니다. 저장된 분석 결과는 변경하지
+            않았습니다. 계산 수치와 근거 참조는 유지하며, 원본 관측은 수집 근거에서 확인할 수
+            있습니다.
+          </p>
+        )}
+        {rawOpen && <DataView value={result} />}
       </details>
     </div>
   );

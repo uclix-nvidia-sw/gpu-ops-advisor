@@ -21,7 +21,7 @@ func TestOptionalBindingMetricsExportKeepsZeroAndMissingDistinct(t *testing.T) {
 			}}}}
 			html := httptest.NewRecorder()
 			metrics := reportMetrics(body)
-			if err := exportMetrics(html, "binding-fixture", "html", body, metrics); err != nil {
+			if err := exportMetrics(html, "binding-fixture", "html", body, metrics, nil); err != nil {
 				t.Fatal(err)
 			}
 			for _, want := range []string{"평균 GPU 메모리 여유량", "GPU 메모리 용량 대비 사용 비율", "평균 Node CPU 사용률", "시간창별 Node load 평균", "산출 불가", "유효시간을 연결하지 못했습니다"} {
@@ -30,7 +30,7 @@ func TestOptionalBindingMetricsExportKeepsZeroAndMissingDistinct(t *testing.T) {
 				}
 			}
 			out := httptest.NewRecorder()
-			if err := exportMetrics(out, "binding-fixture", "csv", body, metrics); err != nil {
+			if err := exportMetrics(out, "binding-fixture", "csv", body, metrics, nil); err != nil {
 				t.Fatal(err)
 			}
 			rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.Body.String(), "\ufeff"))).ReadAll()
@@ -58,7 +58,7 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 		t.Fatalf("metrics: %v", metrics)
 	}
 	html := httptest.NewRecorder()
-	if err := exportMetrics(html, "report-id", "html", body, metrics); err != nil {
+	if err := exportMetrics(html, "report-id", "html", body, metrics, nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{"최종 보고서", "분석 범위와 결과", "기본 보고서", "<table>", "GPU–Pod 연결 관측 시간", "검증된 GPU 할당 이력이 부족합니다", "1.5", "산출 불가", "독점 할당량이나 실제 연산 시간이 아닙니다", "&lt;script&gt;"} {
@@ -70,7 +70,7 @@ func TestReportDownloadRendersMetricsAndEscapesUntrustedFields(t *testing.T) {
 		t.Fatal("unescaped HTML")
 	}
 	out := httptest.NewRecorder()
-	if err := exportMetrics(out, "report-id", "csv", body, metrics); err != nil {
+	if err := exportMetrics(out, "report-id", "csv", body, metrics, nil); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.Body.String(), "\ufeff"))).ReadAll()
@@ -88,7 +88,7 @@ func TestNamespaceExportPreservesRawCSVAndFormatsHTML(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := httptest.NewRecorder()
-	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{"연결 GPU 평균 활동률", "3.000", "MiB", "산출 불가", "Namespace의 실제 소비량", "모델 서버가 오류 응답", "1.2"} {
@@ -97,7 +97,7 @@ func TestNamespaceExportPreservesRawCSVAndFormatsHTML(t *testing.T) {
 		}
 	}
 	csv := httptest.NewRecorder()
-	if err := exportMetrics(csv, "fixture", "csv", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(csv, "fixture", "csv", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(csv.Body.String(), ",bytes,") {
@@ -116,7 +116,7 @@ func TestNamespaceTimeMeaningAndRawPrecision(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := httptest.NewRecorder()
-	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(html, "fixture", "html", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"기간 중 연결이 확인된 GPU", "8대가 각각 1시간", "GPU·시간", "동시 사용 대수가 아닙니다"} {
@@ -128,7 +128,7 @@ func TestNamespaceTimeMeaningAndRawPrecision(t *testing.T) {
 		t.Fatal("limitations hidden after metrics")
 	}
 	out := httptest.NewRecorder()
-	if err := exportMetrics(out, "fixture", "csv", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(out, "fixture", "csv", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.Body.String(), ",7.9864155557420515,GPU-hours,") {
@@ -142,7 +142,7 @@ func TestClusterObservationExportKeepsZeroUnknownAndLabels(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := httptest.NewRecorder()
-	if err := exportMetrics(w, "fixture", "html", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(w, "fixture", "html", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"클러스터 관측 GPU", "클러스터 연결 확인 GPU", "<td>0</td>", "산출 불가", "Pod 연결 라벨 없는 GPU", "유휴 상태나 회수 가능 여부는 확인되지", "cpc-2", "cpc-3"} {
@@ -151,7 +151,7 @@ func TestClusterObservationExportKeepsZeroUnknownAndLabels(t *testing.T) {
 		}
 	}
 	w = httptest.NewRecorder()
-	if err := exportMetrics(w, "fixture", "csv", body, reportMetrics(body)); err != nil {
+	if err := exportMetrics(w, "fixture", "csv", body, reportMetrics(body), nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(w.Body.String(), "O08.cluster_connected_gpu_count.0,cpc-2,0,physical_gpu") {

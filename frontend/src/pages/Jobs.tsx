@@ -29,6 +29,7 @@ import { obj } from '../lib/live';
 import { groupLabel, topicName } from '../lib/report';
 import { reportScopeClusters, reportTitle, reportTopics } from '../lib/workflow';
 import { JobDebug } from '../components/JobDebug';
+import { ReportDeletionNotice } from '../components/ReportDeletion';
 import { debugPath, returnPath } from '../lib/debug';
 export function Jobs() {
   const app = useApp();
@@ -185,7 +186,7 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
                   <Link
                     className="text-link jobs-title"
                     to={
-                      isReport || job.result_ref != null
+                      job.deletion == null && (isReport || job.result_ref != null)
                         ? `/${job.kind === 'rca' ? 'analyses' : 'reports'}/${id}#final-report`
                         : `/jobs/${id}`
                     }
@@ -253,7 +254,7 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
                   {reportRequestTime(str(job.created_at)).replace(/ (?=\d{2}:)/, '\n')}
                 </td>
                 <td>
-                  {job.result_ref != null ? (
+                  {job.deletion == null && job.result_ref != null ? (
                     <Link
                       className="text-link jobs-result-link"
                       state={{ from }}
@@ -262,7 +263,9 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
                       결과 보기
                     </Link>
                   ) : (
-                    <span className="jobs-unpublished">결과 미발행</span>
+                    <span className="jobs-unpublished">
+                      {job.deletion != null ? '보고서 삭제' : '결과 미발행'}
+                    </span>
                   )}
                   <div>
                     <Link
@@ -334,6 +337,13 @@ export function JobDetail() {
         }
       />
       <QueryState query={q}>
+        {j.deletion != null && (
+          <Panel title="보고서 삭제 기록">
+            <div className="live-padding">
+              <ReportDeletionNotice job={j} />
+            </div>
+          </Panel>
+        )}
         {unresolved.length > 0 && (
           <Notice>
             종료된 {unresolved.map((attempt) => `${num(attempt.attempt_no)}차`).join(', ')} 시도의
@@ -468,7 +478,7 @@ export function JobDetail() {
                       재시도
                     </button>
                   )}
-                  {j.result_ref != null && (
+                  {j.deletion == null && j.result_ref != null && (
                     <Link
                       className="button primary"
                       state={location.state}
@@ -626,7 +636,9 @@ function ReportJobRequest({ job }: { job: Row }) {
         <section className="report-job-topics" aria-label="요청한 분석 주제">
           <h3>요청한 분석 주제{ids.length > 0 && ` · ${ids.length}개`}</h3>
           <p>
-            요청한 내용입니다. 주제별 산출 여부와 근거 부족 사유는 완성된 보고서에서 확인하세요.
+            {job.deletion != null
+              ? '삭제 전 요청한 분석 주제입니다. 삭제된 결과 본문은 다시 볼 수 없습니다.'
+              : '요청한 내용입니다. 주제별 산출 여부와 근거 부족 사유는 완성된 보고서에서 확인하세요.'}
           </p>
           {ids.length ? (
             <div className="table-wrap">

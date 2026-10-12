@@ -276,3 +276,36 @@ it('keeps missing RCA targets unknown and does not assign a report creation sour
   expect(html).not.toContain('자동 생성');
   expect(html).not.toContain('결과 보기</a>');
 });
+
+it('keeps deleted report history without presenting it as unpublished or linking to a result', () => {
+  fixture.job = {
+    ...fixture.job,
+    id: 'deleted-report',
+    status: 'succeeded',
+    result_ref: null,
+    result_status: 'deleted',
+    deletion: {
+      deleted_at: '2026-10-12T00:00:00Z',
+      reason: '검증 보고서 정리',
+      evidence_count: 3,
+      artifact_cleanup_state: 'complete',
+    },
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <JobHistoryTable items={[fixture.job]} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('보고서 삭제');
+  expect(html).toContain('href="/jobs/deleted-report"');
+  expect(html).not.toContain('href="/reports/deleted-report');
+  expect(html).not.toContain('결과 미발행');
+  const detail = render();
+  expect(detail).toContain('검증 보고서 정리');
+  expect(detail).toContain(
+    '삭제 전 요청한 분석 주제입니다. 삭제된 결과 본문은 다시 볼 수 없습니다.',
+  );
+  expect(detail).not.toContain('완성된 보고서에서 확인하세요');
+  expect(detail).toContain('정리 완료');
+  expect(detail).not.toContain('저장된 결과 보기');
+});

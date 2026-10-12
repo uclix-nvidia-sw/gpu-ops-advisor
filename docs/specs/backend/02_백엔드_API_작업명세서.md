@@ -146,3 +146,10 @@ Backend는 `source_module=backend,source_key=manual:<Idempotency-Key>`로 JC의 
 Backend는 발행된 `result_candidates.body`의 `measurements`와 `topics[].metrics`를 읽어 출력하며 새 분석을 실행하지 않는다. 수치가 있으면 HTML은 항목·대상·값·단위·제한 사유 표를, CSV는 `id,target,value,unit,method,reason,evidence_refs` 열을 생성한다. null 값은 ‘산출 불가’로 표시한다. HTML은 원본 결과와 해석 제한을 포함하고 텍스트를 escape하며 CSV는 수식 문자를 방어한다. 수치 배열이 비어 있으면 기존 JSON 기반 HTML/필드별 CSV 출력을 사용한다. Agent의 저장 파일을 그대로 전송하는 경로와는 구분한다. 구현: [export](../../../backend/internal/api/export.go), [수치 출력](../../../backend/internal/api/report_export.go).
 
 [DB](../common/03_데이터_설계서.md) · [큐](../job-controller/10_Job_Controller_모듈_설계서.md) · [공통 계약](../common/14_모듈간_호출과_공통실행_계약.md)
+
+### 2026-10-12 보고서 경량 조회와 삭제
+
+- criteria `1.3` 운영 보고서의 O01에 중복 저장된 `quality.node_condition_observations`만 SQL에서 제외해 응답한다. 계산 지표·근거 참조는 유지하고 저장 본문/해시는 바꾸지 않는다. 실제로 제외한 응답은 `result_projection`에 제외 필드와 저장 원본 해시를 표시한다. criteria `1.2`, RCA, 다른 필드는 그대로다. 기존 데이터 재계산이나 DB 원본 정리가 아니다.
+- `POST /jobs/{id}/delete`는 종료된 보고서 삭제를 JC에 전달한다. 사유·버전·멱등 키가 필요하며, 참조 또는 실행 경합 시 삭제하지 않는다. 구체적인 상태 코드와 DTO는 [Backend API](../../../backend/API.md)를 따른다.
+- 삭제한 보고서는 보고서 목록에서 제외한다. 작업 상세는 기존 실행 상태·시도 이력과 `deletion`을 유지하고 결과 상태를 `deleted`로 표시한다. 결과 본문/내보내기/재시도는 제공하지 않는다. 파일 정리 상태는 삭제 기록에서 별도로 확인한다.
+- 증거를 연결하는 지식·검토 저장은 같은 트랜잭션 안에서 증거 존재와 범위를 확인하고 잠근다. 삭제와 동시에 참조가 생성되어 끊어지는 것을 막는다.

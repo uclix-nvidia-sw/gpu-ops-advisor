@@ -27,10 +27,7 @@ def test_default_selection_omits_unrequested_queries():
         "D04",
         "D06",
         "D10",
-        "D15",
         "D16",
-        "D18",
-        "D19",
         "D20",
         "D22",
     }

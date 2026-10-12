@@ -21,7 +21,7 @@ from .report import write_report
 from .namespace_usage import namespace_usage
 from .collection import collect_report
 from .presentation import TOPIC_BASES
-from .additional_inputs import ADDITIONS, apply_additional_inputs
+from .additional_inputs import additional_queries, apply_additional_inputs
 from .basic_observations import basic_observations
 
 
@@ -104,7 +104,12 @@ def query_ids(
             base.append("D06")
         return tuple(
             dict.fromkeys(
-                base + (list(ADDITIONS[topic_id]) if include_additions else [])
+                base
+                + (
+                    list(additional_queries(topic_id, criteria_version))
+                    if include_additions
+                    else []
+                )
             )
         )
     if (
@@ -906,9 +911,11 @@ def calculate(
             topic["status"] = "partial"
     topic["missing_inputs"] = list(dict.fromkeys(topic["missing_inputs"]))
     if consolidated(profile):
-        apply_additional_inputs(topic, data, collected)
+        apply_additional_inputs(
+            topic, data, collected, criteria_version=criteria_version
+        )
     if criteria_version == "1.3":
-        basic_observations(topic, data, collected)
+        basic_observations(topic, data, collected, minimal=consolidated(profile))
         useful = any(m["value"] is not None for m in topic["metrics"])
         topic["status"] = (
             "partial"
@@ -952,15 +959,23 @@ async def run(tools):
         if ("O08" in data["topic_ids"] and criteria_version in {"1.2", "1.3"})
         else ()
     )
-    namespace_only = (
+    namespace_narrowing = (
         criteria_version in {"1.2", "1.3"}
-        and data["topic_ids"] == ["O08"]
+        and (
+            data["topic_ids"] == ["O08"]
+            or (
+                criteria_version == "1.3"
+                and consolidated(ctx["profile"])
+                and "O08" in data["topic_ids"]
+                and set(data["topic_ids"]) <= {"O01", "O08", "O11"}
+            )
+        )
         and set(data.get("topic_group_by", {}).get("O08", data["group_by"]))
         in ({"namespace"}, {"cluster", "namespace"})
     )
     order = (
         ["D01", "D02", "D08", "D06"]
-        if namespace_only
+        if namespace_narrowing
         else sorted(queries, key=lambda q: (q not in priority, int(q[1:])))
     )
     if consolidated(ctx["profile"]):
@@ -982,7 +997,7 @@ async def run(tools):
         data,
         ctx["deadline"],
         order,
-        namespace_only,
+        namespace_narrowing,
         {
             q
             for topic in data["topic_ids"]
