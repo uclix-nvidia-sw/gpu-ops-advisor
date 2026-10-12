@@ -1684,11 +1684,11 @@ def test_builtin_profile_without_datasource_configuration(stack, namespaces):
         assert energy["quality"]["reason"] == "actual_power_original_samples_missing"
         assert not temperature
         assert all((q, "empty") in evidence for q in ("D04", "D11"))
-    assert any(q == "D09" and s == "ok" for q, s in evidence)
+    assert not {"D09", "D13"} & {q for q, _ in evidence}
     requests = Upstream.requests[request_start:]
     assert any(p == "/api/datasources" for p, _ in requests)
     assert any("/label/cluster_id/values" in p for p, _ in requests)
-    assert any("/label/cluster/values" in p for p, _ in requests)
+    assert not any("/loki/" in p for p, _ in requests)
     metric_queries = [
         args["query"][0] for path, args in requests if path.endswith("/api/v1/query")
     ]
@@ -1701,9 +1701,6 @@ def test_builtin_profile_without_datasource_configuration(stack, namespaces):
     for path, args in requests:
         if path.endswith("/api/v1/query"):
             assert 'cluster_id="cpc-2"' in args["query"][0]
-            assert ('namespace=~"dev"' in args["query"][0]) == (namespaces is not None)
-        if path.endswith("/loki/api/v1/query_range"):
-            assert 'cluster="cpc-2"' in args["query"][0]
             assert ('namespace=~"dev"' in args["query"][0]) == (namespaces is not None)
 
 
@@ -1800,7 +1797,7 @@ def test_llm_failure_preserves_metrics_and_independent_topics(stack):
             next(t for t in result["topics"] if t["topic_id"] == "O10")["status"]
             == "blocked"
         )
-        assert any(q == "D09" and s == "unavailable" for q, s in evidence)
+        assert not {"D09", "D13"} & {q for q, _ in evidence}
     finally:
         Upstream.llm_fail = False
         Upstream.logs_fail = False

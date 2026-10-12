@@ -34,11 +34,11 @@ PLAN = {
     "O03": ("D08", "D06", "D02", "D10"),
     "O04": ("D08", "D06", "D02"),
     "O05": ("D10",),
-    "O06": ("D08", "D06", "D13"),
+    "O06": ("D08", "D06"),
     "O07": ("D07", "D12"),
     "O08": ("D08", "D01", "D06", "D12"),
     "O09": ("D11", "D10"),
-    "O10": ("D11", "D02", "D13", "D09"),
+    "O10": ("D11", "D02"),
     "O11": ("D10",),
 }
 
@@ -119,9 +119,6 @@ def query_ids(
         and (not data.get("action_record_ids") or not data.get("comparison_range"))
     ):
         return ()
-    # Only an explicitly empty, successfully pinned DB snapshot permits omission.
-    if topic_id == "O06" and context is not None and context.get("incidents") == []:
-        return ("D08", "D06")
     return (
         ("D01", "D02", "D06", "D08")
         if topic_id == "O08" and criteria_version in {"1.2", "1.3"}
@@ -150,6 +147,14 @@ def calculate(
         evidence_refs=[],
         recommendations=[],
     )
+    omitted = {"O05": ("D09",), "O06": ("D09", "D13"), "O10": ("D09", "D13")}.get(
+        topic_id, ()
+    )
+    if omitted:
+        topic["quality"]["omitted_queries"] = [
+            dict(query_id=q, reason="unused_by_report_calculation", evidence_refs=[])
+            for q in omitted
+        ]
     if "topic_group_by" in data:
         data = {**data, "group_by": data["topic_group_by"][topic_id]}
         topic["quality"].update(
@@ -727,16 +732,6 @@ def calculate(
             for r in context["rca_results"]
         ]
     elif topic_id == "O06":
-        if "D13" not in query_ids(
-            topic_id, criteria_version, context=context, data=data
-        ):
-            topic["quality"]["omitted_queries"] = [
-                dict(
-                    query_id="D13",
-                    reason="no_stored_incidents_in_period",
-                    evidence_refs=[db_evidence["id"]],
-                )
-            ]
         relations = []
         for incident in context["incidents"]:
             at = timestamp(incident["occurred_at"])

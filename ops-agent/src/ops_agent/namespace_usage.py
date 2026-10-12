@@ -1,6 +1,8 @@
 """O08 draft: activity of observed connected GPUs, never tenant consumption."""
 
 from collections import defaultdict
+import json
+import re
 
 from agent_common.calculations import allocation_hours, seconds, union
 from agent_common.contracts import timestamp
@@ -343,4 +345,47 @@ def pod_namespace_scope(collected, profile=None):
         ]
         if labels and all(r.get("namespace") for r in labels):
             out[cluster] = sorted({r["namespace"] for r in labels})
+    return out
+
+
+def gpu_pod_scope(collected, profile, period):
+    """Only complete period-wide identities can restrict Pod names; retain all UIDs."""
+    if not consolidated(profile):
+        return {}
+    namespaces = pod_namespace_scope(collected, profile)
+    out = {}
+    for cluster in namespaces:
+        names = set()
+        for query in set((inventory_query(profile), mapping_query(profile))):
+            evidence = [
+                e for e in collected.get(query, []) if e["cluster_id"] == cluster
+            ]
+            start, end = timestamp(period["start"]), timestamp(period["end"])
+            spans = union(
+                [
+                    (
+                        max(start, timestamp(e["time_range"]["start"])),
+                        min(end, timestamp(e["time_range"]["end"])),
+                    )
+                    for e in evidence
+                ]
+            )
+            rows = series(evidence)
+            if (
+                spans != [(start, end)]
+                or not rows
+                or any(
+                    not all(
+                        r["labels"].get(k)
+                        for k in ("gpu_uuid", "namespace", "pod", "node")
+                    )
+                    for r in rows
+                )
+            ):
+                break
+            names.update(r["labels"]["pod"] for r in rows)
+        else:
+            # A bounded regex avoids replacing response pressure with query-size pressure.
+            if len(json.dumps("|".join(re.escape(n) for n in sorted(names)))) <= 4096:
+                out[cluster] = sorted(names)
     return out

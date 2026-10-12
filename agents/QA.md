@@ -1,3 +1,36 @@
+# 2026-10-12 보고서 D09/D13 제거·D06 Pod 범위 축소 — 로컬 검수
+
+- 시작 원격 main `4ddeff1`, 종료 확인 시 추가된 RCA UI PR #103의 `bc2577d`를 fast-forward로 반영했다. Agent/공통 Python은 두 main 사이에 변경이 없다. 검수 당시 브랜치는 `fix/report-collection-pruning`의 로컬 수정 상태였다. 이후 사용자 요청으로 같은 변경의 PR을 준비한다. 운영 배포·데이터 변경은 하지 않았다.
+- 구현: Ops O05/O06/O10이 계산에 사용하지 않는 D09/D13을 계획·부가 참조에서 제외하고 생략 사유를 표시한다. 기존 namespace 축소가 허용된 통합 binding의 O08 및 기본 조합에서 완전한 기간·GPU/Namespace/Pod/Node 단서가 있을 때 D06 Pod 이름을 추가 제한한다. UID/Node 필터는 걸지 않아 재생성·충돌·이동 판단을 보존한다. 다른 D06 소비 주제 혼합·누락 신원·과대 정규식은 기존 범위다.
+- 전체 Agent 검사 **1077 passed / 0 skipped**, 109.19초. 기존 MCP deprecation warning 3건. Python 3.11.16, 외부 DB 변수를 제거한 임시 loopback PostgreSQL, 최신 소스에서 빌드한 JC/Incident/Backend와 실제 두 Worker·공식 MCP를 사용했다. Grafana/LLM은 fixture다. 최초 sandbox의 loopback bind 제한을 해소했고, 제거된 로그를 기대하던 기존 계획/E2E assertion을 수정한 후 전체 통과했다.
+- 새 회귀: 같은 Namespace의 CPU Pod 제외, UID 충돌·재생성, Node 이동, 관측 공백, 라벨 누락·부분/빈 응답·기간 누락·과대 필터 fallback, 정규식 escaping, scope별 캐시 분리, RCA의 기본 무필터 수집. 사건 수·실제 신원 관계·조치 전후 에너지의 값/단위/방법/상태/누락 사유가 제거 전과 일치한다. 새 evidence UUID·사용하지 않는 로그 참조·수집 메타데이터·설명 문구는 동일성 대상이 아니다.
+- Ruff check/format, 문서 링크, diff 공백 검사 통과. Go/Frontend 구현·DB schema·Helm 값은 변경하지 않았다. 해당 모듈 전체 unit suite는 이 변경의 별도 필수 대상으로 잡지 않았으며 발행·API/export 소비는 Agent E2E에서 검사했다.
+
+## 같은 24시간 자료의 baseline/main 대조
+
+[재현 스크립트](tests/benchmark_report_pruning.py)를 baseline `bc2577d`에서 추출한 Ops/shared Python과 수정본으로 각각 실행했다. 24시간·15초 표본, 같은 Namespace의 GPU 연결 Pod 1개와 일반 Pod 99개, 로그 query당 1000개 합성 줄을 사용했다. 각 3회 중앙값, 측정은 다른 검사 종료 후 순차 실행했다. 원본 크기는 **압축 전 JSON 바이트**이며 PostgreSQL 물리 저장량·네트워크 시간·실제 소스 부하가 아니다.
+
+| 항목 | 이전 | 수정 후 |
+|---|---:|---:|
+| 기본 O01/O08/O11 실제 수집 호출 | 19 | 19 |
+| 기본 D06 응답 JSON | 9,922,564 B | 99,727 B |
+| 기본 전체 응답 JSON | 10,643,388 B | 820,551 B |
+| 기본 저장할 evidence snapshot JSON | 10,643,632 B | 820,795 B |
+| 기본 수집 처리 | 2.337초 | 0.160초 |
+| 기본 수집+계산+고정 설명 처리 | 7.057초 | 3.264초 |
+| 기본 결과 JSON | 약 157,756 B | 약 158,315 B |
+| 확장 O05/O06/O10 실제 수집 호출 | 20 | 18 |
+| 확장 evidence snapshot JSON | 11,039,703 B | 10,545,581 B |
+| 확장 수집+계산+고정 설명 처리 | 3.121초 | 3.098초 |
+
+기본 원본 저장 크기 약 92.3% 감소, 로컬 처리 약 53.7% 감소. 기본 계산값·자료 부족 판정은 같고 결과 JSON은 조회 범위 메타데이터 때문에 약 0.6KB 늘었다. 호출 수는 같아도 불필요한 Pod 표본을 덜 읽는다. 확장 조합은 D06 범위를 유지해 로그 원본만 약 4.5% 줄었고 처리 시간 차이는 약 0.7%로 유의미한 속도 개선이라고 주장하지 않는다. 두 시나리오 모두 모든 계산값·단위·방법·상태·누락 사유 대조 통과.
+
+재현: baseline의 `ops-agent/ shared/python/`을 `.local/report-pruning/baseline/`에 추출한 뒤 스크립트 상단의 PYTHONPATH 실행 예를 따른다. `--scenario extended`로 확장 조합도 실행하고 같은 시나리오의 이전 JSON을 `--compare`에 전달한다. 로컬 비교 파일은 `.local/report-pruning/`, 전체 test XML은 `.local/report-pruning-tests.xml`에 남긴다.
+
+**미검증:** 운영 Mimir/Loki/DB 조회 시간·실제 보고서 생성 시간·Pod 메모리 감소, 실제 LLM 설명 품질. 기존 evidence/보고서는 그대로이며 과거 용량을 자동 축소하지 않는다. 원천 집계·연속 표본 압축·공유 중복 저장 제거는 이번 범위가 아니다.
+
+---
+
 # 2026-10-12 수집 최소화·삭제 기능 최종 검수
 
 - 원격 main `029fbed`를 작업 시작·종료 시 재확인했다. 작업 브랜치는 `fix/minimal-report-evidence`이고 커밋·PR·운영 배포·실제 보고서 삭제는 하지 않았다.

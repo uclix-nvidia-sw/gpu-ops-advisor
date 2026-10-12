@@ -1,4 +1,4 @@
-"""Report-only planning around the unchanged shared observation collector."""
+"""Report-only planning around the shared observation collector."""
 
 import asyncio
 from copy import deepcopy
@@ -10,7 +10,7 @@ from agent_common.observation import Observation
 from agent_common.parallel import run_bounded
 from agent_common.query_contract import inventory_query, mapping_query, query_definition
 
-from .namespace_usage import pod_namespace_scope
+from .namespace_usage import gpu_pod_scope, pod_namespace_scope
 
 
 REPORT_LIMITS = {"max_queries", "chunk_seconds", "max_rows", "max_concurrency"}
@@ -210,7 +210,14 @@ async def collect_report(
                     else None
                 )
                 async with asyncio.timeout(max(0, obs.deadline - time.monotonic())):
-                    await obs.collect(query, period, namespace_scope=narrowed)
+                    await obs.collect(
+                        query,
+                        period,
+                        namespace_scope=narrowed,
+                        pod_scope=gpu_pod_scope(collected, profile, period)
+                        if namespace_only and query == "D06"
+                        else None,
+                    )
         except asyncio.CancelledError:
             raise
         except Exception as exc:
