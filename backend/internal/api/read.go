@@ -124,19 +124,48 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 		limit, _ = strconv.Atoi(v)
 	}
 	args = append(args, limit+1)
-	rows, e := s.DB.Pool.Query(q.R.Context(), "SELECT to_jsonb(j) FROM jobs j WHERE "+where+fmt.Sprintf(" ORDER BY created_at DESC,id DESC LIMIT $%d", len(args)), args...)
+	// Backend-only databases may not have the JC-owned retryable column yet.
+	var hasRetryable bool
+	if e = s.DB.Pool.QueryRow(q.R.Context(), "SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='jobs'::regclass AND attname='retryable' AND NOT attisdropped)").Scan(&hasRetryable); e != nil {
+		return e
+	}
+	retryable := "NULL::boolean AS retryable"
+	if hasRetryable {
+		retryable = "retryable"
+	}
+	// Page first, then read only the published candidate's list fields. Never serialize its body.
+	rows, e := s.DB.Pool.Query(q.R.Context(), `
+SELECT to_jsonb(j), jsonb_build_object('id',c.id,
+ 'result_status',c.body->'result_status','narrative_status',c.body->'narrative_status')
+FROM (
+ SELECT id,kind,status,stage,attempt_no,created_at,started_at,deadline_at,queue_reason,
+  cancel_requested_at,termination_reason,version,parent_job_id,scope,source_module,source_key,
+  published_result_id,max_attempts,budget_used,token_budget,`+retryable+`,
+  jsonb_build_object('execution',jsonb_build_object('attempt_budget',versions#>'{execution,attempt_budget}')) AS versions,
+  (SELECT jsonb_object_agg(key,value)
+   FROM jsonb_each(CASE WHEN jsonb_typeof(input_snapshot)='object' THEN input_snapshot ELSE '{}'::jsonb END)
+   WHERE key IN ('target','time_range','timezone','topic_ids','purpose_ids','group_by',
+    'topic_group_by','comparison_range','incident_id','symptom')) AS input_snapshot
+ FROM jobs WHERE `+where+fmt.Sprintf(" ORDER BY created_at DESC,id DESC LIMIT $%d", len(args))+`
+) j
+LEFT JOIN result_candidates c ON c.id=j.published_result_id AND c.job_id=j.id AND c.kind=j.kind
+ORDER BY j.created_at DESC,j.id DESC`, args...)
 	if e != nil {
 		return e
 	}
 	defer rows.Close()
-	rawItems := []Object{}
+	type listItem struct{ job, result Object }
+	rawItems := []listItem{}
 	for rows.Next() {
-		var b []byte
-		if e = rows.Scan(&b); e != nil {
+		var job, result []byte
+		if e = rows.Scan(&job, &result); e != nil {
 			return e
 		}
-		var v Object
-		if e = json.Unmarshal(b, &v); e != nil {
+		var v listItem
+		if e = json.Unmarshal(job, &v.job); e != nil {
+			return e
+		}
+		if e = json.Unmarshal(result, &v.result); e != nil {
 			return e
 		}
 		rawItems = append(rawItems, v)
@@ -146,16 +175,21 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	}
 	var next any
 	if len(rawItems) > limit {
-		last := rawItems[limit-1]
+		last := rawItems[limit-1].job
 		b, _ := json.Marshal(cursor{String(last, "created_at"), String(last, "id"), filter})
 		next = base64.RawURLEncoding.EncodeToString(b)
 		rawItems = rawItems[:limit]
 	}
 	items := []Object{}
 	for _, v := range rawItems {
-		dto, e := s.jobDTO(q, v, false)
-		if e != nil {
-			return e
+		dto := jobSummary(v.job)
+		if id := String(v.job, "published_result_id"); id != "" {
+			if String(v.result, "id") != id {
+				return Fail(404, "NOT_FOUND", "리소스를 찾을 수 없습니다.")
+			}
+			dto["result_ref"] = id
+			dto["result_status"] = v.result["result_status"]
+			dto["narrative_status"] = v.result["narrative_status"]
 		}
 		items = append(items, dto)
 	}
@@ -170,7 +204,7 @@ func onlyQuery(q *Request, keys ...string) error {
 	}
 	return nil
 }
-func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
+func jobSummary(v Object) Object {
 	out := Object{}
 	if String(v, "kind") == "report" {
 		out["report_origin"] = "unknown"
@@ -199,6 +233,10 @@ func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
 	out["result_ref"] = nil
 	out["result_status"] = "unpublished"
 	out["narrative_status"] = nil
+	return out
+}
+func (s *Server) jobDTO(q *Request, v Object, detail bool) (Object, error) {
+	out := jobSummary(v)
 	if id := String(v, "published_result_id"); id != "" {
 		result, e := store.One(q.R.Context(), s.DB.Pool, "SELECT to_jsonb(c) FROM result_candidates c WHERE id::text=$1 AND job_id::text=$2 AND kind=$3", id, String(v, "id"), String(v, "kind"))
 		if e != nil {
