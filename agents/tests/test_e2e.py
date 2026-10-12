@@ -2189,3 +2189,42 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
         assert limited.status_code == 429
         assert limited.json()["error"]["code"] == "rate_limited"
         assert limited.headers["Retry-After"] == "60"
+
+
+@pytest.mark.e2e
+def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
+    original_reply = analysis_reply
+    original_worker = worker_result
+    captured = {}
+    calls = 0
+
+    def rejection_then_repair(refs):
+        nonlocal calls
+        calls += 1
+        response = original_reply(refs)
+        if calls == 1:
+            response["hypotheses"][0]["claim"] = "온도는 999도입니다."
+        return response
+
+    def capture_result(*args, **kwargs):
+        result, evidence = original_worker(*args, **kwargs)
+        captured.update(result=result, evidence=evidence)
+        return result, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "analysis_reply", rejection_then_repair)
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
+    test_grafana_webhook_through_incident_jc_and_real_rca_worker(
+        stack, monkeypatch, True
+    )
+    diagnostic = captured["result"]["quality"]["analysis"]["synthesis"]
+    assert calls == 2
+    assert diagnostic["repair_status"] == "repaired"
+    assert diagnostic["repair_attempts"] == 1
+    gate = diagnostic["repair_gate"]
+    assert not gate["budget_blocked"] and not gate["deadline_blocked"]
+    assert gate["remaining_seconds"] > 0 and gate["available_output_cap"] > 0
+    violation = diagnostic["validation_failures"][0]["violations"][0]
+    assert violation["code"] == "unregistered_numeric_claim"
+    assert len(violation["numeric_diagnostic"]["text_sha256"]) == 64
+    assert "999" not in json.dumps(violation)
+    assert ("rca_synthesis", "ok") in captured["evidence"]

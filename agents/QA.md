@@ -1,3 +1,12 @@
+# 2026-10-12 RCA 숫자 거절 진단 및 수정 요청 예산
+
+- RCA synthesis만 수정했다. 거절된 필드의 해시·길이·숫자 위치를 기록하며 원문이나 숫자 값은 저장하지 않는다. 수정 요청의 출력 상한은 실제 LLM 전송 계층과 동일하게 남은 예산에 맞춘다. 예산 부족과 시간 만료를 별도 진단한다.
+- 로컬 검증: Python 3.11, UTF-8 환경의 전체 비 E2E Agent 검사 **976 passed / 36 deselected**. 실제 LLM 전송 클래스의 합성 HTTP 검사는 출력 상한 일치를 확인했다.
+- 추가 E2E **1 passed / 26 deselected**: 새 loopback PostgreSQL, 현재 JC·Incident 실행 파일, 실제 RCA Worker와 공식 Grafana MCP를 사용했다. 합성 Grafana/LLM으로 숫자 응답 거절 → 수정 1회 → 결과 발행 및 hash 일치 → 진단 보존을 확인했다.
+- 운영 DB·배포·Runbook 발행 상태는 변경하지 않았다. 과거 거절 응답 원문은 복원할 수 없으며 실제 모델의 새 RCA 검수는 배포 후 필요하다. 로컬 합성 검사는 운영 분석 품질 검증이 아니다.
+
+---
+
 # 2026-10-12 기본 보고서 E2E의 CI 기본 경로 수정
 
 - PR #96과 머지된 main `eccb662`의 GitHub Actions에서 새 보고서 E2E가 `KeyError: BACKEND_BINARY`로 실패했다(1 failed / 1005 passed). CI는 `.local/backend-e2e`를 빌드하지만 해당 선택 환경변수를 지정하지 않는다. 이전 로컬 검증은 변수를 지정하여 이 차이를 놓쳤다.

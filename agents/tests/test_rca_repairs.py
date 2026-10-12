@@ -195,3 +195,116 @@ def test_dcgm_uid_must_agree_with_same_time_ksm_when_join_required():
         },
     }
     assert allocations([e], period, [], observed=True, require_pod_join=True) == []
+
+
+def test_numeric_diagnostic_preserves_offsets_without_raw_reply():
+    text = "XID79 관측 뒤 secret_token_12345 값과 두 개의 장치를 확인합니다."
+    with pytest.raises(SynthesisValidationError) as caught:
+        validate_synthesis(
+            reply(text), ["log"], [{"error_code": "xid:79", "evidence_refs": ["log"]}]
+        )
+    diagnostic = caught.value.diagnostic["numeric_diagnostic"]
+    assert len(diagnostic["text_sha256"]) == 64
+    assert diagnostic["text_length"] == len(text)
+    assert diagnostic["matches"][0] == {
+        "start": text.index("12345"),
+        "end": text.index("12345") + 5,
+        "kind": "digits",
+    }
+    assert diagnostic["matches"][1]["kind"] == "number_word"
+    assert "secret_token" not in str(caught.value.diagnostic)
+    assert "12345" not in str(caught.value.diagnostic)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["adaptive", "budget", "deadline", "both"])
+async def test_repair_gate_records_specific_conditions(mode):
+    from types import SimpleNamespace
+
+    class Model:
+        configured = True
+        remaining = 32768
+        deadline = time.monotonic() + 60
+        settings = SimpleNamespace(llm_synthesis_max_tokens=4096)
+
+        def __init__(self):
+            self.usage = {"calls": 0, "request_attempts": 0}
+
+        async def complete(self, system, data, **kwargs):
+            self.usage["calls"] += 1
+            self.usage["request_attempts"] += 1
+            if self.usage["calls"] == 1:
+                self.remaining = 1 if mode in {"budget", "both"} else 6500
+                if mode in {"deadline", "both"}:
+                    self.deadline = 0
+                return reply("온도는 999도입니다.")
+            assert "999" not in str(data)
+            return reply()
+
+    diagnostics = {}
+    status, _, _ = await synthesize(Model(), payload(), diagnostics)
+    gate = diagnostics["repair_gate"]
+    assert gate["budget_blocked"] == (mode in {"budget", "both"})
+    assert gate["deadline_blocked"] == (mode in {"deadline", "both"})
+    if mode == "adaptive":
+        assert status == "complete"
+        assert diagnostics["repair_status"] == "repaired"
+        assert 0 < gate["available_output_cap"] < 4096
+    else:
+        assert status == "failed"
+        assert diagnostics["repair_attempts"] == 0
+        assert (
+            diagnostics["repair_status"]
+            == {
+                "budget": "budget_exhausted",
+                "deadline": "deadline_exhausted",
+                "both": "budget_and_deadline_exhausted",
+            }[mode]
+        )
+
+
+@pytest.mark.asyncio
+async def test_repair_gate_matches_real_transport_output_cap():
+    import json
+    import httpx
+    from agent_common.llm import LLM
+    from agent_common.settings import Settings
+
+    requests = []
+
+    def handle(request):
+        requests.append(json.loads(request.content))
+        response = reply("관측값은 999입니다.") if len(requests) == 1 else reply()
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(response, ensure_ascii=False)
+                        },
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {"total_tokens": 26268 if len(requests) == 1 else 100},
+            },
+        )
+
+    settings = Settings(
+        "rca",
+        llm_base_url="http://fixture.invalid/v1",
+        llm_model="fixture",
+        llm_api_key="fixture",
+        llm_synthesis_max_tokens=4096,
+    )
+    diagnostics = {}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
+        model = LLM(settings, time.monotonic() + 60, 32768, lambda _: None, http)
+        status, candidates, _ = await synthesize(model, payload(), diagnostics)
+    assert status == "complete" and candidates
+    assert len(requests) == 2
+    assert (
+        requests[1]["max_tokens"] == diagnostics["repair_gate"]["available_output_cap"]
+    )
+    assert 0 < requests[1]["max_tokens"] < 4096
+    assert diagnostics["repair_gate"]["remaining_budget"] == 6500
