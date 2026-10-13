@@ -75,7 +75,7 @@ func normalize(kind string, b Object) error {
 			seen := map[string]bool{}
 			allowed := []string{"cluster", "model", "node", "namespace", "pod", "workload"}
 			if k == "topic_ids" {
-				allowed = []string{"O01", "O02", "O03", "O04", "O05", "O06", "O07", "O08", "O09", "O10", "O11"}
+				allowed = []string{"O01", "O02", "O03", "O04", "O05", "O06", "O07", "O08", "O09", "O10", "O11", "namespace_usage", "incident_summary"}
 			}
 			for _, v := range values {
 				if seen[v] || !Has(allowed, v) {
@@ -90,6 +90,12 @@ func normalize(kind string, b Object) error {
 		}
 		if e = ValidateTopicGroups(input); e != nil {
 			return e
+		}
+		if e = ValidateAggregateReport(input); e != nil {
+			return e
+		}
+		if IsAggregateReport(input) != (String(b, "execution_profile_revision") == AggregateReportVersion) {
+			return Invalid("aggregate_execution_profile")
 		}
 	} else {
 		if e := normalizeRCA(input, version); e != nil {

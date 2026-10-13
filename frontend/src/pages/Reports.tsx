@@ -24,6 +24,7 @@ import {
 } from '../lib/reportPeriod';
 import { ReportTimeNote } from '../components/ReportMeta';
 import { useApp } from '../lib/store';
+import { AggregateReportForm } from './AggregateReportForm';
 export function Reports() {
   const app = useApp();
   const [filterParams] = useSearchParams();
@@ -105,6 +106,14 @@ export function Reports() {
   );
 }
 export function ReportForm() {
+  const [params] = useSearchParams();
+  return params.has('legacy') || params.has('kind') ? (
+    <LegacyReportForm />
+  ) : (
+    <AggregateReportForm />
+  );
+}
+export function LegacyReportForm() {
   const app = useApp(),
     navigate = useNavigate(),
     [params] = useSearchParams(),
@@ -573,6 +582,8 @@ export function ReportFilters() {
             onChange={(e) => filter('topic', e.target.value)}
           >
             <option value="">전체 주제</option>
+            <option value="namespace_usage">Namespace 활동과 변화</option>
+            <option value="incident_summary">사건과 반복 현황</option>
             {reportKinds.map((kind) => (
               <optgroup key={kind.id} label={kind.name}>
                 {kind.topicIds.map((id) => (

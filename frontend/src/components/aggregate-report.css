@@ -1,0 +1,158 @@
+.aggregate-report {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.aggregate-report > section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.aggregate-report h2 {
+  margin: 0 0 16px;
+  font-size: 24px;
+}
+.aggregate-report h3 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+.aggregate-report h4 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.aggregate-report p {
+  margin: 8px 0 16px;
+  max-width: 80ch;
+}
+.aggregate-heading {
+  margin-bottom: 24px;
+}
+.aggregate-table-scroll {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+.aggregate-report table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+.aggregate-report caption {
+  text-align: left;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.aggregate-report th,
+.aggregate-report td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.aggregate-report thead {
+  background: var(--surface-2, #f1f6f3);
+}
+.aggregate-report tr.selected {
+  background: #edf5f0;
+}
+.aggregate-report td span,
+.aggregate-report th span,
+.aggregate-report small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.aggregate-report th button {
+  border: 0;
+  background: none;
+  color: var(--green, #176b53);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.aggregate-report th button:hover {
+  text-decoration: underline;
+}
+.aggregate-report button:focus-visible,
+.aggregate-report summary:focus-visible {
+  outline: 2px solid #176b53;
+  outline-offset: 3px;
+}
+.aggregate-chart {
+  margin-top: 24px;
+}
+.aggregate-chart svg {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  min-height: 180px;
+}
+.aggregate-chart text {
+  font-size: 12px;
+  fill: #52665d;
+}
+.aggregate-grid {
+  stroke: #d9e3dd;
+  stroke-width: 1;
+}
+.aggregate-activity-line {
+  fill: none;
+  stroke: #176b53;
+  stroke-width: 2.5;
+}
+.aggregate-activity-dot {
+  fill: #176b53;
+}
+.aggregate-report details {
+  margin: 20px 0;
+}
+.aggregate-report summary {
+  cursor: pointer;
+  padding: 12px 0;
+  color: #176b53;
+  font-weight: 600;
+}
+.aggregate-patterns {
+  margin-top: 24px;
+}
+.aggregate-evidence {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.aggregate-evidence-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.aggregate-form {
+  max-width: 860px;
+}
+.aggregate-form .aggregate-fields {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 24px;
+}
+.aggregate-form .aggregate-fields label {
+  display: grid;
+  gap: 8px;
+  min-width: 200px;
+}
+.aggregate-form .aggregate-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .aggregate-report th,
+  .aggregate-report td {
+    min-width: 110px;
+  }
+  .aggregate-form .aggregate-fields {
+    padding: 16px;
+  }
+}

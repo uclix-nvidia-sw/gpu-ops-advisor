@@ -13,6 +13,7 @@ func TestReportProfileSelection(t *testing.T) {
 		topics, groups []string
 		expected       string
 	}{
+		{[]string{"namespace_usage", "incident_summary"}, []string{"cluster", "namespace"}, AggregateReportVersion},
 		{[]string{"O08"}, []string{"namespace"}, "report-namespace-v2"},
 		{[]string{"O01", "O09", "O05"}, []string{"cluster"}, "local-v1"},
 		{[]string{"O02", "O03", "O04"}, []string{"cluster"}, "local-v1"},

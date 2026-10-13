@@ -88,7 +88,11 @@ class Worker:
                 claim["input"],
                 claim.get("versions", {}).get("input_contract", "1.3"),
             )
-            profile = self.settings.profile()
+            profile = (
+                self.settings.profile_for_claim(claim)
+                if hasattr(self.settings, "profile_for_claim")
+                else self.settings.profile()
+            )
             deadline = time.monotonic() + min(
                 profile["limits"]["deadline_seconds"],
                 timestamp(claim["deadline_at"]) - time.time(),
@@ -268,7 +272,7 @@ def transient_connection_error(exc):
     )
 
 
-async def serve_nat(settings, once=False):
+async def serve_nat(settings, once=False, *, store=None):
     from nat.runtime.loader import load_workflow
 
     delay = 2
@@ -294,7 +298,7 @@ async def serve_nat(settings, once=False):
                         value = await run.result()
                         return value["result"], value["evidence"]
 
-                await Worker(settings, runner).serve(once)
+                await Worker(settings, runner, store=store).serve(once)
                 return
         await asyncio.sleep(delay)
         delay = min(delay * 2, 30)

@@ -38,7 +38,7 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 	resultQuality, _ := body["quality"].(map[string]any)
 	perTopic := resultQuality["topic_group_by"] != nil
 	versions, _ := body["versions"].(map[string]any)
-	timed := String(versions, "criteria") == "1.3"
+	timed := String(versions, "criteria") == "1.3" || String(versions, "criteria") == AggregateReportVersion
 	var data [][]string
 	for _, metric := range metrics {
 		target, _ := metric["target"].(map[string]any)

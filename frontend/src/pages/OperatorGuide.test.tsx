@@ -66,7 +66,7 @@ it.each(['classic', 'operations', 'developer'])(
 it('allows reading before cluster registration without opening report execution', () => {
   app.mode = 'classic';
   app.connection.isError = false;
-  expect(render()).toContain('O01·O05·O08·O11 분석을 담습니다');
+  expect(render()).toContain('일일·주간 운영 보고서로 시작하세요');
   expect(render()).not.toContain('11개 소주제를 담습니다');
   expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
   expect(render('/reports')).not.toContain('report-content-marker');

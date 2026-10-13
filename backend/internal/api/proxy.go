@@ -98,6 +98,9 @@ func (s *Server) envelope(input Object, source string, now time.Time) Object {
 			revision = "report-namespace-v2"
 		}
 	}
+	if IsAggregateReport(input) {
+		revision = AggregateReportVersion
+	}
 	return Object{"contract_version": "1.3", "source_module": "backend", "source_key": source, "kind": "report", "input": input, "deadline_at": now.Add(s.Config.JobDeadline).UTC().Format(time.RFC3339Nano), "execution_profile_revision": revision}
 }
 func (s *Server) submitReport(w http.ResponseWriter, q *Request) error {

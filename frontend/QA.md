@@ -6,6 +6,10 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 검증: 프런트엔드 정적 렌더 회귀검사와 빌드·포맷 검사. 새 운영 배포와 실제 LLM 재실행은 미검증이며, 공통 operator_guidance 표시와 XID/SXID의 미확인 장치 원인 문장 검증을 함께 보강했다. 새 Runbook revision의 운영 발행은 별도 단계다.
 
+# 2026-10-13 Aggregate report UI / 집계 보고서 화면
+
+Base: latest origin/main `f7cf8c9`. PASS: 251 tests / 24 files, format check and TypeScript/Vite build with Node22.23. Local browser: namespace selection updates graph/summary; missing prior observations remain comparison-pending; hourly details expand; empty source/incident cap never becomes zero or healthy; weekly schedule shows weekday/time. Desktop and narrow form checked; no console errors observed. One static design scan passed. Preview API and figures are synthetic. Existing bundle-size warning remains; CI Node24 and live production publication are unverified. [Full verification](../agents/QA.md) · [Contract and measured limits](../docs/specs/ops-agent/aggregate-report-v1.md).
+
 # 2026-10-13 RCA 사용자 안내·수정 진단 — 로컬 검수
 
 - 통과: frontend npm test 248 tests / 23 files, build, format:check. 기존 번들 크기 경고 유지.

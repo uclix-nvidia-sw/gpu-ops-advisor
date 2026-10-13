@@ -6,6 +6,24 @@
 - Selected Runbook originals survive missing applicability facts; this does not authorize recommendations. XID/SXID unidentified-device claims are rejected for covered wording patterns; this is not an exhaustive semantic proof.
 - Not performed: production publication, retirement, deployment or live RCA. Publish reviewed new revisions after compatible Backend/Worker deployment. Producer zero timestamps and unmatched device identities remain unresolved.
 
+## PR CI portability follow-up / PR CI 환경 차이 수정
+
+Initial Python 3.12 CI: 1,149 passed and one new Backend intake E2E failed because it required BACKEND_BINARY. The test now uses the same platform-aware `.local/backend-e2e` fallback as existing E2E cases. With BACKEND_BINARY unset, both new aggregate publication/intake E2E cases passed locally (2 passed, 28 deselected; fresh loopback DB and fixture upstreams). Product code and RCA are unchanged. Remote rerun status is tracked on PR #110.
+
+최초 CI의 신규 테스트 1개에서 Backend 경로 환경변수 누락을 확인했다. 기존 테스트와 동일한 기본 경로를 사용하도록 수정했으며, 환경변수를 제거한 조건으로 신규 집계 보고서 공개·접수 E2E 2개를 재검증했다. 제품 코드·RCA 변경은 없다.
+
+# 2026-10-13 Ops aggregate report — local verification / 로컬 검증
+
+Base: origin/main `f7cf8c9`; branch `feat/ops-report-aggregation`. Local verification for PR; not deployed. [Design, query semantics, measured data size and limitations](../docs/specs/ops-agent/aggregate-report-v1.md).
+
+- PASS: Python 3.11.16, both-worker complete suite: 1,150 passed / 0 skipped after integrating latest main (112.91s; three existing MCP deprecation warnings). Actual local PostgreSQL/Backend/JC/Worker/NAT/official MCP processes, fixture Grafana/LLM. New report works without the D registry; manual intake, publication/read and daily/weekly schedule acceptance, monthly rejection verified.
+- PASS: Go 1.26.2, shared/backend/job-controller/incident `go vet ./...`, `go test -race ./...`, `go build ./...`. Backend and Incident `go test -tags=e2e ./... -count=1 -timeout=10m` use a newly initialized loopback-only temporary database; stopped after tests. Includes JC lifecycle/report compatibility checks.
+- PASS: Frontend 251 tests in 24 files, format check, TypeScript and Vite build (Node 22.23; CI Node24 not locally exercised). Existing bundle-size warning remains.
+- PASS: Helm 3.17.3 contract/render/package/mirror checks and 22 CI tool tests. New report profile is also in the opt-in independent-worker values example.
+- PASS: Browser on local fixture preview: namespace selection changes the graph and matching summary; exact hourly values expand; empty/unavailable input remains blocked rather than zero; weekly automatic form displays weekday/time; desktop and narrow form checked; no browser console errors observed. One static design detector pass completed without findings.
+- LIVE READ ONLY: final three PromQL expressions executed against CPC-1 for Oct12 KST. Same-period serialized Grafana data decreased about90.16% (1,698,241→167,175 bytes), samples103,716→1,968. Request time improvement is NOT established (different execution/cache conditions: earlier391+121ms vs546ms). Detailed calculation differences and methodology are in the design document.
+- UNVERIFIED: production deployment/publication with live LLM, CPC-2 end-to-end new collection, complete weekly comparison, maximum256GPU capacity and multi-worker concurrent load. Local browser samples are synthetic, not production reports. No production data is committed. RCA implementation, D definitions and production settings were not changed.
+
 ## 2026-10-13 RCA identity-cause and repair regression
 
 - PASS: worktree PYTHONPATH, Python UTF-8 mode; 1077 passed / 38 skipped in agents/tests, excluding test_report_cleanup.py. That unchanged Report module has Windows open-file unlink and directory fsync failures; no Report fix is included. Optional E2E skips are not passes.

@@ -927,6 +927,12 @@ def calculate(
 
 
 async def run(tools):
+    from .report_contract import aggregate_report
+
+    if aggregate_report(attempt_context.get()["claim"]["input"]):
+        from .aggregate_report import run as run_aggregate
+
+        return await run_aggregate(tools)
     ctx = attempt_context.get()
     claim, data = ctx["claim"], ctx["claim"]["input"]
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
