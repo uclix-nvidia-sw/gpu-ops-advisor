@@ -129,3 +129,102 @@ async def test_prerequisite_and_transport_failure_are_explained_without_rewritin
     assert "조회 실패 또는 일부 기간" in text
     assert result["topics"] == before
     assert result["result_status"] == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_operator_report_summarizes_checks_without_repeating_all_metrics():
+    from types import SimpleNamespace
+
+    metrics = [
+        dict(
+            id=f"O08.observed_low_activity_seconds.{i}",
+            method="verified_interval",
+            value=1800,
+            unit="seconds",
+            quality={},
+            evidence_refs=["e1"],
+        )
+        for i in range(40)
+    ]
+    findings = [
+        dict(
+            id=f"O08.check.{i:02}",
+            priority=i,
+            text=f"확인 대상 {i}",
+            next_check=f"작업 목적 확인 {i}",
+            value_refs=[m["id"]],
+            evidence_refs=["e1"],
+        )
+        for i, m in enumerate(metrics)
+    ]
+    topic = dict(
+        topic_id="O08",
+        status="ready",
+        metrics=metrics,
+        findings=findings,
+        recommendations=[],
+        missing_inputs=[],
+        evidence_refs=["e1"],
+    )
+    result = dict(
+        time_range={"start": "2026-10-01T00:00:00Z", "end": "2026-10-02T00:00:00Z"},
+        scope={"clusters": []},
+        versions={"criteria": "1.3"},
+        topics=[topic],
+        measurements=[],
+        quality={},
+        limitations=[],
+        result_status="ready",
+    )
+    before = copy.deepcopy(topic)
+    await write_report(result, SimpleNamespace(configured=False))
+    text = " ".join(s["text"] for s in result["narrative"])
+    assert "확인 대상 0" in text and "작업 목적 확인 4" in text
+    assert "확인 대상 5" not in text and "1800 seconds" not in text
+    assert "40건 중 우선 5건" in text
+    assert result["topics"][0] == before
+    assert result["quality"]["report"]["presentation"] == "operator_checks_v1"
+    assert "먼저 확인할 운영 사항" in render(result)["html"].decode()
+    assert len(render(result)["csv"].decode("utf-8-sig").splitlines()) == 41
+    assert result["narrative_status"] == "omitted"
+
+
+@pytest.mark.asyncio
+async def test_invalid_model_cannot_replace_verified_operator_checks():
+    class Model:
+        configured = True
+
+        async def complete(self, system, payload):
+            return {"fact_ids": ["made-up-remediation"]}
+
+    result = dict(
+        time_range={},
+        scope={},
+        result_status="partial",
+        quality={},
+        limitations=[],
+        topics=[
+            dict(
+                topic_id="O01",
+                metrics=[],
+                recommendations=[],
+                missing_inputs=[],
+                evidence_refs=["e1"],
+                findings=[
+                    dict(
+                        id="node-check",
+                        priority=1,
+                        text="Node Ready 상태의 False 관측을 확인하세요.",
+                        next_check="해당 시각의 Node 이벤트를 확인하세요.",
+                        evidence_refs=["e1"],
+                        value_refs=[],
+                    )
+                ],
+            )
+        ],
+    )
+    await write_report(result, Model())
+    assert result["narrative_status"] == "failed"
+    assert result["quality"]["report"]["method"] == "deterministic_fallback"
+    assert "해당 시각의 Node 이벤트" in str(result["narrative"])
+    assert "made-up-remediation" not in str(result["narrative"])

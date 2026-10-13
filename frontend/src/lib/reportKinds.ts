@@ -2,20 +2,20 @@
 export const reportKinds = [
   {
     id: 'namespace',
-    name: 'Namespace별 GPU 사용 현황',
+    name: 'GPU 사용 패턴',
     topicIds: ['O08'],
     groupBy: 'namespace',
-    description: 'Namespace별 시간대의 GPU 대수·활동률과 저활동 구간을 확인합니다.',
+    description: 'Namespace별 활동률과 저활동 시간대를 함께 보고 확인할 작업을 찾습니다.',
     insight: '어디에서 GPU를 많이 또는 적게 사용하는지 보고 배분 정책을 검토합니다.',
     requirement: 'GPU 활동률과 같은 시각의 GPU·Pod 신원 정보가 필요합니다.',
     limit: '연결 관측이며 독점 할당량·Namespace 실사용률·회수 가능량은 아닙니다.',
   },
   {
     id: 'equipment',
-    name: 'GPU·Node 관측 현황',
+    name: '장비·Node 점검 대상',
     topicIds: ['O01'],
     groupBy: 'cluster',
-    description: '관측 GPU와 메모리·온도·Node 상태를 확인합니다.',
+    description: '관측된 Node 주의 상태와 장비 기록에서 추가 확인할 대상을 찾습니다.',
     insight: '추가 점검할 장비와 관측 자료의 한계를 확인합니다.',
     requirement: '장비 신원과 검증된 단위의 관측 자료가 필요합니다.',
     limit:
@@ -33,13 +33,15 @@ export const reportKinds = [
   },
   {
     id: 'incidents',
-    name: '등록된 장애 현황',
+    name: '장애·조사·처리 현황',
     topicIds: ['O05'],
     groupBy: 'cluster',
-    description: '분석 기간에 등록된 사건과 반복 발생을 확인합니다.',
+    description: '분석 기간에 발생한 사건과 저장된 RCA 조사 결과를 함께 확인합니다.',
     insight: '자주 발생하는 사건의 조사 우선순위를 정합니다.',
-    requirement: '저장된 사건 기록이 필요합니다.',
-    limit: '사건이 등록되지 않았다고 장비가 정상인 것은 아닙니다.',
+    requirement:
+      '저장된 사건 기록과 공개된 RCA 결과를 사용합니다. 조치 수행 여부는 별도 기록이 필요합니다.',
+    limit:
+      '알람 해제·조사 완료·조치 수행은 서로 다릅니다. 기간 이전에 발생한 사건 전체를 포함하지 않습니다.',
   },
   {
     id: 'allocation',
@@ -88,7 +90,7 @@ export const reportKinds = [
   },
   {
     id: 'monitoring',
-    name: '모니터링 수집 상태 점검',
+    name: '자료 신뢰도 · 수집 상태',
     topicIds: ['O11'],
     groupBy: 'cluster',
     description: '수집 대상별 정상·실패·미관측 시간과 수집 지연을 확인합니다.',
@@ -99,7 +101,16 @@ export const reportKinds = [
   },
 ];
 
-export const defaultReportKinds = ['namespace', 'equipment', 'monitoring'];
+export const defaultReportKinds = ['namespace', 'equipment', 'incidents', 'monitoring'];
+
+export const reportKindGroups = [
+  { title: '주요 분석', ids: ['namespace', 'equipment', 'incidents'] },
+  { title: '공통 · 자료 신뢰도', ids: ['monitoring'] },
+  {
+    title: '필요할 때 추가',
+    ids: ['allocation', 'incident-workloads', 'waiting', 'energy', 'comparison'],
+  },
+];
 
 // Preserve links created before equipment, energy and incidents were separated.
 const legacyHealth = {

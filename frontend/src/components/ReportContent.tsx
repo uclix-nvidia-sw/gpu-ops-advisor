@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BasicReport } from './BasicReport';
+import { BasicReport, operationalFindings, ReportChecks } from './BasicReport';
 import { topicDisplayBases } from '../lib/reportKinds';
 import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
 import { reportRequestTime } from '../lib/reportPeriod';
@@ -100,6 +100,7 @@ export function ReportContent({
     blocked: topics.filter((topic) => topic.status === 'blocked').length,
   };
   const quality = obj(result.quality);
+  const hasChecks = operationalFindings(topics).length > 0;
   const basic = obj(result.versions).criteria === '1.3';
   const namespaceTopic = topics.find((topic) => topic.topic_id === 'O08');
   const namespaceQuality = obj(namespaceTopic?.quality);
@@ -156,8 +157,9 @@ export function ReportContent({
       role="region"
       aria-label="GPU Ops 최종 보고서"
     >
+      {hasChecks && <ReportChecks topics={topics} onEvidence={onEvidence} />}
       <section className="result-section">
-        <h3>분석 요약</h3>
+        <h3>분석 범위와 자료 상태</h3>
         <dl className="report-summary-meta">
           <div>
             <dt>데이터 기준 시각</dt>
@@ -249,7 +251,7 @@ export function ReportContent({
             계산된 수치와 근거는 유지합니다.
           </p>
         )}
-        {!!narrative.length && !narrative.some((section) => section.title) && (
+        {!hasChecks && !!narrative.length && !narrative.some((section) => section.title) && (
           <ul>
             {narrative.map((fact, index) => (
               <li key={str(fact.id, String(index))}>
@@ -481,7 +483,9 @@ export function ReportContent({
       )}
       {narrative.some((section) => section.title) && (
         <details className="result-section">
-          <summary>저장된 보고서 해석 · LLM 또는 기본 보고서</summary>
+          <summary>
+            {hasChecks ? '저장된 보고서 문장 확인' : '저장된 보고서 해석 · LLM 또는 기본 보고서'}
+          </summary>
           <h3>GPU Ops 최종 보고서</h3>
           <p className="muted">
             {result.narrative_status === 'complete'

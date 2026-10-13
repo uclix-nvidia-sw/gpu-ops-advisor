@@ -28,6 +28,8 @@ BASIC_OMITTED_QUERIES = {"D15", "D18", "D19"}
 
 
 def additional_queries(topic_id, criteria_version=None):
+    if topic_id == "O05" and criteria_version == "1.3":
+        return ()
     return tuple(
         query
         for query in ADDITIONS[topic_id]
