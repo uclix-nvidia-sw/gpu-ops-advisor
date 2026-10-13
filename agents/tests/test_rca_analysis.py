@@ -178,7 +178,13 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                     {
                         "function": {
                             "name": "investigate",
-                            "arguments": json.dumps({"query_id": "D02"}),
+                            "arguments": json.dumps(
+                                {
+                                    "query_id": payload["available_queries"][0]
+                                    if mode == "xid"
+                                    else "D02"
+                                }
+                            ),
                         }
                     }
                 ]
@@ -315,7 +321,20 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             c["causal_status"] == "candidate" for c in result["cause_candidates"]
         )
         assert any(e["query_id"] == "rca_synthesis" for e in output["evidence"])
-        if mode in ("followup", "xid", "sxid"):
+        if mode == "xid":
+            assert events == [
+                "collect",
+                "plan",
+                "collect",
+                "collect",
+                "synthesize",
+            ]
+            analysis = result["quality"]["analysis"]
+            assert analysis["followups"] == 2
+            assert analysis["remaining_queries"] == []
+            assert analysis["collection_stop_reason"] == "no_remaining_queries"
+            assert {"D09", "D44", "D02"} <= {e["query_id"] for e in output["evidence"]}
+        elif mode in ("followup", "sxid"):
             assert events == ["collect", "plan", "collect", "synthesize"]
             assert result["quality"]["analysis"]["followups"] == 1
         elif mode == "unconfigured":

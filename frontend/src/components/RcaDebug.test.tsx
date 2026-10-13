@@ -494,3 +494,55 @@ it('keeps actionable next checks visible once and collapses repeated limitations
   expect(html.split('현재 상태는 미확정입니다.')).toHaveLength(2);
   expect(html.indexOf('장치 연결을 확인하세요.')).toBeLessThan(html.indexOf('<details>'));
 });
+
+it('distinguishes a rejected hypothesis from a rejected limitation', () => {
+  const html = render(
+    <RcaQualityGuidance
+      result={{
+        quality: {
+          analysis: {
+            synthesis: {
+              repair_status: 'failed',
+              validation_failures: [
+                {
+                  attempt: 2,
+                  violations: [
+                    { rule: 'non_korean', hypothesis_index: 0 },
+                    { rule: 'numeric', limitation_index: 1 },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      }}
+    />,
+  );
+  expect(html).toContain('원인 후보 문장이 한국어 설명 기준');
+  expect(html).toContain('(원인 후보 1)');
+  expect(html).toContain('(한계 문장 2)');
+});
+
+it('shows the recorded collection stop and outstanding queries without inferring older results', () => {
+  const html = render(
+    <RcaResult
+      onEvidence={() => {}}
+      showEvidence={false}
+      job={{
+        status: 'succeeded',
+        result_ref: 'saved',
+        result: {
+          quality: {
+            analysis: {
+              collection_stop_reason: 'round_limit_reached',
+              remaining_queries: ['D02'],
+            },
+          },
+        },
+      }}
+    />,
+  );
+  expect(html).toContain('수집 회차 상한 도달');
+  expect(html).toContain('실행하지 않은 조회 후보');
+  expect(html).toContain('D02');
+});

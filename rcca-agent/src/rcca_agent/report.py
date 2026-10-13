@@ -60,7 +60,7 @@ async def write_report(result, data, clues, evidence, llm):
     reported = result.get("quality", {}).get("analysis", {}).get("reported_errors", [])
     codes = ", ".join(sorted({h["error_code"] for h in reported}))
     headline = (
-        f"보고된 오류 코드: {codes}."
+        f"{codes} 보고는 확인했습니다."
         if codes
         else "알람이 발생했습니다. 상세 증상은 아래 원문을 확인하세요."
     )
@@ -223,11 +223,49 @@ async def write_report(result, data, clues, evidence, llm):
                 "조사 절차와 원천 권고 조치는 원인 확정 근거가 아닙니다. "
                 "재부팅 등 원천 권고를 수집했더라도 해당 대상의 조치 적합성·수행·복구가 확인된 것은 아닙니다.",
             )
-        add(
-            "next",
-            "로그의 생산자 계약·관측 시각·장비 신원과 원인별 확인 조건을 점검해야 합니다. "
-            f"미충족 항목: {', '.join(label('reasons', code) for code in result['missing_inputs'])}.",
-        )
+        if "causal_confirmation_evidence" in result["missing_inputs"]:
+            add(
+                "next",
+                "실제 원인은 확정하지 못했습니다. 해당 오류의 원인을 구분할 추가 근거를 확인해야 합니다.",
+            )
+        if "normalized_health" in result["missing_inputs"]:
+            add(
+                "next",
+                "현재 장치 상태는 검증하지 못했습니다. 조사 대상 장치의 최신 상태와 관측 시각을 확인해야 합니다.",
+            )
+        unverified = [
+            h
+            for h in result.get("device_observations", [])
+            if h.get("time_basis") == "loki_recorded_at" and not h.get("fact_eligible")
+        ]
+        if "unknown_value" in result["missing_inputs"]:
+            if unverified:
+                add(
+                    "next",
+                    "수집된 로그 중 상태 의미가 미검증인 관측이 있습니다. 해당 원본의 상태 판정 조건과 장치 연결 정보를 추가 확인해야 합니다.",
+                    [ref for h in unverified for ref in h.get("evidence_refs", [])],
+                )
+            else:
+                add(
+                    "next",
+                    "조사에 필요한 값 중 의미 또는 유효성이 확인되지 않은 항목이 있습니다. 상세 근거에서 해당 관측과 검증 사유를 확인해야 합니다.",
+                )
+        explained = {
+            "causal_confirmation_evidence",
+            "normalized_health",
+            "unknown_value",
+            "approved_runbook",
+            "mapping_target_unverified",
+            "target_identity_conflict",
+        }
+        remaining = [code for code in result["missing_inputs"] if code not in explained]
+        if remaining:
+            add(
+                "next",
+                "추가로 충족해야 할 조사 조건: "
+                + ", ".join(label("reasons", code) for code in remaining)
+                + ".",
+            )
     if not any(s["section"] == "next" for s in statements):
         add(
             "next",

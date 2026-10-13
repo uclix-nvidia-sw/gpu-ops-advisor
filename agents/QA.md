@@ -1,3 +1,48 @@
+# 2026-10-13 RCA operator wording — final checks
+
+- Focused RCA regression: 99 passed, including conditional uncertainty wording and preserved assessment/evidence references.
+- Local temporary PostgreSQL + Incident/JC + real RCA Worker/NAT + official MCP: 6 passed, 21 deselected (webhook, missing Runbook and numeric repair/publication). Grafana and LLM upstreams were fixtures. No production DB used.
+- Production deployment and new live RCA remain unverified; review the new result after deployment.
+
+# 2026-10-13 RCA general expansion — local verification
+
+- Separate expected cause/state uncertainty from missing required evidence when
+  deciding whether to add a general Runbook. Preserve all missing inputs and
+  approved optional queries; query failure, conflict and identity gaps still
+  permit fallback. No Ops/shared runtime, DB or published Runbook changes.
+- Focused requirement, workflow, Fleet and synthesis tests: 81 passed using
+  local fixtures. New-code live RCA and full E2E remain unverified; these tests
+  do not establish physical GPU health or production LLM accuracy.
+- Agent non-E2E regression: 1037 passed, 38 deselected, excluding the existing
+  Windows-incompatible Report cleanup test module described below. Ruff check,
+  format and document links passed. No full-suite/E2E-green claim.
+- Read-only D09 UI inspection of the new synthetic run found 44 stored rows:
+  11 synthetic Unhealthy reports and 33 existing Fleet Healthy reports. Valid
+  synthetic timestamps do not validate the other source reports or GPU health.
+
+# 2026-10-12 RCA evidence diagnostics — local verification
+
+- Read-only production inspection of `6b31300c-1767-4265-9d38-a1db62ddbfa1`:
+  XID79 revision 4 and general revision 3; D09 31 reports, D44 19 samples;
+  D02 remained with query budget 46. Synthesis repair ran and failed with
+  `non_korean_claim`; it was not skipped for time/budget.
+- Grafana same-period Loki query confirmed the 18:00:03 KST Unhealthy report.
+  Producer time is the year-one initial value; error PCI `0000:01:00` differs from
+  inventory `0000:08:00.0`. JSON-string inventory exists. Reported error is supported;
+  current state, event time, cause and physical error-device identity are not.
+- RCA-only changes: third bounded collection round; explicit stop reason/remaining
+  queries; inventory decoding without fact promotion; producer-time/state counts;
+  field-specific LLM repair guidance; Korean incident-time display and correct
+  hypothesis-versus-limitation diagnostics. Ops and shared Python are unchanged.
+- Focused RCA tests: 61 passed. Broader Agent run: 1030 passed, 38 E2E deselected,
+  excluding Report cleanup. The original Windows run had a locale failure resolved
+  with UTF-8 mode and two Report cleanup failures (open file deletion/directory
+  fsync); those unrelated tests/code were not modified. No full-suite-green claim.
+- Frontend: 232 passed; typecheck/build/format passed, existing bundle-size warning.
+  Ruff and document links passed. Fixtures are not live model validation.
+- New-code production RCA, full E2E, commit/push, deployment and any DB/Runbook
+  mutation were not performed. Past results retain their original contents.
+
 # 2026-10-12 보고서 D09/D13 제거·D06 Pod 범위 축소 — 로컬 검수
 
 - 시작 원격 main `4ddeff1`, 종료 확인 시 추가된 RCA UI PR #103의 `bc2577d`를 fast-forward로 반영했다. Agent/공통 Python은 두 main 사이에 변경이 없다. 검수 당시 브랜치는 `fix/report-collection-pruning`의 로컬 수정 상태였다. 이후 사용자 요청으로 같은 변경의 PR을 준비한다. 운영 배포·데이터 변경은 하지 않았다.

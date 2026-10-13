@@ -2,7 +2,56 @@ import copy
 
 import pytest
 
-from rcca_agent.requirement_diagnostics import reported_facts, unmet_requirements
+from rcca_agent.requirement_diagnostics import (
+    reported_facts,
+    unmet_requirements,
+    general_extension_reason,
+)
+
+
+def test_report_only_uncertainty_does_not_expand_general_investigation():
+    content = {
+        "required_evidence": ["reported_error_code", "reported_producer_contract"]
+    }
+    available = set(content["required_evidence"])
+    gaps = ["causal_confirmation_evidence", "unknown_value"]
+    before = list(gaps)
+    assert (
+        general_extension_reason(
+            content, available, gaps, ["missing_evidence", "unknown_value"]
+        )
+        is None
+    )
+    assert gaps == before  # Suppressing expansion must not erase uncertainty.
+    assert (
+        general_extension_reason(
+            content, {"reported_error_code"}, gaps, ["missing_evidence"]
+        )
+        == "required_fact_missing"
+    )
+    state_content = {"required_evidence": ["normalized_health"]}
+    assert (
+        general_extension_reason(state_content, available, gaps, ["unknown_value"])
+        == "required_fact_missing"
+    )
+
+
+@pytest.mark.parametrize("event", ["query_failed", "conflicting_evidence"])
+def test_query_failure_and_conflict_still_allow_general_extension(event):
+    assert (
+        general_extension_reason(
+            {"required_evidence": ["observations"]}, {"observations"}, [], [event]
+        )
+        == event
+    )
+
+
+@pytest.mark.parametrize(
+    "gap",
+    ["required_query:D09", "target_identity_conflict", "mapping_target_unverified"],
+)
+def test_incomplete_queries_and_identity_gaps_still_allow_extension(gap):
+    assert general_extension_reason({}, set(), [gap], ["missing_evidence"])
 
 
 def fixture():

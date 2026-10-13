@@ -286,3 +286,12 @@ codes in operational terms, and collapses repeated limitations and diagnostic co
 Opaque machine identifiers remain available under target correlation details;
 they do not establish which physical device failed. Cases defaults to RCA results,
 and incident details link directly to results. Report rendering is unchanged.
+
+
+## RCA incident time and investigation diagnostics — 2026-10-12
+
+RCA narrative incident timestamps display in Asia/Seoul with seconds and a KST label.
+Only the explicitly labelled incident timestamp is localized; saved text, quoted
+logs and other narrative sections remain unchanged. Analysis details distinguish
+collection stop reasons and remaining queries, and distinguish rejected hypothesis
+sentences from limitations. Older results without these diagnostics remain unknown.

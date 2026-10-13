@@ -68,3 +68,21 @@ describe('RCA report reading', () => {
     expect(renderToStaticMarkup(<RcaNarrative result={{}} />)).toBe('');
   });
 });
+
+it('renders only the incident timestamp in Korea time without rewriting saved text', () => {
+  const result = {
+    narrative: [
+      {
+        id: 'problem',
+        title: '감지된 문제',
+        text: '사건 기준 시각: 2026-10-12T09:01:10Z\n실제 오류 발생 시각과 같다고 단정할 수 없습니다.',
+      },
+    ],
+  };
+  const original = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaNarrative result={result} />);
+  expect(html).toContain('18:01:10');
+  expect(html).toContain('KST (한국 시각)');
+  expect(html).toContain('실제 오류 발생 시각과 같다고 단정할 수 없습니다.');
+  expect(JSON.stringify(result)).toBe(original);
+});

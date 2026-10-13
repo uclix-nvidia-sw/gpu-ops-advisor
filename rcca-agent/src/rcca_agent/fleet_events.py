@@ -186,3 +186,51 @@ def parse_events(evidence, profile, target):
             if e["id"] not in results[identity]["evidence_refs"]:
                 results[identity]["evidence_refs"].append(e["id"])
     return list(results.values())
+
+
+def enrich_report_inventory(health, evidence):
+    """Read inventory strings for RCA only; never promote device or health facts."""
+    originals = {e["id"]: e for e in evidence}
+    cached_lines = {}
+    for report in health:
+        if report.get("time_basis") != "loki_recorded_at":
+            continue
+        refs = report.get("evidence_refs", [])
+        e = originals.get(refs[0]) if refs else None
+        if not e:
+            continue
+        if e["id"] not in cached_lines:
+            cached_lines[e["id"]] = list(log_entries(e["snapshot"]))
+        lines = cached_lines[e["id"]]
+        position = report.get("source_position", {}).get("line")
+        if not isinstance(position, int) or not 0 <= position < len(lines):
+            continue
+        raw = object_value(lines[position][1])
+        resources = object_value(raw.get("resources"))
+        source_time = object_value(raw.get("attributes")).get("time")
+        report["producer_time_status"] = (
+            "missing_or_zero"
+            if not source_time or str(source_time).startswith("0001-")
+            else "unverified"
+        )
+        inventory = resources.get("gpuInfo.gpus")
+        if isinstance(inventory, str):
+            try:
+                inventory = json.loads(inventory)
+            except ValueError:
+                inventory = None
+        if not isinstance(inventory, list):
+            continue
+        report["gpu_candidates"] = [
+            {
+                "gpu_uuid": gpu["uuid"],
+                "bus_id": gpu.get("busID"),
+                "mapping_basis": "node_inventory_report",
+                "verified": False,
+            }
+            for gpu in inventory
+            if isinstance(gpu, dict)
+            and isinstance(gpu.get("uuid"), str)
+            and gpu["uuid"].strip()
+        ]
+    return health

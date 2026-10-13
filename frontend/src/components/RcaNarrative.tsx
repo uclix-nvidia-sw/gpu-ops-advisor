@@ -1,7 +1,26 @@
 import { rows, str, type Row } from '../lib/live';
 import './RcaNarrative.css';
 
-// Render stored paragraphs verbatim: layout must not invent or upgrade claims.
+// Localize only the explicitly labelled incident timestamp; preserve stored results.
+function incidentTime(text: string): string {
+  return text.replace(
+    /(^|\n)사건 기준 시각: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))(?=\n|$)/g,
+    (original, prefix: string, value: string) => {
+      if (!Number.isFinite(Date.parse(value))) return original;
+      const formatted = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date(value));
+      return `${prefix}사건 기준 시각: ${formatted} KST (한국 시각)`;
+    },
+  );
+}
 export function RcaNarrative({
   result,
   consolidateChecks = false,
@@ -81,7 +100,7 @@ export function RcaNarrative({
                       <p>{text}</p>
                     </details>
                   ) : (
-                    <p key={i}>{text}</p>
+                    <p key={i}>{str(section.id) === 'problem' ? incidentTime(text) : text}</p>
                   ),
                 )
               ) : (
