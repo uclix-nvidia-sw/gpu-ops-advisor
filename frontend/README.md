@@ -17,7 +17,7 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 # Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
 
-`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace/model table, selectable hourly graph, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
+`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
 
 [계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). Local preview uses explicitly labelled synthetic data; it does not submit operational jobs.
 
@@ -340,3 +340,12 @@ Only the explicitly labelled incident timestamp is localized; saved text, quoted
 logs and other narrative sections remain unchanged. Analysis details distinguish
 collection stop reasons and remaining queries, and distinguish rejected hypothesis
 sentences from limitations. Older results without these diagnostics remain unknown.
+
+
+### 집계 보고서의 Namespace 요약과 장애 내용
+
+신규 집계 보고서는 실제 보고서 제목 아래 두 대주제(Namespace별 GPU 활동 현황, 기간 내 장애 알림 현황)와 하위 제목을 표시한다. 비교표는 항상 전체 Namespace를 보여주며 필터 체크박스를 넣지 않는다. 클러스터별 그래프만 범례로 대상을 선택하며 기본은 전체 선택이며, 모두 해제하면 축·격자만 남기고 선과 점을 숨긴다. 일부 선택 시 해당 Namespace의 모든 GPU 모델만 표시하며 다른 클러스터의 선택에는 영향을 주지 않는다. 같은 Namespace는 같은 색, GPU 모델은 선 모양으로 구분한다. 모델·시간대 수치와 자료 부족 사유는 기본 접힌 세부 수치 영역에서 확인한다. 미표기 Namespace는 비교표와 분리한다. 현재 관측과 이전 비교의 자료 상태를 구분하며 관측 공백을 0으로 표시하지 않는다. 장애 종류별 현황·노드·저장 증상과 사건 링크를 보여주고 장비 반복 여부와 구분한다. 이전 결과에 증상이 없으면 설명 미저장을 안내하며 추가 API 조회로 본문을 채우지 않는다. 보고서 내부 제목/본문 스타일은 공통 패널의 작은 글자 규칙을 덮어쓰도록 보고서 범위에 한정한다.
+
+집계 보고서 비교표는 관측 구성과 실제 평균 활동률을 먼저 표시한다. 여러 모델이면 모델별 평균의 최소–최대를 표시하며 모델 평균을 다시 합치지 않는다. 유효 시간 수·전기 비교 조건은 상세에 남긴다. 사건 목록은 발생 시각·클러스터·노드·알림 내용·알림 상태·상세 보기의 독립 열로 표시한다. 날짜/시간은 두 줄로, 발생 중은 강조 배지로, 해제·미확인은 일반 텍스트로 구분한다. 상태는 보고서 작성 당시 기준이며 실시간 상태를 의미하지 않는다. 원문 펼침과 제목 링크를 제거하고 오른쪽 상세 보기로 이동 경로를 통합한다. 발행된 결과는 RCA 보기, 미발행은 사건 보기와 RCA 미발행 안내를 표시하며 밑줄·화살표로 링크를 구분한다. 저장 원문은 변경하지 않는다.
+
+UI 단독 배포는 저장 결과에 없는 노드·알림 제목·장애 종류를 새로 만들지 않는다. 관련 선택 필드가 없는 과거 결과는 미확인·미저장 안내로 표시한다. Ops 집계 생산자 보완은 별도 변경이며, 로컬 실제 관측 미리보기와 배포 후 결과의 필드 제공 범위가 다를 수 있다.

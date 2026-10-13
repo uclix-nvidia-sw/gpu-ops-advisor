@@ -43,6 +43,8 @@ export function ResultPage({ kind }: { kind: string }) {
     [status, setStatus] = useState(''),
     [reason, setReason] = useState('');
   const r = q.data || {};
+  const aggregateReport =
+    kind === 'report' && obj(obj(r.result).quality).report_format === 'report-aggregate-v1';
   const deleted = kind === 'report' && r.deletion != null;
   useEffect(() => {
     if (hash !== '#final-report' || !q.data) return;
@@ -91,16 +93,20 @@ export function ResultPage({ kind }: { kind: string }) {
           </Notice>
         )}
         <Panel
-          title={str(
-            r.title,
-            kind === 'incident'
-              ? '사건 관측'
-              : deleted
-                ? '보고서 삭제 기록'
-                : kind === 'report' && r.result_ref == null
-                  ? '보고서 작성 현황'
-                  : '저장된 결과',
-          )}
+          title={
+            aggregateReport && !deleted
+              ? undefined
+              : str(
+                  r.title,
+                  kind === 'incident'
+                    ? '사건 관측'
+                    : deleted
+                      ? '보고서 삭제 기록'
+                      : kind === 'report' && r.result_ref == null
+                        ? '보고서 작성 현황'
+                        : '저장된 결과',
+                )
+          }
         >
           <div className="live-padding stack">
             <div className="head-actions">
