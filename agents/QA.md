@@ -1,3 +1,10 @@
+## RCA label mirror CI correction — 2026-10-13
+
+- Synchronized the packaged RCA labels with the frontend dictionary: six collection termination reasons and the sufficiency explanation. No workflow, Ops or production data changes.
+- PASS: 105 Korean/report, synthesis-context and collection regressions, including the CI-failing mirror equality test.
+- PASS: three webhook-to-RCA-publication E2E cases using fresh loopback PostgreSQL, actual Worker/JC/Incident/MCP and fixture Grafana/LLM. Production behavior remains unverified.
+- Local sandbox blocked Windows asyncio socketpair setup; rerunning the same tests outside that sandbox passed without code changes.
+
 ## RCA bounded evaluation and Korean repair — 2026-10-13 (local only)
 
 - Python regression: 1,105 passed, 41 skipped (E2E flags disabled); Windows-incompatible report cleanup tests excluded. No Ops implementation changes.
