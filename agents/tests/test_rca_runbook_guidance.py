@@ -82,3 +82,66 @@ def test_mixed_english_prose_rejected(word):
     }
     with pytest.raises(ValueError, match="non_korean"):
         validate_synthesis(response, ["log"])
+
+
+@pytest.mark.parametrize("family,code", [("xid", 79), ("sxid", 11001)])
+def test_structured_guidance_projects_published_original_only(family, code):
+    from rcca_agent.operator_guidance import (
+        project_guidance,
+        validate_operator_guidance,
+    )
+
+    book = json.loads(
+        (
+            Path(__file__).resolve().parents[2]
+            / f"rcca-agent/runbooks/{family}/RB-{family.upper()}-{code}.json"
+        ).read_text("utf-8")
+    )
+    content = book["content"]
+    validate_operator_guidance(content["operator_guidance"], content["sources"])
+    entry = {
+        "id": "original",
+        "query_id": "runbook",
+        "query_version": "next",
+        "quality": {"origin": "published"},
+        "snapshot": content,
+    }
+    actual = project_guidance([entry])
+    assert actual[0]["guidance"] == content["operator_guidance"]
+    actual[0]["guidance"]["meaning"] = "changed"
+    assert content["operator_guidance"]["meaning"] != "changed"
+    assert project_guidance([{**entry, "quality": {"origin": "builtin"}}]) == []
+    bad = copy.deepcopy(content["operator_guidance"])
+    bad["references"][0]["source_indices"] = [999]
+    with pytest.raises(ValueError, match="operator_guidance"):
+        validate_operator_guidance(bad, content["sources"])
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "연결된 GPU가 슬롯 접촉 불량으로 분리된 가능성이 있다",
+        "NVSwitch 펌웨어 오류 또는 링크 문제로 발생했을 가능성이 있다",
+    ],
+)
+@pytest.mark.parametrize(
+    "relation", ["not_in_reported_inventory", "switch_inventory_required"]
+)
+def test_unmapped_hardware_claim_is_rejected(claim, relation):
+    response = {
+        "hypotheses": [
+            {
+                "claim": claim,
+                "supporting_refs": ["log"],
+                "contradicting_refs": [],
+                "missing_inputs": [],
+            }
+        ],
+        "limitations": [],
+    }
+    with pytest.raises(ValueError, match="unsupported_identity_cause"):
+        validate_synthesis(
+            response,
+            ["log"],
+            [{"evidence_refs": ["log"], "pci_inventory_relation": relation}],
+        )

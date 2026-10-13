@@ -1,3 +1,5 @@
+import xid from '../../../rcca-agent/runbooks/xid/RB-XID-79.json';
+import sxid from '../../../rcca-agent/runbooks/sxid/RB-SXID-11001.json';
 import { it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaGuidance } from './RcaGuidance';
@@ -8,13 +10,24 @@ it('keeps literature separate from device facts and explains restart prerequisit
     '대상 장치 접근을 확인한다.',
     'Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.',
   ];
-  const result = { runbook_revisions: [{ knowledge_key: 'RB-XID-79', revision: 4 }] };
+  const result = {
+    quality: {
+      runbook_guidance: [
+        {
+          title: xid.content.title,
+          revision: 5,
+          guidance: xid.content.operator_guidance,
+          sources: xid.content.sources,
+        },
+      ],
+    },
+  };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaGuidance paragraphs={paragraphs} result={result} />);
   expect(html).toContain('안전하게 종료하거나 다른 서버로 옮기고');
   expect(html).toContain('물리적인 분리나 부품 고장을 확정할 수는 없습니다');
-  expect(html).toContain('XID79 조사 Runbook · revision 4');
-  expect(html).toContain('<summary>이 오류에 대한 참고 안내</summary>');
+  expect(html).toContain('revision 5');
+  expect(html).toContain('<h5>이 오류에 대한 참고 안내</h5>');
   expect(html).not.toContain('<details open');
   expect(html).not.toContain('현재는 연결되지 않았습니다');
   expect(JSON.stringify(result)).toBe(before);
@@ -47,12 +60,23 @@ it('explains SXID11001 without GPU failure or XID restart guidance', () => {
       paragraphs={[
         'SXID 대상 NVSwitch ingress invalid command; access/trunk. B200/B300에는 적용하지 않는다.',
       ]}
-      result={{ runbook_revisions: [{ knowledge_key: 'RB-SXID-11001', revision: 3 }] }}
+      result={{
+        quality: {
+          runbook_guidance: [
+            {
+              title: sxid.content.title,
+              revision: 4,
+              guidance: sxid.content.operator_guidance,
+              sources: sxid.content.sources,
+            },
+          ],
+        },
+      }}
     />,
   );
   expect(html).toContain('수신 측에서 잘못된 명령');
-  expect(html).toContain('전체 시스템 고장으로 단정하지 않습니다');
-  expect(html).toContain('B200·B300에 적용하지 않습니다');
+  expect(html).toContain('전체 서버 장애를 뜻한다고 단정할 수는 없습니다');
+  expect(html).toContain('B200·B300에 적용하지 않으며');
   expect(html).not.toContain('XID154');
   expect(html).not.toContain('GPU가 PCIe 연결을 통해');
 });
@@ -65,4 +89,29 @@ it('does not invent catalog details for unknown or unrecorded guidance', () => {
   );
   expect(html).not.toContain('물리 서버 재시작과 기술 지원 문의');
   expect(html).not.toContain('GPU가 PCIe 연결을 통해');
+});
+
+it('renders a new error family from its published guidance without UI code branches', () => {
+  const guidance = structuredClone(xid.content.operator_guidance);
+  guidance.meaning = '새 구성 요소의 관측 오류 설명';
+  guidance.cause_note = '원인은 별도 검증';
+  guidance.next_checks = [{ title: '원본 상태 확인', text: '같은 대상의 기록을 확인하세요.' }];
+  guidance.references = [
+    { title: '해당 생산자 안내', text: '전용 출처의 적용 조건', source_indices: [0] },
+  ];
+  const html = renderToStaticMarkup(
+    <RcaGuidance
+      paragraphs={[]}
+      result={{
+        quality: {
+          runbook_guidance: [
+            { title: '새 오류 조사', revision: 1, guidance, sources: xid.content.sources },
+          ],
+        },
+      }}
+    />,
+  );
+  expect(html).toContain('새 구성 요소의 관측 오류 설명');
+  expect(html).not.toContain('XID154');
+  expect(html).not.toContain('재시작');
 });

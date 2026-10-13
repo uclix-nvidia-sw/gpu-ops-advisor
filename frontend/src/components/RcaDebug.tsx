@@ -133,10 +133,10 @@ export function RcaJobSummary({ job }: { job: Row }) {
     result = obj(job.result);
   return (
     <div className="stack">
-      <AlarmIdentity record={job} />
+      <AlarmIdentity record={job} rcaView />
       {str(job.incident_id) && (
         <Link className="text-link" to={`/incidents/${str(job.incident_id)}`}>
-          원본 사건 · {str(job.incident_id)}
+          알림 원본 보기
         </Link>
       )}
       <Notice>
@@ -530,8 +530,8 @@ export function RcaResult({
               ['조사별 판단', result.assessments],
             ] as const
           ).map(([title, value]) => (
-            <section className="result-section" key={title}>
-              <h3>{title}</h3>
+            <details className="result-section" key={title}>
+              <summary>{title} · 구조화된 분석 기록</summary>
               {title === '조사별 판단' ? (
                 rows(value).map((assessment, index) => (
                   <article
@@ -544,11 +544,11 @@ export function RcaResult({
               ) : (
                 <DataView value={value} evidenceLabels={evidenceLabels} />
               )}
-            </section>
+            </details>
           ))}
           {!!rows(result.runbook_revisions).length && (
-            <section className="result-section">
-              <h3>참조 Runbook</h3>
+            <details className="result-section">
+              <summary>참조 Runbook · 선택 기록</summary>
               {rows(result.runbook_revisions).some((book) => book.origin === 'published') && (
                 <p>
                   발행 Runbook 선택 기록이 있습니다. 선택은 필수 근거 충족이나 원인 확정을 의미하지
@@ -558,7 +558,7 @@ export function RcaResult({
                 </p>
               )}
               <DataView field="runbook_revisions" value={result.runbook_revisions} />
-            </section>
+            </details>
           )}
           <details>
             <summary>공개 결과 원본 · 모델/Runbook revision 포함</summary>
@@ -566,9 +566,12 @@ export function RcaResult({
           </details>
         </>
       )}
-      <p className="muted">
-        접수 {formatDate(str(job.created_at))} · 작업 ID {str(job.id)}
-      </p>
+      <details>
+        <summary>작업 연결 정보</summary>
+        <p className="muted">
+          접수 {formatDate(str(job.created_at))} · 작업 ID {str(job.id)}
+        </p>
+      </details>
     </div>
   );
 }

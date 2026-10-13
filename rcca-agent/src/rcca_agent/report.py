@@ -18,6 +18,9 @@ TITLES = {
 
 
 async def write_report(result, data, clues, evidence, llm):
+    from .operator_guidance import project_guidance
+
+    result.setdefault("quality", {})["runbook_guidance"] = project_guidance(evidence)
     statements = []
 
     def add(section, text, refs=()):
@@ -74,9 +77,11 @@ async def write_report(result, data, clues, evidence, llm):
         "alertname": "알람",
     }
     reported = result.get("quality", {}).get("analysis", {}).get("reported_errors", [])
-    codes = ", ".join(sorted({h["error_code"] for h in reported}))
+    codes = ", ".join(
+        sorted({h["error_code"].upper().replace(":", " ") for h in reported})
+    )
     headline = (
-        f"{codes} 보고는 확인했습니다."
+        f"{codes} 오류가 보고된 것을 확인했습니다."
         if codes
         else "알람이 발생했습니다. 상세 증상은 아래 원문을 확인하세요."
     )

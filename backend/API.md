@@ -1,3 +1,14 @@
+## Runbook operator guidance — 2026-10-13
+
+Runbook content accepts optional `operator_guidance` (`gpu-rca-guidance/1.0`).
+It has meaning/cause_note strings and 1–12 next_checks (title/text) and references
+(title/text/source_indices). Text is nonempty, up to 2,000 Unicode characters;
+source indices are nonnegative integers referring to existing content.sources.
+Unknown keys and invalid references are rejected at registration/review/publication.
+Existing content without the field remains valid. This presentation contract adds
+no database column, observation fact or action permission. Deploy Backend and RCA
+before publishing new revisions; stored revisions are never modified in place.
+
 ## 종료된 보고서 영구 삭제 — 2026-10-12
 
 `POST /jobs/{id}/delete`는 `{ "reason": "삭제 사유" }`, `Idempotency-Key`, `If-Match`를 받아 JC의 동일 명령으로 위임한다. succeeded/failed/cancelled/expired report만 대상이다. 실제 실행 자리·lease·외부 근거 참조와 버전 충돌은 JC가 잠금 안에서 검증한다. RCA는 409이며 Backend가 직접 결과·근거를 삭제하지 않는다. 지식·검토의 정식 근거 참조는 작성 트랜잭션에서 근거 행 잠금을 커밋까지 유지해 삭제와의 경합을 막는다. 같은 키·본문 재전송은 기존 receipt를 반환한다.

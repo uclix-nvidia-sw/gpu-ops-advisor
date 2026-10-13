@@ -1,3 +1,11 @@
+## Structured RCA guidance — 2026-10-13 (local verification)
+
+- Python agent regression: 1,083 passed, 38 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).
+- RCA fixture integration: six webhook/fallback/repair cases passed; Runbook API lifecycle passed separately using current Backend/JC, temporary PostgreSQL, official Grafana MCP and fixture upstreams. This checks registration/review/publication and selected XID/SXID guidance in the result, not live model quality.
+- Backend: vet, race tests and build passed. Frontend: 252 tests, format and build passed (existing bundle-size warning). Local actual-component browser preview checked at 5291.
+- Selected Runbook originals survive missing applicability facts; this does not authorize recommendations. XID/SXID unidentified-device claims are rejected for covered wording patterns; this is not an exhaustive semantic proof.
+- Not performed: production publication, retirement, deployment or live RCA. Publish reviewed new revisions after compatible Backend/Worker deployment. Producer zero timestamps and unmatched device identities remain unresolved.
+
 ## 2026-10-13 RCA identity-cause and repair regression
 
 - PASS: worktree PYTHONPATH, Python UTF-8 mode; 1077 passed / 38 skipped in agents/tests, excluding test_report_cleanup.py. That unchanged Report module has Windows open-file unlink and directory fsync failures; no Report fix is included. Optional E2E skips are not passes.

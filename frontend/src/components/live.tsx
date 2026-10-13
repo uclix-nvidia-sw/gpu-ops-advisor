@@ -204,7 +204,15 @@ const incidentFields: Record<string, [string, string]> = {
   updated_at: ['최근 변경 시각', '이 기록을 마지막으로 변경한 시각입니다.'],
 };
 
-export function AlarmIdentity({ record, compact = false }: { record: Row; compact?: boolean }) {
+export function AlarmIdentity({
+  record,
+  compact = false,
+  rcaView = false,
+}: {
+  record: Row;
+  compact?: boolean;
+  rcaView?: boolean;
+}) {
   const target = obj(record.target);
   const name =
     str(target.reason) ||
@@ -223,7 +231,10 @@ export function AlarmIdentity({ record, compact = false }: { record: Row; compac
     ['node_uid', 'Node UID'],
     ['pod_uid', 'Pod UID'],
   ].flatMap(([key, label]) => {
-    const value = str(target[key]) || (key === 'cluster_id' ? str(record.cluster_id) : '');
+    const value =
+      str(target[key]) ||
+      (key === 'node' ? str(target.k8s_node_name) : '') ||
+      (key === 'cluster_id' ? str(record.cluster_id) : '');
     return value ? [`${label}: ${value}`] : [];
   });
   return (
@@ -232,7 +243,7 @@ export function AlarmIdentity({ record, compact = false }: { record: Row; compac
       {(target.test_alarm === true || /synthetic/i.test(name) || !!target.test_id) && (
         <Badge status={null} label="테스트 알람" />
       )}
-      {!compact && str(target.alertname) && target.alertname !== name && (
+      {!rcaView && !compact && str(target.alertname) && target.alertname !== name && (
         <span className="cell-sub">{str(target.alertname)}</span>
       )}
       {!compact && <span className="cell-sub">{targets.join(' · ') || '발생 대상 미확인'}</span>}
@@ -517,7 +528,7 @@ export function JobRows({ items }: { items: Row[] }) {
                     }
                   >
                     {j.kind === 'rca' ? (
-                      <AlarmIdentity record={j} />
+                      <AlarmIdentity record={j} rcaView={location.pathname === '/cases'} />
                     ) : j.kind === 'report' ? (
                       <strong>{reportTitle(j)}</strong>
                     ) : (
@@ -526,7 +537,9 @@ export function JobRows({ items }: { items: Row[] }) {
                   </Link>
                   {j.kind === 'report' && <ReportOrigin value={j.report_origin} />}
                 </div>
-                {j.kind === 'rca' && <small className="cell-sub">작업 ID · {str(j.id)}</small>}
+                {j.kind === 'rca' && location.pathname !== '/cases' && (
+                  <small className="cell-sub">작업 ID · {str(j.id)}</small>
+                )}
                 {j.kind === 'report' ? (
                   <>
                     <details>

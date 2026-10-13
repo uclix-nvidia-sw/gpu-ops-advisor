@@ -1,3 +1,11 @@
+## Structured RCA guidance — 2026-10-13 (local verification)
+
+- Python agent regression: 1,083 passed, 38 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).
+- RCA fixture integration: six webhook/fallback/repair cases passed; Runbook API lifecycle passed separately using current Backend/JC, temporary PostgreSQL, official Grafana MCP and fixture upstreams. This checks registration/review/publication and selected XID/SXID guidance in the result, not live model quality.
+- Backend: vet, race tests and build passed. Frontend: 252 tests, format and build passed (existing bundle-size warning). Local actual-component browser preview checked at 5291.
+- Selected Runbook originals survive missing applicability facts; this does not authorize recommendations. XID/SXID unidentified-device claims are rejected for covered wording patterns; this is not an exhaustive semantic proof.
+- Not performed: production publication, retirement, deployment or live RCA. Publish reviewed new revisions after compatible Backend/Worker deployment. Producer zero timestamps and unmatched device identities remain unresolved.
+
 # 2026-10-12 종료된 보고서 삭제와 참조 경합
 
 - **통과:** 새 임시 PostgreSQL 16.9에서 실제 Backend·JC를 연결해 `backend/`의 `go test -tags=e2e ./... -v -count=1 -timeout=10m`. 기존 전체 E2E와 상세 projection, `TestReportDeletion`을 함께 통과했다. 작업 종료 네 상태의 자체 결과·근거 정리, report 목록 제외·job 이력 유지, 발행 hash·입력·시도·receipt·감사 보존, RCA 보존, 활성/격리/미종료 시도 거부, 외부 정식 참조 거부와 rollback을 확인했다.

@@ -93,3 +93,37 @@ func TestReportedRequirementsRemainInvestigationOnly(t *testing.T) {
 		t.Fatal("report-only action precondition accepted")
 	}
 }
+
+func TestOperatorGuidanceContract(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []any{nil, "invalid", Object{"schema": "unknown"}} {
+		var row Object
+		if err := json.Unmarshal(b, &row); err != nil {
+			t.Fatal(err)
+		}
+		c := row["content"].(map[string]any)
+		c["operator_guidance"] = value
+		if validateRunbook(c, Object{}, false) == nil {
+			t.Fatal("invalid guidance accepted")
+		}
+	}
+	var row Object
+	if err := json.Unmarshal(b, &row); err != nil {
+		t.Fatal(err)
+	}
+	c := row["content"].(map[string]any)
+	g := c["operator_guidance"].(map[string]any)
+	for _, index := range []any{-1, 999, 0.5, true, "0"} {
+		g["references"].([]any)[0].(map[string]any)["source_indices"] = []any{index}
+		if validateRunbook(c, Object{}, false) == nil {
+			t.Fatal("invalid source index accepted")
+		}
+	}
+	delete(c, "operator_guidance")
+	if err := validateRunbook(c, Object{}, false); err != nil {
+		t.Fatal(err)
+	}
+}

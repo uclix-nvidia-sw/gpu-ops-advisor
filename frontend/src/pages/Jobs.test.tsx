@@ -1,3 +1,4 @@
+import { JobRows } from '../components/live';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -308,4 +309,31 @@ it('keeps deleted report history without presenting it as unpublished or linking
   expect(detail).not.toContain('완성된 보고서에서 확인하세요');
   expect(detail).toContain('정리 완료');
   expect(detail).not.toContain('저장된 결과 보기');
+});
+
+it('shows RCA node context without technical identifiers in the case list', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/cases']}>
+      <JobRows
+        items={[
+          {
+            id: 'opaque-job',
+            kind: 'rca',
+            result_ref: 'result',
+            target: {
+              reason: 'XID 79',
+              alertname: 'GPUAlert',
+              cluster_id: 'cluster-test',
+              k8s_node_name: 'node-test',
+            },
+          },
+        ]}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('노드: node-test');
+  expect(html).toContain('CPC: cluster-test');
+  expect(html).not.toContain('GPUAlert');
+  expect(html).not.toContain('작업 ID ·');
+  expect(html).toContain('/analyses/opaque-job#final-report');
 });

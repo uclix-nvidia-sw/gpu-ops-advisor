@@ -1,0 +1,15 @@
+{
+  "scope": "Presentation-only draft change; no publication or evidence promotion. Existing investigation requirements and sources preserved.",
+  "entries": [
+    {
+      "file": "xid/RB-XID-79.json",
+      "before_content_sha256": "1c89528e5950f6c39278fb9c0ddff674cec85fc08740a44997d49a004cfed9d1",
+      "after_content_sha256": "41d4dc3cc43f415952b20197d6a84d687f9a17c8ad67c706766c0f15803237fd"
+    },
+    {
+      "file": "sxid/RB-SXID-11001.json",
+      "before_content_sha256": "c002cb905117e662994bc333883fc76730868403852dc7c3236abc4d03cfa936",
+      "after_content_sha256": "67081ab07a5bad940774ae881c92b59888755fd63a5531634eb19a1adeeab80e"
+    }
+  ]
+}

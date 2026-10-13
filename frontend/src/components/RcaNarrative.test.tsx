@@ -119,9 +119,42 @@ it('separates a general XID cause from stored identity uncertainty without inven
   };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaNarrative result={result} />);
-  expect(html).toContain('일반적인 원인 후보');
-  expect(html).toContain('같은 오류의 재보고일 수 있으므로');
   expect(html).toContain('장애 원인이 아니라 원인을 확정하지 못하는 이유');
   expect(html).toContain('<summary>저장된 원인 문장·해석 주의</summary>');
   expect(JSON.stringify(result)).toBe(before);
+});
+
+it('qualifies unmapped XID hardware candidates and preserves the original for inspection', () => {
+  const result = {
+    runbook_revisions: [{ knowledge_key: 'RB-XID-79' }],
+    device_observations: [{ pci_inventory_relation: 'not_in_reported_inventory' }],
+    narrative: [
+      { id: 'problem', text: 'xid:79 보고는 확인했습니다.' },
+      {
+        id: 'cause',
+        text: '보고된 PCI 주소 PCI:0000:01:00에 연결된 GPU가 전원 문제로 분리된 가능성',
+      },
+      { id: 'guidance', text: 'GPU has fallen off the bus' },
+    ],
+  };
+  const before = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaNarrative result={result} />);
+  expect(html).toContain('XID 79 오류가 보고된 것을 확인했습니다.');
+  expect(html).toContain('이번 기록은 오류 장치가 식별되지 않아 해당 원인을 뒷받침하지 못합니다.');
+  expect(html.indexOf('저장된 원인 문장·해석 주의')).toBeLessThan(html.indexOf('연결된 GPU가'));
+  expect(JSON.stringify(result)).toBe(before);
+});
+it('does not apply the XID interpretation to an unfamiliar error', () => {
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        narrative: [
+          { id: 'problem', text: '새 오류 보고' },
+          { id: 'cause', text: '원인 미확인' },
+        ],
+      }}
+    />,
+  );
+  expect(html).not.toContain('전원 문제');
+  expect(html).toContain('원인 미확인');
 });
