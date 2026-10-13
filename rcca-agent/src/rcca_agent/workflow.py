@@ -761,7 +761,8 @@ async def run(tools):
     analysis_missing.extend(gaps)
     candidates = list(model_candidates)
     recommendations = []
-    for book in applicable:
+    applicable_ids = {book["id"] for book in applicable}
+    for book in selected:
         bid = str(uuid4())
         obs.evidence.append(
             dict(
@@ -781,6 +782,8 @@ async def run(tools):
                 **evidence_stamp(),
             )
         )
+        if book["id"] not in applicable_ids:
+            continue
         observation_refs = [
             e["id"]
             for e in obs.evidence

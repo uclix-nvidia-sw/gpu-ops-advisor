@@ -1,3 +1,14 @@
+## Runbook operator guidance — 2026-10-13
+
+Runbook content accepts optional `operator_guidance` (`gpu-rca-guidance/1.0`).
+It has meaning/cause_note strings and 1–12 next_checks (title/text) and references
+(title/text/source_indices). Text is nonempty, up to 2,000 Unicode characters;
+source indices are nonnegative integers referring to existing content.sources.
+Unknown keys and invalid references are rejected at registration/review/publication.
+Existing content without the field remains valid. This presentation contract adds
+no database column, observation fact or action permission. Deploy Backend and RCA
+before publishing new revisions; stored revisions are never modified in place.
+
 # Aggregate report addition / 신규 집계 보고서 (2026-10-13)
 
 `POST /reports` accepts `topic_ids=["namespace_usage","incident_summary"]` (either or both), `group_by=["cluster","namespace"]`, `timezone="Asia/Seoul"`, and a KST-midnight 24h/168h `time_range`. Old O topics cannot be mixed. Previous equal-length period is derived by the worker; caller-supplied comparison_range/resource_selectors/action_record_ids are rejected. Backend fixes execution_profile_revision to `report-aggregate-v1`. The response and result publication endpoints are unchanged. New-topic schedules allow only daily/weekly in Asia/Seoul; existing schedules are not converted.

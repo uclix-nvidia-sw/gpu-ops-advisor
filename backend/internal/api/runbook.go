@@ -29,7 +29,7 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if c["schema"] != "gpu-rca-runbook/1.0" {
 		return Invalid("runbook.schema")
 	}
-	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "limitations", "investigation_only", "unexpected_evidence"); err != nil {
+	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "operator_guidance", "limitations", "investigation_only", "unexpected_evidence"); err != nil {
 		return err
 	}
 	for _, key := range []string{"title", "description", "claim"} {
@@ -113,6 +113,9 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	sources, ok := c["sources"].([]any)
 	if !ok || len(sources) == 0 {
 		return Invalid("runbook.sources")
+	}
+	if raw, exists := c["operator_guidance"]; exists && !validOperatorGuidance(raw, len(sources)) {
+		return Invalid("runbook.operator_guidance")
 	}
 	for _, raw := range sources {
 		s, ok := raw.(map[string]any)
@@ -278,6 +281,53 @@ func runbookConditions(v any, required bool) bool {
 		}
 		if field == "error_code" && !runbookCode.MatchString(c["equals"].(string)) {
 			return false
+		}
+	}
+	return true
+}
+
+// Presentation guidance cannot establish observation facts or action approval.
+func validOperatorGuidance(raw any, sourceCount int) bool {
+	g, ok := raw.(map[string]any)
+	if !ok || len(g) != 5 || only(g, "schema", "meaning", "cause_note", "next_checks", "references") != nil || g["schema"] != "gpu-rca-guidance/1.0" {
+		return false
+	}
+	text := func(v any) bool {
+		s, ok := v.(string)
+		return ok && strings.TrimSpace(s) != "" && len([]rune(s)) <= 2000
+	}
+	if !text(g["meaning"]) || !text(g["cause_note"]) {
+		return false
+	}
+	for _, field := range []string{"next_checks", "references"} {
+		items, ok := g[field].([]any)
+		if !ok || len(items) == 0 || len(items) > 12 {
+			return false
+		}
+		for _, item := range items {
+			row, ok := item.(map[string]any)
+			if !ok || !text(row["title"]) || !text(row["text"]) {
+				return false
+			}
+			if field == "next_checks" {
+				if len(row) != 2 {
+					return false
+				}
+				continue
+			}
+			if len(row) != 3 {
+				return false
+			}
+			indexes, ok := row["source_indices"].([]any)
+			if !ok || len(indexes) == 0 {
+				return false
+			}
+			for _, index := range indexes {
+				n, ok := index.(float64)
+				if !ok || n < 0 || n >= float64(sourceCount) || n != float64(int(n)) {
+					return false
+				}
+			}
 		}
 	}
 	return true

@@ -1,3 +1,20 @@
+## Runbook-driven RCA guidance
+
+RCA reads `quality.runbook_guidance` projected from selected published Runbook
+evidence. `gpu-rca-guidance/1.0` contains meaning, next checks, references and a
+conditional cause note. Unknown errors use the same renderer; legacy results show
+saved guidance without invented catalog details. Reference explanations remain
+visible, with source links and original guidance in disclosures. Report rendering
+and APIs are unchanged.
+
+## RCA 운영자 읽기 순서 — 2026-10-13
+
+RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시하고 반복적인 알림 규칙 이름은 생략한다. RCA 결과의 ID는 연결 정보에 보존하며 알림 원본 링크는 사람이 읽을 수 있는 이름으로 표시한다. Report 화면의 ID와 목록 경로는 유지한다.
+
+오류 보고 확인 문구는 오류 코드를 읽기 쉽게 표시하며 고장 확정과 구분한다. SXID 의미는 참고 안내에서 설명한다. 참고 안내는 기본으로 펼쳐 표시하고 구조화된 관측 사실·원인 후보·조치·조사별 판단·Runbook 기록은 별도 펼침으로 보존한다. PCI 불일치가 기록된 XID79 결과에서는 장치 존재를 전제한 저장 문장을 주의 원문으로 옮기고 조건부 일반 안내를 표시한다. 저장 결과와 Agent 판단은 수정하지 않는다. 알려지지 않은 오류에 XID 설명을 적용하지 않는다.
+
+검증: 프런트엔드 정적 렌더 회귀검사와 빌드·포맷 검사. 새 운영 배포와 실제 LLM 재실행은 미검증이며, 이 변경은 LLM 검증기 자체의 보강이 아니다. 장기적으로 오류별 참고 안내를 검토된 Runbook 구조화 필드로 전환하는 작업이 남는다.
+
 # Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
 
 `/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace/model table, selectable hourly graph, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.

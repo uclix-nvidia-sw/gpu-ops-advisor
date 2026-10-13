@@ -230,11 +230,18 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
         "recommendations",
         "sources",
         "analysis_guidance",
+        "operator_guidance",
         "limitations",
         "investigation_only",
         "unexpected_evidence",
     }
     _require(set(content) <= allowed_fields, "content: unsupported fields")
+    from .operator_guidance import validate_operator_guidance
+
+    if "operator_guidance" in content:
+        validate_operator_guidance(
+            content["operator_guidance"], content.get("sources", [])
+        )
     investigation_only = content.get("investigation_only", False)
     _require(type(investigation_only) is bool, "investigation_only: expected boolean")
     _compatibility(row.get("compatibility"), allow_empty=authoring)

@@ -1,3 +1,21 @@
+## Structured operator guidance — 2026-10-13
+
+An optional `content.operator_guidance` with schema `gpu-rca-guidance/1.0` holds
+`meaning`, `cause_note`, ordered `next_checks` (title/text), and `references`
+(title/text/source_indices into the existing sources array). The contract rejects
+unknown keys and invalid source references. The selected published Runbook evidence
+is copied into `quality.runbook_guidance` with its evidence ID and revision; it does
+not supply observation facts, confirm a cause, or approve an action. The frontend
+renders this common shape without error-code branches. Legacy Runbooks retain their
+saved guidance and do not inherit another error's explanation.
+
+XID79 and SXID11001 catalog drafts add this field only; requirement/source hashes
+are linked by `operator-guidance-review-20261013.json`. Deploy the compatible worker
+before reviewing/publishing new revisions through the existing Backend workflow.
+This code change does not publish or retire any operational revision. Other errors
+can adopt the same contract after source/content review, without new UI branches.
+Zero producer timestamps and unmatched PCI identities remain unverified.
+
 ## Identity limitations and repair validation — 2026-10-13
 
 Device identity uncertainty belongs in limitations, not causal hypotheses. The Korean identity-cause guard also checks claims when bounded synthesis context omits inventory relation metadata. Repair feedback asks the model to remove such hypotheses (an empty list is valid) and translate internal field names into Korean explanations. Every repair still passes the same validator. Rejected limitation sentences remain excluded; `quality.analysis.synthesis.completion_mode` distinguishes `validated_subset` from `validated_response`. This diagnostic does not change publication status or establish missing device facts. The guard covers tested language patterns, not every possible unsupported claim. Ops runtime and stored results are unchanged.

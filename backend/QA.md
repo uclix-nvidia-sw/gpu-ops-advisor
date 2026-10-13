@@ -1,3 +1,11 @@
+## Structured RCA guidance — 2026-10-13 (local verification)
+
+- Python agent regression: 1,100 passed, 41 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).
+- RCA fixture integration: six webhook/fallback/repair cases passed; Runbook API lifecycle passed separately using current Backend/JC, temporary PostgreSQL, official Grafana MCP and fixture upstreams. This checks registration/review/publication and selected XID/SXID guidance in the result, not live model quality.
+- Backend: vet, race tests and build passed. Frontend: 255 tests, format and build passed (existing bundle-size warning). Local actual-component browser preview checked at 5291.
+- Selected Runbook originals survive missing applicability facts; this does not authorize recommendations. XID/SXID unidentified-device claims are rejected for covered wording patterns; this is not an exhaustive semantic proof.
+- Not performed: production publication, retirement, deployment or live RCA. Publish reviewed new revisions after compatible Backend/Worker deployment. Producer zero timestamps and unmatched device identities remain unresolved.
+
 # 2026-10-13 Aggregate report intake / 집계 보고서 접수
 
 Base: latest origin/main `74c93f9`. PASS: all four Go modules vet/race/build, Backend and Incident DB E2E on a fresh temporary loopback PostgreSQL, then stopped. Actual Backend→JC→Ops process tests cover new report submission/publication/read, daily/weekly schedule acceptance and monthly rejection. Additional Ops snapshot test proves start-inclusive/end-exclusive periods and Namespace isolation. Existing RCA/legacy report regression passed. No production DB or schema changes. [Full verification](../agents/QA.md) · [Contract](../docs/specs/ops-agent/aggregate-report-v1.md).

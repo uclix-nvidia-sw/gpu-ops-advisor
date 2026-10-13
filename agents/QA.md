@@ -1,3 +1,11 @@
+## Structured RCA guidance — 2026-10-13 (local verification)
+
+- Python agent regression: 1,100 passed, 41 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).
+- RCA fixture integration: six webhook/fallback/repair cases passed; Runbook API lifecycle passed separately using current Backend/JC, temporary PostgreSQL, official Grafana MCP and fixture upstreams. This checks registration/review/publication and selected XID/SXID guidance in the result, not live model quality.
+- Backend: vet, race tests and build passed. Frontend: 255 tests, format and build passed (existing bundle-size warning). Local actual-component browser preview checked at 5291.
+- Selected Runbook originals survive missing applicability facts; this does not authorize recommendations. XID/SXID unidentified-device claims are rejected for covered wording patterns; this is not an exhaustive semantic proof.
+- Not performed: production publication, retirement, deployment or live RCA. Publish reviewed new revisions after compatible Backend/Worker deployment. Producer zero timestamps and unmatched device identities remain unresolved.
+
 ## PR CI portability follow-up / PR CI 환경 차이 수정
 
 Initial Python 3.12 CI: 1,149 passed and one new Backend intake E2E failed because it required BACKEND_BINARY. The test now uses the same platform-aware `.local/backend-e2e` fallback as existing E2E cases. With BACKEND_BINARY unset, both new aggregate publication/intake E2E cases passed locally (2 passed, 28 deselected; fresh loopback DB and fixture upstreams). Product code and RCA are unchanged. Remote rerun status is tracked on PR #110.

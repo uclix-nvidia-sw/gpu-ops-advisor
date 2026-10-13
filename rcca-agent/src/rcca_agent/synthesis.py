@@ -395,7 +395,7 @@ def validate_synthesis(
             in {"not_in_reported_inventory", "switch_inventory_required"}
             for o in cited
         ) and re.search(
-            r"물리적|핫\s*제거|장비\s*재조명|존재하지\s*않|잘못된\s*명령|연결\s*불량",
+            r"물리적|핫\s*제거|장비\s*재조명|존재하지\s*않|잘못된\s*명령|연결\s*불량|연결된\s*GPU|슬롯\s*접촉|전원\s*문제|펌웨어\s*오류|링크\s*문제",
             h["claim"],
         ):
             raise SynthesisValidationError(

@@ -70,6 +70,28 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
             )
             assert followup["before_content_sha256"] == e["after_content_sha256"]
             assert digest == followup["after_content_sha256"]
+        elif row["knowledge_key"] in {"RB-XID-79", "RB-SXID-11001"}:
+            followups = json.loads(
+                (CATALOG / "operator-guidance-review-20261013.json").read_text("utf-8")
+            )
+            followup = next(
+                item for item in followups["entries"] if item["file"] == e["file"]
+            )
+            assert followup["before_content_sha256"] == e["after_content_sha256"]
+            assert digest == followup["after_content_sha256"]
+            original = deepcopy(row["content"])
+            del original["operator_guidance"]
+            assert (
+                hashlib.sha256(
+                    json.dumps(
+                        original,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest()
+                == e["after_content_sha256"]
+            )
         else:
             assert digest == e["after_content_sha256"]
     general = next(r for r in ROWS if r["knowledge_key"] == "RB-GENERAL-GPU-NODE")

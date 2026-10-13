@@ -40,7 +40,7 @@ async def test_operator_problem_order_preserves_alert_time_and_identity():
     )
     problem = result["narrative"][0]
     paragraphs = problem["text"].split("\n\n")
-    assert paragraphs[0] == "xid:79 보고는 확인했습니다."
+    assert paragraphs[0] == "XID 79 오류가 보고된 것을 확인했습니다."
     assert paragraphs[1] == "대상\n노드: fixture-node"
     assert "사건 기준 시각: 2026-10-12T05:00:00Z" in paragraphs[2]
     assert "실제 오류 발생 시각과 같다고 단정할 수 없습니다" in paragraphs[2]
@@ -297,7 +297,7 @@ async def test_report_explains_only_observed_gaps(state_missing, unverified):
         result, {"incident_time": "2026-10-12T00:00:00Z"}, {}, [], Model()
     )
     sections = {s["id"]: s for s in result["narrative"]}
-    assert "xid:79 보고는 확인했습니다." in sections["problem"]["text"]
+    assert "XID 79 오류가 보고된 것을 확인했습니다." in sections["problem"]["text"]
     text = sections["next"]["text"]
     assert "실제 원인은 확정하지 못했습니다" in text
     assert ("현재 장치 상태는 검증하지 못했습니다" in text) == state_missing

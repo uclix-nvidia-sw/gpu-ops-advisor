@@ -58,7 +58,7 @@ export function ResultPage({ kind }: { kind: string }) {
         title={
           kind === 'incident' ? '사건 상세' : kind === 'report' ? reportTitle(r) : 'RCA 조사 결과'
         }
-        description={id || ''}
+        description={kind === 'analysis' ? '' : id || ''}
         actions={
           <>
             {kind === 'report' && !deleted && r.result_ref != null && <ReportExports id={id!} />}

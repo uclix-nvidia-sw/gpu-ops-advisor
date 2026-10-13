@@ -2296,6 +2296,13 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
             jid = submit(stack, "rca", data)
             before = len(Upstream.requests)
             result, evidence = worker_result(stack, "rca", jid, "-" + key)
+            if "operator_guidance" in row["content"]:
+                projected = result["quality"]["runbook_guidance"]
+                assert any(
+                    item["guidance"] == row["content"]["operator_guidance"]
+                    and str(item["revision"]) == "2"
+                    for item in projected
+                )
             assert any(q.startswith("D") for q, _ in evidence)
             assert all(
                 c["causal_status"] == "candidate" for c in result["cause_candidates"]
