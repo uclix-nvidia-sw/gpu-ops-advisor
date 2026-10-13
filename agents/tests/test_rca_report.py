@@ -200,7 +200,9 @@ async def test_final_report_preserves_missing_evidence_and_withheld_actions(mode
         return
     await write_report(result, data, clues, evidence, Model())
     assert len(calls) == (2 if mode == "invalid" else int(mode != "unconfigured"))
-    assert [s["id"] for s in result["narrative"]] == list(TITLES)
+    assert [s["id"] for s in result["narrative"]] == [
+        k for k in TITLES if k != "guidance"
+    ]
     text = "\n".join(s["text"] for s in result["narrative"])
     for expected in [
         "dgx01",

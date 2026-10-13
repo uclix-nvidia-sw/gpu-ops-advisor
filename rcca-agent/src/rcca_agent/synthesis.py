@@ -254,8 +254,38 @@ def validate_synthesis(
     def korean(text, evidence_refs):
         text = prose(text, evidence_refs)
         hangul = len(re.findall(r"[가-힣]", text))
-        latin = len(re.findall(r"[a-z]", text, re.I))
-        return hangul > 0 and latin <= hangul
+        # Identifiers were masked above. Permit technical terms, not arbitrary
+        # English prose hidden inside a mostly Korean sentence.
+        technical = {
+            "GPU",
+            "CPU",
+            "PCI",
+            "PCIE",
+            "AER",
+            "NVLINK",
+            "NVSWITCH",
+            "CUDA",
+            "ECC",
+            "HBM",
+            "NVML",
+            "DCGM",
+            "MIG",
+            "LLM",
+            "BIOS",
+            "BMC",
+            "NIC",
+            "RDMA",
+            "NVME",
+            "SSD",
+            "IO",
+            "OS",
+            "TESLA",
+            "PARTIAL",
+            "TRUE",
+            "FALSE",
+        }
+        words = re.findall(r"[A-Za-z]+", text)
+        return hangul > 0 and all(word.upper() in technical for word in words)
 
     precision_reduced = any(
         q.get("quality", {}).get("reason") == "time_precision_reduced"

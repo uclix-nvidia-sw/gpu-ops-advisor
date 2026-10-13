@@ -422,3 +422,25 @@ def test_rca_inventory_rejects_non_array(inventory):
     e = evidence(raw)
     health = parse_health([e], p["health_contracts"], p["queries"])
     assert enrich_report_inventory(health, [e])[0]["gpu_candidates"] == []
+
+
+@pytest.mark.parametrize(
+    "address,relation",
+    [
+        ("PCI:0000:01:00", "not_in_reported_inventory"),
+        ("PCI:0000:08:00", "inventory_candidate_only"),
+    ],
+)
+def test_report_pci_comparison_never_promotes_device_identity(address, relation):
+    from rcca_agent.fleet_events import enrich_report_inventory
+
+    raw = fleet()
+    raw["attributes"]["reason"] += " " + address
+    raw["resources"]["gpuInfo.gpus"] = '[{"uuid":"GPU-a","busID":"0000:08:00.0"}]'
+    e = evidence(raw)
+    p = profile()
+    health = parse_health([e], p["health_contracts"], p["queries"])
+    enriched = enrich_report_inventory(health, [e])[0]
+    assert enriched["pci_inventory_relation"] == relation
+    assert enriched["fact_eligible"] is False
+    assert enriched["gpu_candidates"][0]["verified"] is False
