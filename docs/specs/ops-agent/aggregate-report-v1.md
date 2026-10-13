@@ -1,6 +1,6 @@
 # Ops Report Agent — 일일·주간 집계 보고서
 
-2026-10-13 · 원격 main `74c93f9` 기준 로컬 구현. PR·배포 전 검토용이다. 신규 요청에만 `report-aggregate-v1`을 적용하며 과거 보고서·일정은 변경하지 않는다.
+2026-10-13 · 원격 main `f7cf8c9` 기준 로컬 구현·검증. 운영 배포 전 검토용이다. 신규 요청에만 `report-aggregate-v1`을 적용하며 과거 보고서·일정은 변경하지 않는다.
 
 ## 무엇을 왜 바꾸는가
 
@@ -69,7 +69,7 @@ Frontend·Backend·JC·Ops Worker를 같은 성공한 빌드로 맞춘다. 구 W
 
 2026-10-13 로컬: Python 3.11.16, Go 1.26.2, Node 22.23, Helm 3.17.3. CI의 Python 3.12/Node 24와는 다르다. 생산 DB를 테스트에 사용하지 않았다.
 
-- 두 Agent 전체 **1,144개 통과**. 이후 사건 snapshot의 기간 경계·Namespace 격리 사례 1개를 추가해 신규 E2E 3개 재실행도 통과. 실제 로컬 PostgreSQL·Backend·JC·Worker·NAT·공식 Grafana MCP 프로세스 E2E 포함. Grafana/LLM upstream은 fixture다. D 설정 파일이 없어도 새 보고서가 공개되는 경로와 기존 RCA 회귀를 확인했다.
+- 최신 main 통합 후 두 Agent 전체 **1,150개 통과 / skip 0개**(112.91초, 기존 MCP deprecation warning 3개). 사건 snapshot의 기간 경계·Namespace 격리 사례 포함. 실제 로컬 PostgreSQL·Backend·JC·Worker·NAT·공식 Grafana MCP 프로세스 E2E 포함. Grafana/LLM upstream은 fixture다. D 설정 파일이 없어도 새 보고서가 공개되는 경로와 기존 RCA 회귀를 확인했다.
 - 네 Go 모듈 vet/race/build 통과. Backend/Incident DB E2E와 UI 최종 결과는 해당 모듈 QA를 참조한다.
 - Helm 렌더·패키징·mirror 검사, CI 도구 22개 통과. 운영 배포 검증을 의미하지 않는다.
 - CPC-1의 2026-10-12 하루에 실제 Grafana/Mimir에서 최종 3개 쿼리를 실행했다. `kube_node_labels`는 배포 데이터에서 없어서 독점/공유 설정의 판정 근거로 사용하지 않았다.
