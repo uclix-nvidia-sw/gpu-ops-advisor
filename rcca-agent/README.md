@@ -250,3 +250,26 @@ explain recorded-time versus current-health limitations. Model repair feedback
 addresses the rejected hypothesis or limitation without relaxing evidence checks.
 
 RCA operator wording separates reported error codes, unconfirmed cause and unmet current-health requirements. `unknown_value` explains unverified Fleet observations only when those observations exist; it does not assert that every producer contract, timestamp or device identity is absent. The reference-only editor cannot drop these statements, and assessment/status gates are unchanged.
+
+## Published investigation guidance / 발행 조사 지침 표시 — 2026-10-13
+
+RCA reports preserve the selected published investigation-only Runbook's guidance,
+recommendation preconditions and limitations in a separate narrative section.
+These are documentary investigation instructions, not observed device facts or
+eligible remediation. Existing recommendation eligibility and result status remain
+unchanged. Saved past results are not rewritten. The editor orders statements but
+cannot remove this guidance. Report/Ops generation is unchanged.
+
+XID79의 XID154 연계는 [NVIDIA 카탈로그](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)의
+Xid 79 행과 Xid 154 설명을 2026-10-13 대조했다. `CUDA 12.7; GPU driver R565`는
+연계 표기이며, 모든 XID79에 XID154가 반드시 동반되거나 현장 장비가 해당 버전이라는
+증거가 아니다. XID154는 다른 Xid의 복구 조치를 요약하는 정보 이벤트다.
+A100/H100/B100/GB200 적용 표기 및 RESTART_BM/CONTACT_SUPPORT 분류도 문헌 정보로만
+표시한다. Fleet의 고정 카탈로그 action과 이번 알림에 실제 포함된 action은 구분한다.
+기존 발행본의 지침을 표시하며, 이번 변경은 Runbook 본문이나 검토 hash를 변경하지 않는다.
+
+RCA-only PCI diagnostics compare a report's PCI address with its own inventory;
+neither a match nor a mismatch proves hardware identity or synthetic origin.
+Korean explanation validation rejects unregistered English prose while retaining
+input identifiers and a small technical vocabulary. This is not proof that a
+model hypothesis is true; deployed model quality still needs live review.

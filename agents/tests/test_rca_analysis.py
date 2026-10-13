@@ -303,7 +303,13 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
         attempt_context.reset(token)
     result = output["result"]
     validate_result(result, output["evidence"])
-    assert len(result["narrative"]) == 5
+    assert {s["id"] for s in result["narrative"]} >= {
+        "problem",
+        "cause",
+        "action",
+        "next",
+        "limits",
+    }
     assert all(section["text"] for section in result["narrative"])
     assert result["quality"]["report"]["status"] == "complete"
     if mode != "unconfigured":

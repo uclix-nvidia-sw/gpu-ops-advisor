@@ -35,6 +35,11 @@ Do not cite an omitted observation or a query ID such as D09 as an evidence ID.
 Supporting and contradicting references must be disjoint. If no supplied observation
 supports a hypothesis, omit that hypothesis; never fabricate a reference.
 Every hypothesis needs supporting evidence.
+An error code or a Runbook's list of possible causes alone does not distinguish
+hardware, cabling, firmware or driver causes. Do not enumerate generic causes
+without an observation supporting that distinction. Put needed diagnostic checks
+in Korean limitations instead. Never claim an inventory GPU is the event device
+when its PCI address differs from the reported event address.
 All hypotheses remain unconfirmed candidates. An empty list is valid when evidence
 cannot support an explanation. Preserve gaps, conflicts and observation failures.
 Do not invent numbers, producer semantics, impact, recovery, or performed actions.

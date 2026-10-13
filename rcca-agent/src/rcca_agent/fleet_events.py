@@ -233,4 +233,25 @@ def enrich_report_inventory(health, evidence):
             and isinstance(gpu.get("uuid"), str)
             and gpu["uuid"].strip()
         ]
+        reason = object_value(raw.get("attributes")).get("reason", "")
+        addresses = re.findall(
+            r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?",
+            reason if isinstance(reason, str) else "",
+            re.I,
+        )
+        inventory_addresses = [
+            gpu["bus_id"]
+            for gpu in report["gpu_candidates"]
+            if isinstance(gpu.get("bus_id"), str) and pci(gpu["bus_id"])
+        ]
+        if addresses and inventory_addresses:
+            report["reported_pci_addresses"] = sorted(set(addresses))
+            report["pci_inventory_relation"] = (
+                "not_in_reported_inventory"
+                if any(
+                    pci(address) not in {pci(v) for v in inventory_addresses}
+                    for address in addresses
+                )
+                else "inventory_candidate_only"
+            )
     return health

@@ -3,6 +3,26 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaNarrative } from './RcaNarrative';
 
 describe('RCA report reading', () => {
+  it('preserves published guidance separately from findings when checks are consolidated', () => {
+    const html = renderToStaticMarkup(
+      <RcaNarrative
+        consolidateChecks
+        result={{
+          narrative: [
+            { id: 'problem', title: '감지된 문제', text: '오류 보고 확인' },
+            {
+              id: 'guidance',
+              title: 'Runbook 조사 지침·적용 조건',
+              text: '문헌 적용 조건: R565\n\n조건부 권고: 유지보수 승인 후 검토',
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain('Runbook 조사 지침·적용 조건');
+    expect(html).toContain('유지보수 승인 후 검토');
+    expect(html).toContain('문헌 적용 조건: R565');
+  });
   it('moves repeated checks out of the primary report and explains opaque identifiers', () => {
     const result = {
       narrative: [

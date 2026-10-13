@@ -12,6 +12,7 @@ TITLES = {
     "problem": "감지된 문제",
     "cause": "원인 판단",
     "action": "권고 조치와 조건",
+    "guidance": "Runbook 조사 지침·적용 조건",
     "next": "추가 확인",
     "limits": "분석 한계",
 }
@@ -121,6 +122,19 @@ async def write_report(result, data, clues, evidence, llm):
                 diagnostic["evidence_refs"],
             )
     candidates = result["cause_candidates"]
+    mismatches = [
+        h
+        for h in result.get("device_observations", [])
+        if h.get("pci_inventory_relation") == "not_in_reported_inventory"
+    ]
+    if mismatches:
+        add(
+            "problem",
+            "장치 연결 미확인: 오류 메시지의 PCI 주소가 같은 로그의 장비 목록과 "
+            "일치하지 않습니다. 장비 목록의 GPU를 장애 GPU로 간주하지 않았습니다. "
+            "시험 주입 여부와 원본 장치 정보를 대조해야 합니다.",
+            [ref for h in mismatches for ref in h.get("evidence_refs", [])],
+        )
     if not candidates:
         add(
             "cause", "근본 원인을 판단할 유효한 근거가 부족합니다. 원인은 미확정입니다."
@@ -184,6 +198,38 @@ async def write_report(result, data, clues, evidence, llm):
             "사건과 호환되는 검토·발행된 Runbook과 허용된 조사 쿼리를 등록해야 합니다.",
         )
     runbooks = result.get("runbook_revisions", [])
+    # Published investigation guidance is useful even when device-state gates
+    # prevent actionable recommendations. Keep it separate from observed facts
+    # and eligible remediation; cite only the selected immutable snapshots.
+    for entry in evidence:
+        if entry.get("query_id") != "runbook":
+            continue
+        if entry.get("quality", {}).get("origin") != "published":
+            continue
+        content = entry.get("snapshot", {})
+        if not content.get("investigation_only"):
+            continue
+        refs = [entry["id"]]
+        add(
+            "guidance",
+            f"{content.get('title', '발행 Runbook')} · revision {entry.get('query_version', '?')}\n"
+            "아래는 발행된 조사 지침과 문헌의 적용 조건입니다. 이번 장비에서 확인된 사실이나 "
+            "실행 승인으로 해석하지 마세요. 조치는 운영자가 판단하며 자동 실행하지 않습니다.",
+            refs,
+        )
+        for rec in content.get("recommendations", []):
+            add(
+                "guidance",
+                "Runbook 권고 검토: "
+                + rec["text"]
+                + "\n적용 조건(충족 여부 별도 확인): "
+                + literal(rec.get("preconditions", [])),
+                refs,
+            )
+        for guidance in content.get("analysis_guidance", []):
+            add("guidance", guidance, refs)
+        for limitation in content.get("limitations", []):
+            add("guidance", "적용 한계: " + limitation, refs)
     published = any(b.get("origin") == "published" for b in runbooks)
     if any(b.get("origin") == "builtin" for b in runbooks):
         add(
@@ -379,6 +425,7 @@ async def write_report(result, data, clues, evidence, llm):
             value_refs=[],
         )
         for section, title in TITLES.items()
+        if section != "guidance" or any(s["section"] == section for s in ordered)
     ]
     result["narrative_status"] = editorial["narrative_status"]
     result["quality"]["report"] = {

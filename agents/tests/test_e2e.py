@@ -1433,7 +1433,13 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
     assert rca["narrative_status"] == "complete"
-    assert len(rca["narrative"]) == 5
+    assert {s["id"] for s in rca["narrative"]} >= {
+        "problem",
+        "cause",
+        "action",
+        "next",
+        "limits",
+    }
     assert rca["device_observations"] and rca["cause_candidates"]
     assert rca["quality"]["analysis"]["status"] == "complete"
     assert rca["quality"]["analysis"]["followups"] == 1

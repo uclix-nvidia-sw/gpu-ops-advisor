@@ -48,7 +48,8 @@
   font-size: 15px;
   line-height: 1.9;
   white-space: pre-wrap;
-  word-break: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .rca-narrative-section p {
   margin: 0 0 14px;
