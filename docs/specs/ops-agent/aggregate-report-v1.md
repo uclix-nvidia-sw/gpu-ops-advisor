@@ -85,3 +85,25 @@ JSON 크기는 압축 네트워크 전송량이나 PostgreSQL 디스크 크기�
 기존 시간가중 계산과 새 표본 평균의 모델별 차이: A100 40GB 약 0.000058%p, A100 80GB 약 0.001487%p. 시간대별 최대 차이는 각각 약 0.001097%p, 0.387701%p였다. 산식이 동일하다고 주장하지 않는다. 로컬 화면은 실제 계산 코드를 사용한 합성 데이터이며 운영 보고서 발행 결과가 아니다.
 
 미검증: CPC-2 새 집계 경로 전체, 실제 7일/직전 7일의 품질·상한, 256GPU/다중 동시 부하, 운영 LLM을 포함한 신규 보고서 최종 공개·삭제·재시도, 최대 규모 Mimir 비용. 배포 후 일일 단건→주간 단건→동시 실행 순서로 확인한다. 자료 누락이나 상한이 잦으면 관측 계약/범위를 먼저 조정하고 원본 전체 조회로 되돌리지 않는다.
+
+
+## Report detail producer follow-up / 보고서 상세 자료 생성 보완 — 2026-10-13
+
+PR #113 added the presentation; this follow-up supplies its optional result fields from Ops alone. No RCA implementation, shared D registry, activity PromQL/formula, database schema or Helm setting changes.
+
+PR #113의 화면에 필요한 결과 필드를 Ops에서 채운다. RCA 구현·공통 D·활동률 쿼리와 계산식·DB 구조·Helm 설정은 변경하지 않는다.
+
+| Producer / 생성 파일 | Result and boundary / 결과와 조건 |
+| --- | --- |
+| `namespace_summary.py` | Model/hour `nodes` come from existing verified GPU Hostname–Pod node matches; model nodes union only valid hours. Previous-only/unverified nodes are not current observations. `previous_valid_hours`/`previous_expected_hours` explain comparison availability without altering means. / 기존 신원 검증을 통과한 노드만 보존하고, 이전 기간만 있거나 확인되지 않은 노드는 현재 노드로 표시하지 않는다. 비교 가능 시간 정보는 설명용이며 평균을 바꾸지 않는다. |
+| `report_store.py` | Empty `symptom` falls back to recorded `target.title`; display is capped at 512 characters and the full normalized title is hashed. Read only GPU UUID, node (including `k8s_node_name` fallback), component, alert name and test marker. / 증상 누락 시 저장된 제목을 사용하며 원본 전체·RCA 본문은 추가 조회하지 않는다. |
+| `incident_summary.py` | `summary.categories` groups distinct incidents by cluster and XID/SXID code, otherwise component/alertname/unknown. Includes current/previous counts, current nodes, firing/test counts and incident IDs. / 알림 종류별 현황이며 동일 원인이나 동일 GPU 반복 장애를 추론하지 않는다. 기존 UUID·동일 증상 반복 집계와 구분한다. |
+| `aggregate_report.py` | Deterministic text describes up to three current categories and their nodes (up to three), previous counts and unidentified-device limitations. / 코드가 상위 알림 종류와 노드·이전 건수를 설명하며 새 LLM 해석은 추가하지 않는다. |
+
+The merged UI shows every cluster/Namespace table row, with one graph per cluster. Namespace toggles affect charts only; all-off keeps an empty grid. Model-specific activity is not averaged across GPU models. Alarm status uses the stored `status_as_of` snapshot, not live recovery state.
+
+화면은 클러스터·Namespace별 한 줄로 전체 표를 보여주고 그래프만 선택해서 비교한다. 모델이 다른 GPU의 활동률을 임의로 합치지 않는다. 알림 상태는 저장된 `status_as_of` 기준으로, 현재 상태나 복구 완료를 뜻하지 않는다.
+
+Deploy the new Ops image and generate a new aggregate report to populate these fields. Existing immutable reports are not rewritten; missing source metadata stays unknown. No new settings or migration are required. Local observation snapshots and preview files are not shipped. Production generation after deployment remains to be checked.
+
+새 Ops 이미지 배포 후 새 집계 보고서를 생성해야 추가 필드가 저장된다. 과거 보고서는 재작성하지 않으며 원천에 없는 정보는 미확인으로 유지한다. 설정 추가·마이그레이션은 없고 로컬 관측 데이터·미리보기 파일은 배포 코드에 포함하지 않는다. 운영 배포 후 신규 보고서 생성 확인은 별도로 필요하다.

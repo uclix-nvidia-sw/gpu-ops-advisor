@@ -68,8 +68,13 @@ class ReportStore(Store):
                 ):
                     rows = await (
                         await conn.execute(
-                            """SELECT i.id::text, i.cluster_id, i.occurred_at, left(i.symptom,512) AS symptom, md5(i.symptom) AS symptom_key,
-                        jsonb_build_object('gpu_uuid',i.target->'gpu_uuid') AS target, i.alarm_status, i.alarm_resolved_at,
+                            """SELECT i.id::text, i.cluster_id, i.occurred_at,
+                        left(coalesce(nullif(btrim(i.symptom),''),nullif(btrim(i.target->>'title'),'')),512) AS symptom,
+                        md5(coalesce(nullif(btrim(i.symptom),''),nullif(btrim(i.target->>'title'),''))) AS symptom_key,
+                        jsonb_strip_nulls(jsonb_build_object(
+                          'gpu_uuid',i.target->'gpu_uuid','node',coalesce(nullif(btrim(i.target->>'node'),''),nullif(btrim(i.target->>'k8s_node_name'),'')),
+                          'component',i.target->'component','alertname',i.target->'alertname','test_alarm',i.target->'test_alarm'
+                        )) AS target, i.alarm_status, i.alarm_resolved_at,
                         r.id::text AS result_id, r.content_hash
                         FROM incidents i LEFT JOIN LATERAL (
                           SELECT c.id,c.content_hash FROM jobs j JOIN result_candidates c ON c.id=j.published_result_id
