@@ -273,3 +273,20 @@ neither a match nor a mismatch proves hardware identity or synthetic origin.
 Korean explanation validation rejects unregistered English prose while retaining
 input identifiers and a small technical vocabulary. This is not proof that a
 model hypothesis is true; deployed model quality still needs live review.
+
+## RCA evidence and guidance clarity — 2026-10-13
+
+SXID PCI addresses require NVSwitch inventory; GPU inventory cannot identify the
+faulty switch. Inventory mismatch is not evidence of physical removal or a cause.
+The synthesis validator rejects the reproduced unsupported identity-to-cause
+phrases, and the prompt makes this distinction explicit. This targeted guard is
+not a general proof of causal correctness.
+
+Bounded synthesis input rotates across evidence references before admitting more
+series from one query. Repair rebuilds the bounded input with output headroom and
+records its selected references separately. Original samples remain unchanged;
+context selection can still omit samples and truncation is still diagnosed.
+
+Published guidance conditions are rendered as readable text where recognized.
+The RCA UI separates next checks, documentary reference guidance and preserved
+full text. No Runbook is published or retired by this change.

@@ -377,6 +377,21 @@ def validate_synthesis(
             raise SynthesisValidationError(
                 "non_korean_claim", rule="non_korean", index=i, tokens=["non_korean"]
             )
+        # Unresolved inventory is a limitation, never a causal mechanism.
+        cited = [
+            o for o in observations if set(o.get("evidence_refs", [])) & supporting
+        ]
+        if any(
+            o.get("pci_inventory_relation")
+            in {"not_in_reported_inventory", "switch_inventory_required"}
+            for o in cited
+        ) and re.search(
+            r"물리적|핫\s*제거|장비\s*재조명|존재하지\s*않|잘못된\s*명령|연결\s*불량",
+            h["claim"],
+        ):
+            raise SynthesisValidationError(
+                "unsupported_identity_cause", rule="identity_is_not_cause", index=i
+            )
         if ASSERTION.search(prose(h["claim"], supporting)):
             raise SynthesisValidationError(
                 "unsupported_assertion", rule="assertion", index=i, tokens=["assertion"]
@@ -431,7 +446,29 @@ async def synthesize(llm, payload, diagnostics=None):
         for attempt in range(2):
             request = dict(view)
             if attempt:
+                # Rebuild from immutable input while reserving repair output room.
+                repair_remaining = getattr(llm, "remaining", 32768)
+                reserve = min(
+                    4096, max(512, (repair_remaining - len(SYNTHESIS.encode())) // 3)
+                )
+                repair_bytes = min(
+                    max_bytes,
+                    max(
+                        0,
+                        repair_remaining
+                        - len(SYNTHESIS.encode())
+                        - encoded_size(feedback)
+                        - 512
+                        - reserve,
+                    ),
+                )
+                repair_view = bounded_context(payload, repair_bytes)
+                if repair_view["observation_refs"]:
+                    view = repair_view
+                request = dict(view)
                 request["validation_feedback"] = feedback
+                diagnostics["repair_context_selection"] = view["context_selection"]
+                diagnostics["repair_input_evidence_refs"] = view["observation_refs"]
                 # Use the same prompt bound and adaptive output cap as LLM.complete.
                 prompt_bound = (
                     len(
@@ -447,7 +484,7 @@ async def synthesize(llm, payload, diagnostics=None):
                 )
                 output_cap = min(configured_cap, remaining - prompt_bound)
                 seconds = getattr(llm, "deadline", float("inf")) - time.monotonic()
-                budget_blocked = output_cap <= 0
+                budget_blocked = output_cap <= 0 or not view["observation_refs"]
                 deadline_blocked = seconds <= 0
                 diagnostics["repair_gate"] = {
                     "remaining_budget": remaining,

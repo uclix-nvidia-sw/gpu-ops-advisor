@@ -1,3 +1,4 @@
+import { RcaGuidance } from './RcaGuidance';
 import { rows, str, type Row } from '../lib/live';
 import './RcaNarrative.css';
 
@@ -50,7 +51,9 @@ export function RcaNarrative({
       <nav className="rca-narrative-nav" aria-label="최종 보고서 목차">
         {sections.map((section, index) => (
           <a key={index} href={`#rca-report-section-${index}`}>
-            {str(section.title) || '분석 설명'}
+            {str(section.id) === 'guidance'
+              ? '다음에 확인할 내용'
+              : str(section.title) || '분석 설명'}
           </a>
         ))}
       </nav>
@@ -67,8 +70,14 @@ export function RcaNarrative({
               className={`rca-narrative-section${list ? ' rca-narrative-checks' : ''}${str(section.id) === 'problem' ? ' rca-narrative-problem' : ''}`}
               aria-labelledby={`rca-report-title-${index}`}
             >
-              <h4 id={`rca-report-title-${index}`}>{str(section.title) || '분석 설명'}</h4>
-              {list && paragraphs.length > 0 ? (
+              <h4 id={`rca-report-title-${index}`}>
+                {str(section.id) === 'guidance'
+                  ? '다음에 확인할 내용'
+                  : str(section.title) || '분석 설명'}
+              </h4>
+              {str(section.id) === 'guidance' ? (
+                <RcaGuidance paragraphs={paragraphs} result={result} />
+              ) : list && paragraphs.length > 0 ? (
                 <>
                   <ul>
                     {paragraphs.slice(0, 2).map((text, i) => (

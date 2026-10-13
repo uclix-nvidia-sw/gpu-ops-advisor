@@ -244,8 +244,12 @@ def enrich_report_inventory(health, evidence):
             for gpu in report["gpu_candidates"]
             if isinstance(gpu.get("bus_id"), str) and pci(gpu["bus_id"])
         ]
-        if addresses and inventory_addresses:
+        if addresses:
             report["reported_pci_addresses"] = sorted(set(addresses))
+        if addresses and report.get("component") == "accelerator-nvidia-error-sxid":
+            # GPU inventory cannot validate a switch PCI address.
+            report["pci_inventory_relation"] = "switch_inventory_required"
+        elif addresses and inventory_addresses:
             report["pci_inventory_relation"] = (
                 "not_in_reported_inventory"
                 if any(

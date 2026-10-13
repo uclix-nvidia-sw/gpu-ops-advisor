@@ -1,3 +1,4 @@
+import { RcaObservations } from './RcaObservations';
 import { RcaNarrative } from './RcaNarrative';
 import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons, missingGroups, purposeLabel } from '../lib/rcaLabels';
@@ -500,6 +501,7 @@ export function RcaResult({
             </p>
             <p>{str(result.summary)}</p>
           </details>
+          <RcaObservations result={result} />
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}

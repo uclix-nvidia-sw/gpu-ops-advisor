@@ -435,6 +435,8 @@ def test_report_pci_comparison_never_promotes_device_identity(address, relation)
     from rcca_agent.fleet_events import enrich_report_inventory
 
     raw = fleet()
+    raw["attributes"]["component"] = "accelerator-nvidia-error-xid"
+    raw["attributes"]["reason"] = "XID 79"
     raw["attributes"]["reason"] += " " + address
     raw["resources"]["gpuInfo.gpus"] = '[{"uuid":"GPU-a","busID":"0000:08:00.0"}]'
     e = evidence(raw)

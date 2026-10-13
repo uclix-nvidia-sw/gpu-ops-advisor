@@ -19,7 +19,8 @@ describe('RCA report reading', () => {
         }}
       />,
     );
-    expect(html).toContain('Runbook 조사 지침·적용 조건');
+    expect(html).toContain('다음에 확인할 내용');
+    expect(html).toContain('이 오류에 대한 참고 안내');
     expect(html).toContain('유지보수 승인 후 검토');
     expect(html).toContain('문헌 적용 조건: R565');
   });
