@@ -1,5 +1,6 @@
 """Count distinct recorded incidents, without re-running RCA or reading its body."""
 
+import re
 from collections import defaultdict
 
 
@@ -48,7 +49,53 @@ def summarize(context):
         }
         for key in sorted(now_groups.keys() | old_groups.keys())
     ]
+
+    # Categories describe recorded alerts, not inferred causes or repeated failures.
+    def categories(records):
+        grouped = defaultdict(list)
+        for row in records.values():
+            target = row.get("target") or {}
+            code = re.search(
+                r"\b(SXID|XID)\s*[:#]?\s*(\d+)\b", row.get("symptom") or "", re.I
+            )
+            label = (
+                f"{code[1].upper()} {code[2]}"
+                if code
+                else {"disk": "디스크·파일시스템"}.get(
+                    target.get("component"), target.get("component")
+                )
+                or target.get("alertname")
+                or "장애 종류 미확인"
+            )
+            grouped[(row["cluster_id"], label)].append(row)
+        return grouped
+
+    now_types, old_types = categories(current), categories(previous)
+    types = []
+    for key in sorted(now_types.keys() | old_types.keys()):
+        events = now_types.get(key, [])
+        types.append(
+            {
+                "cluster_id": key[0],
+                "name": key[1],
+                "count": len(events),
+                "previous_count": len(old_types.get(key, [])),
+                "nodes": sorted(
+                    {
+                        r["target"]["node"]
+                        for r in events
+                        if (r.get("target") or {}).get("node")
+                    }
+                ),
+                "firing_count": sum(r.get("alarm_status") == "firing" for r in events),
+                "test_count": sum(
+                    (r.get("target") or {}).get("test_alarm") is True for r in events
+                ),
+                "incident_ids": [r["id"] for r in events],
+            }
+        )
     return {
+        "categories": types,
         "status": "ready",
         "count": len(current),
         "previous_count": len(previous),

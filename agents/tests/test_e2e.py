@@ -2486,7 +2486,7 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
 def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     import asyncio
     from test_aggregate_report import DATA
-    from ops_agent.report_contract import previous_period
+    from ops_agent.report_contract import VERSION, previous_period
     from ops_agent.report_store import ReportStore
 
     data = {**DATA, "scope": SCOPE}
@@ -2514,3 +2514,55 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert [row["id"] for row in context["previous_incidents"]] == [ids[2]]
     assert context["incidents"][0]["target"] == {"gpu_uuid": "GPU-fixture"}
     assert not context["incident_limit_exceeded"]
+
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "UPDATE incidents SET symptom=NULL,alarm_status='firing',target=%s WHERE id=%s",
+            (
+                Jsonb(
+                    {
+                        "title": "XID 79 " + "x" * 600,
+                        "node": None,
+                        "k8s_node_name": "dgx01",
+                        "component": "accelerator-nvidia-error-xid",
+                        "test_alarm": True,
+                        "private_raw_payload": "must not be read",
+                    }
+                ),
+                ids[0],
+            ),
+        )
+    context = asyncio.run(
+        ReportStore(stack["url"]).read_context({"input": data, "versions": {}})
+    )
+    record = context["incidents"][0]
+
+    assert record["symptom"] == ("XID 79 " + "x" * 600)[:512]
+    assert (
+        record["symptom_key"]
+        == hashlib.md5(("XID 79 " + "x" * 600).encode()).hexdigest()
+    )
+    assert record["target"] == {
+        "node": "dgx01",
+        "component": "accelerator-nvidia-error-xid",
+        "test_alarm": True,
+    }
+    assert context["previous_incidents"][0]["symptom"] == "XID fixture"
+
+    jid = submit(stack, "report", data, execution_profile=VERSION)
+    body, _ = worker_result(stack, "report", jid, "-incident-details")
+    usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
+    incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
+    assert usage["rows"][0]["nodes"] == ["test-node"]
+    assert usage["rows"][0]["activity_percent"] == 60
+    assert usage["rows"][0]["change_percentage_points"] == 0
+    summary = incident["summary"]
+    category = next(c for c in summary["categories"] if c["name"] == "XID 79")
+    assert category["nodes"] == ["dgx01"]
+    assert category["count"] == category["firing_count"] == category["test_count"] == 1
+    assert category["incident_ids"] == [ids[0]]
+    assert summary["status_as_of"]
+    assert summary["unclassified_count"] == 1
+    assert [(g["count"], g["previous_count"]) for g in summary["groups"]] == [(0, 1)]
+    assert "cpc-2의 XID 79 1건(dgx01, 이전 0건)" in incident["findings"][0]["text"]
+    assert "private_raw_payload" not in json.dumps(body)

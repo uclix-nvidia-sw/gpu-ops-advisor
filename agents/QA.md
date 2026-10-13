@@ -1,3 +1,20 @@
+# 2026-10-13 Ops report detail producer / 보고서 상세 자료 생성 후속 검증
+
+Base: origin/main `e639839` (merged UI #113). Isolated worktree `/private/tmp/gpuops-report-details-pr`; no production DB/data changes. Runtime edits are confined to four Ops modules. RCA/shared runtime, Backend/Incident/JC, queries, migrations and Helm are unchanged.
+
+기준 main `e639839`의 화면에 필요한 노드·알림 종류를 Ops에서 생성하는 후속 변경이다. 운영 DB·데이터를 변경하지 않았고 제품 코드 수정은 Ops 4개 파일에 한정한다.
+
+- **PASS** Python 3.11.16: `PYTHONPATH=<worktree>/shared/python/src:<worktree>/rcca-agent/src:<worktree>/ops-agent/src RUN_AGENT_E2E=1 ... python -m pytest -c agents/pytest.ini agents/tests -q`: **1,160 passed, 0 skipped, 108.40s**, three existing MCP deprecation warnings. Fresh loopback-only PostgreSQL, current-main-built Backend/Incident/JC, real RCA/Ops Worker/NAT/official MCP; Grafana and LLM upstreams are fixtures. Explicitly unset `AGENT_E2E_DATABASE_URL` and use the local server binaries at `namespace-tools/postgres/bin`.
+- **PASS** New/extended checks: verified nodes only; previous-only nodes excluded; prior comparison availability; per-cluster XID/SXID/component/unknown categories; duplicate incident IDs; current vs previous-only counts; firing/test markers. Actual DB title fallback/truncation/full-source hash, JSON-null node fallback, metadata allowlist, scope and period boundaries. Real Ops Worker publication retains nodes/categories/status timestamp and excludes private raw payload.
+- **PASS** Additional main-versus-change comparison across 20 synthetic cases (activity 0/4/5/60/100 × complete/missing identity/query failure/incomplete hour): every existing Namespace result field matches after excluding only the added metadata. This is calculation equivalence on fixtures, not a production performance benchmark.
+- **PASS** Full Ruff lint and format check (126 files), `git diff --check`, UTF-8 CRLF and documentation links (115 documents, 1,433 links/assets, zero errors).
+- **PASS** Frontend consumer regression: **264 tests / 25 files**, format and TypeScript/Vite build, Node 24. Existing bundle-size warning remains. UI code is unchanged from #113; rendering assertions cover added fields and absent-field compatibility. No new browser/live Grafana session was used for this follow-up.
+- Setup correction: the first run pointed at client-only Homebrew libpq and could not initialize PostgreSQL; corrected to the existing local server tools. A new assertion initially excluded previous-only recurrence groups; corrected to preserve the existing `(current=0, previous=1)` behavior. Final full rerun above passed without product workarounds.
+
+**미검증 / UNVERIFIED:** Production image deployment and new live CPC-1/CPC-2 report publication, production LLM quality/latency, weekly/max-size/concurrent load. CI Python 3.12 result is separate from the local Python 3.11 run. No performance reduction is claimed. Existing published reports are not rewritten; generate a new aggregate report after upgrade, and retain unknown when source metadata is missing. No settings or migration are required. LLM operational interpretation and policy integration remain separate work.
+
+로컬 실제 프로세스 검증은 통과했지만 운영 배포·운영 자료 기반 새 보고서 발행까지 확인한 것은 아니다. 과거 보고서 자동 보완 없이 배포 후 새 보고서로 노드·알림 제목·종류별 현황·상태 기준 시각을 확인한다. 기존 계산은 유지하며 원천에 없는 정보는 미확인이다.
+
 ## Structured RCA guidance — 2026-10-13 (local verification)
 
 - Python agent regression: 1,100 passed, 41 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).

@@ -116,6 +116,7 @@ def summarize(evidence, period):
                 "sample_count": 0,
                 "reasons": set(),
                 "gpu_ids": set(),
+                "nodes": set(),
             },
         )
         reason = None
@@ -173,6 +174,7 @@ def summarize(evidence, period):
         bucket["activity_sum"] += values["activity_sum"]
         bucket["sample_count"] += values["sample_count"]
         bucket["gpu_ids"].add(labels["UUID"])
+        bucket["nodes"].add(labels["Hostname"])
         group["gpu_ids"].add(labels["UUID"])
     if len({(k[0], k[1]) for k in groups}) > MAX_NAMESPACES:
         raise ValueError("report_namespace_limit_exceeded")
@@ -189,6 +191,7 @@ def summarize(evidence, period):
                     "sample_count": 0,
                     "reasons": {"unobserved_hour"},
                     "gpu_ids": set(),
+                    "nodes": set(),
                 },
             )
             reasons = sorted(bucket["reasons"] | errors[key[0]])
@@ -197,6 +200,7 @@ def summarize(evidence, period):
                 {
                     **bucket,
                     "gpu_ids": sorted(bucket["gpu_ids"]),
+                    "nodes": sorted(bucket["nodes"]),
                     "reasons": reasons,
                     "activity_percent": bucket["activity_sum"] / count
                     if count and not reasons
@@ -219,6 +223,7 @@ def summarize(evidence, period):
                 **group,
                 "gpu_ids": sorted(group["gpu_ids"]),
                 "hours": hours,
+                "nodes": sorted({node for h in valid for node in h["nodes"]}),
                 "activity_sum": activity_sum,
                 "sample_count": count,
                 "activity_percent": activity_sum / count if count else None,
@@ -262,6 +267,10 @@ def compare(current, previous):
                 - before["activity_percent"]
                 if compatible
                 else None,
+                "previous_valid_hours": before["valid_hours"] if before else 0,
+                "previous_expected_hours": before["expected_hours"]
+                if before
+                else row["expected_hours"],
                 "comparison_status": "comparable"
                 if compatible
                 else "previous_not_observed"
@@ -274,6 +283,7 @@ def compare(current, previous):
             {
                 **row,
                 "hours": [],
+                "nodes": [],
                 "activity_sum": 0,
                 "sample_count": 0,
                 "activity_percent": None,
@@ -283,6 +293,8 @@ def compare(current, previous):
                 "low_activity_windows": [],
                 "quality_status": "blocked",
                 "previous_activity_percent": row["activity_percent"],
+                "previous_valid_hours": row["valid_hours"],
+                "previous_expected_hours": row["expected_hours"],
                 "change_percentage_points": None,
                 "comparison_status": "current_not_observed",
             }
