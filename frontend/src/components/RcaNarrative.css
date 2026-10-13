@@ -93,3 +93,18 @@
     padding-inline: 16px;
   }
 }
+
+.rca-reference-guide > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rca-reference-guide dt {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.rca-reference-guide dd {
+  margin: 0;
+  line-height: 1.8;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
