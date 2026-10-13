@@ -144,13 +144,16 @@ func (s *Server) validateWork(q *Request, kind string) error {
 	if e = reportTimeRange(b["time_range"], q.Limits); e != nil {
 		return e
 	}
-	if e = enums(b, "topic_ids", []string{"O01", "O02", "O03", "O04", "O05", "O06", "O07", "O08", "O09", "O10", "O11"}, true); e != nil {
+	if e = enums(b, "topic_ids", []string{"O01", "O02", "O03", "O04", "O05", "O06", "O07", "O08", "O09", "O10", "O11", "namespace_usage", "incident_summary"}, true); e != nil {
 		return e
 	}
 	if e = enums(b, "group_by", []string{"cluster", "model", "node", "namespace", "pod", "workload"}, true); e != nil {
 		return e
 	}
 	if e = ValidateTopicGroups(b); e != nil {
+		return e
+	}
+	if e = ValidateAggregateReport(b); e != nil {
 		return e
 	}
 	if b["comparison_range"] != nil {

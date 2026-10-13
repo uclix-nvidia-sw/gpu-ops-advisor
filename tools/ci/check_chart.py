@@ -129,7 +129,10 @@ def main():
         execution_revision,
         namespace_revision,
         "report-namespace-v1",
+        "report-aggregate-v1",
     }
+    assert profiles["report-aggregate-v1"]["criteria"] == "report-aggregate-v1"
+    assert profiles["report-aggregate-v1"]["kind"] == "report"
     assert profiles["report-namespace-v1"]["criteria"] == "1.2"
     assert profiles[namespace_revision]["kind"] == "report"
     assert profiles[namespace_revision]["criteria"] == "1.3"

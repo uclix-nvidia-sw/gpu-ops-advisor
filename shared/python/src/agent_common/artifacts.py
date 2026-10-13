@@ -23,9 +23,10 @@ def render(result):
     ]
     buf = io.StringIO(newline="")
     writer = csv.writer(buf)
-    timed = result.get("versions", {}).get("criteria") == "1.3" and bool(
-        result.get("topics")
-    )
+    timed = result.get("versions", {}).get("criteria") in {
+        "1.3",
+        "report-aggregate-v1",
+    } and bool(result.get("topics"))
     per_topic = bool(result.get("quality", {}).get("topic_group_by"))
     writer.writerow(
         ["id", "value", "unit", "method", "reason"]

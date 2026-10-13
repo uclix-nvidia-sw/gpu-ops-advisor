@@ -1,3 +1,7 @@
+# 2026-10-13 Aggregate report UI / 집계 보고서 화면
+
+Base: latest origin/main `74c93f9`. PASS: 245 tests / 24 files, format check and TypeScript/Vite build with Node22.23. Local browser: namespace selection updates graph/summary; missing prior observations remain comparison-pending; hourly details expand; empty source/incident cap never becomes zero or healthy; weekly schedule shows weekday/time. Desktop and narrow form checked; no console errors observed. One static design scan passed. Preview API and figures are synthetic. Existing bundle-size warning remains; CI Node24 and live production publication are unverified. [Full verification](../agents/QA.md) · [Contract and measured limits](../docs/specs/ops-agent/aggregate-report-v1.md).
+
 # 2026-10-13 운영 확인 사항 중심 보고서 — 로컬 검수
 
 - **통과:** `frontend/`에서 최종 전체 `npm test` **236 tests / 22 files**, `npm run format:check`, `npm run build`. 기존 900kB 번들 경고는 유지하며 TypeScript/Vite 빌드는 완료했습니다.

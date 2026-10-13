@@ -1,3 +1,7 @@
+# 2026-10-13 Aggregate report profile / 집계 보고서 프로필
+
+Base: latest origin/main `74c93f9`. PASS: all four Go modules vet/race/build, isolated Backend/Incident DB E2E and real local Worker publication through JC. New report topics are paired with report-aggregate-v1; legacy report/RCA contracts remain valid. Queue/slot/lease behavior was not changed. Source/Helm/independent-worker profile mirrors and 22 CI tests pass. Production rolling-upgrade behavior and concurrent load are unverified. [Full verification](../agents/QA.md) · [Contract](../docs/specs/ops-agent/aggregate-report-v1.md).
+
 # Job Controller 검증 기록
 
 ## 2026-10-12 종료 보고서 삭제 — 로컬 격리 검증

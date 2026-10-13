@@ -1,3 +1,9 @@
+# Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
+
+`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace/model table, selectable hourly graph, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
+
+[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). Local preview uses explicitly labelled synthetic data; it does not submit operational jobs.
+
 ## 운영자가 확인할 일을 중심으로 한 보고서 — 2026-10-13
 
 새 보고서의 기본 선택은 **GPU 사용 패턴(O08)·장비/Node 점검 대상(O01)·장애/조사/처리 현황(O05)**과 **공통 자료 신뢰도(O11)**입니다. 전용 할당 활용도·장애 당시 작업·배치 대기·에너지·조치 비교는 추가 분석으로 남깁니다. 주제 ID와 기존 종류 링크를 유지하며 저장된 자동 일정·보고서를 새 구성으로 바꾸지 않습니다.

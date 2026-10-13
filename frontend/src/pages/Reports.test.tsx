@@ -155,30 +155,24 @@ describe('Ops report landing', () => {
 });
 
 it.each(['/reports/new', '/reports/new?schedule=true'])(
-  'defaults %s to three main areas plus collection confidence',
+  'defaults %s to namespace activity and recorded incidents',
   (path) => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={[path]}>
         <ReportForm />
       </MemoryRouter>,
     );
-    expect(html).toContain('GPU 사용 패턴');
-    expect(html.match(/type="radio"/g)).toHaveLength(2);
-    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(4);
-    expect(html).toContain('name="report-kind" checked="" value="namespace"');
-    expect(html).toContain('aria-label="주요 분석"');
-    expect(html).toContain('aria-label="필요할 때 추가"');
-    expect(html).not.toContain('세부 분석 설정');
+    expect(html).toContain('Namespace 활동과 변화');
+    expect(html).toContain('사건과 반복 현황');
+    expect(html).toContain('이전 기간 비교');
+    expect(html).not.toContain('월간 (매월)');
     expect(html).not.toContain('type="checkbox" checked="" value="O');
-    expect(html).toContain('클러스터·Namespace별 연결 관측');
     if (path.includes('schedule')) {
       expect(html).toContain('직전 완료된 하루');
-      expect(html).not.toContain('yearly');
-      expect(html).toContain('월간 (매월)');
+      expect(html).toContain('실행 시각 · 한국 시간');
     } else {
-      expect(html.match(/type="date"/g)).toHaveLength(2);
-      expect(html).not.toContain('datetime-local');
-      expect(html).toContain('1일 · 시작일 00:00');
+      expect(html.match(/type="date"/g)).toHaveLength(1);
+      expect(html).toContain('마지막 분석 날짜');
     }
   },
 );
@@ -229,9 +223,9 @@ it('previews the complete requested period and explains worker preflight before 
       <ReportForm />
     </MemoryRouter>,
   );
-  expect(html).toContain('요청 전 기간 확인');
+  expect(html).toContain('분석 범위와 기간');
   expect(html).toContain('24시간');
-  expect(html).toContain('수집 시작 전 서버');
+  expect(html).toContain('직전 하루 또는 직전 7일');
 });
 
 const expectedKinds = [
