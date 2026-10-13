@@ -1,9 +1,20 @@
-import xid from '../../../rcca-agent/runbooks/xid/RB-XID-79.json';
-import sxid from '../../../rcca-agent/runbooks/sxid/RB-SXID-11001.json';
+import { readFileSync } from 'node:fs';
+
 import { it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaGuidance } from './RcaGuidance';
 import { RcaObservations } from './RcaObservations';
+
+// Read canonical Runbooks only when tests execute; production builds contain frontend only.
+const xid = JSON.parse(
+  readFileSync(new URL('../../../rcca-agent/runbooks/xid/RB-XID-79.json', import.meta.url), 'utf8'),
+);
+const sxid = JSON.parse(
+  readFileSync(
+    new URL('../../../rcca-agent/runbooks/sxid/RB-SXID-11001.json', import.meta.url),
+    'utf8',
+  ),
+);
 
 it('keeps literature separate from device facts and explains restart prerequisites', () => {
   const paragraphs = [
