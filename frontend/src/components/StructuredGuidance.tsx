@@ -26,7 +26,7 @@ export function StructuredGuidance({ entries }: { entries: Row[] }) {
               ))}
             </ol>
             <section aria-label="이 오류에 대한 참고 안내">
-              <h5>이 오류에 대한 참고 안내</h5>
+              <h5 className="rca-reference-heading">이 오류에 대한 참고 안내</h5>
               <p>{str(guidance.meaning)}</p>
               <p>발행된 지침의 일반 안내이며 이번 장비의 고장 판정이나 조치 승인이 아닙니다.</p>
               <dl className="rca-reference-guide">

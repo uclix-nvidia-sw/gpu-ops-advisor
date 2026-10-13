@@ -448,6 +448,7 @@ async def synthesize(llm, payload, diagnostics=None):
     # RemoteUncertain and cancellation propagate to Worker fencing.
     fallback = None
     feedback = []
+    repair_sentences = []
     diagnostics.update(
         repair_attempts=0, repair_status="not_needed", validation_failures=[]
     )
@@ -467,6 +468,7 @@ async def synthesize(llm, payload, diagnostics=None):
                         repair_remaining
                         - len(SYNTHESIS.encode())
                         - encoded_size(feedback)
+                        - encoded_size(repair_sentences)
                         - 512
                         - reserve,
                     ),
@@ -476,6 +478,7 @@ async def synthesize(llm, payload, diagnostics=None):
                     view = repair_view
                 request = dict(view)
                 request["validation_feedback"] = feedback
+                request["rejected_sentences"] = repair_sentences
                 diagnostics["repair_context_selection"] = view["context_selection"]
                 diagnostics["repair_input_evidence_refs"] = view["observation_refs"]
                 # Use the same prompt bound and adaptive output cap as LLM.complete.
@@ -579,6 +582,34 @@ async def synthesize(llm, payload, diagnostics=None):
                     violation.get("rule"),
                     "Correct the indicated field against the supplied schema and observation_refs.",
                 )
+            # Send bounded model text back only to the editor; do not persist it in diagnostics.
+            repair_sentences = []
+            for violation in feedback[:8]:
+                if violation.get("rule") != "non_korean":
+                    continue
+                field = (
+                    "limitations" if "limitation_index" in violation else "hypotheses"
+                )
+                index = violation.get(
+                    "limitation_index", violation.get("hypothesis_index")
+                )
+                values = response.get(field, []) if isinstance(response, dict) else []
+                if (
+                    isinstance(index, int)
+                    and isinstance(values, list)
+                    and 0 <= index < len(values)
+                ):
+                    text = values[index]
+                    if isinstance(text, dict):
+                        text = text.get("claim")
+                    if isinstance(text, str) and not re.search(
+                        r"secret|credential|password|token|authorization|api[_ -]?key",
+                        text,
+                        re.I,
+                    ):
+                        repair_sentences.append(
+                            {"field": field, "index": index, "text": text[:800]}
+                        )
             diagnostics["validation_failures"].append(
                 {"attempt": attempt + 1, "violations": feedback}
             )

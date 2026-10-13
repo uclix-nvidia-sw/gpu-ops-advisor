@@ -312,3 +312,17 @@ context selection can still omit samples and truncation is still diagnosed.
 Published guidance conditions are rendered as readable text where recognized.
 The RCA UI separates next checks, documentary reference guidance and preserved
 full text. No Runbook is published or retired by this change.
+
+## Bounded RCA evaluation batches — 2026-10-13
+
+The default collector runs required observations followed by at most one auxiliary
+batch of up to three approved queries. Policy queries take priority; otherwise the
+planner selects independent queries addressing the gaps. No automatic third round
+is performed. Unselected or dependency-bound candidates remain visible alongside
+the stop reason; query budgets and completeness checks remain enforced.
+
+Each round adds evidence_evaluation with available facts, gaps, policy findings,
+next queries and the final stop reason. Original unexpected_evidence/sufficiency
+records remain available for auditing. Repair requests include bounded rejected
+sentences as untrusted model output; diagnostics retain codes only. Live SXID
+repair and the 265-Runbook publication gate remain pending deployment verification.

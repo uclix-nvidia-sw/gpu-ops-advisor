@@ -284,6 +284,37 @@ export function EvidenceRows({
   );
 }
 
+export function EvidenceEvaluation({ record }: { record: Row }) {
+  const next = strings(record.next_queries);
+  return (
+    <article className="data-item">
+      <h4>근거 평가 · {Number(record.round ?? 0) + 1}회차</h4>
+      <p>
+        판단: <RcaReason value={record.decision} />
+      </p>
+      <ul>
+        {strings(record.evidence_gap).map((gap) => (
+          <li key={gap}>{gapMeaning(gap, {}) || reasons[gap] || gap}</li>
+        ))}
+      </ul>
+      <p>
+        {next.length
+          ? `다음 조회: ${next.map(queryName).join(' · ')}`
+          : '이번 회차 이후 추가 조회를 배정하지 않았습니다.'}
+      </p>
+      {record.stop_reason != null && (
+        <p>
+          수집 종료 이유: <RcaReason value={record.stop_reason} />
+        </p>
+      )}
+      <details>
+        <summary>확인한 사실·확장 정책·남은 예산</summary>
+        <DataView value={record} />
+      </details>
+    </article>
+  );
+}
+
 export function RcaEvidence({
   result,
   job,
@@ -357,9 +388,14 @@ export function RcaEvidence({
           있는지 확인하세요.
         </p>
       )}
+      {trace
+        .filter((v) => v.query_id === 'evidence_evaluation')
+        .map((v) => (
+          <EvidenceEvaluation key={str(v.id)} record={obj(v.snapshot)} />
+        ))}
       {!!trace.length && (
         <details>
-          <summary>조사 단계 기록 · {trace.length}건</summary>
+          <summary>개발용 조사 단계 원본 · {trace.length}건</summary>
           <div className="stack">
             {trace.map((v) => (
               <article className="data-item" key={str(v.id)}>

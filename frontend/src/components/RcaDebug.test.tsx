@@ -1,3 +1,4 @@
+import { EvidenceEvaluation } from './RcaDebug';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -613,4 +614,22 @@ it('does not describe rejected analysis as a usable subset', () => {
   );
   expect(html).toContain('LLM 분석 응답 미채택');
   expect(html).not.toContain('응답 일부만 사용했습니다');
+});
+
+it('explains a bounded evaluation without treating gaps as query failures', () => {
+  const html = renderToStaticMarkup(
+    <EvidenceEvaluation
+      record={{
+        round: 1,
+        decision: 'insufficient_blocked',
+        evidence_gap: ['causal_confirmation_evidence'],
+        next_queries: [],
+        stop_reason: 'no_remaining_queries',
+      }}
+    />,
+  );
+  expect(html).toContain('근거 평가 · 2회차');
+  expect(html).toContain('원인');
+  expect(html).toContain('수집 종료 이유');
+  expect(html).toContain('확인한 사실·확장 정책·남은 예산');
 });

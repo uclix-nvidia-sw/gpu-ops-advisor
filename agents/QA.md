@@ -1,3 +1,11 @@
+## RCA bounded evaluation and Korean repair — 2026-10-13 (local only)
+
+- Python regression: 1,105 passed, 41 skipped (E2E flags disabled); Windows-incompatible report cleanup tests excluded. No Ops implementation changes.
+- Six focused RCA E2E cases passed using a fresh loopback PostgreSQL, rebuilt current Job Controller, real workers and official MCP with fixture upstreams: webhook intake, fallback and numeric repair/publication.
+- Frontend: 265 tests, build and format passed. Actual-component local preview verified main headings at 18px, title at 22px and reference subheadings at 15px.
+- First E2E setup failed with a stale local JC binary (invalid report criteria profile). Rebuilding current JC resolved setup; production was not accessed.
+- Live SXID repair remains unverified. Do not expand/publish the remaining 265 guidance revisions until XID and SXID both pass production review. This change does not repair producer time or device identity.
+
 # 2026-10-13 Ops report detail producer / 보고서 상세 자료 생성 후속 검증
 
 Base: origin/main `e639839` (merged UI #113). Isolated worktree `/private/tmp/gpuops-report-details-pr`; no production DB/data changes. Runtime edits are confined to four Ops modules. RCA/shared runtime, Backend/Incident/JC, queries, migrations and Helm are unchanged.

@@ -344,6 +344,10 @@ async def test_repair_feedback_targets_hypothesis_without_saving_rejected_text()
             if self.calls == 1:
                 return response(claim="GPU has fallen off the bus detected on hardware")
             feedback = request["validation_feedback"]
+            assert (
+                request["rejected_sentences"][0]["text"]
+                == "GPU has fallen off the bus detected on hardware"
+            )
             assert feedback[0]["hypothesis_index"] == 0
             assert feedback[0]["rule"] == "non_korean"
             assert "Korean prose" in feedback[0]["repair_instruction"]
