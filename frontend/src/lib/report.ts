@@ -138,7 +138,10 @@ const reasons: Record<string, string> = {
 };
 export const reportReason = (value: string) => reasons[value] || value;
 export const metricName = (id: string) => names[id.split('.')[1]] || id;
-export const topicName = (id: string) => topics[Number(id.slice(1)) - 1] || id;
+export const topicName = (id: string) =>
+  ({ namespace_usage: 'Namespace 활동과 변화', incident_summary: '사건과 반복 현황' })[id] ||
+  topics[Number(id.slice(1)) - 1] ||
+  id;
 export function metricValue(metric: Row) {
   if (metric.value == null) return '산출 불가';
   if (typeof metric.value !== 'number') return String(metric.value);

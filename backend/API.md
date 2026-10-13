@@ -1,3 +1,9 @@
+# Aggregate report addition / 신규 집계 보고서 (2026-10-13)
+
+`POST /reports` accepts `topic_ids=["namespace_usage","incident_summary"]` (either or both), `group_by=["cluster","namespace"]`, `timezone="Asia/Seoul"`, and a KST-midnight 24h/168h `time_range`. Old O topics cannot be mixed. Previous equal-length period is derived by the worker; caller-supplied comparison_range/resource_selectors/action_record_ids are rejected. Backend fixes execution_profile_revision to `report-aggregate-v1`. The response and result publication endpoints are unchanged. New-topic schedules allow only daily/weekly in Asia/Seoul; existing schedules are not converted.
+
+신규 경로의 한도·계산 의미·추가 결과 필드(`quality.report_format`, topics rows/hours/summary, narrative)는 [집계 보고서 계약](../docs/specs/ops-agent/aggregate-report-v1.md)에 정의합니다. 신규 DB schema나 RCA 실행 API 변경은 없습니다.
+
 ## 종료된 보고서 영구 삭제 — 2026-10-12
 
 `POST /jobs/{id}/delete`는 `{ "reason": "삭제 사유" }`, `Idempotency-Key`, `If-Match`를 받아 JC의 동일 명령으로 위임한다. succeeded/failed/cancelled/expired report만 대상이다. 실제 실행 자리·lease·외부 근거 참조와 버전 충돌은 JC가 잠금 안에서 검증한다. RCA는 409이며 Backend가 직접 결과·근거를 삭제하지 않는다. 지식·검토의 정식 근거 참조는 작성 트랜잭션에서 근거 행 잠금을 커밋까지 유지해 삭제와의 경합을 막는다. 같은 키·본문 재전송은 기존 receipt를 반환한다.

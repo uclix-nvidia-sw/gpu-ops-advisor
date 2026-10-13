@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AggregateReport } from './AggregateReport';
 import { BasicReport, operationalFindings, ReportChecks } from './BasicReport';
 import { topicDisplayBases } from '../lib/reportKinds';
 import { ReportExecution, ReportPeriod, ReportScope } from './ReportMeta';
@@ -42,6 +43,8 @@ export function ReportContent({
   const result = obj(value),
     topics = rows(result.topics),
     observations = reportObservations(result);
+  if (obj(result.quality).report_format === 'report-aggregate-v1')
+    return <AggregateReport value={result} onEvidence={onEvidence} />;
   if (!Object.keys(result).length)
     return (
       <section className="result-section" id="final-report" aria-label="운영 보고서 작성 현황">

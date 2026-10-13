@@ -152,6 +152,13 @@ func (s *Server) schedules(w http.ResponseWriter, q *Request, parts []string) er
 		}
 		clone.Body["timezone"] = spec.Timezone
 		clone.Body["time_range"] = Object{"start": now.Add(-24 * time.Hour).Format(time.RFC3339), "end": now.Format(time.RFC3339)}
+		if IsAggregateReport(clone.Body) {
+			if spec.Timezone != "Asia/Seoul" || (spec.Frequency != "daily" && spec.Frequency != "weekly") {
+				return Invalid("aggregate_schedule_daily_or_weekly_kst")
+			}
+			start, end := spec.Window(now)
+			clone.Body["time_range"] = Object{"start": start.Format(time.RFC3339), "end": end.Format(time.RFC3339)}
+		}
 		if e = s.validateWork(&clone, "reports"); e != nil {
 			return e
 		}

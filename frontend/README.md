@@ -1,3 +1,9 @@
+# Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
+
+`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace/model table, selectable hourly graph, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
+
+[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). Local preview uses explicitly labelled synthetic data; it does not submit operational jobs.
+
 ## RCA 실행별 제한과 수정 응답 — 2026-10-13
 
 missing_data 요약은 저장된 missing_inputs의 구체적 의미를 표시한다. 알 수 없는 코드는 보존한다. 수정 검증 실패 후 검증된 일부만 채택한 분석은 전체 성공과 구분하며, 분석 자체가 실패했다면 미채택으로 표시한다. PCI 불일치에는 시험 주입 로그인지도 확인하라고 안내하되, 시험 데이터라고 단정하지 않는다.

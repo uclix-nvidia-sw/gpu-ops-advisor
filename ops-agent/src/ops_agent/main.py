@@ -3,7 +3,7 @@ import asyncio
 import contextlib
 import logging
 import sys
-from agent_common.settings import Settings
+from .report_store import ReportSettings as Settings, ReportStore
 from agent_common.worker import serve_nat
 from .cleanup import cleanup
 
@@ -11,10 +11,12 @@ from .cleanup import cleanup
 async def serve(settings, once=False):
     if once:
         await cleanup(settings, once=True)
-        return await serve_nat(settings, once=True)
+        return await serve_nat(
+            settings, once=True, store=ReportStore(settings.database_url)
+        )
     task = asyncio.create_task(cleanup(settings))
     try:
-        await serve_nat(settings)
+        await serve_nat(settings, store=ReportStore(settings.database_url))
     finally:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):

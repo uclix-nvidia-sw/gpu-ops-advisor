@@ -73,7 +73,7 @@ class Upstream(BaseHTTPRequestHandler):
 
     def do_POST(self):
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        if self.path.endswith("/api/v1/query"):
+        if self.path.endswith(("/api/v1/query", "/api/v1/query_range")):
             self.path += "?" + raw.decode()
             return self.do_GET()
         body = json.loads(raw or "{}")
@@ -161,6 +161,30 @@ class Upstream(BaseHTTPRequestHandler):
                     "access": "proxy",
                     "jsonData": {},
                 }
+            )
+        if u.path.endswith("/api/v1/query_range") and "/loki/" not in u.path:
+            from test_aggregate_report import fixture
+            from ops_agent.report_contract import iso
+
+            start = float(query["start"][0])
+            end = float(query["end"][0])
+            period = {"start": iso(start - 3600), "end": iso(end)}
+            expr = query["query"][0]
+            assert float(query["step"][0]) == 3600
+            assert "offset 1ms" in expr
+            name = (
+                "hourly_gpu_activity"
+                if "label_replace" in expr
+                else "hourly_pod_identity"
+                if "kube_pod_info" in expr
+                else "hourly_gpu_identity_count"
+            )
+            evidence = fixture(period, cluster="cpc-2", namespace="dev")
+            rows = next(
+                e["snapshot"]["series"] for e in evidence if e["query_id"] == name
+            )
+            return self.send(
+                {"status": "success", "data": {"resultType": "matrix", "result": rows}}
             )
         if u.path.endswith("/api/v1/query"):
             expr = query.get("query", [""])[0]
@@ -2359,3 +2383,127 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
     assert len(violation["numeric_diagnostic"]["text_sha256"]) == 64
     assert "999" not in json.dumps(violation)
     assert ("rca_synthesis", "ok") in captured["evidence"]
+
+
+@pytest.mark.e2e
+def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
+    from test_aggregate_report import DATA
+    from ops_agent.report_contract import VERSION
+
+    data = {**DATA, "scope": SCOPE}
+    monkeypatch.setitem(
+        stack["env"], "AGENT_CONFIG_FILE", str(LOCAL / "missing-d-registry.json")
+    )
+    before = len(Upstream.requests)
+    jid = submit(stack, "report", data, execution_profile=VERSION)
+    body, evidence = worker_result(stack, "report", jid, "-aggregate")
+    assert body["result_status"] == "ready", body
+    assert body["quality"]["report_format"] == VERSION
+    usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
+    incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
+    assert usage["rows"][0]["activity_percent"] == 60
+    assert usage["rows"][0]["change_percentage_points"] == 0
+    assert incident["summary"]["count"] == 0
+    assert len(evidence) == 7
+    assert not any(query.startswith("D") for query, _ in evidence)
+    queries = [
+        args
+        for path, args in Upstream.requests[before:]
+        if path.endswith("/api/v1/query_range")
+    ]
+    assert len(queries) == 6
+    assert not any("/loki/" in path for path, _ in Upstream.requests[before:])
+
+
+@pytest.mark.e2e
+def test_aggregate_report_backend_intake_schedule_and_read(stack):
+    from test_aggregate_report import DATA
+    from ops_agent.report_contract import VERSION
+
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    )
+    assert binary.is_file(), "Build Backend for aggregate report API E2E"
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    process = stack["spawn"](
+        [str(binary)],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "false",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+            "DSX_JOB_CONTROLLER_URL": stack["jc"].removesuffix("/internal/v1"),
+        },
+        "aggregate-backend",
+    )
+    wait_http(backend + "/health/ready", process)
+    with httpx.Client(base_url=backend, timeout=30) as client:
+        data = {**DATA, "scope": SCOPE}
+        response = client.post(
+            "/reports", json=data, headers={"Idempotency-Key": uuid4().hex}
+        )
+        assert response.status_code == 202, response.text
+        jid = response.json()["job_id"]
+        body, _ = worker_result(stack, "report", jid, "-backend-aggregate")
+        assert body["versions"]["criteria"] == VERSION
+        result = client.get("/reports/" + jid)
+        assert result.status_code == 200 and VERSION in result.text
+        spec = {k: v for k, v in data.items() if k not in ("time_range", "timezone")}
+        for frequency, period, extras in (
+            ("daily", "previous_complete_day", {}),
+            ("weekly", "previous_complete_week", {"weekday": 1}),
+            ("monthly", "previous_complete_month", {"day": 1}),
+        ):
+            response = client.post(
+                "/schedules",
+                json={
+                    "enabled": True,
+                    "frequency": frequency,
+                    "period": period,
+                    "timezone": "Asia/Seoul",
+                    "local_time": "09:00",
+                    "report_spec": spec,
+                    **extras,
+                },
+                headers={"Idempotency-Key": uuid4().hex},
+            )
+            assert response.status_code == (422 if frequency == "monthly" else 201), (
+                response.text
+            )
+
+
+@pytest.mark.e2e
+def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
+    import asyncio
+    from test_aggregate_report import DATA
+    from ops_agent.report_contract import previous_period
+    from ops_agent.report_store import ReportStore
+
+    data = {**DATA, "scope": SCOPE}
+    previous = previous_period(data)
+    cases = [
+        (SCOPE, data["time_range"]["start"]),
+        (SCOPE, data["time_range"]["end"]),
+        (SCOPE, previous["start"]),
+        (
+            {"clusters": [{"cluster_id": "cpc-2", "namespaces": ["private"]}]},
+            data["time_range"]["start"],
+        ),
+    ]
+    ids = [str(uuid4()) for _ in cases]
+    with psycopg.connect(stack["url"]) as conn:
+        for iid, (scope, at) in zip(ids, cases):
+            conn.execute(
+                "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version,symptom,target) VALUES(%s,'cpc-2',%s,%s,'open',1,'XID fixture',%s)",
+                (iid, Jsonb(scope), at, Jsonb({"gpu_uuid": "GPU-fixture"})),
+            )
+    context = asyncio.run(
+        ReportStore(stack["url"]).read_context({"input": data, "versions": {}})
+    )
+    assert [row["id"] for row in context["incidents"]] == [ids[0]]
+    assert [row["id"] for row in context["previous_incidents"]] == [ids[2]]
+    assert context["incidents"][0]["target"] == {"gpu_uuid": "GPU-fixture"}
+    assert not context["incident_limit_exceeded"]

@@ -1,3 +1,7 @@
+# Report aggregate profile / 신규 보고서 실행 프로필 (2026-10-13)
+
+`report-aggregate-v1` is an additional report-only execution profile and criteria revision. Submit validation binds namespace_usage/incident_summary requests to this profile and rejects mixed legacy topics; queues, slots, attempts and RCA policy stay unchanged. Source JSON, chart embedded JSON and independent-worker preset contain the same profile. Existing O requests retain their profiles. [Contract and upgrade notes](../docs/specs/ops-agent/aggregate-report-v1.md).
+
 # Go Job Controller v1.3
 
 보고서 종합·다중 선택 입력의 선택적 `topic_group_by`는 [02 계약](../docs/specs/backend/02_백엔드_API_작업명세서.md#소주제별-기준을-가진-보고서--2026-10-06)을 따른다. 기존 입력은 보존하며 새 map은 선택 주제 전체와 허용 프리셋을 검증한다. RCA 분석·JC 실행/슬롯 정책·DB 구조는 변경하지 않는다.

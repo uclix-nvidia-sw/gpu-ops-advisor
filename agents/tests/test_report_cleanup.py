@@ -207,12 +207,13 @@ async def test_once_mode_runs_one_cleanup_before_worker(monkeypatch):
     async def cleanup(settings, once=False):
         calls.append(("cleanup", once))
 
-    async def worker(settings, once=False):
+    async def worker(settings, once=False, *, store=None):
+        assert isinstance(store, main.ReportStore)
         calls.append(("worker", once))
 
     monkeypatch.setattr(main, "cleanup", cleanup)
     monkeypatch.setattr(main, "serve_nat", worker)
-    await main.serve(SimpleNamespace(), once=True)
+    await main.serve(SimpleNamespace(database_url="fixture-only"), once=True)
     assert calls == [("cleanup", True), ("worker", True)]
 
 
@@ -227,14 +228,15 @@ async def test_worker_exit_cancels_cleanup_task(monkeypatch):
         finally:
             stopped.set()
 
-    async def worker(settings):
+    async def worker(settings, *, store=None):
+        assert isinstance(store, main.ReportStore)
         await started.wait()
         raise RuntimeError("fixture worker exit")
 
     monkeypatch.setattr(main, "cleanup", cleanup)
     monkeypatch.setattr(main, "serve_nat", worker)
     with pytest.raises(RuntimeError, match="fixture worker exit"):
-        await main.serve(SimpleNamespace())
+        await main.serve(SimpleNamespace(database_url="fixture-only"))
     assert stopped.is_set()
 
 

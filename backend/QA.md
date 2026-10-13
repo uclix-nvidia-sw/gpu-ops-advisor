@@ -1,3 +1,7 @@
+# 2026-10-13 Aggregate report intake / 집계 보고서 접수
+
+Base: latest origin/main `74c93f9`. PASS: all four Go modules vet/race/build, Backend and Incident DB E2E on a fresh temporary loopback PostgreSQL, then stopped. Actual Backend→JC→Ops process tests cover new report submission/publication/read, daily/weekly schedule acceptance and monthly rejection. Additional Ops snapshot test proves start-inclusive/end-exclusive periods and Namespace isolation. Existing RCA/legacy report regression passed. No production DB or schema changes. [Full verification](../agents/QA.md) · [Contract](../docs/specs/ops-agent/aggregate-report-v1.md).
+
 # 2026-10-12 종료된 보고서 삭제와 참조 경합
 
 - **통과:** 새 임시 PostgreSQL 16.9에서 실제 Backend·JC를 연결해 `backend/`의 `go test -tags=e2e ./... -v -count=1 -timeout=10m`. 기존 전체 E2E와 상세 projection, `TestReportDeletion`을 함께 통과했다. 작업 종료 네 상태의 자체 결과·근거 정리, report 목록 제외·job 이력 유지, 발행 hash·입력·시도·receipt·감사 보존, RCA 보존, 활성/격리/미종료 시도 거부, 외부 정식 참조 거부와 rollback을 확인했다.

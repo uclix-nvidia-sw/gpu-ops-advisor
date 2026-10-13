@@ -23,3 +23,7 @@ func Decode[T any](v any) (T, error) { return c.Decode[T](v) }
 
 var ValidateTopicGroups = c.ValidateTopicGroups
 var ReportTopicGroups = c.ReportTopicGroups
+var IsAggregateReport = c.IsAggregateReport
+var ValidateAggregateReport = c.ValidateAggregateReport
+
+const AggregateReportVersion = c.AggregateReportVersion

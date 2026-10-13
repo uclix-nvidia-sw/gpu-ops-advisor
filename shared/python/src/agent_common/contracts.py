@@ -122,7 +122,14 @@ def validate_input(kind, data, version="1.3"):
         return
     else:
         ZoneInfo(data["timezone"])
-        ids, allowed = data["topic_ids"], {f"O{i:02}" for i in range(1, 12)}
+        ids, allowed = (
+            data["topic_ids"],
+            {f"O{i:02}" for i in range(1, 12)}
+            | {"namespace_usage", "incident_summary"},
+        )
+        new_topics = {"namespace_usage", "incident_summary"}
+        if set(ids) & new_topics and not set(ids) <= new_topics:
+            raise ValueError("mixed report versions")
         if not set(data["group_by"]) <= {
             "cluster",
             "namespace",
@@ -141,7 +148,7 @@ def validate_input(kind, data, version="1.3"):
             for topic, axes in groups.items():
                 valid = (
                     (["namespace"], ["cluster", "namespace"], ["namespace", "cluster"])
-                    if topic == "O08"
+                    if topic in {"O08", "namespace_usage"}
                     else (["cluster"],)
                 )
                 if axes not in valid:
