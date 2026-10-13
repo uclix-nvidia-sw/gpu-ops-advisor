@@ -1,3 +1,15 @@
+## General investigation expansion — 2026-10-13
+
+RCA preserves cause uncertainty and unknown state values in the assessment, but
+does not add a general Runbook solely for those expected limitations once the
+selected Runbook's required facts and queries are satisfied. Missing required
+facts/queries, identity or mapping gaps, query failure and conflicting evidence
+still permit the published fallback policy. Approved optional queries remain
+available; suppressing general expansion never promotes a report to verified
+device health or a confirmed cause. The `unexpected_evidence` snapshot records
+`general_extension_reason` and `general_extension_suppressed` for inspection.
+This is worker behavior, not a mutation or publication of stored Runbooks.
+
 # Datasource routing and RCA evidence / 조회 경로와 RCA 근거 — 2026-10-07
 
 검증된 공통 binding은 `environment.datasource_mode="discover"`로 Grafana UID를
@@ -106,7 +118,7 @@ DB migration·결과 스키마 버전 변경은 없고 기존 snapshot/hash와 �
 
 `src/rcca_agent/workflow.py`에 snapshot 검사·호환 Runbook·조건 검사·등록 조사·근거/원인 후보/권고가 있고, `procedures.py`에 GPU 접근 이상·GPU와 Pod·작업 진행 이상·다중 장치 사건 네 절차를 등록했습니다. 저장/발행은 LLM 도구가 아니며 Worker가 처리합니다. NAT 설정과 프롬프트를 보고서 Agent와 분리했습니다.
 
-2026-09-28 구현은 하나의 NAT workflow 안에서 **Orchestrator → 병렬 Observation Sub-agent → 코드 충분성 판정 → 최대 1회 재조사 → 도구 없는 Synthesis → 결과 검증·저장 → JC 공개**로 동작합니다. `observation_agents.py`는 query별 독립 상태·예약 예산으로 수집하고 형제 실패를 격리하며 취소 시 task를 회수합니다. `synthesis.py`는 실제 수집 근거를 해석하되 모델 원인은 항상 candidate로 유지합니다. 충분한 기존 증거와 적용 Runbook이 있으면 MCP 수집·원인 Synthesis는 생략하지만 최종 보고서 편집은 수행합니다.
+2026-10-12 구현은 하나의 NAT workflow 안에서 **Orchestrator → 병렬 Observation Sub-agent → 코드 충분성 판정 → 최대 2회 재조사 → 도구 없는 Synthesis → 결과 검증·저장 → JC 공개**로 동작합니다. `observation_agents.py`는 query별 독립 상태·예약 예산으로 수집하고 형제 실패를 격리하며 취소 시 task를 회수합니다. `synthesis.py`는 실제 수집 근거를 해석하되 모델 원인은 항상 candidate로 유지합니다. 충분한 기존 증거와 적용 Runbook이 있으면 MCP 수집·원인 Synthesis는 생략하지만 최종 보고서 편집은 수행합니다.
 
 Runbook 조회·검색·조건 검사는 코드로 수행합니다. 전용 Runbook이 없으면 `rca.general_runbook_key`의 승인·고정 일반 Runbook을 사용합니다. 일반 Runbook까지 없으면 `approved_runbook` 부족을 저장하고 조사하지 않습니다. 기본 key `RB-GENERAL-GPU-NODE`는 콘텐츠를 자동 생성·발행하지 않으며, [Runbook 초안](runbooks/README.md)도 운영 발행본이 아닙니다. `limits.max_concurrency` 기본값은 3이며 전체 query/discovery 예산을 공유합니다.
 
@@ -220,3 +232,21 @@ incident reference time (not asserted as device occurrence time), verbatim alert
 identifiers are separate paragraphs. Recommendations separate suggested action and
 conditions; producer proposals remain unverified proposals. This changes presentation
 only, preserving evidence, eligibility, causal status and historical report content.
+
+
+## RCA collection and diagnostic boundaries — 2026-10-12
+
+RCA permits initial collection plus at most two follow-up rounds, within existing
+query/discovery budgets and the attempt deadline. Only approved, uncollected queries
+are eligible. This permits a D09 → D44 → D02 investigation when selected; it does
+not require all optional queries to run. `collection_stop_reason` distinguishes
+round limit, budget, deadline, no remaining query, fast path and model non-selection.
+The result retains `remaining_queries`; older records cannot recover this reason.
+
+RCA decodes JSON-string Fleet inventory as unverified node inventory candidates.
+It never treats inventory agreement as the error device, promotes zero producer
+time to event time, or changes the shared Ops parser. Fleet report diagnostic counts
+explain recorded-time versus current-health limitations. Model repair feedback
+addresses the rejected hypothesis or limitation without relaxing evidence checks.
+
+RCA operator wording separates reported error codes, unconfirmed cause and unmet current-health requirements. `unknown_value` explains unverified Fleet observations only when those observations exist; it does not assert that every producer contract, timestamp or device identity is absent. The reference-only editor cannot drop these statements, and assessment/status gates are unchanged.

@@ -40,7 +40,7 @@ async def test_operator_problem_order_preserves_alert_time_and_identity():
     )
     problem = result["narrative"][0]
     paragraphs = problem["text"].split("\n\n")
-    assert paragraphs[0] == "보고된 오류 코드: xid:79."
+    assert paragraphs[0] == "xid:79 보고는 확인했습니다."
     assert paragraphs[1] == "대상\n노드: fixture-node"
     assert "사건 기준 시각: 2026-10-12T05:00:00Z" in paragraphs[2]
     assert "실제 오류 발생 시각과 같다고 단정할 수 없습니다" in paragraphs[2]
@@ -257,3 +257,57 @@ async def test_missing_data_explains_unverified_semantics_without_promoting_acti
     assert "조치 적합성·수행·복구가 확인된 것은 아닙니다" in text
     assert result["result_status"] == "partial"
     assert result["recommendations"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state_missing", [False, True])
+@pytest.mark.parametrize("unverified", [False, True])
+async def test_report_explains_only_observed_gaps(state_missing, unverified):
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        limitations=[],
+        missing_inputs=["causal_confirmation_evidence", "unknown_value"]
+        + (["normalized_health"] if state_missing else []),
+        quality={
+            "analysis": {
+                "reported_errors": [{"error_code": "xid:79", "evidence_refs": ["log"]}]
+            }
+        },
+        device_observations=[
+            dict(
+                time_basis="loki_recorded_at",
+                fact_eligible=False,
+                evidence_refs=["log"],
+            )
+        ]
+        if unverified
+        else [],
+    )
+    before = copy.deepcopy(result)
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result, {"incident_time": "2026-10-12T00:00:00Z"}, {}, [], Model()
+    )
+    sections = {s["id"]: s for s in result["narrative"]}
+    assert "xid:79 보고는 확인했습니다." in sections["problem"]["text"]
+    text = sections["next"]["text"]
+    assert "실제 원인은 확정하지 못했습니다" in text
+    assert ("현재 장치 상태는 검증하지 못했습니다" in text) == state_missing
+    assert ("수집된 로그 중 상태 의미가 미검증인 관측" in text) == unverified
+    assert ("log" in sections["next"]["evidence_refs"]) == unverified
+    assert "로그의 생산자 계약·관측 시각·장비 신원과" not in text
+    assert "causal_confirmation_evidence" not in text
+    assert "unknown_value" not in text
+    for key in (
+        "missing_inputs",
+        "device_observations",
+        "result_status",
+        "cause_candidates",
+    ):
+        assert result[key] == before[key]

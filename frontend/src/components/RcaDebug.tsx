@@ -406,6 +406,52 @@ export function RcaResult({
               <dd>
                 <RcaReason value={analysis.sufficiency} />
               </dd>
+              <dt>수집 종료 사유</dt>
+              <dd>
+                {(
+                  {
+                    fast_path: '결정적 판단 경로',
+                    sufficient: '필수 조건 충족',
+                    no_remaining_queries: '허용된 추가 조회 없음',
+                    query_budget_exhausted: '조회 예산 소진',
+                    deadline_exhausted: '작업 기한 도달',
+                    round_limit_reached: '수집 회차 상한 도달',
+                    followup_not_selected: '추가 조회를 선택하지 못함',
+                  } as Record<string, string>
+                )[str(analysis.collection_stop_reason)] ||
+                  '기록 없음 · 이전 결과의 종료 이유는 추정하지 않습니다.'}
+              </dd>
+              {Array.isArray(analysis.remaining_queries) && (
+                <>
+                  <dt>실행하지 않은 조회 후보</dt>
+                  <dd>{strings(analysis.remaining_queries).join(', ') || '없음'}</dd>
+                </>
+              )}
+              {obj(analysis.fleet_report_diagnostics).reports != null && (
+                <>
+                  <dt>Fleet 상태 보고 해석</dt>
+                  <dd>
+                    <p>
+                      읽은 Fleet 상태 보고: {String(obj(analysis.fleet_report_diagnostics).reports)}
+                      건. 생산자 시각 누락·초기값:{' '}
+                      {String(
+                        obj(analysis.fleet_report_diagnostics).missing_or_zero_producer_time ??
+                          '미기록',
+                      )}
+                      건. 현재 상태로 검증되지 않은 보고:{' '}
+                      {String(
+                        obj(analysis.fleet_report_diagnostics).unverified_state_reports ?? '미기록',
+                      )}
+                      건.
+                    </p>
+                  </dd>
+                  <dd>
+                    로그 수집 성공은 상태 검증 성공이 아닙니다. 발생 시각이 비어 있거나 초기값이면
+                    Loki 기록 시각을 실제 장애 발생 시각으로 대신 사용하지 않습니다. 장비 목록은
+                    노드 재고이며 오류 장치 확정 정보가 아닙니다.
+                  </dd>
+                </>
+              )}
               <dt>분석 경로</dt>
               <dd>
                 {analysis.fast_path === true
@@ -635,12 +681,14 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
               {rows(attempt.violations).map((violation, j) => (
                 <p key={j}>
                   {violation.rule === 'non_korean'
-                    ? '분석 한계 문장이 한국어 설명 기준을 충족하지 못했습니다.'
+                    ? `${typeof violation.hypothesis_index === 'number' ? '원인 후보' : '분석 한계'} 문장이 한국어 설명 기준을 충족하지 못했습니다.`
                     : violation.rule === 'numeric'
-                      ? '등록된 근거로 검증되지 않은 숫자 표현이 분석 한계 문장에 포함됐습니다.'
+                      ? `등록된 근거로 검증되지 않은 숫자 표현이 ${typeof violation.hypothesis_index === 'number' ? '원인 후보' : '분석 한계'} 문장에 포함됐습니다.`
                       : str(violation.code, '응답 검증 실패')}
                   {typeof violation.limitation_index === 'number' &&
                     ` (한계 문장 ${violation.limitation_index + 1})`}
+                  {typeof violation.hypothesis_index === 'number' &&
+                    ` (원인 후보 ${violation.hypothesis_index + 1})`}
                 </p>
               ))}
             </div>

@@ -329,3 +329,28 @@ async def test_cpu_query_id_reference_is_repaired_to_observation_id():
     assert status == "complete"
     assert hypotheses[0]["supporting_refs"] == ["cpu-log"]
     assert diagnostics["repair_attempts"] == 1
+
+
+@pytest.mark.asyncio
+async def test_repair_feedback_targets_hypothesis_without_saving_rejected_text():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return response(claim="GPU has fallen off the bus detected on hardware")
+            feedback = request["validation_feedback"]
+            assert feedback[0]["hypothesis_index"] == 0
+            assert feedback[0]["rule"] == "non_korean"
+            assert "Korean prose" in feedback[0]["repair_instruction"]
+            return response()
+
+    diagnostics = {}
+    status, candidates, _ = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and candidates
+    assert diagnostics["repair_status"] == "repaired"
+    assert "fallen off" not in json.dumps(diagnostics)

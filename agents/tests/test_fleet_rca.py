@@ -381,3 +381,44 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_even
     assert "mapping_target_unverified" in result["missing_inputs"]
     assert not result["pod_relations"] and result["result_status"] != "ready"
     assert all(c["causal_status"] == "candidate" for c in result["cause_candidates"])
+
+
+@pytest.mark.parametrize(
+    "inventory",
+    [
+        '[{"uuid":"GPU-a","busID":"0000:08:00.0"}]',
+        [{"uuid": "GPU-a", "busID": "0000:08:00.0"}],
+    ],
+)
+def test_rca_inventory_string_preserves_unverified_health_and_original(inventory):
+    from rcca_agent.fleet_events import enrich_report_inventory
+
+    raw = fleet()
+    raw["resources"]["gpuInfo.gpus"] = inventory
+    e = evidence(raw)
+    before = copy.deepcopy(e)
+    p = profile()
+    health = parse_health([e], p["health_contracts"], p["queries"])
+    enriched = enrich_report_inventory(health, [e])
+    assert enriched[0]["gpu_candidates"][0]["gpu_uuid"] == "GPU-a"
+    assert enriched[0]["gpu_candidates"][0]["verified"] is False
+    assert enriched[0]["fact_eligible"] is False
+    assert (
+        health_facts(
+            enriched, {"machine_id": "machine-1", "node": "node-1", "cluster_id": "c"}
+        )
+        == {}
+    )
+    assert e == before
+
+
+@pytest.mark.parametrize("inventory", ["invalid", '{"uuid":"GPU-a"}', None, 42])
+def test_rca_inventory_rejects_non_array(inventory):
+    from rcca_agent.fleet_events import enrich_report_inventory
+
+    raw = fleet()
+    raw["resources"]["gpuInfo.gpus"] = inventory
+    p = profile()
+    e = evidence(raw)
+    health = parse_health([e], p["health_contracts"], p["queries"])
+    assert enrich_report_inventory(health, [e])[0]["gpu_candidates"] == []

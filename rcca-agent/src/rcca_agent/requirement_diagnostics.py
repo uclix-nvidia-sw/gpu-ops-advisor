@@ -106,3 +106,22 @@ def requirement_groups(content):
         }
     )
     return groups
+
+
+def general_extension_reason(content, available, gaps, events):
+    """Gate general expansion; expected uncertainty still limits the result."""
+    if "conflicting_evidence" in events:
+        return "conflicting_evidence"
+    if "query_failed" in events:
+        return "query_failed"
+    if set(content.get("required_evidence", [])) - set(available):
+        return "required_fact_missing"
+    if any(gap.startswith("required_query:") for gap in gaps):
+        return "required_query_incomplete"
+    if any(
+        gap in {"target_identity_conflict", "approved_runbook"}
+        or gap.startswith("mapping_")
+        for gap in gaps
+    ):
+        return "identity_or_plan_unresolved"
+    return None

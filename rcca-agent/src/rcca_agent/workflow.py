@@ -16,12 +16,13 @@ from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
 from .synthesis import synthesis_input, synthesize
-from .fleet_events import parse_events
+from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
 from .requirement_diagnostics import (
     unmet_requirements,
     reported_facts,
     requirement_groups,
+    general_extension_reason,
 )
 from .report_labels import query_label
 from .observation_agents import collect_round
@@ -212,6 +213,7 @@ def normalized_state(obs, collected, data, profile, initial_facts):
     health = parse_health(
         obs.evidence, profile.get("health_contracts", {}), profile["queries"]
     )
+    health = enrich_report_inventory(health, obs.evidence)
     complete = {e["id"]: e for e in obs.evidence if usable_observation(e)}
     valid = [h for h in health if set(h["evidence_refs"]) <= complete.keys()]
     # Scope-local health is usable only for the same target. A missing freshness
@@ -493,7 +495,9 @@ async def run(tools):
     concurrency = profile["limits"].get("max_concurrency", 3)
     analysis_status, model_candidates, analysis_limits = "skipped_runbook", [], []
     followups, gaps, gate = 0, [], "sufficient"
-    for round_no in range(2):
+    stop_reason = None
+    max_rounds = 3  # Initial collection plus two bounded follow-ups.
+    for round_no in range(max_rounds):
         if not fast_path and queries:
             collected.update(
                 await collect_round(
@@ -574,8 +578,13 @@ async def run(tools):
             unexpected_queries.extend(policy["additional_queries"])
             if policy["fallback"] == "stop":
                 stopped_queries.update(plan_queries([book]))
-            if policy["fallback"] == "general_runbook" and not book.get(
-                "general_investigation"
+            extension_reason = general_extension_reason(
+                book["content"], available, gaps, triggered
+            )
+            if (
+                extension_reason
+                and policy["fallback"] == "general_runbook"
+                and not book.get("general_investigation")
             ):
                 eligible, waiting = matching_runbooks(
                     [b for b in runbooks if b.get("general_investigation")],
@@ -595,6 +604,10 @@ async def run(tools):
                     "runbook_revision_id": book["id"],
                     "events": triggered,
                     "policy": policy,
+                    "general_extension_reason": extension_reason,
+                    "general_extension_suppressed": (
+                        policy["fallback"] == "general_runbook" and not extension_reason
+                    ),
                 },
                 "ok",
                 {"deterministic": True},
@@ -653,6 +666,21 @@ async def run(tools):
             if remaining
             else "insufficient_blocked"
         )
+        stop_reason = (
+            "fast_path"
+            if fast_path
+            else "sufficient"
+            if gate == "sufficient"
+            else "no_remaining_queries"
+            if not remaining
+            else "query_budget_exhausted"
+            if budget["queries"] <= 0
+            else "deadline_exhausted"
+            if time.monotonic() >= ctx["deadline"]
+            else "round_limit_reached"
+            if round_no + 1 >= max_rounds
+            else None
+        )
         obs._evidence(
             "sufficiency",
             None,
@@ -660,6 +688,8 @@ async def run(tools):
             {
                 "round": round_no,
                 "decision": gate,
+                "stop_reason": stop_reason,
+                "max_rounds": max_rounds,
                 "evidence_gap": gaps,
                 "remaining_queries": remaining,
                 "remaining_budget": dict(budget),
@@ -668,14 +698,7 @@ async def run(tools):
             "ok",
             {"deterministic": True},
         )
-        if (
-            fast_path
-            or round_no == 1
-            or gate not in ("insufficient_actionable", "conflicted", "degraded")
-            or not remaining
-            or budget["queries"] <= 0
-            or time.monotonic() >= ctx["deadline"]
-        ):
+        if stop_reason:
             break
         queries = [
             q for q in dict.fromkeys(unexpected_queries) if q not in collected
@@ -685,6 +708,7 @@ async def run(tools):
             else await choose_followup(ctx["llm"], remaining, gaps)
         )
         if not queries:
+            stop_reason = "followup_not_selected"
             break
         followups += 1
     synthesis_diagnostics = {}
@@ -920,8 +944,25 @@ async def run(tools):
         "followups": followups,
         "plan_evidence_id": plan_id,
         "sufficiency": gate,
+        "collection_stop_reason": stop_reason,
+        "remaining_queries": remaining,
+        "collection_max_rounds": max_rounds,
         "remaining_budget": budget,
         "synthesis": synthesis_diagnostics,
+        "fleet_report_diagnostics": {
+            "reports": sum(h.get("time_basis") == "loki_recorded_at" for h in health),
+            "missing_or_zero_producer_time": sum(
+                h.get("producer_time_status") == "missing_or_zero" for h in health
+            ),
+            "unverified_state_reports": sum(
+                h.get("time_basis") == "loki_recorded_at" and not h.get("fact_eligible")
+                for h in health
+            ),
+            "unknown_normalized_health": sum(
+                h.get("normalized_health") == "unknown" for h in health
+            ),
+            "scope": "Collected reports; inventory candidates are not the error device and report time is not event time.",
+        },
         "error_events": error_events,
         "reported_errors": [
             {

@@ -493,6 +493,15 @@ async def synthesize(llm, payload, diagnostics=None):
             except SynthesisValidationError as exc:
                 diagnostics["error_code"] = str(exc)
                 feedback += [exc.diagnostic]
+            # Concrete, bounded instructions refer to fields, never promote evidence.
+            for violation in feedback:
+                violation["repair_instruction"] = {
+                    "numeric": "Remove unregistered quantities from this sentence; do not replace them with number words. Keep only cited error codes and supplied identifiers.",
+                    "non_korean": "Rewrite this sentence in Korean prose. Translate English explanations and omit long English error titles; retain only the cited XID/SXID code if needed.",
+                }.get(
+                    violation.get("rule"),
+                    "Correct the indicated field against the supplied schema and observation_refs.",
+                )
             diagnostics["validation_failures"].append(
                 {"attempt": attempt + 1, "violations": feedback}
             )
