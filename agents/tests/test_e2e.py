@@ -2420,9 +2420,14 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
     from test_aggregate_report import DATA
     from ops_agent.report_contract import VERSION
 
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    )
+    assert binary.is_file(), "Build Backend for aggregate report API E2E"
     backend = f"http://127.0.0.1:{port()}/api/v1"
     process = stack["spawn"](
-        [os.environ["BACKEND_BINARY"]],
+        [str(binary)],
         {
             **os.environ,
             "DATABASE_URL": stack["url"],

@@ -1,3 +1,9 @@
+## PR CI portability follow-up / PR CI 환경 차이 수정
+
+Initial Python 3.12 CI: 1,149 passed and one new Backend intake E2E failed because it required BACKEND_BINARY. The test now uses the same platform-aware `.local/backend-e2e` fallback as existing E2E cases. With BACKEND_BINARY unset, both new aggregate publication/intake E2E cases passed locally (2 passed, 28 deselected; fresh loopback DB and fixture upstreams). Product code and RCA are unchanged. Remote rerun status is tracked on PR #110.
+
+최초 CI의 신규 테스트 1개에서 Backend 경로 환경변수 누락을 확인했다. 기존 테스트와 동일한 기본 경로를 사용하도록 수정했으며, 환경변수를 제거한 조건으로 신규 집계 보고서 공개·접수 E2E 2개를 재검증했다. 제품 코드·RCA 변경은 없다.
+
 # 2026-10-13 Ops aggregate report — local verification / 로컬 검증
 
 Base: origin/main `f7cf8c9`; branch `feat/ops-report-aggregation`. Local verification for PR; not deployed. [Design, query semantics, measured data size and limitations](../docs/specs/ops-agent/aggregate-report-v1.md).
