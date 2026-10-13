@@ -176,7 +176,18 @@ def build_result(claim, context, evidence):
                 text = "사건 조회 상한을 넘어 건수와 증감 판단을 보류했습니다."
             else:
                 repeated = sum(g["count"] > 1 for g in summary["groups"])
-                text = f"기간 내 저장된 사건은 {summary['count']}건이며 직전 기간보다 {summary['change']:+d}건 변했습니다. 같은 GPU UUID·동일 증상으로 묶인 반복 그룹은 {repeated}개입니다. 알림 상태는 보고서 작성 시점 기준이며 RCA 완료·복구 완료와 다릅니다."
+                text = f"기간 내 저장된 사건은 {summary['count']}건이며 직전 기간보다 {summary['change']:+d}건 변했습니다."
+                for category in sorted(
+                    summary["categories"], key=lambda g: -g["count"]
+                )[:3]:
+                    if not category["count"]:
+                        continue
+                    nodes = ", ".join(category["nodes"][:3]) or "노드 미확인"
+                    text += f" {category['cluster_id']}의 {category['name']} {category['count']}건({nodes}, 이전 {category['previous_count']}건)."
+                text += f" 같은 GPU UUID·동일 증상으로 확인된 반복 그룹은 {repeated}개입니다."
+                if summary["unclassified_count"]:
+                    text += f" 장비·증상 식별 부족 {summary['unclassified_count']}건은 반복 여부를 판단하지 않았습니다."
+                text += " 알림 상태는 보고서 작성 시점 기준이며, 알림 해제는 실제 복구 완료를 뜻하지 않습니다."
             t["findings"].append(
                 {
                     "id": "incident-period-summary",

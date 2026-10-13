@@ -273,3 +273,108 @@ def test_incident_count_and_repeat_are_not_webhook_counts():
     assert result["groups"][0]["count"] == 2
     context["incident_limit_exceeded"] = True
     assert incidents(context)["count"] is None
+
+
+def test_previous_observation_hours_explain_comparison_without_changing_mean():
+    current, _ = summarize(fixture(value=30), DATA["time_range"])
+    previous = deepcopy(current)
+    previous[0].update(valid_hours=12, quality_status="partial", activity_percent=20)
+    row = compare(current, previous)[0]
+    assert row["activity_percent"] == 30
+    assert row["previous_activity_percent"] == 20
+    assert row["previous_valid_hours"] == 12
+    assert row["previous_expected_hours"] == 24
+    assert row["change_percentage_points"] is None
+    assert compare([], previous)[0]["previous_valid_hours"] == 12
+    assert compare(current, [])[0]["previous_valid_hours"] == 0
+
+
+def test_incident_categories_keep_cluster_code_and_unknown_device_distinct():
+    from ops_agent.incident_summary import summarize as incidents
+
+    xid = {
+        "id": "x",
+        "cluster_id": "cpc-1",
+        "symptom": "XID 79 GPU fallen off bus",
+        "target": {"node": "dgx01", "test_alarm": True},
+        "alarm_status": "firing",
+    }
+    sxid = {
+        **xid,
+        "id": "s",
+        "symptom": "SXID 11001 ingress invalid command",
+        "target": {"node": "dgx02"},
+        "alarm_status": "resolved",
+    }
+    other = {**xid, "id": "other", "cluster_id": "cpc-2"}
+    unknown = {**xid, "id": "unknown", "symptom": None, "target": {}}
+    result = incidents(
+        {
+            "incidents": [xid, xid, sxid, other, unknown],
+            "previous_incidents": [{**xid, "id": "old"}],
+            "data_cutoff_at": DATA["time_range"]["end"],
+        }
+    )
+    categories = {(c["cluster_id"], c["name"]): c for c in result["categories"]}
+    assert len(categories) == 4
+    assert categories[("cpc-1", "XID 79")] == {
+        "cluster_id": "cpc-1",
+        "name": "XID 79",
+        "count": 1,
+        "previous_count": 1,
+        "nodes": ["dgx01"],
+        "firing_count": 1,
+        "test_count": 1,
+        "incident_ids": ["x"],
+    }
+    assert categories[("cpc-1", "SXID 11001")]["firing_count"] == 0
+    assert result["count"] == result["unclassified_count"] == 4
+    assert result["groups"] == []
+
+
+def test_namespace_nodes_require_valid_hours_and_do_not_leak_previous_nodes():
+    evidence = fixture()
+    current, _ = summarize(evidence, DATA["time_range"])
+    assert current[0]["nodes"] == ["test-node"]
+    assert current[0]["hours"][0]["nodes"] == ["test-node"]
+    assert compare([], current)[0]["nodes"] == []
+    evidence[1]["tool_status"] = "unavailable"
+    blocked, _ = summarize(evidence, DATA["time_range"])
+    assert blocked[0]["nodes"] == []
+    assert blocked[0]["activity_percent"] is None
+
+
+def test_incident_category_fallbacks_and_previous_only_counts():
+    from ops_agent.incident_summary import summarize as incidents
+
+    records = [
+        {"id": str(i), "cluster_id": "cpc-1", "target": target}
+        for i, target in enumerate(
+            (
+                {"component": "disk", "node": "node-1"},
+                {"alertname": "GPUAlert"},
+                {},
+            )
+        )
+    ]
+    previous = {
+        "id": "old",
+        "cluster_id": "cpc-2",
+        "symptom": "xid: 79",
+        "target": {"node": "old-node"},
+    }
+    result = incidents(
+        {
+            "incidents": records,
+            "previous_incidents": [previous],
+            "data_cutoff_at": DATA["time_range"]["end"],
+        }
+    )
+    categories = {c["name"]: c for c in result["categories"]}
+    assert categories["디스크·파일시스템"]["nodes"] == ["node-1"]
+    assert categories["GPUAlert"]["count"] == 1
+    assert categories["장애 종류 미확인"]["count"] == 1
+    assert categories["XID 79"]["count"] == 0
+    assert categories["XID 79"]["previous_count"] == 1
+    assert categories["XID 79"]["nodes"] == []
+    assert result["count"] == 3 and result["groups"] == []
