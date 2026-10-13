@@ -401,6 +401,23 @@ def validate_synthesis(
             raise SynthesisValidationError(
                 "unsupported_identity_cause", rule="identity_is_not_cause", index=i
             )
+        # Error events with unresolved identity cannot distinguish mechanisms.
+        # Use event metadata too: bounded input may omit the inventory report.
+        unresolved = any(
+            o.get("device_mapping") in {"unresolved", "conflicting"}
+            or o.get("pci_inventory_relation")
+            in {"not_in_reported_inventory", "switch_inventory_required"}
+            for o in cited
+        )
+        if unresolved and re.search(
+            r"펌웨어|드라이버|구성\s*오류|전원\s*문제|연결\s*불량|물리적|접촉\s*불량|링크\s*고장",
+            h["claim"],
+        ):
+            raise SynthesisValidationError(
+                "unsupported_device_mechanism",
+                rule="unresolved_device_mechanism",
+                index=i,
+            )
         if ASSERTION.search(prose(h["claim"], supporting)):
             raise SynthesisValidationError(
                 "unsupported_assertion", rule="assertion", index=i, tokens=["assertion"]
@@ -577,6 +594,7 @@ async def synthesize(llm, payload, diagnostics=None):
                 violation["repair_instruction"] = {
                     "numeric": "Remove unregistered quantities from this sentence; do not replace them with number words. Keep only cited error codes and supplied identifiers.",
                     "non_korean": "Rewrite this sentence in Korean prose. Do not copy snake_case field names, English error titles or English explanations. Describe producer_event_time as 생산자 오류 발생 시각, loki_recorded_at as 로그 기록 시각 and fact_eligible as 상태 판단에 사용할 조건. Preserve uncertainty and evidence references; omit the sentence if it cannot be expressed accurately.",
+                    "unresolved_device_mechanism": "Remove this hypothesis. The reported device is unresolved; its event does not distinguish firmware, configuration, power or physical connection causes. Keep diagnostic checks in Korean limitations. An empty hypotheses list is valid.",
                     "identity_is_not_cause": "Remove this hypothesis. Device identity or PCI inventory uncertainty is a limitation, not a failure mechanism. Describe the unresolved device mapping in Korean limitations instead. Do not replace it with physical separation, firmware failure or another unsupported cause. An empty hypotheses list is valid.",
                 }.get(
                     violation.get("rule"),
@@ -585,7 +603,7 @@ async def synthesize(llm, payload, diagnostics=None):
             # Send bounded model text back only to the editor; do not persist it in diagnostics.
             repair_sentences = []
             for violation in feedback[:8]:
-                if violation.get("rule") != "non_korean":
+                if violation.get("rule") not in {"non_korean", "numeric"}:
                     continue
                 field = (
                     "limitations" if "limitation_index" in violation else "hypotheses"
@@ -607,6 +625,17 @@ async def synthesize(llm, payload, diagnostics=None):
                         text,
                         re.I,
                     ):
+                        if violation.get("rule") == "numeric":
+                            numeric = violation.get("numeric_diagnostic", {})
+                            if numeric.get("truncated"):
+                                continue
+                            # Retain sentence context, never replay an invented quantity.
+                            for match in reversed(numeric.get("matches", [])):
+                                text = (
+                                    text[: match["start"]]
+                                    + "[미검증 수량 삭제]"
+                                    + text[match["end"] :]
+                                )
                         repair_sentences.append(
                             {"field": field, "index": index, "text": text[:800]}
                         )

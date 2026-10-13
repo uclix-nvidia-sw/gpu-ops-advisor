@@ -87,9 +87,9 @@ class Upstream(BaseHTTPRequestHandler):
                 return self.send({"error": "fixture unavailable"}, 503)
             if body.get("tools"):
                 allowed = body["tools"][0]["function"]["parameters"]["properties"][
-                    "query_id"
-                ]["enum"]
-                query = "D02" if "D02" in allowed else "stop"
+                    "query_ids"
+                ]["items"]["enum"]
+                queries = ["D02"] if "D02" in allowed else []
                 message = {
                     "role": "assistant",
                     "tool_calls": [
@@ -98,7 +98,7 @@ class Upstream(BaseHTTPRequestHandler):
                             "type": "function",
                             "function": {
                                 "name": "investigate",
-                                "arguments": json.dumps({"query_id": query}),
+                                "arguments": json.dumps({"query_ids": queries}),
                             },
                         }
                     ],

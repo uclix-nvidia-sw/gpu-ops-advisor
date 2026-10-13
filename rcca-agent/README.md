@@ -1,3 +1,20 @@
+## Auxiliary batch and synthesis repair follow-up — 2026-10-13
+
+The final collection round requests one tool call containing up to three approved
+query IDs, rather than depending on multiple tool calls from the model. Empty
+selection stops; unknown IDs, mixed stop/selection and oversized batches are rejected.
+Legacy single-query replies remain supported. The limit is a maximum, not a mandate
+to execute irrelevant queries; successful live batching still needs deployment checks.
+
+Bounded rejected-sentence feedback now includes numeric violations as well as Korean
+prose violations, under the existing credential filter and repair budget. Invented
+quantities are masked in excerpts rather than replayed as values. Repaired
+text passes the same validator; no raw model sentence is persisted in diagnostics.
+Unresolved event identity also blocks covered firmware/configuration/power/physical
+mechanism claims even when bounded context omitted inventory metadata. These remain
+investigation checks, not supported causal candidates. This guard is not an exhaustive
+semantic validator. No source timestamps, health facts or published Runbooks change.
+
 ## Structured operator guidance — 2026-10-13
 
 An optional `content.operator_guidance` with schema `gpu-rca-guidance/1.0` holds
