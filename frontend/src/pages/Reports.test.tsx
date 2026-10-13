@@ -15,9 +15,9 @@ const publication = vi.hoisted(() => ({
 
 it('selects exactly the default topics and preserves old health links', () => {
   expect(reportSelection(defaultReportKinds)).toEqual({
-    topic_ids: ['O01', 'O08', 'O11'],
+    topic_ids: ['O01', 'O05', 'O08', 'O11'],
     group_by: ['cluster'],
-    topic_group_by: { O01: ['cluster'], O08: ['namespace'], O11: ['cluster'] },
+    topic_group_by: { O01: ['cluster'], O05: ['cluster'], O08: ['namespace'], O11: ['cluster'] },
   });
   const html = renderToStaticMarkup(
     <MemoryRouter initialEntries={['/reports/new?kind=health']}>
@@ -155,17 +155,19 @@ describe('Ops report landing', () => {
 });
 
 it.each(['/reports/new', '/reports/new?schedule=true'])(
-  'defaults %s to the three-topic basic report',
+  'defaults %s to three main areas plus collection confidence',
   (path) => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={[path]}>
         <ReportForm />
       </MemoryRouter>,
     );
-    expect(html).toContain('Namespace별 GPU 사용 현황');
+    expect(html).toContain('GPU 사용 패턴');
     expect(html.match(/type="radio"/g)).toHaveLength(2);
-    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(3);
+    expect(html.match(/name="report-kind" checked=""/g)).toHaveLength(4);
     expect(html).toContain('name="report-kind" checked="" value="namespace"');
+    expect(html).toContain('aria-label="주요 분석"');
+    expect(html).toContain('aria-label="필요할 때 추가"');
     expect(html).not.toContain('세부 분석 설정');
     expect(html).not.toContain('type="checkbox" checked="" value="O');
     expect(html).toContain('클러스터·Namespace별 연결 관측');

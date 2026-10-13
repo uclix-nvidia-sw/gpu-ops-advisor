@@ -40,7 +40,7 @@ def test_only_basic_o01_drops_optional_queries_and_empty_outputs():
     config = profile()
     old = set(workflow.query_ids("O01", "1.2", profile=config))
     new = set(workflow.query_ids("O01", "1.3", profile=config))
-    assert old - new == OMITTED and not new - old
+    assert old - new == OMITTED | {"D06"} and not new - old
     for topic in ("O03", "O04"):
         assert "D15" in workflow.query_ids(topic, "1.3", profile=config)
     assert workflow.query_ids("O01", "1.3") == workflow.query_ids("O01", "1.2")
@@ -228,6 +228,7 @@ async def execute_fixture(config, metrics, snapshots, topics, criteria="1.3"):
     "topics,criteria,narrowed",
     [
         (["O01", "O08", "O11"], "1.3", True),
+        (["O01", "O05", "O08", "O11"], "1.3", True),
         (["O08", "O01"], "1.3", True),
         (["O11", "O08"], "1.3", True),
         (["O08"], "1.2", True),

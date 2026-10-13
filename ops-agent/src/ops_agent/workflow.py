@@ -23,6 +23,7 @@ from .collection import collect_report
 from .presentation import TOPIC_BASES
 from .additional_inputs import additional_queries, apply_additional_inputs
 from .basic_observations import basic_observations
+from .operator_insights import operator_insights
 
 
 log = logging.getLogger(__name__)
@@ -95,12 +96,14 @@ def query_ids(
     include_additions=True,
 ):
     if consolidated(profile):
+        if topic_id == "O05" and criteria_version == "1.3":
+            return ()
         previous = query_ids(topic_id, criteria_version, context=context, data=data)
         roles = {"D01": inventory_query(profile), "D08": mapping_query(profile)}
         base = list(dict.fromkeys(roles.get(q, q) for q in previous))
         if not base:
             return ()
-        if topic_id == "O01":
+        if topic_id == "O01" and criteria_version != "1.3":
             base.append("D06")
         return tuple(
             dict.fromkeys(
@@ -150,6 +153,8 @@ def calculate(
     omitted = {"O05": ("D09",), "O06": ("D09", "D13"), "O10": ("D09", "D13")}.get(
         topic_id, ()
     )
+    if criteria_version == "1.3" and consolidated(profile):
+        omitted += {"O01": ("D06",), "O05": ("D10", "D22")}.get(topic_id, ())
     if omitted:
         topic["quality"]["omitted_queries"] = [
             dict(query_id=q, reason="unused_by_report_calculation", evidence_refs=[])
@@ -917,6 +922,7 @@ def calculate(
             if useful and topic["missing_inputs"]
             else ("ready" if useful else "blocked")
         )
+        operator_insights(topic, data, context, db_evidence)
     return topic
 
 
@@ -962,7 +968,7 @@ async def run(tools):
                 criteria_version == "1.3"
                 and consolidated(ctx["profile"])
                 and "O08" in data["topic_ids"]
-                and set(data["topic_ids"]) <= {"O01", "O08", "O11"}
+                and set(data["topic_ids"]) <= {"O01", "O05", "O08", "O11"}
             )
         )
         and set(data.get("topic_group_by", {}).get("O08", data["group_by"]))

@@ -6,6 +6,7 @@ import { queryPath, str, topics, useCommand, useList } from '../lib/live';
 import { scopeLabel } from '../lib/domain';
 import {
   defaultReportKinds,
+  reportKindGroups,
   reportKind,
   reportKinds,
   reportSelection,
@@ -223,7 +224,7 @@ export function ReportForm() {
       <PageHead
         eyebrow="NEW REPORT"
         title="새 운영 보고서"
-        description="기본 3개 분석으로 시작하고 필요한 분석만 추가해 보고서 한 장으로 확인하세요."
+        description="사용 패턴·장비 점검·장애 현황과 자료 신뢰도를 보고 확인할 일을 정하세요."
       />
       <NavTabs items={reportTabs} />
       <ReportTimeNote />
@@ -238,7 +239,7 @@ export function ReportForm() {
                 checked={comprehensive}
                 onChange={() => setSelectedIds(defaultReportKinds)}
               />
-              기본 종합보고서 · Namespace·장비·모니터링
+              기본 종합보고서 · 주요 분석 3개 + 자료 신뢰도
             </label>
             <label className="check">
               <input
@@ -265,45 +266,46 @@ export function ReportForm() {
             추가 분석은 선택한 경우에만 관련 자료를 조회합니다. 체크를 바꾸면 직접 선택으로
             전환됩니다.
           </p>
-          <div className="report-kind-grid">
-            {[...reportKinds]
-              .sort(
-                (a, b) =>
-                  Number(defaultReportKinds.includes(b.id)) -
-                  Number(defaultReportKinds.includes(a.id)),
-              )
-              .map((item) => (
-                <label
-                  key={item.id}
-                  className={`report-kind-card${selectedIds.includes(item.id) ? ' selected' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    name="report-kind"
-                    value={item.id}
-                    checked={selectedIds.includes(item.id)}
-                    onChange={() => chooseKind(item.id)}
-                  />
-                  <span>
-                    <strong>{item.name}</strong>
-                    <span className="report-kind-description">{item.description}</span>
-                    <small>
-                      {defaultReportKinds.includes(item.id) ? '기본 분석' : '추가 분석'} ·{' '}
-                      {item.topicIds.join(' · ')}
-                    </small>
-                    <span className="report-kind-basis">
-                      표시 기준
-                      <br />
-                      {item.topicIds.map((id) => (
-                        <span key={id}>
-                          {id} · {topicDisplayBases[id]}
+          {reportKindGroups.map((group) => (
+            <section className="report-selection-group" key={group.title} aria-label={group.title}>
+              <h3>{group.title}</h3>
+              <div className="report-kind-grid">
+                {group.ids
+                  .map((id) => reportKind(id))
+                  .map((item) => (
+                    <label
+                      key={item.id}
+                      className={`report-kind-card${selectedIds.includes(item.id) ? ' selected' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        name="report-kind"
+                        value={item.id}
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => chooseKind(item.id)}
+                      />
+                      <span>
+                        <strong>{item.name}</strong>
+                        <span className="report-kind-description">{item.description}</span>
+                        <small>
+                          {defaultReportKinds.includes(item.id) ? '기본 분석' : '추가 분석'} ·{' '}
+                          {item.topicIds.join(' · ')}
+                        </small>
+                        <span className="report-kind-basis">
+                          표시 기준
+                          <br />
+                          {item.topicIds.map((id) => (
+                            <span key={id}>
+                              {id} · {topicDisplayBases[id]}
+                            </span>
+                          ))}
                         </span>
-                      ))}
-                    </span>
-                  </span>
-                </label>
-              ))}
-          </div>
+                      </span>
+                    </label>
+                  ))}
+              </div>
+            </section>
+          ))}
         </fieldset>
         <section className="report-kind-detail" aria-label="선택한 보고서 안내" aria-live="polite">
           <h2>{comprehensive ? '기본 종합보고서' : '선택한 소주제 안내'}</h2>
