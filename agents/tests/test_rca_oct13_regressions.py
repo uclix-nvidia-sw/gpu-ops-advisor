@@ -109,3 +109,31 @@ def test_identity_uncertainty_is_not_a_cause_without_relation_metadata(claim):
     reply["hypotheses"] = []
     reply["limitations"] = ["장치 신원이 확인되지 않아 원인을 판단하지 못했습니다."]
     assert validate_synthesis(reply, ["log"]) == []
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "NVSwitch 펌웨어 또는 구성 오류로 잘못된 입력이 발생했을 가능성이 있다",
+        "드라이버 버그로 오류가 발생했을 가능성이 있다",
+        "전원 문제로 장치가 물리적으로 분리되었을 가능성이 있다",
+    ],
+)
+def test_unresolved_event_cannot_support_device_mechanism_without_inventory(claim):
+    reply = {
+        "hypotheses": [
+            {
+                "claim": claim,
+                "supporting_refs": ["event"],
+                "contradicting_refs": [],
+                "missing_inputs": [],
+            }
+        ],
+        "limitations": [],
+    }
+    observations = [{"evidence_refs": ["event"], "device_mapping": "unresolved"}]
+    with pytest.raises(ValueError, match="unsupported_device_mechanism"):
+        validate_synthesis(reply, ["event"], observations)
+    reply["hypotheses"] = []
+    reply["limitations"] = ["장치 연결과 펌웨어 및 구성 정보를 추가 확인해야 합니다."]
+    assert validate_synthesis(reply, ["event"], observations) == []

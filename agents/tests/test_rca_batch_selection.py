@@ -37,3 +37,39 @@ async def test_bounded_registered_batch(ids, expected):
         )
         == expected
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "ids,expected",
+    [
+        (["D44", "D02"], ["D44", "D02"]),
+        (["D44", "D02", "D11"], ["D44", "D02", "D11"]),
+        ([], []),
+        (["D99"], []),
+        (["D44"] * 4, []),
+        ("D44", []),
+    ],
+)
+async def test_single_tool_call_selects_complete_auxiliary_batch(ids, expected):
+    class Model:
+        configured = True
+
+        async def complete(self, prompt, payload, **kwargs):
+            schema = kwargs["tools"][0]["function"]["parameters"]
+            assert schema["required"] == ["query_ids"]
+            assert schema["properties"]["query_ids"]["maxItems"] == 3
+            assert "final collection round" in prompt
+            return [
+                {
+                    "function": {
+                        "name": "investigate",
+                        "arguments": json.dumps({"query_ids": ids}),
+                    }
+                }
+            ]
+
+    assert (
+        await choose_followup(Model(), ["D44", "D02", "D11"], ["unknown_value"])
+        == expected
+    )

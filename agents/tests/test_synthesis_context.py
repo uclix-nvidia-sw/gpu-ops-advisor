@@ -415,3 +415,44 @@ async def test_failed_korean_repair_is_explicit_subset_not_full_validation():
     assert diagnostics["completion_mode"] == "validated_subset"
     assert diagnostics["repair_error_code"] == "invalid_limitations"
     assert not any("unexpected English" in text for text in limitations)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "sentence",
+    ["관측 2건은 상태 확인이 필요합니다.", "관측 두 건은 상태 확인이 필요합니다."],
+)
+async def test_numeric_repair_receives_rejected_sentence_without_persisting_it(
+    sentence,
+):
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return {"hypotheses": [], "limitations": [sentence]}
+            assert request["rejected_sentences"] == [
+                {
+                    "field": "limitations",
+                    "index": 0,
+                    "text": sentence.replace("2", "[미검증 수량 삭제]").replace(
+                        "두 건은", "[미검증 수량 삭제]"
+                    ),
+                }
+            ]
+            assert request["validation_feedback"][0]["rule"] == "numeric"
+            return {
+                "hypotheses": [],
+                "limitations": ["관측의 상태 의미를 확인해야 합니다."],
+            }
+
+    diagnostics = {}
+    status, candidates, limitations = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and not candidates
+    assert diagnostics["repair_status"] == "repaired"
+    assert diagnostics["completion_mode"] == "validated_response"
+    assert sentence not in json.dumps(diagnostics, ensure_ascii=False)
