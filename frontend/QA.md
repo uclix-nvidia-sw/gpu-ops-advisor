@@ -1,3 +1,7 @@
+## Alarm snapshot notice / 알림 상태 기준 안내 — 2026-10-13
+
+상태 열에 작성 기준을 표시하고 표 바로 위에서 보고서 작성 중 조회 당시의 상태임을 안내한다. `summary.status_as_of`를 KST로 표시하며 없으면 미저장으로 표시한다. 실시간 상태·현재 해제 여부를 추정하지 않는다. 최종 frontend 264 tests / 25 files, build, format:check 통과. 실제 관측 로컬 스냅샷의 저장 기준 시각 표시를 확인했으며 운영 배포는 미수행이다.
+
 ## UI-only PR integration / UI 단독 PR 통합 — 2026-10-13
 
 - Base: origin/main `a52d6ff`. Frontend 263 tests / 25 files, build and format check passed after incorporating upstream RCA work. Existing bundle warning remains.

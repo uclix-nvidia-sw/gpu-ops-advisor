@@ -378,7 +378,6 @@ export function AggregateReport({
           {rows(incident.findings).map((f) => (
             <p key={str(f.id)}>{str(f.text)}</p>
           ))}
-          <p>알림 상태 조회 시점: {reportRequestTime(str(summary.status_as_of))}</p>
           {rows(summary.categories).length > 0 && (
             <div className="aggregate-table-scroll">
               <table className="aggregate-incident-types">
@@ -433,60 +432,72 @@ export function AggregateReport({
             </Notice>
           ) : (
             rows(summary.incidents).length > 0 && (
-              <div className="aggregate-table-scroll">
-                <table className="aggregate-incident-table">
-                  <caption>사건별 알림 내용</caption>
-                  <thead>
-                    <tr>
-                      <th>발생 시각</th>
-                      <th>클러스터</th>
-                      <th>노드</th>
-                      <th>알림 내용</th>
-                      <th>알림 상태</th>
-                      <th>상세 보기</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows(summary.incidents)
-                      .slice(0, incidentLimit)
-                      .map((row) => (
-                        <tr key={str(row.id)}>
-                          <td className="aggregate-date">
-                            <time dateTime={str(row.occurred_at)}>
-                              {reportRequestTime(str(row.occurred_at))
-                                .split(/ (?=\d{2}:\d{2}:\d{2}$)/)
-                                .map((part, index) => (
-                                  <span key={index}>{part}</span>
-                                ))}
-                            </time>
-                          </td>
-                          <td>{str(row.cluster_id) || '미확인'}</td>
-                          <td>{str(obj(row.target).node) || '미확인'}</td>
-                          <td>
-                            <span className="aggregate-alert-title">
-                              {incidentShortTitle(str(row.symptom))}
-                            </span>
-                            {obj(row.target).test_alarm === true && (
-                              <small>시험 알림으로 표시됨</small>
-                            )}
-                          </td>
-                          <td>
-                            {row.alarm_status === 'firing' ? (
-                              <Badge status="firing" label="발생 중" />
-                            ) : (
-                              <span>{row.alarm_status === 'resolved' ? '해제' : '미확인'}</span>
-                            )}
-                          </td>
-                          <td>
-                            <TextLink to={`/incidents/${encodeURIComponent(str(row.id))}`}>
-                              {row.result_id ? 'RCA 보기' : '사건 보기'}
-                            </TextLink>
-                            {!row.result_id && <small>RCA 미발행</small>}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+              <div>
+                <p className="aggregate-data-note">
+                  알림 상태는 보고서 작성 중 조회한 당시 기준이며, 현재 상태와 다를 수 있습니다.
+                  <br />
+                  기준 시각:{' '}
+                  {str(summary.status_as_of)
+                    ? `${reportRequestTime(str(summary.status_as_of))} KST`
+                    : '미저장'}
+                </p>
+                <div className="aggregate-table-scroll">
+                  <table className="aggregate-incident-table">
+                    <caption>사건별 알림 내용</caption>
+                    <thead>
+                      <tr>
+                        <th>발생 시각</th>
+                        <th>클러스터</th>
+                        <th>노드</th>
+                        <th>알림 내용</th>
+                        <th>
+                          알림 상태<span>작성 기준</span>
+                        </th>
+                        <th>상세 보기</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows(summary.incidents)
+                        .slice(0, incidentLimit)
+                        .map((row) => (
+                          <tr key={str(row.id)}>
+                            <td className="aggregate-date">
+                              <time dateTime={str(row.occurred_at)}>
+                                {reportRequestTime(str(row.occurred_at))
+                                  .split(/ (?=\d{2}:\d{2}:\d{2}$)/)
+                                  .map((part, index) => (
+                                    <span key={index}>{part}</span>
+                                  ))}
+                              </time>
+                            </td>
+                            <td>{str(row.cluster_id) || '미확인'}</td>
+                            <td>{str(obj(row.target).node) || '미확인'}</td>
+                            <td>
+                              <span className="aggregate-alert-title">
+                                {incidentShortTitle(str(row.symptom))}
+                              </span>
+                              {obj(row.target).test_alarm === true && (
+                                <small>시험 알림으로 표시됨</small>
+                              )}
+                            </td>
+                            <td>
+                              {row.alarm_status === 'firing' ? (
+                                <Badge status="firing" label="발생 중" />
+                              ) : (
+                                <span>{row.alarm_status === 'resolved' ? '해제' : '미확인'}</span>
+                              )}
+                            </td>
+                            <td>
+                              <TextLink to={`/incidents/${encodeURIComponent(str(row.id))}`}>
+                                {row.result_id ? 'RCA 보기' : '사건 보기'}
+                              </TextLink>
+                              {!row.result_id && <small>RCA 미발행</small>}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
                 {rows(summary.incidents).length > incidentLimit && (
                   <button
                     type="button"

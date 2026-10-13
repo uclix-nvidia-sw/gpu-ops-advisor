@@ -153,6 +153,7 @@ it('shows incident content and cannot turn missing GPU identity into no repetiti
               topic_id: 'incident_summary',
               summary: {
                 count: 2,
+                status_as_of: '2026-10-13T06:29:46Z',
                 unclassified_count: 2,
                 categories: [
                   {
@@ -194,6 +195,9 @@ it('shows incident content and cannot turn missing GPU identity into no repetiti
   expect(html).not.toContain('알림 원문');
   expect(html).toContain('<th>클러스터</th><th>노드</th><th>알림 내용</th>');
   expect(html).toContain('badge-firing');
+  expect(html).toContain('알림 상태<span>작성 기준</span>');
+  expect(html).toContain('현재 상태와 다를 수 있습니다');
+  expect(html).toContain('2026. 10. 13. 15:29:46 KST');
   expect(html).toContain('<td>cpc-1</td><td>dgx01</td>');
   expect(html).toContain('<td>cpc-1</td><td>미확인</td>');
   expect(html).toContain('RCA 보기');
@@ -226,4 +230,25 @@ it('shortens known alert wording while keeping unknown titles bounded and accura
   expect(incidentShortTitle('XID 79 unrecognized wording')).toBe('XID 79 unrecognized wording');
   expect(incidentShortTitle('')).toContain('미저장');
   expect(incidentShortTitle('a'.repeat(80))).toBe('a'.repeat(60) + '…');
+});
+
+it('does not invent a status timestamp for an older stored report', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          topics: [
+            {
+              topic_id: 'incident_summary',
+              summary: { count: 1, incidents: [{ id: 'old', alarm_status: 'resolved' }] },
+            },
+          ],
+        }}
+        onEvidence={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('기준 시각: 미저장');
+  expect(html).toContain('현재 상태와 다를 수 있습니다');
+  expect(html).not.toContain('badge-firing');
 });
