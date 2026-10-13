@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ResultPage } from './Results';
 import { Cases } from './Cases';
+import { JobRows } from '../components/live';
 import type { Row } from '../lib/live';
 const fixture = vi.hoisted(() => ({
   mode: 'classic',
@@ -71,7 +72,9 @@ it('keeps developer RCA lists on the RCA menu', () => {
     </MemoryRouter>,
   );
   expect(fixture.paths.some((path) => path?.startsWith('/analyses?'))).toBe(true);
-  expect(html).toContain('공개된 RCA 보고서');
+  expect(html).toContain('RCA 조사 목록');
+  expect(html).not.toContain('공개된 RCA 보고서');
+  expect(fixture.paths.some((path) => path?.includes('status=succeeded'))).toBe(true);
 });
 
 it('starts the RCA menu with investigations while preserving explicit incident navigation', () => {
@@ -163,3 +166,49 @@ it.each(['classic', 'operations', 'developer'])(
       expect(html).not.toContain(text);
   },
 );
+
+it.each(['', 'running', 'retry_wait', 'succeeded', 'failed', 'cancelled', 'expired'])(
+  'uses server-side status filtering in the unified RCA list: %s',
+  (status) => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/cases?tab=analyses&status=' + status]}>
+        <Cases />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('RCA 조사 목록');
+    expect(html).not.toContain('>조사 이력</button>');
+    expect(html).not.toContain('>최종 보고서</button>');
+    expect(
+      fixture.paths.some(
+        (path) => path?.startsWith('/analyses?') && (!status || path.includes('status=' + status)),
+      ),
+    ).toBe(true);
+  },
+);
+
+it('routes completed RCA titles to results and unfinished investigations to execution', () => {
+  const items = [
+    {
+      id: 'done',
+      kind: 'rca',
+      status: 'succeeded',
+      result_ref: 'published',
+      result_status: 'partial',
+      target: { node: 'dgx01' },
+    },
+    { id: 'active', kind: 'rca', status: 'running', result_ref: null },
+    { id: 'failed', kind: 'rca', status: 'failed', result_ref: null },
+  ];
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/cases']}>
+      <JobRows items={items} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('/analyses/done#final-report');
+  expect(html).toContain('/jobs/active');
+  expect(html).toContain('/jobs/failed');
+  expect(html).not.toContain('/analyses/active');
+  expect(html).not.toContain('<th>종류</th>');
+  expect(html).not.toContain('최종 보고서 보기');
+  expect(html).toContain('부분 산출');
+});

@@ -1,3 +1,21 @@
+## Follow-up selection and safe repair recovery — 2026-10-14
+
+RCA records `followup_selection` in each `evidence_evaluation`: selected,
+explicit stop, malformed response or model unavailable are distinct. A missing or
+malformed tool call gets one JSON selection retry through the same LLM budget and
+deadline. HTTP, deadline, token exhaustion and remote uncertainty do not trigger
+this retry. An explicit empty selection stops; it is not evidence sufficiency.
+Both formats accept only the approved remaining query IDs, at most three. No
+CPC-specific routing or unconditional collection is introduced.
+
+Synthesis validates all limitation and hypothesis items before repair, supplies
+all detected violations and the validated subset, and revalidates any recovered
+subset against its original context. Inventory absence/identity uncertainty is not
+a causal mechanism. Rejected hypotheses and Korean prose remain excluded even
+when repair fails. Valid limitations can survive as `validated_subset`; this is
+not a fully validated model response or confirmation of device health. Original
+published results and Runbook revisions are unchanged.
+
 ## Auxiliary batch and synthesis repair follow-up — 2026-10-13
 
 The final collection round requests one tool call containing up to three approved

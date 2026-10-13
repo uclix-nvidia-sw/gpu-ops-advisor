@@ -8,20 +8,19 @@ export function Cases() {
   const app = useApp();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
-  const tab = ['incidents', 'analyses', 'reports'].includes(params.get('tab') || '')
-      ? params.get('tab')!
-      : 'analyses',
-    status = params.get('status') || '';
+  const tab = params.get('tab') === 'incidents' ? 'incidents' : 'analyses',
+    status = params.get('status') ?? (params.get('tab') === 'reports' ? 'succeeded' : '');
   const setStatus = (value: string) => {
     const next = new URLSearchParams(params);
+    next.set('tab', tab);
     next.set('status', value);
     setParams(next);
   };
   const q = useList(
     app.ready
-      ? queryPath('/' + (tab === 'reports' ? 'analyses' : tab), {
+      ? queryPath('/' + tab, {
           scope: app.scope,
-          status: tab === 'reports' ? 'succeeded' : status,
+          status,
           limit: 30,
         })
       : null,
@@ -32,24 +31,19 @@ export function Cases() {
       <PageHead
         eyebrow="ROOT CAUSE ANALYSIS"
         title={app.mode === 'developer' ? '사건·RCA 연결' : 'RCA 조사'}
-        description="조사 제목을 선택하면 발행된 RCA 결과를 바로 볼 수 있습니다. 원본 사건과 실행 기록은 별도 링크에서 확인합니다."
+        description="진행 중인 조사와 완료된 결과를 한 목록에서 확인합니다. 완료된 제목을 선택하면 RCA 보고서로, 결과가 없으면 실행 이력으로 이동합니다."
         actions={
           app.mode === 'developer' ? (
             <Link className="button" to="/jobs?kind=rca">
               RCA 실행 작업 검색
             </Link>
-          ) : (
-            <Link className="button primary" to="/cases?tab=reports">
-              최종 보고서
-            </Link>
-          )
+          ) : undefined
         }
       />
       <div className="tabs">
         {[
           ['incidents', '사건'],
-          ['analyses', '조사 이력'],
-          ['reports', '최종 보고서'],
+          ['analyses', 'RCA 조사'],
         ].map(([v, l]) => (
           <button
             className={tab === v ? 'active' : ''}
@@ -65,31 +59,41 @@ export function Cases() {
           </button>
         ))}
       </div>
-      <Panel
-        title={
-          tab === 'incidents' ? '사건 목록' : tab === 'reports' ? '공개된 RCA 보고서' : '조사 목록'
-        }
-      >
-        {tab !== 'reports' && (
+      <Panel title={tab === 'incidents' ? '사건 목록' : 'RCA 조사 목록'}>
+        {
           <div className="live-toolbar">
             <Field label={tab === 'incidents' ? '사건 처리 상태' : '실행 상태'}>
               <select value={status} onChange={(e) => setStatus(e.target.value)}>
                 <option value="">전체</option>
                 {(tab === 'incidents'
                   ? ['open', 'acknowledged', 'closed']
-                  : ['queued', 'running', 'succeeded', 'failed', 'cancelled']
+                  : [
+                      'queued',
+                      'running',
+                      'retry_wait',
+                      'succeeded',
+                      'failed',
+                      'cancelled',
+                      'expired',
+                    ]
                 ).map((s) => (
                   <option key={s} value={s}>
-                    {labels[s] || s}
+                    {s === 'succeeded' ? '분석 완료' : labels[s] || s}
                   </option>
                 ))}
               </select>
             </Field>
           </div>
-        )}
+        }
         <QueryState query={q} empty={!q.items.length}>
           {tab !== 'incidents' ? (
-            <JobRows items={q.items} />
+            <>
+              <p className="muted">
+                분석 완료는 원인 확정을 뜻하지 않습니다. 보고서에서 확인한 사실과 남은 제한을
+                확인하세요.
+              </p>
+              <JobRows items={q.items} />
+            </>
           ) : (
             <div className="table-wrap">
               <table className="incident-list">

@@ -498,6 +498,7 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
 export function JobRows({ items }: { items: Row[] }) {
   const location = useLocation();
   const reportsOnly = location.pathname === '/reports';
+  const rcaList = location.pathname === '/cases';
   const from = location.pathname + location.search;
   if (reportsOnly) return <ReportHistory items={items} from={from} />;
   return (
@@ -506,11 +507,11 @@ export function JobRows({ items }: { items: Row[] }) {
         <thead>
           <tr>
             <th>분석 · 대상</th>
-            <th>종류</th>
+            {!rcaList && <th>종류</th>}
             <th>접수 시각</th>
             <th className="job-state-cell">실행 상태</th>
             <th className="job-state-cell">결과 품질</th>
-            <th>최종 보고서</th>
+            <th>{rcaList ? '실행 기록' : '최종 보고서'}</th>
           </tr>
         </thead>
         <tbody>
@@ -556,10 +557,10 @@ export function JobRows({ items }: { items: Row[] }) {
                     </div>
                   </>
                 ) : (
-                  <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
+                  !rcaList && <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
                 )}
               </td>
-              {!reportsOnly && (
+              {!reportsOnly && !rcaList && (
                 <td>
                   {str(j.kind) === 'rca'
                     ? 'RCA 조사'
@@ -582,7 +583,7 @@ export function JobRows({ items }: { items: Row[] }) {
               </td>
               {!reportsOnly && (
                 <td>
-                  {j.deletion == null && j.result_ref != null ? (
+                  {rcaList ? null : j.deletion == null && j.result_ref != null ? (
                     <Link
                       className="text-link"
                       state={{ from }}

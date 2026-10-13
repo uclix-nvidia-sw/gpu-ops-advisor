@@ -456,3 +456,69 @@ async def test_numeric_repair_receives_rejected_sentence_without_persisting_it(
     assert diagnostics["repair_status"] == "repaired"
     assert diagnostics["completion_mode"] == "validated_response"
     assert sentence not in json.dumps(diagnostics, ensure_ascii=False)
+
+
+@pytest.mark.asyncio
+async def test_live_identity_cause_cannot_survive_subset_recovery():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+
+        async def complete(self, *args, **kwargs):
+            result = response(
+                claim="보고된 PCI 주소가 노드 인벤토리에 없는 GPU와 관련되어 오류가 발생했을 가능성이 있다"
+            )
+            result["limitations"] = [
+                "unexpected English 상태입니다.",
+                "오류 장치와 실제 장치를 연결하지 못했습니다.",
+            ]
+            return result
+
+    diagnostics = {}
+    status, candidates, limits = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and candidates == []
+    assert diagnostics["completion_mode"] == "validated_subset"
+    assert diagnostics["rejected_hypotheses"] == 1
+    assert all("unexpected English" not in text for text in limits)
+    assert "오류 장치와 실제 장치를 연결하지 못했습니다." in limits
+    rules = {v["rule"] for v in diagnostics["validation_failures"][0]["violations"]}
+    assert rules == {"non_korean", "identity_is_not_cause"}
+
+
+@pytest.mark.asyncio
+async def test_sxid_repair_preserves_valid_limitations_and_removes_invalid_hypothesis():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                result = response(claim="장치 식별 불확실성이 원인일 가능성이 있다")
+                result["limitations"] = [
+                    "producer_event_time 의미를 확인해야 합니다.",
+                    "스위치와 포트 연결은 확인되지 않았습니다.",
+                ]
+                return result
+            assert request["validated_response"]["hypotheses"] == []
+            assert request["validated_response"]["limitations"] == [
+                "스위치와 포트 연결은 확인되지 않았습니다."
+            ]
+            assert len(request["validation_feedback"]) == 2
+            return {
+                "hypotheses": [],
+                "limitations": [
+                    "생산자 오류 발생 시각을 확인해야 합니다.",
+                    "스위치와 포트 연결은 확인되지 않았습니다.",
+                ],
+            }
+
+    diagnostics = {}
+    status, candidates, limits = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and candidates == []
+    assert diagnostics["repair_status"] == "repaired"
+    assert diagnostics["completion_mode"] == "validated_response"
+    assert len(limits) >= 2

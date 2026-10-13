@@ -633,3 +633,23 @@ it('explains a bounded evaluation without treating gaps as query failures', () =
   expect(html).toContain('수집 종료 이유');
   expect(html).toContain('확인한 사실·확장 정책·남은 예산');
 });
+
+it.each([
+  ['explicit_stop', '모델이 추가 조회 없이 종료하도록 선택했습니다.'],
+  ['invalid_response', '추가 조회 선택 응답이 형식 검증을 통과하지 못했습니다.'],
+  ['model_unavailable', '모델 요청이 완료되지 않아 추가 조회를 선택하지 못했습니다.'],
+  ['selected', '필요한 보조 조회를 선택했습니다.'],
+])('distinguishes followup selection outcome %s', (status, text) => {
+  const html = render(
+    <EvidenceEvaluation
+      record={{
+        round: 0,
+        decision: 'insufficient_actionable',
+        next_queries: [],
+        followup_selection: { status, attempts: 2 },
+      }}
+    />,
+  );
+  expect(html).toContain(text);
+  expect(html).toContain('선택 응답의 형식 복구를 한 차례 시도했습니다.');
+});

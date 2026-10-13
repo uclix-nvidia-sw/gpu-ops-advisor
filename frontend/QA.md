@@ -1,3 +1,14 @@
+## Unified RCA investigation list — 2026-10-14 (local)
+
+- PASS: 277 frontend tests, TypeScript/Vite build, formatting. Existing large-bundle
+  warning remains. Report history/rendering tests remain passing.
+- PASS: local browser fixture with actual Cases/JobRows components: completed and
+  failed filters, empty queued list, published result versus execution link targets.
+  Two tabs remain (incidents/RCA); the legacy reports URL uses completed filtering.
+- PASS: evidence evaluation distinguishes explicit stop, invalid response, model
+  unavailable and successful selection repair without inventing legacy diagnostics.
+- Production UI deployment and real XID/SXID reruns remain unverified.
+
 ## Alarm snapshot notice / 알림 상태 기준 안내 — 2026-10-13
 
 상태 열에 작성 기준을 표시하고 표 바로 위에서 보고서 작성 중 조회 당시의 상태임을 안내한다. `summary.status_as_of`를 KST로 표시하며 없으면 미저장으로 표시한다. 실시간 상태·현재 해제 여부를 추정하지 않는다. 최종 frontend 264 tests / 25 files, build, format:check 통과. 실제 관측 로컬 스냅샷의 저장 기준 시각 표시를 확인했으며 운영 배포는 미수행이다.
@@ -706,3 +717,5 @@ Structure acceptance passed with today snapshot: six table rows remained unchang
 - Cluster graph headers now name their purpose and share a contrasting header band. Incident dates/times occupy separate lines; known XID79/SXID11001 wording is shortened without asserting a cause, and complete saved text remains in a closed disclosure. Unknown long titles are bounded to 60 characters in the list.
 - Replaced model-readiness/comparability counts in the main table with saved activity means (min/max of model means when multiple models are present, not a new blended mean). Effective hours and prior-period eligibility remain in supporting details, not the overview. Partial data stays labelled.
 - Passed: 258 frontend tests, production build and browser acceptance with the existing Oct 13 real snapshot at 1414x900 and 1176x827. All incident columns fit at the narrow desktop width, date/time split and full-text disclosure worked; no browser warnings/errors observed. Backend, RCA, storage, and aggregate calculations unchanged in this follow-up. Operational deployment remains unverified.
+
+RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.

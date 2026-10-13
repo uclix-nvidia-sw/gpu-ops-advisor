@@ -73,3 +73,75 @@ async def test_single_tool_call_selects_complete_auxiliary_batch(ids, expected):
         await choose_followup(Model(), ["D44", "D02", "D11"], ["unknown_value"])
         == expected
     )
+
+
+@pytest.mark.asyncio
+async def test_missing_tool_call_repairs_to_registered_batch():
+    class Model:
+        configured = True
+        last_failure = None
+        calls = 0
+
+        async def complete(self, prompt, payload, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return None
+            assert "tools" not in kwargs
+            return {"query_ids": ["D44", "D02"]}
+
+    model = Model()
+    diagnostics = {}
+    assert await choose_followup(
+        model, ["D44", "D02"], ["unknown_value"], diagnostics
+    ) == ["D44", "D02"]
+    assert diagnostics == {
+        "status": "selected",
+        "attempts": 2,
+        "selected_queries": ["D44", "D02"],
+        "initial_failure": "missing_tool_calls",
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure",
+    ["llm_deadline_exhausted", "llm_token_budget_exhausted", "llm_http_error"],
+)
+async def test_selection_transport_failure_is_not_explicit_stop(failure):
+    class Model:
+        configured = True
+        last_failure = failure
+        calls = 0
+
+        async def complete(self, *args, **kwargs):
+            self.calls += 1
+            return None
+
+    model = Model()
+    diagnostics = {}
+    assert await choose_followup(model, ["D44"], ["unknown_value"], diagnostics) == []
+    assert model.calls == 1
+    assert diagnostics["status"] == "model_unavailable"
+    assert diagnostics["initial_failure"] == failure
+
+
+@pytest.mark.asyncio
+async def test_explicit_stop_does_not_retry_or_force_remaining_queries():
+    class Model:
+        configured = True
+        calls = 0
+
+        async def complete(self, *args, **kwargs):
+            self.calls += 1
+            return [
+                {"function": {"name": "investigate", "arguments": '{"query_ids": []}'}}
+            ]
+
+    model = Model()
+    diagnostics = {}
+    assert (
+        await choose_followup(model, ["D44", "D02"], ["unknown_value"], diagnostics)
+        == []
+    )
+    assert model.calls == 1
+    assert diagnostics["status"] == "explicit_stop"

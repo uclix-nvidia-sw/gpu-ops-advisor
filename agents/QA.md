@@ -1,3 +1,17 @@
+## RCA selection and subset recovery — 2026-10-14 (local)
+
+- PASS: 1,127 Agent tests; 41 skipped without E2E flags. Existing Windows-incompatible
+  Report cleanup suites excluded; no Ops runtime changes.
+- PASS: final focused workflow/selection/synthesis/repair checks, 81 tests.
+- PASS: five isolated E2E scenarios in total: three webhook variants, numeric repair,
+  and missing-tool-call JSON recovery plus unsafe identity-cause/Korean subset
+  filtering through Worker/JC publication. Fresh loopback PostgreSQL, actual
+  Worker/JC/Incident/official MCP; Grafana and LLM upstreams are fixtures.
+- The first new E2E attempt bypassed model selection via fixture policy. The fixture
+  was corrected to leave D02 approved without forcing it, then passed.
+- PASS: Ruff and local document links. No production DB, Runbook publication or
+  deployment. Live XID/SXID model selection and language quality remain unverified.
+
 ## RCA label mirror CI correction — 2026-10-13
 
 - Synchronized the packaged RCA labels with the frontend dictionary: six collection termination reasons and the sufficiency explanation. No workflow, Ops or production data changes.
