@@ -595,3 +595,22 @@ production deployment verification is pending.
   result-first navigation, and legacy/unpublished results.
 - Passed: 229 Vitest tests, production build, Prettier check and documentation links (113 documents / 1403 links). Live deployment,
   new RCA execution and operational Runbook publication remain unverified.
+
+## 2026-10-13 RCA guidance and observation clarity
+
+- RCA-only next checks explain stopping or moving running jobs before an operator
+  considers a server restart. Reference guidance and complete stored Runbook text
+  are separately collapsible. Conditions are not promoted to approved actions.
+- Observation detail separates report time, reported code/state, device mapping
+  and eligibility limits. SXID mapping requests switch inventory, not GPU matching.
+- Single newlines flow within paragraphs; the fixed 80ch body width was removed.
+  Local React fixture was inspected at normal and narrow browser widths. This was
+  a local fixture, not a deployed Backend result or production acceptance test.
+- Validation: 242 frontend tests, build and format check passed. Agent suite with
+  test_report_cleanup.py excluded: 1072 passed, 38 skipped. The initial full run
+  exposed two unchanged Windows Report cleanup failures (open-file deletion and
+  directory fsync); Report code was not modified. Six relevant isolated RCA E2E
+  cases passed with temporary PostgreSQL and mocked LLM/upstream Grafana data.
+- Sanitized three-run regressions cover unsupported identity-derived hypotheses,
+  SXID inventory separation and later-query context starvation. These are fixture
+  checks; new live RCA quality and repair truncation frequency remain unverified.

@@ -44,10 +44,10 @@
 }
 .rca-narrative-section p,
 .rca-narrative-section li {
-  max-width: 80ch;
+  max-width: 100%;
   font-size: 15px;
   line-height: 1.9;
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }

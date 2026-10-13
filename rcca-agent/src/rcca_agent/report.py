@@ -1,6 +1,5 @@
 """Always render an RCA report; the model may prioritize supplied statements only."""
 
-import json
 from collections import Counter, defaultdict
 
 from .report_editor import prioritize
@@ -33,7 +32,23 @@ async def write_report(result, data, clues, evidence, llm):
         )
 
     def literal(value):
-        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+        if isinstance(value, list) and all(isinstance(v, dict) for v in value):
+            labels = {
+                "error_code": "보고된 오류 코드",
+                "component": "구성 요소",
+                "normalized_health": "검증된 장치 상태",
+                "producer_contract": "생산자 계약",
+            }
+            if all(
+                set(v) == {"field", "equals"} and v["field"] in labels for v in value
+            ):
+                return (
+                    "; ".join(
+                        f"{labels[v['field']]}가 {v['equals']}인지 확인" for v in value
+                    )
+                    or "별도 조건 미기재"
+                )
+        return "상세 조건은 발행 Runbook 원문에서 확인하세요."
 
     incident_refs = [e["id"] for e in evidence if e["query_id"] == "incident_snapshot"]
     target = {**data.get("target", {})}
@@ -406,8 +421,8 @@ async def write_report(result, data, clues, evidence, llm):
     ordered = editorial.get("narrative", []) + statements
     ordered = list({s["id"]: s for s in ordered}.values())
     # Keep the problem headline/context in a stable reading order.
-    ordered = [s for s in statements if s["section"] == "problem"] + [
-        s for s in ordered if s["section"] != "problem"
+    ordered = [s for s in statements if s["section"] in {"problem", "guidance"}] + [
+        s for s in ordered if s["section"] not in {"problem", "guidance"}
     ]
     result["narrative"] = [
         dict(
