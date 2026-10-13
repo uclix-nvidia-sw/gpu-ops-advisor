@@ -1,3 +1,10 @@
+## 2026-10-13 RCA identity-cause and repair regression
+
+- PASS: worktree PYTHONPATH, Python UTF-8 mode; 1077 passed / 38 skipped in agents/tests, excluding test_report_cleanup.py. That unchanged Report module has Windows open-file unlink and directory fsync failures; no Report fix is included. Optional E2E skips are not passes.
+- PASS: six selected real local lifecycle E2E cases (Grafana webhook through Incident, no published Runbook, numeric repair), using fresh temporary PostgreSQL, Incident/JC/RCA and official Grafana MCP with fixture upstream Grafana/LLM responses. Not production integration.
+- PASS: Korean identity uncertainty paraphrases are rejected as causal hypotheses even without inventory relation metadata; repair moves them to limitations, and a second invalid Korean response is marked validated_subset. Raw rejected model text is not added to diagnostics. Full Ruff checks/format and documentation links pass.
+- UNVERIFIED: new production LLM responses and deployment. Pattern validation does not prove every unsupported hypothesis is caught. Ops runtime, shared contracts and published Runbooks are unchanged.
+
 # 2026-10-13 RCA operator wording — final checks
 
 - Focused RCA regression: 99 passed, including conditional uncertainty wording and preserved assessment/evidence references.

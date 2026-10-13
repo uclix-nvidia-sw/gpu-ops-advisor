@@ -377,6 +377,15 @@ def validate_synthesis(
             raise SynthesisValidationError(
                 "non_korean_claim", rule="non_korean", index=i, tokens=["non_korean"]
             )
+        # Identity uncertainty is a diagnostic limitation regardless of wording or
+        # whether the bounded view retained the inventory relation observation.
+        if re.search(r"식별|매핑|인벤토리|장치\s*신원", h["claim"]) and re.search(
+            r"불확실|미확인|불일치|연결되지|매핑되지|식별하지\s*못|확인되지|알\s*수\s*없",
+            h["claim"],
+        ):
+            raise SynthesisValidationError(
+                "unsupported_identity_cause", rule="identity_is_not_cause", index=i
+            )
         # Unresolved inventory is a limitation, never a causal mechanism.
         cited = [
             o for o in observations if set(o.get("evidence_refs", [])) & supporting
@@ -564,7 +573,8 @@ async def synthesize(llm, payload, diagnostics=None):
             for violation in feedback:
                 violation["repair_instruction"] = {
                     "numeric": "Remove unregistered quantities from this sentence; do not replace them with number words. Keep only cited error codes and supplied identifiers.",
-                    "non_korean": "Rewrite this sentence in Korean prose. Translate English explanations and omit long English error titles; retain only the cited XID/SXID code if needed.",
+                    "non_korean": "Rewrite this sentence in Korean prose. Do not copy snake_case field names, English error titles or English explanations. Describe producer_event_time as 생산자 오류 발생 시각, loki_recorded_at as 로그 기록 시각 and fact_eligible as 상태 판단에 사용할 조건. Preserve uncertainty and evidence references; omit the sentence if it cannot be expressed accurately.",
+                    "identity_is_not_cause": "Remove this hypothesis. Device identity or PCI inventory uncertainty is a limitation, not a failure mechanism. Describe the unresolved device mapping in Korean limitations instead. Do not replace it with physical separation, firmware failure or another unsupported cause. An empty hypotheses list is valid.",
                 }.get(
                     violation.get("rule"),
                     "Correct the indicated field against the supplied schema and observation_refs.",
@@ -588,6 +598,11 @@ async def synthesize(llm, payload, diagnostics=None):
     if diagnostics["repair_status"] == "failed":
         diagnostics["repair_error_code"] = diagnostics["error_code"]
     diagnostics["error_code"] = None
+    diagnostics["completion_mode"] = (
+        "validated_subset"
+        if rejected or diagnostics["repair_status"] == "failed"
+        else "validated_response"
+    )
     if rejected:
         limitations.append(
             "모델의 일부 한계 문장이 검증을 통과하지 못해 제외했습니다. 검증된 근거와 아래 미충족 조건을 함께 확인해야 합니다."
