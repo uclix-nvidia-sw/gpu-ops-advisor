@@ -38,7 +38,7 @@ it('keeps literature separate from device facts and explains restart prerequisit
   expect(html).toContain('안전하게 종료하거나 다른 서버로 옮기고');
   expect(html).toContain('물리적인 분리나 부품 고장을 확정할 수는 없습니다');
   expect(html).toContain('revision 5');
-  expect(html).toContain('<h5>이 오류에 대한 참고 안내</h5>');
+  expect(html).toContain('<h5 class="rca-reference-heading">이 오류에 대한 참고 안내</h5>');
   expect(html).not.toContain('<details open');
   expect(html).not.toContain('현재는 연결되지 않았습니다');
   expect(JSON.stringify(result)).toBe(before);

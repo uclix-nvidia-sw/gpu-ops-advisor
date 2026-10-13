@@ -78,7 +78,7 @@
     "mapping_target_unverified": "장애 대상과 GPU UUID의 관계가 검증되지 않아 직접 GPU–Pod 연결을 판단할 수 없습니다.",
     "mapping_not_observed_at_incident": "사건 시각의 GPU–Pod 연결 관측을 확보하지 못했습니다.",
     "target_identity_conflict": "사건 대상과 알람의 장비 식별 정보가 충돌합니다.",
-    "sufficient": "필수 근거를 충족했습니다.",
+    "sufficient": "현재 조사에 필요한 근거 조건을 충족했습니다. 실제 원인 확정 여부는 별도입니다.",
     "degraded": "수집 실패 또는 불완전한 관측이 있습니다.",
     "conflicted": "관측 상태가 상충합니다.",
     "insufficient_actionable": "근거가 부족하며 추가 조회 후보가 있습니다.",
@@ -151,7 +151,13 @@
     "gpu_capacity_join_unverified": "같은 GPU의 사용량·전체 용량·단위·유효시간을 연결하지 못했습니다.",
     "optional_query_budget_exhausted": "기존 필수 조회 예산을 보존하기 위해 추가 조회를 보류했습니다.",
     "normalized_health": "정규화한 장비 상태를 검증된 fact로 확인하지 못했습니다. 로그의 Healthy/Unhealthy 표기만으로 현재 상태를 확정하지 않습니다.",
-    "unknown_value": "조사에 필요한 값의 의미 또는 유효성이 미확인입니다. 원본 관측과 생산자·시각·대상 계약을 확인하세요."
+    "unknown_value": "조사에 필요한 값의 의미 또는 유효성이 미확인입니다. 원본 관측과 생산자·시각·대상 계약을 확인하세요.",
+    "no_remaining_queries": "현재 조사 지침에서 추가로 실행할 조회가 없어 수집을 종료했습니다.",
+    "round_limit_reached": "필수 조회와 한 차례의 보조 조회를 마쳤습니다. 남은 후보는 이번 실행에서 조회하지 않았습니다.",
+    "followup_not_selected": "남은 후보 중 이번 제한을 보완할 추가 조회가 선택되지 않았습니다.",
+    "query_budget_exhausted": "이번 실행의 조회 예산을 모두 사용했습니다.",
+    "deadline_exhausted": "이번 실행의 수집 가능 시간이 끝났습니다.",
+    "fast_path": "검증된 기존 근거를 사용해 추가 조회를 생략했습니다."
   },
   "groups": {
     "design": {

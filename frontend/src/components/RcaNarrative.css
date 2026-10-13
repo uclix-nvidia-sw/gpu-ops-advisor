@@ -38,9 +38,11 @@
 .rca-narrative-section + .rca-narrative-section {
   border-top: 1px solid var(--border);
 }
-.rca-narrative-section h4 {
+.rca-narrative-section h4,
+.rca-narrative-section .rca-reference-heading {
   margin: 0 0 16px;
-  font-size: 17px;
+  font-size: 18px;
+  line-height: 1.5;
 }
 .rca-narrative-section p,
 .rca-narrative-section li {
@@ -107,4 +109,17 @@
   line-height: 1.8;
   word-break: keep-all;
   overflow-wrap: anywhere;
+}
+
+.rca-narrative-section h5 {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.rca-narrative-section .rca-reference-heading {
+  margin-top: 24px;
+  font-size: 18px;
+}
+.rca-reference-guide dt,
+.rca-reference-guide dd {
+  font-size: 15px;
 }

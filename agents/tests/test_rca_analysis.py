@@ -174,6 +174,16 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                 events.append("plan")
                 if mode == "invalid_plan":
                     raise ValueError("malformed response JSON")
+                if mode == "xid":
+                    return [
+                        {
+                            "function": {
+                                "name": "investigate",
+                                "arguments": json.dumps({"query_id": q}),
+                            }
+                        }
+                        for q in payload["available_queries"][:3]
+                    ]
                 return [
                     {
                         "function": {
@@ -336,7 +346,13 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                 "synthesize",
             ]
             analysis = result["quality"]["analysis"]
-            assert analysis["followups"] == 2
+            assert analysis["followups"] == 1
+            evaluations = [
+                e for e in output["evidence"] if e["query_id"] == "evidence_evaluation"
+            ]
+            assert len(evaluations) == 2
+            assert set(evaluations[0]["snapshot"]["next_queries"]) == {"D44", "D02"}
+            assert evaluations[1]["snapshot"]["stop_reason"] == "no_remaining_queries"
             assert analysis["remaining_queries"] == []
             assert analysis["collection_stop_reason"] == "no_remaining_queries"
             assert {"D09", "D44", "D02"} <= {e["query_id"] for e in output["evidence"]}
