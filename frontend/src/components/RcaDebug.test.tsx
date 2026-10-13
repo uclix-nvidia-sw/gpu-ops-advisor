@@ -228,7 +228,9 @@ describe('RCA diagnostics', () => {
         />,
       );
       expect(html).toContain('RCA 최종 보고서');
-      expect(html.indexOf('id="final-report"')).toBeLessThan(html.indexOf('<h3>확인할 사항</h3>'));
+      expect(html.indexOf('id="final-report"')).toBeLessThan(
+        html.indexOf('<h3>확정하지 못한 이유</h3>'),
+      );
       expect(html.indexOf('id="final-report"')).toBeLessThan(
         html.indexOf('분석 요약·LLM 실행 기록'),
       );
@@ -545,4 +547,70 @@ it('shows the recorded collection stop and outstanding queries without inferring
   expect(html).toContain('수집 회차 상한 도달');
   expect(html).toContain('실행하지 않은 조회 후보');
   expect(html).toContain('D02');
+});
+
+it('puts observation and collection evidence ahead of collapsed quality diagnostics', () => {
+  const html = render(
+    <RcaResult
+      job={{
+        status: 'succeeded',
+        result_ref: 'published',
+        result: {
+          device_observations: [{ fact_eligible: false }],
+          missing_inputs: ['unknown_value'],
+          narrative: [
+            { id: 'guidance', text: '대상 장치 확인' },
+            { id: 'next', text: '중복 다음 확인 문장' },
+          ],
+        },
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html.indexOf('관측 근거: 확인한 사실과 판단 제한')).toBeLessThan(
+    html.indexOf('판단 제한·검증 진단 상세'),
+  );
+  expect(html).not.toContain('중복 다음 확인 문장</li>');
+  expect(html).toContain('unknown_value');
+});
+
+it('explains published missing data from actual gaps and exposes subset repair', () => {
+  const html = render(
+    <RcaResult
+      job={{
+        status: 'succeeded',
+        result_ref: 'published',
+        result: {
+          termination_reason: 'missing_data',
+          missing_inputs: ['causal_confirmation_evidence'],
+          quality: {
+            analysis: {
+              status: 'complete',
+              synthesis: { repair_status: 'failed', completion_mode: 'validated_subset' },
+            },
+          },
+        },
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain('보고된 증상만으로 실제 원인을 확정할 수 없습니다');
+  expect(html).not.toContain('필수 근거가 부족합니다. 부족 항목을 확인하세요');
+  expect(html).toContain('응답 일부만 사용했습니다');
+});
+it('does not describe rejected analysis as a usable subset', () => {
+  const html = render(
+    <RcaResult
+      job={{
+        status: 'succeeded',
+        result_ref: 'published',
+        result: {
+          quality: { analysis: { status: 'failed', synthesis: { repair_status: 'failed' } } },
+        },
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain('LLM 분석 응답 미채택');
+  expect(html).not.toContain('응답 일부만 사용했습니다');
 });

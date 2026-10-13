@@ -107,3 +107,21 @@ it('renders only the incident timestamp in Korea time without rewriting saved te
   expect(html).toContain('실제 오류 발생 시각과 같다고 단정할 수 없습니다.');
   expect(JSON.stringify(result)).toBe(original);
 });
+
+it('separates a general XID cause from stored identity uncertainty without inventing recurrence', () => {
+  const result = {
+    runbook_revisions: [{ knowledge_key: 'RB-XID-79' }],
+    device_observations: [{ pci_inventory_relation: 'not_in_reported_inventory' }],
+    narrative: [
+      { id: 'cause', title: '원인 판단', text: '장치 식별 불확실성이 원인일 가능성이 있다' },
+      { id: 'guidance', text: 'Fleet 고정 카탈로그: GPU has fallen off the bus' },
+    ],
+  };
+  const before = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaNarrative result={result} />);
+  expect(html).toContain('일반적인 원인 후보');
+  expect(html).toContain('같은 오류의 재보고일 수 있으므로');
+  expect(html).toContain('장애 원인이 아니라 원인을 확정하지 못하는 이유');
+  expect(html).toContain('<summary>저장된 원인 문장·해석 주의</summary>');
+  expect(JSON.stringify(result)).toBe(before);
+});

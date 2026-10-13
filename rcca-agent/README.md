@@ -1,3 +1,7 @@
+## Identity limitations and repair validation — 2026-10-13
+
+Device identity uncertainty belongs in limitations, not causal hypotheses. The Korean identity-cause guard also checks claims when bounded synthesis context omits inventory relation metadata. Repair feedback asks the model to remove such hypotheses (an empty list is valid) and translate internal field names into Korean explanations. Every repair still passes the same validator. Rejected limitation sentences remain excluded; `quality.analysis.synthesis.completion_mode` distinguishes `validated_subset` from `validated_response`. This diagnostic does not change publication status or establish missing device facts. The guard covers tested language patterns, not every possible unsupported claim. Ops runtime and stored results are unchanged.
+
 ## General investigation expansion — 2026-10-13
 
 RCA preserves cause uncertainty and unknown state values in the assessment, but

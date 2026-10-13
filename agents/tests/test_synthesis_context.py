@@ -354,3 +354,60 @@ async def test_repair_feedback_targets_hypothesis_without_saving_rejected_text()
     assert status == "complete" and candidates
     assert diagnostics["repair_status"] == "repaired"
     assert "fallen off" not in json.dumps(diagnostics)
+
+
+@pytest.mark.asyncio
+async def test_identity_uncertainty_repair_moves_claim_to_limitations():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return response(claim="장치 식별 불확실성이 원인일 가능성이 있다")
+            feedback = request["validation_feedback"]
+            assert feedback[0]["rule"] == "identity_is_not_cause"
+            assert "Remove this hypothesis" in feedback[0]["repair_instruction"]
+            return {
+                "hypotheses": [],
+                "limitations": [
+                    "오류 장치와 실제 장치 정보를 연결하지 못해 원인은 미확정입니다."
+                ],
+            }
+
+    diagnostics = {}
+    status, candidates, limitations = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and candidates == []
+    assert diagnostics["repair_status"] == "repaired"
+    assert diagnostics["completion_mode"] == "validated_response"
+    assert limitations
+
+
+@pytest.mark.asyncio
+async def test_failed_korean_repair_is_explicit_subset_not_full_validation():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls > 1:
+                instruction = request["validation_feedback"][0]["repair_instruction"]
+                assert (
+                    "snake_case" in instruction
+                    and "생산자 오류 발생 시각" in instruction
+                )
+            return {"hypotheses": [], "limitations": ["unexpected English 상태입니다."]}
+
+    diagnostics = {}
+    status, candidates, limitations = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and not candidates
+    assert diagnostics["repair_status"] == "failed"
+    assert diagnostics["completion_mode"] == "validated_subset"
+    assert diagnostics["repair_error_code"] == "invalid_limitations"
+    assert not any("unexpected English" in text for text in limitations)

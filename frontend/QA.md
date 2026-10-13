@@ -2,6 +2,16 @@
 
 Base: latest origin/main `74c93f9`. PASS: 245 tests / 24 files, format check and TypeScript/Vite build with Node22.23. Local browser: namespace selection updates graph/summary; missing prior observations remain comparison-pending; hourly details expand; empty source/incident cap never becomes zero or healthy; weekly schedule shows weekday/time. Desktop and narrow form checked; no console errors observed. One static design scan passed. Preview API and figures are synthetic. Existing bundle-size warning remains; CI Node24 and live production publication are unverified. [Full verification](../agents/QA.md) · [Contract and measured limits](../docs/specs/ops-agent/aggregate-report-v1.md).
 
+# 2026-10-13 RCA 사용자 안내·수정 진단 — 로컬 검수
+
+- 통과: frontend npm test 248 tests / 23 files, build, format:check. 기존 번들 크기 경고 유지.
+- 회귀 사례: XID/SXID 분리, 없는 문헌 미생성, 반복 로그와 원인 확정 구분, 장치 식별 원문 보존, 근거 우선 배치, 중복 다음 확인 제거, 결과 객체 불변. 분석 실패와 검증된 일부 채택을 구분하고 실행별 missing_inputs를 설명한다. 기존 Report 검사 포함.
+- 브라우저: 실제 RcaNarrative 컴포넌트의 로컬 합성 XID 결과(127.0.0.1:5288)에서 다음 확인과 참고 안내 펼침·문단 배치를 확인했다. 좁은 화면과 변경 후 운영 실행은 미검증이다.
+- 운영 읽기 확인: XID 229c8028 및 SXID 315d65bf 결과를 대조했다. 저장 결과·Runbook·DB는 수정하지 않았다. RCA worker 변경은 agents/QA.md에 기록한다.
+- 한계: 실제 오류 발생 시각·장치 연결·NVSwitch 포트 원천은 이 수정으로 확보되지 않는다. 시험 로그 가능성을 안내하되 시험 여부를 단정하지 않는다.
+
+---
+
 # 2026-10-13 운영 확인 사항 중심 보고서 — 로컬 검수
 
 - **통과:** `frontend/`에서 최종 전체 `npm test` **236 tests / 22 files**, `npm run format:check`, `npm run build`. 기존 900kB 번들 경고는 유지하며 TypeScript/Vite 빌드는 완료했습니다.

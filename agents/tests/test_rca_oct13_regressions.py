@@ -82,3 +82,30 @@ def test_later_query_keeps_representative_samples_without_changing_source():
     assert encoded_size(view) <= 1600
     assert not view["context_selection"]["complete"]
     assert payload == before
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "보고된 PCI 주소가 인벤토리에 없는 GPU와 매핑되지 않아 장치 식별 불확실성이 원인일 가능성이 있다",
+        "장치 신원이 확인되지 않아 문제가 발생했을 가능성이 있다",
+        "인벤토리 불일치로 문제가 발생했을 가능성이 있다",
+    ],
+)
+def test_identity_uncertainty_is_not_a_cause_without_relation_metadata(claim):
+    reply = {
+        "hypotheses": [
+            {
+                "claim": claim,
+                "supporting_refs": ["log"],
+                "contradicting_refs": [],
+                "missing_inputs": [],
+            }
+        ],
+        "limitations": [],
+    }
+    with pytest.raises(ValueError, match="unsupported_identity_cause"):
+        validate_synthesis(reply, ["log"])
+    reply["hypotheses"] = []
+    reply["limitations"] = ["장치 신원이 확인되지 않아 원인을 판단하지 못했습니다."]
+    assert validate_synthesis(reply, ["log"]) == []

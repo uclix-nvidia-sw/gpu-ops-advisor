@@ -22,6 +22,53 @@ function incidentTime(text: string): string {
     },
   );
 }
+// Keep historical model text available while separating identity limits from causes.
+function CauseExplanation({ paragraphs, result }: { paragraphs: string[]; result: Row }) {
+  const xid79 = rows(result.runbook_revisions).some((r) => r.knowledge_key === 'RB-XID-79');
+  const hasCatalog = rows(result.narrative).some(
+    (s) => s.id === 'guidance' && /GPU has fallen off the bus/.test(str(s.text)),
+  );
+  const identityClaims = paragraphs.filter((p) => /장치 식별 불확실성.{0,20}원인/.test(p));
+  const mismatch = rows(result.device_observations).some(
+    (o) => o.pci_inventory_relation === 'not_in_reported_inventory',
+  );
+  return (
+    <>
+      {xid79 && hasCatalog && (
+        <p>
+          <strong>일반적인 원인 후보: </strong>GPU의 물리적인 연결 이탈이나 PCIe 연결 불량을 검토할
+          수 있습니다. XID79 로그가 반복되더라도 같은 오류의 재보고일 수 있으므로 반복 장애나 물리적
+          분리의 증거로 단정하지 않습니다. 시험 주입 여부와 실제 장치의 접근 상태를 먼저 확인해야
+          합니다.
+        </p>
+      )}
+      {paragraphs
+        .filter((p) => !identityClaims.includes(p))
+        .map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
+      {mismatch && (
+        <p>
+          <strong>이번 판단의 제한: </strong>보고된 PCI 주소가 수집된 GPU 목록과 연결되지 않아 오류
+          장치를 식별하지 못했습니다. 테스트용 오류 주입으로 생성된 로그인지도 함께 확인해야 합니다.
+          이는 장애 원인이 아니라 원인을 확정하지 못하는 이유입니다.
+        </p>
+      )}
+      {identityClaims.length > 0 && (
+        <details>
+          <summary>저장된 원인 문장·해석 주의</summary>
+          <p>
+            아래 원문은 장치 식별의 불확실성을 원인처럼 표현했습니다. 분석 한계로 읽어야 하며,
+            저장된 결과는 변경하지 않았습니다.
+          </p>
+          {identityClaims.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </details>
+      )}
+    </>
+  );
+}
 export function RcaNarrative({
   result,
   consolidateChecks = false,
@@ -75,8 +122,21 @@ export function RcaNarrative({
                   ? '다음에 확인할 내용'
                   : str(section.title) || '분석 설명'}
               </h4>
+              {str(section.id) === 'problem' &&
+                rows(result.runbook_revisions).some((r) => r.knowledge_key === 'RB-SXID-11001') &&
+                rows(result.narrative).some(
+                  (s) => s.id === 'guidance' && /ingress invalid command/.test(str(s.text)),
+                ) && (
+                  <p>
+                    <strong>오류 의미: </strong>SXID11001은 NVSwitch의 수신 측에서 잘못된 명령을
+                    감지했다는 보고입니다. 어느 스위치·포트에서 발생했는지 확인해야 하며 GPU
+                    고장이나 전체 서버 장애를 뜻한다고 단정할 수는 없습니다.
+                  </p>
+                )}
               {str(section.id) === 'guidance' ? (
                 <RcaGuidance paragraphs={paragraphs} result={result} />
+              ) : str(section.id) === 'cause' ? (
+                <CauseExplanation paragraphs={paragraphs} result={result} />
               ) : list && paragraphs.length > 0 ? (
                 <>
                   <ul>
