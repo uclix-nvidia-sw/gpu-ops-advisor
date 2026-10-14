@@ -1,6 +1,6 @@
 ## RCA auxiliary selection rules — 2026-10-14
 
-Runbook authoring/publication accepts the optional `observation_plan[].selection` contract (`missing_any`, `requires_all`, `independent: true`) for non-required steps. Auxiliary steps may instead explicitly opt into exploratory model selection with `exploratory_llm: true`; the opt-in cannot coexist with `selection` or `required: true`. Missing selection conditions do not implicitly allow model selection. Backend rejects invalid conditions; RCA additionally checks registered queries and executes the rules. Deploy both validators before registering new revisions. Existing published content and DB schema are unchanged. See [RCA selection contract](../rcca-agent/README.md#conditional-auxiliary-selection--2026-10-14).
+Runbook authoring/publication accepts the optional `observation_plan[].selection` contract (`missing_any`, `requires_all`, `independent: true`) for non-required steps. Auxiliary steps may instead explicitly opt into exploratory model selection with `exploratory_llm: true`; the opt-in cannot coexist with `selection` or `required: true`. Missing selection conditions do not implicitly allow model selection. Backend rejects invalid conditions; RCA additionally checks registered queries and executes the rules. Deploy both validators before registering new revisions. Existing published content and DB schema are unchanged. See [RCA selection contract](../rcca-agent/README.md).
 
 ## 종료된 보고서 영구 삭제 — 2026-10-12
 

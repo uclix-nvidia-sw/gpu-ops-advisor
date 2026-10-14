@@ -30,6 +30,19 @@ Applies to every task. Human explanations and examples: [team collaboration guid
 6. Do not mark the task fully verified or push/merge while required pre-push checks remain unresolved. If an external check must occur after an authorized deployment, agree its owner, conditions and failure response, and leave it explicitly unverified until run. Product changes need relevant acceptance evidence; documentation-only changes do not require live LLM/Grafana tests.
 7. State the completed stage precisely: local files, local commit, remote push, CI, deployment or real-system validation. List remaining gaps and next actions without implying authorization to perform them.
 
+## Shared Documentation
+
+These rules apply when reading or changing the repository, including analysis-only work.
+
+- Start at `README.md` and `docs/README.md`, then read the affected module README and the contracts they link. Check the current code before describing a behavior as implemented. A dated task note is not a current specification.
+- Keep one owner for each fact: root README for product entry points; module README for current behavior, configuration and limitations; `docs/specs/common/` for shared contracts; module specs for detailed rules; QA for verification evidence; `docs/evidence/` for source semantics. Other documents link to the owner instead of copying its content.
+- Update the existing explanation in place. Do not prepend dated task reports, create another HANDOFF/summary/cleanup log, or leave superseded instructions beside their replacement. Use Git history and PR descriptions for the change narrative.
+- Separate implemented behavior, verification and deployment. For each retained QA result, record the source revision/date, environment, scope and unresolved limits. Preserve unique evidence; consolidate repeated test runs. A successful local test or merged PR does not establish a production deployment.
+- Keep unimplemented requirements in an explicitly marked remaining-work section with affected consumers and acceptance conditions. Do not describe a proposal as a runtime path. Remove rejected or superseded proposals after moving still-valid contracts and source references to their owner.
+- Before deleting documentation or code, check callers, tests, CLI/entry points, config, links, anchors and stored-data compatibility. Update consumers in the same change. Old result readers, migrations and published Runbook revisions are not dead code merely because new producers use another format.
+- Keep current diagram sources and the published viewer together. Temporary screenshots, generation receipts and personal tool output belong in ignored local output or CI artifacts, not the shared knowledge index. Delete retired artifacts with their references; do not hand-edit generated diagrams.
+- At completion, the entry points must lead to one consistent description of the changed behavior. Report validation in the PR; add to QA only when it establishes or changes a lasting verification boundary. Keep English instructions and their Korean references aligned.
+
 ## Documentation Checks
 
 Run `python tools/check_links.py` from the repository root (or `python3` where that is the Python 3 command). It needs only the standard library. Check renamed section anchors and paths inside prompt code blocks separately; the checker does not validate those. For rule changes, review scope/routing, English–Korean consistency and preservation of existing policies. Loading a module rule does not itself require its entire runtime suite for a documentation-only change; choose checks by the actual impact, and verify any changed executable instructions. Static file checks do not prove a coding tool loaded the rules in a live session.

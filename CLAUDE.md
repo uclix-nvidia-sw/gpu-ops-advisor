@@ -35,10 +35,12 @@ All contributors and coding assistants use task-based branch names, such as `fea
 - Stable intent and guardrails: this file, applicable rules and the root [README.md](README.md).
 - Actual runtime behavior: implementation and tests in each module.
 - Shared API and database contracts: `shared/contract/` and `shared/migrations/`; the latter is the single SQL source.
-- Designed scope and acceptance criteria: current specifications listed in [docs/specs/README.md](docs/specs/README.md), organized into common contracts and module folders. RCA proposals in `docs/specs/rca-agent/drafts/` are review drafts, not current requirements; use them when the task explicitly targets the proposal, and do not treat them as replacing current contracts.
+- Designed scope and acceptance criteria: current specifications listed in [docs/specs/README.md](docs/specs/README.md), organized into common contracts and module folders. Unimplemented requirements must be marked as remaining work, not described as current runtime behavior.
 - Verified status and known limits: each module's `QA.md`, within its stated date, environment and scope.
 
 If documents and code diverge, treat code and tests as current behavior and update the nearest relevant document in the same change. Design documents, fixtures and newly added tests are not proof of production validation.
+
+Follow [Shared Documentation](.claude/rules/workflow.md#shared-documentation) for every analysis or documentation task. Keep current behavior in its owner document; use Git/PR history for task narratives rather than accumulating dated summaries.
 
 ## Repository and Reference Map
 

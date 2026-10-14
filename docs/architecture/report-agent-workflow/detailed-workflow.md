@@ -1,5 +1,7 @@
 # 보고서 Agent 현재 실행 흐름
 
+적용 범위: 기존 O계열 보고서. 신규 기본 보고서는 [집계 계약](../../specs/ops-agent/aggregate-report-v1.md)을 따른다.
+
 [12번 설계서](../../specs/ops-agent/12_보고서_Agent_모듈_설계서.md) · [Archify](../archify/gpu-ops-advisor.html#sequence-report-collection)
 
 ```mermaid

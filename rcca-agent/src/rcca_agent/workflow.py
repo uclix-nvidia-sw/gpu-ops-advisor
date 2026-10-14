@@ -446,25 +446,6 @@ def parse_followup_args(args, remaining):
     return list(dict.fromkeys(ids))
 
 
-def parse_followup_calls(calls, remaining):
-    if not isinstance(calls, list) or not 1 <= len(calls) <= 3:
-        return None
-    selected = []
-    try:
-        for call in calls:
-            if call["function"]["name"] != "investigate":
-                return None
-            ids = parse_followup_args(
-                json.loads(call["function"]["arguments"]), remaining
-            )
-            if ids is None or (not ids and len(calls) != 1):
-                return None
-            selected.extend(q for q in ids if q not in selected)
-        return selected if len(selected) <= 3 else None
-    except (ValueError, KeyError, TypeError, IndexError):
-        return None
-
-
 async def run(tools):
     ctx = attempt_context.get()
     claim, profile = ctx["claim"], ctx["profile"]

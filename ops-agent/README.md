@@ -1,142 +1,37 @@
-# Ops Report Agent — 신규 경로 / New aggregate reports (2026-10-13)
+# Ops Report Agent
 
-신규 기본 보고서는 `namespace_usage`와 `incident_summary` 두 주제의 일일·주간/직전 기간 비교입니다. Ops 전용 PromQL·집계·사건 snapshot을 사용하고 공통 D registry를 읽지 않습니다. 아래 기존 O 주제 설명은 과거 결과·기존 일정·이전 방식 요청에만 적용합니다. Deployment와 패키지 이름 `ops-agent`는 유지합니다.
+JC에서 보고서 작업을 인수하고 관측·사건을 집계해 결과와 HTML/CSV를 저장한다. 신규 집계 보고서와 기존 O계열 보고서는 서로 다른 입력 계약이며 [workflow.py](src/ops_agent/workflow.py)가 분기한다. 기존 일정·결과를 자동 변환하지 않는다.
 
-2026-10-14 보완: 같은 시간대의 GPU 식별 변경을 무조건 중복으로 제외하지 않고, 해당 GPU/시간대만 원본 시각과 Pod UID를 추가 대조한다. 비중복·연속 관측이 검증된 연결 표본만 기존 평균에 포함하고 원본 배열은 저장하지 않는다. RCA·DB·Helm·과거 보고서는 변경하지 않는다.
+## 신규 기본 보고서
 
-설계·쿼리·제한·파일 역할·실측 결과·배포 호환은 [집계 보고서 v1](../docs/specs/ops-agent/aggregate-report-v1.md)을 따릅니다. RCA 분석 코드는 변경하지 않았습니다. 공통 Worker의 선택적 Store/설정 주입과 신규 보고서 계약은 양쪽 Worker 회귀로 검증합니다.
+`report-aggregate-v1`은 `namespace_usage`·`incident_summary`의 일일/주간 보고서와 직전 동일 기간 비교다. [집계 보고서 계약](../docs/specs/ops-agent/aggregate-report-v1.md)이 쿼리·산식·제한·검수 기준의 담당 문서다.
 
-# 운영자가 확인할 사항을 제시하는 보고서 — 2026-10-13 로컬 구현
+- [report_queries.py](src/ops_agent/report_queries.py)의 Ops 전용 PromQL을 사용한다. 공통 D registry를 읽지 않는다. 클러스터·기간별 활동, Pod 신원, GPU 신원 3개 range 조회를 1시간 간격으로 수행한다.
+- [namespace_usage.py](src/ops_agent/namespace_usage.py)는 유효 활동 합계/유효 표본 수로 평균을 계산한다. 관측 연결은 전용 할당의 증거가 아니다.
+- [identity_transitions.py](src/ops_agent/identity_transitions.py)는 시간대 내 신원 변경이 모호한 GPU·시간대만 추가 조회한다. 검증 요약을 보존하고 이 추가 조회의 원본 표본 배열은 저장하지 않는다.
+- [report_store.py](src/ops_agent/report_store.py)는 같은 DB snapshot에서 사건과 공개 RCA ID/hash를 읽는다. 새 RCA를 실행하지 않는다.
+- [report_contract.py](src/ops_agent/report_contract.py)의 클러스터·Namespace·GPU·표본·바이트·호출·시간 한도를 따른다. 응답을 받은 뒤의 크기 검사만으로 프로세스 최대 메모리를 보장하지 않는다.
+- 근거에는 시간 집계와 검증 요약을 저장한다. 수집 누락·연결 모호성·잘림은 품질과 보고서에 남긴다. 과거 큰 snapshot을 변환하는 migration은 없다.
 
-신규 화면의 기본 요청은 **O08 사용 패턴·O01 장비/Node 점검·O05 장애/조사/처리·O11 자료 신뢰도**다. 사용자에게는 주요 분석 3개와 공통 자료 신뢰도로 보여준다. 기존 O ID와 9개 선택지는 보존하고 전용 할당(O02/O03/O04), 당시 작업(O06), 배치 대기(O07), 에너지(O09), 조치 비교(O10)는 추가 분석으로 남긴다. 기존 일정의 주제 목록·저장 결과를 자동 변환하지 않는다. 아래 날짜별 기록 중 기본 3주제·O01 D06 포함 설명은 이전 상태이며 현재 동작은 이 절을 따른다.
+## 기존 O계열 보고서
 
-- criteria 1.3의 `operator_insights.py`는 기존 지표와 고정 DB snapshot에서 `topics[].findings`를 만든다. 각 항목은 대상·기간·확인 내용·다음 확인·우선순위·`value_refs`·`evidence_refs`를 가진다. 계산값·단위·기존 결측/상태 판정을 바꾸지 않는다. `quality.operator_analysis="1.0"`은 이 설명 형식을 구분한다.
-- O08은 GPU별 **5% 미만·연속 30분 이상** 저활동의 대상 대수와 가장 긴 구간, 같은 모델의 주요 활동 시간대, 계산 불가 시간대를 설명한다. 시간별 평균만으로 연속 저활동을 판단하지 않고 기존 GPU별 판정을 재사용한다. 일부 GPU의 저활동을 Namespace 전체의 유휴·전용 할당·회수 가능성으로 확대하지 않는다. 시간대별 null은 연결 GPU 부재·신원/모델 충돌·수집 누락을 구분해 확인한다.
-- O01은 Ready=false/unknown 또는 MemoryPressure/DiskPressure/PIDPressure/NetworkUnavailable=true가 관측된 Node를 점검 대상으로 제시한다. 누적 관측이며 현재 장애·GPU 고장이 아니다. Fleet 마지막 기록값으로 현재 과열을 판정하지 않고 실제 측정 시각 미확인을 설명한다.
-- O05는 분석 기간 `[start,end)`에 발생해 저장된 사건만 묶는다. `rca_results[].body.incident_id`와 `actions[].body.subject_type/subject_id`가 정확히 일치하는 결과·조치 기록만 연결한다. 접수된 증상을 표시하고 발생 중/RCA 미발행, 발생 중/RCA 발행, 해제, 상태 미확인에 따라 다음 확인을 다르게 안내한다. 알람 상태는 **DB snapshot 시점**(`status_as_of`)이며 분석 종료 시점이나 현재 실시간 상태가 아니다. 알람 해제·RCA 완료·조치 기록을 복구 완료로 승격하지 않는다. 기간 이전부터 이어진 사건 전체를 별도로 조회하지 않는다.
-- O11은 수집 대상별 실패·미관측 시간을 나누고 해당 범위의 판단을 보류하도록 안내한다. 기대 인벤토리가 없으므로 전체 장비 수집 완료를 주장하지 않는다. O01/O08의 남은 결측 사유도 확인 범위 제한으로 요약한다.
-- `report.py`는 우선순위 기준 최대 5개 확인 항목과 다음 확인을 먼저 설명한다. 모든 수치를 문장으로 다시 나열하지 않고 주제별 상세·기존 수치·근거에서 확인하게 한다. LLM은 검증된 문장의 표현 대상과 순서를 선택하며 새로운 수치·원인·조치를 만들지 않는다. 모델 미설정 시에도 결정적 설명을 제공한다.
+이전 요청 방식과 기존 일정은 [O계열 명세](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md)를 사용한다. `criteria 1.3`의 기본 주제는 O08/O01/O05/O11이며 현재 신규 화면의 기본 집계 계약과 구분한다.
 
-| criteria 1.3 + 통합 binding | 변경 | 보존되는 것 |
-|---|---|---|
-| O01 단독 | 계산에 쓰지 않는 D06 Pod 이력 제외 | 장비 관측·Node 조건 지표 및 필요한 D02/D03/D04/D16/D20 |
-| O05 단독 | 계산에 쓰지 않는 D10·D22 제외; 원격 D 조회 0종 | DB 사건 수, RCA 참조, 미확인 발생률 분모, 사건별 다음 확인 |
-| O01/O05/O08/O11 기본 합집합 | **기존과 같은 D 8종**: D02/D03/D04/D06/D10/D16/D20/D22 | O08에 필요한 D06, O11에 필요한 D10/D22 |
-| O08을 포함한 기본 조합 | O05를 함께 선택해도 기존 D06 Namespace/Pod 범위 축소 유지 | 불완전한 신원·기간이면 기존 범위로 복귀; 다른 D06 소비 주제 혼합 시 축소하지 않음 |
+- 공통 D binding과 query+CPC+기간 계획으로 조회한다. [collection.py](src/ops_agent/collection.py)가 의존성·예약 예산·병렬 수집·취소 회수를 처리한다. 실행별 관측 캐시는 같은 조회·기간의 근거를 재사용한다.
+- O01 장비/Node 관측, O08 사용 패턴, O05 DB 사건·공개 RCA·조치 기록, O11 자료 신뢰도에 [operator_insights.py](src/ops_agent/operator_insights.py)의 확인 항목을 연결한다. 누적 상태와 현재 장애, 알람 해제와 복구 완료를 구분한다.
+- 통합 binding과 criteria 1.3에서 O01은 불필요한 D06을, O05는 D10/D22를 조회하지 않는다. 계산에 쓰지 않는 보고서 D09/D13도 생략하며 `quality.omitted_queries`에 이유를 남긴다. 다른 계약의 조회를 임의로 줄이지 않는다.
+- D06 범위 축소는 완전한 D02 신원·기간과 허용된 주제 조합에서만 적용한다. 신원 누락·공백·빈 후보·필터 한도 초과 시 넓은 기존 범위로 복귀한다. 최종 UID·Node·시간 연결 검사는 유지한다.
+- O01 추가 관측은 대상별 고유 지표 ID를 사용한다. criteria 1.3은 D20 원본 구간을 결과 본문에 중복 저장하지 않고 계산 결과와 evidence refs를 유지한다. 구 결과 형식은 조회 호환용으로 유지한다.
+- [report.py](src/ops_agent/report.py)는 코드가 만든 문장을 문장 ID 선택 LLM으로 편집한다. 새 수치·원인·조치를 생성하지 않으며 모델을 사용할 수 없으면 기본 보고서를 남긴다.
 
-생략은 `quality.omitted_queries`의 `unused_by_report_calculation`로 기록한다. O01/O05의 위 조회 제거는 **criteria 1.3 + 통합 binding**에 한정한다. 이전 criteria·구 binding의 조회와 추가 분석의 계산 의미는 유지한다. 공통 Python·RCA Agent·Worker 실행·JC·DB schema는 변경하지 않는다. 주제를 묶었다는 이유로 호출량이나 처리 시간이 줄었다고 주장하지 않는다. 실제 감소는 요청 조합과 자료량에 따라 검증한다.
+## 보고서 삭제와 파일 정리
 
-[단계별 설계](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#운영자-확인-중심-보고서--2026-10-13) · [회귀 검사](../agents/tests/test_operator_insights.py) · [검증 범위](../agents/QA.md)
+사용자가 종료한 보고서를 삭제하면 JC가 DB 결과·근거를 삭제하고 `report_deletions`를 기록한다. [cleanup.py](src/ops_agent/cleanup.py)는 Worker 시작 시와 이후 30초마다 대상 1건을 처리한다. DB 행 잠금·`SKIP LOCKED`로 여러 Pod가 같은 대상을 동시에 맡지 않는다.
 
----
+정규 UUID의 `ARTIFACT_DIR/<job_id>`만 처리하고 심볼릭 링크를 따라가지 않는다. 파일 삭제 후 0바이트 일반 파일로 표시해 늦게 끝난 저장 작업이 디렉터리를 다시 만들지 못하게 한다. `pending`/`failed`는 미완료, `complete`는 삭제 표시까지 생성한 상태다. 실패 시 재시도하며 DB에서 삭제한 본문이 복구되지는 않는다. migration 008 미적용 중에는 경고를 남기고 분석 루프를 유지한다. RCA에는 이 정리 루프가 없다.
 
-# D binding Report 연결 — 2026-10-06
+## 실행·검증
 
-[공통 전환 기록](../docs/specs/common/d-binding-runtime.md)을 따른다. 새 profile에서는 D01/D08 역할을 D02로 통합하고 D06 UID/시간 연결을 보존한다. 매핑 §6의 기본 추가 D를 선택하며 실패는 기존 수치와 분리한다. O01 여유량·용량 비율·CPU·window별 load와 Node condition 관측을 연결했다. 전체 조건부 조사/신규 산식은 미완료다. 미선택 후보는 원격 조회하지 않는다. 구 profile의 기존 산식은 회귀검사로 유지하며, 계산에 쓰지 않는 보고서 로그 조회는 아래 최소화 규칙을 따른다.
+[공통 실행 안내](../agents/README.md) · [Agent QA](../agents/QA.md) · [삭제 회귀](../agents/tests/test_report_cleanup.py) · [격리 DB 삭제 검증](../agents/tests/test_report_cleanup_e2e.py).
 
-## O01 추가 관측 결과의 고유 ID — 2026-10-08
-
-D03·D15·D16·D18·D19를 소비하는 O01 추가 지표는 한 보고서에 여러 GPU·Node·load 시간창의 결과를 만든다. 각 지표 ID는 기존 다중 행 방식인 `O01.<metric_name>.<순번>`을 사용하며, 항목별로 0부터 증가한다. 단일 결과와 자료 부족으로 남기는 null 행에도 순번을 붙인다. 이 번호는 보고서 내부 행 식별자이며 보고서 간 영구 장비 식별자가 아니다. 실제 대상은 기존 `target`에 보존한다.
-
-값·단위·기간·대상·근거·부족 사유·행 수는 바꾸지 않으며, 같은 target으로 표시되는 별도 원천 시리즈도 ID 충돌을 피하려고 삭제하거나 합치지 않는다. 결과 전체의 중복 ID 검증은 그대로 유지한다. 화면·보고서 문장·Backend 내보내기는 기존 `O01.<metric_name>`과 새 순번 형식을 모두 읽는다. 과거 결과·실패 이력은 재작성하지 않으며 배포 후 새 요청의 발행을 확인한다. 시간 초과·공통 Worker 로깅·JC 슬롯 정책은 이번 수정 범위가 아니다.
-
-## D20 Node 상태 관측의 저장 형식 — 2026-10-08
-
-O01의 `quality.node_condition_observations`에 D20 관측 구간을 담을 때 각 구간을 JSON 배열 `[시작 시각, 종료 시각, 값]`로 변환한다. 계산용 tuple을 그대로 남기면 자료 수집·계산·CSV 생성 후에도 저장 전 공통 해시 검증에서 `not JSON`으로 거절된다. D20이 비어 있는 보고서는 이 경로를 지나지 않으므로 발행 성공만으로 유효 D20의 저장까지 검증했다고 볼 수 없다.
-
-변환은 Ops의 결과 구성 지점에서만 수행한다. 구간·0/1 값·cluster·node/condition/status 라벨·근거 참조와 원본 evidence를 보존하고, 자료 없음/조회 실패는 기존 빈 관측 목록과 수집 사유를 유지한다. Node condition을 GPU 건강 판정으로 승격하지 않으며 공통 해시·검증기, RCA·JC·DB·조회 설정과 과거 결과는 변경하지 않는다. 저장 전 검증과 실제 Worker·DB·JC 발행 경로의 합성 검수는 [Agent QA](../agents/QA.md)에 기록한다.
-
-# ops-agent
-
-운영 보고서 Worker이며 JC kind는 `report`다. 하나의 job/attempt/lease 안에서 **입력·DB snapshot 고정 → 수집 계획 → 병렬 Observation → 결정적 계산 → 보고서 문장 선택 → 저장·JC 공개**를 수행한다. 일정 계산은 Backend가 담당한다.
-
-## 계획과 병렬 수집
-
-`collection.py`는 중복 query를 합치고 query+CPC+기간별 독립 Observation task를 만든다. 비교 기간은 별도 task다. 실제 조회 전 전체 초기 호출량·설정·범위를 검사한다. 각 task의 query/discovery 예산을 예약하고 의존성이 해결된 task를 한 배치로 실행한다. 배치 종료 후 미사용 예산을 다음 task에 배분한다. 실패는 해당 근거에 남기고 독립 결과를 보존하며, 취소 시 모든 task를 회수한다. RCA와 공통 bounded runner를 사용한다.
-
-`report.limits` 예시는 `max_queries=2048`, `chunk_seconds=86400`, `max_rows=50000`, `max_concurrency=3`이다. 네 키만 양수 정수로 받으며 미지정 키는 기존 공통 limits를 사용한다. 동시성 1은 순차 실행이다. 원본 표본·응답 크기·전체 deadline·최대 기간은 보존한다. 세부 예산·시간 배분은 [설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#기간-수집예산-분리--2026-10-01)를 따른다.
-
-`builtin-grafana-v7`의 `report.query_chunk_seconds={"D06":7200}`은 D06(Pod 신원 이력)의 초기 조회 구간을 최대 2시간으로 제한한다. 등록된 query ID와 양수 정수만 허용하며 전체 `chunk_seconds`와 query별 값 중 작은 값을 계획·실행에 똑같이 적용한다. 맵이 없으면 기존 전체 구간 설정을 사용하고, 다른 query는 예시의 24시간을 유지한다. D06의 원본 표본·Pod UID·연결 시각을 보존한다. 2시간은 확인한 하루 약 32MiB의 전송·처리량과 Agent의 2MiB·50000표본 한도를 고려한 초기 상한이다. Prometheus의 고정 10MiB 제한을 전제로 하지 않으며, 응답 밀도·추가 분할에 따라 예산을 소진할 수 있으므로 월간 완료를 보장하지 않는다.
-
-수집기는 Mimir/Prometheus·Loki의 수신 응답 크기·표본 한도를 넘거나 알려진 MCP 원격 크기 초과 오류를 받으면 기존 예산 안에서 구간을 줄인다. 확인된 원격 10MiB 상한은 Loki에 한정하며, Prometheus 원격 오류 복구는 오류 주입 fixture 검증이다. 일반 timeout·연결 실패를 같은 구간에서 무조건 반복하지 않는다. 공통 `grafana_mcp`는 HTTP 제한을 도구 제한보다 5초 길게 두고 연결 수명을 별도 task로 관리한다. 실패한 호출은 재실행하지 않으며 다음 예산 내 호출에서 연결을 다시 열 수 있다. 세션 종료 404도 연결을 정리한 뒤 다음 호출에서 복구한다. 두 Worker에 적용되는 공통 전송 변경이며 RCA 계산 정책은 유지한다. 구간별 안전한 진단 로그와 배포 범위는 [공통 실행 문서](../agents/README.md#grafana-조회와-llm-오류-진단)를 따른다.
-
-동일 CPC·기간·metric task에는 순서를 두어 완전한 동일 Prometheus 응답을 재사용한다. 도구·데이터소스·범위·표현식·시각·구간이 모두 일치해야 하며 query/evidence ID와 `quality.reused_from_evidence`를 보존한다. 실패·부분·대용량 폐기 응답과 Loki는 재사용하지 않는다. 완료된 캐시만 복사하고 실행 중 상태는 공유하지 않는다. O08 단독 namespace의 D06은 새 profile의 D02(구 D01/D08) 완료 뒤 검증된 namespace 범위로 좁힌다. 불완전·후보 없음이면 기존 범위를 유지한다. criteria 1.3의 O08 포함 O01/O08/O11 조합도 같은 규칙을 적용하며, 다른 D06 소비 주제와 혼합하면 좁히지 않는다.
-
-`quality.collection.tasks`의 `sub_agent_id`, `depends_on`, 초기 구간 상한 `chunk_seconds`, 예약/실사용 호출량, 시작 offset·소요시간, 완료/빈 응답/미완료 구간으로 웹 결과 상세에서 수집을 추적한다. 근거의 `quality.sub_agent_id`와 연결된다. 응답 완료 구간은 표본 커버리지·계산 성공을 뜻하지 않는다. 저장된 진단이며 실시간 분산 추적은 아니다.
-
-## 불필요한 조회 제거 — 2026-10-06
-
-구 profile에서는 O01 장비 계산이 사용하지 않는 D06 Pod 이력을 조회 계획에서 제외한다. 새 binding profile은 매핑 설계의 기본 입력에 따라 D06을 포함한다. 다른 주제가 D06을 필요로 하면 조회한다. O05/O06의 부가 D09 및 O06/O10의 D13·O10의 D09를 보고서 계획에서 제외한다. 사건 건수·발생 시각 연결·조치 전후 전력 계산은 이 원본 로그를 읽지 않는다. 사건 유무와 관계없이 적용하며 RCA 로그 수집은 그대로다. O06의 D08/D06 관측과 기존 자료 부족 판정은 유지한다.
-
-생략 사유와 DB 근거를 주제 `quality.omitted_queries` 및 보고서 문장에 남긴다. 조회하지 않은 로그를 정상 빈 응답이나 실제 장애 0으로 해석하지 않는다. 기본 2개 클러스터·하루 장비 묶음의 초기 계획은 34→10회, 사건 0건 O06은 28→26회다. O08 단독과 11주제 전체는 줄지 않는다. 실제 전송량·실행시간 감소는 운영 측정 전이다. RCA·공통 수집·DB·실행 프로필은 바꾸지 않는다. 기간별 계획과 범위는 [12번 설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#불필요한-보고서-조회-제거--2026-10-06), 검증은 [Agent QA](../agents/QA.md)를 따른다.
-
-## UI 개편 전 분석 조건 정리 — 2026-10-06
-
-[보고서 선택 개편 기준](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md#보고서-선택-개편-전-확정-기준--2026-10-06)에 7개 종류의 주제·집계 기본값, 실제 계산 단위와 필수 자료, 기존 일정/결과 보존을 정리했다. 후속 변경에서 7개 종류 다중 선택·전체 종합을 한 보고서로 실행한다. 선택적 `topic_group_by`를 주제별로 적용하고 실제 표시 기준을 topic/metric quality에 남긴다. O10 조치·비교 기간 미지정 시 해당 주제 전용 조회를 생략하고 사유를 보존한다. 종합 실행은 수집량 감소를 뜻하지 않는다. O08 이외 일반 그룹 집계는 미완료이므로 cluster 요청을 클러스터별 결과로 오해하지 않는다.
-
-D08이 연결 관측(`observed_pod_labels`)인 O02/O03/O04/O06에는 기존 `allocation_contract_missing` 사유를 명시한다. O02 연결 관측 수치와 다른 클러스터의 유효 수치는 보존하며, 조회 실패/빈 응답/독점 episode 부족과 구분한다. 보고서 문장·화면·내보내기 사유 설명을 동기화한다. 데이터 계약·산식·저장 결과·일정·RCA는 변경하지 않는다. 준비 상태는 실행에 고정된 evidence 기준이며 현재 배포 가용성 전체를 증명하지 않는다.
-
-## 계산과 보고서
-
-O01~O11은 공통 결정적 산식을 사용하고 고정 절대 기간·공개 RCA ID/hash·주제별 partial/blocked를 보존한다. HTML/CSV는 저장 수치에서 생성한다. 모델은 코드로 만든 사실·보고서 문장의 참조와 순서만 선택하며 수치·권고를 생성하거나 계산 품질을 승격하지 않는다.
-
-주제 계산은 별도 스레드에서 요청 순서대로 하나씩 수행하여 CPU 계산 중에도 Worker heartbeat가 계속 동작하게 한다. 해당 주제에서 사용하는 할당·활동 입력만 정규화한다. 취소·lease 상실·deadline이면 다음 주제와 보고서 설명·저장으로 진행하지 않으며, 이미 실행 중인 계산은 끝날 때까지 회수한다. 수집·주제 계산·보고서 문장 구성의 시작/완료와 소요시간을 job/attempt별 로그로 남긴다. 원본 관측·프롬프트는 이 로그에 넣지 않으며 계산 산식·결과 스키마·RCA·JC 한도는 바꾸지 않는다.
-
-`report.py`는 분석 범위와 결과·확인된 운영 현황·권고와 실행 조건·추가 확인·분석 한계의 다섯 섹션을 구성한다. 모델 미설정·확정 실패·무효 응답에도 결정적 기본 보고서를 남긴다. `quality.report.status=complete`는 보고서 구성 완료이며 topic/result_status와 다르다. `narrative_status`와 `quality.narrative_reason`은 모델 편집 상태다. 원격 종료 불명·취소·lease 상실은 기존 fail·슬롯 반환 계약을 따른다.
-
-O08 criteria 1.2는 namespace 또는 cluster+namespace의 연결 GPU 고유 대수·연결 GPU-hours·평균 유효시간·시간 가중 활동률을 제공한다. 기존 report-namespace-v1은 이 계산을 유지한다. 신규 기본 프로필은 아래 criteria 1.3이며 JC가 작업별 기준 버전을 고정한다. 연결 활동률은 namespace 실사용률·독점 할당량이 아니다. 공유/MIG·신원/활동 충돌 구간을 제외하며 null과 실제 0%를 구분한다. 유효시간은 전체 클러스터 커버리지나 정책 비교 적격성을 뜻하지 않는다. 과거 결과를 재계산하지 않는다.
-
-## 클러스터 관측 요약 — 2026-10-02
-
-O08 criteria 1.2는 요청 클러스터마다 관측 GPU·연결 확인 GPU·누적 연결 시간과 Pod 라벨 없음/신원 연결 미확인 대수를 저장한다. 물리 UUID와 시간 합집합으로 중복을 제거한다. 요청 Namespace 필터를 유지하며 조회 실패는 null, 확인된 연결 부재는 0으로 구분한다. 라벨 부재를 유휴로 확정하지 않는다. 실제 오류만 partial/blocked를 만들고 독점 할당 아님은 해석 제한으로 남긴다. 기존 Namespace 활동률 산식과 결과 스키마·RCA는 유지하며 과거 보고서는 바꾸지 않는다.
-
-## 남은 범위와 실행
-
-최초 병렬 관측은 구현했다. 판단 부족에 따른 추가 관측 라운드, 자유 생성형 Report Synthesis와 조언 검증은 [OP-05~07](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md)의 후속 목표다. 실제 Grafana 부하·일간/주간/월간 완료·관측 의미·모델 품질은 고정 fixture 검수와 별도다.
-
-[공통 설치·환경·E2E](../agents/README.md) · [검증 기록](../agents/QA.md) · [현재 상세 흐름](../docs/architecture/report-agent-workflow/detailed-workflow.md) · [Archify](../docs/architecture/archify/gpu-ops-advisor.html#sequence-report-collection)
-
-저장소 루트에서 실행한다.
-
-```powershell
-.venv/Scripts/python.exe -m ops_agent.main
-```
-
-## 기본 종합 운영보고서 — criteria 1.3 (로컬 구현, 2026-10-12)
-
-- 신규 화면 기본 선택은 O01/O08/O11이다. 기존 장비·에너지·장애 묶음을 O01, O09, O05로 분리해 기본 보고서에서 O05/O09가 자동 실행되지 않는다. 나머지는 추가 선택하며 기존 O ID·저장 결과·일정의 주제 목록은 삭제하거나 재작성하지 않는다.
-- O08은 D02/D06의 유효 GPU–Pod 신원 연결을 재사용한다. 시간대 GPU 대수는 최대 동시 연결 물리 GPU 수이고, 평균은 같은 GPU 모델의 유효 GPU-seconds로 가중한다. 미관측은 null이며 실제 0%와 다르다. 모델 미확인·충돌·공유/MIG 구간은 활동 비교에서 제외한다.
-- 저활동은 GPU별 **5% 미만이 연속 30분 이상**인 관측이다. UTC 정시(한국 시간 정시와 일치)로 자른 표시는 연속 판정을 끊지 않지만 관측 공백·Namespace 이동은 끊는다. 할당 독점성·낭비·회수 권고는 판정하지 않는다. 연결 시간은 상세 근거로만 남긴다.
-- O01은 유효 시간 계약이 있는 평균을 보존한다. hold=0인 Fleet 입력은 기간 내 마지막 기록값과 기록 시각을 표시하고 실제 측정 시각 미확인을 명시한다. D20 Node 조건의 관측 시간을 GPU 건강 판정으로 사용하지 않는다.
-- O11은 관측된 job/instance별 D10 정상·실패·미관측 시간을 구분하고 D22 응답시간 평균·최대를 표시한다. 기대 인벤토리가 없어 전체 coverage는 null이다. 보고서 자체의 조회 진단 `quality.collection`과 다르다.
-- criteria 1.3 + 통합 binding의 기본 3개 합집합은 D02/D03/D04/D06/D10/D16/D20/D22(8종)다. O01의 부가 D15/D18/D19와 이에 대응하는 여유 메모리·CPU·load 출력은 수집/계산에서 제외한다. 다른 주제에서 필요한 D15와 기존 criteria 1.2는 유지한다. O08을 포함한 O01/O08/O11 조합도 검증된 GPU 연결 Namespace로 D06을 좁힌다. 신원/관측 범위가 불완전하면 기존 전체 요청 범위로 돌아가며 다른 D06 소비 주제와 섞인 보고서는 좁히지 않는다. D 종류 수는 실제 호출 수·전송량 감소율이 아니다.
-- 새 계산은 `report-namespace-v2`/criteria 1.3으로 구분한다. 1.2 결과·이미 접수한 job·재시도는 고정된 기준을 유지한다. **아직 접수되지 않은 일정의 다음 회차는 Backend의 새 기본 프로필을 선택할 수 있다.** 일정의 주제 목록은 바뀌지 않는다. 기존 일정의 계산 기준까지 유지해야 하면 기존 Backend 프로필 설정을 유지한 채 별도 전환한다.
-- API 입력·DB 스키마·RCA 분석·JC 슬롯은 그대로다. Backend/JC 설정에는 새 보고서 프로필을 추가한다. `configuration.jobController`는 전체 대체이므로 커스텀 Helm values에도 v1을 남기고 v2를 추가해야 한다. 새 Worker → JC 프로필 → Backend/Frontend 순서로 반영하며, 배포는 별도 승인 후 수행한다.
-- 모든 새 시간별/기록값 지표에 대상·period·근거가 있으며 CSV/HTML에도 대상과 시각을 포함한다. 상세 시계열은 LLM 입력에 행마다 복제하지 않고 수치 표에서 제공한다.
-
-검증 사례: [계산 회귀](../agents/tests/test_basic_report.py), [실제 프로세스 E2E](../agents/tests/test_e2e.py). 고정 응답 검증이며 실환경 의미·부하 검증을 대신하지 않는다.
-
-## 기본 보고서 수집·결과 최소화 — 2026-10-12
-
-criteria 1.3 통합 binding에서는 계산에 쓰인 D20 원본 구간을 `quality.node_condition_observations`에 다시 복제하지 않는다. Node별 condition/status의 `node_condition_seconds`와 해당 원본 evidence·참조를 유지한다. Namespace 활동률·시간대별 GPU 대수·연속 저활동·공백 및 충돌 처리, GPU 메모리 사용/총량·온도와 수집 상태의 산식은 바꾸지 않는다. 제외한 D의 빈 지표나 자료 부족 경고를 대신 생성하지 않는다. 과거 criteria 1.2의 계산/출력 및 저장된 결과는 변경하지 않는다.
-
-기존 criteria 1.3의 큰 발행본은 Backend가 중복 D20 필드만 제외하는 읽기용 결과를 반환하며, 원본 저장 본문/해시는 유지한다. 원본 evidence는 명시적으로 열 때 조회한다. 결과 화면의 접힌 원본 영역은 펼칠 때만 구성한다. DB 내부 JSON 압축 해제 비용 자체가 사라진다는 뜻은 아니다. [Backend API](../backend/API.md)와 [검증 기록](../agents/QA.md)을 따른다.
-
-합성 자료로 수정 전후의 유지 지표(값·단위·대상·기간·산식·상태·부족 판정)를 대조하는 재현 스크립트는 `agents/tests/benchmark_report_minimization.py`다. 실환경 수집 시간·네트워크 전송량과 구분한다.
-
-## 삭제한 보고서의 파일 정리 — 2026-10-12
-
-사용자가 종료한 보고서를 삭제하면 JC가 해당 보고서의 결과·증거를 지우고 `report_deletions` 기록을 남긴다. Ops Worker는 시작 시와 이후 30초마다 정리 대상 1건을 확인해 자신의 `ARTIFACT_DIR/<job_id>`만 비운다. 여러 Pod가 같은 저장소를 사용해도 DB 행 잠금과 `SKIP LOCKED`로 같은 대상을 동시에 맡지 않는다. RCA 작업과 삭제 요청이 없는 보고서는 대상이 아니다. 공통 Python Worker와 RCA Agent에는 정리 루프를 추가하지 않는다.
-
-파일을 지운 자리에는 0바이트 일반 파일을 남긴다. 취소된 이전 저장 스레드가 늦게 끝나도 같은 보고서 폴더를 다시 만들지 못하게 하는 삭제 표시다. 삭제 내용·CSV·HTML은 남기지 않는다. 경로는 정규 UUID만 허용하고 보고서 폴더의 심볼릭 링크를 따라가지 않는다. 저장소 루트가 없거나 파일 정리에 실패하면 완료로 표시하지 않고 다음 순서에서 재시도한다. `artifact_cleanup_state`의 `pending`/`failed`는 파일 정리 대기·실패, `complete`는 이 삭제 표시까지 생성했음을 뜻한다.
-
-008 마이그레이션이 아직 없는 순차 배포 중에는 경고만 기록하고 기존 분석 루프를 계속한다. 파일 정리 실패는 DB에서 이미 삭제한 본문을 복구하지 않으며 Ops Pod가 실행되고 공유 저장소가 정상이어야 정리가 끝난다. 프로세스 중단은 진행 중 파일 정리가 끝난 뒤 잠금을 놓고, 재시작 시 남은 대상을 다시 처리한다. `--once`는 파일 정리 1회를 먼저 시도한 뒤 기존 작업 실행을 진행한다.
-
-검증: [경로·지연 저장·취소 회귀](../agents/tests/test_report_cleanup.py), [격리 DB의 정리 재시도·동시 실행](../agents/tests/test_report_cleanup_e2e.py), [실제 Worker 발행·삭제 연동](../agents/tests/test_e2e.py). 운영 PVC의 실제 삭제는 별도 사용자 요청 없이 실행하지 않는다.
-
-### 보고서 전용 로그 제거·Pod 조회 축소 — 2026-10-12
-
-- O05/O06/O10의 `quality.omitted_queries.reason=unused_by_report_calculation`은 계산에 쓰지 않는 D09/D13 생략을 명시한다. 원본 로그의 부가 참조·수집 상태는 제거하지만 사건 DB snapshot, 신원 연결, D11 전후 계산과 자료 부족 판정은 보존한다. 작업 피해·인과 효과가 확인됐다는 의미가 아니다. 이전 발행 결과·증거는 재작성하지 않는다.
-- 기존 D06 namespace 축소가 허용된 **통합 binding**의 O08 단독(criteria 1.2/1.3) 및 O08을 포함한 기본 O01/O08/O11 조합(criteria 1.3)에서 Pod 이름도 좁힌다. D02(신원·연결 역할)의 요청 기간 전체가 완전하게 수집되고 모든 후보의 GPU/Namespace/Pod/Node 라벨이 있어야 한다. 누락·공백·빈 후보·4096자 초과 정규식이면 Pod 필터를 추가하지 않고 기존 namespace/전체 범위로 돌아간다.
-- Pod 이름과 Namespace 집합의 교집합을 조회하며 UID·Node 필터를 추가하지 않는다. 같은 이름으로 재생성된 UID와 충돌 표본을 모두 남기고 기존 시간·신원 연결에서 판정한다. 여러 Namespace에서 같은 Pod 이름을 쓰면 불필요한 일부 행이 남을 수 있지만 필요한 신원은 제외하지 않는다. 선택된 Pod는 `quality.queried_pods` 및 저장된 요청 표현식에 남긴다.
-- 추가 필터는 Ops만 전달한다. RCA·구 binding·확장 주제 혼합 보고서는 기존 D06 범위다. 샘플 주기·구간·값·원본 형식·계산 산식·DB schema는 바꾸지 않는다. 24시간 원천 집계와 구간 압축은 이번 범위가 아니다.
+실환경 지연·최대 메모리·운영 PVC의 삭제·복구와 원인/업무 영향 해석은 각 검증 근거의 범위를 따른다. 저장소 원본이나 fixture 테스트만으로 운영 배포와 성능 개선을 확정하지 않는다.

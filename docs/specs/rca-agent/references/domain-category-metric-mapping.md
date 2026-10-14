@@ -69,7 +69,7 @@
 | unsupported/sentinel 처리 | collector 구현과 버전에 따라 누락 처리 시점이 달라질 수 있음 |
 | 실제 CPC 값 일치 | 아직 미검증. 제공 자료에서 Fleet 표본은 있으나 로컬 Prometheus의 `DCGM_FI_DEV_GPU_UTIL` 조회는 0건이어서 동일 GPU·동일 시간 비교 표본이 없음 |
 
-따라서 Knowledge DB에는 두 이름을 다음처럼 등록하는 것이 적합하다. 이 원칙의 상세 설명은 [Knowledge DB reference](../drafts/knowledge-db-reference.md)를 따른다.
+따라서 Knowledge DB에는 두 이름을 다음처럼 등록하는 것이 적합하다. 이 원칙의 상세 설명은 [생산자별 메트릭 의미](metric-meaning.md)를 따른다.
 
 ```text
 canonical_meaning_key: gpu.temperature.celsius
