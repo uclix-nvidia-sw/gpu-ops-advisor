@@ -363,3 +363,35 @@ it('does not call failed or unlabelled prose an AI interpretation', () => {
     expect(html).toContain('stored summary');
   }
 });
+
+it('keeps saved interpretation timestamps and text intact when adding wrap boundaries', () => {
+  const text =
+    'cpc-1 / test-project-demand-forecast: 10/13 15:00~10/13 16:00 KST 0.00%\n다음 10/14 01:02:03에는 96.98%.';
+  const value = {
+    narrative_status: 'complete',
+    quality: { report: { method: 'llm_interpreted' } },
+    topics: [{ topic_id: 'namespace_usage' }],
+    narrative: [
+      {
+        topic_id: 'namespace_usage',
+        observation: text,
+        meaning: '해석 유지',
+        next_check: '확인 유지',
+      },
+    ],
+  };
+  const before = JSON.stringify(value);
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} onEvidence={() => {}} />
+    </MemoryRouter>,
+  );
+  const observation = html.split('<dd>')[1].split('</dd>')[0];
+  expect(observation).toContain(
+    '<span class="aggregate-timestamp">10/13 15:00</span>~<span class="aggregate-timestamp">10/13 16:00</span>',
+  );
+  expect(observation).toContain('<span class="aggregate-timestamp">10/14 01:02:03</span>');
+  expect(observation.replace(/<[^>]+>/g, '')).toBe(text);
+  expect(JSON.stringify(value)).toBe(before);
+  expect(html).toContain('<dd>해석 유지</dd>');
+});

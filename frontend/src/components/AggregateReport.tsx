@@ -105,6 +105,19 @@ export function incidentShortTitle(value: string) {
   return characters.length > 60 ? `${characters.slice(0, 60).join('')}…` : title;
 }
 
+function InterpretationText({ text }: { text: string }) {
+  // Keep each saved date/time together without rewriting the model's text.
+  return text.split(/(\b\d{1,2}\/\d{1,2}[ \t]+\d{2}:\d{2}(?::\d{2})?)/g).map((part, i) =>
+    i % 2 ? (
+      <span className="aggregate-timestamp" key={i}>
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+}
+
 function TopicInterpretation({
   topic,
   narrative,
@@ -138,7 +151,9 @@ function TopicInterpretation({
         ].map(([key, label]) => (
           <div key={key}>
             <dt>{label}</dt>
-            <dd>{str(section[key])}</dd>
+            <dd>
+              <InterpretationText text={str(section[key])} />
+            </dd>
           </div>
         ))}
       </dl>
