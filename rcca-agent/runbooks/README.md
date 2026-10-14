@@ -109,7 +109,7 @@ R코드는 RCA의 조사 목적이고, D코드는 등록 조회 ID다. Runbook�
 
 RCA 담당은 DB revision/scope/hash 검사 → schema 분기 → v1 검증 → 검색·호환성/조건 평가 → 계획 소비를 연결한다. 알려지지 않은 schema나 잘못된 v1은 legacy equality로 대체하지 않고 진단을 남겨 보류한다. 검색 점수나 콘텐츠 검증 성공만으로 적용·원인 확정·증거 충족을 선언하지 않는다.
 
-기존 증거가 부족하면 허용된 계획으로 Grafana MCP에서 병렬 수집하고, 코드 충분성·최대 1회 재조사 이후 Synthesis와 코드 검증을 수행한다. 부족하면 partial/blocked와 원인 미확정을 유지한다. 모든 정상 결과 경로는 evidence·candidate 저장 및 JC 공개를 거치며 보고서 Agent는 공개된 RCA 참조를 사용한다. 전체 실행부의 입력 1.3/1.4 및 운영 검증 경계는 [보완 계획](../../docs/specs/rca-agent/implementation-plan-20260928.md)을 따른다.
+기존 증거가 부족하면 허용된 계획으로 Grafana MCP에서 병렬 수집하고, 코드 충분성·최대 1회 재조사 이후 Synthesis와 코드 검증을 수행한다. 부족하면 partial/blocked와 원인 미확정을 유지한다. 모든 정상 결과 경로는 evidence·candidate 저장 및 JC 공개를 거치며 보고서 Agent는 공개된 RCA 참조를 사용한다. 전체 실행부의 입력 1.3/1.4 및 운영 검증 경계는 [현재 RCA 실행 안내](../README.md)를 따른다.
 
 Runbook 담당 파일은 이 디렉터리, 검증기 및 [전용 테스트](../../agents/tests/test_runbook_contract.py)다. RCA 담당은 workflow/procedures/prompts와 런타임 테스트를 관리한다. JC/DB 저장 형식과 보고서 결과 계약은 변경하지 않는다.
 
@@ -143,7 +143,7 @@ python -c "import sys; sys.path[:0]=['rcca-agent/src','shared/python/src','ops-a
 
 Backend는 생성/PATCH 시 v1 구조를 검사하고 approve/publish 시 빈 compatibility를 거부한다. `code` 필터는 legacy `content.code`와 v1 `search.codes`를 정확히 조회한다. 테이블·컬럼·인덱스 추가는 없다. 동적 query registry/procedure 허용 목록은 관리 CLI와 Worker에서 검증하며, 형식 검사만으로 운영 호환성을 승인하지 않는다. [등록 절차와 검증 책임](DB-WORKFLOW.md)을 따른다.
 
-설계 기준: [RCA 모듈 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md), [Runbook 설계 초안](../../docs/specs/rca-agent/drafts/gpu-node-rca-runbook-design.md).
+설계 기준: [RCA 모듈 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md).
 
 
 ## Code-specific retrieval boundary (2026-10-08)

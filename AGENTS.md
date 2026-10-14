@@ -10,6 +10,8 @@ Before inspecting, changing, testing, documenting, or running operational comman
 2. Read [workflow.md](.claude/rules/workflow.md) and [safety.md](.claude/rules/safety.md) for every task, if not already loaded.
 3. Follow the routing table in `CLAUDE.md` and read every relevant scoped rule, including rules for affected consumers. Do not assume `.claude/rules/` is automatically discovered by your tool.
 
+For repository analysis and documentation, follow [Shared Documentation](.claude/rules/workflow.md#shared-documentation): use the current owner document, update it in place, and remove superseded explanations instead of adding another task diary.
+
 The Korean references are [docs/CLAUDE.ko.md](docs/CLAUDE.ko.md) and [docs/rules.ko.md](docs/rules.ko.md); the English sources are authoritative. This entry file connects coding assistants to team rules. It is unrelated to the product workers in `rcca-agent/`, `ops-agent/`, or `agents/`.
 
 A Korean translation of this entry file is available in [docs/AGENTS.ko.md](docs/AGENTS.ko.md) for reference; use this English file as the entry point.

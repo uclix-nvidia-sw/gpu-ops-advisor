@@ -62,4 +62,4 @@ Client의 POST는 202로 끝난다. 상태 조회, 공개 보고서 조회, 다�
 
 실제 비동기 경계인 DB outbox 전달과 Worker heartbeat를 표시했다. 코드에서 근거를 확인하지 못한 Kafka·외부 trace collector·완료 이벤트 broker는 추가하지 않았다. 재시도·조건 분기·캐시 hit는 카드에 설명하고 도면은 정상 완료의 주 경로를 유지한다.
 
-일곱 Sequence는 각각 Archify showcase 9/9, 오류·경고 0으로 생성했다. 네 desktop 크기 브라우저 검사와 밝은/어두운 실제 캡처 검토 결과는 [검토 영수증](review-receipt.json)에 기록한다. 상단 탭·시나리오 선택은 [탭 검사](tabs-check.json)로 확인한다. 제품 코드 실행 시험이나 export 기능 시험을 의미하지 않는다.
+이 도식의 코드 기준일은 2026-10-02다. 최신 동작은 [RCA](../../../rcca-agent/README.md)·[Ops](../../../ops-agent/README.md) 안내를 따른다. 레이아웃·탭 검사는 제품 실행 검증과 별개이며 임시 산출물은 로컬/CI artifact에 보관한다.

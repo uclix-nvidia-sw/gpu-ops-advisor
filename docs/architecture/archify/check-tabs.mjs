@@ -94,6 +94,8 @@ try {
     const bytes=fs.readFileSync(path.join(dir,name));
     binding[name]={sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length};
   }
-  fs.writeFileSync(path.join(dir,'tabs-check.json'),JSON.stringify({status:'pass',binding,checks:rows},null,2));
+  const outputDir = path.resolve(dir, '../../../.local/diagram-checks');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir,'tabs-check.json'),JSON.stringify({status:'pass',binding,checks:rows},null,2));
   console.log('PASS: both tabs and all 7 sequence scenarios, 4 viewports, frame/outer containment, direct links and invalid-hash fallback.');
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }

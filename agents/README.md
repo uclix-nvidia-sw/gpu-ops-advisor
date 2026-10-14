@@ -208,7 +208,7 @@ Compose는 로컬 개발용 PostgreSQL·JC도 포함합니다. 기존 DB/JC 배�
 - scope/namespace/대상/기간은 코드가 조립·검사합니다. LLM에는 쿼리 ID만 전달하며 임의 PromQL/LogQL/SQL/쉘이나 저장·완료 함수는 노출하지 않습니다.
 - 보고서는 REPEATABLE READ에서 data cutoff, Incident, 공개된 RCA ID/hash, 실제 조치 기록을 고정합니다. RCA 원인 수준은 인용한 결과 수준을 유지합니다.
 - 보고서 LLM 설명은 검증된 사실 ID 선택으로 제한하고 저장된 `value_refs`로 렌더링합니다. RCA Synthesis는 수집이 끝난 뒤 도구 없이 근거 참조가 있는 원인 후보·한계를 생성합니다. 자유 문장의 숫자는 거부하고 모델의 인과 수준은 candidate로 제한합니다. 참조·형식 검증이 모델 문장 의미의 진실성을 보장하지는 않습니다.
-- RCA는 승인 Runbook 계획의 query를 병렬 실행하며 `limits.max_concurrency` 기본값은 3입니다. 최대 1회 재조사 후 Synthesis하고, 조회 실패·부분 수집은 degraded로 남깁니다. 전용 Runbook 미일치는 `rca.general_runbook_key`의 승인 발행본으로 대체하며 일반 발행본까지 없으면 조사하지 않습니다. [RCA 실행 안내](../rcca-agent/README.md)와 [보완 계획](../docs/specs/rca-agent/implementation-plan-20260928.md)을 따릅니다.
+- RCA는 승인 Runbook 계획의 query를 병렬 실행하며 `limits.max_concurrency` 기본값은 3입니다. 최대 1회 재조사 후 Synthesis하고, 조회 실패·부분 수집은 degraded로 남깁니다. 전용 Runbook 미일치는 `rca.general_runbook_key`의 승인 발행본으로 대체하며 일반 발행본이 없으면 패키지의 조사 전용 템플릿을 사용합니다. 템플릿은 발행 지식이나 원인 확정 근거가 아닙니다. [RCA 실행 안내](../rcca-agent/README.md)와 [현재 RCA 실행 안내](../rcca-agent/README.md)을 따릅니다.
 - timeout/cancel 이후 추론 종료가 확인되지 않으면 `remote_call_state=unknown`으로 fail을 보냅니다. JC는 실행 슬롯을 반환하고 원격 종료 미확인 감사 이력을 남깁니다. 저장 실패는 succeeded가 아닙니다.
 - Agent는 HTML·CSV 파일과 checksum을 저장합니다. Backend 다운로드 API는 발행된 결과에서 HTML 표와 항목별 CSV를 렌더링하며 새 조회·분석은 하지 않습니다. HTML escape와 CSV 수식 방어를 적용합니다. 화면 상단의 HTML·CSV 다운로드 버튼으로 받을 수 있습니다.
 

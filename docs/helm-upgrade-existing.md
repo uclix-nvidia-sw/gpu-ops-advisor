@@ -49,7 +49,7 @@ kubectl -n gpu-ops-advisor get pvc gpu-ops-artifacts \
 
 ## Fleet RCA profile v3 반영 시 확인 (2026-09-30)
 
-이번 변경에는 DB migration이 없다. 기존 DB/report PVC와 snapshot/hash를 유지한다. Agent 전체 override를 쓰는 경우 `builtin-grafana-v3`의 D05/D09 `json_target_fields`, `health_contract`, query revision과 `health_contracts`를 기존 설정에 병합한다. 기본 `loki_timestamp_is_observed_at=false`를 운영 시각 계약 검증 없이 켜지 않는다. [상세 설정](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따른다.
+이번 변경에는 DB migration이 없다. 기존 DB/report PVC와 snapshot/hash를 유지한다. Agent 전체 override를 쓰는 경우 `builtin-grafana-v3`의 D05/D09 `json_target_fields`, `health_contract`, query revision과 `health_contracts`를 기존 설정에 병합한다. 기본 `loki_timestamp_is_observed_at=false`를 운영 시각 계약 검증 없이 켜지 않는다. [상세 설정](../rcca-agent/README.md)을 따른다.
 
 배포는 별도 승인 후 CI 성공 이미지 digest로 RCA/Ops·Incident·Frontend를 갱신한다. 새 테스트 사건에서 실제 요청 범위/31건 같은 원본 건수/관측 참조/남은 D02 실행/R02 D08·D06 계획/보고서 공개를 확인한다. 근거 부족과 대상 매핑 미확인은 partial/blocked로 남아야 한다. 실패 시 기존 이미지와 전체 설정으로 복귀하며 DB/PVC를 재생성하지 않는다. 기존 결과는 자동 재분석하지 않는다. 운영 검수 담당자·대상·시점을 배포 전에 지정한다.
 

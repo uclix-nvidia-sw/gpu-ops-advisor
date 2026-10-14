@@ -7,6 +7,9 @@ __pycache__/
 .ruff_cache/
 .venv/
 .local/
+docs/architecture/**/*.visual-check*
+docs/architecture/**/*receipt*.json
+docs/architecture/**/tabs-check.json
 *.egg-info/
 # NAT eval/profiler run output (configs/runai_rca_eval.yml eval.general.output.dir)
 agent/.tmp/

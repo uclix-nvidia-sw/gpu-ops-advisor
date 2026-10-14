@@ -88,36 +88,17 @@ class Upstream(BaseHTTPRequestHandler):
                 return self.send({"error": "fixture unavailable"}, 503)
             if body.get("tools") and self.reject_tool_requests:
                 return self.send({"error": "fixture tool protocol failure"}, 500)
-            if body.get("tools"):
-                allowed = body["tools"][0]["function"]["parameters"]["properties"][
-                    "query_ids"
-                ]["items"]["enum"]
-                queries = ["D02"] if "D02" in allowed else []
-                message = {
-                    "role": "assistant",
-                    "tool_calls": [
-                        {
-                            "id": "fixture-call",
-                            "type": "function",
-                            "function": {
-                                "name": "investigate",
-                                "arguments": json.dumps({"query_ids": queries}),
-                            },
-                        }
-                    ],
-                }
-            else:
-                data = json.loads(body["messages"][1]["content"])
-                message = {
-                    "role": "assistant",
-                    "content": json.dumps(
-                        analysis_reply(data["observation_refs"])
-                        if "observation_refs" in data
-                        else {"query_ids": data["available_queries"][:3]}
-                        if "available_queries" in data
-                        else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
-                    ),
-                }
+            data = json.loads(body["messages"][1]["content"])
+            message = {
+                "role": "assistant",
+                "content": json.dumps(
+                    analysis_reply(data["observation_refs"])
+                    if "observation_refs" in data
+                    else {"query_ids": data["available_queries"][:3]}
+                    if "available_queries" in data
+                    else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
+                ),
+            }
             return self.send(
                 {
                     "choices": [{"message": message, "finish_reason": "stop"}],

@@ -1,409 +1,50 @@
-## Korean repair diagnostics — 2026-10-14
+# RCA Agent
 
-Rejected Korean prose records `language_diagnostic`: bounded Unicode character spans, sentence hash/length and whether Korean prose is missing. The model receives the spans with the existing bounded rejected sentence, so repair can target the actual disallowed fragments. Raw rejected prose is not persisted in diagnostics. Identifier/technical-term allowances and evidence, numeric and causality checks are unchanged; failed repair still retains only the validated subset.
+Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인수해 조사하는 Worker다. 현재 구현은 아래 코드와 계약을 기준으로 읽는다. 코드 병합과 운영 배포·Runbook 발행은 별개다.
 
-## Unified evidence evaluation — 2026-10-14
+## 현재 실행 흐름
 
-Each collection round calls one evaluator for observation gaps/conflicts/failures, existing Runbook extension policies, sufficiency and follow-up/stop decisions. New runs emit only `evidence_evaluation`; no `unexpected_evidence` or `sufficiency` stage records are written. Plan-extension provenance remains separate. Published Runbook policy fields and historical records are unchanged. The result summary retains `analysis.sufficiency` for old consumers alongside `analysis.evidence_evaluation`.
+1. JC claim의 사건 snapshot·대상·기간·예산·지식 revision을 고정한다. [workflow.py](src/rcca_agent/workflow.py)가 전체 흐름을 소유한다.
+2. [retrieval.py](src/rcca_agent/retrieval.py)로 발행 Runbook을 검색하고 [runbook_contract.py](src/rcca_agent/runbook_contract.py)와 적용 조건을 검사한다. 검색 점수는 관련도이며 원인 확률이 아니다. 일반 조사 템플릿은 원인 확정 근거가 아니다.
+3. 선택한 Runbook의 필수 관측을 [observation_agents.py](src/rcca_agent/observation_agents.py)에서 수집한다. 허용된 독립 조회는 공유 예산 안에서 병렬 실행한다.
+4. 매 라운드 코드가 `evidence_evaluation`에 가용 사실·부족 조건·상충·선택 이유·종료 이유를 기록한다. 최초 수집과 보완 수집 1회, 최대 2라운드이며 보완 배치는 최대 3개 조회다.
+5. 수집 종료 후 [synthesis_context.py](src/rcca_agent/synthesis_context.py)가 제한된 모델 입력을 만들고 [synthesis.py](src/rcca_agent/synthesis.py)가 원인 후보·한계를 생성하고 검증한다. 기존 근거로 판단하는 fast path에서는 원인 Synthesis를 생략한다.
+6. [report.py](src/rcca_agent/report.py)가 근거가 연결된 보고서 문장을 구성하고 [report_editor.py](src/rcca_agent/report_editor.py)가 문장 ID의 우선순위를 선택한다. 선택되지 않은 원문도 보존한다. 결과·근거를 저장한 뒤 JC가 공개를 확정한다.
 
-## Conditional auxiliary selection — 2026-10-14
+## 보완 조회 선택
 
-Optional observation-plan `selection` rules contain `missing_any` (nonempty fact/gap names), `requires_all` (facts already established by the existing scoped validators), and `independent: true`. They are permitted only on auxiliary steps. A matching gap plus all prerequisites selects the query deterministically; priority then query ID orders rules, duplicates are removed, and the existing budget/three-query/final-round caps apply. Findings retain the Runbook revision, matched gaps, missing prerequisites and purpose. Successful retrieval does not validate device identity, timestamps, current health or causation.
+선택 조건은 발행 Runbook의 `observation_plan`에 둔다. `selection.missing_any`는 부족 조건, `requires_all`은 필요한 scoped fact, `independent: true`는 독립 조회를 뜻한다. 조건을 만족한 항목을 priority와 query ID 순으로 선택한다. 명시적 `unexpected_evidence.additional_queries` 정책도 지원하되 단계의 selection 규칙을 우회하지 않는다.
 
-Explicit unexpected-event policy queries remain supported, but cannot bypass a step's selection rule. Rules that do not match are excluded from LLM selection. Only auxiliary steps explicitly marked `exploratory_llm: true` may use the JSON exploratory path, recorded as `explicit_exploratory_llm`. This opt-in cannot coexist with a selection rule or a required step. Legacy steps without rules or policy selection no longer call the model: `selection_conditions_missing` and `unconfigured_queries` identify the authoring gap (조회 선택 조건 미설정). There is no implicit legacy or unconfigured-model fallback. When deterministic rules select a batch, no selection LLM is called or used to fill spare slots. Synthesis/report explanation remains LLM-based.
+규칙으로 배치를 선택하면 선택 LLM을 호출하거나 남는 자리를 LLM으로 채우지 않는다. `exploratory_llm: true`인 보조 단계만 JSON 방식의 탐색 선택에 참여한다. 이 표시는 필수 단계나 selection 규칙과 함께 사용할 수 없다. 설정되지 않은 단계는 `selection_conditions_missing`으로 남긴다.
 
-XID79 and SXID11001 repository drafts now require scoped reported code/producer facts and a cause/current-health gap before their independent auxiliary queries. These are proposed new content revisions, not changes to published rows. Deploy Backend and RCA validators first, validate against the deployed profile, then review/publish new revisions using Backend API. Older validators reject these new fields; retain old published revisions until rollout succeeds. No DB schema or Ops runtime changes.
+탐색 LLM은 승인된 query ID만 최대 3개 반환할 수 있다. 잘못된 JSON 선택은 같은 예산·deadline 안에서 1회 수정한다. HTTP·deadline·예산 실패로 임의의 조회를 강제하지 않는다. 빈 선택은 조사 중단이며 근거 충분을 뜻하지 않는다.
 
-## RCA JSON auxiliary selection — 2026-10-14
+## 관측과 판단의 경계
 
-Auxiliary selection uses ordinary JSON on the same model endpoint, without forced tool calling. Only registered independent candidates (maximum three) pass code validation. Malformed selection gets one repair; HTTP, deadline and budget failures remain explicit and do not force queries. The observed production investigation calls returned HTTP 500 three times per job; the server-side cause is not known. This change removes the tool-protocol dependency, not a claim that every HTTP failure is fixed.
+- 공통 [Observation](../shared/python/src/agent_common/observation.py)이 검증된 D binding과 Grafana MCP를 사용한다. 데이터소스 UID는 profile에 따라 발견하거나 고정하며, 요청 cluster_id와 허용 범위를 유지한다.
+- [Fleet 이벤트](src/rcca_agent/fleet_events.py)는 보고된 오류와 장치 연결을 구조화한다. 로그 기록 시각·장비 발생 시각·현재 상태를 구분한다. PCI가 GPU 목록과 같아도 오류 장비 확정을 뜻하지 않으며, SXID의 스위치 주소를 GPU 목록으로 검증하지 않는다.
+- 원본 관측은 evidence에 보존한다. 모델에는 크기를 제한한 뷰를 전달하며 `context_selection`과 입력 refs로 생략 범위를 기록한다. 수집 성공과 모델 입력 포함은 별개다.
+- 현재 Synthesis는 구조·refs·한국어·숫자 표현·일부 원인 주장 패턴을 검사한다. 장치 신원 불확실성을 원인으로 제시하는 검사는 문장 표현 검사보다 먼저 적용한다. 수정 응답도 같은 기준을 통과해야 한다. 이 검사는 가설의 진실성이나 원인 분석 정확도 점수가 아니다.
+- 수정은 예산·deadline 안에서 1회다. `validated_response`와 유효 부분만 남은 `validated_subset`을 구분한다. 진단에는 거절 사유·위치·hash를 남기고 거절 원문 전체는 저장하지 않는다.
+- 원인 후보가 없을 때 보고된 증상 요약이 표시될 수 있다. 관측 요약, LLM 가설, Runbook 적용에 따른 판단을 같은 확정 원인으로 해석하지 않는다. 장비 조치는 수행하지 않는다.
 
-## Follow-up selection and safe repair recovery — 2026-10-14
+## 보고서와 조회 호환
 
-RCA records `followup_selection` in each `evidence_evaluation`: selected,
-explicit stop, malformed response or model unavailable are distinct. A missing or
-malformed tool call gets one JSON selection retry through the same LLM budget and
-deadline. HTTP, deadline, token exhaustion and remote uncertainty do not trigger
-this retry. An explicit empty selection stops; it is not evidence sufficiency.
-Both formats accept only the approved remaining query IDs, at most three. No
-CPC-specific routing or unconditional collection is introduced.
+보고서는 사건·관측·원인 후보·권고·Runbook 지침·부족 근거를 연결한다. 최종 LLM은 새 원인이나 수치를 작성하지 않고 문장 ID를 정렬한다. 모델 미설정·확정 실패에는 코드 기본 보고서를 사용하며, 원격 실행 종료 불명은 공통 Worker의 격리 규칙을 따른다.
 
-Synthesis validates all limitation and hypothesis items before repair, supplies
-all detected violations and the validated subset, and revalidates any recovered
-subset against its original context. Inventory absence/identity uncertainty is not
-a causal mechanism. Rejected hypotheses and Korean prose remain excluded even
-when repair fails. Valid limitations can survive as `validated_subset`; this is
-not a fully validated model response or confirmation of device health. Original
-published results and Runbook revisions are unchanged.
+`operator_guidance`의 공통 스키마는 의미, 원인 관련 주의, 다음 확인, 출처를 표현한다. 지침은 해당 Runbook revision에 속하며 관측 사실이나 조치 승인을 대신하지 않는다. [작성·발행 안내](runbooks/DB-WORKFLOW.md)를 따른다.
 
-## Auxiliary batch and synthesis repair follow-up — 2026-10-13
+새 작업의 수집 평가 기록은 `evidence_evaluation`이다. 과거 `unexpected_evidence`·`sufficiency` 기록은 기존 결과 조회용으로 남아 있고, `analysis.sufficiency`도 호환 요약으로 제공한다. `job.status`, `result_status`, Synthesis 상태, `narrative_status`는 각각 실행·판단 가능 범위·모델 응답·보고서 구성 상태다.
 
-The final collection round requests one tool call containing up to three approved
-query IDs, rather than depending on multiple tool calls from the model. Empty
-selection stops; unknown IDs, mixed stop/selection and oversized batches are rejected.
-Legacy single-query replies remain supported. The limit is a maximum, not a mandate
-to execute irrelevant queries; successful live batching still needs deployment checks.
+## Runbook 관리
 
-Bounded rejected-sentence feedback now includes numeric violations as well as Korean
-prose violations, under the existing credential filter and repair budget. Invented
-quantities are masked in excerpts rather than replayed as values. Repaired
-text passes the same validator; no raw model sentence is persisted in diagnostics.
-Unresolved event identity also blocks covered firmware/configuration/power/physical
-mechanism claims even when bounded context omitted inventory metadata. These remain
-investigation checks, not supported causal candidates. This guard is not an exhaustive
-semantic validator. No source timestamps, health facts or published Runbooks change.
+- [목록](runbooks/CATALOG.md) · [등록·검토·발행](runbooks/DB-WORKFLOW.md) · [구조 계약](src/rcca_agent/runbook_contract.py).
+- 오프라인 계약 검사는 `python -m rcca_agent.runbook_audit --help`로 입력 형식을 확인한다. 운영 DB를 변경하거나 발행하지 않는다.
+- `python -m rcca_agent.runbook_transition --snapshot published.json --profile profile.json --output new-review-directory`는 제공된 발행 snapshot으로 전환 검토안을 만든다. 입력 hash를 확인하고 새 출력 폴더만 사용한다. Backend 호출·승인·발행은 없다.
+- [265개 전환 검토](runbooks/transition-review-20261014.json)는 196개 계약 통과 제안과 69개 보류(정의 미확정 64개·정보성 5개)를 기록한다. 의미 검토·운영 발행 완료를 뜻하지 않는다. 원인·필수 근거·출처를 보존하고 발행 전 최신 revision/hash와 다시 대조해야 한다.
 
-## Structured operator guidance — 2026-10-13
+## 실행·검증·남은 과제
 
-An optional `content.operator_guidance` with schema `gpu-rca-guidance/1.0` holds
-`meaning`, `cause_note`, ordered `next_checks` (title/text), and `references`
-(title/text/source_indices into the existing sources array). The contract rejects
-unknown keys and invalid source references. The selected published Runbook evidence
-is copied into `quality.runbook_guidance` with its evidence ID and revision; it does
-not supply observation facts, confirm a cause, or approve an action. The frontend
-renders this common shape without error-code branches. Legacy Runbooks retain their
-saved guidance and do not inherit another error's explanation.
+설치·환경 변수·timeout·Worker 실행은 [공통 Agent 안내](../agents/README.md), 검증 범위는 [Agent QA](../agents/QA.md), 상세 계약은 [RCA 명세](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md)를 따른다.
 
-XID79 and SXID11001 catalog drafts add this field only; requirement/source hashes
-are linked by `operator-guidance-review-20261013.json`. Deploy the compatible worker
-before reviewing/publishing new revisions through the existing Backend workflow.
-This code change does not publish or retire any operational revision. Other errors
-can adopt the same contract after source/content review, without new UI branches.
-Zero producer timestamps and unmatched PCI identities remain unverified.
-
-## Identity limitations and repair validation — 2026-10-13
-
-Device identity uncertainty belongs in limitations, not causal hypotheses. The Korean identity-cause guard also checks claims when bounded synthesis context omits inventory relation metadata. Repair feedback asks the model to remove such hypotheses (an empty list is valid) and translate internal field names into Korean explanations. Every repair still passes the same validator. Rejected limitation sentences remain excluded; `quality.analysis.synthesis.completion_mode` distinguishes `validated_subset` from `validated_response`. This diagnostic does not change publication status or establish missing device facts. The guard covers tested language patterns, not every possible unsupported claim. Ops runtime and stored results are unchanged.
-
-## General investigation expansion — 2026-10-13
-
-RCA preserves cause uncertainty and unknown state values in the assessment, but
-does not add a general Runbook solely for those expected limitations once the
-selected Runbook's required facts and queries are satisfied. Missing required
-facts/queries, identity or mapping gaps, query failure and conflicting evidence
-still permit the published fallback policy. Approved optional queries remain
-available; suppressing general expansion never promotes a report to verified
-device health or a confirmed cause. The `unexpected_evidence` snapshot records
-`general_extension_reason` and `general_extension_suppressed` for inspection.
-This is worker behavior, not a mutation or publication of stored Runbooks.
-
-# Datasource routing and RCA evidence / 조회 경로와 RCA 근거 — 2026-10-07
-
-검증된 공통 binding은 `environment.datasource_mode="discover"`로 Grafana UID를
-발견할 수 있다. 승인된 후보 라벨·요청 cluster_id의 정확한 값·요청 기간에서 유일한 datasource만 사용하며
-candidate를 활성화하지 않는다. 결과 발행 성공이어도 D02/D09가 `binding_unselected`면
-실제 조회 전 차단된 것이므로 LLM 재시도보다 적용 설정의 verification/selection을 먼저
-확인한다. 발행 Runbook 부재는 별도 문제이며 일반 템플릿으로 원인을 확정하지 않는다.
-[계약과 운영 검수 순서](../docs/specs/common/d-binding-runtime.md#datasource-uid-discovery--datasource-uid-자동-발견).
-
-# D binding RCA 연결 — 2026-10-06
-
-RCA와 Report는 공통 `agents/config.example.json`의 query/binding registry를 검증한다. Runbook의 D는 이 registry에서만 실행하며, 미선택 후보·생산 불가능한 fact 요구를 실행하지 않는다. 267개 작성 원본의 D05 요구를 D09와 필수 fact로 병합하고 일반 패키지 사본을 맞췄다. D02의 관측 연결은 D06 UID/시간과 함께 확인한다. [구현·적용 순서와 남은 범위](../docs/specs/common/d-binding-runtime.md). 개별 추가 분석·비코드 Runbook과 DB 등록/발행은 미완료다.
-
-# rcca-agent
-
-## Final editor validation — 2026-10-08
-
-`quality.report.editor` records a bounded reason for final statement selection:
-response shape, empty selection, invalid/unknown IDs, or an LLM budget/transport/output
-failure. RCA permits one repair of a rejected non-null selection using the original
-statements and the existing deadline/token budget. No raw rejected reply is stored or
-reinserted into the prompt. Remote uncertainty and cancellation propagate unchanged;
-transport/budget failures are not retried by the editor. RCA completed truncation uses the bounded retry described below. Ops keeps its single-selection
-call. Every original statement and its evidence references remain in the fallback.
-
-This improves diagnostics and recoverable selection failures; it does not prove that
-the historical `editor_response_rejected` was an ID error. That result did not retain
-the specific editor failure. Production resolution requires deployment and a new RCA.
-
-## Structured Fleet error events — 2026-10-08
-
-등록된 D09 Fleet 계약의 `log_type=event`, XID/SXID `data_source=kmsg` 표본을
-상태 요약과 분리한다. 요청 cluster·노드/머신·component, 구조화된 코드와 메시지의
-일치, 명시된 event 시각과 실제 조회 구간을 검사한다. event와 Loki 시각을 보존하며
-관측된 차이를 임의 보정하지 않는다. 동일 의미·원본 payload의 재전송은 참조를 합치고
-상충하는 payload는 분리한다. XID의 GPU 목록 일치는 후보 연결이고, SXID의 NVSwitch를
-GPU 목록으로 연결하지 않는다. 주입 메시지의 고정 PCI 예시는 실제 장치 신원을 보장하지 않는다.
-
-결과의 `quality.analysis.error_events`와 제한된 모델 입력에 보고된 event를 남긴다.
-현재 건강 상태·복구·물리 고장·Runbook 조건 fact로 승격하지 않으며 기존 부족 근거
-판정은 유지한다. 모델의 오류 코드 인용은 선택된 event의 evidence 참조로 검증한다.
-새 쿼리, CPC별 분기, DB migration은 없다. [원천 검토와 제한](../docs/evidence/fleet-state-event-review-20261008.md).
-
-## Runbook-first RCA — 2026-10-02
-
-신규 실행은 R01~R09, `purpose_ids`, R별 procedure/조회 허용 목록과 `purpose_plan`을 사용하지 않는다. Alert 단서 → 검토된 Runbook 검색·호환성 검사 → `observation_plan`의 필수 조회 → 근거 검사 → 최대 한 번 추가 조회 → Synthesis/보고 순서다. 이 날짜의 작업에서는 D 정의를 변경하지 않았다. 이후 D binding 전환은 위 최신 절을 따른다. 아래 이전 날짜의 R 기반 설명은 과거 동작 기록이다.
-
-- 신규 Incident 입력 1.5(기존 사건 revision 경로), 에피소드 입력 1.4, 기존 입력 1.3을 처리한다. 1.3의 목적 필드는 불변 snapshot 호환을 위해 읽지만 실행을 제어하지 않는다. Worker가 지원 계약을 명시해 구형 Worker에 새 입력을 배분하지 않는다.
-- Plan은 Runbook revision/hash/origin, 필수 근거, 조회 단계와 `unexpected_evidence`를 evidence에 고정한다. 조사별 assessment는 `assessment_id`, `question`, `runbook_revision_id`로 표시한다. 과거 `purpose_id` 결과와 snapshot/hash는 수정하지 않는다.
-- Runbook의 `required_evidence`와 실제 필수 조회 완료 여부를 검사한다. 미실행·빈 응답·부분·실패를 충분한 근거로 보지 않는다. GPU–Pod 신원/사건 시각·producer/freshness·조치 조건 검증은 유지한다. 조건 충족과 코드 매칭은 다른 단계다.
-- `unexpected_evidence`는 `on`(unknown_value/missing_evidence/conflicting_evidence/query_failed), `additional_queries`(등록 D 목록), `fallback`(general_runbook/stop)이다. 추가 조회를 우선하고 stop이면 그 뒤 미확정으로 종료한다. 실패 조회를 반복하지 않고 예산/deadline/취소를 준수한다. 없는 필드는 기존 revision 호환을 위해 추가 조회 없음·일반 조사 전환으로 해석한다.
-- 발행 일반 Runbook이 없으면 패키지의 `general_runbook.json`을 사용한다. 이 파일은 `runbooks/RB-GENERAL-GPU-NODE.json`의 content와 일치해야 한다. `origin=builtin` 조사 전용 템플릿이며 발행 지식·원인 판정·조치 허가로 취급하지 않는다. 일반 템플릿은 D09의 로그·상태 fact와 부족 시 D02를 사용한다. 광범위한 D 수집 구조 재설계는 별도 작업이다.
-
-배포 순서는 JC의 007 migration·입력 지원 → 새 Worker → Incident/화면이다. 기존 backlog는 유지하며, 실제 배포와 Runbook DB 발행은 별도 승인 작업이다.
-
-## Bounded synthesis context / 분석 입력 크기 제한 — 2026-10-01
-
-원본 메트릭 전체를 그대로 JSON 직렬화하면 `LLM.complete()`의 보수적 UTF-8 입력 예산을 초과해 HTTP 요청 전에 실패할 수 있다. 전체 `llm_usage.calls`에는 후속 조회 선택과 최종 보고서 편집도 포함되므로 값이 양수여도 원인 Synthesis 호출 성공을 뜻하지 않는다.
-
-- `synthesis_context.py`는 저장된 evidence를 수정하지 않고 모델용 view만 제한한다. 최대 16,000바이트이고 남은 예산에서 system/전송 여유와 8,192의 출력 여유를 뺀 값이 더 작으면 그 값을 사용한다. 실제 output cap과 비용 차감은 기존 LLM transport가 담당한다.
-- health, 검증된 relation, metric 순서로 담는다. metric은 사건 노드와 비-inventory 계열을 우선하고 계열당 최대 8개의 균등 간격 원본 인덱스 표본을 전달한다. 새로운 평균·최댓값·연속성을 계산하거나 주장하지 않는다. 생략한 관측/표본 수와 계열별 선택 방법을 `context_selection`/`sample_selection`에 명시하며 보고서 한계에도 남긴다. 최소 메타데이터와 유효 관측을 담을 수 없으면 명시적으로 실패한다.
-- 후보의 참조는 실제 선택한 관측의 evidence ID로 제한한다. 숫자 측정값을 자유 문장으로 생성하지 못하며, 인용한 관측의 typed `error_code`와 일치하는 XID/SXID 식별자만 예외로 허용한다. 오류 코드 인용은 원인 확정이나 fact 승격이 아니다.
-- 모델 view에 그대로 들어 있는 영문+숫자 식별자 토큰(`D05`, `R01`, `cpc-2`, 노드·Pod 이름, UUID 등)은 그대로 인용해도 숫자 검사에서 제외한다. 토큰은 공백 단위로 추출하며 metric `samples`, ISO 시각, `16GB`·`85C`·`30m` 같은 숫자+단위 값과 `sxid:11001` 같은 오류 코드는 식별자로 보지 않는다(오류 코드는 기존처럼 인용 관측의 typed `error_code`만 허용). 숫자만 있는 값(`GPU 0`), 개수·기간·측정값은 계속 `invalid_limitations`/`unregistered_numeric_claim`으로 거부한다. 운영 작업 `ed730b4d`에서 입력 제한 후 실제 요청 1건이 이 검사로 탈락해 보완했다.
-- `quality.analysis.synthesis`와 `rca_synthesis.snapshot.diagnostics`에 단계별 `request_attempts`, `response_calls`, 안전한 `error_code`, 입력 크기와 선택 범위를 저장한다. 모델 원문·외부 예외 문자열은 진단에 저장하지 않는다. 응답 기록도 내용 검증 성공을 의미하지 않는다.
-
-기존 partial/missing-data·producer 시각 계약·GPU–Pod mapping 조건과 취소/원격 추론 종료 불명 처리는 유지한다. DB migration과 기존 결과 재작성은 없다. 운영 적용에는 RCA Worker/Frontend의 승인된 배포와 새 실행 검수가 필요하다. [검증 범위](../agents/QA.md).
-
-DBeaver/PostgreSQL에서는 아래 읽기 전용 조회의 `:job_id`에 새 RCA 작업 UUID를 넣어 분석 단계의 진단을 확인한다. 구 결과는 `diagnostics`가 NULL이며 호출 0회를 뜻하지 않는다. `reason`은 장비 식별용 target이 아니라 사건의 `alert.labels.reason`과 `alert_clues`에 보존된다.
-
-```sql
-SELECT query_id, tool_status, quality,
-       jsonb_extract_path(snapshot, 'diagnostics') AS diagnostics
-FROM public.evidence
-WHERE job_id = CAST(:job_id AS uuid)
-  AND query_id = 'rca_synthesis';
-```
-
-## 보고서 첫 화면 접근 — 2026-09-30
-
-RCA 첫 페이지의 `최종 보고서` 버튼/탭과 공개 작업의 바로가기에서 저장된 다섯 섹션으로 이동한다. RCA 판단·저장·LLM 호출 계약은 변경하지 않는다. 미공개 작업을 최종 보고서로 표시하지 않으며 기존 결과를 재작성하지 않는다.
-
-## 2026-09-30 Fleet RCA 수집·분석 보완
-
-- Loki 경계를 밀리초로 안쪽 정규화한 경우 원본 기간의 `complete=false`와 실제 `request_time_range`를 보존한다. 조회 성공·미잘림·경고 없음이면 `observation_usable=true`로 실제 구간 안의 개별 health 관측을 Synthesis에 전달한다. 기간 전체의 오류 부재·지속 시간·집계가 완전하다는 뜻은 아니다. 다른 partial 사유는 허용하지 않는다.
-- 기본 프로필 `builtin-grafana-v5`에서 D05는 D09 원본으로 파생하며 D09는 등록된 `fleet-component-log-v1` adapter로 `attributes.health/component/reason`, `resources["machine.id"]`, `resources["k8s.node.name"]`, Loki ns timestamp와 XID/SXID 코드를 정규화한다. `log_type=component_data`, 알려진 component, 대상과 유효 시각이 필요하다. `Unhealthy`만 등록했으며 미등록 상태는 unknown이다.
-- Loki 시각은 기본적으로 로그 기록 시각이다. `fact_eligible=false`인 보고 관측은 모델 입력으로 쓰지만 현재 장비 상태·runbook 실행 조건으로 승격하지 않는다. 운영 producer의 시각 의미를 검증해 `loki_timestamp_is_observed_at=true`를 명시하고 query의 `max_hold_seconds`를 등록한 경우에만 동일 대상·단일 cluster·사건 이전 freshness 검사 후 health/error_code fact로 승격할 수 있다. 기본 설정은 이 승격을 켜지 않는다.
-- `degraded`여도 승인된 미실행 query와 예산·deadline이 남으면 최대 한 번 독립 후속 조회를 실행한다. 실패한 query를 재시도하는 루프는 추가하지 않는다.
-- 승인 Runbook이 선택됐고 R02/R03가 요청되면 D08/D06을 계획에 포함한다. `purpose_plan`에 계획과 대상 식별 상태를 남긴다. GPU UUID 또는 Pod UID와 사건 시각 매핑을 확인하지 못하면 `incident_mapping`은 여전히 부족하다. 같은 노드의 Pod만으로 직접 GPU 사용 관계를 단정하지 않는다. 미실행·source 불가·대상 불명·당시 관계 부재를 구분한다.
-- Incident의 새 입력 target에는 `machine_id/component/k8s_node_name`을 투영한다. 기존 event key와 의미 증거 hash는 유지해 투영만으로 중복 incident/RCA를 만들지 않는다. 기존 snapshot/hash/공개 결과는 재작성하지 않고 DB migration도 없다. Worker는 구형 snapshot의 alert 단서로 실행용 target만 보완하며 식별 충돌 시 fact/관계 승격을 막는다.
-
-검증은 [Agent QA](../agents/QA.md)의 fixture 범위다. 운영 배포·실제 producer 시각 계약·실제 모델 원인 분석 품질은 별도 검수 대상이다.
-
-## 2026-09-30 최종 보고서
-
-유효 입력으로 판단 결과 구성까지 도달한 RCA는 `report.py`에서 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계의 다섯 섹션을 항상 만든다. 근거 없음, 승인 Runbook 없음, 결정적 fast path도 포함한다. 모델이 구성돼 있으면 기존 `explain()`을 한 번 호출해 코드가 만든 문장 ID의 우선순위를 선택하며 새 사실·조치·자유 문장을 생성하지 않는다. 선택되지 않은 문장도 남겨 부족 근거와 실행 조건이 누락되지 않게 한다.
-
-`narrative`에 보고서를 저장하고 공개 RCA 화면에 표시한다. `narrative_status=complete/failed/omitted`는 모델 편집 상태이며 `quality.report.status=complete`는 보고서 구성 완료다. 원인 Synthesis 상태인 `quality.analysis`, 목적별 assessment와 `result_status`는 변경하지 않는다. 원천 `REBOOT_SYSTEM` 등은 미검증·미수행 제안으로 표시한다.
-
-모델 미설정·확정된 HTTP 오류·잘못된 응답·예산 소진으로 편집을 못 하면 코드 기본 보고서를 남긴다. 실제 네트워크 호출 횟수는 모델 설정·남은 token/deadline·전송 재시도에 따라 달라진다. 원격 추론 종료 불명, 취소·lease 상실·실행 deadline 초과는 기존 fail·슬롯 반환 계약이 우선이며 보고서로 우회 공개하지 않는다. 입력 검증·저장 등 기술 실패까지 공개 보고서를 보장하지 않는다.
-
-DB migration·결과 스키마 버전 변경은 없고 기존 snapshot/hash와 공개 결과는 재작성하지 않는다. 재배포 후 새 실행에 적용하며 운영 검증 상태는 [Agent QA](../agents/QA.md)를 따른다.
-
-다른 PC나 새 세션에서 이어받을 때는 [RCA·Runbook 개발 인수인계](HANDOFF.md)를 먼저 읽습니다. 구현 파일, 검증 범위, 미완료 항목과 다음 작업을 연결했습니다.
-
-`11_RCA_Agent_모듈_설계서.md`에 따른 Incident 전용 RCA Worker입니다. JC kind는 `rca`입니다.
-
-`src/rcca_agent/workflow.py`에 snapshot 검사·호환 Runbook·조건 검사·등록 조사·근거/원인 후보/권고가 있고, `procedures.py`에 GPU 접근 이상·GPU와 Pod·작업 진행 이상·다중 장치 사건 네 절차를 등록했습니다. 저장/발행은 LLM 도구가 아니며 Worker가 처리합니다. NAT 설정과 프롬프트를 보고서 Agent와 분리했습니다.
-
-2026-10-12 구현은 하나의 NAT workflow 안에서 **Orchestrator → 병렬 Observation Sub-agent → 코드 충분성 판정 → 최대 2회 재조사 → 도구 없는 Synthesis → 결과 검증·저장 → JC 공개**로 동작합니다. `observation_agents.py`는 query별 독립 상태·예약 예산으로 수집하고 형제 실패를 격리하며 취소 시 task를 회수합니다. `synthesis.py`는 실제 수집 근거를 해석하되 모델 원인은 항상 candidate로 유지합니다. 충분한 기존 증거와 적용 Runbook이 있으면 MCP 수집·원인 Synthesis는 생략하지만 최종 보고서 편집은 수행합니다.
-
-Runbook 조회·검색·조건 검사는 코드로 수행합니다. 전용 Runbook이 없으면 `rca.general_runbook_key`의 승인·고정 일반 Runbook을 사용합니다. 일반 Runbook까지 없으면 `approved_runbook` 부족을 저장하고 조사하지 않습니다. 기본 key `RB-GENERAL-GPU-NODE`는 콘텐츠를 자동 생성·발행하지 않으며, [Runbook 초안](runbooks/README.md)도 운영 발행본이 아닙니다. `limits.max_concurrency` 기본값은 3이며 전체 query/discovery 예산을 공유합니다.
-
-실제 로컬 LLM endpoint는 추후 연결합니다. 미구성이면 유효 근거를 보존하고 `synthesis_unconfigured`를 기록합니다. Fleet adapter는 error_code를 추출하지만 기본 설정에서는 보고 관측으로만 사용하며 fact 승격에는 운영 producer/binding/freshness 계약이 필요합니다. 현재 Worker 입력은 **1.3**입니다. 1.4 목적 자동 선택·이력 고정·선택 trace와 운영 분석 품질 검수는 [보완 계획](../docs/specs/rca-agent/implementation-plan-20260928.md)의 후속 단계입니다.
-
-설치·환경 설정·Docker·최소 테스트/E2E: [공통 실행 안내](../agents/README.md), [검증 기록](../agents/QA.md).
-
-```powershell
-.venv/Scripts/python.exe -m rcca_agent.main
-```
-
-저장소 루트에서 실행합니다. `incident_id`가 없는 임의 증상 요청은 받지 않습니다.
-
-Incident가 생성한 `incident_snapshot.alert`를 원본 알람 증거로 읽습니다. 기존 `incident_snapshot.evidence` 형식도 지원합니다. 원본 snapshot과 hash는 변경하지 않으며, 알람의 필드를 `verified_facts`로 승격하지 않습니다. `alert` 형식은 등록된 purpose에 따라 조사 절차를 선택하고 실제 수집 증거로 판단합니다. 두 증거 필드가 모두 없거나 `alert`가 객체가 아니면 Worker 입력 검증 단계에서 거부합니다.
-
-## Korean synthesis and report labels / 한국어 분석·보고서 표기 — 2026-10-01
-
-기준: `origin/main` `529df747173e76a908ff2d56b1ac3688c4a3e648`, 브랜치 `fix/rca-report-korean-labels`.
-
-- Synthesis `claim`·`limitations`는 한국어 문장이어야 한다. 입력 식별자와 인용한 관측의 typed XID/SXID 코드를 제거한 뒤 typed node/Pod/namespace 필드의 숫자 없는 이름도 식별자로 제외한 뒤 한글 완성형 음절이 하나 이상이고, 영문 알파벳 수가 한글 음절 수 이하여야 한다(두 문자군 중 영문 비중 최대 50%). GPU·PCIe 같은 짧은 기술 용어를 허용하면서 영어 문장에 한글만 덧붙이는 우회를 막기 위한 보수적인 기준이며 언어 의미 판별기는 아니다. 실패는 `non_korean_claim`/`invalid_limitations`로 기록한다.
-- 수치는 코드가 관리한다. 영어 수사·수량 단어, 한국어 독립 수사, 수관형사+단위와 한자어 수사+퍼센트를 차단한다. Unicode 단어 경계로 일반 단어 안의 수사 접두사를 제외하며 단위 뒤 조사만 제한적으로 허용한다. `한계·열화·일부·이상·삼성·이번·영향·일반·두께·세부·네트워크` 회귀 검사를 둔다. 모든 한국어 수량 표현을 해석하는 형태소 분석기는 아니다.
-- 프롬프트는 가설형 문장과 표본 기반 유휴·고장·정상 추론 및 synthetic/test 단어 기반 원인 해석 금지를 명시한다. 검증기는 명시적인 `원인이다/원인입니다`, `고장이다/고장입니다`, 원인 확정, `physically` 등 좁은 표현만 `unsupported_assertion`으로 거부한다. 모든 `…이다` 종결을 금지하면 관측·불확실성 설명도 오탐하므로 넓은 의미 검증은 하지 않는다. 후보는 계속 미확정이다.
-- 시각 정밀도 손실 문구는 모델에 전달한 `query_quality[].quality.reason=time_precision_reduced`가 있을 때만 허용한다. 조건 없는 한계 문구는 `invalid_limitations`로 응답 전체를 거부하며 조용히 삭제하지 않는다. Fleet `fact_eligible=false`·Runbook 계획의 한계도 입력에 존재할 때만 언급하도록 프롬프트를 제한한다.
-- `report_labels.py`와 Frontend `rcaLabels.json`의 조회·목적·필수 근거·사유·상태·부족 항목 분류를 동일하게 유지하며 Python 테스트로 비교한다. 모든 실행 D-query를 ID별로 표시하고 여러 구간은 상태/완전성별 구간 수로 묶는다. 표본은 단일 구간만 표시하고 합산하지 않는다. 정상은 수집 상태이며 장비 정상이나 전체 기간의 연속성을 뜻하지 않는다.
-- 보고서 대상·종료 사유·미충족 항목을 한국어로 표시하며 원본 코드는 병기한다. 원인 분석 응답 검증 완료와 결과 부분 산출이 함께 나오는 이유를 설명한다. 부족 항목의 네 분류는 확인 방향이며 해당 작업의 exporter 부재나 Fleet 설정값을 추정하는 근거가 아니다.
-
-Fleet 계약·충분성 gate·`REQUIRED`·결과 스키마·DB migration은 변경하지 않았다. 기존 결과는 재작성하지 않으므로 저장된 영어 모델 문장이 소급 번역되지는 않는다. 검증 범위는 [Agent QA](../agents/QA.md)를 따른다.
-
-## ci.110 후속 증거·표시 보정
-
-- Synthesis 한계 문장은 개별 검증 후 탈락 문장만 제외합니다. 가설 검증 실패는 여전히 거부합니다. 남은 요청 예산과 deadline이 허용하면 최대 한 번 교정을 요청하고, 교정 실패 시 앞서 검증된 가설을 보존합니다. 추론 종료 불확실/취소는 기존 worker fencing으로 전파합니다.
-- 진단은 문장 위치·고정 규칙·토큰 **분류**만 보존합니다. 임의 모델 토큰은 비밀값일 수 있어 원문을 저장하지 않습니다. `validation_failures`, `rejected_limitations`, `repair_attempts/status/error_code`로 원인을 구분합니다. 전체 job 예산을 현재 LLM 잔여 예산으로 해석하지 않습니다.
-- XID/SXID 구성 요소 단서는 `gpu_access` 조사 절차를 선택하지만 검증된 사실은 아닙니다. R02/R03의 필수 D08/D06 조회는 별도로 유지합니다.
-- R01의 공개 assessment enum은 변경하지 않습니다. `quality.analysis.reported_errors`는 보고된 코드이며 Runbook applicability, verified facts, 조치 적격성을 높이지 않습니다. 유효한 발생 시각·신원 계약 없이 `reported`를 새로운 충분성 상태로 만드는 것은 안전 계약과 충돌합니다.
-- Fleet `gpuInfo.gpus`는 시각·근거가 있는 **미검증 신원 후보**로 보존합니다. GPU 한 장이라는 로그만으로 사건 시각의 장애 GPU를 확정하지 않습니다. 검증된 inventory freshness/device-time 계약이 제공될 때까지 `mapping_target_unverified`를 유지합니다.
-- 라벨의 단일 원천은 `src/rcca_agent/report_labels.json`입니다. 수정 후 저장소 루트에서 `python tools/generate_rca_labels.py`를 실행하여 frontend JSON을 생성합니다. Python 패키지 데이터에도 포함하며 기존 mirror 일치 테스트를 유지합니다.
-
-## Runbook 선택과 근거 부족 구분 — 2026-10-07
-
-공통 `shared-core-observations-20261007-r1`은 D02/D09 외에 검토된 D03 메모리 사용량, D06 Pod 배치, D10 scrape 상태를 요청 cluster_id와 MCP 발견 경로로 선택합니다. [검토 범위와 남은 원천](../docs/evidence/d-core-observations-20261007.md)을 따릅니다. 등록된 D를 모두 수집하지 않으며 실행 계획에 있는 조회만 수행합니다. XID48/ECC 작성 원본에는 D03 선택 조회를 추가했습니다. DB에 새 revision을 발행하기 전에는 기존 계획이 유지됩니다. 이 관측은 메모리 오류 원인·직접 GPU 할당·현재 장비 상태를 자동 확정하지 않습니다.
-
-발행 Runbook 선택 후 `missing_evidence`/`unknown_value` 정책에 따라 일반 템플릿을 추가할 수 있습니다. 이 경우 보고서는 발행본 선택과 일반 조사 보완을 함께 설명합니다. builtin 기록만으로 발행 Runbook이 없었다고 판정하지 않습니다. Frontend의 참조 Runbook 설명은 저장된 revision/origin을 사용하므로 과거 결과에도 선택 기록을 보여주지만, 불변의 과거 보고서 문장을 재작성하지 않습니다.
-
-`runbook_selection` → `investigation_plan` → `unexpected_evidence` → `sufficiency` 순으로 확인하면 계약 탈락, 검색 선택, 필수 근거 부족, 추가 조회 소진을 구분할 수 있습니다. `normalized_health`와 `unknown_value`는 미검증 상태/값을 뜻하며 조회 실패나 데이터 부재와 같지 않습니다. Loki에 XID/Unhealthy 로그가 있어도 발생 시각·장비·생산자 계약이 확인되지 않으면 상태 fact와 조치 조건을 충족하지 않습니다.
-
-기존 DB 발행본은 저장소 JSON 변경으로 갱신되지 않습니다. 현재 레지스트리에서 제거된 D05 등을 참조하는 발행본은 `invalid_contract`로 제외됩니다. [DB 등록 절차](runbooks/DB-WORKFLOW.md)에 따라 현재 D09 계획으로 새 revision을 작성·검토·발행해야 합니다. 기존 발행본을 제자리 수정하거나 계약 검사를 완화하지 않습니다.
-
-### Offline contract audit / DB 비접속 계약 검사
-
-`runbook_selection`의 `invalid_contract` 기록은 검색 관련성이나 적용 조건 불일치가 아니라 계약 검사 실패다. `reason`은 검증기가 정의한 첫 실패 사유를 기록하며, 원문 오류 값이나 모델 응답을 포함하지 않는다. 예전 저장 기록에는 상세 사유가 없으며 재작성하지 않는다.
-
-```bash
-# 저장된 발행본 JSON 배열/단일 객체만 검사한다. HTTP·DB 접속과 발행은 없다.
-python -m rcca_agent.runbook_audit saved-runbooks.json --profile agents/config.example.json
-# 저장소 초안: 빈 compatibility를 허용하며 발행 hash 검사는 하지 않는다.
-python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.example.json --authoring
-```
-
-종료 코드는 전부 계약 통과 0, 계약 실패 포함 1, 입력 파일 오류 2다. 결과는 revision별 첫 실패를 수집한다. `contract_valid`는 적용 가능성·원천 의미·운영 승인·현재 발행 상태의 보증이 아니다. 저장된 스냅샷의 범위와 시점을 별도로 확인해야 한다. 발행 상태·접근 범위·claim 고정은 기존 Store/JC 책임이다.
-
-최종 보고서는 코드가 만든 문장을 LLM이 우선순위 선택하는 구조다. `quality.report.fallback_reason`은 `editor_not_configured`, `editor_response_rejected`, `editor_exception`, `editor_no_selection`을 구분한다. 이는 원인 분석(`rca_synthesis`)의 성공/실패와 별개이며, 원격 실행 불확실성·취소는 계속 Worker로 전파한다. 기존 보고서는 이 필드가 없을 수 있다.
-
-
-## Synthesis rejection diagnostics — 2026-10-12
-
-Numeric rejection diagnostics retain a SHA-256 of the rejected field, its length,
-and at most ten digit/number-word spans (zero-based Unicode codepoint offsets,
-exclusive end). Neither rejected prose nor matched values are retained. Hashes
-identify matching text; they cannot reconstruct historical replies.
-
-The single synthesis repair uses the transport's conservative UTF-8 prompt bound
-and configured synthesis output cap, reduced to the remaining attempt budget.
-It no longer requires a fixed 8192-token output reservation. `repair_gate` records
-remaining budget, prompt bound, configured/available output cap, remaining seconds,
-and separate budget/deadline blockers. No deadline or attempt budget is increased.
-Original evidence, uncertainty and hardware recommendation-only behavior remain.
-Past results are immutable and gain no retroactive diagnostics. A new deployed RCA
-is required to validate this behavior with the production model.
-
-## RCA final report and general investigation — 2026-10-12
-
-The general investigation source and packaged template now require scoped original
-`observations`, not `producer_contract` and `normalized_health` as admission gates.
-This does not establish current health: normalization, cause confirmation and action
-preconditions still require their own verified facts. Unsupported components remain
-uninterpreted. Missing/failed D09 and identity/time mismatches remain unresolved.
-The dated 2026-10-08 audit is preserved; the follow-up hash is in
-[general requirement review](runbooks/general-requirements-review-20261012.json).
-Existing published revisions are immutable. A new general revision must be separately
-registered, reviewed and published with deployed compatibility checks after deployment.
-
-The RCA-only editor receives at most six statement previews per section (384 characters
-each), selects IDs only, and never writes or removes report claims. Every original
-statement and reference is retained, including those outside the preview selection.
-After the common transport has exhausted its completed-length retry, RCA can make one
-additional compact request (96-character previews) within the same attempt budget and
-deadline. No retry follows uncertain execution or cancellation. Invalid ID selection
-retains the existing single repair. Ops and the shared LLM transport are unchanged.
-`quality.report.editor` records candidate/statement counts, completion calls, and
-`truncation_retry_gate` (prompt bound, remaining budget, configured/available output
-cap and remaining seconds). Completion calls can contain the existing transport retry;
-they are not HTTP-attempt counts. A failed editor preserves deterministic text.
-
-This PR changes repository content and rendering, not operational knowledge state.
-Production acceptance requires the new general revision and a new RCA checking selected
-revision, sufficiency, current-state uncertainty, editor diagnostics and publication.
-
-### Operator-first wording
-New RCA reports keep the problem headline first even after ID prioritization. Target,
-incident reference time (not asserted as device occurrence time), verbatim alert and
-identifiers are separate paragraphs. Recommendations separate suggested action and
-conditions; producer proposals remain unverified proposals. This changes presentation
-only, preserving evidence, eligibility, causal status and historical report content.
-
-
-## RCA collection and diagnostic boundaries — 2026-10-12
-
-RCA permits initial collection plus at most two follow-up rounds, within existing
-query/discovery budgets and the attempt deadline. Only approved, uncollected queries
-are eligible. This permits a D09 → D44 → D02 investigation when selected; it does
-not require all optional queries to run. `collection_stop_reason` distinguishes
-round limit, budget, deadline, no remaining query, fast path and model non-selection.
-The result retains `remaining_queries`; older records cannot recover this reason.
-
-RCA decodes JSON-string Fleet inventory as unverified node inventory candidates.
-It never treats inventory agreement as the error device, promotes zero producer
-time to event time, or changes the shared Ops parser. Fleet report diagnostic counts
-explain recorded-time versus current-health limitations. Model repair feedback
-addresses the rejected hypothesis or limitation without relaxing evidence checks.
-
-RCA operator wording separates reported error codes, unconfirmed cause and unmet current-health requirements. `unknown_value` explains unverified Fleet observations only when those observations exist; it does not assert that every producer contract, timestamp or device identity is absent. The reference-only editor cannot drop these statements, and assessment/status gates are unchanged.
-
-## Published investigation guidance / 발행 조사 지침 표시 — 2026-10-13
-
-RCA reports preserve the selected published investigation-only Runbook's guidance,
-recommendation preconditions and limitations in a separate narrative section.
-These are documentary investigation instructions, not observed device facts or
-eligible remediation. Existing recommendation eligibility and result status remain
-unchanged. Saved past results are not rewritten. The editor orders statements but
-cannot remove this guidance. Report/Ops generation is unchanged.
-
-XID79의 XID154 연계는 [NVIDIA 카탈로그](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)의
-Xid 79 행과 Xid 154 설명을 2026-10-13 대조했다. `CUDA 12.7; GPU driver R565`는
-연계 표기이며, 모든 XID79에 XID154가 반드시 동반되거나 현장 장비가 해당 버전이라는
-증거가 아니다. XID154는 다른 Xid의 복구 조치를 요약하는 정보 이벤트다.
-A100/H100/B100/GB200 적용 표기 및 RESTART_BM/CONTACT_SUPPORT 분류도 문헌 정보로만
-표시한다. Fleet의 고정 카탈로그 action과 이번 알림에 실제 포함된 action은 구분한다.
-기존 발행본의 지침을 표시하며, 이번 변경은 Runbook 본문이나 검토 hash를 변경하지 않는다.
-
-RCA-only PCI diagnostics compare a report's PCI address with its own inventory;
-neither a match nor a mismatch proves hardware identity or synthetic origin.
-Korean explanation validation rejects unregistered English prose while retaining
-input identifiers and a small technical vocabulary. This is not proof that a
-model hypothesis is true; deployed model quality still needs live review.
-
-## RCA evidence and guidance clarity — 2026-10-13
-
-SXID PCI addresses require NVSwitch inventory; GPU inventory cannot identify the
-faulty switch. Inventory mismatch is not evidence of physical removal or a cause.
-The synthesis validator rejects the reproduced unsupported identity-to-cause
-phrases, and the prompt makes this distinction explicit. This targeted guard is
-not a general proof of causal correctness.
-
-Bounded synthesis input rotates across evidence references before admitting more
-series from one query. Repair rebuilds the bounded input with output headroom and
-records its selected references separately. Original samples remain unchanged;
-context selection can still omit samples and truncation is still diagnosed.
-
-Published guidance conditions are rendered as readable text where recognized.
-The RCA UI separates next checks, documentary reference guidance and preserved
-full text. No Runbook is published or retired by this change.
-
-## Bounded RCA evaluation batches — 2026-10-13
-
-The default collector runs required observations followed by at most one auxiliary
-batch of up to three approved queries. Policy queries take priority; otherwise the
-planner selects independent queries addressing the gaps. No automatic third round
-is performed. Unselected or dependency-bound candidates remain visible alongside
-the stop reason; query budgets and completeness checks remain enforced.
-
-Each round adds evidence_evaluation with available facts, gaps, policy findings,
-next queries and the final stop reason. Original unexpected_evidence/sufficiency
-records remain available for auditing. Repair requests include bounded rejected
-sentences as untrusted model output; diagnostics retain codes only. Live SXID
-repair and the 265-Runbook publication gate remain pending deployment verification.
-
-
-## Common repair invariants and transition review — 2026-10-14
-
-RCA investigation scope is GPU, NVSwitch and node hardware. This change adds no
-Pod/workload queries and does not modify the Ops report worker. Identity-to-cause
-validation runs before prose validation, independent of error code or component.
-A repair must still satisfy all evidence, identity, time, language and numeric
-checks. Rejected hypotheses remain excluded even when a Korean rewrite succeeds.
-This remains a targeted validator, not a proof that every causal statement is correct.
-
-`python -m rcca_agent.runbook_transition --snapshot published.json --profile profile.json --output new-review-directory`
-creates offline candidates from a supplied published-revision snapshot. It never
-calls Backend or approves/publishes content. Input review hashes must match; the
-output directory must be new, and proposals contain no published state metadata.
-Existing structured content requires merge review. Undefined/conflicting codes
-and informational events are held instead of receiving speculative query rules.
-
-The remaining-265 inventory is in [transition review](runbooks/transition-review-20261014.json).
-196 proposals passed the local profile contract; 69 are held (64 unresolved-code
-and 5 informational entries). These counts do not imply semantic approval.
-Per-code auxiliary relevance, source applicability and operator guidance still
-need review. Original claims, evidence requirements, applicability and sources
-are preserved. No revision is published or retired by this local work. Before
-publication, fetch the latest live revision again and compare the recorded base
-hash; never overwrite intervening edits or use a proposal as reviewed evidence.
+현재 미완료인 작업은 오류별 보완 조회·출처·지침의 의미 검토, 발행 profile 재검증, 실제 모델·장비 사건으로 원인 분석 품질 검증이다. Synthesis 후 적절성 점수로 다른 Runbook을 재선택하는 루프와 중간 언어 검사/최종 한국어 표현의 분리는 구현돼 있지 않다. 이를 변경할 때 RCA 결과를 읽는 Backend·Frontend·Ops와 검수 사례를 함께 정의해야 한다.
