@@ -540,3 +540,65 @@ def test_language_diagnostic_preserves_offsets_and_hides_raw_prose():
     assert not diagnostic["missing_korean_prose"]
     assert "spuriously" not in json.dumps(diagnostic)
     assert "fixture-node" not in json.dumps(diagnostic)
+
+
+@pytest.mark.parametrize(
+    "component",
+    ["accelerator-nvidia-error-xid", "accelerator-nvidia-error-sxid", "cpu", "disk"],
+)
+def test_identity_cause_precedes_language_for_any_component(component):
+    observation = {
+        "component": component,
+        "evidence_refs": ["log"],
+        "device_mapping": "unresolved",
+    }
+    with pytest.raises(ValueError) as caught:
+        validate_synthesis(
+            response(claim="장치 식별 불확실성이 unexpected 원인일 가능성이 있다"),
+            ["log"],
+            [observation],
+        )
+    assert caught.value.diagnostic["rule"] == "identity_is_not_cause"
+    # A limitation remains legitimate; no GPU identity is required for node observations.
+    assert (
+        validate_synthesis(
+            {
+                "hypotheses": [],
+                "limitations": [
+                    "보고 대상의 연결 정보가 없어 현재 상태를 확인할 수 없습니다."
+                ],
+            },
+            ["log"],
+            [observation],
+        )
+        == []
+    )
+
+
+@pytest.mark.asyncio
+async def test_korean_repair_still_rejects_new_identity_cause():
+    class Model:
+        configured = True
+        remaining = 32768
+        usage = {}
+        calls = 0
+
+        async def complete(self, prompt, request, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return {
+                    "hypotheses": [],
+                    "limitations": ["unexpected 상태는 확인이 필요합니다."],
+                }
+            assert request["repair_constraints"]["identity_uncertainty_is_not_cause"]
+            assert request["repair_constraints"]["revalidate_all_rules"]
+            result = response(claim="장치 식별 불확실성이 원인일 가능성이 있다")
+            result["limitations"] = ["현재 장치 상태를 확인하지 못했습니다."]
+            return result
+
+    diagnostics = {}
+    status, candidates, limitations = await synthesize(Model(), payload(), diagnostics)
+    assert status == "complete" and candidates == []
+    assert diagnostics["completion_mode"] == "validated_subset"
+    assert diagnostics["repair_error_code"] == "unsupported_identity_cause"
+    assert "현재 장치 상태를 확인하지 못했습니다." in limitations

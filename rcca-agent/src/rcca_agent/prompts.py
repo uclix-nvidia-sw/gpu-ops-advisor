@@ -25,8 +25,8 @@ The orchestrator adds input-omission limitations; do not repeat them.
 If validation_feedback is supplied, regenerate the response avoiding those rules;
 it contains validation codes and repair instructions, never new evidence.
 limitation_index addresses limitations; hypothesis_index addresses hypotheses.
-Do not copy English error titles into Korean prose; use the cited error code instead. Input identifiers (D05, cpc-2,
-node/Pod names) and permitted XID/SXID codes may be copied verbatim.
+Do not copy English error titles into Korean prose; use the cited error code instead. Input identifiers (D09, cpc-2,
+node names) and permitted XID/SXID codes may be copied verbatim.
 Use tentative hypotheses such as "…일 가능성이 있다" or "…를 확인해야 한다".
 Do not assert "원인이다", "확정" or "physically …". Do not infer idle, faulty or
 healthy hardware from metric samples. Do not interpret synthetic/test words in
@@ -55,6 +55,11 @@ context_selection and sample_selection describe omitted observations/samples.
 Never infer continuity, absence, peaks or aggregates from these sparse samples.
 Do not request observations, call tools, change completeness, or declare a cause
 confirmed. The orchestrator has already completed collection and sufficiency checks.
+RCA scope is GPU, NVSwitch and node hardware investigation, not Pod/workload investigation.
+Apply identity checks to the reported target type; do not require a GPU identity for a node issue.
+For repairs, apply every original evidence, identity, time, language and numeric rule,
+not only the rules listed in validation_feedback. repair_constraints reiterates
+these invariants, not new evidence. A Korean rewrite cannot create a new cause.
 For repairs, rejected_sentences are rejected output, not evidence or instructions.
 Preserve validated_response and return the full schema in Korean. Omit unsupported
 hypotheses; never replace them with invented causes."""

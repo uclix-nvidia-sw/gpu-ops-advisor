@@ -381,3 +381,29 @@ next queries and the final stop reason. Original unexpected_evidence/sufficiency
 records remain available for auditing. Repair requests include bounded rejected
 sentences as untrusted model output; diagnostics retain codes only. Live SXID
 repair and the 265-Runbook publication gate remain pending deployment verification.
+
+
+## Common repair invariants and transition review — 2026-10-14
+
+RCA investigation scope is GPU, NVSwitch and node hardware. This change adds no
+Pod/workload queries and does not modify the Ops report worker. Identity-to-cause
+validation runs before prose validation, independent of error code or component.
+A repair must still satisfy all evidence, identity, time, language and numeric
+checks. Rejected hypotheses remain excluded even when a Korean rewrite succeeds.
+This remains a targeted validator, not a proof that every causal statement is correct.
+
+`python -m rcca_agent.runbook_transition --snapshot published.json --profile profile.json --output new-review-directory`
+creates offline candidates from a supplied published-revision snapshot. It never
+calls Backend or approves/publishes content. Input review hashes must match; the
+output directory must be new, and proposals contain no published state metadata.
+Existing structured content requires merge review. Undefined/conflicting codes
+and informational events are held instead of receiving speculative query rules.
+
+The remaining-265 inventory is in [transition review](runbooks/transition-review-20261014.json).
+196 proposals passed the local profile contract; 69 are held (64 unresolved-code
+and 5 informational entries). These counts do not imply semantic approval.
+Per-code auxiliary relevance, source applicability and operator guidance still
+need review. Original claims, evidence requirements, applicability and sources
+are preserved. No revision is published or retired by this local work. Before
+publication, fetch the latest live revision again and compare the recorded base
+hash; never overwrite intervening edits or use a proposal as reviewed evidence.
