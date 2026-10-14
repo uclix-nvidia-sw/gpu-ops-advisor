@@ -1,5 +1,6 @@
 ## Topic interpretation / 주제별 해석 — 2026-10-14 (local)
 
+- PR integration PASS on remote main `31a0bcc`: 289 tests / 25 files, format and build passed. Existing bundle warning only; no RCA UI changes in this diff.
 - PASS: 288 tests / 25 files, format check and TypeScript/Vite build; the existing bundle-size warning remains. Final focused UI regression: 16 passed. Covers two topic interpretations, hourly source references/evidence, report-time limits, escaped text, old selection provenance and failed/non-AI fallback.
 - PASS: actual-data browser comparison for three reports over October 12 and 13; before/after/failure switching and source disclosure retain the same calculation table/graph. Actual model output names the Namespace and adjacent hours; disclosed hourly values match the prose. The failure tab is explicitly hypothetical. Earlier evidence callback and 1280px layout checks passed; final 390px check found no AI container overflow.
 - Actual-data local preview uses saved reports and explanation-only operating LLM replies (17.38s, 18.48s, 51.49s), not a synthesized report. No production report or DB was changed. The earlier synthetic preview below is superseded for this task.
