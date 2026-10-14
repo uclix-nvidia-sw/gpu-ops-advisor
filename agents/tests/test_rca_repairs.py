@@ -6,6 +6,7 @@ import pytest
 from agent_common.normalize import allocations
 from agent_common.parsers import parse_health, health_facts
 from rcca_agent.incident import alert_clues
+from rcca_agent.prompts import SYNTHESIS
 from rcca_agent.synthesis import (
     identifier_tokens,
     validate_synthesis,
@@ -234,7 +235,11 @@ async def test_repair_gate_records_specific_conditions(mode):
             self.usage["calls"] += 1
             self.usage["request_attempts"] += 1
             if self.usage["calls"] == 1:
-                self.remaining = 1 if mode in {"budget", "both"} else 6500
+                # Leave adaptive output room after the current system prompt.
+                # A fixed budget can become smaller than the prompt after edits.
+                self.remaining = (
+                    1 if mode in {"budget", "both"} else len(SYNTHESIS.encode()) + 4096
+                )
                 if mode in {"deadline", "both"}:
                     self.deadline = 0
                 return reply("온도는 999도입니다.")
@@ -286,7 +291,11 @@ async def test_repair_gate_matches_real_transport_output_cap():
                         "finish_reason": "stop",
                     }
                 ],
-                "usage": {"total_tokens": 26268 if len(requests) == 1 else 100},
+                "usage": {
+                    "total_tokens": 32768 - (len(SYNTHESIS.encode()) + 4096)
+                    if len(requests) == 1
+                    else 100
+                },
             },
         )
 
@@ -307,4 +316,6 @@ async def test_repair_gate_matches_real_transport_output_cap():
         requests[1]["max_tokens"] == diagnostics["repair_gate"]["available_output_cap"]
     )
     assert 0 < requests[1]["max_tokens"] < 4096
-    assert diagnostics["repair_gate"]["remaining_budget"] == 6500
+    assert (
+        diagnostics["repair_gate"]["remaining_budget"] == len(SYNTHESIS.encode()) + 4096
+    )
