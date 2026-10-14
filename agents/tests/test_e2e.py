@@ -44,6 +44,12 @@ def port():
         return s.getsockname()[1]
 
 
+def interpretation_reply(data):
+    from test_report_interpretation import reply_for
+
+    return reply_for(data)
+
+
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
@@ -96,6 +102,8 @@ class Upstream(BaseHTTPRequestHandler):
                     if "observation_refs" in data
                     else {"query_ids": data["available_queries"][:3]}
                     if "available_queries" in data
+                    else interpretation_reply(data)
+                    if data.get("interpretation_version") == "ops-interpretation-v2"
                     else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
                 ),
             }
@@ -2415,6 +2423,13 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
     body, evidence = worker_result(stack, "report", jid, "-aggregate")
     assert body["result_status"] == "ready", body
     assert body["quality"]["report_format"] == VERSION
+    assert body["quality"]["report"]["method"] == "llm_interpreted"
+    assert body["narrative_status"] == "complete"
+    assert {n["topic_id"] for n in body["narrative"]} == {
+        "namespace_usage",
+        "incident_summary",
+    }
+    assert all(n["source_fact_ids"] and n["evidence_refs"] for n in body["narrative"])
     usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
     incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
     assert usage["rows"][0]["activity_percent"] == 60
@@ -2467,6 +2482,9 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
         assert body["versions"]["criteria"] == VERSION
         result = client.get("/reports/" + jid)
         assert result.status_code == 200 and VERSION in result.text
+        exported = client.get("/reports/" + jid + "/export", params={"format": "html"})
+        assert exported.status_code == 200, exported.text
+        assert "눈에 띄는 변화" in exported.text and "확인할 점" in exported.text
         spec = {k: v for k, v in data.items() if k not in ("time_range", "timezone")}
         for frequency, period, extras in (
             ("daily", "previous_complete_day", {}),
@@ -2718,3 +2736,28 @@ def test_aggregate_report_transition_verification_is_published(
         and "[1h] offset 1ms" in args.get("query", [""])[0]
     ]
     assert len(raw) == 4  # Two bounded checks for each comparison period.
+
+
+@pytest.mark.e2e
+def test_aggregate_invalid_interpretation_keeps_published_calculations(
+    stack, monkeypatch
+):
+    from test_aggregate_report import DATA
+    from ops_agent.report_contract import VERSION
+
+    monkeypatch.setattr(
+        sys.modules[__name__], "interpretation_reply", lambda data: {"sections": []}
+    )
+    jid = submit(stack, "report", {**DATA, "scope": SCOPE}, execution_profile=VERSION)
+    body, evidence = worker_result(stack, "report", jid, "-invalid-interpretation")
+    assert body["result_status"] == "ready"
+    assert body["narrative_status"] == "failed"
+    assert body["quality"]["report"]["method"] == "deterministic_fallback"
+    assert body["quality"]["report"]["attempts"] == 2
+    assert (
+        next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")["rows"][
+            0
+        ]["activity_percent"]
+        == 60
+    )
+    assert len(evidence) == 7

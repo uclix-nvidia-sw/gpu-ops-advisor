@@ -105,6 +105,79 @@ export function incidentShortTitle(value: string) {
   return characters.length > 60 ? `${characters.slice(0, 60).join('')}…` : title;
 }
 
+function TopicInterpretation({
+  topic,
+  narrative,
+  onEvidence,
+}: {
+  topic: Row;
+  narrative: Row[];
+  onEvidence: (id: string) => void;
+}) {
+  const section = narrative.find((item) => item.topic_id === topic.topic_id);
+  if (!section || !['observation', 'meaning', 'next_check'].every((key) => str(section[key])))
+    return null;
+  const facts = rows(topic.findings).filter((fact) =>
+    strings(section.source_fact_ids).includes(str(fact.id)),
+  );
+  return (
+    <section
+      className="aggregate-interpretation"
+      aria-label={`${str(topic.topic_id)} AI 운영 해석`}
+    >
+      <h3>AI 운영 해석</h3>
+      <p className="aggregate-summary-source">
+        저장된 계산 결과를 바탕으로 AI가 작성했습니다. 확인할 점은 제안이며, 실제 조치나 장애 원인
+        판정이 아닙니다.
+      </p>
+      <dl>
+        {[
+          ['observation', '눈에 띄는 변화'],
+          ['meaning', '의미와 한계'],
+          ['next_check', '확인할 점'],
+        ].map(([key, label]) => (
+          <div key={key}>
+            <dt>{label}</dt>
+            <dd>{str(section[key])}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="aggregate-interpretation-limit">{str(section.interpretation_limit)}</p>
+      <details>
+        <summary>해석 근거와 계산 결과</summary>
+        {facts.map((fact) => (
+          <p key={str(fact.id)}>{str(fact.text)}</p>
+        ))}
+        {rows(topic.metrics)
+          .filter(
+            (metric) =>
+              str(metric.id).startsWith('namespace_usage.hourly_activity.') &&
+              strings(section.value_refs).includes(str(metric.id)),
+          )
+          .map((metric) => (
+            <p key={str(metric.id)}>
+              {str(obj(metric.target).cluster_id)} / {str(obj(metric.target).namespace)} ·{' '}
+              {str(obj(metric.target).model)}: {reportRequestTime(str(obj(metric.period).start))} ~{' '}
+              {reportRequestTime(str(obj(metric.period).end))} · {pct(metric.value)}
+            </p>
+          ))}
+        <div className="aggregate-evidence-links">
+          {strings(section.evidence_refs).map((id, i) => (
+            <button
+              type="button"
+              className="button secondary"
+              key={id}
+              onClick={() => onEvidence(id)}
+            >
+              근거 {i + 1} 확인
+            </button>
+          ))}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export function AggregateReport({
   value,
   onEvidence,
@@ -139,6 +212,16 @@ export function AggregateReport({
       return next;
     });
   const summary = obj(incident?.summary);
+  const summaryMethod = str(obj(obj(value.quality).report).method);
+  const aiInterpreted =
+    value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted';
+  const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
+  const calculatedSummary = summaryMethod === 'deterministic_fallback';
+  const summaryTitle = aiSelected
+    ? 'AI가 고른 주요 변화'
+    : calculatedSummary
+      ? '계산 결과 요약'
+      : '저장된 주요 변화';
   return (
     <section id="final-report" className="aggregate-report" aria-label="운영 분석 보고서">
       <header className="aggregate-heading">
@@ -149,19 +232,38 @@ export function AggregateReport({
         활동률은 연결 GPU의 관측 표본 평균입니다. 부서의 독점 사용량·할당 효율이나 GPU 회수 가능량을
         뜻하지 않습니다.
       </Notice>
-      {rows(value.narrative).length > 0 && (
-        <section aria-label="주요 변화 요약">
-          <h3>주요 변화 요약</h3>
-          {rows(value.narrative)
-            .slice(0, 3)
-            .map((finding) => (
-              <p key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</p>
-            ))}
+      {!aiInterpreted && rows(value.narrative).length > 0 && (
+        <section
+          className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
+          aria-labelledby="report-summary-title"
+        >
+          <h3 id="report-summary-title">{summaryTitle}</h3>
+          <p className="aggregate-summary-source">
+            {aiSelected
+              ? '계산된 관측 결과 중 AI가 선택한 항목입니다. 문장과 수치는 계산 결과이며, AI가 원인이나 운영 조치를 판단한 내용은 아닙니다.'
+              : calculatedSummary
+                ? 'AI 응답을 사용하지 않은 기본 요약입니다. 계산된 관측 결과를 표시합니다.'
+                : '요약의 AI 선택 여부가 기록되지 않았습니다. 저장된 문장을 그대로 표시합니다.'}
+          </p>
+          <div className="aggregate-summary-findings">
+            {rows(value.narrative)
+              .slice(0, 3)
+              .map((finding) => (
+                <p key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</p>
+              ))}
+          </div>
         </section>
       )}
       {usage && (
         <section aria-labelledby="namespace-summary-title">
           <h2 id="namespace-summary-title">Namespace별 GPU 활동 현황</h2>
+          {aiInterpreted && (
+            <TopicInterpretation
+              topic={usage}
+              narrative={rows(value.narrative)}
+              onEvidence={onEvidence}
+            />
+          )}
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
             있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
@@ -375,6 +477,13 @@ export function AggregateReport({
       {incident && (
         <section aria-labelledby="incident-summary-title">
           <h2 id="incident-summary-title">기간 내 장애 알림 현황</h2>
+          {aiInterpreted && (
+            <TopicInterpretation
+              topic={incident}
+              narrative={rows(value.narrative)}
+              onEvidence={onEvidence}
+            />
+          )}
           {rows(incident.findings).map((f) => (
             <p key={str(f.id)}>{str(f.text)}</p>
           ))}

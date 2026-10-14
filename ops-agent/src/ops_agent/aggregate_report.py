@@ -8,7 +8,7 @@ from uuid import uuid4
 from agent_common.contracts import base_result, metric, result_status
 from agent_common.observation import evidence_stamp
 from agent_common.runtime import attempt_context
-from agent_common.llm import explain
+from .report_interpretation import interpret_report
 
 from . import incident_summary, namespace_summary
 from .report_contract import MAX_BYTES, VERSION, previous_period, validate
@@ -284,44 +284,7 @@ async def run(tools):
     except asyncio.CancelledError:
         await task
         raise
-    statements = [
-        f
-        for t in sorted(
-            result["topics"], key=lambda t: t["topic_id"] != "incident_summary"
-        )
-        for f in t["findings"]
-    ]
-    # Keep model input bounded. All calculated findings remain visible in the topic.
-    editorial = {
-        "facts": statements[:30],
-        "limitations": [],
-        "narrative_status": "omitted",
-    }
-    try:
-        await explain(
-            editorial,
-            ctx["llm"],
-            'Choose up to three supplied operational findings, prioritizing period changes and repeated incidents. Return JSON {"fact_ids": [ids]}. Select IDs only; do not infer causes or allocation policy.',
-        )
-    except (ValueError, TypeError, KeyError):
-        editorial["narrative_status"] = "failed"
-    selected = editorial.get("narrative") or statements[:3]
-    result["narrative"] = [
-        {
-            **s,
-            "title": "사용 패턴과 변화"
-            if s["id"].startswith("namespace")
-            else "사건과 반복 현황",
-        }
-        for s in selected[:3]
-    ]
-    result["narrative_status"] = editorial["narrative_status"]
-    result["quality"]["report"] = {
-        "status": "complete",
-        "method": "llm_prioritized"
-        if editorial["narrative_status"] == "complete"
-        else "deterministic_fallback",
-    }
+    await interpret_report(result, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage
     result["quality"]["query_count"] = collector.calls
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:

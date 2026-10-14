@@ -41,7 +41,13 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 `/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
 
-[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). Local preview uses explicitly labelled synthetic data; it does not submit operational jobs.
+[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). 미리보기의 실제 자료·합성 자료 구분과 검수 범위는 [QA](QA.md)를 따릅니다. 로컬 미리보기는 운영 작업을 접수하지 않습니다.
+
+### AI 운영 해석과 과거 요약 / AI interpretation and historical summaries
+
+Complete `llm_interpreted` narrative appears in each topic as **AI 운영 해석**: observation, meaning/limits and next check. The green surface distinguishes model-authored prose from calculated tables/graphs. Expandable sources show selected findings, stored hourly metrics and evidence links; code-supplied partial-data/report-time limits remain visible. Text is React-escaped and HTML export uses the same stored narrative. Generation and validation belong to [Ops](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation).
+
+기존 `llm_prioritized` 결과는 **AI가 고른 주요 변화**로 표시합니다. 코드가 만든 문장 중 AI가 선택한 결과이며 새로 작성한 해석은 아닙니다. `deterministic_fallback`은 **계산 결과 요약**, 출처 미기록은 **저장된 주요 변화**로 구분하고 빈 narrative는 표시하지 않습니다. 기존 계산·저장 문장·RCA는 변경하지 않습니다. 새 해석의 시간대 근거는 선택된 Namespace·모델과 전후 구간의 저장 수치를 표시해 그래프·표와 대조할 수 있습니다.
 
 ## RCA 실행별 제한과 수정 응답 — 2026-10-13
 

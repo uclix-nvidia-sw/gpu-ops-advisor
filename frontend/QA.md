@@ -9,6 +9,7 @@
 | RCA 조회 선택 조건·통합 평가 표시 | 2026-10-14, PR #122 이전/포함 변경: 281개 테스트·TypeScript/Vite build·포맷 통과 기록. 새 evidence_evaluation 우선과 과거 summary fallback, 조건 미설정 표시 검사 | 정적 React fixture. 새 운영 화면 검증이 아님 |
 | RCA 지침·조사 목록 | 2026-10-14: 277개 테스트와 실제 컴포넌트 브라우저 fixture에서 글자 크기·접기/펼치기·구분선 확인 | 운영 배포·실제 모델 재실행은 미검증 |
 | 집계 보고서 소비 | 2026-10-14: AggregateReport·NamespaceCharts·report helper 35개 테스트 통과 기록 | 신원 전환 보완 후 새 실환경 보고서를 브라우저에서 검수한 결과가 아님 |
+| Ops AI 해석과 출처 표시 | 2026-10-14, PR #126 / main `2171929` 통합: 289개 검사·형식·빌드 통과. 실제 보고서 3건의 기존/해석/실패 예시 전환, 시간대 근거 펼침, 390px 줄바꿈 확인 | 실패 탭만 가정한 상황. 설명은 실제 모델 재생 결과이며 기존 계산·CSV 불변. 운영 신규 발행·상세 링크 전체 이동·자연어 의미 품질은 별도 검증 |
 | 사건·작업·일정·과거 결과 | CI의 페이지·컴포넌트·API fixture 회귀검사와 타입/build 검사 | 실제 Backend 응답·다운로드·운영 데이터량의 통합 검증을 대신하지 않음 |
 
 CI 명령: `npm ci --ignore-scripts`, `npm run format:check`, `npm test`, `npm run build` (`frontend/`, Node 24). 날짜별 통과 수는 당시 revision의 근거이며 현재 전체 검사 수가 아니다. 기존 큰 번들 경고는 남아 있다.
