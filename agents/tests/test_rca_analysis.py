@@ -199,6 +199,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
     if mode in ("followup", "invalid_plan"):
         books[0]["content"]["unexpected_evidence"]["additional_queries"] = []
         books[0]["content"]["unexpected_evidence"]["fallback"] = "general_runbook"
+        for step in books[0]["content"]["observation_plan"]:
+            if not step["required"]:
+                step["exploratory_llm"] = True
         books[0].update(
             content_hash=content_hash(books[0]["content"]),
             reviewed_content_hash=content_hash(books[0]["content"]),
@@ -237,9 +240,11 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                 / f"rcca-agent/runbooks/{mode}/{key}.json"
             ).read_text(encoding="utf-8")
         )
-        # Preserve legacy revisions without authored auxiliary conditions.
+        # This fixture explicitly tests the permitted exploratory path.
         for step in row["content"]["observation_plan"]:
             step.pop("selection", None)
+            if not step["required"]:
+                step["exploratory_llm"] = True
         books[0].update(
             knowledge_key=key,
             content=row["content"],

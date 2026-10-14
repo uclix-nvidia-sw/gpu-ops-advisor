@@ -378,7 +378,7 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
     for step in plan:
         _require(
             isinstance(step, dict)
-            and set(step) - {"selection"}
+            and set(step) - {"selection", "exploratory_llm"}
             == {
                 "query_id",
                 "priority",
@@ -414,6 +414,13 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
             _require(
                 set(step["fact_names"]) <= query_facts(query),
                 "query cannot produce requested facts",
+            )
+        if "exploratory_llm" in step:
+            _require(
+                step["exploratory_llm"] is True
+                and not step["required"]
+                and "selection" not in step,
+                "exploratory_llm: expected explicit auxiliary opt-in without selection",
             )
         if "selection" in step:
             rule = step["selection"]

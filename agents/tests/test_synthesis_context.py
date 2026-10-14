@@ -350,6 +350,10 @@ async def test_repair_feedback_targets_hypothesis_without_saving_rejected_text()
             )
             assert feedback[0]["hypothesis_index"] == 0
             assert feedback[0]["rule"] == "non_korean"
+            language = feedback[0]["language_diagnostic"]
+            assert language["matches"][0] == {"start": 4, "end": 7}
+            assert language["missing_korean_prose"]
+            assert "has" not in json.dumps(language)
             assert "Korean prose" in feedback[0]["repair_instruction"]
             return response()
 
@@ -522,3 +526,17 @@ async def test_sxid_repair_preserves_valid_limitations_and_removes_invalid_hypot
     assert diagnostics["repair_status"] == "repaired"
     assert diagnostics["completion_mode"] == "validated_response"
     assert len(limits) >= 2
+
+
+def test_language_diagnostic_preserves_offsets_and_hides_raw_prose():
+    text = "노드 fixture-node GPU 상태는 spuriously 미확인입니다."
+    with pytest.raises(ValueError) as caught:
+        validate_synthesis(
+            {"hypotheses": [], "limitations": [text]}, [], identifiers=["fixture-node"]
+        )
+    diagnostic = caught.value.diagnostic["language_diagnostic"]
+    start = text.index("spuriously")
+    assert diagnostic["matches"] == [{"start": start, "end": start + len("spuriously")}]
+    assert not diagnostic["missing_korean_prose"]
+    assert "spuriously" not in json.dumps(diagnostic)
+    assert "fixture-node" not in json.dumps(diagnostic)

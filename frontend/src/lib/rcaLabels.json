@@ -154,6 +154,7 @@
     "unknown_value": "조사에 필요한 값의 의미 또는 유효성이 미확인입니다. 원본 관측과 생산자·시각·대상 계약을 확인하세요.",
     "no_remaining_queries": "현재 조사 지침에서 추가로 실행할 조회가 없어 수집을 종료했습니다.",
     "round_limit_reached": "필수 조회와 한 차례의 보조 조회를 마쳤습니다. 남은 후보는 이번 실행에서 조회하지 않았습니다.",
+    "selection_conditions_missing": "조회 선택 조건 미설정: Runbook에 보조 조회 조건이나 명시적 탐색 허용이 없어 추가 조회를 진행하지 않았습니다.",
     "followup_not_selected": "남은 후보 중 이번 제한을 보완할 추가 조회가 선택되지 않았습니다.",
     "query_budget_exhausted": "이번 실행의 조회 예산을 모두 사용했습니다.",
     "deadline_exhausted": "이번 실행의 수집 가능 시간이 끝났습니다.",

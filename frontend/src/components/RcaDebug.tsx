@@ -294,6 +294,8 @@ export function EvidenceEvaluation({ record }: { record: Row }) {
     invalid_response: '추가 조회 선택 응답이 형식 검증을 통과하지 못했습니다.',
     model_unavailable: '모델 요청이 완료되지 않아 추가 조회를 선택하지 못했습니다.',
     policy_selected: 'Runbook 정책에 따라 보조 조회를 배정했습니다.',
+    selection_conditions_missing:
+      '조회 선택 조건 미설정: Runbook에 보조 조회 조건을 설정해야 합니다. 선택용 LLM은 호출하지 않았습니다.',
     conditions_not_met:
       '보조 조회의 Runbook 조건이 충족되지 않았습니다. 근거가 충분하다는 뜻은 아닙니다.',
     registered_default: '승인된 조회 후보를 코드 정책에 따라 배정했습니다.',
@@ -490,6 +492,7 @@ export function RcaResult({
                     query_budget_exhausted: '조회 예산 소진',
                     deadline_exhausted: '작업 기한 도달',
                     round_limit_reached: '수집 회차 상한 도달',
+                    selection_conditions_missing: '조회 선택 조건 미설정',
                     followup_not_selected: '추가 조회를 선택하지 못함',
                   } as Record<string, string>
                 )[str(analysis.collection_stop_reason)] ||

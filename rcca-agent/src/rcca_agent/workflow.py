@@ -798,17 +798,32 @@ async def run(tools):
                 "deferred_queries": candidates[limit:],
                 "attempts": 0,
             }
-            # Old revisions without selection rules retain their exploratory path.
-            exploratory = [q for q in remaining if q not in governed]
+            # Missing authoring conditions never grant permission to consult the model.
+            permitted = {
+                step["query_id"]
+                for book in selected
+                for step in plans.get(book["id"], [])
+                if step.get("exploratory_llm") is True
+            }
+            exploratory = [q for q in remaining if q not in governed and q in permitted]
+            unconfigured = [
+                q
+                for q in remaining
+                if q not in governed and q not in permitted and q not in policy_queries
+            ]
+            selection_diagnostics["unconfigured_queries"] = unconfigured
             if not next_queries and exploratory:
                 await_queries = await choose_followup(
                     ctx["llm"], exploratory, gaps, selection_diagnostics
                 )
                 next_queries = await_queries[:limit]
-                selection_diagnostics["method"] = "legacy_exploratory_llm"
+                selection_diagnostics["method"] = "explicit_exploratory_llm"
                 selection_diagnostics["selected_queries"] = next_queries
             if not next_queries:
                 stop_reason = "followup_not_selected"
+                if unconfigured and not exploratory:
+                    stop_reason = "selection_conditions_missing"
+                    selection_diagnostics["status"] = "selection_conditions_missing"
         obs._evidence(
             "evidence_evaluation",
             None,

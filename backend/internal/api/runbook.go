@@ -208,6 +208,10 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 						return Invalid("runbook.selection.requires_all")
 					}
 				}
+			} else if optIn, exists := s["exploratory_llm"]; exists {
+				if optIn != true || must || len(s) != 9 {
+					return Invalid("runbook.exploratory_llm")
+				}
 			} else if len(s) != 8 {
 				return Invalid("runbook.observation_plan")
 			}
