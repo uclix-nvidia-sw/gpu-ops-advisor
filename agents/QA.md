@@ -988,3 +988,20 @@ hardware identity or cause. No Pod/workload investigation was added.
 Real execution after these local edits, per-code source applicability review,
 operator-guidance conversion and deployment-profile revalidation remain pending.
 No production revisions were created, approved, published or retired in this change.
+
+## 2026-10-14 Repair budget fixture correction
+
+CI #269/#270 failed three repair-budget cases after the synthesis prompt grew.
+Their fixed 6500 remaining-token fixture no longer covered the conservative
+UTF-8 prompt bound plus repair input. The runtime correctly refused an over-budget
+repair; the fixture incorrectly expected adaptive output or deadline-only blocking.
+Tests now reserve the current system prompt bytes plus 4096 for repair input/output.
+They still assert a positive output cap below 4096, exact transport/gate cap agreement,
+and distinct budget, deadline and combined blocking. Runtime budgets and validators
+are unchanged.
+
+Local Python 3.12: repair/analysis/context/transition/selection/contract tests **360 passed**;
+RCA fixture publication E2E **2 passed, 32 deselected** with temporary local PostgreSQL
+and fixture Grafana/LLM. Live model and deployment validation are not repeated for this
+test-only correction. The initial sandbox-only run stalled on local test I/O and was
+stopped; the completed run used local socket access.
