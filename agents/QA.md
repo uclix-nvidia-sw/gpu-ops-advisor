@@ -1,3 +1,16 @@
+## Ops GPU identity transitions / GPU 연결 변경 검증 — 2026-10-14
+
+Base: freshly fetched origin/main `a317bf7`, branch `fix/report-gpu-identity-transitions`. Local-only changes. No RCA/shared runtime, Backend/JC/Incident, frontend runtime, DB schema, Helm or production data mutation.
+
+- PASS: live read-only Grafana/Mimir inspection of October 13 CPC-1 09–10 / 12–13 KST and CPC-2 13–14 KST. Thirteen GPU-hour transitions across eleven distinct GPUs had disjoint old/new label intervals, separated by 15 seconds. Same-UID Pod metadata transitions included `pod_ip` becoming populated. Actual timestamp bounds and Pod identity were inspected; sum-of-counts alone was not treated as proof.
+- PASS: local replay of stored report aggregates with the newly observed timestamp/Pod bounds through the production transition validator. Verified transitions: 8 + 3 + 2. Serving A100 80GB: valid hourly buckets 23→24, mean 3.7688626→3.8747123%, prior comparison −5.3146107%p and 19 low-mean buckets enabled. Serving A100 40GB: 9→10 buckets, 0.5106481→0.4620359%. Three CPC-1 test namespaces: 4→5 buckets. CPC-2 test namespaces: 3→4 buckets, means 62.9972222→47.8965153% and 53.9375→40.9651899%. Partial start buckets contribute their real sample counts, not a full hour of zeros. Prior-day absence remains uncomparable.
+- PASS: 46 focused calculation/transition tests. Covers true overlap, interleaving, gaps, same-UID metadata changes, different UID/node, unknown/shared/MIG labels, outside-Namespace identities, evidence/aggregate mismatch, query failure, 32-call cap and publication-time reserve. No production endpoints in these tests.
+- PASS: existing UI consumers, 35 tests across AggregateReport, NamespaceCharts and report helpers, Node 22.23.2. No UI edits or live browser preview of a newly generated report in this task.
+- PASS: final full Agent/E2E suite, 1,211 passed / 0 skipped in 122.91s, three existing MCP deprecation warnings. Uses Python 3.11.16, current-main-built Backend/JC/Incident, native temporary PostgreSQL bound to loopback, real Worker/NAT/official Grafana MCP, and fixture Grafana/LLM upstreams. `AGENT_E2E_DATABASE_URL` is explicitly unset; production DB is not used.
+- Initial new E2E failed because its synthetic aggregate response returned an unselected Namespace despite the query filter. Corrected the test upstream to respect the filter; production scope guards were retained. Both normal-transition publication and overlapping-identity partial publication are included.
+
+UNVERIFIED: deployment/new-image production publication, production LLM latency, weekly/max-size/concurrent or high-churn load. Targeted verification adds reads, not a claimed speedup. All-period completeness/comparison rules remain; A→B→A bounds, missing retention or exhausted verification budgets can still leave partial analysis. Existing published reports are immutable and not rewritten. PR/commit/push/deployment have not been performed.
+
 ## RCA selection and subset recovery — 2026-10-14 (local)
 
 - PASS: 1,127 Agent tests; 41 skipped without E2E flags. Existing Windows-incompatible

@@ -195,11 +195,34 @@ class Upstream(BaseHTTPRequestHandler):
             rows = next(
                 e["snapshot"]["series"] for e in evidence if e["query_id"] == name
             )
+            if name == "hourly_gpu_activity" and 'namespace=~"dev"' in expr:
+                rows = [r for r in rows if r["metric"].get("namespace") == "dev"]
             return self.send(
                 {"status": "success", "data": {"resultType": "matrix", "result": rows}}
             )
         if u.path.endswith("/api/v1/query"):
             expr = query.get("query", [""])[0]
+            if getattr(self, "transition_fixture", None) and "[1h] offset 1ms" in expr:
+                from test_identity_transitions import transition_fixture
+                from ops_agent.report_contract import iso
+
+                at = float(query["time"][0])
+                _, gpu, pods, _ = transition_fixture(
+                    {"start": iso(at - 3600), "end": iso(at)},
+                    cluster="cpc-2",
+                    namespace="dev",
+                )
+                if self.transition_fixture == "overlap":
+                    gpu[1]["values"][0][0] = gpu[0]["values"][-1][0]
+                return self.send(
+                    {
+                        "status": "success",
+                        "data": {
+                            "resultType": "matrix",
+                            "result": pods if "kube_pod_info" in expr else gpu,
+                        },
+                    }
+                )
             metric = expr.split("{", 1)[0]
             start = datetime.fromisoformat(
                 PERIOD["start"].replace("Z", "+00:00")
@@ -2648,3 +2671,47 @@ def test_rca_selection_repair_and_safe_subset_survive_publication(stack, monkeyp
     assert selection["attempts"] == 2
     assert selection["initial_failure"] == "missing_tool_calls"
     assert selection["status"] == "selected"
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("overlap", [False, True])
+def test_aggregate_report_transition_verification_is_published(
+    stack, monkeypatch, overlap
+):
+    import test_aggregate_report
+    from test_identity_transitions import transition_fixture
+    from ops_agent.report_contract import VERSION
+
+    monkeypatch.setattr(
+        test_aggregate_report,
+        "fixture",
+        lambda *a, **kw: transition_fixture(*a, **kw)[0],
+    )
+    monkeypatch.setattr(
+        Upstream,
+        "transition_fixture",
+        "overlap" if overlap else "normal",
+        raising=False,
+    )
+    data = {**test_aggregate_report.DATA, "scope": SCOPE}
+    before = len(Upstream.requests)
+    jid = submit(stack, "report", data, execution_profile=VERSION)
+    body, evidence = worker_result(stack, "report", jid, "-aggregate-transition")
+    usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
+    row = next(r for r in usage["rows"] if r["namespace"] == "dev")
+    assert row["valid_hours"] == (23 if overlap else 24)
+    assert row["verified_transition_hours"] == (0 if overlap else 1)
+    assert row["hours"][0]["activity_percent"] == (None if overlap else 60)
+    assert row["activity_percent"] == 60
+    assert row["change_percentage_points"] == (None if overlap else 0)
+    assert ("gpu_identity_transitions", "ok") in evidence
+    assert (
+        any("연결 변경이 확인된" in f["text"] for f in usage["findings"]) is not overlap
+    )
+    raw = [
+        args
+        for path, args in Upstream.requests[before:]
+        if path.endswith("/api/v1/query")
+        and "[1h] offset 1ms" in args.get("query", [""])[0]
+    ]
+    assert len(raw) == 4  # Two bounded checks for each comparison period.

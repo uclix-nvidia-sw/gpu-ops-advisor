@@ -18,7 +18,7 @@
 
 기간은 Asia/Seoul 자정 경계의 24시간 또는 168시간 `[start,end)`다. 현재 기간과 직전 같은 길이의 기간을 같은 범위로 조회한다. 수동 주간은 선택한 마지막 날짜까지 7일, 자동 주간은 기존 달력 규칙의 직전 완료된 월~일이다. 월간·연간·임의 기간은 이번 신규 경로에 없다.
 
-클러스터·기간마다 아래 **3개의 range 요청**을 각각 한 번 보낸다. `stepSeconds=3600`이고 하루는 24점, 주간은 168점이다. 15초마다 HTTP 요청하거나 시간대별로 API를 24번 호출하지 않는다. datasource discovery 요청은 별도다.
+기본 수집은 클러스터·기간마다 아래 **3개의 range 요청**을 각각 한 번 보낸다. 연결 변경이 의심되는 시간대만 아래 추가 검증을 수행한다. `stepSeconds=3600`이고 하루는 24점, 주간은 168점이다. 15초마다 HTTP 요청하거나 시간대별로 API를 24번 호출하지 않는다. datasource discovery 요청은 별도다.
 
 | 조회 ID | 집계 | 필요한 이유 |
 |---|---|---|
@@ -107,3 +107,23 @@ The merged UI shows every cluster/Namespace table row, with one graph per cluste
 Deploy the new Ops image and generate a new aggregate report to populate these fields. Existing immutable reports are not rewritten; missing source metadata stays unknown. No new settings or migration are required. Local observation snapshots and preview files are not shipped. Production generation after deployment remains to be checked.
 
 새 Ops 이미지 배포 후 새 집계 보고서를 생성해야 추가 필드가 저장된다. 과거 보고서는 재작성하지 않으며 원천에 없는 정보는 미확인으로 유지한다. 설정 추가·마이그레이션은 없고 로컬 관측 데이터·미리보기 파일은 배포 코드에 포함하지 않는다. 운영 배포 후 신규 보고서 생성 확인은 별도로 필요하다.
+
+
+## Verified GPU connection transitions / 검증된 GPU 연결 변경 — 2026-10-14
+
+A count of two identities during an hour does not prove simultaneous duplication. Keep the hourly aggregates, then verify only selected GPU hours with more than one identity. The raw reads are instant range vectors, so they retain real scrape timestamps rather than Prometheus lookback-resampled timestamps.
+
+한 시간 안에 식별 정보가 두 종류 나타났다는 사실만으로 동시 중복이라고 판단하지 않는다. 기본 시간별 집계는 유지하고, 선택 대상 GPU에서 여러 식별 정보가 관측된 시간대만 실제 표본 시각으로 대조한다.
+
+- `report_queries.py`: one-hour GPU UUID-filtered and Pod-name-filtered reads, after all base aggregates, at most 16 GPUs per batch and 32 additional calls / 60 seconds per report, leaving at least 30 seconds before the calculation deadline. Existing 80-call / 8 MiB / per-call and overall deadlines still apply. Other Namespace identities participate in the transient GPU overlap check, but are not stored in the selected Namespace's evidence. A failed or skipped check never validates an hour and does not invalidate unrelated hours.
+- `identity_transitions.py`: verify distinct, non-overlapping identity intervals, a continuous 238–242-sample GPU hour, 14–30-second within-series gaps, at most 30-second boundary/inter-identity gaps, unchanged physical node/model, and no conflicting aliases or explicit shared/MIG attribution. Pod records must retain one UID and node, value 1, continuous non-overlapping intervals, and cover the GPU interval within one 15-second scrape tolerance. Same-UID Pod metadata transitions are allowed; different UIDs or overlapping records remain unverified.
+- `namespace_summary.py`: the proof must match the original full identity, sample sum/count/min/max, global identity count, Pod UID and Pod sample count. Only that Namespace's original observed samples contribute to the unchanged sum/count formula. Unlabelled intervals are neither assigned nor zero-filled. Existing missing/overlap/MIG/range guards remain.
+- `aggregate_report.py`: explain the number of verified transition hours and the observed-sample basis. Record `quality.gpu_attribution_version=gpu-identity-transitions-v1`. The input profile/result format remains `report-aggregate-v1`; additive row/hour fields are compatible with the current UI and export.
+
+추가 증거 `gpu_identity_transitions`에는 검증된 식별 정보, 구간의 처음·마지막 시각/표본 간격, sum/count/min/max, Pod UID·표본 수와 검증 버전을 남긴다. 원본 표본 배열은 저장하지 않는다. 실패한 조회의 원문 오류/비밀값도 저장하지 않는다. 이전 증거만 있으면 기존의 보수적인 판정을 유지한다.
+
+**Scope / 범위:** Ops 조회·검증·설명과 테스트만 변경한다. RCA·공통 D·공통 Worker·DB·Helm은 변경하지 않는다. 기존 발행 결과와 일정은 재작성하지 않으며 새 보고서부터 적용된다. 현재/이전 기간 완전성, 전체 주제 partial 판정, 저활동·이전 기간 비교 조건은 별도로 완화하지 않는다.
+
+**Limits / 한계:** One identity reappearing within an hour (A→B→A) can have overlapping first/last bounds and remains conservatively excluded. This bounded recovery is not a universal lifecycle or exclusive-allocation proof. Missing raw retention, large churn, or budget exhaustion retains partial analysis. It adds targeted read cost; no latency reduction is claimed. Weekly/max-size/concurrent production load and new-image publication need deployment validation.
+
+실제 CPC-1·CPC-2의 2026-10-13 세 시간대, GPU·시간대 조합 13건에서 확인한 연결 변경은 모두 시각상 비중복이었다. 조회 성공·표본 수만으로 추정하지 않고 실제 처음/마지막 시각과 Pod UID를 대조했다. 이 결과로 ‘모든 연결 변경은 정상’이라고 일반화하지 않는다. 상세 로컬 검사 범위는 [Agent QA](../../../agents/QA.md)를 따른다.
