@@ -1,3 +1,9 @@
+## RCA JSON selection — 2026-10-14 (local)
+
+- PASS: 38 targeted RCA selection/workflow tests, including real LLM transport with fixture tool rejection, HTTP 401/500, invalid candidate, maximum batch, explicit stop and repair failure.
+- PASS: isolated Worker/JC/Incident/MCP-to-publication E2E with fixture upstreams; tool calls rejected, JSON selection succeeds and unsafe synthesis subset remains filtered.
+- First E2E setup used an obsolete JC binary; rebuilt current local JC/Incident and passed. Production HTTP 500 root cause and post-deployment behavior remain unverified. No shared LLM/Ops runtime changes.
+
 ## RCA selection and subset recovery — 2026-10-14 (local)
 
 - PASS: 1,127 Agent tests; 41 skipped without E2E flags. Existing Windows-incompatible

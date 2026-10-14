@@ -170,34 +170,16 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             if "facts" in payload:
                 events.append("report")
                 return {"fact_ids": [f["id"] for f in payload["facts"]]}
-            if kwargs.get("tools"):
+            if "available_queries" in payload:
+                assert not kwargs.get("tools")
                 events.append("plan")
                 if mode == "invalid_plan":
                     raise ValueError("malformed response JSON")
-                if mode == "xid":
-                    return [
-                        {
-                            "function": {
-                                "name": "investigate",
-                                "arguments": json.dumps({"query_id": q}),
-                            }
-                        }
-                        for q in payload["available_queries"][:3]
-                    ]
-                return [
-                    {
-                        "function": {
-                            "name": "investigate",
-                            "arguments": json.dumps(
-                                {
-                                    "query_id": payload["available_queries"][0]
-                                    if mode == "xid"
-                                    else "D02"
-                                }
-                            ),
-                        }
-                    }
-                ]
+                return {
+                    "query_ids": payload["available_queries"][:3]
+                    if mode == "xid"
+                    else ["D02"]
+                }
             events.append("synthesize")
             if mode in ("missing_runbook", "unsafe_general"):
                 assert payload["runbook_plans"][0]["investigation_only"] is True

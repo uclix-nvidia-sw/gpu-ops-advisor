@@ -14,9 +14,12 @@ export function StructuredGuidance({ entries }: { entries: Row[] }) {
         const sources = rows(entry.sources);
         return (
           <section key={str(entry.evidence_id) || index}>
-            <p>
-              적용 지침: {str(entry.title)} · revision {String(entry.revision ?? '?')}
-            </p>
+            <details>
+              <summary>적용 지침</summary>
+              <p>
+                {str(entry.title)} · revision {String(entry.revision ?? '?')}
+              </p>
+            </details>
             <ol>
               {rows(guidance.next_checks).map((check, i) => (
                 <li key={i}>

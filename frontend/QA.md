@@ -1,3 +1,9 @@
+## Compact RCA guidance — 2026-10-14 (local)
+
+- PASS: 277 tests, build and format check (existing bundle warning).
+- PASS: actual RCA component browser fixture: headings 18px, problem summary 16px, body/checks/references 13px. Applied guidance starts closed and opens correctly; only the complete reference group has a bottom border.
+- Production deployment is unverified. Report/Ops components unchanged.
+
 ## Unified RCA investigation list — 2026-10-14 (local)
 
 - PASS: 277 frontend tests, TypeScript/Vite build, formatting. Existing large-bundle

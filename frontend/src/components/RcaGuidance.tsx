@@ -18,15 +18,17 @@ export function RcaGuidance({ paragraphs, result }: { paragraphs: string[]; resu
     );
   return (
     <>
-      <p>
-        적용 지침:{' '}
-        {rows(result.runbook_revisions)
-          .map(
-            (r) =>
-              `${str(r.title) || str(r.knowledge_key)} · revision ${String(r.revision ?? '?')}`,
-          )
-          .join(', ') || '저장된 조사 지침'}
-      </p>
+      <details>
+        <summary>적용 지침</summary>
+        <p>
+          {rows(result.runbook_revisions)
+            .map(
+              (r) =>
+                `${str(r.title) || str(r.knowledge_key)} · revision ${String(r.revision ?? '?')}`,
+            )
+            .join(', ') || '저장된 조사 지침'}
+        </p>
+      </details>
       <p>
         이 결과에는 구조화된 사용자 안내가 없습니다. 아래 저장된 지침을 확인하세요. 이번 장비의 고장
         판정이나 조치 승인은 아닙니다.

@@ -47,7 +47,7 @@ def port():
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
-    missing_tool_calls = False
+    reject_tool_requests = False
     api_key = "fixture-only"
     logs_fail = False
     logs_max_limit = None
@@ -86,15 +86,8 @@ class Upstream(BaseHTTPRequestHandler):
                 return self.send({"choices": [{"message": {"content": "OK"}}]})
             if self.llm_fail:
                 return self.send({"error": "fixture unavailable"}, 503)
-            if body.get("tools") and self.missing_tool_calls:
-                return self.send(
-                    {
-                        "choices": [
-                            {"message": {"content": "{}"}, "finish_reason": "stop"}
-                        ],
-                        "usage": {"total_tokens": 30},
-                    }
-                )
+            if body.get("tools") and self.reject_tool_requests:
+                return self.send({"error": "fixture tool protocol failure"}, 500)
             if body.get("tools"):
                 allowed = body["tools"][0]["function"]["parameters"]["properties"][
                     "query_ids"
@@ -2581,7 +2574,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
 
 
 @pytest.mark.e2e
-def test_rca_selection_repair_and_safe_subset_survive_publication(stack, monkeypatch):
+def test_rca_json_selection_and_safe_subset_survive_publication(stack, monkeypatch):
     original_worker = worker_result
     captured = {}
 
@@ -2603,7 +2596,7 @@ def test_rca_selection_repair_and_safe_subset_survive_publication(stack, monkeyp
         captured.update(result=result, evidence=evidence)
         return result, evidence
 
-    monkeypatch.setattr(Upstream, "missing_tool_calls", True)
+    monkeypatch.setattr(Upstream, "reject_tool_requests", True)
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", unsafe_reply)
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
     # The isolated fixture normally forces D02 by policy; remove only that force
@@ -2645,6 +2638,6 @@ def test_rca_selection_repair_and_safe_subset_survive_publication(stack, monkeyp
     selection = next(
         row[0]["followup_selection"] for row in evaluations if row[0]["next_queries"]
     )
-    assert selection["attempts"] == 2
-    assert selection["initial_failure"] == "missing_tool_calls"
+    assert selection["attempts"] == 1
+    assert "initial_failure" not in selection
     assert selection["status"] == "selected"
