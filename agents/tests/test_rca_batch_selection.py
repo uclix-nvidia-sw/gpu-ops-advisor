@@ -200,3 +200,17 @@ async def test_repair_http_failure_is_not_malformed_response():
     assert await choose_followup(Model(), ["D02"], [], diagnostics) == []
     assert diagnostics["repair_failure"] == "llm_http_error"
     assert diagnostics["status"] == "model_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_exploration_does_not_force_queries():
+    class Model:
+        configured = False
+
+    diagnostics = {}
+    assert (
+        await choose_followup(Model(), ["D44", "D02"], ["unknown_value"], diagnostics)
+        == []
+    )
+    assert diagnostics["initial_failure"] == "model_not_configured"
+    assert diagnostics["attempts"] == 0

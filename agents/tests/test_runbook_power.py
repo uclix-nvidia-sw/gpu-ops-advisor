@@ -161,8 +161,13 @@ async def test_power_followup_never_establishes_health_or_recovery(
         }
 
     class Model:
-        configured = False
+        configured = True
         usage = {}
+
+        async def complete(self, prompt, payload, **kwargs):
+            if "available_queries" in payload:
+                return {"query_ids": payload["available_queries"][:3]}
+            return None
 
     grafana = Grafana()
     grafana.labels = {
@@ -193,15 +198,25 @@ async def test_power_followup_never_establishes_health_or_recovery(
     result = output["result"]
     validate_result(result, output["evidence"])
     followup = [e for e in output["evidence"] if e["query_id"] == query]
-    assert followup
-    if profile_kind == "current":
-        assert all(e["quality"].get("binding_id") for e in followup)
-    if mode == "empty":
-        assert all(e["tool_status"] == "empty" for e in followup)
-    elif mode == "failed":
-        assert all(e["tool_status"] not in ("ok", "empty") for e in followup)
+    if code == 79:
+        # Empty D09 cannot satisfy the authored reported-fact prerequisites.
+        assert not followup
+        evaluations = [
+            e["snapshot"]
+            for e in output["evidence"]
+            if e["query_id"] == "evidence_evaluation"
+        ]
+        assert evaluations[0]["followup_selection"]["status"] == "conditions_not_met"
     else:
-        assert any(e["tool_status"] == "ok" for e in followup)
+        assert followup
+        if profile_kind == "current":
+            assert all(e["quality"].get("binding_id") for e in followup)
+        if mode == "empty":
+            assert all(e["tool_status"] == "empty" for e in followup)
+        elif mode == "failed":
+            assert all(e["tool_status"] not in ("ok", "empty") for e in followup)
+        else:
+            assert any(e["tool_status"] == "ok" for e in followup)
     assert result["result_status"] != "ready"
     # General collection no longer requires a current-state assertion. Empty
     # health evidence still blocks cause and action confirmation independently.

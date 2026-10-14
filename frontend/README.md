@@ -1,3 +1,7 @@
+## RCA evidence evaluation — 2026-10-14
+
+New RCA diagnostics use the unified evaluation decision. Historical result summaries and raw stage records remain readable. A rule that does not match is shown as unmet selection conditions, never as sufficient evidence.
+
 ## RCA compact typography — 2026-10-14
 
 RCA section headings remain 18px and the detected-problem summary 16px. Body, checks and reference items use 13px. Applied Runbook metadata starts collapsed; reference items share one bottom divider after the whole group. Report/Ops rendering is unchanged.

@@ -1,3 +1,15 @@
+## Unified evidence evaluation — 2026-10-14
+
+Each collection round calls one evaluator for observation gaps/conflicts/failures, existing Runbook extension policies, sufficiency and follow-up/stop decisions. New runs emit only `evidence_evaluation`; no `unexpected_evidence` or `sufficiency` stage records are written. Plan-extension provenance remains separate. Published Runbook policy fields and historical records are unchanged. The result summary retains `analysis.sufficiency` for old consumers alongside `analysis.evidence_evaluation`.
+
+## Conditional auxiliary selection — 2026-10-14
+
+Optional observation-plan `selection` rules contain `missing_any` (nonempty fact/gap names), `requires_all` (facts already established by the existing scoped validators), and `independent: true`. They are permitted only on auxiliary steps. A matching gap plus all prerequisites selects the query deterministically; priority then query ID orders rules, duplicates are removed, and the existing budget/three-query/final-round caps apply. Findings retain the Runbook revision, matched gaps, missing prerequisites and purpose. Successful retrieval does not validate device identity, timestamps, current health or causation.
+
+Explicit unexpected-event policy queries remain supported, but cannot bypass a step's selection rule. Rules that do not match are excluded from LLM selection. Only remaining legacy steps without rules may use the JSON exploratory path, recorded as `legacy_exploratory_llm`; there is no unconditional degraded-query or unconfigured-model fallback. When deterministic rules select a batch, no selection LLM is called or used to fill spare slots. Synthesis/report explanation remains LLM-based.
+
+XID79 and SXID11001 repository drafts now require scoped reported code/producer facts and a cause/current-health gap before their independent auxiliary queries. These are proposed new content revisions, not changes to published rows. Deploy Backend and RCA validators first, validate against the deployed profile, then review/publish new revisions using Backend API. Older validators reject these new fields; retain old published revisions until rollout succeeds. No DB schema or Ops runtime changes.
+
 ## RCA JSON auxiliary selection — 2026-10-14
 
 Auxiliary selection uses ordinary JSON on the same model endpoint, without forced tool calling. Only registered independent candidates (maximum three) pass code validation. Malformed selection gets one repair; HTTP, deadline and budget failures remain explicit and do not force queries. The observed production investigation calls returned HTTP 500 three times per job; the server-side cause is not known. This change removes the tool-protocol dependency, not a claim that every HTTP failure is fixed.

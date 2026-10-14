@@ -1,3 +1,8 @@
+## Unified evaluation diagnostics — 2026-10-14 (local)
+
+- PASS: frontend regression tests, TypeScript/Vite build and format. Rule conditions not met remain insufficient; unified decisions take precedence with historical summary fallback.
+- Existing bundle-size warning remains. Fixture/static-render validation only; production UI is unverified. Report/Ops rendering is unchanged.
+
 ## Compact RCA guidance — 2026-10-14 (local)
 
 - PASS: 277 tests, build and format check (existing bundle warning).

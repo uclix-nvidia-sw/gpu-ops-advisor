@@ -239,7 +239,7 @@ export function StoredEvidence({
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="D05, sufficiency, synthesis, partial…"
+          placeholder="D09, evidence_evaluation, synthesis, partial…"
         />
       </Field>
       <p>

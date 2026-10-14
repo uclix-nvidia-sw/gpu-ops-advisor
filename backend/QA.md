@@ -1,3 +1,11 @@
+## Runbook conditional auxiliary selection — 2026-10-14 (local)
+
+- PASS: 1,165 non-E2E Agent tests with UTF-8 enabled; 45 E2E cases deselected. Unchanged Windows-incompatible Ops cleanup module excluded after two file-lock/fsync failures; no claim of full cross-platform suite success.
+- PASS: three isolated E2E cases: Backend Runbook registration/review/publication and RCA consumption, plus legacy JSON and deterministic rule selection through result publication. Native loopback temporary PostgreSQL, current Backend/JC/Incident binaries, official MCP and fixture upstreams; no production DB.
+- PASS: Backend vet, race tests (CGO/w64devkit), build; Ruff, formatting, documentation links. Initial race invocation lacked CGO; rerun with compiler passed.
+- XID79/SXID11001 new draft conditions require scoped reported facts. Empty D09 blocks authored auxiliary queries; code does not promote inventory, timestamps, device state or cause. Rule selection has zero LLM attempts; no unconditional fallback when the model is unconfigured.
+- Not performed: commit/push, deployment, new production revision registration/publication, or live XID/SXID validation. Existing immutable published revisions remain unchanged. Remaining catalog entries retain explicit policy or legacy exploration; no blanket 265-item conversion.
+
 ## Structured RCA guidance — 2026-10-13 (local verification)
 
 - Python agent regression: 1,100 passed, 41 skipped; Windows-incompatible report cleanup suite excluded (Report implementation unchanged).

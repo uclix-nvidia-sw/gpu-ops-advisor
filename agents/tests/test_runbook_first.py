@@ -160,7 +160,7 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
     assert all("purpose_id" not in a for a in output["result"]["assessments"])
     assert output["result"]["result_status"] != "ready"
     if mode in ("missing", "incompatible"):
-        assert {"D09", "D02", "unexpected_evidence"} <= ids
+        assert {"D09", "D02", "evidence_evaluation"} <= ids
         assert output["result"]["runbook_revisions"][0]["id"] == "builtin-general"
     else:
         assert "D04" in ids  # Former procedure allowlists excluded temperature.
