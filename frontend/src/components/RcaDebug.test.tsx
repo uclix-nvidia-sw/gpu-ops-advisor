@@ -684,3 +684,18 @@ it.each([true, false])('reads unified or historical evaluation summary (%s)', (u
   const expected = renderToStaticMarkup(<RcaReason value="insufficient_blocked" />);
   expect(html).toContain(`근거 평가 판단</dt><dd>${expected}</dd>`);
 });
+
+it('explains unconfigured auxiliary selection without blaming the model', () => {
+  const html = render(
+    <EvidenceEvaluation
+      record={{
+        round: 0,
+        next_queries: [],
+        followup_selection: { status: 'selection_conditions_missing', attempts: 0 },
+      }}
+    />,
+  );
+  expect(html).toContain('조회 선택 조건 미설정');
+  expect(html).toContain('선택용 LLM은 호출하지 않았습니다.');
+  expect(html).not.toContain('모델 요청이 완료되지 않아');
+});

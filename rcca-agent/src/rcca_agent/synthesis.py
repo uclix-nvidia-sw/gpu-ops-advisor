@@ -81,11 +81,15 @@ def synthesis_input(
 class SynthesisValidationError(ValueError):
     """Fixed diagnostic codes only; never persist model text or raw exceptions."""
 
-    def __init__(self, code, *, rule="shape", index=None, tokens=(), numeric=None):
+    def __init__(
+        self, code, *, rule="shape", index=None, tokens=(), numeric=None, language=None
+    ):
         super().__init__(code)
         self.diagnostic = {"code": code, "rule": rule, "tokens": list(tokens)[:10]}
         if numeric is not None:
             self.diagnostic["numeric_diagnostic"] = numeric
+        if language is not None:
+            self.diagnostic["language_diagnostic"] = language
         if index is not None:
             self.diagnostic[
                 "limitation_index"
@@ -251,9 +255,9 @@ def validate_synthesis(
             "truncated": len(matches) > 10,
         }
 
-    def korean(text, evidence_refs):
-        text = prose(text, evidence_refs)
-        hangul = len(re.findall(r"[가-힣]", text))
+    def language_diagnostic(text, evidence_refs):
+        masked = prose(text, evidence_refs, preserve_offsets=True)
+        hangul = len(re.findall(r"[가-힣]", masked))
         # Identifiers were masked above. Permit technical terms, not arbitrary
         # English prose hidden inside a mostly Korean sentence.
         technical = {
@@ -284,8 +288,21 @@ def validate_synthesis(
             "TRUE",
             "FALSE",
         }
-        words = re.findall(r"[A-Za-z]+", text)
-        return hangul > 0 and all(word.upper() in technical for word in words)
+        matches = [
+            m
+            for m in re.finditer(r"[A-Za-z]+", masked)
+            if m[0].upper() not in technical
+        ]
+        if hangul and not matches:
+            return None
+        return {
+            "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "text_length": len(text),
+            "offset_unit": "unicode_codepoints",
+            "missing_korean_prose": not bool(hangul),
+            "matches": [{"start": m.start(), "end": m.end()} for m in matches[:10]],
+            "truncated": len(matches) > 10,
+        }
 
     precision_reduced = any(
         q.get("quality", {}).get("reason") == "time_precision_reduced"
@@ -311,7 +328,7 @@ def validate_synthesis(
             else "numeric"
             if numeric_prose(text, refs)
             else "non_korean"
-            if not korean(text, refs)
+            if language_diagnostic(text, refs)
             else "precision_loss"
             if not precision_reduced and PRECISION_LOSS.search(text)
             else None
@@ -325,6 +342,9 @@ def validate_synthesis(
                 index=i,
                 tokens=[rule],
                 numeric=numeric_prose(text, refs) if rule == "numeric" else None,
+                language=language_diagnostic(text, refs)
+                if rule == "non_korean"
+                else None,
             )
     candidates = []
     for i, h in enumerate(hypotheses):
@@ -373,9 +393,13 @@ def validate_synthesis(
                 tokens=["numeric"],
                 numeric=numeric_prose(h["claim"], supporting),
             )
-        if not korean(h["claim"], supporting):
+        if language_diagnostic(h["claim"], supporting):
             raise SynthesisValidationError(
-                "non_korean_claim", rule="non_korean", index=i, tokens=["non_korean"]
+                "non_korean_claim",
+                rule="non_korean",
+                index=i,
+                tokens=["non_korean"],
+                language=language_diagnostic(h["claim"], supporting),
             )
         # Identity uncertainty is a diagnostic limitation regardless of wording or
         # whether the bounded view retained the inventory relation observation.
@@ -623,7 +647,7 @@ async def synthesize(llm, payload, diagnostics=None):
             for violation in feedback:
                 violation["repair_instruction"] = {
                     "numeric": "Remove unregistered quantities from this sentence; do not replace them with number words. Keep only cited error codes and supplied identifiers.",
-                    "non_korean": "Rewrite this sentence in Korean prose. Do not copy snake_case field names, English error titles or English explanations. Describe producer_event_time as 생산자 오류 발생 시각, loki_recorded_at as 로그 기록 시각 and fact_eligible as 상태 판단에 사용할 조건. Preserve uncertainty and evidence references; omit the sentence if it cannot be expressed accurately.",
+                    "non_korean": "Rewrite this sentence in Korean prose. language_diagnostic.matches gives the exact Unicode character offsets of disallowed English in rejected_sentences; replace those fragments with Korean and reread the complete sentence. missing_korean_prose requires a Korean explanation. Do not copy snake_case field names, English error titles or English explanations. Describe producer_event_time as 생산자 오류 발생 시각, loki_recorded_at as 로그 기록 시각 and fact_eligible as 상태 판단에 사용할 조건. Preserve uncertainty and evidence references; omit the sentence if it cannot be expressed accurately.",
                     "unresolved_device_mechanism": "Remove this hypothesis. The reported device is unresolved; its event does not distinguish firmware, configuration, power or physical connection causes. Keep diagnostic checks in Korean limitations. An empty hypotheses list is valid.",
                     "identity_is_not_cause": "Remove this hypothesis. Device identity or PCI inventory uncertainty is a limitation, not a failure mechanism. Describe the unresolved device mapping in Korean limitations instead. Do not replace it with physical separation, firmware failure or another unsupported cause. An empty hypotheses list is valid.",
                 }.get(

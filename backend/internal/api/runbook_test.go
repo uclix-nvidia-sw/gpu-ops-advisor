@@ -161,3 +161,27 @@ func TestAuxiliarySelectionConditions(t *testing.T) {
 		})
 	}
 }
+
+func TestExploratorySelectionRequiresExplicitPermission(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []any{true, false, "true", float64(1), nil} {
+		var row Object
+		if err := json.Unmarshal(b, &row); err != nil {
+			t.Fatal(err)
+		}
+		c := row["content"].(map[string]any)
+		step := c["observation_plan"].([]any)[1].(map[string]any)
+		delete(step, "selection")
+		step["exploratory_llm"] = value
+		if err := validateRunbook(c, Object{}, false); (err == nil) != (value == true) {
+			t.Fatalf("opt-in %v: %v", value, err)
+		}
+		step["required"] = true
+		if validateRunbook(c, Object{}, false) == nil {
+			t.Fatal("required exploration accepted")
+		}
+	}
+}

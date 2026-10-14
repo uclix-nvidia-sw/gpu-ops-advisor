@@ -1,3 +1,12 @@
+## Explicit exploratory permission and rule publication — 2026-10-14
+
+- PASS (local): 1,201 non-E2E tests; 45 E2E cases deselected. Existing Windows-incompatible Report cleanup module excluded; no full cross-platform claim. Rule, explicit opt-in and missing-condition stop paths retain uncertain evidence semantics.
+- PASS (isolated integration): 3 temporary PostgreSQL/Backend/JC/Incident/official-MCP fixture E2E cases covering registration/review/publication, rule selection and explicit JSON exploration through result publication. No production DB used by tests.
+- PASS: Ruff lint/format; Korean repair diagnostic spans preserve original Unicode offsets, mask known identifiers, and persist only positions/hash, not rejected prose. This improves repair feedback without weakening validation.
+- PASS (live, deployed predecessor plus new published content): dgx02 injection at 11:57:34 KST selected XID79 revision 6 and SXID11001 revision 5. Both recorded `method=runbook_rules`, `attempts=0`; XID D09/D44/D02 and SXID D09/D02 succeeded. Jobs created around 12:00:48; both published partial results with complete narratives. Both synthesis repairs passed on the second response; final editors passed without repair. Physical cause/device state remains unconfirmed.
+- Published content hashes: XID79 `13a44c8cc52087158f47e9b1ee69cc5df2bcd6af3d1a08e8c3f70ebd43561fcc`; SXID11001 `ee1475be64daec318d40c435ee69a5c176b3019f21a177e47adfdde40dacaf0d`. Previous revisions were preserved, not retired by this operation.
+- NOT DEPLOYED: the local explicit-only exploration gate, missing-condition UI wording and language-span feedback. Live rule selection success does not prove these unshipped changes. No commit, PR or code deployment performed in this task.
+
 ## Unified evidence evaluation — 2026-10-14 (local)
 
 - PASS: 1165 non-E2E tests; 45 E2E cases deselected. Existing Windows Ops cleanup tests remain excluded as documented below.

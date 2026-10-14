@@ -96,3 +96,36 @@ def test_rule_priority_and_revision_provenance():
     )
     assert selected == ["D44", "D11", "D04", "D02"]
     assert len(findings) == 8
+
+
+@pytest.mark.parametrize("value", [False, "true", 1, None])
+def test_exploration_requires_boolean_opt_in(value):
+    row = json.loads(
+        (ROOT / "rcca-agent/runbooks/xid/RB-XID-79.json").read_text("utf-8")
+    )
+    step = row["content"]["observation_plan"][1]
+    step.pop("selection")
+    step["exploratory_llm"] = value
+    queries = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
+        "queries"
+    ]
+    with pytest.raises(ValueError):
+        validate_runbook(row, queries, list(queries), authoring=True)
+
+
+def test_explicit_exploration_contract_and_conflicts():
+    row = json.loads(
+        (ROOT / "rcca-agent/runbooks/xid/RB-XID-79.json").read_text("utf-8")
+    )
+    queries = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
+        "queries"
+    ]
+    step = row["content"]["observation_plan"][1]
+    step["exploratory_llm"] = True
+    with pytest.raises(ValueError):
+        validate_runbook(row, queries, list(queries), authoring=True)
+    step.pop("selection")
+    assert validate_runbook(row, queries, list(queries), authoring=True)
+    step["required"] = True
+    with pytest.raises(ValueError):
+        validate_runbook(row, queries, list(queries), authoring=True)

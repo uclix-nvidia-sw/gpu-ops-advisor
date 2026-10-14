@@ -2642,6 +2642,10 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
                         "requires_all": ["observations"],
                         "independent": True,
                     }
+        if not rule_selection:
+            for step in content["observation_plan"]:
+                if not step["required"]:
+                    step["exploratory_llm"] = True
         conn.execute(
             "UPDATE knowledge_revisions SET content=%s,content_hash=%s,reviewed_content_hash=%s WHERE id=%s",
             (Jsonb(content), content_hash(content), content_hash(content), book_id),

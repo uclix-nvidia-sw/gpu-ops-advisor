@@ -1,6 +1,6 @@
 ## RCA evidence evaluation — 2026-10-14
 
-New RCA diagnostics use the unified evaluation decision. Historical result summaries and raw stage records remain readable. A rule that does not match is shown as unmet selection conditions, never as sufficient evidence.
+New RCA diagnostics use the unified evaluation decision. Missing auxiliary selection conditions are labeled 조회 선택 조건 미설정 and state that the selection model was not called. Historical result summaries and raw stage records remain readable. A rule that does not match is shown as unmet selection conditions, never as sufficient evidence.
 
 ## RCA compact typography — 2026-10-14
 

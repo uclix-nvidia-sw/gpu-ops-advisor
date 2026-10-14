@@ -85,8 +85,9 @@ def test_current_binding_is_parameterized_observation_not_health(query, unit):
 )
 @pytest.mark.parametrize("mode", ["samples", "empty", "failed"])
 @pytest.mark.parametrize("profile_kind", ["legacy_fixture", "current"])
+@pytest.mark.parametrize("exploration_allowed", [False, True])
 async def test_power_followup_never_establishes_health_or_recovery(
-    code, query, mode, profile_kind
+    code, query, mode, profile_kind, exploration_allowed
 ):
     profile = json.loads(
         (ROOT / "agents/tests/fixtures/config-v7.json").read_text("utf-8")
@@ -122,6 +123,10 @@ async def test_power_followup_never_establishes_health_or_recovery(
     book.update(
         id="fixture-book", revision=1, compatibility={"cluster_id": "fixture-cluster"}
     )
+    if exploration_allowed:
+        for step in book["content"]["observation_plan"]:
+            if not step["required"] and "selection" not in step:
+                step["exploratory_llm"] = True
     book.update(
         content_hash=content_hash(book["content"]),
         reviewed_content_hash=content_hash(book["content"]),
@@ -166,6 +171,7 @@ async def test_power_followup_never_establishes_health_or_recovery(
 
         async def complete(self, prompt, payload, **kwargs):
             if "available_queries" in payload:
+                assert exploration_allowed
                 return {"query_ids": payload["available_queries"][:3]}
             return None
 
@@ -207,6 +213,15 @@ async def test_power_followup_never_establishes_health_or_recovery(
             if e["query_id"] == "evidence_evaluation"
         ]
         assert evaluations[0]["followup_selection"]["status"] == "conditions_not_met"
+    elif not exploration_allowed:
+        assert not followup
+        evaluation = next(
+            e["snapshot"]
+            for e in output["evidence"]
+            if e["query_id"] == "evidence_evaluation"
+        )
+        assert evaluation["stop_reason"] == "selection_conditions_missing"
+        assert evaluation["followup_selection"]["attempts"] == 0
     else:
         assert followup
         if profile_kind == "current":

@@ -1,3 +1,8 @@
+## Missing selection conditions — 2026-10-14 (local)
+
+- PASS: 281 tests, TypeScript/Vite build and formatting. RCA displays 조회 선택 조건 미설정 and explains that the selection LLM was not called; existing diagnostics remain readable.
+- Static React rendering fixture only; new wording is not yet deployed. Existing bundle-size warning remains. Report/Ops implementation unchanged.
+
 ## Unified evaluation diagnostics — 2026-10-14 (local)
 
 - PASS: frontend regression tests, TypeScript/Vite build and format. Rule conditions not met remain insufficient; unified decisions take precedence with historical summary fallback.

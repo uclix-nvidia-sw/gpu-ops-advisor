@@ -1,3 +1,8 @@
+## Explicit Runbook exploration permission — 2026-10-14 (local)
+
+- PASS: vet, unit tests, CGO race tests and build. `exploratory_llm` accepts boolean true only on optional steps, without a selection rule.
+- PASS: current Backend binary in isolated Runbook lifecycle/RCA consumption E2E. No schema or production DB changes. New validator is local and not deployed.
+
 ## Runbook conditional auxiliary selection — 2026-10-14 (local)
 
 - PASS: 1,165 non-E2E Agent tests with UTF-8 enabled; 45 E2E cases deselected. Unchanged Windows-incompatible Ops cleanup module excluded after two file-lock/fsync failures; no claim of full cross-platform suite success.
