@@ -1,3 +1,7 @@
+## RCA compact typography — 2026-10-14
+
+RCA section headings remain 18px and the detected-problem summary 16px. Body, checks and reference items use 13px. Applied Runbook metadata starts collapsed; reference items share one bottom divider after the whole group. Report/Ops rendering is unchanged.
+
 ## Unified RCA list / RCA 목록 통합 — 2026-10-14
 
 `/cases` has one RCA investigation list with server-side execution status filters,

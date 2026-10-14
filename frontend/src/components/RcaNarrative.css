@@ -14,7 +14,7 @@
   font-size: 22px;
 }
 .rca-narrative .rca-narrative-header p {
-  font-size: 15px;
+  font-size: 13px;
   margin: 8px 0;
   line-height: 1.7;
 }
@@ -50,7 +50,7 @@
 .rca-narrative .rca-reference-guide dt,
 .rca-narrative .rca-reference-guide dd {
   max-width: 100%;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.9;
   white-space: normal;
   word-break: keep-all;
@@ -101,6 +101,8 @@
 
 .rca-reference-guide > div {
   padding: 12px 0;
+}
+.rca-reference-guide {
   border-bottom: 1px solid var(--border);
 }
 .rca-reference-guide dt {
@@ -115,7 +117,7 @@
 }
 
 .rca-narrative-section h5 {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.6;
 }
 .rca-narrative-section .rca-reference-heading {
@@ -123,6 +125,6 @@
   font-size: 18px;
 }
 .rca-narrative .rca-narrative-section summary {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.7;
 }

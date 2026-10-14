@@ -1,3 +1,7 @@
+## RCA JSON auxiliary selection — 2026-10-14
+
+Auxiliary selection uses ordinary JSON on the same model endpoint, without forced tool calling. Only registered independent candidates (maximum three) pass code validation. Malformed selection gets one repair; HTTP, deadline and budget failures remain explicit and do not force queries. The observed production investigation calls returned HTTP 500 three times per job; the server-side cause is not known. This change removes the tool-protocol dependency, not a claim that every HTTP failure is fixed.
+
 ## Follow-up selection and safe repair recovery — 2026-10-14
 
 RCA records `followup_selection` in each `evidence_evaluation`: selected,
