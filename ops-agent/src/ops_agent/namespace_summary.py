@@ -6,6 +6,7 @@ import math
 from agent_common.contracts import timestamp
 
 from .report_contract import MAX_GPU_SERIES, MAX_NAMESPACES, iso
+from .identity_transitions import identity
 
 MEASURES = {"activity_sum", "sample_count", "minimum", "maximum"}
 
@@ -22,7 +23,24 @@ def summarize(evidence, period):
     expected = set(range(int(start) + 3600, int(end) + 1, 3600))
     activity, identities, gpu_identities = {}, defaultdict(list), defaultdict(list)
     errors, refs = defaultdict(set), [e["id"] for e in evidence]
+    transitions = defaultdict(list)
     for e in evidence:
+        if e["query_id"] == "gpu_identity_transitions":
+            if e["tool_status"] == "ok":
+                for check in e["snapshot"]["checks"]:
+                    labels = check["labels"]
+                    allowed = e["scope"]["clusters"][0].get("namespaces")
+                    if (
+                        labels.get("cluster_id") != e["cluster_id"]
+                        or (
+                            allowed is not None
+                            and labels.get("namespace") not in allowed
+                        )
+                        or check["at"] not in expected
+                    ):
+                        raise ValueError("invalid_transition_scope")
+                    transitions[(check["at"], identity(labels))].append(check)
+            continue
         if e["tool_status"] != "ok":
             errors[e["cluster_id"]].add(
                 e["quality"].get("reason") or "query_unavailable"
@@ -92,6 +110,14 @@ def summarize(evidence, period):
     groups = {}
     for row in activity.values():
         labels, values, at = row["labels"], row["values"], row["at"]
+        checks = transitions[(at, identity(labels))]
+        gpu_checks = gpu_identities[(at, labels.get("cluster_id"), labels.get("UUID"))]
+        verified = (
+            len(checks) == 1
+            and checks[0]["values"] == values
+            and len(gpu_checks) == 1
+            and gpu_checks[0][1] == checks[0]["source_identity_count"]
+        )
         key = (
             labels.get("cluster_id"),
             labels.get("namespace", ""),
@@ -129,7 +155,7 @@ def summarize(evidence, period):
             or labels.get("uuid", labels["UUID"]) != labels["UUID"]
         ):
             reason = "identity_labels_conflict"
-        elif len(by_gpu[(at, key[0], labels["UUID"])]) != 1:
+        elif len(by_gpu[(at, key[0], labels["UUID"])]) != 1 and not verified:
             reason = "duplicate_or_changed_gpu_identity"
         elif (
             set(values) != MEASURES
@@ -144,15 +170,24 @@ def summarize(evidence, period):
             reason = "invalid_activity_aggregate"
         else:
             pods = identities[(at, key[0], key[1], labels["pod"], labels["Hostname"])]
-            if len(pods) != 1 or not pods[0][0].get("uid"):
+            if not pods or (
+                not verified and (len(pods) != 1 or not pods[0][0].get("uid"))
+            ):
+                reason = "pod_identity_unverified"
+            elif verified and (
+                {p[0].get("uid") for p in pods} != {checks[0]["pod_uid"]}
+                or sum(p[1] for p in pods) != checks[0]["pod_sample_count"]
+            ):
                 reason = "pod_identity_unverified"
             elif (
                 not 238 <= values["sample_count"] <= 242 or not 238 <= pods[0][1] <= 242
-            ):
+            ) and not verified:
                 reason = "incomplete_hour_or_sampling_interval"
             else:
                 identities_for_gpu = gpu_identities[(at, key[0], labels["UUID"])]
-                if len(identities_for_gpu) != 1 or identities_for_gpu[0][1] != 1:
+                if not verified and (
+                    len(identities_for_gpu) != 1 or identities_for_gpu[0][1] != 1
+                ):
                     reason = "duplicate_or_changed_gpu_identity"
                 elif (
                     labels["UUID"].startswith("MIG-")
@@ -172,6 +207,8 @@ def summarize(evidence, period):
             bucket["reasons"].add(reason)
             continue
         bucket["activity_sum"] += values["activity_sum"]
+        if verified:
+            bucket["verified_connection_change"] = True
         bucket["sample_count"] += values["sample_count"]
         bucket["gpu_ids"].add(labels["UUID"])
         bucket["nodes"].add(labels["Hostname"])
@@ -232,6 +269,9 @@ def summarize(evidence, period):
                 else None,
                 "valid_hours": len(valid),
                 "expected_hours": len(expected),
+                "verified_transition_hours": sum(
+                    bool(h.get("verified_connection_change")) for h in valid
+                ),
                 "low_activity_windows": low_windows,
                 "low_activity_hours": sum(h["activity_percent"] < 5 for h in valid)
                 if len(valid) == len(expected)

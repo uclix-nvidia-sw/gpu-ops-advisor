@@ -111,6 +111,8 @@ def build_result(claim, context, evidence):
                     )
                 else:
                     text = f"{scope}: 확인된 {row['valid_hours']}개 시간대의 관측 표본 평균 활동률은 {row['activity_percent']:.2f}%입니다."
+                    if row.get("verified_transition_hours"):
+                        text += f" 연결 변경이 확인된 {row['verified_transition_hours']}개 시간대는 해당 Namespace에 연결된 표본만 반영했습니다. 연결 전후의 미표기 표본을 0%로 채우지 않았습니다."
                     if row["change_percentage_points"] is not None:
                         text += f" 직전 같은 기간보다 {row['change_percentage_points']:+.2f}%p 변했습니다."
                     if row["low_activity_hours"] is not None:
@@ -228,6 +230,7 @@ def build_result(claim, context, evidence):
         sampling_interval_seconds=15,
         low_activity_threshold_percent=5,
         bucket_seconds=3600,
+        gpu_attribution_version="gpu-identity-transitions-v1",
     )
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:
         raise ValueError("report_result_limit_exceeded")
@@ -241,9 +244,19 @@ async def run(tools):
     evidence = []
     collector = ReportQueries(tools, data, ctx["deadline"])
     if "namespace_usage" in data["topic_ids"]:
+        pending = []
         for cluster in data["scope"]["clusters"]:
             for period in (data["time_range"], previous_period(data)):
-                evidence.extend(await collector.collect(cluster, period))
+                collected = await collector.collect(cluster, period)
+                evidence.extend(collected)
+                pending.append((cluster, period, collected))
+        # Optional verification must not spend another cluster's base collection budget.
+        for cluster, period, collected in pending:
+            uid = collected[0]["input"]["datasourceUid"]
+            if uid and all(e["tool_status"] == "ok" for e in collected):
+                evidence.extend(
+                    await collector.check_transitions(cluster, period, uid, collected)
+                )
     if "incident_summary" in data["topic_ids"]:
         evidence.append(
             dict(

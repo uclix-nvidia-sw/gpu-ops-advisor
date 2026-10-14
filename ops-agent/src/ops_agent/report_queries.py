@@ -3,6 +3,8 @@
 import asyncio
 import json
 import time
+import re
+from collections import defaultdict
 from uuid import uuid4
 
 from agent_common.contracts import timestamp
@@ -11,6 +13,7 @@ from agent_common.grafana_time import mcp_time
 from agent_common.observation import evidence_stamp, unwrap
 
 from .report_contract import MAX_BYTES, MAX_POINTS, VERSION, iso
+from .identity_transitions import sample_bounds, verified_transitions
 
 
 def selector(metric, cluster, *, namespace=True):
@@ -81,6 +84,8 @@ class ReportQueries:
         self.discovery = Discovery(self.call)
         self.calls = 0
         self.bytes_received = 0
+        self.transition_calls = 0
+        self.transition_deadline = None
 
     async def call(self, name, args):
         self.calls += 1
@@ -159,3 +164,96 @@ class ReportQueries:
                 )
             )
         return evidence
+
+    async def check_transitions(self, cluster, period, uid, evidence):
+        if self.transition_deadline is None:
+            self.transition_deadline = min(self.deadline - 30, time.monotonic() + 60)
+        activity, _, counts = evidence
+        selected = {
+            (float(at), s["metric"].get("UUID"))
+            for s in activity["snapshot"]["series"]
+            if s["metric"].get("namespace") and s["metric"].get("pod")
+            for at, _ in s["values"]
+        }
+        hours = defaultdict(dict)
+        for s in counts["snapshot"]["series"]:
+            gpu = s["metric"].get("UUID")
+            for at, value in s["values"]:
+                if gpu and float(value) > 1 and (float(at), gpu) in selected:
+                    hours[float(at)][gpu] = float(value)
+        output = []
+        for at, expected in sorted(hours.items()):
+            gpu_ids = sorted(expected)
+            # Bound exceptional raw reads; normal hours keep the three aggregate queries.
+            for offset in range(0, len(gpu_ids), 16):
+                if (
+                    self.transition_calls + 2 > 32
+                    or time.monotonic() >= self.transition_deadline
+                ):
+                    return output
+                batch = gpu_ids[offset : offset + 16]
+                pod_names = sorted(
+                    {
+                        s["metric"]["pod"]
+                        for s in activity["snapshot"]["series"]
+                        if s["metric"].get("UUID") in batch
+                        and s["metric"].get("pod")
+                        and any(float(t) == at for t, _ in s["values"])
+                    }
+                )
+
+                def restrict(metric, label, names, namespace=True):
+                    base = selector(metric, cluster, namespace=namespace)
+                    pattern = json.dumps("|".join(re.escape(n) for n in names))
+                    return base[:-1] + f",{label}=~{pattern}}}[1h] offset 1ms"
+
+                expressions = [
+                    restrict("DCGM_FI_DEV_GPU_UTIL", "UUID", batch, False),
+                    restrict("kube_pod_info", "pod", pod_names),
+                ]
+                inputs, bounds, checks, reason = [], [], [], None
+                before = time.monotonic()
+                try:
+                    for expr in expressions:
+                        args = dict(
+                            datasourceUid=uid,
+                            expr=expr,
+                            queryType="instant",
+                            endTime=mcp_time(iso(at)),
+                        )
+                        inputs.append(args)
+                        self.transition_calls += 1
+                        async with asyncio.timeout_at(self.transition_deadline):
+                            rows = matrix(await self.call("query_prometheus", args))
+                        bounds.append(sample_bounds(rows, at, cluster["cluster_id"]))
+                    checks = verified_transitions(
+                        bounds[0],
+                        bounds[1],
+                        at,
+                        {g: expected[g] for g in batch},
+                        cluster.get("namespaces"),
+                    )
+                except Exception:
+                    reason = "transition_verification_unavailable"
+                output.append(
+                    dict(
+                        id=str(uuid4()),
+                        query_id="gpu_identity_transitions",
+                        query_version="gpu-identity-transitions-v1",
+                        cluster_id=cluster["cluster_id"],
+                        scope={"clusters": [cluster]},
+                        time_range=period,
+                        input={"queries": inputs},
+                        tool_status="unavailable" if reason else "ok",
+                        snapshot={"checks": checks},
+                        quality={
+                            "reason": reason,
+                            "hour_end": iso(at),
+                            "gpu_count": len(batch),
+                            "elapsed_seconds": time.monotonic() - before,
+                            "raw_samples_stored": False,
+                        },
+                        **evidence_stamp(),
+                    )
+                )
+        return output
