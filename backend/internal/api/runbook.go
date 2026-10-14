@@ -171,7 +171,7 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 		seen, required := map[string]bool{}, map[string]bool{}
 		for _, raw := range steps {
 			s, ok := raw.(map[string]any)
-			if !ok || len(s) != 8 {
+			if !ok || (len(s) != 8 && len(s) != 9) {
 				return Invalid("runbook.observation_plan")
 			}
 			for _, key := range []string{"query_id", "purpose"} {
@@ -183,6 +183,32 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 			priority, number := s["priority"].(float64)
 			must, boolean := s["required"].(bool)
 			if seen[id] || !number || priority <= 0 || priority != float64(int(priority)) || !boolean || s["binding"] != "execution_profile" || s["time_range"] != "incident" || s["freshness"] != "query_contract" {
+				return Invalid("runbook.observation_plan")
+			}
+			if raw, exists := s["selection"]; exists {
+				rule, valid := raw.(map[string]any)
+				if !valid || must || len(rule) != 3 || rule["independent"] != true {
+					return Invalid("runbook.selection")
+				}
+				missing, valid := runbookStrings(rule["missing_any"])
+				if !valid || len(missing) == 0 {
+					return Invalid("runbook.selection.missing_any")
+				}
+				for _, gap := range missing {
+					if !Has(facts, gap) && gap != "causal_confirmation_evidence" && gap != "unknown_value" {
+						return Invalid("runbook.selection.missing_any")
+					}
+				}
+				prerequisites, valid := runbookStrings(rule["requires_all"])
+				if !valid {
+					return Invalid("runbook.selection.requires_all")
+				}
+				for _, fact := range prerequisites {
+					if !Has(facts, fact) {
+						return Invalid("runbook.selection.requires_all")
+					}
+				}
+			} else if len(s) != 8 {
 				return Invalid("runbook.observation_plan")
 			}
 			seen[id] = true

@@ -42,7 +42,18 @@
         "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
-        "freshness": "query_contract"
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
       },
       {
         "query_id": "D02",
@@ -54,7 +65,18 @@
         "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
-        "freshness": "query_contract"
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
       }
     ],
     "sources": [

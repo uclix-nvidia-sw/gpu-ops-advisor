@@ -237,6 +237,9 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
                 / f"rcca-agent/runbooks/{mode}/{key}.json"
             ).read_text(encoding="utf-8")
         )
+        # Preserve legacy revisions without authored auxiliary conditions.
+        for step in row["content"]["observation_plan"]:
+            step.pop("selection", None)
         books[0].update(
             knowledge_key=key,
             content=row["content"],
@@ -319,6 +322,17 @@ async def test_query_first_collection_analysis_and_failure_boundaries(mode):
             c["causal_status"] == "candidate" for c in result["cause_candidates"]
         )
         assert any(e["query_id"] == "rca_synthesis" for e in output["evidence"])
+        assert not {"unexpected_evidence", "sufficiency"} & {
+            e["query_id"] for e in output["evidence"]
+        }
+        rounds = [
+            e["snapshot"]["round"]
+            for e in output["evidence"]
+            if e["query_id"] == "evidence_evaluation"
+        ]
+        assert rounds == list(range(len(rounds)))
+        assert rounds
+
         if mode == "xid":
             assert events == [
                 "collect",

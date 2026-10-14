@@ -1,3 +1,7 @@
+## RCA auxiliary selection rules — 2026-10-14
+
+Runbook authoring/publication accepts the optional `observation_plan[].selection` contract (`missing_any`, `requires_all`, `independent: true`) for non-required steps. Backend rejects invalid conditions; RCA additionally checks registered queries and executes the rules. Deploy both validators before registering new revisions. Existing published content and DB schema are unchanged. See [RCA selection contract](../rcca-agent/README.md#conditional-auxiliary-selection--2026-10-14).
+
 ## 종료된 보고서 영구 삭제 — 2026-10-12
 
 종료된 보고서의 삭제 명령을 JC로 위임한다. 자체 결과·근거를 지우되 최소 작업 이력과 삭제 기록을 남기고, 참조한 RCA 원본은 보존한다. 삭제된 보고서는 보고서 목록에서 제외하고 작업 이력과 직접 주소에서는 삭제 상태와 Ops의 파일 정리 상태를 보여준다. Backend는 파일 PVC를 마운트하거나 직접 삭제하지 않는다. [삭제 API](API.md#종료된-보고서-영구-삭제--2026-10-12)를 따른다.

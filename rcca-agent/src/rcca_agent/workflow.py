@@ -323,16 +323,46 @@ def conflicting_health(health):
     )
 
 
+def rule_followup(books, plans, remaining, gaps, available):
+    """Evaluate authored rules only; observations never become verified facts here."""
+    findings, eligible, governed = [], [], set()
+    for book in books:
+        for step in plans.get(book["id"], []):
+            rule = step.get("selection")
+            query = step["query_id"]
+            if rule is None or query not in remaining:
+                continue
+            governed.add(query)
+            matched = sorted(set(rule["missing_any"]) & set(gaps))
+            missing = sorted(set(rule["requires_all"]) - set(available))
+            allowed = bool(matched) and not missing
+            findings.append(
+                {
+                    "runbook_revision_id": book["id"],
+                    "query_id": query,
+                    "matched_gaps": matched,
+                    "missing_prerequisites": missing,
+                    "eligible": allowed,
+                    "purpose": step["purpose"],
+                }
+            )
+            if allowed:
+                eligible.append((step["priority"], query))
+    ordered = list(dict.fromkeys(q for _, q in sorted(eligible)))
+    return ordered, governed, findings
+
+
 async def choose_followup(llm, remaining, gaps, diagnostics=None):
     diagnostics = diagnostics if diagnostics is not None else {}
     diagnostics.update(status="not_needed", attempts=0, selected_queries=[])
-    if not remaining or not llm.configured:
-        selected = remaining[:3]
+    if not remaining:
+        diagnostics["status"] = "no_candidates"
+        return []
+    if not llm.configured:
         diagnostics.update(
-            status="registered_default" if selected else "no_candidates",
-            selected_queries=selected,
+            status="model_unavailable", initial_failure="model_not_configured"
         )
-        return selected
+        return []
     try:
         diagnostics["attempts"] = 1
         response = await llm.complete(
@@ -566,13 +596,13 @@ async def run(tools):
     followups, gaps, gate = 0, [], "sufficient"
     stop_reason = None
     max_rounds = 2  # Required collection plus one bounded auxiliary batch.
-    for round_no in range(max_rounds):
-        if not fast_path and queries:
-            collected.update(
-                await collect_round(
-                    obs, queries, budget, round_no=round_no, concurrency=concurrency
-                )
-            )
+
+    async def evaluate_evidence(round_no, approved):
+        """Evaluate observations, apply investigation policies, and record one decision.
+
+        Published Runbook policy fields and plan-extension provenance stay compatible;
+        only this stage writes the per-round evaluation record.
+        """
         health, facts, verified, relations, available = normalized_state(
             obs, collected, data, profile, initial_facts
         )
@@ -671,24 +701,10 @@ async def run(tools):
                     "events": triggered,
                     "policy": policy,
                     "general_extension_reason": extension_reason,
-                }
-            )
-            obs._evidence(
-                "unexpected_evidence",
-                None,
-                data["time_range"],
-                {
-                    "round": round_no,
-                    "runbook_revision_id": book["id"],
-                    "events": triggered,
-                    "policy": policy,
-                    "general_extension_reason": extension_reason,
                     "general_extension_suppressed": (
                         policy["fallback"] == "general_runbook" and not extension_reason
                     ),
-                },
-                "ok",
-                {"deterministic": True},
+                }
             )
         for book in fallback_books:
             if book not in selected:
@@ -762,28 +778,35 @@ async def run(tools):
         next_queries = []
         selection_diagnostics = {"status": "not_requested"}
         if not stop_reason:
-            next_queries = [
-                q for q in dict.fromkeys(unexpected_queries) if q in remaining
-            ][:3]
-            if next_queries:
-                selection_diagnostics = {
-                    "status": "policy_selected",
-                    "selected_queries": next_queries,
-                }
-            if not next_queries:
-                if gate == "degraded":
-                    selection_diagnostics = {
-                        "status": "registered_default",
-                        "selected_queries": remaining[:3],
-                    }
-                next_queries = (
-                    remaining[:3]
-                    if gate == "degraded"
-                    else await choose_followup(
-                        ctx["llm"], remaining, gaps, selection_diagnostics
-                    )
+            ruled, governed, rule_findings = rule_followup(
+                selected, plans, remaining, gaps, available
+            )
+            # An explicit rule cannot be bypassed by a broad unexpected-event policy.
+            policy_queries = [
+                q
+                for q in dict.fromkeys(unexpected_queries)
+                if q in remaining and (q not in governed or q in ruled)
+            ]
+            limit = max(0, min(3, budget["queries"]))
+            candidates = list(dict.fromkeys(policy_queries + ruled))
+            next_queries = candidates[:limit]
+            selection_diagnostics = {
+                "status": "policy_selected" if next_queries else "conditions_not_met",
+                "method": "runbook_rules",
+                "selected_queries": next_queries,
+                "rule_findings": rule_findings,
+                "deferred_queries": candidates[limit:],
+                "attempts": 0,
+            }
+            # Old revisions without selection rules retain their exploratory path.
+            exploratory = [q for q in remaining if q not in governed]
+            if not next_queries and exploratory:
+                await_queries = await choose_followup(
+                    ctx["llm"], exploratory, gaps, selection_diagnostics
                 )
-            next_queries = next_queries[: max(0, min(3, budget["queries"]))]
+                next_queries = await_queries[:limit]
+                selection_diagnostics["method"] = "legacy_exploratory_llm"
+                selection_diagnostics["selected_queries"] = next_queries
             if not next_queries:
                 stop_reason = "followup_not_selected"
         obs._evidence(
@@ -795,8 +818,18 @@ async def run(tools):
                 "decision": gate,
                 "stop_reason": stop_reason,
                 "available_facts": sorted(available),
+                "collected_queries": list(collected),
+                "observation_refs": [
+                    e["id"] for entries in collected.values() for e in entries
+                ],
                 "evidence_gap": sorted(set(gaps)),
+                "events": events,
                 "policy_findings": policy_findings,
+                "runbook_revision_ids": [b["id"] for b in applicable + pending],
+                "selected_runbook_revision_ids": [b["id"] for b in selected],
+                "extended_runbook_revision_ids": list(
+                    dict.fromkeys(b["id"] for b in fallback_books)
+                ),
                 "next_queries": next_queries,
                 "followup_selection": selection_diagnostics,
                 "remaining_queries": remaining,
@@ -807,23 +840,44 @@ async def run(tools):
             "ok",
             {"deterministic": True},
         )
-        obs._evidence(
-            "sufficiency",
-            None,
-            data["time_range"],
-            {
-                "round": round_no,
-                "decision": gate,
-                "stop_reason": stop_reason,
-                "max_rounds": max_rounds,
-                "evidence_gap": gaps,
-                "remaining_queries": remaining,
-                "remaining_budget": dict(budget),
-                "runbook_revision_ids": [b["id"] for b in applicable + pending],
-            },
-            "ok",
-            {"deterministic": True},
+        return (
+            health,
+            facts,
+            verified,
+            relations,
+            available,
+            applicable,
+            pending,
+            gaps,
+            gate,
+            stop_reason,
+            remaining,
+            next_queries,
+            approved,
         )
+
+    for round_no in range(max_rounds):
+        if not fast_path and queries:
+            collected.update(
+                await collect_round(
+                    obs, queries, budget, round_no=round_no, concurrency=concurrency
+                )
+            )
+        (
+            health,
+            facts,
+            verified,
+            relations,
+            available,
+            applicable,
+            pending,
+            gaps,
+            gate,
+            stop_reason,
+            remaining,
+            next_queries,
+            approved,
+        ) = await evaluate_evidence(round_no, approved)
         if stop_reason:
             break
         queries = next_queries
@@ -1063,7 +1117,8 @@ async def run(tools):
         "fast_path": fast_path,
         "followups": followups,
         "plan_evidence_id": plan_id,
-        "sufficiency": gate,
+        "evidence_evaluation": {"decision": gate, "stop_reason": stop_reason},
+        "sufficiency": gate,  # Historical result consumers retain this summary alias.
         "collection_stop_reason": stop_reason,
         "remaining_queries": remaining,
         "collection_max_rounds": max_rounds,

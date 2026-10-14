@@ -264,7 +264,8 @@ async def write_report(result, data, clues, evidence, llm):
             [
                 e["id"]
                 for e in evidence
-                if e["query_id"] in ("runbook_selection", "unexpected_evidence")
+                if e["query_id"]
+                in ("runbook_selection", "evidence_evaluation", "unexpected_evidence")
             ],
         )
     if "mapping_target_unverified" in result["missing_inputs"]:

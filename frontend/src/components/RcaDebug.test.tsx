@@ -653,3 +653,34 @@ it.each([
   expect(html).toContain(text);
   expect(html).toContain('선택 응답의 형식 복구를 한 차례 시도했습니다.');
 });
+
+it('shows rule evaluation without implying model selection or sufficient evidence', () => {
+  const html = render(
+    <EvidenceEvaluation
+      record={{
+        round: 0,
+        decision: 'insufficient_blocked',
+        next_queries: [],
+        followup_selection: { status: 'conditions_not_met', method: 'runbook_rules', attempts: 0 },
+        policy_findings: [{ general_extension_suppressed: true }],
+      }}
+    />,
+  );
+  expect(html).toContain('보조 조회의 Runbook 조건이 충족되지 않았습니다.');
+  expect(html).toContain('근거가 충분하다는 뜻은 아닙니다.');
+  expect(html).not.toContain('형식 복구를 한 차례');
+});
+
+it.each([true, false])('reads unified or historical evaluation summary (%s)', (unified) => {
+  const analysis = unified
+    ? { evidence_evaluation: { decision: 'insufficient_blocked' }, sufficiency: 'sufficient' }
+    : { sufficiency: 'insufficient_blocked' };
+  const html = render(
+    <RcaResult
+      job={{ result_ref: 'result', result: { quality: { analysis } } }}
+      onEvidence={() => {}}
+    />,
+  );
+  const expected = renderToStaticMarkup(<RcaReason value="insufficient_blocked" />);
+  expect(html).toContain(`근거 평가 판단</dt><dd>${expected}</dd>`);
+});

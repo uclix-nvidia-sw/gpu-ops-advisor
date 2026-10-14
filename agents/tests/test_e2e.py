@@ -2597,7 +2597,10 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
 
 
 @pytest.mark.e2e
-def test_rca_json_selection_and_safe_subset_survive_publication(stack, monkeypatch):
+@pytest.mark.parametrize("rule_selection", [False, True])
+def test_rca_json_selection_and_safe_subset_survive_publication(
+    stack, monkeypatch, rule_selection
+):
     original_worker = worker_result
     captured = {}
 
@@ -2631,6 +2634,14 @@ def test_rca_json_selection_and_safe_subset_survive_publication(stack, monkeypat
         original_content = json.loads(json.dumps(content))
         content["unexpected_evidence"]["additional_queries"] = []
         content["unexpected_evidence"]["fallback"] = "general_runbook"
+        if rule_selection:
+            for step in content["observation_plan"]:
+                if not step["required"]:
+                    step["selection"] = {
+                        "missing_any": ["causal_confirmation_evidence"],
+                        "requires_all": ["observations"],
+                        "independent": True,
+                    }
         conn.execute(
             "UPDATE knowledge_revisions SET content=%s,content_hash=%s,reviewed_content_hash=%s WHERE id=%s",
             (Jsonb(content), content_hash(content), content_hash(content), book_id),
@@ -2658,12 +2669,26 @@ def test_rca_json_selection_and_safe_subset_survive_publication(stack, monkeypat
             "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='evidence_evaluation'",
             (result["job_id"],),
         ).fetchall()
+    assert len(evaluations) == 2
+    assert sorted(row[0]["round"] for row in evaluations) == [0, 1]
+    with psycopg.connect(stack["url"]) as conn:
+        assert (
+            conn.execute(
+                "SELECT count(*) FROM evidence WHERE job_id=%s "
+                "AND query_id IN ('unexpected_evidence', 'sufficiency')",
+                (result["job_id"],),
+            ).fetchone()[0]
+            == 0
+        )
     selection = next(
         row[0]["followup_selection"] for row in evaluations if row[0]["next_queries"]
     )
-    assert selection["attempts"] == 1
+    assert selection["attempts"] == (0 if rule_selection else 1)
     assert "initial_failure" not in selection
-    assert selection["status"] == "selected"
+    assert selection["status"] == ("policy_selected" if rule_selection else "selected")
+    if rule_selection:
+        assert selection["method"] == "runbook_rules"
+        assert selection["rule_findings"][0]["eligible"]
 
 
 @pytest.mark.e2e

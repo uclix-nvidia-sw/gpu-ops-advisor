@@ -78,8 +78,23 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 item for item in followups["entries"] if item["file"] == e["file"]
             )
             assert followup["before_content_sha256"] == e["after_content_sha256"]
-            assert digest == followup["after_content_sha256"]
+            selection_review = json.loads(
+                (CATALOG / "auxiliary-selection-review-20261014.json").read_text(
+                    "utf-8"
+                )
+            )
+            selection = next(
+                item
+                for item in selection_review["entries"]
+                if item["file"] == e["file"]
+            )
+            assert (
+                selection["before_content_sha256"] == followup["after_content_sha256"]
+            )
+            assert digest == selection["after_content_sha256"]
             original = deepcopy(row["content"])
+            for step in original["observation_plan"]:
+                step.pop("selection", None)
             del original["operator_guidance"]
             assert (
                 hashlib.sha256(

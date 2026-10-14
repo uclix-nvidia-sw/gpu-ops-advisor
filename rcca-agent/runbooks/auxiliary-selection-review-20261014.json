@@ -1,0 +1,17 @@
+{
+  "status": "local_review_not_published",
+  "entries": [
+    {
+      "file": "xid/RB-XID-79.json",
+      "before_content_sha256": "41d4dc3cc43f415952b20197d6a84d687f9a17c8ad67c706766c0f15803237fd",
+      "after_content_sha256": "13a44c8cc52087158f47e9b1ee69cc5df2bcd6af3d1a08e8c3f70ebd43561fcc",
+      "change": "Independent auxiliary selection requires scoped reported code/producer and an unmet cause/state gap. No new fact semantics or source claims."
+    },
+    {
+      "file": "sxid/RB-SXID-11001.json",
+      "before_content_sha256": "67081ab07a5bad940774ae881c92b59888755fd63a5531634eb19a1adeeab80e",
+      "after_content_sha256": "ee1475be64daec318d40c435ee69a5c176b3019f21a177e47adfdde40dacaf0d",
+      "change": "Independent auxiliary selection requires scoped reported code/producer and an unmet cause/state gap. No new fact semantics or source claims."
+    }
+  ]
+}

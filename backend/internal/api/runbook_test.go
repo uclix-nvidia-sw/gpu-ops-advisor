@@ -127,3 +127,37 @@ func TestOperatorGuidanceContract(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAuxiliarySelectionConditions(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{"", "gap", "prerequisite", "dependent", "required", "extra"} {
+		t.Run(invalid, func(t *testing.T) {
+			var row Object
+			if err := json.Unmarshal(b, &row); err != nil {
+				t.Fatal(err)
+			}
+			c := row["content"].(map[string]any)
+			step := c["observation_plan"].([]any)[1].(map[string]any)
+			rule := step["selection"].(map[string]any)
+			switch invalid {
+			case "gap":
+				rule["missing_any"] = []any{"invented"}
+			case "prerequisite":
+				rule["requires_all"] = []any{"invented"}
+			case "dependent":
+				rule["independent"] = false
+			case "required":
+				step["required"] = true
+			case "extra":
+				rule["extra"] = true
+			}
+			err := validateRunbook(c, Object{}, false)
+			if (err != nil) != (invalid != "") {
+				t.Fatalf("unexpected validation: %v", err)
+			}
+		})
+	}
+}

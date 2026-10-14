@@ -294,6 +294,8 @@ export function EvidenceEvaluation({ record }: { record: Row }) {
     invalid_response: '추가 조회 선택 응답이 형식 검증을 통과하지 못했습니다.',
     model_unavailable: '모델 요청이 완료되지 않아 추가 조회를 선택하지 못했습니다.',
     policy_selected: 'Runbook 정책에 따라 보조 조회를 배정했습니다.',
+    conditions_not_met:
+      '보조 조회의 Runbook 조건이 충족되지 않았습니다. 근거가 충분하다는 뜻은 아닙니다.',
     registered_default: '승인된 조회 후보를 코드 정책에 따라 배정했습니다.',
   };
   return (
@@ -472,9 +474,11 @@ export function RcaResult({
               <dd>
                 <Badge status={str(result.result_status) || null} />
               </dd>
-              <dt>충분성 판단</dt>
+              <dt>근거 평가 판단</dt>
               <dd>
-                <RcaReason value={analysis.sufficiency} />
+                <RcaReason
+                  value={obj(analysis.evidence_evaluation).decision ?? analysis.sufficiency}
+                />
               </dd>
               <dt>수집 종료 사유</dt>
               <dd>

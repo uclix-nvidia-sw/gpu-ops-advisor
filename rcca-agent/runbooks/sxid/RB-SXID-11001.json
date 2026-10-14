@@ -42,7 +42,18 @@
         "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
-        "freshness": "query_contract"
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
       }
     ],
     "sources": [

@@ -1,3 +1,18 @@
+## Unified evidence evaluation — 2026-10-14 (local)
+
+- PASS: 1165 non-E2E tests; 45 E2E cases deselected. Existing Windows Ops cleanup tests remain excluded as documented below.
+- PASS: 3 isolated PostgreSQL/Backend/JC/MCP fixture E2E cases. Both rule and legacy exploratory selection publish two evaluation records with rounds 0/1 and zero old `unexpected_evidence`/`sufficiency` stage records.
+- PASS: lint/format. Policy semantics, plan-extension provenance and historical result summary alias retained.
+- Production deployment, live model/Grafana quality and new Runbook publication remain unverified/not performed.
+
+## Runbook conditional auxiliary selection — 2026-10-14 (local)
+
+- PASS: 1,165 non-E2E Agent tests with UTF-8 enabled; 45 E2E cases deselected. Unchanged Windows-incompatible Ops cleanup module excluded after two file-lock/fsync failures; no claim of full cross-platform suite success.
+- PASS: three isolated E2E cases: Backend Runbook registration/review/publication and RCA consumption, plus legacy JSON and deterministic rule selection through result publication. Native loopback temporary PostgreSQL, current Backend/JC/Incident binaries, official MCP and fixture upstreams; no production DB.
+- PASS: Backend vet, race tests (CGO/w64devkit), build; Ruff, formatting, documentation links. Initial race invocation lacked CGO; rerun with compiler passed.
+- XID79/SXID11001 new draft conditions require scoped reported facts. Empty D09 blocks authored auxiliary queries; code does not promote inventory, timestamps, device state or cause. Rule selection has zero LLM attempts; no unconditional fallback when the model is unconfigured.
+- Not performed: commit/push, deployment, new production revision registration/publication, or live XID/SXID validation. Existing immutable published revisions remain unchanged. Remaining catalog entries retain explicit policy or legacy exploration; no blanket 265-item conversion.
+
 ## RCA JSON selection — 2026-10-14 (local)
 
 - PASS: 38 targeted RCA selection/workflow tests, including real LLM transport with fixture tool rejection, HTTP 401/500, invalid candidate, maximum batch, explicit stop and repair failure.

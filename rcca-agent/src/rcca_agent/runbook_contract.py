@@ -378,7 +378,7 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
     for step in plan:
         _require(
             isinstance(step, dict)
-            and set(step)
+            and set(step) - {"selection"}
             == {
                 "query_id",
                 "priority",
@@ -414,6 +414,29 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
             _require(
                 set(step["fact_names"]) <= query_facts(query),
                 "query cannot produce requested facts",
+            )
+        if "selection" in step:
+            rule = step["selection"]
+            _require(
+                not step["required"]
+                and isinstance(rule, dict)
+                and set(rule) == {"missing_any", "requires_all", "independent"}
+                and rule["independent"] is True,
+                "selection: expected independent auxiliary rule",
+            )
+            _require(
+                set(
+                    _strings(
+                        rule["missing_any"], "selection.missing_any", nonempty=True
+                    )
+                )
+                <= FACT_NAMES | {"causal_confirmation_evidence", "unknown_value"},
+                "selection: unsupported gap",
+            )
+            _require(
+                set(_strings(rule["requires_all"], "selection.requires_all"))
+                <= FACT_NAMES,
+                "selection: unsupported prerequisite",
             )
         _text(step["purpose"], "observation_plan.purpose")
         for key, value in (

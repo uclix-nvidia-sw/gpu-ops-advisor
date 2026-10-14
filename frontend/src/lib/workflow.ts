@@ -61,7 +61,7 @@ export const rcaSteps: WorkflowStep[] = [
     purpose: 'Runbook 또는 근거 기반 조사 경로에서 사실·후보·목적별 판단을 만듭니다.',
     inspect: 'quality.analysis · assessments · facts · cause_candidates · missing_inputs',
     expected:
-      'fast_path·sufficiency·status와 후보의 지지/반박 근거를 함께 확인합니다. 성공 상태만으로 원인을 확정하지 않습니다.',
+      'fast_path·evidence_evaluation·status와 후보의 지지/반박 근거를 함께 확인합니다. 성공 상태만으로 원인을 확정하지 않습니다.',
     missing:
       '아직 공개되지 않은 판단·내부 후보는 조회되지 않습니다. 근거 목록의 조사 단계 기록도 확인하세요.',
     fields: ['quality', 'assessments', 'facts', 'cause_candidates', 'missing_inputs'],
