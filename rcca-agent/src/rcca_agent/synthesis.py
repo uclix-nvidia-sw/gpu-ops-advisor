@@ -385,22 +385,6 @@ def validate_synthesis(
             raise SynthesisValidationError(
                 "invalid_evidence_references", rule=rule, index=i
             )
-        if numeric_prose(h["claim"], supporting):
-            raise SynthesisValidationError(
-                "unregistered_numeric_claim",
-                rule="numeric",
-                index=i,
-                tokens=["numeric"],
-                numeric=numeric_prose(h["claim"], supporting),
-            )
-        if language_diagnostic(h["claim"], supporting):
-            raise SynthesisValidationError(
-                "non_korean_claim",
-                rule="non_korean",
-                index=i,
-                tokens=["non_korean"],
-                language=language_diagnostic(h["claim"], supporting),
-            )
         # Identity uncertainty is a diagnostic limitation regardless of wording or
         # whether the bounded view retained the inventory relation observation.
         if re.search(
@@ -443,6 +427,22 @@ def validate_synthesis(
                 "unsupported_device_mechanism",
                 rule="unresolved_device_mechanism",
                 index=i,
+            )
+        if numeric_prose(h["claim"], supporting):
+            raise SynthesisValidationError(
+                "unregistered_numeric_claim",
+                rule="numeric",
+                index=i,
+                tokens=["numeric"],
+                numeric=numeric_prose(h["claim"], supporting),
+            )
+        if language_diagnostic(h["claim"], supporting):
+            raise SynthesisValidationError(
+                "non_korean_claim",
+                rule="non_korean",
+                index=i,
+                tokens=["non_korean"],
+                language=language_diagnostic(h["claim"], supporting),
             )
         if ASSERTION.search(prose(h["claim"], supporting)):
             raise SynthesisValidationError(
@@ -522,6 +522,14 @@ async def synthesize(llm, payload, diagnostics=None):
                     view = repair_view
                 request = dict(view)
                 request["validation_feedback"] = feedback
+                request["repair_constraints"] = {
+                    "scope": "gpu_switch_node",
+                    "identity_uncertainty_is_not_cause": True,
+                    "reported_event_is_not_current_health": True,
+                    "preserve_evidence_references": True,
+                    "allow_empty_hypotheses": True,
+                    "revalidate_all_rules": True,
+                }
                 request["rejected_sentences"] = repair_sentences
                 if fallback:
                     request["validated_response"] = fallback[0]

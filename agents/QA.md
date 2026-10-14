@@ -964,3 +964,27 @@ revision publication and live LLM truncation recovery remain unverified.
 separate target/time/raw alert/identity and preserved references covered by a new test.
 Local publication E2E repeated: 3 passed, 24 deselected. Operational reports untouched;
 new wording requires a new RCA after deployment, not a rewrite of old published results.
+
+
+## 2026-10-14 Common repair invariants and offline Runbook transition review
+
+Local Python 3.12 verification in the isolated recovery checkout:
+`pytest -c agents/pytest.ini agents/tests/test_rca_analysis.py agents/tests/test_synthesis_context.py agents/tests/test_runbook_transition.py agents/tests/test_rca_rule_selection.py agents/tests/test_runbook_contract.py -q`: **339 passed**.
+`RUN_AGENT_E2E=1 ... pytest -c agents/pytest.ini agents/tests/test_e2e.py -k rca_json_selection_and_safe_subset_survive_publication -q`: **2 passed, 32 deselected**.
+The E2E uses temporary local PostgreSQL, JC/Incident, real RCA/NAT/official MCP and
+fixture Grafana/LLM responses; it does not validate live model compliance.
+The initial sandbox run could not use local HTTP; the completed run used the
+same tests with local socket access. Initial E2E setup used incorrect binary
+environment names; corrected fixture variables passed both cases.
+
+The offline published snapshot review covers the remaining 265 keys: 196
+contract-valid proposals, 69 held (64 unresolved definitions, 5 informational
+codes). This is not semantic approval or publication. Original evidence requirements,
+claims, applicability, source references and recommendations are unchanged.
+Unknown gaps alone cannot select the proposed auxiliary queries; scoped report
+facts (or general observations) are prerequisites. Query results cannot establish
+hardware identity or cause. No Pod/workload investigation was added.
+
+Real execution after these local edits, per-code source applicability review,
+operator-guidance conversion and deployment-profile revalidation remain pending.
+No production revisions were created, approved, published or retired in this change.

@@ -1,0 +1,3701 @@
+{
+  "status": "not_approved_not_published",
+  "scope": "GPU_NVSwitch_node_no_Pod_queries",
+  "entries": [
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "57859528632061925ae45d499cbbb741ee2737cdc36c02826d53b89097e7c25d",
+      "after_content_hash": "c08d1a2bde9318b2d199307f9d30d54dd11c56e840041583ac2642774acc2279",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-GENERAL-GPU-NODE",
+      "category": "general_investigation",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b7bb20447d07604a0b8dd4a263fb251321493d995cec9f89776e167587ec1df2",
+      "after_content_hash": "aa17366d6163f8b803dd4631ce1df350c048d65843b45a87d4564016bdf905b8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-10001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "3876830f10626748a02e26c7e7dca2681fb7d80f1325ddd20e53309ecf07c818",
+      "after_content_hash": "b5198cccbdad5e44d821d1b477317dd0845bb62d14ab401bdbbb472b5744d553",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-10002",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "77220c5aebb4152f94f8209170d35d31c86b00a6ff4c6a6a2425c7ea41226dde",
+      "after_content_hash": "0933b498d93caf9189fe896d086c3c5272db9c2950c5b08d8bef4846cde34497",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-10003",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b75753c849e79fac6781c8f6730ba7082e4220cb8fceee50effb9f303d9e623e",
+      "after_content_hash": "19bbf8fca5ffd8b5458577cbbaea134582b8e9b445729ad1f740e9f69afd5b59",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-10004",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e6ca8b1486f7efc77f24f8c23cbf10871a838fcbf721d27bc51acb8f34250684",
+      "after_content_hash": "861e729ba4baaf83b826a1423515ae85ba7ace23ae3cdf1d781fa207bd0c99c8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-10005",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ffa4a2d8db6cef0e00b9a93a25236bd955eaead4ac39a7dae38b09f30ec1cdd9",
+      "after_content_hash": "75a7744b11f88b638f714a0d0d9835ccc40c781116afc75edd3e89defc6a3c48",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11004",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5d88d2018eb22f5eeda61dc89af787e53ad83fb184b80548f2b0d98803d43ebc",
+      "after_content_hash": "030b6702b82f257e59d19fd09a6ad6a4ff8aef6a30be1cc4b57d5f69a81f9c9b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11009",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "561f368558546d1c057f821f036421470d94916469a286ee6984d848a7e3509e",
+      "after_content_hash": "3f1818674be36f2953dff0c46e0f694e2adab9abdf780f28227aa12071247ace",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11012",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cb57338894981d4010923d5c96cde053dc75d777fe259216ed8742905682838a",
+      "after_content_hash": "9a46d6aeb7db0954fed9d99b42188b345d3a722138dca098c5cb1cbac53451ca",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11013",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0bb2efeb5530f16d0fc352801f5e58d33f4f128fbeb14fba8630b855e380cc70",
+      "after_content_hash": "04dc6b7a922f1f960d3fe8da5047dd8622881edd4bae7bfa7380325ebb6c7fa6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11018",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "52a9926a95844e965dce06cdc6bf080ff78cff9ad617b688cd3e0351735b343a",
+      "after_content_hash": "e7966a30395ed39fffe7dad96b524cacd2fa9a35227c5f2aa19b81b97e6d26e9",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11019",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "4ce717b4b72d16d31363b9602060e8ccca8020cbeda5be6cc0c91204a5a7fc1e",
+      "after_content_hash": "64bb9fe80bbf6f04b735cf78e671f41fe9f545a9b87e0ac044c684b1cb5ba09c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11020",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "80ba192b33ad33bc183bee872c3aae3ce1240e4c90bc2d719059a7fcc4727dac",
+      "after_content_hash": "187f772b6c11e0b00309ecd2824c05a7a930522d820ff7a8bac23cc9e384453f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11021",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "74036153e0abd4801fb37ecf482f1d5f727716e0861cf336810d6d52f4055424",
+      "after_content_hash": "72c406a7cc81364f6a0dd38b716d15d937bbfadc8115e895e4820c6afd822961",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11022",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f292590e1e83b087ec1cd39a2c0b1e6cb73a8a040d258caddb89ebdebdfa8ffe",
+      "after_content_hash": "1031ab0e829e917c02906936bf01329344dc139ce5319def8b5b2d24c63c46ae",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-11023",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "18c70927083090761bdd267f044888da76a6556fc6bd14ac9d57a3adcd1ddd24",
+      "after_content_hash": "103490d3699f8ad41b7b8fe9f10554bf45c6d93c6134d84fb7d62182ce7159f1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "61aedae99c1293eb2ab225955dff6e79f85eafd4c2b0cf80bd8b5d591989d909",
+      "after_content_hash": "fcc9a7514528d3d4747820228d6ac88ad998ec31038c1dbf2179ce663da19b8f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12002",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cff6daf0e3febe2638878b7f62cd2e12226d0522ac06b682c451f4fc7e4fe69e",
+      "after_content_hash": "efc70502db6cb1a019fba345b099dd9c0b18c981060591d63505149e8c6c3bcd",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12020",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "578c327efa292c5ca1c67eeab19f2d6d064826cafa2de156c93ee32292e46476",
+      "after_content_hash": "d678df9fe634f2de39c733668966e3c09e6e05ffa2938025640b17953aae7209",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12021",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "7e6257eaa4b903008839fb2f30df6f3892fa9b959f6c76bbcda5386e78799d15",
+      "after_content_hash": "1f0e426d6649a7b0e978fdba085b744544c692f1827607e143d55786196e1716",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12022",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "982cceb4f753565dec484c1d25fab04265d2953eb975f498f3df7b7fca9cec38",
+      "after_content_hash": "e1b64f5fca79404cb49936c739d86ed3fec476517f4bc9ca3293fb493db8b874",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12023",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "dbb2954d45bac77b6e87983197f5cb7c8e9491b6e8833d17ffd186f4c84a1fff",
+      "after_content_hash": "444d38b2a71ae2f8b3ffad48bd6b577aeee36684f8061cbd8620ee0f647e77a2",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12024",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1477d106c577dbb26bab98decfa25a589126bda30de9c6c75d38f39754a463ba",
+      "after_content_hash": "0b8768d4c1e76b417502c41a1c5e64ac8172652f703372b2696cf27694f592bc",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12025",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2025455aa1d187e4f72f4840188a4e8458496022c792470ac07d624323d2f4a6",
+      "after_content_hash": "eef8e215601a64f7d5bce90a1fb385d48100fb19228765641da014ef32bc6230",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12026",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "82ef545b4e3a4ebc7350780e305aedd6663ec9b4483be7c234139f51fa4ec175",
+      "after_content_hash": "646888991c757d726891e138eb003815746247ec13301007908a2713d8e97773",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12027",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2966ce14a7e34c27c220e139e0d58995b6c69761cc5531bfc853865211e88485",
+      "after_content_hash": "edc28dba2467b2a96a67b7e3aa4215eceb109c52df72e661a8553274878ecf2c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12028",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a88637c52059f9e0fabbfe0cb8a5a8965585ca5d8340f2c986ac226f48058783",
+      "after_content_hash": "3ab9cf778c7a4b61ed01f11d36ea37466fd6e300509df691ad95eaf80fc192b3",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12030",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "7f7a7373c9b227456f108edc0a3995a609baa74bacedfbf712b2ec934e1d614f",
+      "after_content_hash": "e96e496eb864264070d042ffb00030324d6f238f289462495494eb405c720f74",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12031",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "28c3b14c07ff5c4069eacfca61fb0943ef94a6e59b10966660ef7f1229ee9c3a",
+      "after_content_hash": "91e68727f8e2cb9204bd8203d0c05d216360bd806a7488527b7b37e2342b365a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-12032",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "323cd75277c192704f471fb98afb8a96a456d30cf97ca7ab159656c4d6e3f7ae",
+      "after_content_hash": "37dd3d51bec0b47acb9fba67620ec5ca3ee1f24619ffc12b08f432aac6bec647",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-14017",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d05dd6393a5d2b0d82f8e24e368e4a5d63f895ca308f28d7f255038d33788582",
+      "after_content_hash": "0762bd8064a9c6a85336052b2b56c17b079be5c8d67ce487110a4a736adb0f78",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b8f52289dc1b0982b3923db0cd66ee86168e6aa089c1784e27231b20d9d8f330",
+      "after_content_hash": "d4c414f0153ee200c57308a9a21ab55f850c5d398b3e0ae4e4be07981f9854c3",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15006",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a451a11b0b02a2411b0eb3893ac1f674a98f90af5c0a6eb6419b80185c0fc474",
+      "after_content_hash": "df9007db8e679e17c4d89b523d1f88925458c5ee57d8c557886cb7e83069fff2",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15008",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "087e51bc340c56949e08cf60d1114a55065dba5ac18e429de8a65b8aae5fb511",
+      "after_content_hash": "94d0e2dfd1387115e23698ffe23de8485504211f54851b742ffe61d6b82514fe",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15009",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "fa4ee40e29ba8ce0140a9884e36fc7ee278afdc11c2e55713b9910ecfe1ba2fb",
+      "after_content_hash": "74752b795dc70608e7c07d3c2e043672f0b39f658cf3e71fe7b0cc1bec09c770",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15010",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "feac7fde833cba265bbebd43fbfb3ee94e445aea76829b1f6b5e6b8c17f3ba5f",
+      "after_content_hash": "9e410eb78a8bb122eef3ea22faff2f17aad1a8d67d57a547bc0397ba465c5fba",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15011",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a008c5f94cf2c57467d18bd978d82dbc816ede3d6c06f6349516b19554eadb02",
+      "after_content_hash": "50a865e79fd8ba47a8f69645f14d90b54dcfb8abf7eda781c2c07172ed79918f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15012",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8a4c7f5b46cbed0ba45ce54198e0c8d1b02b2d893e25182f6ed8a7d75b1e0642",
+      "after_content_hash": "2722316bbdda360f1538da19a42b9f3f01d98c998fe4f8011b3de66785d83773",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-15013",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "84ed8d54ea3179f776e336eaddca2b6c98ea6b5528173e05c443f0f2b9a033dc",
+      "after_content_hash": "25a1b39ea3bd66c8a74906be417fb3e03858d953d4bdf92700ad1fd8dfea22db",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19047",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "df697e18ccfd09d4297719bd84a28b9249fd2f795cc1a9c6e3fa536960f9250a",
+      "after_content_hash": "74179eb28a857dc98617fa3ae0e2986d684340de6875d8a47acd65cf0cb1a7e6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19048",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2792a9f6a0c9ed4d84cebc65202f3f31e91038f76ebc749e908cd30fe93f0f15",
+      "after_content_hash": "ab50e0120568c2dc4a221668f568c59f67b8fa18039461a76ab24dac29107768",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19049",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "23565c7ec7767bb65d77d0ef9733415f57b6bedb12dee045a9f9da48c5ce9c4e",
+      "after_content_hash": "bedcba3ad50032458d569b991893e899083c320c7d37e20a4533fc9786b4ab14",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19054",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cb55cf13ee2304d701d8ea89c304ae5da59ded47868e8aadefd1ba9ad52b3318",
+      "after_content_hash": "80e2b19a2172c4d82d9f9f9a8d72d06b1a3254ffd0d36b100c4ba357c0fdd1bb",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19055",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5e5138a06a95140d9e6027861fb3c49762d939d72aec13f176dbd9e3f4476d22",
+      "after_content_hash": "d1b3b1f0cfca2fa7b7be7b593c7780d1589f188a9c2bf12f65c5c94a8a6e8ef6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19056",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "dba0d2aad499a56297ba132d12ff6743d2a848aa727b1410916f26e5c610f3b2",
+      "after_content_hash": "86355b70643e25a34a8097672df73121c0cdb6d365aa4265075f7c262d34e63a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19057",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "20730f32c402e9e71326c7ec3f03664d0aa5fdc3cd5cb5b5cd9e47adaede6690",
+      "after_content_hash": "fabd04043dd45f2fbe258ffab7b9e9684e4879300cc7520b92c895c4efcb59ce",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19058",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "4e088a761175961b08d7d1be5cf06e2c070429ad7e5fbff78bc539b1f4ba1103",
+      "after_content_hash": "ef1fd5a50f62ecd826e5bae63244fc909ff5422d26f8116c393bd86b2a6e7ed1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19059",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "fe7633ec1b67c77229c8f1a4ebd42c25b71b329ca698e322cedf404eb5ec7c58",
+      "after_content_hash": "9a0417118ebabd7aee6434f41f1cc5797635f8ec6c4bc8b3763758e894ce4939",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19060",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cc9eac9eae30bbb61e2a81dbe90b65303f1d3fce6e75898535e7fb7e29d42034",
+      "after_content_hash": "2652f507374e8897dd7f78face0cf69638cc5113c049a37d4fc1a6aa836c41b0",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19061",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "038d11a80f50680c0a837e08019e211d9a3742861eeceffdf4c2c08aa817141d",
+      "after_content_hash": "3dc0f09ac335a145735ed0d5e4f880fd6048589478161afe6acce027cc48e5c8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19062",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0e9d74e7174dba931de1080fad2274a42cb1c034faa3311b14c48b8e5224fff8",
+      "after_content_hash": "5bb5f9937b864e0c796c4b5ea34a8a91a769869c3c89985997bce311c7ebec61",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19063",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "140cd9043fbf5c90d5701bd99aefabd3aa00f5f02daee194c46200b2a02e2477",
+      "after_content_hash": "84e92bd3cb1ac406d0d2f061d1b1fe86a317a34bb15912876f826cae8a4c6e1f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19064",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "54208c9ae6147eb0e41fee324d38d6f22e856de3d5fec47ba14585eecbd3c304",
+      "after_content_hash": "0a9d0989260c0ea8e37ce41bf4cd0308b3377cb196465d31e4fc8deaaaf31294",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19065",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0a3c7ad7d52ce84dcc8098ae06908159dcb77c17de3eec723f0a4bbf30d2003c",
+      "after_content_hash": "b0cd6e17f22115d5c1ebe6661e1ff558f65c7f612c45ba9b97446d6d3cf5d047",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19066",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9ca9713339f14132222687dc5c2496ce70e0e6c29a19abf4b6c3f8e9a6410779",
+      "after_content_hash": "07561d8a431fddcd7b646f7ae9b2f7f8002fa1e5d47bf815fcc5fcca32522f2c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19067",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1d35ac79270c835215f53c2850a1c92b2c4beb104b8e357b864314431808bc93",
+      "after_content_hash": "1d2bff0c1a73a378451823031ddec022729b5d4a2048b7696816bb273d39826c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19068",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ff327c30f1680e2415ef7c2a0d114b3213c7635f3f95fa947cf21927443c015f",
+      "after_content_hash": "6dd9df9f2db514142fca01cc5781080a6b0710cd00e962f9c85e227a61ce8365",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19069",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9fed153559fd0ac0f96d54643dd8784614505da1dd86dc858e527d463058f9b7",
+      "after_content_hash": "136ae0647393f2b76ecff40b7b252ba2cfc4457d450c5c1568d1803e9d1c8bb6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19070",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "bfd4e36e7f7e30abcdea8742f6c4f7ea76c7b3bcbd3a35f3f6612f7508978590",
+      "after_content_hash": "14bc48a2ccce57a1c9917ae4c7e432decc02b60fc01ee99201dce16ab4968138",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19071",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0d920b10e48b4f22fe191852ef556358ea3437b866b774fd5b9e19e3b1b1d423",
+      "after_content_hash": "df3faf2beadce716c7707b9a1763e211f57378e7b8146079534318611e706613",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-19084",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c0ee1c2a34989b8d457053abfd18589ae6ecf568133572030c23d9d205b957f3",
+      "after_content_hash": "a18bae94c13ea08ee76429a9db1900f5c02c5db5a48145e346620f8a41278a48",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-20001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "47a65a2900ed080e3e6ed4f0c7b77916879712ad354947ac410aa792410f573a",
+      "after_content_hash": "78fa68c8c158c4c4c77005097fc467d2130fafc2b81863e291360fba8bb9538e",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-20009",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "4040124d2ed710e6d0410d6b427fc66f22a32edea2a4e089ca5dd008290dcfc7",
+      "after_content_hash": "232d9d9624c58e7326f88a63ec45c5475024cee6a5008ff786c194b9fca72a8c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-20012",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b7e7989ff920ed5cff70729ffcaa37602dad31e77a77adf5baa9e1009992cc42",
+      "after_content_hash": "1d06a22c100204987a24e7b16146497c7ac0e597374f3a5401bdbc10d0bb76c9",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-20034",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "32a7a2b6a1210be97644e1ebc3993ad0a800f08d68de6274ba38574991797a32",
+      "after_content_hash": "f590bb22f8a3902d17f2c0e7bd7001e70a767a781a4430087ef466cd08392f33",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-22003",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "6d52ea2fffeca616712aa9d76dd22690609e2e6cef24e20aea3f273e16bc61f8",
+      "after_content_hash": "ed57f722cb0a8ac613bae99739f38139f3d0a78b3d9f2b5567d0fc724259ebe2",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-22011",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1f45205bf180d840e34e4e73019eb44b9a5fa5d1b6c3835ab3347d0279017bf1",
+      "after_content_hash": "5d9173b147706802249d9c6f86c396a8b174fdedf1018307fe43af65473fc7d4",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-22012",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cf92e95ce85ba33492ada0a2758c078f15930c436c00663ddaf57bc961b485d2",
+      "after_content_hash": "2ac4a2f0ccb51ab01c29d4b573f057564f6cc1a3d369869c0fc2d06c6372ef17",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-22013",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "3cd6e2b6b14f76a6c6c34726614ab66ff607bfd253fd914588985d14f7297827",
+      "after_content_hash": "892b30d612525f07998eb71628904c16b0893d9547e01b60889beac57b783a5b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "65eacd22b2e64ab6e73e964ddc439396e9384acc25d82e9e570d3baaf5bb17fb",
+      "after_content_hash": "7d7779005ed3025ba9c6108cfaf8c19cb0ddfaa7233f3519ecbf77f0d9481c5d",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23002",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f85192ddba8c476c98a17accc5a124879221e69e2739437431e7b0b31492477f",
+      "after_content_hash": "5cf68ec95cf322c53a1889629bfdf1fb8a133441da7fc8644c87e691ea5eb307",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23003",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9d02617eaf189e5db5aa7f8b3c8faa7fc2d471ba6f4c186d2b95cac43b58c8dc",
+      "after_content_hash": "0aa87a75c67487a561e894eaa04e7f5180b8a4afe40dd3c80ae71b6d2aa9a2f1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23004",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c7e05124d00a418d7115094f645a9b9a0be08d86b178915ef7f830db067198e0",
+      "after_content_hash": "0f918119b255dfc1538b3636c511f35bfd60de3b1c2bfd2c2228617e47a20ed8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23005",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5fac2de3e729422b8e073aa2be0dfdfd9e5e07a474e1bf3cdb1e00588af00517",
+      "after_content_hash": "ae75edc3cb77154bfbd16da02665f751abcb7265e894e33f599e908a34e5cbae",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23006",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "6a861ff05048749912f0d4473d64b3fb6b380c52cfce3f601641cd782ed00ca8",
+      "after_content_hash": "e84a3a64ee7267c37040b1c2a0567ae3f8226d2da85d3ad97b05d788236d8ff8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23007",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a18c53d147ea81614e410838deba768e74ba96492f94187a6f9ea06c25f99a52",
+      "after_content_hash": "7f9ac48b9629c8485d26e691d81fe8d03ac9a90c142d96b2b5da9ab90bd9e441",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23008",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cb362f2067c365c53fa15784da88c5dd377d5863f44ee25d28d294ac506e9790",
+      "after_content_hash": "fd13d11a2054e36819f2e8d9928b14c6054b520b0938560c9ac5d2d26574d275",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23009",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1b4050710ab1326b97a6856e165710a381a025e3da8a7ad3affdb094f425a189",
+      "after_content_hash": "42f552ce2dc679facd9dc64c0d7da40c7e88745af6ad11dcb66a0191c2998977",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23010",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8187d1ced16a66d4edc54f3fe5ed7b0a25f44803e9eea51d8e1c0329ee3e2d21",
+      "after_content_hash": "f82a053a7b584fcbe1b06bfea1e436151cb1533058e1cf39d322ea675f617f97",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23011",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "661e8bb834c22b25ebcff793643007ce9828200c69746d68879920f0b5628af8",
+      "after_content_hash": "1f6b5762c441871547bbea497f26895cbeabf006f3d5f04d7209cc8c90ebac17",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23012",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1bc4e30293d79465b78ef9da0fe37f63bb02e11203bcecc2486e4bc45f2840a6",
+      "after_content_hash": "e6157a8bec89bea77e5f59f11eec028db76232d253b6b67653c4d2d0db862ad9",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23013",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5dcfa915dfbe80f33662885e9ee339fea446d7e7439aacffe03b7fcdf0a3305e",
+      "after_content_hash": "20fc6d0e1473087eb9fbbf8a05eac53b2b5ffca7ca2934bb45d11f166505cfe7",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23014",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "286ce516c035798f7e97759310378701b7119c7e4b817f71514bbd0bdcfee063",
+      "after_content_hash": "a70268bd0553c8e3cbdb385e06012bd676d25ac01c55e9250b6cd58e73ac36a8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23015",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2d04dfb880aafcf631589d43dd81a7219b21fcf14c31f9105d322709c3114bac",
+      "after_content_hash": "747d0ec54fb6a0389734987b01a85e7c6960ead94f6422a5b4fe31af0471c77d",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23016",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "22e9e5c0586d93c54d7c1e15b3316ea5f26a5526f8864c100106e13126ebb445",
+      "after_content_hash": "60acc141f6d014e0a7efa8c6d0ba301efcec7444443cfb639c35b8558258b98b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-23017",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "abb8c852a6cac0ad46b3afd3f411c7d8e1c0227f1736f8ddb9951252ef070138",
+      "after_content_hash": "a391ac0b4946d2c7e7e08666a23902226b6c787e91437f3f9104ca8466e8029b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24001",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "382ab2481a7559bc445f7b06131a62412354bee2a7ae386be90add88d2d5487e",
+      "after_content_hash": "1e24ecac10ed84a6621525c06679c6b4ce17cfba5eec0234018caec44b735975",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24002",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e285e76ab904780486a98aed83f05ceef71886e7d093aa8923daa020a1e0d889",
+      "after_content_hash": "6f086801daf3b0f2f8800e784e6365d118d0e22f2e0054cc0597ac2b4535a100",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24003",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "6f85dbc8347e9a8734141ec75b64773f704d9efee7147aadc3b9545aa3dfdea7",
+      "after_content_hash": "e555938ffae2a71dc48b4b0993e484059332edc4991a6e897e51409239f2c8d5",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24004",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d35e6676f849a38c540ac2c3e25d357df049c0a6b87223f39588a8f28364271c",
+      "after_content_hash": "3f19b67530f6d30a99eb433a213705d70ec587825dd24a8cabd7f418c93c6566",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24005",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "3abdbb56a08c37a0c81a94cfe612f06e101d3ec8f8386e5a549b706cc8a507ce",
+      "after_content_hash": "cfcd048f5526c88233f6ce58c6e0b91e5e9a627e25d9671d0e2a56d30aebdac1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24006",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f8236d752cbfe2485ae6e4cb533d3b1807e1858adc3fd0d490c629c99dc47718",
+      "after_content_hash": "c6f449281bf9fdf577d7ab17217a1e5fc6741652ecc6b29418ecf202709e3916",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-SXID-24007",
+      "category": "nvswitch",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-1",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-10",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a19a5f48ed41f7b38f11a2aab33cea5bc5520f5891e553d1a195c707a7179a7f",
+      "after_content_hash": "dbbe8c9466d19ba3450636224fc256a37ad82dd6ddb6541c8af854f93dab94e4",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-100",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ba651dba5d3e4d172c4fce9a02084aa7a22e48378688901441049238b5939f44",
+      "after_content_hash": "06c6c29a23d929415f350812bd3839641353bb63f52c9016c1f444c7937ed45c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-101",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "bdb2bfe938f9a7cf5f900408525c0a94f6a24ad7dcfe1726ac2f60fad495db63",
+      "after_content_hash": "b8edc6b8c801a396c0c65269a9de65bafcf640e0a391ca37ec95891a100936fc",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-102",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0cdc27b1e5439256905b8ae28dfc9e8514c52854d8a211103424a84e538aed00",
+      "after_content_hash": "d0deaf16862596c9ef155c82c4b9d0e64f5600bae359655fe8e64df5a03d5ad7",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-103",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ea382b358798b32d0b6b35740f5807502ca8c5362c242328861b0c1c43b68d0f",
+      "after_content_hash": "09669395e4bf8c3544aefdfaea7865461c14db1c460b4db176fc6d42b76c5a67",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-104",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5129c1cc200c0ebc402dbaabcd4b826d8135a6a489801577e7b020de30fed304",
+      "after_content_hash": "b97f6dab9dd3cbeb4d81fa41a38613cac17fb40ef387d69b67b3acecf2a3f787",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-105",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-106",
+      "category": "informational"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-107",
+      "category": "informational"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-108",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "3f223df0f0de18929ad4fab2cc4df4810be39e6be16637700c48e8834accecae",
+      "after_content_hash": "058f297e3750826037483eb25e17cb709dd0e5a79c6b4fccbec41adc4638b5df",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-109",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "902a40ca79046fee106d3c5ea689ca5545f1822706fb89f25eb27649e35a76ca",
+      "after_content_hash": "fe486105b3c2456081e1b8182a2545833a9623328705f2f600e52fa1e85e18ac",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-11",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c73cb2d5d71f6abcb5977218bada574fc25572bb082d756e52dec802e6d5bbca",
+      "after_content_hash": "9a31a80b069cab7abd8b166c16b3b808b46bca151f45b760bd0cc9bbc0674ea8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-110",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-111",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-112",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-113",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-114",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-115",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-116",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-117",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-118",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "26ea374f3f4025b690f28f8b0b9dec466879160fdb17279e5fefb25ebb27dcfc",
+      "after_content_hash": "31d87b725b948b19dc24fdbb51121248f22c43c4b358120a237b5b1c706161a4",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-119",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-12",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "31b34bcdc97cd13947bd45fea00d9b48b03509dec5e7ce546a5d95a65f468c0f",
+      "after_content_hash": "580ebe89951f1129b5fc1f024d54dd06a8b33450d94e5820466c2d19624d6072",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-120",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0608974e945e4299cd5bac6599573ce38f7df4d307588e7ab1c22699626c87a4",
+      "after_content_hash": "03c20110a0b2e0d2ad2797ce586bed5bada152c03a81505b6913a402a100d4c3",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-121",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-122",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-123",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-124",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-125",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "eb540721dc8a6d747e845024d2b80b75fb116b91b91f63807416a0e6686f648c",
+      "after_content_hash": "2ef0fac68d3e4f4cc0384744db4e8a0931fcfd5f19287d6b789d6a5e9beda8eb",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-126",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2a293b6744437527210edf0485fb0d05e1cc5d19b0f097c44706f8934d92250b",
+      "after_content_hash": "1d82607bbd6d841bf4852b55e792f53ca6086516166ebcb95f068277995d9cdc",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-127",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "73350c6a9ece1d5979adaaab93928f5733d668f09b5fb7b0f0bf6b8ff3963572",
+      "after_content_hash": "a92855d17d0cd9312c13b4f117c55e7545fc359329d9e453c853171d2dd3ff4a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-128",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "42c0eba3018797c7d7ebf2cd4e17b500efcea0295511dd4ac1c906adbe5ea7e3",
+      "after_content_hash": "380f27a6c7f86133e32a21ccc238143d4b43167b613911ca7553910dc5539e4c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-129",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "af3667c1865cff8373953101f89bc419ace60a29538ff6ccccf7cc45532a486a",
+      "after_content_hash": "ff631435b6c309abbea8f37b7c68712b428b3f0adc3fdcd62683bd1fe49e94d2",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-13",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "905e0923aa9ad952669981e563d0891da764a1484d03f8851fd12234b7ceafa5",
+      "after_content_hash": "4f2081982d1fc0df07c8191c49b85ef9a5fb960fa0853acee5c7ae724edd0df7",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-130",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "59149f86e0f9abdaffbd6448f39ecc1378530d596c1150960dfe96aee0715744",
+      "after_content_hash": "812b72893b539b55dc3b19df542cf03d30080920525d71c086c53b4c01d84d48",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-131",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "184504bf013a98c98987114fa50ab639f7ba0815e9037a691d17121cc8df6a4e",
+      "after_content_hash": "4e8dfdedf926128725eac5b6edaadcf18c07bc2427edab12ec2c807d0ec8c6d6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-132",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e6ba43d4df2c5e7a794f900fded4790ee57fd8d4dd69235532e8df75b0f8893a",
+      "after_content_hash": "deabcf02d60d1e1b843f49e045109a575bbefeaa52b17af82356c87379577694",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-133",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "236c58fd6e291c91bb09c4b706fbad33bef53c81aecdf1777a670770076d3aa8",
+      "after_content_hash": "82f568c7efa96d72153d89b48c0f02579468407f762bfb045fd4df092daf8684",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-134",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "be361ec5cab706d1ee1065e5bf00b1257d2bf5b3fffa380f919c59380e522701",
+      "after_content_hash": "6d8ebcbee05a72780723af88d01c7b7267b205468f847c9558480a1d9e4df95f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-135",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "3bff46e246ed4bb98172116f590ecd8a0078744212d7d68daa78b045efe708ee",
+      "after_content_hash": "5c8a69334cb2110aeb6db4fe3e5875fc3370a9f788bbe09e420daf0c0b678f02",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-136",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "59cad81de4a2e870ac218aae481896ae85f3a049f9430379ef5d40702e1ce9e6",
+      "after_content_hash": "8907bae7ad051d23300d965b46ac965ab6d717e56d9e3f67a35c1a63602622a4",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-137",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-138",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a6813879856b5a73ad9634b451b0791e2597c45f47de8f2bb0f3518c9d85f705",
+      "after_content_hash": "da3ab69511e816378753609553a592d7feb7a85519965dca28feb919920d786e",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-139",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-14",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "892f51c7464be894ad361631e783bcd93c373fe1218ad26fc35e1a4928e18ef0",
+      "after_content_hash": "ad9cb853e0c39519acc81efde21db5f5dbfbf724f0f4e9e4c852b0111f6333ca",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-140",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8d33cf0f71434ad68d48be7ffe38458340c522be1c91d4babcb92392c9f1facd",
+      "after_content_hash": "f3bbea20277f9fbdba96a43baf4440ecfd50aa9b5b8718d8db420e07d30f4e1c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-141",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-142",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c50fd219c7f12b910093589fe21de2d3b8a90caec2ccf69c0c1e528559a8b191",
+      "after_content_hash": "6495205622c09b16da12aadbfbf6cce3d5d5c705f91f03cb5bd915b0fbe2939e",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-143",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "20c005a4c679c9e44e0507b48ca8609186b7a3ecf5f8e18fce22d023660b838e",
+      "after_content_hash": "f3c014d0912f65c90d9f00a1860a57005dd8c6708305870969e85bc046d48574",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-144",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c4fc10927dcb195710b92931da8ed760117241ab9bdd6c9b7a7c15981182ddc8",
+      "after_content_hash": "fa3706bf178de578f314d735234b73da773d2950b6335dfd29457be53f8adcc6",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-145",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c0b4b029023f49d62657808f20208acd13bff967237ba6a968bbcc0befb440d5",
+      "after_content_hash": "e15e87d2d4d26b412b4776ca0f722a3e952199fbf041d803dad73b0242c77ab8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-146",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f76352d2f21376e5dde0f49eb7c93e694cc24317358ddb776c2345a62323b52d",
+      "after_content_hash": "858d98bc59336e666c0c90527ca370cd2e53de28ff1e029653c2a27a5a5a6f8c",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-147",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ee07279e1c876c3bcce846962912a43719431830d8322ed1d9dfb5203a474341",
+      "after_content_hash": "b5c8fd7dadf7a3db2e5fb71c9fc3d5327741776ce1d2f0f7214ab6f6a4a4ce91",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-148",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "052f3cd79e921abebd9bdb65634722877a175746c2a0ea8ed46664002e1ed1b1",
+      "after_content_hash": "d1bbeafc37084c0beea714328c4cf374ba932ced2e5b27e5e5b964162a3e61f3",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-149",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-15",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "cf0b264ec364d9d2961809b69de36497329c88e89bf7f9ff1814a9c7d04b5b0e",
+      "after_content_hash": "d19d786f1813397192468e37b6c9315cf8398953f3b9959134a661fa875a2bdc",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-150",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f0854bea23cad4adb8daac926956ba27658a45450da2d616e1acfbc0819f3989",
+      "after_content_hash": "69b70b88d39b39f3669a554f159452ce715649f8ed015c83c98134f4f4b93d97",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-151",
+      "category": "virtualization",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b5f8df8d1ba8e6c9a541e40637855ca299cae585f0d0b98d06d11caa6d06bf8e",
+      "after_content_hash": "6d3f04c67609eda01bd691d938bf11815bcf16652d527e9ef1492c8d7e608ebf",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-152",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "00de79cf771a1fe7d98d3c6bfb89cf7c44cd7a95f91c38ebd0be24c9115a3c51",
+      "after_content_hash": "d1cb9049835b5f68c58f75862f07f1a8ac4b6acfc0c83321a88e373f0129f48f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-153",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-154",
+      "category": "informational"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "703adc3909d29c258364e9351507afe52291ba305ca22a5005266ff1de6d9f39",
+      "after_content_hash": "a75bd754de1dcb1d8848746d656086b7855680e42d98273d6e0e4012859de6c1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-155",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "abcbc7eb2200bf0fd39335c89af368df1b62c5e1226700384bc5335eb5da0d48",
+      "after_content_hash": "48857eff9b1d3ca403929e20141284fec4f76b06923c84adc4cd483236bb63db",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-156",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "17c598a7c90e39804f828bd3bdc2def4035aef649a411f853029eebe6d5516b6",
+      "after_content_hash": "f8e6d4cdad92982a6ff7ac89d9083f78d340d798de85ab3ed2bb3bf0136b69b5",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-157",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "7efcaa291dfbc0652493faceaade16c147dc27ac0eed2b5b6d1dae0961d9c616",
+      "after_content_hash": "0451a8fc36dab8adf688433470168ca2a490535b3e3069913ecde7af0b56cd0b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-158",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8d8ce60ce64b477e163064083b37ac346e0278976cdfc172e168639b2f5e3320",
+      "after_content_hash": "1e01d31b423e9738b983893b67c68311ae268b8d3717ef12c2d18ba70107875b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-159",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-16",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "498cfc5f346a844b7cb0ace9f77cf4b7fca3327fea226d60da8213aa510fef7c",
+      "after_content_hash": "356dc4a5af65af1378978134b9de60b248063bddec77befac32a1173080d24a8",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-160",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "10a7bd26f448cc8a0e39d787eb10f4a8d7068543930283f4442f3daa12605ea0",
+      "after_content_hash": "6517626fcc97159406a7c4e9914c93f77c0858c7331ca54acf28ed2f2fa33abf",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-161",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "bdd8bb0ff6f7596d819af729d92efac750ad77c12ea53485becf91e58f1bfae0",
+      "after_content_hash": "eb185bcb93891afe97d53decca0312d243b9ca1f123995472376d172708910db",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-162",
+      "category": "power_thermal",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "774b27224c9e3c2734690ce164acf09dcc544293a9407316b62ab6e8829cda40",
+      "after_content_hash": "d94d217eca377cb8e924b5e6e10b3265161dd61ea681830b4c43ffff0bf728fd",
+      "queries": [
+        "D04",
+        "D11",
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-163",
+      "category": "power_thermal",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "70fd29fb5011c2cf77180f1db8a213826bac142d708842fd4b82f11269185dec",
+      "after_content_hash": "1e2df73877d44635f0fde9e946940792f0fe3345d8ed37d9f443af80dedb2445",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-164",
+      "category": "power_thermal",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c9b55b726eb10f8ff08a47f373d7dc81ba8c089df27e7c28246bdecce989b39c",
+      "after_content_hash": "2565b9eb2fbf8b35f2e7b932fc0321c4aec3fbb25d3d6903c5f2970815b67f04",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-165",
+      "category": "power_thermal",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d7e3b5558321ec27bf35140175b1e08f9e02251ec3885f09a2ea301bdc1cd380",
+      "after_content_hash": "c6b5e595b483d1ca7f06811e9caf6bb7a908573edd6a172b140edf78368ee433",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-166",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2d207e227ef5fb0f2559ddb8652f80680d358214a9ee42542dc170e3d7eac6b0",
+      "after_content_hash": "3e78965435f7594695d2d79b64ff43c3233fc77ae45f50d6416036e0119fea69",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-167",
+      "category": "pcie_access",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "10313430c03db602c26a43e54f5bb3aef0f7322088acb02acb7db110a3c2eca0",
+      "after_content_hash": "2c63ba8fda80c227d16dd3af535331edb9d7baa2243ac41e15507e39c098c42e",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-168",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "06795e6114bfe0cae173a01379cc1e79c43d92e9b0b61806177880abbfe7723e",
+      "after_content_hash": "2c46b36e019fbe14ddb252b81023298e4f567e0cd544a286bcbfba96effac55f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-169",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-17",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5638f5479d055f4ae376e140798fae2942c44d2ab0a634aa26c661e128f4b803",
+      "after_content_hash": "da19903afb111a7a003305fdb218805ef177e72210a28bd7f0e928de1ba7da36",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-170",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "78d7d35093ba4b7d49485506a276a0c9c76e33855994aa9f8fe9c4bb74a143a5",
+      "after_content_hash": "f852ad1978077b8192a9967a22bf9ae9e660a62e4313bd38e9f3b592f1a9a1bb",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-171",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d671482351d4b0d5bbe1a7183148f4427428260ef23d86cd55b56ce830b99a0b",
+      "after_content_hash": "385d78279dcc3d024203a87c606fd9ea803cf7b4fe9f0086c0e8c3d43784fb40",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-172",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9fea1cb4c9b65b47ca6250246101f077509de480799fc7c0575b0e6722804234",
+      "after_content_hash": "860b253e74870ac0924fb3111b1f4be618aedb70c98c671a0e262e658b9dfe42",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-173",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-18",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-19",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-2",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-20",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-21",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-22",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-23",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-24",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e9329736e8c65c312e3c77d8ec9a36436e161fde27e892cc767ec7848e54791d",
+      "after_content_hash": "609835c49014f0c44b0fb6456e981429dfd1c2b8d17587dd962e65d1c2e328a9",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-25",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-26",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-27",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-28",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-29",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-3",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-30",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a6cf00846714892e069df671d843bb4c98462fcf256c92205e2ae559b43acf99",
+      "after_content_hash": "1c0ea5429a9dc51d555d5607691d82c019ef1967e4645809a769c7ed6d537aa0",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-31",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "86c51852cdb45df6862bb8e5bf201e3ca468b78a93a24ef91f83e2a2378d8ada",
+      "after_content_hash": "bccee7d07306fbcba827b419de4d5e08b5e9f7eaefdd8719ecbc6c7f24391cd4",
+      "queries": [
+        "D44",
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-32",
+      "category": "pcie_access",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-33",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-34",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-35",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-36",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "226be3d7ebd3d38985774f86b4a3134345116eebdb63139421f8e6545ead1523",
+      "after_content_hash": "4349348b170f16f6924853b4290b10f26ecb71f29e0850c69fa99e33fbad1020",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-37",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "976175d65cf9195b80c417c046a289927ff754cb80ac8b6efdb41899659620cc",
+      "after_content_hash": "e974c2865639b1d3802f6a356a6b978bbb3efce4d1e50f37e5b1bd7a5a3a0c6a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-38",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "a5b856347562c37594bcf3586b060490806cda34a1e9764529253a12d36372d6",
+      "after_content_hash": "089baabb0517ebfd5e84dc56763e32dd5e157956f755a2a2a99a06fe53efe287",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-39",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-4",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2750f9fcd9517e782807d4cdbec07a1597ef8cb9e0ce37cebeeb4f6a1a84bd55",
+      "after_content_hash": "84ef234c37548525e0ce2615ff3ad45295db6e598ff80ec5fa8dc6083b26cf38",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-40",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "871bd832c8aaef0956331d142b9020374cd1e8fa71b5a07cb7751ffdec1172e4",
+      "after_content_hash": "f725141dac2c6c4e1f982c18ff0fcd98836b52f3631f723cf963debc7a91d427",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-41",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-42",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b6fe723ce5167412f0ba2de170735d4f675ec3ca6a23b66d8267b569042d33d9",
+      "after_content_hash": "addb07dc1ed881cee52be9a9391fc3e46202064d08f1bee694da04ecf61b146a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-43",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b4530343138574f377077d59e69823c56bc4eba1beb605bf5e9b5c0310b12c3c",
+      "after_content_hash": "117c7199c2495ebdd39c2876db67711156019fba6b0f37e29ea18eb4cfa0f999",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-44",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-45",
+      "category": "informational"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b2423fcd387956a1e7eb5c455aa82a20220bc3793193c696d6cc6ca3cbf110de",
+      "after_content_hash": "ef7f41a567b6de2a872af8c97f0b6b401d2dcb3a5c59fda1adb73492ef386253",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-46",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-47",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "c7f18002d2d243853ab0236c044c1a44a29e2dcd4bfc4e53ebd72457ef2c6c24",
+      "after_content_hash": "9134416baeb0e60b2c86ab6129b8552c842d3ea273092fbffee7fc92ed15fb41",
+      "queries": [
+        "D02",
+        "D03"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-48-63-64",
+      "category": "ecc_event",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-49",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-5",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-50",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-51",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-52",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-53",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "ebf04795141385c9be2f0c571805dbf7b8f8d2959b5387538c6ec9fd794250f1",
+      "after_content_hash": "b40ac9497902ac646f9d6d88d7972e1746b64012aa9277931526615200f92d5a",
+      "queries": [
+        "D11",
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-54",
+      "category": "power_thermal",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-55",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-56",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-57",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-58",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-59",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-6",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0bc04fe475110c211d4f439cb3d8bda2fd8d57e7b853a339b8b2c3fdba8396e4",
+      "after_content_hash": "47fd262599ad5744913d6051e8c02f2c8c802951e0530821f8a200b09f0a3997",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-60",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-61",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5d6a343e6b50b857d077dbbd92dc51b9c40c2d2c056f3a02fa0eba66bef626ff",
+      "after_content_hash": "d066692eed535faf70f212964cf2c94eb60488a3c192011afab75d26110b3d25",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-62",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "dc8717666d2b8f8a8b367f651d3174f4b0611522ff7c1b3a5d98cb2a15b2f937",
+      "after_content_hash": "7601cdc66118337727db8fba9cf270337e574027d09a6e0fa9e89335a1fea873",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-63",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9879fcfaebc7a978da638d39158e6f17cd0b0d0ce55b0898466b6b8ad1e04e1e",
+      "after_content_hash": "bccabfa1fbe017dcab81280dc1746941b10505eb53dbd05d183a53ec4a88683d",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-64",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-65",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "13b12f9db7a1385fe81f5e941c1297a61e3e28a8cc2c8c546caa09bdb009b6e9",
+      "after_content_hash": "9478837849ed98977446fd56ad6db355ca0f7e285321a3c2840ead9a809c5d52",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-66",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e20cf2bc5f64ba57804851dba928d40f8cb3d94f4913af8362b4c41962159cb1",
+      "after_content_hash": "ea9a19d0440ce75019210904d30186d3ae33b9916b6ac2df87da6d5d338b61b7",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-67",
+      "category": "driver_firmware",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "9c29f39558446b135121c29b1aeacd074f5b915b95ade87dbe683842595c46c2",
+      "after_content_hash": "ac83747f3cae0fc8833d815cad7de79b17930041910efb83b98fbca3c0c61980",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-68",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d04f61bb219ed2fa9119f8c71ed374b2719d11c486a1adc75f67a3e48d24db15",
+      "after_content_hash": "916df1d673ad79be31d805f863a5dfa95d7fbe8e496c264094192cd447438cca",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-69",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-7",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "73aac3dfaca4c27e8bac3c41d778c85a2a2be94c428893c3dc5231f6d931759c",
+      "after_content_hash": "d994f89f654b81b214b85be48dd6024a7b3d32bdb7a87d2249f58d4dfcbc0689",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-70",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "37c0577cd4bd65df5dba9ff2d8dd910d1a938298dd3b26308efdd7834c7fe925",
+      "after_content_hash": "2a5f64135b1f049afe902df727c83c7dabc3c35551d0454597b1ac2c63a4cb15",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-71",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "75e7594414c7cbc0ae11ba44bce3e76001c59f61785f730cecc181aae258953b",
+      "after_content_hash": "eae1a8d7dd14642f91f2283592e7543a4a97169e66e99d90ff56a896eee7d091",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-72",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-73",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "429f1bf3a678474827f26e8defdda86a8839fbe6c0b741da611ee8710d0a2795",
+      "after_content_hash": "91d242628b7a4ea676bb3eee59b5d28a007fe5d70af21b0b640cf725af536722",
+      "queries": [
+        "D33",
+        "D34",
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-74",
+      "category": "nvlink",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8aca79aa1b0969b3f71ae54b5a727d21c4b2e3ecf5cb9763cae8e134110c9682",
+      "after_content_hash": "f85dfa92a4d3f343193b668cae7aa6afc217a5077af107430374cd83155083cc",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-75",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "486be7fd9dab7f2c54680e1069d39b0e36f6722819f04582c51e4d0a77261ab2",
+      "after_content_hash": "77293f829703a05db68cd3fb9de6fb55290aba33619200e630e30c6427b8ad24",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-76",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "b3590e389aa86c6cdc494b8d79b47ab3458eb679be6294f0b06c34a82975fcd5",
+      "after_content_hash": "06ceac5b586f840d978c0c48862586a420ea839eb63adca4a72744ea8acacc58",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-77",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "5c0604b6fe884bc43825df3fa956c52de4401fdf9f2e2fc54861051072eeeac8",
+      "after_content_hash": "a06c2e20253bde07f5b53368e43086bed336d3fc56154bf3174bfe3c45c3f8d1",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-78",
+      "category": "virtualization",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "0cd5572b93a0da1bf0baa0463094f9f2ac7818796cdeb4d759fcde25ee205e0d",
+      "after_content_hash": "b349d12a279b72bddfeaeeee79bbf65eac80fe04bc44656e61140563b8c49f6a",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-8",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "8f832d1eb5fb8f34111dcbbae8d4a21f2b86c45062d8bf93b00768d21edf4416",
+      "after_content_hash": "329f67bb2f62cae8603b845e8a4eaff4b6b1f4d6c2345bdabdf8d23f8e2350a0",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-80",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-81",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "353b468a3d07396adc1f6798a6431048b3f847433864ab9702b867643fa8575d",
+      "after_content_hash": "03d78235c5963eb3f21c6251aa7f22cf5ac5280d551a9496c545156459bb310f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-82",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "538d22a00ccee43cd06967a0908c2f0fcf2130694cf20e66cacf8b2dd03cddac",
+      "after_content_hash": "2e3a49a10be0896bf73971dfd16f92050e89065ca61f02b494ccbee7b9cf09c3",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-83",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f6ac306b5f78e041ff3d87208746c0b5dbed0d331c9aefc03d3ecaaeb2be0175",
+      "after_content_hash": "8c9110b61df7c0a9cec3856bc63dfc26a3ce8f59c04127add10770679ff885b7",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-84",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "53dac1ba4d28ef1018268c1d37304f30e17e1bdc1b72d4eecd318d70c50d7fc8",
+      "after_content_hash": "16418ad3c0f5eb7ef73cf678a8ea89eef34a08c53d00a98eafb50df2bf35051f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-85",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "f1d3e1fc4869f238786bfc5dc22a4a93e66cdaf85007bfd701bdbccd0e0111e4",
+      "after_content_hash": "5de78b7d2c8cf1ac47863b1c00a5d144f2d941108d096f35237fa9c2c08b3eeb",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-86",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-87",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "1784e9cb78396da280646ad3cc1dde224f164aa61ac2932909dc5bfbcf27d995",
+      "after_content_hash": "69de3bce4e1f8e99fc225af339e179417439a2a04b26b4633d5f56cd479ba6f4",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-88",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "55b3b31cdf95e1f41dc82951232a7e9dc8d63d5be2de7c17d8340e3239810693",
+      "after_content_hash": "0f28913d51a3d8a2c2d07cbcaba0b9a4064251bcc520c74a35e23f13a48cf056",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-89",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-9",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-90",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-91",
+      "category": "unresolved_code"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "807d9b537d3e679004dbc329450079505d2d36648893b131ec9521237303e3af",
+      "after_content_hash": "b221b80c0bfbae207408278da4735d9124ce09b423ef3801f35f482dfead4091",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-92",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "held",
+      "reasons": [
+        "code_meaning_or_auxiliary_relevance_requires_review"
+      ],
+      "knowledge_key": "RB-XID-93",
+      "category": "informational"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "e588bc71e0898b49e3ade09f8aad9ff92baab411565a7f7b780e33c17a41502f",
+      "after_content_hash": "482a89f1b9d6304460cb94b47d5468c75b5a3bf7b68912219858cffb9caffd0b",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-94",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "736e5beb986eed92219f3a93b7ba0479e2f19bc9f4126f1ba19f1c377b1d2f25",
+      "after_content_hash": "a9206440e9bd72d9365b2463dd6f7a95a3a397cfeb6f3f1a047ffc6b166ea593",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-95",
+      "category": "ecc_memory",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "d69b1594bb18b3e0bdf67a8d4db5a4f63c814468c54336404ffc1841753eb4b5",
+      "after_content_hash": "a485f3be82f8b50471d36aed164562977bfb93395de4fe4bd18214e1ec8ee390",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-96",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "41741e49c7b86b8ce135eba181cbf8aaf0ca58ffa1ef22c9b8bca4e34ad41526",
+      "after_content_hash": "85ede8b05e8bc50cb25f508436887814c3e84007622ca15e316ed1a586252751",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-97",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "45052710d5d4ec42ccda21ce1a03759925aea0adda624da67d4298bc610c130d",
+      "after_content_hash": "056e3b94d2e7394a34ad94e71b0d4a246a261675a8ba172ee31e0cc95c8b6ace",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-98",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    },
+    {
+      "status": "proposal_requires_semantic_review",
+      "before_content_hash": "2be7a84f9c6fe5526d44a5b22488c249e1bb9f7b55232f997c9791e4c2a921ed",
+      "after_content_hash": "baea118fd6dcb2a432186aa3473979e59351356c57d9f69734d3006b2ee0333f",
+      "queries": [
+        "D02"
+      ],
+      "remaining_review": [
+        "query_relevance_for_this_code",
+        "operator_guidance_and_source_applicability",
+        "deployed_profile_compatibility"
+      ],
+      "knowledge_key": "RB-XID-99",
+      "category": "application_fault",
+      "contract": "passed_against_local_profile"
+    }
+  ]
+}
