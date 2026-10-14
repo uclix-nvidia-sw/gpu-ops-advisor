@@ -1,5 +1,7 @@
 # 팀 개발 역할과 협업 규칙
 
+공통 문서의 작성·정리는 [문서 관리 지침](../.claude/rules/workflow.md#shared-documentation)을 따른다. 현재 설명은 담당 문서에서 갱신하고 작업 과정은 PR에 남긴다.
+
 팀은 **A — Frontend, B — Backend·DB, C-1 — RCA Agent, C-2 — Ops Agent**의 4명으로 구성한다. A/B/C-1/C-2는 실명 배정 전 역할 표기다. 인프라 전담 역할은 두지 않고, 배포·Kubernetes·공통 설정 변경은 작업마다 담당자를 지정하며 필요하면 리뷰를 요청한다.
 
 이 문서는 협업 절차를 설명한다. 공통 원칙의 시작점은 [CLAUDE.md](../CLAUDE.md)이며, 실행 규칙은 [작업 방식](../.claude/rules/workflow.md)·[안전수칙](../.claude/rules/safety.md)과 변경 경로에 해당하는 규칙을 따른다. [시작 지침 번역](CLAUDE.ko.md)과 [규칙의 한국어 번역](rules.ko.md)도 함께 제공한다. 구현 계약은 [Backend API](../backend/API.md), [Job Controller API](../job-controller/API.md), [공유 스키마](../shared/README.md), [Agent 실행 안내](../agents/README.md)를 기준으로 한다. 이 문서와 실제 코드가 다르면 구현·테스트를 확인하고 관련 문서를 함께 고친다.

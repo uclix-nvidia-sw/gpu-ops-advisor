@@ -1,13 +1,3 @@
-## Topic-level AI interpretation / 주제별 AI 운영 해석 — 2026-10-14
-
-For new aggregate reports, complete `llm_interpreted` narrative is displayed inside each matching topic as **AI 운영 해석**: observation, meaning/limits and next check. The soft green surface separates AI prose from calculated tables and graphs. A disclosure shows the original selected findings and existing evidence links. Code-supplied partial-data and report-time limits remain visible; strings are React-escaped. Failed or unavailable explanations retain the calculated summary without AI attribution. Existing `llm_prioritized` reports retain the behavior below. HTML exports use the same saved narrative text; calculations, RCA and existing reports are unchanged.
-
-## AI-selected report summary / AI가 고른 주요 변화 — 2026-10-14
-
-The aggregate report highlights the saved summary in a soft green surface only when `narrative_status=complete` and `quality.report.method=llm_prioritized`. The heading is **AI가 고른 주요 변화**: the LLM selects existing calculated findings; it does not author new analysis or recommendations. A deterministic fallback uses **계산 결과 요약** without AI emphasis, and unknown provenance uses **저장된 주요 변화**. Empty narrative produces no summary section. Calculations, saved text, RCA and HTML exports are unchanged.
-
-집계 보고서 상단에서 AI가 선택한 문장만 연한 녹색 배경과 전용 제목으로 구분한다. 기본 요약·출처 미기록은 AI 결과로 표시하지 않으며, 문장·수치·표·그래프는 그대로 유지한다. 새 LLM 운영 해석 생성은 이번 범위에 포함하지 않는다.
-
 ## RCA evidence evaluation — 2026-10-14
 
 New RCA diagnostics use the unified evaluation decision. Missing auxiliary selection conditions are labeled 조회 선택 조건 미설정 and state that the selection model was not called. Historical result summaries and raw stage records remain readable. A rule that does not match is shown as unmet selection conditions, never as sufficient evidence.
@@ -51,7 +41,13 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 `/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
 
-[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). Local preview uses explicitly labelled synthetic data; it does not submit operational jobs.
+[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). 미리보기의 실제 자료·합성 자료 구분과 검수 범위는 [QA](QA.md)를 따릅니다. 로컬 미리보기는 운영 작업을 접수하지 않습니다.
+
+### AI 운영 해석과 과거 요약 / AI interpretation and historical summaries
+
+Complete `llm_interpreted` narrative appears in each topic as **AI 운영 해석**: observation, meaning/limits and next check. The green surface distinguishes model-authored prose from calculated tables/graphs. Expandable sources show selected findings, stored hourly metrics and evidence links; code-supplied partial-data/report-time limits remain visible. Text is React-escaped and HTML export uses the same stored narrative. Generation and validation belong to [Ops](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation).
+
+기존 `llm_prioritized` 결과는 **AI가 고른 주요 변화**로 표시합니다. 코드가 만든 문장 중 AI가 선택한 결과이며 새로 작성한 해석은 아닙니다. `deterministic_fallback`은 **계산 결과 요약**, 출처 미기록은 **저장된 주요 변화**로 구분하고 빈 narrative는 표시하지 않습니다. 기존 계산·저장 문장·RCA는 변경하지 않습니다. 새 해석의 시간대 근거는 선택된 Namespace·모델과 전후 구간의 저장 수치를 표시해 그래프·표와 대조할 수 있습니다.
 
 ## RCA 실행별 제한과 수정 응답 — 2026-10-13
 
@@ -391,5 +387,3 @@ UI 단독 배포는 저장 결과에 없는 노드·알림 제목·장애 종류
 주요 보고서 제목과 참고 안내 제목은 18px, 세부 출처 제목과 설명은 15px로 맞춘다.
 
 RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.
-
-시간대 해석의 접힌 근거에는 선택된 Namespace·GPU 모델과 전후 구간의 저장 수치를 함께 표시합니다. AI 문장의 날짜·활동률을 기존 그래프/표와 대조할 수 있으며 그래프 계산이나 조회는 추가하지 않습니다.

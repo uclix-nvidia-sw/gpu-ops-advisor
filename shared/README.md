@@ -8,7 +8,7 @@ JC의 추가 migration `007_runbook_contract.sql`은 Worker 지원 계약 제약
 
 ## RCA 관측 호환 보완 (2026-09-30)
 
-공통 Python 수집기는 밀리초 정밀도 축소의 실제 요청 범위와 개별 관측 사용 가능 여부를 기록한다. 원본 기간 complete=false는 유지하고 RCA health 해석만 사용 가능 범위를 구분한다. Ops 집계/매핑 완전성 요구는 유지한다. 등록 Fleet JSON adapter와 기존 producer JSON parser를 함께 지원한다. [RCA 계약](../rcca-agent/README.md#2026-09-30-fleet-rca-수집분석-보완)을 따르며 DB 테이블·migration·소유권 변경은 없다.
+공통 Python 수집기는 밀리초 정밀도 축소의 실제 요청 범위와 개별 관측 사용 가능 여부를 기록한다. 원본 기간 complete=false는 유지하고 RCA health 해석만 사용 가능 범위를 구분한다. Ops 집계/매핑 완전성 요구는 유지한다. 등록 Fleet JSON adapter와 기존 producer JSON parser를 함께 지원한다. [RCA 계약](../rcca-agent/README.md)을 따르며 DB 테이블·migration·소유권 변경은 없다.
 
 `contract`는 stdlib 기반 DTO·scope·시간 범위 정규화·해시 유틸리티다. `migrations`는 Backend(001/002)와 Job Controller(001/002/003)가 같은 스키마를 사용하게 하는 유일한 SQL 원본이다. Backend의 기존 internal/contract와 migrations 패키지는 호환 래퍼다.
 

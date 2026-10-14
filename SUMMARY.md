@@ -3,7 +3,7 @@
 - [서비스 안내](README.md)
 - [개발 문서](docs/README.md)
 - [현재 구현·검증 안내](docs/specs/README.md)
-- [문서 반영·정리 내역](docs/specs/09_통합검토_반영내역.md)
+- [공통 문서 관리](.claude/rules/workflow.md)
 - [구조도](docs/architecture/architecture-modules-20260917-v1.3/README.md)
 - [환경 근거](docs/evidence/README.md)
 - [Frontend](frontend/README.md)

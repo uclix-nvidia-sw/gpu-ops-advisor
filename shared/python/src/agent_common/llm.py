@@ -49,14 +49,14 @@ class LLM:
             and (self.settings.llm_api_key or self.settings.llm_routed)
         )
 
-    async def complete(self, system, data, stage="synthesis", tools=None):
+    async def complete(self, system, data, stage="synthesis"):
         self.last_failure = None
         if not self.configured:
             self.last_failure = "model_not_configured"
             return None
         text = json.dumps(data, ensure_ascii=False)
-        # Conservative UTF-8 upper bound includes prompt and output in reserved budget.
-        prompt_bound = len((system + text + json.dumps(tools or [])).encode()) + 256
+        # Keep the existing two-byte protocol reserve aligned with the synthesis repair gate.
+        prompt_bound = len((system + text + "[]").encode()) + 256
         cap = (
             self.settings.llm_synthesis_max_tokens
             if stage == "synthesis"
@@ -79,10 +79,6 @@ class LLM:
             temperature=0.2,
             max_tokens=cap,
         )
-        if tools:
-            payload.update(
-                tools=tools, tool_choice="required", parallel_tool_calls=False
-            )
         url = self.settings.llm_base_url + "/chat/completions"
         headers = {}
         extensions = {}
@@ -168,8 +164,6 @@ class LLM:
                     self.last_failure = "llm_output_truncated"
                     return None
                 message = choice.get("message", {})
-                if tools:
-                    return message.get("tool_calls")
                 try:
                     return json.loads(strip_reasoning(message.get("content") or ""))
                 except (ValueError, TypeError):

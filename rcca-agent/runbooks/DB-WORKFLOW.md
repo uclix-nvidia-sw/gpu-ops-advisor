@@ -152,6 +152,6 @@ python -m rcca_agent.runbook_admin publish .local/xid79-reviewed.json --profile 
 
 신규 E2E는 세 JSON의 CLI 등록·같은 키 재전송·빈 호환성 승인 거부·새 revision·명시적 검토/발행·namespace 검색·실제 Worker의 지침 소비·원인 승격 방지·폐기를 검사한다. 사건 입력, 관측 및 모델은 fixture이며 운영 Fleet parser가 동작한다는 증명이 아니다. 기존 실제 Incident webhook 회귀는 별도 사례로 유지한다.
 
-최신 실행 결과는 [Agent QA](../../agents/QA.md), [Backend QA](../../backend/QA.md)를 따른다. 이번 개발은 사용자 지시에 따라 다른 세션과 조율하지 않는다. 다른 PC에서는 [HANDOFF](../HANDOFF.md)와 `git status`, `git log`를 먼저 확인한다. 미커밋 파일은 원격 clone에 포함되지 않으며 commit/push/배포는 별도 단계다.
+검증 범위는 [Agent QA](../../agents/QA.md)와 [Backend QA](../../backend/QA.md), 현재 실행은 [RCA 안내](../README.md)를 따른다. 저장소 내용과 운영 발행 revision을 구분한다.
 
 다음 입력: 실제 Fleet image와 source revision, 비밀을 제거한 원본 로그, 노드/GPU/NVSwitch 식별 연결, Grafana 수집 라벨·기간·완전성, 설치 플랫폼/드라이버/FM 버전. 이를 확보하면 query/parser와 세부 판정을 연결하고 운영 compatibility를 검토한다.
