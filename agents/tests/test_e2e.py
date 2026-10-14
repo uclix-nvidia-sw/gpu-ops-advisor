@@ -47,6 +47,7 @@ def port():
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
+    missing_tool_calls = False
     api_key = "fixture-only"
     logs_fail = False
     logs_max_limit = None
@@ -85,6 +86,15 @@ class Upstream(BaseHTTPRequestHandler):
                 return self.send({"choices": [{"message": {"content": "OK"}}]})
             if self.llm_fail:
                 return self.send({"error": "fixture unavailable"}, 503)
+            if body.get("tools") and self.missing_tool_calls:
+                return self.send(
+                    {
+                        "choices": [
+                            {"message": {"content": "{}"}, "finish_reason": "stop"}
+                        ],
+                        "usage": {"total_tokens": 30},
+                    }
+                )
             if body.get("tools"):
                 allowed = body["tools"][0]["function"]["parameters"]["properties"][
                     "query_ids"
@@ -110,6 +120,8 @@ class Upstream(BaseHTTPRequestHandler):
                     "content": json.dumps(
                         analysis_reply(data["observation_refs"])
                         if "observation_refs" in data
+                        else {"query_ids": data["available_queries"][:3]}
+                        if "available_queries" in data
                         else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
                     ),
                 }
@@ -2566,3 +2578,73 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert [(g["count"], g["previous_count"]) for g in summary["groups"]] == [(0, 1)]
     assert "cpc-2의 XID 79 1건(dgx01, 이전 0건)" in incident["findings"][0]["text"]
     assert "private_raw_payload" not in json.dumps(body)
+
+
+@pytest.mark.e2e
+def test_rca_selection_repair_and_safe_subset_survive_publication(stack, monkeypatch):
+    original_worker = worker_result
+    captured = {}
+
+    def unsafe_reply(refs):
+        response = analysis_reply_original(refs)
+        response["hypotheses"][0]["claim"] = (
+            "보고된 PCI 주소가 인벤토리에 없는 GPU와 관련되어 오류가 발생했을 가능성이 있다"
+        )
+        response["limitations"] = [
+            "unexpected English 상태입니다.",
+            "오류 장치와 실제 장치의 연결을 확인해야 합니다.",
+        ]
+        return response
+
+    analysis_reply_original = analysis_reply
+
+    def capture_result(*args, **kwargs):
+        result, evidence = original_worker(*args, **kwargs)
+        captured.update(result=result, evidence=evidence)
+        return result, evidence
+
+    monkeypatch.setattr(Upstream, "missing_tool_calls", True)
+    monkeypatch.setattr(sys.modules[__name__], "analysis_reply", unsafe_reply)
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
+    # The isolated fixture normally forces D02 by policy; remove only that force
+    # to exercise the actual model selection/repair path (D02 remains approved).
+    with psycopg.connect(stack["url"], autocommit=True) as conn:
+        book_id, content, digest, reviewed = conn.execute(
+            "SELECT id,content,content_hash,reviewed_content_hash FROM knowledge_revisions WHERE knowledge_key='RB-GENERAL-GPU-NODE' AND state='published'"
+        ).fetchone()
+        original_content = json.loads(json.dumps(content))
+        content["unexpected_evidence"]["additional_queries"] = []
+        content["unexpected_evidence"]["fallback"] = "general_runbook"
+        conn.execute(
+            "UPDATE knowledge_revisions SET content=%s,content_hash=%s,reviewed_content_hash=%s WHERE id=%s",
+            (Jsonb(content), content_hash(content), content_hash(content), book_id),
+        )
+        try:
+            test_grafana_webhook_through_incident_jc_and_real_rca_worker(
+                stack, monkeypatch, True
+            )
+        finally:
+            conn.execute(
+                "UPDATE knowledge_revisions SET content=%s,content_hash=%s,reviewed_content_hash=%s WHERE id=%s",
+                (Jsonb(original_content), digest, reviewed, book_id),
+            )
+    result = captured["result"]
+    diagnostic = result["quality"]["analysis"]["synthesis"]
+    assert diagnostic["completion_mode"] == "validated_subset"
+    assert diagnostic["rejected_hypotheses"] == 1
+    assert diagnostic["repair_status"] == "failed"
+    assert "인벤토리에 없는 GPU와 관련되어" not in json.dumps(
+        result, ensure_ascii=False
+    )
+    assert "unexpected English" not in json.dumps(result, ensure_ascii=False)
+    with psycopg.connect(stack["url"]) as conn:
+        evaluations = conn.execute(
+            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='evidence_evaluation'",
+            (result["job_id"],),
+        ).fetchall()
+    selection = next(
+        row[0]["followup_selection"] for row in evaluations if row[0]["next_queries"]
+    )
+    assert selection["attempts"] == 2
+    assert selection["initial_failure"] == "missing_tool_calls"
+    assert selection["status"] == "selected"

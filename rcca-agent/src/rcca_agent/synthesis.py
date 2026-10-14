@@ -379,8 +379,10 @@ def validate_synthesis(
             )
         # Identity uncertainty is a diagnostic limitation regardless of wording or
         # whether the bounded view retained the inventory relation observation.
-        if re.search(r"식별|매핑|인벤토리|장치\s*신원", h["claim"]) and re.search(
-            r"불확실|미확인|불일치|연결되지|매핑되지|식별하지\s*못|확인되지|알\s*수\s*없",
+        if re.search(
+            r"식별|매핑|인벤토리|장치\s*신원|장치\s*목록|GPU\s*목록", h["claim"]
+        ) and re.search(
+            r"불확실|미확인|불일치|연결되지|매핑되지|식별하지\s*못|확인되지|알\s*수\s*없|인벤토리.{0,20}(?:없는|없어|없다|누락)|목록.{0,20}(?:없는|없어|없다|누락)",
             h["claim"],
         ):
             raise SynthesisValidationError(
@@ -486,6 +488,7 @@ async def synthesize(llm, payload, diagnostics=None):
                         - len(SYNTHESIS.encode())
                         - encoded_size(feedback)
                         - encoded_size(repair_sentences)
+                        - encoded_size(fallback[0] if fallback else {})
                         - 512
                         - reserve,
                     ),
@@ -496,6 +499,8 @@ async def synthesize(llm, payload, diagnostics=None):
                 request = dict(view)
                 request["validation_feedback"] = feedback
                 request["rejected_sentences"] = repair_sentences
+                if fallback:
+                    request["validated_response"] = fallback[0]
                 diagnostics["repair_context_selection"] = view["context_selection"]
                 diagnostics["repair_input_evidence_refs"] = view["observation_refs"]
                 # Use the same prompt bound and adaptive output cap as LLM.complete.
@@ -576,16 +581,41 @@ async def synthesize(llm, payload, diagnostics=None):
                     except SynthesisValidationError as exc:
                         rejected.append({**exc.diagnostic, "limitation_index": index})
                 filtered["limitations"] = accepted
+            rejected_hypotheses = []
+            if (
+                isinstance(filtered, dict)
+                and isinstance(filtered.get("hypotheses"), list)
+                and len(filtered["hypotheses"]) <= 8
+            ):
+                accepted = []
+                for index, hypothesis in enumerate(filtered["hypotheses"]):
+                    try:
+                        validate_synthesis(
+                            {"hypotheses": [hypothesis], "limitations": []}, *args
+                        )
+                        accepted.append(hypothesis)
+                    except SynthesisValidationError as exc:
+                        rejected_hypotheses.append(
+                            {**exc.diagnostic, "hypothesis_index": index}
+                        )
+                filtered["hypotheses"] = accepted
             diagnostics["rejected_limitations"] = len(rejected)
-            feedback = rejected
+            diagnostics["rejected_hypotheses"] = len(rejected_hypotheses)
+            feedback = rejected + rejected_hypotheses
             try:
-                candidates = validate_synthesis(filtered, *args)
-                fallback = (candidates, filtered["limitations"], rejected)
-                if not rejected:
+                validate_synthesis(filtered, *args)
+                # Retain the validated subset and its exact validation context.
+                if (
+                    filtered["hypotheses"]
+                    or filtered["limitations"]
+                    or not rejected_hypotheses
+                ):
+                    fallback = (filtered, args, rejected, rejected_hypotheses)
+                if not feedback:
                     if attempt:
                         diagnostics["repair_status"] = "repaired"
                     break
-                diagnostics["error_code"] = "invalid_limitations"
+                diagnostics["error_code"] = feedback[0]["code"]
             except SynthesisValidationError as exc:
                 diagnostics["error_code"] = str(exc)
                 feedback += [exc.diagnostic]
@@ -652,20 +682,26 @@ async def synthesize(llm, payload, diagnostics=None):
         diagnostics["response_calls"] = usage.get("calls", 0) - before["calls"]
     if fallback is None:
         return "failed", [], []
-    candidates, limitations, rejected = fallback
-    limitations = list(limitations)
+    accepted_response, accepted_args, rejected, rejected_hypotheses = fallback
+    try:
+        candidates = validate_synthesis(accepted_response, *accepted_args)
+    except SynthesisValidationError:
+        diagnostics["error_code"] = "recovered_subset_invalid"
+        return "failed", [], []
+    limitations = list(accepted_response["limitations"])
+    diagnostics["rejected_hypotheses"] = len(rejected_hypotheses)
     diagnostics["rejected_limitations"] = len(rejected)
     if diagnostics["repair_status"] == "failed":
         diagnostics["repair_error_code"] = diagnostics["error_code"]
     diagnostics["error_code"] = None
     diagnostics["completion_mode"] = (
         "validated_subset"
-        if rejected or diagnostics["repair_status"] == "failed"
+        if rejected or rejected_hypotheses or diagnostics["repair_status"] == "failed"
         else "validated_response"
     )
-    if rejected:
+    if rejected or rejected_hypotheses:
         limitations.append(
-            "모델의 일부 한계 문장이 검증을 통과하지 못해 제외했습니다. 검증된 근거와 아래 미충족 조건을 함께 확인해야 합니다."
+            "모델의 일부 분석 문장이 검증을 통과하지 못해 제외했습니다. 검증된 근거와 아래 미충족 조건을 함께 확인해야 합니다."
         )
     if not view["context_selection"]["complete"]:
         limitations.append(

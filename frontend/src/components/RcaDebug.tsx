@@ -286,6 +286,16 @@ export function EvidenceRows({
 
 export function EvidenceEvaluation({ record }: { record: Row }) {
   const next = strings(record.next_queries);
+  const selection = obj(record.followup_selection);
+  const selectionText: Record<string, string> = {
+    selected: '필요한 보조 조회를 선택했습니다.',
+    explicit_stop:
+      '모델이 추가 조회 없이 종료하도록 선택했습니다. 근거가 충분해졌다는 뜻은 아닙니다.',
+    invalid_response: '추가 조회 선택 응답이 형식 검증을 통과하지 못했습니다.',
+    model_unavailable: '모델 요청이 완료되지 않아 추가 조회를 선택하지 못했습니다.',
+    policy_selected: 'Runbook 정책에 따라 보조 조회를 배정했습니다.',
+    registered_default: '승인된 조회 후보를 코드 정책에 따라 배정했습니다.',
+  };
   return (
     <article className="data-item">
       <h4>근거 평가 · {Number(record.round ?? 0) + 1}회차</h4>
@@ -302,6 +312,12 @@ export function EvidenceEvaluation({ record }: { record: Row }) {
           ? `다음 조회: ${next.map(queryName).join(' · ')}`
           : '이번 회차 이후 추가 조회를 배정하지 않았습니다.'}
       </p>
+      {selectionText[str(selection.status)] && (
+        <p>
+          {selectionText[str(selection.status)]}
+          {selection.attempts === 2 ? ' 선택 응답의 형식 복구를 한 차례 시도했습니다.' : ''}
+        </p>
+      )}
       {record.stop_reason != null && (
         <p>
           수집 종료 이유: <RcaReason value={record.stop_reason} />

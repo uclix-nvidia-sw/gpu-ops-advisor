@@ -13,7 +13,8 @@
   margin: 0 0 12px;
   font-size: 22px;
 }
-.rca-narrative-header p {
+.rca-narrative .rca-narrative-header p {
+  font-size: 15px;
   margin: 8px 0;
   line-height: 1.7;
 }
@@ -44,8 +45,10 @@
   font-size: 18px;
   line-height: 1.5;
 }
-.rca-narrative-section p,
-.rca-narrative-section li {
+.rca-narrative .rca-narrative-section p,
+.rca-narrative .rca-narrative-section li,
+.rca-narrative .rca-reference-guide dt,
+.rca-narrative .rca-reference-guide dd {
   max-width: 100%;
   font-size: 15px;
   line-height: 1.9;
@@ -59,9 +62,9 @@
 .rca-narrative-section p:last-child {
   margin-bottom: 0;
 }
-.rca-narrative-problem p:first-of-type {
+.rca-narrative .rca-narrative-problem > p:first-of-type {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
 }
 .rca-narrative-problem p:not(:first-of-type) {
   padding: 12px 16px;
@@ -119,7 +122,7 @@
   margin-top: 24px;
   font-size: 18px;
 }
-.rca-reference-guide dt,
-.rca-reference-guide dd {
-  font-size: 15px;
+.rca-narrative .rca-narrative-section summary {
+  font-size: 14px;
+  line-height: 1.7;
 }

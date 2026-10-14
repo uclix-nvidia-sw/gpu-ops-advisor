@@ -1,3 +1,17 @@
+## Unified RCA list / RCA 목록 통합 — 2026-10-14
+
+`/cases` has one RCA investigation list with server-side execution status filters,
+alongside the incident tab. Legacy `?tab=reports` links open the same list filtered
+to completed jobs. Published result titles lead to the RCA report; unpublished
+jobs lead to execution history. Completion and result quality remain separate,
+and partial is never displayed as a confirmed cause. Duplicate report-list tabs,
+kind columns and repeated report buttons are removed only from `/cases`.
+`/reports`, Report Agent and report history retain their existing paths/behavior.
+
+Evidence evaluation explains explicit model stop, malformed selection, unavailable
+model and a bounded selection repair separately. Legacy records without those
+diagnostics do not invent a reason.
+
 ## Runbook-driven RCA guidance
 
 RCA reads `quality.runbook_guidance` projected from selected published Runbook
@@ -357,3 +371,5 @@ UI 단독 배포는 저장 결과에 없는 노드·알림 제목·장애 종류
 새 RCA는 회차별 근거 평가에서 제한·다음 조회·종료 이유를 함께 표시한다. 개발용
 원본 기록은 접힌 영역에 보존하며 과거 결과를 새 판단으로 다시 쓰지 않는다.
 주요 보고서 제목과 참고 안내 제목은 18px, 세부 출처 제목과 설명은 15px로 맞춘다.
+
+RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.
