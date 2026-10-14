@@ -1,3 +1,16 @@
+## Topic interpretation / 주제별 해석 — 2026-10-14 (local)
+
+- PASS: 288 tests / 25 files, format check and TypeScript/Vite build; the existing bundle-size warning remains. Final focused UI regression: 16 passed. Covers two topic interpretations, hourly source references/evidence, report-time limits, escaped text, old selection provenance and failed/non-AI fallback.
+- PASS: actual-data browser comparison for three reports over October 12 and 13; before/after/failure switching and source disclosure retain the same calculation table/graph. Actual model output names the Namespace and adjacent hours; disclosed hourly values match the prose. The failure tab is explicitly hypothetical. Earlier evidence callback and 1280px layout checks passed; final 390px check found no AI container overflow.
+- Actual-data local preview uses saved reports and explanation-only operating LLM replies (17.38s, 18.48s, 51.49s), not a synthesized report. No production report or DB was changed. The earlier synthetic preview below is superseded for this task.
+- Production deployment and complete navigation from this isolated component preview to operational incident/evidence pages remain unverified. Existing missing/partial source data and occasional awkward model phrasing are not corrected by the UI.
+
+## AI summary provenance / AI 요약 출처 표시 — 2026-10-14 (local)
+
+- PASS: 286 tests / 25 files, format check and TypeScript/Vite build. Six added cases cover AI selection, failed/omitted fallback, absent/inconsistent provenance and empty narrative; saved text is preserved.
+- PASS: local fixture preview at 1280px, 549px and 390px; AI surface, fallback, unknown and empty states were checked in the browser. Long Korean text wraps in the summary.
+- Scope: aggregate report display only. Existing calculation, Agent, RCA, API/DB and HTML export logic unchanged. Preview uses explicit synthetic data, not a production report or new LLM call. Production deployment remains unverified; existing bundle size warning remains.
+
 ## Missing selection conditions — 2026-10-14 (local)
 
 - PASS: 281 tests, TypeScript/Vite build and formatting. RCA displays 조회 선택 조건 미설정 and explains that the selection LLM was not called; existing diagnostics remain readable.

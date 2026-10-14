@@ -1,3 +1,13 @@
+## Ops topic interpretation / 주제별 운영 해석 — 2026-10-14 (local)
+
+- Baseline: fetched remote main `66c0019`; no RCA/shared-runtime/calculation/query/DB/Helm changes. Editorial integration is after `build_result` only. Existing hourly metrics select an editorial focus; no activity values are recalculated.
+- PASS: Agent suite with isolated PostgreSQL and real Worker/NAT/MCP/JC/Incident/Backend processes: 1,265 tests, no skips, 129.25s (three existing deprecation warnings). Grafana/model responses in E2E are fixtures. After the final prompt and repair-diagnostic changes: 40 interpretation tests and two focused aggregate publication/fallback E2E tests passed (33 unrelated E2E cases deselected, 4.76s). Ruff lint/format passed.
+- Actual operating-model replay: three stored reports covering October 12 and 13; `auto-router` accepted two on the first response (17.38s and 18.48s) and one after one repair (51.49s). These are explanation-only times, not whole-report latency. The final raw responses were locally replayed through the current validator and matched the remote rendered narratives/diagnostics. Every non-editorial result field, topic quality and CSV stayed identical.
+- Actual examples: October 13 demand-forecast activity 15–16 KST 0.00% to 16–17 KST 96.98%; October 12 serving activity 08–09 KST 0.00% to 09–10 KST 60.14%. Both are stored adjacent-hour values with matching GPU identity. Next checks identify the same Namespace and target hour. Missing prior-period comparisons remain unavailable.
+- Earlier development responses failed reference/period validation, omitted targets or repeated prohibited wording in negative sentences; prompt and repair diagnostics were tightened without bypassing validation. The final three successes are not a general success-rate estimate or proof of perfect Korean prose.
+- Local preview uses the three actual stored reports and their accepted model responses; only the labelled failure tab is hypothetical. Production reports/DB were not modified. Live inputs/replies remain ignored local files, not committed fixtures.
+- UNVERIFIED: deployment and a newly published production report through the changed Worker, concurrent/weekly/max-size load and exhaustive semantic safety of free text. Policy integration/resource recommendations remain out of scope; partial data stays partial.
+
 ## Explicit exploratory permission and rule publication — 2026-10-14
 
 - PASS (local): 1,201 non-E2E tests; 45 E2E cases deselected. Existing Windows-incompatible Report cleanup module excluded; no full cross-platform claim. Rule, explicit opt-in and missing-condition stop paths retain uncertain evidence semantics.

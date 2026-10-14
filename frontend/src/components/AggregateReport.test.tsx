@@ -252,3 +252,114 @@ it('does not invent a status timestamp for an older stored report', () => {
   expect(html).toContain('현재 상태와 다를 수 있습니다');
   expect(html).not.toContain('badge-firing');
 });
+
+it.each([
+  ['complete', 'llm_prioritized', 'AI가 고른 주요 변화', true],
+  ['failed', 'deterministic_fallback', '계산 결과 요약', false],
+  ['omitted', 'deterministic_fallback', '계산 결과 요약', false],
+  ['complete', undefined, '저장된 주요 변화', false],
+  ['failed', 'llm_prioritized', '저장된 주요 변화', false],
+])('labels summary provenance for %s / %s without rewriting facts', (status, method, title, ai) => {
+  const html = renderToStaticMarkup(
+    <AggregateReport
+      value={{
+        narrative_status: status,
+        quality: { report: { method } },
+        narrative: [{ id: 'finding-1', summary_text: '계산한 활동률은 12.34%입니다.' }],
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain(title);
+  expect(html).toContain('계산한 활동률은 12.34%입니다.');
+  expect(html.includes('aggregate-summary-ai')).toBe(ai);
+  if (ai) expect(html).toContain('AI가 원인이나 운영 조치를 판단한 내용은 아닙니다.');
+});
+it('does not invent an AI summary when saved narrative is empty', () => {
+  const html = renderToStaticMarkup(
+    <AggregateReport
+      value={{
+        narrative_status: 'complete',
+        quality: { report: { method: 'llm_prioritized' } },
+        narrative: [],
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).not.toContain('report-summary-title');
+});
+
+it('shows generated interpretations inside each topic with source facts and snapshot limits', () => {
+  const topicIds = ['namespace_usage', 'incident_summary'];
+  const value = {
+    narrative_status: 'complete',
+    quality: { report: { method: 'llm_interpreted' } },
+    topics: topicIds.map((topic_id) => ({
+      topic_id,
+      findings: [{ id: topic_id + '-fact', text: topic_id + ' calculated fact' }],
+      metrics:
+        topic_id === 'namespace_usage'
+          ? [
+              {
+                id: 'namespace_usage.hourly_activity.7',
+                value: 75,
+                target: { cluster_id: 'cpc-1', namespace: 'research', model: 'A100' },
+                period: { start: '2026-10-13T01:00:00Z', end: '2026-10-13T02:00:00Z' },
+              },
+            ]
+          : [],
+    })),
+    narrative: topicIds.map((topic_id) => ({
+      id: topic_id,
+      topic_id,
+      observation: topic_id + ' observed change',
+      meaning: '확인된 범위에서만 해석합니다.',
+      next_check: '기존 기록을 확인해 보세요.',
+      interpretation_limit: '알림 상태는 보고서 작성 당시 기준입니다.',
+      source_fact_ids: [topic_id + '-fact'],
+      value_refs: ['namespace_usage.hourly_activity.7'],
+      evidence_refs: [topic_id + '-evidence'],
+    })),
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} onEvidence={() => {}} />
+    </MemoryRouter>,
+  );
+  expect(html.match(/<h3>AI 운영 해석<\/h3>/g)).toHaveLength(2);
+  expect(html).not.toContain('id="report-summary-title"');
+  expect(html).toContain('해석 근거와 계산 결과');
+  expect(html).toContain('namespace_usage calculated fact');
+  expect(html).toContain('incident_summary calculated fact');
+  expect(html).toContain('근거 1 확인');
+  expect(html).toContain('75.00%');
+  expect(html).toContain('research');
+  expect(html).toContain('10:00');
+  expect(html).toContain('보고서 작성 당시');
+  expect(html).toContain('실제 조치나 장애 원인 판정이 아닙니다');
+  expect(html.indexOf('namespace-summary-title">')).toBeLessThan(
+    html.indexOf('namespace_usage observed change'),
+  );
+  expect(html.indexOf('incident-summary-title">')).toBeLessThan(
+    html.indexOf('incident_summary observed change'),
+  );
+});
+it('does not call failed or unlabelled prose an AI interpretation', () => {
+  for (const narrative_status of ['failed', 'omitted']) {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport
+          value={{
+            narrative_status,
+            quality: { report: { method: 'llm_interpreted' } },
+            topics: [{ topic_id: 'namespace_usage' }],
+            narrative: [{ id: 'n', text: 'stored summary' }],
+          }}
+          onEvidence={() => {}}
+        />
+      </MemoryRouter>,
+    );
+    expect(html).not.toContain('<h3>AI 운영 해석</h3>');
+    expect(html).toContain('stored summary');
+  }
+});
