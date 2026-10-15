@@ -2407,9 +2407,9 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
             response["hypotheses"][0]["claim"] = "온도는 999도입니다."
         return response
 
-    def capture_result(*args, **kwargs):
-        result, evidence = original_worker(*args, **kwargs)
-        captured.update(result=result, evidence=evidence)
+    def capture_result(stack, kind, jid, suffix=""):
+        result, evidence = original_worker(stack, kind, jid, suffix)
+        captured.update(result=result, evidence=evidence, job_id=jid)
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", rejection_then_repair)
@@ -2417,8 +2417,24 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
     test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         stack, monkeypatch, True
     )
-    diagnostic = captured["result"]["quality"]["analysis"]["synthesis"]
-    assert calls == 2
+    with psycopg.connect(stack["url"]) as conn:
+        rounds = [
+            row[0]
+            for row in conn.execute(
+                "SELECT snapshot FROM evidence WHERE job_id=%s "
+                "AND query_id='rca_synthesis' ORDER BY (snapshot->>'round')::integer",
+                (captured["job_id"],),
+            ).fetchall()
+        ]
+    assert [row["round"] for row in rounds] == [0, 1]
+    assert calls == 3  # First analysis, numeric repair, then analysis after follow-up.
+    diagnostic = rounds[0]["diagnostics"]
+    assert rounds[1]["diagnostics"]["repair_status"] == "not_needed"
+    assert rounds[1]["diagnostics"]["repair_attempts"] == 0
+    assert (
+        captured["result"]["quality"]["analysis"]["synthesis"]
+        == rounds[1]["diagnostics"]
+    )
     assert diagnostic["repair_status"] == "repaired"
     assert diagnostic["repair_attempts"] == 1
     gate = diagnostic["repair_gate"]
