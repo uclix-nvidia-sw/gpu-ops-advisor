@@ -241,7 +241,7 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 | 필드 | 형식·의미 |
 |---|---|
-| `schema_version` | 문자열 `"1"`. 평가 확장 자체의 버전이며 input/result_schema 버전과 별개 |
+| `schema_version` | 문자열 `"1"` 또는 `"2"`. 평가 확장 자체의 버전이며 input/result_schema 버전과 별개 |
 | `collection` | `{status, reason, query_results, evidence_refs}`. status는 `complete/partial/failed/not_requested`. complete 이외에는 reason 필수 |
 | `evidence` | `{execution_status, reason, evidence_refs}`. refs는 검증된 해석 기록과 기초 진단 기록. 실행 완료는 모든 의미 확인 완료가 아님 |
 | `analysis_id` | 최종 발행할 초안의 hash. 코드 fallback도 ID를 생성; result content_hash와 별개 |
@@ -260,6 +260,12 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 - 계획했지만 반환 자료/완료된 빈 응답이 전혀 없고 모두 실패·미실행이면 `failed`다. 미실행의 예산·정책·조건 사유를 유지한다.
 
 `stop_reason`은 `review_accepted/no_available_followup/followup_not_selected/selection_conditions_missing/query_budget_exhausted/llm_budget_exhausted/round_limit_reached/revision_limit_reached/analysis_unresolved/no_usable_evidence/model_unavailable/fast_path` 중 하나다. 이는 발행 가능한 종료의 상세 사유이며 기존 `termination_reason` enum을 대체하지 않는다. 원격 종료 불명·취소·lease 상실·실행 deadline 초과는 이 필드로 정상 공개하지 않고 14의 실패 경로를 따른다. 검토 입력이 너무 커서 남은 예산에 들어가지 않는 경우는 `llm_budget_exhausted`와 단계 진단으로 남긴다.
+
+schema 2는 `generation_mode=combined/separate`를 명시한다. combined의 evidence refs는 기초 진단과 `rca_synthesis`의 채택된 `interpretation`에 연결하며 독립 해석 완료 기록을 만들지 않는다. `evidence.interpretation`은 최종 자료에 남은 해석이며 실패/보류는 null일 수 있다. 초안 hash에 해석과 실제 입력 view hash를 포함한다. 원본 관측 refs와 진단 포함 input refs를 구분하고 생성된 finding ID는 별도 의존 참조다.
+
+목적 정책 사용 시 `review.rubric_version=2`, `investigation.objective`에 고정 대상·기간, Runbook revision/hash·목적, 기준별 code/llm·required·상태·finding/원본 refs, 차단 상태·필수 근거 부족·남겨도 되는 미확인을 보존한다. `goal_achieved`는 모든 필수 기준·차단 조건과 같은 최종 자료의 acceptable 검토가 필요하다. `goal_not_met`는 목적 미달이며 가능한 필수 보완이 없는 종료다. 두 값을 기존 stop_reason에 추가한다. 원인 확정·현재 건강과 별개이며 구 schema 1에는 소급 적용하지 않는다.
+
+`rca_result_frozen`은 보고서가 아닌 최종 RCA 근거 자료와 `material_hash`를 저장한다. `report_assembly`는 이 기록을 evidence ref와 hash로 연결한다. 보고서 구성 후 RCA 자료 hash를 다시 검사하며 판단을 바꾸면 공개하지 않는다. 동일 증거의 재작성 차단·문제 주장 보류는 기록에 남기고, 변경 자료의 review는 skipped/null(`draft_changed_after_review`)이다. 이전 검토 지적은 원본 기록에서 읽는다.
 
 예시 값은 구조 설명용이며 실제 ID가 아니다.
 
@@ -321,7 +327,7 @@ Runbook 원문 evidence의 선택적 `quality.selection_evidence_id`와 조사 �
 
 - `result_status`, assessments, `quality.analysis`와 sufficiency 호환 요약, `termination_reason`, `causal_status`, `narrative_status`의 기존 의미와 값은 유지한다. 타당 판정만으로 ready/confirmed로 승격하지 않는다.
 - 과거 결과에 확장이 없으면 ‘평가 분리 기록 없음’으로 표시한다. 과거 호출 실패를 추정하거나 기본 acceptable을 넣지 않는다. 알 수 없는 확장 버전은 원본 보존·지원되지 않는 평가 형식으로 표시하고 기존 결과는 읽을 수 있게 한다.
-- 새 Worker는 자신이 쓰는 schema_version=1의 상태·refs·ID를 검증한다. Backend/JC는 기존 저장·공개 권한·hash를 검증하며 LLM 의미 평가를 대신하지 않는다.
+- 새 Worker는 자신이 쓰는 schema_version=1/2의 상태·refs·ID를 검증한다. Backend/JC는 기존 저장·공개 권한·hash를 검증하며 LLM 의미 평가를 대신하지 않는다.
 - Ops는 공개 결과 ID/hash와 원인 수준을 그대로 인용하고 새 검토 상태·한계를 함께 전달한다. 미검토·미확정·제외된 주장을 타당·확정·실제 조치로 바꾸지 않는다.
 - 결과 요약은 final draft만, 과거 초안·검토는 디버깅 기록만 참조한다. 보류 내용과 무효 모델 응답을 일반 보고서에 되살리지 않는다.
 - 기존 DB JSON/evidence 경로를 재사용하고 과거 결과·snapshot·hash를 backfill하지 않는다. 생산자 활성화 전에 소비자 호환성을 확인하며 실행 순서는 14를 따른다.

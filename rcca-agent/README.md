@@ -7,11 +7,15 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 1. JC claim의 사건 snapshot·대상·기간·예산·지식 revision을 고정한다. [workflow.py](src/rcca_agent/workflow.py)가 전체 흐름을 소유한다.
 2. [retrieval.py](src/rcca_agent/retrieval.py)로 발행 Runbook을 검색하고 [runbook_contract.py](src/rcca_agent/runbook_contract.py)와 적용 조건을 검사한다. 검색 점수는 관련도이며 원인 확률이 아니다. 일반 조사 템플릿은 원인 확정 근거가 아니다.
 3. 선택한 Runbook의 필수 관측을 [observation_agents.py](src/rcca_agent/observation_agents.py)에서 수집한다. 허용된 독립 조회는 공유 예산 안에서 병렬 실행한다.
-4. 코드가 수집 상태와 형식·시각·식별자 정확 비교를 기록한다. [evidence_interpretation.py](src/rcca_agent/evidence_interpretation.py)의 LLM ①이 제한된 원문·관측에서 보고된 사실과 추론·미확인을 구분한다. 추론은 verified facts에 합치지 않는다.
-5. [synthesis.py](src/rcca_agent/synthesis.py)의 LLM ②가 후보·한계를 작성한다. 기존 수치·참조 검증과 Runbook 후보·권고를 결합해 초안을 고정한다.
-6. [analysis_review.py](src/rcca_agent/analysis_review.py)의 LLM ③이 초안 전체를 6개 평가 척도로 검토한다. 항목마다 판정·이유·근거를 남기며 초안 hash가 바뀌면 이전 판정을 재사용하지 않는다.
-7. [evaluation.py](src/rcca_agent/evaluation.py)에서 의미 수정은 attempt당 최대 1회다. 조건부 보완 수집은 최대 1라운드·3개 조회이며 해석부터 다시 수행한다. `evidence_evaluation`의 기존 요건 기록과 `investigation_decision`의 다음 행동·종료 이유를 구분한다. fast path는 기존 규칙 판단을 유지하고 해석·Synthesis·검토를 생략한다.
-8. [report.py](src/rcca_agent/report.py)가 상태·한계를 포함한 보고서 문장을 구성하고 [report_editor.py](src/rcca_agent/report_editor.py)가 문장 ID의 우선순위만 선택한다. 결과·근거를 저장한 뒤 JC가 공개를 확정한다.
+4. 코드가 수집 상태와 형식·시각·식별자의 명확한 조건을 확인한다. 원문과 진단은 보존한다.
+5. [통합 작성](src/rcca_agent/combined_synthesis.py)이 **증거 해석과 원인 분석을 한 번의 작성 LLM 요청**으로 처리한다. 출력은 보고서가 아닌 사실·추론·미확인·원인 후보·근거 참조를 담은 구조화된 RCA 자료다.
+6. [독립 품질 검토](src/rcca_agent/analysis_review.py)가 전체 주장과 원본을 대조한다. 검토 실패가 같은 증거의 재작성이나 재검토 루프를 유발하지 않는다. 특정 가능한 부적절 주장을 코드로 보류하면 새 초안은 미검토로 기록하고 이전 검토 지적을 보존한다.
+7. [Runbook 판단](src/rcca_agent/decision_policy.py)이 조사 목적의 필수 기준·차단 조건·같은 초안의 검토를 확인한다. 목적을 달성하면 선택 조회가 남아도 종료한다. 미달이면 허용된 필수 보완 조회 또는 한계 종료를 결정한다. 새 관측이 추가된 경우에만 다음 RCA 작성이 가능하다.
+8. `rca_result_frozen`에 최종 RCA 근거 자료와 hash를 고정한다. [report.py](src/rcca_agent/report.py)는 이 자료를 최종 보고서로 구성한다. [report_editor.py](src/rcca_agent/report_editor.py)의 선택적 LLM은 이미 만든 문장 ID를 정렬하며 새로운 원인·근거를 생성하지 않는다. 실패하면 코드 보고서를 유지한다. `report_assembly`는 사용한 근거 자료 hash를 연결한다. 저장·공개는 기존 Worker/JC가 담당한다.
+
+기본 작성 방식은 `combined`다. 비교·회귀용 profile의 `rca.generation_mode=separate`는 기존 해석·분석 호출을 유지하지만 같은 증거 재작성 제한은 동일하다. 한 attempt 안에서 원본 내용 hash를 비교하므로 UUID 변경·같은 응답 재수집·모델 입력 축약·검토 feedback은 새 증거가 아니다. 작성은 HTTP 오류·출력 잘림에도 재전송하지 않는다. 다른 명시적 작업/attempt의 재평가는 별도 실행이다. 핵심 분석 LLM 두 단계와 선택·보고서 정렬 호출을 합쳐 ‘전체 호출 두 번’이라고 표시하지 않는다. fast path, 기존 결과 읽기, 취소·원격 종료 불명 처리는 유지한다.
+
+XID 79와 SXID 11001 작성 원본에 Runbook 1.1 `decision_policy`를 넣었다. 현재 목적은 **해당 대상·기간의 오류 보고 식별**이며 실제 고장 원인이나 회복 확인이 아니다. Python·Backend Go가 계약을 검증하고 GUI·Ops가 평가 schema 1/2를 읽는다. 운영 적용에는 새 Runbook revision 발행과 코드 배포가 필요하다. 실제 모델 비교·의미 품질은 아직 검증하지 않았다.
 
 ## 보완 조회 선택
 
@@ -22,7 +26,7 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 탐색 LLM은 승인된 query ID만 최대 3개 반환할 수 있다. 잘못된 JSON 선택은 같은 예산·deadline 안에서 1회 수정한다. HTTP·deadline·예산 실패로 임의의 조회를 강제하지 않는다. 빈 선택은 조사 중단이며 근거 충분을 뜻하지 않는다.
 
 
-모델 토큰 예산 부족(`llm_budget_exhausted`)은 조회 예산과 구분한다. 이 경우에도 발행 Runbook의 명시적 조건·예상 밖 근거 정책이 허용하는 독립 조회는 남은 query budget·deadline 안에서 수행한다. LLM 탐색은 추가 호출하지 않는다. 검토가 acceptable이어도 충족된 명시적 보완 조회 조건은 먼저 수행하며, 검토 통과만으로 해당 조회를 생략하지 않는다. 최초 수집 → 해석 → 분석 → 검토 → 보완 수집 순서와 최대 2라운드·보완 3개 한도는 유지하며, 마지막 검토 실패는 정상 판정으로 바꾸지 않는다.
+모델 토큰 예산 부족(`llm_budget_exhausted`)은 조회 예산과 구분한다. 이 경우에도 발행 Runbook의 명시적 조건·예상 밖 근거 정책이 허용하는 독립 조회는 남은 query budget·deadline 안에서 수행한다. LLM 탐색은 추가 호출하지 않는다. 정책 없는 구 Runbook은 검토가 acceptable이어도 기존 명시적 보완 조회 조건을 유지한다. Runbook 1.1은 위의 목적 달성 조건을 먼저 확인한다. 최초 수집 → RCA 작성 → 독립 검토 → 필요한 보완 수집 순서와 최대 2라운드·보완 3개 한도는 유지하며, 마지막 검토 실패는 정상 판정으로 바꾸지 않는다.
 
 XID 79 저작 계획은 D44·D02·D11(전력), SXID 11001은 D02·D13을 조건부 보완 대상으로 둔다. D02 작업 라벨과 D06 Pod UID의 유효 시각을 조인한다. 사건에 GPU UUID가 없으면 같은 클러스터·서버의 XID 보고 PCI와 인벤토리가 유일하게 일치할 때만 관측 연결 대상으로 사용하며 원문 근거 참조를 보존한다. SXID PCI를 GPU PCI로 대체하거나 노드의 모든 Pod를 영향 작업으로 간주하지 않는다. 실제 실패·중단은 별도 근거가 필요하다.
 
@@ -51,7 +55,7 @@ FM 전용 원천은 선택 사항인 실행 프로파일 `rca.evidence_roles.fab
 
 품질 검토용 예산은 원인 분석의 유효 원문 근거가 모두 제거되지 않는 범위에서 예약한다. 기존 외부 예약과 총예산은 유지하며 예약 축소·남은 예산·원문 포함 가능 여부를 Synthesis의 `budget_allocation`에 기록한다. 축소된 예약은 후속 검토 성공을 보장하지 않는다. 실제 부족·출력 잘림·변경된 초안의 미검토 상태는 그대로 보존한다.
 
-예산 조정은 수집/분석 결함 수정과 별도로 수행한다. `attempt_budget=32768`은 한 시도의 해석·분석·수정·검토가 공유하며 `token_budget=98304` 전체를 한 시도에서 사용할 수 있는 것은 아니다. 실제 재생 실험 후보는 RCA용 새 실행 프로파일의 `attempt_budget=65536`, `token_budget=196608`, `max_attempts=3`이다. 기본값과 운영 설정은 이 변경에서 올리지 않는다. 보완 수집 후 분석·최종 검토까지 완료되는지, 토큰 사용·지연·동시성 비용을 비교한 뒤 채택한다. 출력 잘림은 단계별 출력 상한 문제도 확인해야 하며 총예산 증액만으로 해결됐다고 보지 않는다.
+예산 조정은 수집/분석 결함 수정과 별도로 수행한다. `attempt_budget=32768`은 한 시도의 작성·검토·선택·보고서 정렬이 공유하며 `token_budget=98304` 전체를 한 시도에서 사용할 수 있는 것은 아니다. 실제 재생 실험 후보는 RCA용 새 실행 프로파일의 `attempt_budget=65536`, `token_budget=196608`, `max_attempts=3`이다. 기본값과 운영 설정은 이 변경에서 올리지 않는다. 보완 수집 후 분석·최종 검토까지 완료되는지, 토큰 사용·지연·동시성 비용을 비교한 뒤 채택한다. 출력 잘림은 단계별 출력 상한 문제도 확인해야 하며 총예산 증액만으로 해결됐다고 보지 않는다.
 
 `operator_guidance`의 공통 스키마는 의미, 원인 관련 주의, 다음 확인, 출처를 표현한다. 지침은 해당 Runbook revision에 속하며 관측 사실이나 조치 승인을 대신하지 않는다. [작성·발행 안내](runbooks/DB-WORKFLOW.md)를 따른다.
 
@@ -69,6 +73,27 @@ Runbook 본문은 적용·호환 조건을 거쳐 조사에 사용할 지침이 
 - 오프라인 계약 검사는 `python -m rcca_agent.runbook_audit --help`로 입력 형식을 확인한다. 운영 DB를 변경하거나 발행하지 않는다.
 - `python -m rcca_agent.runbook_transition --snapshot published.json --profile profile.json --output new-review-directory`는 제공된 발행 snapshot으로 전환 검토안을 만든다. 입력 hash를 확인하고 새 출력 폴더만 사용한다. Backend 호출·승인·발행은 없다.
 - [265개 전환 검토](runbooks/transition-review-20261014.json)는 196개 계약 통과 제안과 69개 보류(정의 미확정 64개·정보성 5개)를 기록한다. 의미 검토·운영 발행 완료를 뜻하지 않는다. 원인·필수 근거·출처를 보존하고 발행 전 최신 revision/hash와 다시 대조해야 한다.
+
+## 오프라인 RCA 재생
+
+[재생 도구](../agents/tests/rca_replay.py)는 기존 `workflow.run()` → `evaluate_analysis()` → 조립·검토·보완 조회·종료를 그대로 실행한다. 검토자만 시험할 때는 `review_analysis()`를 직접 사용한다. 모델 전송은 `httpx.MockTransport`, 조회는 **도구 이름과 전체 요청 인자가 일치하는 고정 응답**으로 대체한다. 실제 MCP·모델·DB·JC 발행에 연결하지 않으며 운영 실행 설정은 바꾸지 않는다.
+
+공통 Agent 개발 환경을 설치한 뒤 저장소 루트에서 실행한다. 결과에는 입력 원문이 포함되므로 합성 또는 비식별화한 자료만 사용하고 출력은 `.local/`에 둔다. 새 출력 폴더만 허용하며 기존 결과를 덮어쓰지 않는다.
+
+```bash
+python agents/tests/rca_replay.py --case enough_budget --output .local/rca-replay/before
+python agents/tests/rca_replay.py --input .local/rca-replay/before/input.json --baseline .local/rca-replay/before/result.json --output .local/rca-replay/after
+python -m pytest -c agents/pytest.ini agents/tests/test_rca_replay.py -q
+```
+
+- `summary.md`: 라운드별 해석·분석·검토, 실패 이유, 추가 수집·종료를 한국어로 읽는 요약.
+- `input.json`: 사건·대상·기간·profile·Runbook 내용/revision/hash·총예산·출력 cap·조회와 응답 fixture·사전 기대 판정을 고정한 입력. Runbook은 합성 revision이며 운영 발행본이 아니다.
+- `result.json`: 입력 hash와 실행한 Worker/공통 Python 소스 hash, 실제 전송 입력·프롬프트·cap·완료 사유·응답 크기/hash·예산 차감, **검증 후 보존된** 해석·분석·검토·결정·최종 결과. 거절된 모델 원문은 실행 추적에 복사하지 않는다. 입력 fixture 자체는 별도로 남는다.
+- `comparison.json`: 같은 입력 hash일 때만 호출·부분 성공·잘림·검토·다음 행동의 차이를 비교한다. 의미상 타당성은 원문과 함께 사람이 확인해야 한다. 소스가 바뀐 뒤 `--case`로 새 입력을 만들지 말고 저장한 `--input`을 재사용한다.
+
+[기본 사례](../agents/tests/rca_replay_cases.py)는 충분 예산, 의도적 부족, 해석만 보존, 보완 후 검토 변경, 검토 수락 후 명시 규칙 조회를 포함한다. `review_limited/overclaim/typo/gap/conflict/unused`는 적절·과장 쌍과 오타·관측 공백·모순·증거 미사용의 검토자 단독 사례다. 실행 전 기대 판정은 도구용 제안이며 사람의 의미 평가 합의 완료로 간주하지 않는다.
+
+누락·모호한 조회 fixture, 모델 응답 fixture 소진, 응답 참조 바인딩 실패는 `partial` 재생으로 표시한다. 모델 usage를 제공하지 않은 경우 실제 사용량을 0으로 해석하지 않고 미기록과 보수적 차감을 나눈다. fixture 토큰값·실행시간은 운영 비용이나 모델 지연의 실측이 아니다. 이 도구는 **현행 분리 경로의 최소 비교 기반**이며 통합 호출·새 Runbook 판단 정책·실제 모델 의미 평가가 구현됐다는 뜻이 아니다. 이후 변경은 같은 입력으로 다시 재생한다.
 
 ## 실행·검증·남은 과제
 

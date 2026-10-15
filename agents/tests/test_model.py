@@ -41,6 +41,30 @@ async def test_routed_model_uses_saved_name_and_authentication(kind, monkeypatch
         assert await llm.complete("fixture", {}) == {"ok": True}
 
 
+@pytest.mark.parametrize("limit,expected_calls", [(1, 1), (3, 3)])
+async def test_author_single_request_limit_does_not_change_other_callers(
+    limit, expected_calls
+):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(503, json={"error": "fixture unavailable"})
+
+    settings = Settings(
+        "rca",
+        llm_base_url="http://test/v1",
+        llm_model="fixture",
+        llm_api_key="test-only",
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 32768, lambda _: None, http)
+        llm.request_attempt_limit = limit
+        assert await llm.complete("fixture", {}, stage="synthesis") is None
+        assert llm.last_failure == "llm_http_error"
+        assert len(calls) == expected_calls
+
+
 def test_missing_key_and_unknown_reference_do_not_fall_back(monkeypatch):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     base = Settings("report", llm_api_key="other-key")

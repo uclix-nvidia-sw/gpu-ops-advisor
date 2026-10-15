@@ -29,6 +29,68 @@ describe('separate RCA evaluations', () => {
       },
     },
   };
+  it('shows the combined author and independent reviewer without inventing a third stage', () => {
+    const records = ['rca_synthesis', 'analysis_review'].map((query_id) => ({
+      id: query_id,
+      query_id,
+      quality: { generation_mode: 'combined' },
+      snapshot: { generation_mode: 'combined' },
+    }));
+    const html = renderToStaticMarkup(<RcaEvaluationTrace items={records} onEvidence={() => {}} />);
+    expect(html).toContain('증거 해석·RCA 분석');
+    expect(html).toContain('작성 LLM');
+    expect(html).toContain('별도 검토 LLM');
+    expect(html).not.toContain('LLM ③');
+  });
+  it('shows objective criteria and never treats a stale review as completed investigation', () => {
+    const value = structuredClone(result);
+    Object.assign(value.quality.rca_evaluation, {
+      schema_version: '2',
+      generation_mode: 'combined',
+    });
+    Object.assign(value.quality.rca_evaluation.investigation, {
+      objective: {
+        status: 'achieved',
+        analysis_id: 'final-draft',
+        policies: [
+          {
+            runbook_revision_id: 'book-1',
+            content_hash: 'hash',
+            goal: {
+              question: '대상 노드의 오류 보고를 확인했는가?',
+              conclusion_scope: '현재 상태와 근본 원인은 미확정',
+            },
+            criteria: [
+              {
+                key: 'criterion-1',
+                question: '보고 내용의 한계를 설명했는가?',
+                required: true,
+                method: 'llm',
+                status: 'satisfied',
+                evidence_refs: ['original-log'],
+              },
+            ],
+            blocking_conditions: [],
+            unmet_required_evidence: [],
+            non_blocking_unknowns: ['current_health'],
+          },
+        ],
+      },
+    });
+    const html = renderToStaticMarkup(<RcaEvaluation result={value} />);
+    for (const text of [
+      '조사 목적 달성',
+      '대상 노드의 오류 보고',
+      '보고 내용의 한계',
+      'original-log',
+      '현재 장치 상태',
+    ])
+      expect(html).toContain(text);
+    value.quality.rca_evaluation.review.analysis_id = 'old-draft';
+    const stale = renderToStaticMarkup(<RcaEvaluation result={value} />);
+    expect(stale).not.toContain('<h4>조사 목적 달성</h4>');
+    expect(stale).toContain('미검토');
+  });
   it('shows partial collection with an acceptable limited analysis without changing existing status', () => {
     const before = JSON.stringify(result);
     const html = renderToStaticMarkup(<RcaEvaluation result={result} />);

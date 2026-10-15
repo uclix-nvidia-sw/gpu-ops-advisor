@@ -1,3 +1,7 @@
+## Runbook contract validation / Runbook 계약 검증
+
+2026-10-15, main `bf85dfd` 기반 로컬 변경: Runbook 1.0/1.1과 명시적인 목적·필수 기준·차단 조건·조회 연결을 검증한다. 현재 Backend 소스의 `go vet ./...`, `go test -race ./...`, `go build ./...` 통과. Windows 경로의 대괄호로 인한 embed 제약을 피하려고 ASCII 임시 경로에 현재 소스를 복사했으며 Go 1.26.2와 CGO/w64devkit을 사용했다. 새 PostgreSQL에서 Backend 생성→검토→발행과 실제 RCA Worker 소비·schema 2 결과 공개도 통과했다([Agent QA](../agents/QA.md)). 모델/Grafana는 fixture이며 운영 발행·배포·실제 모델 품질은 미검증이다. DB migration 변경은 없다.
+
 ## Explicit Runbook exploration permission — 2026-10-14 (local)
 
 - PASS: vet, unit tests, CGO race tests and build. `exploratory_llm` accepts boolean true only on optional steps, without a selection rule.

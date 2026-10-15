@@ -1,7 +1,17 @@
-import { obj, str, type Row } from '../lib/live';
+import { obj, rows, str, type Row } from '../lib/live';
 
 export const evaluationLabels: Record<string, string> = {
   complete: '완료',
+  no_new_evidence: '새 관측 없음 · 같은 증거의 분석 재호출 생략',
+  same_evidence_rewrite_blocked: '같은 증거의 재작성 금지 · 검토 지적 보존',
+  goal_achieved: '조사 목적 달성으로 종료',
+  goal_not_met: '목적 미달 · 가능한 보완 없음',
+  achieved: '조사 목적 달성',
+  not_achieved: '조사 목적 미달',
+  satisfied: '충족',
+  not_satisfied: '불충족',
+  review_rejected_interpretation: '검토에서 지적된 해석 제외',
+  invalid_author_response: '통합 작성 응답 검증 실패',
   no_remaining_queries: '허용된 미수행 조회 없음',
   authorized_followup: '조건을 충족한 보완 조회',
   review_revision_required: '검토 지적에 따른 분석 수정',
@@ -52,7 +62,7 @@ export function RcaEvaluation({ result }: { result: Row }) {
   const label = (value: unknown) => evaluationLabels[str(value)] || str(value, '미확인');
   if (!Object.keys(evaluation).length)
     return <p>이전 결과: 분리된 분석 품질 검토 기록이 없습니다.</p>;
-  if (evaluation.schema_version !== '1')
+  if (!['1', '2'].includes(str(evaluation.schema_version)))
     return <p>지원하지 않는 평가 형식입니다. 원본 기록을 확인하세요.</p>;
   const collection = obj(evaluation.collection);
   const evidence = obj(evaluation.evidence);
@@ -63,6 +73,20 @@ export function RcaEvaluation({ result }: { result: Row }) {
   return (
     <section aria-label="RCA 평가 구분">
       <h4>수집·증거 해석·분석 품질</h4>
+      {evaluation.generation_mode === 'combined' && (
+        <p>증거 해석·RCA 분석을 작성 LLM이 함께 처리하고, 별도 검토 LLM이 품질을 확인합니다.</p>
+      )}
+      <RcaObjective
+        value={{
+          ...obj(investigation.objective),
+          ...(obj(investigation.objective).status === 'achieved' &&
+          (!reviewed ||
+            review.verdict !== 'acceptable' ||
+            obj(investigation.objective).analysis_id !== evaluation.analysis_id)
+            ? { status: 'unknown' }
+            : {}),
+        }}
+      />
       <dl className="details">
         <dt>수집 상태</dt>
         <dd>{label(collection.status)}</dd>
@@ -136,6 +160,94 @@ export function RcaEvaluation({ result }: { result: Row }) {
           있습니다.
         </p>
       </details>
+    </section>
+  );
+}
+
+export function RcaObjective({ value }: { value: unknown }) {
+  const objective = obj(value);
+  if (!rows(objective.policies).length) return null;
+  return (
+    <section aria-label="조사 목적과 완료 기준">
+      <h4>{evaluationLabels[str(objective.status)] || '조사 기준 확인 중'}</h4>
+      <p>
+        목적 달성과 근본 원인 확정은 다릅니다. 아래 필수 기준과 같은 최종 초안의 품질 검토가 모두
+        충족되어야 목적 달성으로 종료합니다.
+      </p>
+      {rows(objective.policies).map((policy) => (
+        <div key={str(policy.runbook_revision_id)}>
+          <p>
+            <strong>{str(obj(policy.goal).question)}</strong>
+          </p>
+          <p>{str(obj(policy.goal).conclusion_scope)}</p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>확인할 내용</th>
+                  <th>필수 여부</th>
+                  <th>판단</th>
+                  <th>담당·근거</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows(policy.criteria).map((row) => (
+                  <tr key={str(row.key)}>
+                    <td>{str(row.question)}</td>
+                    <td>{row.required ? '필수' : '선택'}</td>
+                    <td>{evaluationLabels[str(row.status)] || '미확정'}</td>
+                    <td>
+                      {row.method === 'code'
+                        ? '코드의 명확한 조건 검사'
+                        : '작성 LLM 제안 + 별도 품질 검토'}
+                      <details>
+                        <summary>근거 ID</summary>
+                        {Array.isArray(row.evidence_refs)
+                          ? row.evidence_refs.join(', ')
+                          : '기록 없음'}
+                      </details>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows(policy.blocking_conditions).some((row) => row.status !== 'satisfied') && (
+            <p>
+              대상·기간·신원·필수 수집에 미확정 또는 충돌이 있어 종료 기준을 충족하지 못했습니다.
+            </p>
+          )}
+          <p>
+            필수 근거 미확인:{' '}
+            {Array.isArray(policy.unmet_required_evidence) && policy.unmet_required_evidence.length
+              ? policy.unmet_required_evidence.join(', ')
+              : '없음'}
+          </p>
+          <p>
+            남아 있어도 이 목적을 막지 않는 미확인:{' '}
+            {Array.isArray(policy.non_blocking_unknowns)
+              ? policy.non_blocking_unknowns
+                  .map(
+                    (item) =>
+                      (
+                        ({
+                          causal_confirmation_evidence: '근본 원인',
+                          current_health: '현재 장치 상태',
+                          physical_or_synthetic_origin: '실제 오류 또는 시험 주입 여부',
+                        }) as Record<string, string>
+                      )[str(item)] || str(item),
+                  )
+                  .join(', ')
+              : '기록 없음'}
+          </p>
+          <details>
+            <summary>판단 기준의 Runbook 출처</summary>
+            <p>
+              {str(policy.runbook_revision_id)} · {str(policy.content_hash)}
+            </p>
+          </details>
+        </div>
+      ))}
     </section>
   );
 }

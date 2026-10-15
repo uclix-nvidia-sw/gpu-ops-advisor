@@ -3,6 +3,18 @@ import { evaluationLabels } from './RcaEvaluation';
 import { modelExecution, rcaReasons } from '../lib/rcaLabels';
 
 export const rcaStages: Record<string, { title: string; actor: string; purpose: string }> = {
+  rca_result_frozen: {
+    title: '보고서용 RCA 근거 자료 고정',
+    actor: '코드',
+    purpose:
+      '확인 사실·채택 및 보류·평가·종료 이유를 구조화해 고정합니다. RCA 자체를 보고서 문장으로 다시 쓰지 않습니다.',
+  },
+  report_assembly: {
+    title: '최종 보고서 작성',
+    actor: '코드 · 선택적 문장 정렬 LLM',
+    purpose:
+      '채택한 분석과 한계·종료 이유를 보고서로 구성합니다. 원인을 새로 분석하지 않으며 저장·공개 여부는 작업 결과에서 확인합니다.',
+  },
   evidence_validation: {
     title: '기초 검증',
     actor: '코드',
@@ -31,9 +43,24 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
   investigation_decision: {
     title: '다음 행동 결정',
     actor: '코드',
-    purpose: '수정·보완 수집·종료를 결정합니다.',
+    purpose: '주장 보류·보완 수집·기존 판단 유지·종료를 결정합니다.',
   },
 };
+export function stageForRecord(record: Row) {
+  const kind = str(record.query_id);
+  const combined =
+    (obj(record.snapshot).generation_mode ?? obj(record.quality).generation_mode) === 'combined';
+  if (combined && kind === 'rca_synthesis')
+    return {
+      title: '증거 해석·RCA 분석',
+      actor: '작성 LLM',
+      purpose:
+        '한 응답에서 보고된 사실·미확인·원인 후보를 구분합니다. 품질 검토는 별도로 진행합니다.',
+    };
+  if (combined && kind === 'analysis_review')
+    return { ...rcaStages.analysis_review, actor: '별도 검토 LLM + 코드' };
+  return rcaStages[kind];
+}
 const label = (v: unknown) => evaluationLabels[str(v)] || rcaReasons[str(v)] || str(v, '기록 없음');
 const amount = (v: unknown) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : '기록 없음';
@@ -130,7 +157,7 @@ export function RcaEvaluationTrace({
         {stages.map((record) => {
           const meta = obj(record.quality);
           const body = obj(record.snapshot);
-          const step = rcaStages[str(record.query_id)];
+          const step = stageForRecord(record);
           const round = meta.round ?? body.round;
           const status = meta.execution_status ?? body.execution_status ?? body.status;
           return (
@@ -165,10 +192,13 @@ export function RcaEvaluationTrace({
                 <p>
                   결정:{' '}
                   {(
-                    { revise: '분석 수정', collect: '추가 수집', finish: '종료' } as Record<
-                      string,
-                      string
-                    >
+                    {
+                      revise: '분석 수정',
+                      collect: '추가 수집',
+                      finish: '종료',
+                      withhold: '문제 주장 보류',
+                      reuse: '기존 분석 유지',
+                    } as Record<string, string>
                   )[str(meta.action)] || str(meta.action)}
                 </p>
               )}
@@ -193,7 +223,7 @@ export function RcaStageDetails({
   record: Row;
   onEvidence?: (id: string) => void;
 }) {
-  const step = rcaStages[str(record.query_id)];
+  const step = stageForRecord(record);
   if (!step) return null;
   const body = obj(record.snapshot);
   const interpretation = obj(body.interpretation);
@@ -219,6 +249,26 @@ export function RcaStageDetails({
         {step.title} · {step.actor}
       </h3>
       <p>{step.purpose}</p>
+      {record.query_id === 'rca_result_frozen' && (
+        <p>
+          RCA 근거 자료 식별값: <code>{str(body.material_hash, '미기록')}</code>. 이후 보고서
+          작성에서 이 자료가 바뀌면 결과 공개를 중단합니다.
+        </p>
+      )}
+      {record.query_id === 'report_assembly' && (
+        <p>
+          작성 방식:{' '}
+          {obj(body.report).method === 'llm_prioritized'
+            ? '확정된 문장을 LLM이 정렬'
+            : obj(body.report).method === 'deterministic_fallback'
+              ? '코드의 기본 순서로 작성'
+              : '미기록'}
+          . 원인과 RCA 판정은 다시 생성하지 않았습니다.
+          {obj(body.report).fallback_reason != null && (
+            <> 기본 순서 사용 이유: {label(obj(body.report).fallback_reason)}.</>
+          )}
+        </p>
+      )}
       {['evidence_interpretation', 'rca_synthesis', 'analysis_review'].includes(
         str(record.query_id),
       ) && (
@@ -230,6 +280,9 @@ export function RcaStageDetails({
       )}
       {record.query_id === 'rca_synthesis' && (
         <>
+          {body.generation_mode === 'combined' && (
+            <RequestChecks value={rows(synthesis.requests).map((row) => row.request_check)} />
+          )}
           {synthesis.error_code != null && (
             <p>
               분석 실패 사유: {label(synthesis.error_code)} <code>{str(synthesis.error_code)}</code>

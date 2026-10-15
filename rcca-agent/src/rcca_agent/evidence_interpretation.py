@@ -120,9 +120,10 @@ def inspection_context(data, evidence, health, diagnostics):
     return {"raw_excerpts": excerpts, "evidence_checks": checks}
 
 
-def validate_interpretation(response, refs):
+def validate_interpretation(response, refs, criteria=None, observation_refs=None):
     fields = {"findings", "unknowns", "conflicts", "limitations"}
-    if not isinstance(response, dict) or set(response) != fields:
+    expected = fields | ({"criterion_assessments"} if criteria is not None else set())
+    if not isinstance(response, dict) or set(response) != expected:
         raise ValueError("interpretation_shape")
     ids = set()
     for field in fields:
@@ -167,6 +168,40 @@ def validate_interpretation(response, refs):
                 ids.add(row["id"])
                 if row["kind"] not in {"observed", "inferred"}:
                     raise ValueError("interpretation_kind")
+    if criteria is not None:
+        answers = response["criterion_assessments"]
+        if not isinstance(answers, list) or len(answers) != len(criteria):
+            raise ValueError("criterion_assessments")
+        seen = set()
+        for row in answers:
+            if not isinstance(row, dict) or set(row) != {
+                "criterion_id",
+                "status",
+                "finding_refs",
+                "evidence_refs",
+            }:
+                raise ValueError("criterion_shape")
+            if (
+                row["criterion_id"] not in criteria
+                or row["criterion_id"] in seen
+                or row["status"] not in {"satisfied", "not_satisfied", "unknown"}
+            ):
+                raise ValueError("criterion_status")
+            seen.add(row["criterion_id"])
+            if not isinstance(row["finding_refs"], list) or any(
+                ref not in ids for ref in row["finding_refs"]
+            ):
+                raise ValueError("criterion_finding_refs")
+            if not isinstance(row["evidence_refs"], list) or any(
+                ref not in refs for ref in row["evidence_refs"]
+            ):
+                raise ValueError("criterion_evidence_refs")
+            if row["status"] == "satisfied" and (
+                not row["finding_refs"]
+                or not row["evidence_refs"]
+                or not set(row["evidence_refs"]) <= set(observation_refs or [])
+            ):
+                raise ValueError("criterion_requires_observations")
     return response
 
 
@@ -286,10 +321,32 @@ async def interpret_evidence(llm, payload):
             "input_view_hash": content_hash(view),
             "context_selection": view["context_selection"],
         }
+    criteria = semantic_criteria(payload)
     return await call_stage(
         llm,
         "evidence_interpretation",
-        INTERPRET,
+        INTERPRET + (CRITERIA_PROMPT if criteria is not None else ""),
         view,
-        lambda value: validate_interpretation(value, set(view["input_evidence_refs"])),
+        lambda value: validate_interpretation(
+            value, set(view["input_evidence_refs"]), criteria, view["observation_refs"]
+        ),
     )
+
+
+CRITERIA_PROMPT = """ Also return criterion_assessments inside interpretation (or the interpretation object itself):
+[{"criterion_id":"supplied criterion key", "status":"satisfied|not_satisfied|unknown",
+"finding_refs":["finding ID"], "evidence_refs":["original observation ID"]}].
+Answer every supplied LLM criterion; never change code criteria. A satisfied criterion
+needs findings and original observation refs. Diagnostic-only refs cannot establish completion."""
+
+
+def semantic_criteria(payload):
+    assessment = payload.get("decision_assessment")
+    if not assessment:
+        return None
+    return {
+        row["key"]
+        for policy in assessment["policies"]
+        for row in policy["criteria"]
+        if row["method"] == "llm"
+    }

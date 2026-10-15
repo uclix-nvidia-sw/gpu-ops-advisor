@@ -26,10 +26,10 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if _, exists := c["schema"]; !exists {
 		return nil
 	} // Existing legacy knowledge.
-	if c["schema"] != "gpu-rca-runbook/1.0" {
+	if c["schema"] != "gpu-rca-runbook/1.0" && c["schema"] != "gpu-rca-runbook/1.1" {
 		return Invalid("runbook.schema")
 	}
-	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "operator_guidance", "limitations", "investigation_only", "unexpected_evidence"); err != nil {
+	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "operator_guidance", "limitations", "investigation_only", "unexpected_evidence", "decision_policy"); err != nil {
 		return err
 	}
 	for _, key := range []string{"title", "description", "claim"} {
@@ -239,6 +239,9 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 				}
 			}
 		}
+	}
+	if !validDecisionPolicy(c) {
+		return Invalid("runbook.decision_policy")
 	}
 	b, err = json.Marshal(compatibility)
 	if err != nil {

@@ -134,7 +134,10 @@ def schema_kind(content):
     _require(isinstance(content, dict), "content: expected object")
     if "schema" not in content:
         return "legacy"
-    _require(content["schema"] == SCHEMA, "content.schema: unsupported schema")
+    _require(
+        content["schema"] in {SCHEMA, "gpu-rca-runbook/1.1"},
+        "content.schema: unsupported schema",
+    )
     return "v1"
 
 
@@ -234,8 +237,11 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
         "limitations",
         "investigation_only",
         "unexpected_evidence",
+        "decision_policy",
     }
     _require(set(content) <= allowed_fields, "content: unsupported fields")
+    from .decision_policy import validate_policy
+
     from .operator_guidance import validate_operator_guidance
 
     if "operator_guidance" in content:
@@ -459,4 +465,5 @@ def validate_runbook(row, queries, allowed_queries, *, authoring=False):
             set(required) == {step["query_id"] for step in plan if step["required"]},
             "required_queries: must match required observation_plan entries",
         )
+    validate_policy(content)
     return deepcopy(sorted(plan, key=lambda step: (step["priority"], step["query_id"])))

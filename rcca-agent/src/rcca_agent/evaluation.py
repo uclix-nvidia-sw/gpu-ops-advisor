@@ -8,7 +8,7 @@ from agent_common.parsers import parse_health
 from agent_common.contracts import now, incident_source
 
 from .analysis_review import (
-    REVIEW,
+    review_prompt,
     analysis_draft,
     review_analysis,
     review_payload,
@@ -16,6 +16,7 @@ from .analysis_review import (
 )
 from .evidence_interpretation import inspection_context, interpret_evidence, SENSITIVE
 from .synthesis import synthesize, reserve_review_budget
+from .combined_synthesis import generate, author_prompt
 from .synthesis_context import bounded_context, encoded_size
 
 
@@ -71,6 +72,8 @@ async def evaluate_analysis(
 
     def record(kind, body, status="ok"):
         metadata = {"round": round_no, "stage": kind}
+        if combined:
+            metadata["generation_mode"] = body["generation_mode"] = "combined"
         metadata.update(
             {
                 k: body[k]
@@ -104,7 +107,7 @@ async def evaluate_analysis(
             metadata["verdict"] = (
                 body["review"]["verdict"] if body.get("review") else None
             )
-            body["rubric_version"] = "1"
+            body["rubric_version"] = rubric
         return obs._evidence(
             kind,
             None,
@@ -114,6 +117,8 @@ async def evaluate_analysis(
             metadata,
         )["id"]
 
+    combined = payload.get("generation_mode") == "combined"
+    rubric = "2" if payload.get("decision_assessment") else "1"
     checks = []
     parse_health(
         obs.evidence,
@@ -129,20 +134,27 @@ async def evaluate_analysis(
     validation_id = record(
         "evidence_validation", {"checks": payload["evidence_checks"]}
     )
-    interpretation, interpretation_diag = await interpret_evidence(llm, payload)
-    interpretation_id = record(
-        "evidence_interpretation",
-        {
-            **interpretation_diag,
-            "validation_evidence_id": validation_id,
-            "interpretation": interpretation,
-        },
-        "ok" if interpretation is not None else "unavailable",
-    )
-    if interpretation:
-        payload.update(
-            {"interpretation_" + key: rows for key, rows in interpretation.items()}
+    interpretation, interpretation_id = None, None
+    interpretation_diag = {"execution_status": "skipped", "reason": "combined_author"}
+    if not combined:
+        interpretation, interpretation_diag = await interpret_evidence(llm, payload)
+        interpretation_id = record(
+            "evidence_interpretation",
+            {
+                **interpretation_diag,
+                "validation_evidence_id": validation_id,
+                "interpretation": interpretation,
+            },
+            "ok" if interpretation is not None else "unavailable",
         )
+        if interpretation:
+            payload.update(
+                {
+                    "interpretation_" + key: rows
+                    for key, rows in interpretation.items()
+                    if key != "criterion_assessments"
+                }
+            )
     # This bounded source view is retained with the draft; the critic sees sources too.
     view = bounded_context(payload, 6000)
     rule_sources = [
@@ -188,10 +200,15 @@ async def evaluate_analysis(
             view["input_evidence_refs"] = previous_refs
             view["context_selection"]["omitted_rule_sources"] += 1
             view["context_selection"]["complete"] = False
+    if combined or rubric == "2":
+        for key in tuple(view):
+            if key.startswith("interpretation_"):
+                view[key] = []
     synthesis_diag = {}
     review, review_diag, draft = None, {}, None
     review_ids = []
     stop_override = None
+    feedback_review = None
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
         base_candidates, base_recommendations = assemble([])
@@ -208,10 +225,18 @@ async def evaluate_analysis(
         output = getattr(getattr(llm, "settings", None), "llm_default_max_tokens", 4096)
         # Preserve the actual rule draft, full review output and existing 512 margin.
         floor = (
-            old_reserve + encoded_size(baseline) + len(REVIEW.encode()) + output + 512
+            old_reserve
+            + encoded_size(baseline)
+            + len(review_prompt(view).encode())
+            + output
+            + 512
         )
         reserved, allocation = reserve_review_budget(
-            llm, payload, review_reserve(view, llm), floor
+            llm,
+            payload,
+            review_reserve(view, llm),
+            floor,
+            **({"prompt": author_prompt(payload)} if combined else {}),
         )
         allocation.update(
             review_floor_basis="rule_draft_full_output",
@@ -222,16 +247,55 @@ async def evaluate_analysis(
         llm.reserved_tokens = reserved
         started_at, started = now(), time.monotonic()
         before = dict(getattr(llm, "usage", {}))
+        request_limit = getattr(llm, "request_attempt_limit", 3)
+        llm.request_attempt_limit = 1
         try:
-            status, model_candidates, limits = await synthesize(
-                llm, payload, synthesis_diag
-            )
+            if combined:
+                authored = await generate(llm, payload, synthesis_diag)
+                status, model_candidates, limits = (
+                    authored["status"],
+                    authored["candidates"],
+                    authored["limitations"],
+                )
+                interpretation = authored["interpretation"]
+                interpretation_diag = {
+                    "execution_status": "complete"
+                    if interpretation is not None
+                    else "failed",
+                    "reason": None
+                    if interpretation is not None
+                    else synthesis_diag["error_code"],
+                }
+                view = {
+                    **authored["input_view"],
+                    "rule_sources": view.get("rule_sources", []),
+                }
+                view["input_evidence_refs"] = sorted(
+                    set(view["input_evidence_refs"])
+                    | {row["id"] for row in view["rule_sources"]}
+                )
+            else:
+                status, model_candidates, limits = await synthesize(
+                    llm, payload, synthesis_diag
+                )
         finally:
             llm.reserved_tokens = old_reserve
-        record(
+            llm.request_attempt_limit = request_limit
+        synthesis_id = record(
             "rca_synthesis",
             {
                 "status": status,
+                **(
+                    {
+                        "generation_mode": "combined",
+                        "interpretation": interpretation,
+                        "interpretation_status": interpretation_diag[
+                            "execution_status"
+                        ],
+                    }
+                    if combined
+                    else {}
+                ),
                 "diagnostics": synthesis_diag,
                 "started_at": started_at,
                 "completed_at": now(),
@@ -252,13 +316,21 @@ async def evaluate_analysis(
             },
             "ok" if status == "complete" else "unavailable",
         )
+        if combined:
+            interpretation_id = synthesis_id
         candidates, recommendations = assemble(model_candidates)
         limits = list(dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *limits]))
         if interpretation is None:
             limits.append(
                 "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
             )
-        draft = analysis_draft(candidates, recommendations, limits, view)
+        draft = analysis_draft(
+            candidates,
+            recommendations,
+            limits,
+            view,
+            interpretation if combined or rubric == "2" else None,
+        )
         record("rca_analysis_draft", {**draft, "input_view": view})
         review, review_diag = await review_analysis(llm, draft, view, allowed)
         review_id = record(
@@ -278,26 +350,36 @@ async def evaluate_analysis(
                     else "llm_budget_exhausted"
                 )
             break
-        if not state.get("revisions") and status == "complete":
-            state["revisions"] = 1
-            record(
-                "investigation_decision",
-                {
-                    "action": "revise",
-                    "reason": "review_revision_required",
-                    "analysis_id": draft["analysis_id"],
-                    "evidence_refs": [review_id],
-                },
-            )
-            payload["review_feedback"] = review
-            continue
+        record(
+            "investigation_decision",
+            {
+                "action": "withhold",
+                "reason": "same_evidence_rewrite_blocked",
+                "analysis_id": draft["analysis_id"],
+                "evidence_refs": [review_id],
+            },
+        )
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
         global_issue = None in affected
+        if interpretation is not None and (
+            global_issue
+            or any(
+                str(item).startswith(("interpretation:", "criterion:"))
+                for item in affected
+            )
+        ):
+            interpretation = None
+            interpretation_diag = {
+                "execution_status": "failed",
+                "reason": "review_rejected_interpretation",
+            }
         candidates = [
             c
             for c in candidates
-            if not global_issue and "cause:" + c["id"] not in affected
+            if not global_issue
+            and "cause:" + c["id"] not in affected
+            and not (combined and interpretation is None and "finding_refs" in c)
         ]
         recommendations = [
             dict(r, eligibility="withheld", reason="analysis_review_unresolved")
@@ -309,60 +391,38 @@ async def evaluate_analysis(
         limits.append(
             "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다. 원인 판단은 추가 확인이 필요합니다."
         )
-        draft = analysis_draft(candidates, recommendations, limits, view)
+        draft = analysis_draft(
+            candidates,
+            recommendations,
+            limits,
+            view,
+            interpretation if combined or rubric == "2" else None,
+        )
         record("rca_analysis_draft", {**draft, "input_view": view})
-        review, review_diag = await review_analysis(llm, draft, view, [])
-        if not review:
-            stop_override = (
-                "llm_budget_exhausted"
-                if review_diag.get("reason") == "llm_token_budget_exhausted"
-                else "analysis_unresolved"
-            )
-            review_diag["failure_reason"] = review_diag.get("reason")
-            review_diag.update(
-                execution_status="skipped", reason="draft_changed_after_review"
-            )
+        feedback_review = review
+        review = None
+        review_diag = {
+            "execution_status": "skipped",
+            "reason": "draft_changed_after_review",
+            "attempts": 0,
+        }
         review_ids.append(
             record(
                 "analysis_review",
-                {**review_diag, "analysis_id": draft["analysis_id"], "review": review},
-                "ok" if review else "unavailable",
+                {
+                    **review_diag,
+                    "analysis_id": draft["analysis_id"],
+                    "review": None,
+                    "previous_review_evidence_id": review_id,
+                },
+                "unavailable",
             )
         )
-        if review and review["verdict"] == "revision_required":
-            stop_override = "revision_limit_reached"
-            # Dependencies of a rejected fallback are not safe to infer from text.
-            draft = analysis_draft(
-                [],
-                [],
-                [
-                    BASE_LIMIT,
-                    REVIEW_LIMIT,
-                    "검토 문제를 해결하지 못해 원인 주장과 권고를 보류했습니다.",
-                ],
-                view,
-            )
-            record("rca_analysis_draft", {**draft, "input_view": view})
-            review = None
-            review_diag = {
-                "execution_status": "skipped",
-                "reason": "draft_changed_after_review",
-                "attempts": 0,
-            }
-            review_ids.append(
-                record(
-                    "analysis_review",
-                    {
-                        **review_diag,
-                        "analysis_id": draft["analysis_id"],
-                        "review": None,
-                    },
-                    "unavailable",
-                )
-            )
         break
     return dict(
         draft=draft,
+        generation_mode="combined" if combined else "separate",
+        interpretation=draft.get("interpretation"),
         stop_reason=stop_override,
         synthesis_status=status,
         synthesis=synthesis_diag,
@@ -370,6 +430,11 @@ async def evaluate_analysis(
             execution_status=interpretation_diag["execution_status"],
             reason=interpretation_diag.get("reason"),
             evidence_refs=[validation_id, interpretation_id],
+            **(
+                {"interpretation": draft.get("interpretation")}
+                if combined or rubric == "2"
+                else {}
+            ),
         ),
         review=dict(
             execution_status=review_diag["execution_status"],
@@ -377,7 +442,7 @@ async def evaluate_analysis(
             reason=review_diag.get("reason"),
             analysis_id=draft["analysis_id"],
             evidence_refs=[review_ids[-1]],
-            rubric_version="1",
+            rubric_version=rubric,
             criteria=review["criteria"] if review else {},
             **(
                 {"failure_reason": review_diag["failure_reason"]}
@@ -385,5 +450,5 @@ async def evaluate_analysis(
                 else {}
             ),
         ),
-        review_output=review,
+        review_output=feedback_review or review,
     )

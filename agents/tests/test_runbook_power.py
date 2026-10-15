@@ -120,6 +120,10 @@ async def test_power_followup_never_establishes_health_or_recovery(
     book = json.loads(
         (ROOT / f"rcca-agent/runbooks/xid/RB-XID-{code}.json").read_text("utf-8")
     )
+    # Preserve the legacy exploration contract; goal completion has its own tests.
+    profile.setdefault("rca", {})["generation_mode"] = "separate"
+    book["content"]["schema"] = "gpu-rca-runbook/1.0"
+    book["content"].pop("decision_policy", None)
     book.update(
         id="fixture-book", revision=1, compatibility={"cluster_id": "fixture-cluster"}
     )

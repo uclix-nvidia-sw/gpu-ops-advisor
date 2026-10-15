@@ -68,6 +68,38 @@ func TestRunbookAuthoringAndPublication(t *testing.T) {
 	}
 }
 
+func TestDecisionPolicyCannotRelaxCompletion(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []string{"legacy", "blocker", "required_query", "criterion", "unknown_query"} {
+		t.Run(change, func(t *testing.T) {
+			var row Object
+			if err := json.Unmarshal(b, &row); err != nil {
+				t.Fatal(err)
+			}
+			c := row["content"].(map[string]any)
+			p := c["decision_policy"].(map[string]any)
+			switch change {
+			case "legacy":
+				c["schema"] = "gpu-rca-runbook/1.0"
+			case "blocker":
+				p["blocking_conditions"] = []any{}
+			case "required_query":
+				p["followup_links"].([]any)[0].(map[string]any)["required"] = false
+			case "criterion":
+				p["completion_criteria"].([]any)[0].(map[string]any)["required"] = false
+			case "unknown_query":
+				p["followup_links"].([]any)[0].(map[string]any)["query_id"] = "D999"
+			}
+			if validateRunbook(c, Object{}, false) == nil {
+				t.Fatal("unsafe decision policy accepted")
+			}
+		})
+	}
+}
+
 func TestReportedRequirementsRemainInvestigationOnly(t *testing.T) {
 	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
 	if err != nil {

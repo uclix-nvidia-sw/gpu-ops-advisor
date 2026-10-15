@@ -16,6 +16,7 @@ from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
 from .synthesis import synthesis_input
+from .decision_policy import assess_policies, finish_assessment, model_assessment
 from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
 from .analysis_review import analysis_draft
 from .fleet_events import parse_events, enrich_report_inventory
@@ -519,6 +520,7 @@ async def run(tools):
     selection_id = obs.evidence[-1]["id"]
     applicable, pending = matching_runbooks(runbooks, initial_facts, {}, data)
     selected = applicable + pending
+    objective_books = list(selected)
     rule_refs = {}
 
     def preserve_runbook(book):
@@ -615,7 +617,7 @@ async def run(tools):
     stop_reason = None
     max_rounds = 2  # Required collection plus one bounded auxiliary batch.
 
-    evaluation_state = {"revisions": 0}
+    evaluation_state = {"revisions": 0, "authored_sources": set()}
     evaluation = None
     synthesis_diagnostics = {}
     error_events = []
@@ -910,7 +912,45 @@ async def run(tools):
                 selected,
                 error_events,
             )
-            payload.update(evidence_gap=gaps, sufficiency=gate)
+            source_hashes = observation_hashes(collected)
+            objective = assess_policies(
+                objective_books, data, health, error_events, gaps
+            )
+            if objective and {b["id"] for b in selected} != {
+                b["id"] for b in objective_books
+            }:
+                objective["compatible"] = False
+            if evaluation and not source_hashes - evaluation_state["authored_sources"]:
+                obs._evidence(
+                    "investigation_decision",
+                    None,
+                    data["time_range"],
+                    {
+                        "round": round_no,
+                        "action": "reuse",
+                        "reason": "no_new_evidence",
+                        "analysis_id": evaluation["draft"]["analysis_id"],
+                        "source_hashes": sorted(source_hashes),
+                        "evidence_refs": evaluation["evidence"]["evidence_refs"],
+                    },
+                    "ok",
+                    {"round": round_no, "action": "reuse", "reason": "no_new_evidence"},
+                )
+                state["decision_assessment"] = finish_assessment(
+                    objective,
+                    evaluation.get("interpretation"),
+                    evaluation["review"],
+                    evaluation["draft"]["analysis_id"],
+                )
+                return
+            evaluation_state["authored_sources"].update(source_hashes)
+            payload["source_version"] = content_hash(sorted(source_hashes))
+            mode = profile.get("rca", {}).get("generation_mode", "combined")
+            if mode not in {"combined", "separate"}:
+                raise ValueError("unsupported RCA generation mode")
+            payload.update(evidence_gap=gaps, sufficiency=gate, generation_mode=mode)
+            if objective:
+                payload["decision_assessment"] = model_assessment(objective)
             evaluation = await evaluate_analysis(
                 obs,
                 data,
@@ -924,6 +964,12 @@ async def run(tools):
                 evaluation_state,
                 round_no,
                 remaining,
+            )
+            state["decision_assessment"] = finish_assessment(
+                objective,
+                evaluation.get("interpretation"),
+                evaluation["review"],
+                evaluation["draft"]["analysis_id"],
             )
             synthesis_diagnostics = evaluation["synthesis"]
             analysis_status = evaluation["synthesis_status"]
@@ -971,6 +1017,31 @@ async def run(tools):
         policy_findings = state["policy_findings"]
         fallback_books = state["fallback_books"]
         unexpected_queries = state["unexpected_queries"]
+        objective = state.get("decision_assessment")
+        deferred_queries = []
+        if objective:
+            unmet = {
+                row["id"]
+                for policy in objective["policies"]
+                for row in policy["criteria"]
+                if row["required"] and row["status"] != "satisfied"
+            }
+            needed = {
+                link["query_id"]
+                for policy in objective["policies"]
+                for link in policy["followup_links"]
+                if link["required"]
+                and (
+                    set(link["criterion_ids"]) & unmet
+                    or any(
+                        row["status"] != "satisfied"
+                        for row in policy["blocking_conditions"]
+                    )
+                )
+            }
+            needed |= {q for q in remaining if "required_query:" + q in gaps}
+            deferred_queries = [q for q in remaining if q not in needed]
+            remaining = [q for q in remaining if q in needed]
         ruled, governed, rule_findings = rule_followup(
             selected, plans, remaining, gaps, available
         )
@@ -979,12 +1050,18 @@ async def run(tools):
             if fast_path
             else evaluation["stop_reason"]
             if evaluation.get("stop_reason") not in (None, "llm_budget_exhausted")
+            else "goal_achieved"
+            if objective and objective["status"] == "achieved"
+            else "goal_not_met"
+            if objective and not remaining
             else "review_accepted"
-            if evaluation["review"]["verdict"] == "acceptable"
+            if not objective
+            and evaluation["review"]["verdict"] == "acceptable"
             and not evaluation["review_output"]["followup_questions"]
             and not ruled
             else "sufficient"
-            if gate == "sufficient"
+            if not objective
+            and gate == "sufficient"
             and not (evaluation.get("review_output") or {}).get("followup_questions")
             and not ruled
             else "no_remaining_queries"
@@ -1073,6 +1150,15 @@ async def run(tools):
                 "next_queries": next_queries,
                 "analysis_stop_reason": evaluation.get("stop_reason"),
                 "followup_selection": selection_diagnostics,
+                **(
+                    {
+                        "decision_assessment": objective,
+                        "deferred_queries": deferred_queries,
+                        "deferred_reason": "outside_required_goal",
+                    }
+                    if objective
+                    else {}
+                ),
                 "remaining_queries": remaining,
                 "remaining_budget": dict(budget),
                 "max_rounds": max_rounds,
@@ -1113,6 +1199,11 @@ async def run(tools):
                 "analysis_id": evaluation["draft"]["analysis_id"],
                 "selected_queries": next_queries,
                 "revisions": evaluation_state["revisions"],
+                **(
+                    {"decision_assessment": state["decision_assessment"]}
+                    if state.get("decision_assessment")
+                    else {}
+                ),
                 "remaining_budget": dict(budget),
                 "evidence_refs": evaluation["review"]["evidence_refs"],
             },
@@ -1305,10 +1396,14 @@ async def run(tools):
         "sufficient": "analysis_unresolved",
         "no_remaining_queries": "no_available_followup",
     }.get(stop_reason, stop_reason)
-    if evaluation.get("stop_reason"):
+    objective = state.get("decision_assessment")
+    if objective and stop_reason == "goal_achieved":
+        final_stop = "goal_achieved"
+    elif evaluation.get("stop_reason"):
         final_stop = evaluation["stop_reason"]
     elif (
-        evaluation["review"]["verdict"] == "acceptable"
+        not objective
+        and evaluation["review"]["verdict"] == "acceptable"
         and not evaluation["review_output"]["followup_questions"]
     ):
         final_stop = "review_accepted"
@@ -1319,7 +1414,10 @@ async def run(tools):
     }:
         final_stop = "llm_budget_exhausted"
     result["quality"]["rca_evaluation"] = {
-        "schema_version": "1",
+        "schema_version": "2"
+        if objective or evaluation.get("generation_mode") == "combined"
+        else "1",
+        "generation_mode": evaluation.get("generation_mode", "separate"),
         "collection": collection_status(planned_queries, collected, fast_path),
         "evidence": evaluation["evidence"],
         "analysis_id": evaluation["draft"]["analysis_id"],
@@ -1327,6 +1425,7 @@ async def run(tools):
         "investigation": {
             "status": "finished",
             "stop_reason": final_stop,
+            **({"objective": objective} if objective else {}),
             "evidence_refs": [
                 e["id"]
                 for e in obs.evidence
@@ -1334,6 +1433,89 @@ async def run(tools):
             ],
         },
     }
+    material_fields = (
+        "cause_candidates",
+        "recommendations",
+        "limitations",
+        "missing_inputs",
+        "device_observations",
+        "error_events",
+        "facts",
+        "measurements",
+    )
+    material = {key: result.get(key, []) for key in material_fields}
+    material["evaluation"] = result["quality"]["rca_evaluation"]
+    material["analysis"] = result["quality"]["analysis"]
+    material_hash = content_hash(material)
+    frozen_id = obs._evidence(
+        "rca_result_frozen",
+        None,
+        data["time_range"],
+        {
+            "analysis_id": evaluation["draft"]["analysis_id"],
+            "material": material,
+            "material_hash": material_hash,
+            "execution_status": "complete",
+            "evidence_refs": evaluation["review"]["evidence_refs"]
+            + evaluation["evidence"]["evidence_refs"],
+        },
+        "ok",
+        {"execution_status": "complete"},
+    )["id"]
     await write_report(result, data, clues, obs.evidence, ctx["llm"])
+    if (
+        content_hash(
+            {
+                **{key: result.get(key, []) for key in material_fields},
+                "evaluation": result["quality"]["rca_evaluation"],
+                "analysis": result["quality"]["analysis"],
+            }
+        )
+        != material_hash
+    ):
+        raise ValueError("report changed frozen RCA material")
+    obs._evidence(
+        "report_assembly",
+        None,
+        data["time_range"],
+        {
+            "execution_status": "complete",
+            "analysis_id": evaluation["draft"]["analysis_id"],
+            "reason": final_stop,
+            "report": result["quality"]["report"],
+            "material_hash": material_hash,
+            "evidence_refs": [frozen_id],
+        },
+        "ok",
+        {"execution_status": "complete", "reason": final_stop},
+    )
+    result["evidence_refs"] = list(
+        dict.fromkeys(result["evidence_refs"] + [frozen_id, obs.evidence[-1]["id"]])
+    )
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": obs.evidence}
+
+
+def observation_hashes(collected):
+    """Original source content, not evidence UUIDs, feedback or model view sampling."""
+    hashes = set()
+    for entries in collected.values():
+        for entry in entries:
+            raw = entry["snapshot"]
+            rows = raw.get("data", raw) if isinstance(raw, dict) else raw
+            rows = rows.get("result", rows) if isinstance(rows, dict) else rows
+            if entry["tool_status"] not in {"ok", "partial"} or not rows:
+                continue
+            # Ignore collection wrappers; timestamps and labels remain source facts.
+            for row in rows if isinstance(rows, list) else [rows]:
+                hashes.add(
+                    content_hash(
+                        {
+                            "cluster": entry.get("cluster_id"),
+                            "scope": entry["scope"],
+                            "time_range": entry["time_range"],
+                            "source": row,
+                        }
+                    )
+                )
+    return hashes

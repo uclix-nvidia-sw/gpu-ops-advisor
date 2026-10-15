@@ -21,6 +21,17 @@ SECTIONS = (
 )
 
 
+OBSERVATION_SECTIONS = frozenset(
+    {
+        "error_events",
+        "device_observations",
+        "pod_relations",
+        "metric_observations",
+        "raw_excerpts",
+    }
+)
+
+
 def encoded_size(value):
     return len(json.dumps(value, ensure_ascii=False).encode())
 
@@ -81,7 +92,7 @@ def bounded_context(payload, max_bytes):
         view["input_evidence_refs"] = sorted(
             set(previous_inputs) | set(row.get("evidence_refs", []))
         )
-        if section in SECTIONS[:5]:
+        if section in OBSERVATION_SECTIONS:
             view["observation_refs"] = sorted(
                 set(previous_refs) | set(row.get("evidence_refs", []))
             )

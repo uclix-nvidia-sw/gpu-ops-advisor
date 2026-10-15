@@ -1,7 +1,8 @@
 {
   "revision": "builtin-grafana-v7",
   "rca": {
-    "general_runbook_key": "RB-GENERAL-GPU-NODE"
+    "general_runbook_key": "RB-GENERAL-GPU-NODE",
+    "generation_mode": "separate"
   },
   "limits": {
     "max_queries": 48,
