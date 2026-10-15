@@ -159,7 +159,9 @@
     "followup_not_selected": "남은 후보 중 이번 제한을 보완할 추가 조회가 선택되지 않았습니다.",
     "query_budget_exhausted": "이번 실행의 조회 예산을 모두 사용했습니다.",
     "deadline_exhausted": "이번 실행의 수집 가능 시간이 끝났습니다.",
-    "fast_path": "검증된 기존 근거를 사용해 추가 조회를 생략했습니다."
+    "fast_path": "검증된 기존 근거를 사용해 추가 조회를 생략했습니다.",
+    "review_revision_unavailable": "검토가 요청한 수정 분석을 예산 등으로 실행하지 못해, 지적받은 주장은 제외하고 검토를 생략했습니다.",
+    "synthesis_unavailable": "원인 분석을 실행하지 못해 코드 판단만으로 초안을 작성했고 모델 검토는 생략했습니다."
   },
   "groups": {
     "design": {

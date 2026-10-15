@@ -21,6 +21,23 @@ from .synthesis_context import bounded_context, encoded_size
 
 BASE_LIMIT = "관측·권고는 원인 확정, 조치 수행 또는 업무 복구를 의미하지 않습니다."
 REVIEW_LIMIT = "LLM 검토는 정답을 보장하지 않으며 원본 증거와 남은 불확실성을 함께 확인해야 합니다."
+UNRESOLVED_LIMIT = (
+    "검토가 수정을 요청한 주장은 수정 분석을 실행하지 못해 제외했습니다. "
+    "검토 지적은 해결되지 않았습니다."
+)
+RETAINED_LIMIT = (
+    "이번 라운드 분석을 실행하지 못해 이전 라운드에서 검토 지적을 받지 않은 주장만 "
+    "유지했습니다. 보완 근거로 다시 검토하지 않았습니다."
+)
+BUDGET_FAILURES = {"llm_context_budget_exhausted", "llm_token_budget_exhausted"}
+
+
+def surviving(model_candidates, review):
+    """Model claims a review did not flag; a draft-wide issue keeps none."""
+    affected = {issue["claim_id"] for issue in (review or {}).get("issues", [])}
+    if None in affected:
+        return []
+    return [c for c in model_candidates if "cause:" + c["id"] not in affected]
 
 
 def collection_status(planned, collected, fast_path=False):
@@ -191,6 +208,8 @@ async def evaluate_analysis(
     synthesis_diag = {}
     review, review_diag, draft = None, {}, None
     review_ids = []
+    # The draft a review asked to revise, kept until its revision actually runs.
+    pending_review = None
     stop_override = None
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
@@ -252,6 +271,52 @@ async def evaluate_analysis(
             },
             "ok" if status == "complete" else "unavailable",
         )
+        if status == "failed":
+            # No new model judgment exists. Keep only claims a review did not reject
+            # and never spend review budget on deterministic text.
+            if pending_review:
+                kept = surviving(pending_review["model"], pending_review["review"])
+                note = [UNRESOLVED_LIMIT]
+                reason = "review_revision_unavailable"
+            else:
+                kept = list(state.get("safe_model_candidates", []))
+                note = [RETAINED_LIMIT] if kept else []
+                reason = "synthesis_unavailable"
+            candidates, recommendations = assemble(kept)
+            if pending_review:
+                recommendations = [
+                    dict(r, eligibility="withheld", reason="analysis_review_unresolved")
+                    for r in recommendations
+                ]
+            limits = [BASE_LIMIT, REVIEW_LIMIT, *note]
+            if interpretation is None:
+                limits.append(
+                    "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
+                )
+            draft = analysis_draft(candidates, recommendations, limits, view)
+            record("rca_analysis_draft", {**draft, "input_view": view})
+            review = None
+            review_diag = {
+                "execution_status": "skipped",
+                "reason": reason,
+                "failure_reason": synthesis_diag.get("error_code")
+                or "synthesis_failed",
+                "attempts": 0,
+            }
+            review_ids.append(
+                record(
+                    "analysis_review",
+                    {
+                        **review_diag,
+                        "analysis_id": draft["analysis_id"],
+                        "review": None,
+                    },
+                    "unavailable",
+                )
+            )
+            if synthesis_diag.get("error_code") in BUDGET_FAILURES:
+                stop_override = "llm_budget_exhausted"
+            break
         candidates, recommendations = assemble(model_candidates)
         limits = list(dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *limits]))
         if interpretation is None:
@@ -261,6 +326,8 @@ async def evaluate_analysis(
         draft = analysis_draft(candidates, recommendations, limits, view)
         record("rca_analysis_draft", {**draft, "input_view": view})
         review, review_diag = await review_analysis(llm, draft, view, allowed)
+        if review and review["verdict"] == "acceptable":
+            state["safe_model_candidates"] = list(model_candidates)
         review_id = record(
             "analysis_review",
             {**review_diag, "analysis_id": draft["analysis_id"], "review": review},
@@ -290,6 +357,7 @@ async def evaluate_analysis(
                 },
             )
             payload["review_feedback"] = review
+            pending_review = dict(model=list(model_candidates), review=review)
             continue
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
@@ -312,6 +380,12 @@ async def evaluate_analysis(
         draft = analysis_draft(candidates, recommendations, limits, view)
         record("rca_analysis_draft", {**draft, "input_view": view})
         review, review_diag = await review_analysis(llm, draft, view, [])
+        if review and review["verdict"] == "acceptable":
+            state["safe_model_candidates"] = [
+                c
+                for c in model_candidates
+                if any(c["id"] == k["id"] for k in candidates)
+            ]
         if not review:
             stop_override = (
                 "llm_budget_exhausted"
@@ -385,5 +459,6 @@ async def evaluate_analysis(
                 else {}
             ),
         ),
-        review_output=review,
+        # An unresolved review keeps its follow-up questions for evidence selection.
+        review_output=review or (pending_review or {}).get("review"),
     )

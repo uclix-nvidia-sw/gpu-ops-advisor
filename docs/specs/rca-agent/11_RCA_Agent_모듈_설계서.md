@@ -215,6 +215,8 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 제외·보류로 최종 초안이 달라졌는데 재검토 예산이 없으면 **최종 초안의 review는 skipped/verdict=null**, 사유는 `draft_changed_after_review`로 남긴다. 이전 검토는 이전 ID의 evidence 이력에만 연결하고 최종 초안의 통과로 표시하지 않는다. 검토 완료·타당 판정을 단순히 문장 삭제 후 승계하지 않는다. 기존 assessment/result_status는 최종 유효 근거와 기존 규칙으로 다시 계산하며 검토 통과로 상향하지 않는다.
 
+검토가 수정을 요청했는데 수정 Synthesis가 실행되지 못하면(예산·입력 상한·출력 실패) 지적받지 않은 1라운드 모델 주장만 남기고, 초안 전체에 대한 지적(`claim_id=null`)이면 모델 주장을 하나도 남기지 않는다. 지적받은 주장은 어떤 경우에도 유지하지 않으며 관련 권고는 보류한다. 이 초안과 Synthesis가 실패한 라운드의 코드 기반 초안에는 모델 검토를 다시 실행하지 않는다. review는 skipped/verdict=null, 사유는 `review_revision_unavailable`(수정 요청 미해결) 또는 `synthesis_unavailable`(분석 미실행)이며 `failure_reason`에 Synthesis 실패 코드를 남긴다. 예산 부족이면 종료 결정은 `llm_budget_exhausted`이고, 남은 예산과 규칙 기반 보완 조회는 다음 라운드에 쓴다. 이후 라운드의 Synthesis가 실패하면 이전 라운드에서 검토 지적을 받지 않은(acceptable) 모델 주장만 유지하고 그 사실을 한계에 적는다. 해결되지 않은 검토의 추가 질문은 `review_output.followup_questions`로 보완 조회 선택에 전달하며 보고서 문장으로 쓰지 않는다. 증거 해석 입력이 예산 때문에 비면 사유는 `no_usable_evidence`가 아니라 `llm_context_budget_exhausted`다.
+
 형식 검증을 통과한 초안·구조화 검토는 기존 evidence에 저장하되, 거절된 원시 모델 응답 전체를 새로 저장하지 않는다. 기존 사유·위치·hash 진단 및 민감정보 제한을 유지한다. 보류된 내용은 일반 보고서·Ops의 정상 후보로 인용하지 않는다.
 
 ### 사건 예시와 결과 추적
