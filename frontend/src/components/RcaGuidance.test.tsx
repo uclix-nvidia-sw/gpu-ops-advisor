@@ -35,7 +35,7 @@ it('keeps literature separate from device facts and explains restart prerequisit
   };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaGuidance paragraphs={paragraphs} result={result} />);
-  expect(html).toContain('안전하게 종료하거나 다른 서버로 옮기고');
+  expect(html).toContain('안전하게 종료하거나 다른 서버로 옮긴 뒤');
   expect(html).toContain('물리적인 분리나 부품 고장을 확정할 수는 없습니다');
   expect(html).toContain('revision 5');
   expect(html).toContain('<details><summary>적용 지침</summary><p>');
@@ -64,6 +64,37 @@ it('separates switch inventory, missing producer time and unverified health', ()
   expect(html).toContain('생산자 시각 누락·초기값 1건');
   expect(html).not.toContain('오류 PCI와 GPU 목록 불일치');
   expect(renderToStaticMarkup(<RcaObservations result={{}} />)).toBe('');
+});
+
+it('shows a matched address and event identity without declaring current health', () => {
+  const result = {
+    quality: {
+      analysis: {
+        error_events: [
+          {
+            event_time: '2026-10-15T04:17:48Z',
+            cluster_id: 'cluster-a',
+            target: { node: 'node-a' },
+            error_code: 'xid:79',
+            reported_device: '0000:07:00',
+            device_mapping: 'inventory_match',
+            inventory_gpu_candidate: 'GPU-matched',
+          },
+        ],
+      },
+    },
+    device_observations: [
+      { pci_inventory_relation: 'inventory_candidate_only', fact_eligible: false },
+    ],
+  };
+  const before = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaObservations result={result} />);
+  expect(html).toContain('GPU-matched');
+  expect(html).toContain('13:17:48 KST');
+  expect(html).toContain('오류 PCI 주소가 수집 GPU 인벤토리와 일치');
+  expect(html).not.toContain('현재 정보만으로 오류 장치 확정 불가');
+  expect(html).toContain('현재 접근 상태와 업무 영향은 별도 관측');
+  expect(JSON.stringify(result)).toBe(before);
 });
 
 it('explains SXID11001 without GPU failure or XID restart guidance', () => {

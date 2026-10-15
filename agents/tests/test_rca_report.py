@@ -1,9 +1,137 @@
 import copy
+import json
+from pathlib import Path
 
 import pytest
 
 from agent_common.llm import RemoteUncertain
 from rcca_agent.report import write_report, TITLES
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_event_identity_and_time_lead_report_without_promoting_recovery(kind):
+    event = dict(
+        event_time="2026-10-15T04:17:48Z",
+        cluster_id="cluster-a",
+        target={"node": "node-a"},
+        reported_device="0000:07:00",
+        error_code=f"{kind}:79",
+        device_mapping="inventory_match" if kind == "xid" else "unresolved",
+        inventory_gpu_candidate="GPU-event" if kind == "xid" else None,
+        evidence_refs=["log"],
+        fact_eligible=False,
+    )
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=[],
+        limitations=[],
+        quality={"analysis": {"error_events": [event]}},
+    )
+    original = copy.deepcopy(event)
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result, {"incident_time": "2026-10-15T04:18:10Z"}, {}, [], Model()
+    )
+    sections = {s["id"]: s for s in result["narrative"]}
+    first = sections["problem"]["text"].split("\n\n")[0]
+    assert first.startswith("2026-10-15 13:17:48 KST, cluster-a / node-a")
+    assert ("GPU-event와 일치" in first) == (kind == "xid")
+    assert ("NVSwitch·포트 연결 정보" in first) == (kind == "sxid")
+    assert sections["problem"]["evidence_refs"] == ["log"]
+    assert list(sections)[:5] == ["problem", "impact", "cause", "action", "next"]
+    assert result["quality"]["analysis"]["error_events"][0] == original
+    assert result["recommendations"] == []
+    assert result["result_status"] == "partial"
+
+
+@pytest.mark.asyncio
+async def test_published_conditional_recovery_is_visible_without_eligible_action():
+    book = json.loads(
+        (
+            Path(__file__).parents[2] / "rcca-agent/runbooks/xid/RB-XID-79.json"
+        ).read_text(encoding="utf-8")
+    )["content"]
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=[],
+        limitations=[],
+        quality={},
+    )
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result,
+        {"incident_time": "2026-10-15T04:18:10Z"},
+        {},
+        [
+            dict(
+                id="book",
+                query_id="runbook",
+                query_version=7,
+                quality={"origin": "published"},
+                snapshot=book,
+            )
+        ],
+        Model(),
+    )
+    sections = {s["id"]: s for s in result["narrative"]}
+    assert "RESTART_BM" in sections["action"]["text"]
+    assert "bare-metal" in sections["action"]["text"]
+    assert "조치 후 확인" in sections["action"]["text"]
+    assert "CONTACT_SUPPORT" in sections["action"]["text"]
+    assert sections["action"]["evidence_refs"] == ["book"]
+    assert "복구 조치는 아직 없습니다" not in sections["action"]["text"]
+    assert "실행 조건 충족" not in sections["action"]["text"]
+    assert result["recommendations"] == []
+
+
+@pytest.mark.asyncio
+async def test_status_inventory_match_is_explained_without_inventing_event_time():
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=[],
+        limitations=[],
+        quality={},
+        device_observations=[
+            dict(
+                pci_inventory_relation="inventory_candidate_only",
+                target={"node": "node-b"},
+                reported_pci_addresses=["PCI:0000:07:00"],
+                evidence_refs=["log"],
+                gpu_candidates=[
+                    {"gpu_uuid": "GPU-match", "bus_id": "00000000:07:00.0"},
+                    {"gpu_uuid": "GPU-other", "bus_id": "0000:08:00.0"},
+                ],
+            )
+        ],
+    )
+
+    class Model:
+        configured = False
+
+    await write_report(
+        result, {"incident_time": "2026-10-15T04:18:10Z"}, {}, [], Model()
+    )
+    text = result["narrative"][0]["text"]
+    assert "node-b의 오류 주소 PCI:0000:07:00" in text
+    assert "GPU-match와 일치" in text
+    assert "GPU-other" not in text
+    assert "오류 발생 시각은 별도 이벤트 근거가 필요" in text
 
 
 @pytest.mark.asyncio
@@ -43,7 +171,7 @@ async def test_operator_problem_order_preserves_alert_time_and_identity():
     assert paragraphs[0] == "XID 79 오류가 보고된 것을 확인했습니다."
     assert paragraphs[1] == "대상\n노드: fixture-node"
     assert "사건 기준 시각: 2026-10-12T05:00:00Z" in paragraphs[2]
-    assert "실제 오류 발생 시각과 같다고 단정할 수 없습니다" in paragraphs[2]
+    assert "오류 발생 시각은 별도 이벤트 근거가 필요합니다" in paragraphs[2]
     assert "raw XID 79 event" in paragraphs[3]
     assert "fixture-gpu" in paragraphs[4]
     assert set(problem["evidence_refs"]) == {"log", "alert"}

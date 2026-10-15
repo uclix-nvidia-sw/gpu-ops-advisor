@@ -3,6 +3,28 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaNarrative } from './RcaNarrative';
 
 describe('RCA report reading', () => {
+  it('keeps the five operator sections visible and supporting material collapsed', () => {
+    const result = {
+      quality: { report: { presentation: 'incident-first/1' } },
+      narrative: [
+        { id: 'problem', title: '발생 내용', text: '사건 기록' },
+        { id: 'impact', title: '영향과 심각도', text: '작업 영향 미확인' },
+        { id: 'cause', title: '원인 분석', text: '원인 후보' },
+        { id: 'action', title: '권고 조치', text: '조건부 복구 안내' },
+        { id: 'next', title: '추가 확인 사항', text: '운영 모드 확인' },
+        { id: 'guidance', title: '참고 지침·적용 조건', text: '문헌 원문' },
+        { id: 'limits', title: '분석 한계', text: '조회 제한 원문' },
+      ],
+    };
+    const before = JSON.stringify(result);
+    const html = renderToStaticMarkup(<RcaNarrative result={result} consolidateChecks />);
+    expect(html).toContain('운영 모드 확인');
+    expect(html).toContain('<summary>참고 지침·적용 조건</summary>');
+    expect(html).toContain('<summary>분석 한계</summary>');
+    expect(html.match(/href="#rca-report-section-/g)).toHaveLength(5);
+    expect(html.indexOf('영향과 심각도')).toBeLessThan(html.indexOf('원인 분석'));
+    expect(JSON.stringify(result)).toBe(before);
+  });
   it('preserves published guidance separately from findings when checks are consolidated', () => {
     const html = renderToStaticMarkup(
       <RcaNarrative

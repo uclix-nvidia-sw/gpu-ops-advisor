@@ -466,6 +466,57 @@ def validate_synthesis(
     return candidates
 
 
+def synthesis_view(payload, remaining, reserved):
+    """Use the same bounded input/output allocation for planning and execution."""
+    remaining -= reserved
+    output_room = (
+        min(8192, max(512, (remaining - len(SYNTHESIS.encode())) // 3))
+        if reserved
+        else 8192
+    )
+    max_bytes = min(
+        16000, max(0, remaining - len(SYNTHESIS.encode()) - 256 - 2 - output_room)
+    )
+    view = bounded_context(payload, max_bytes)
+    return view, max_bytes
+
+
+def reserve_review_budget(llm, payload, requested):
+    """Reserve review capacity without evicting every usable synthesis source.
+
+    Existing caller reservations remain a hard floor. A reduced review reserve
+    is a best-effort allocation, never a promise that later review will succeed.
+    """
+    floor = getattr(llm, "reserved_tokens", 0)
+    requested = max(floor, requested)
+    remaining = getattr(llm, "remaining", 32768)
+
+    def fits(reserved):
+        view, limit = synthesis_view(payload, remaining, reserved)
+        return bool(view["observation_refs"]) and encoded_size(view) <= limit
+
+    selected = requested
+    if not fits(requested):
+        # Positive reservations use adaptive output room; zero retains the
+        # historical unreserved synthesis policy. Search the monotone branch.
+        low, high = max(1, floor), requested
+        selected = floor
+        while low <= high:
+            candidate = (low + high) // 2
+            if fits(candidate):
+                selected = candidate
+                low = candidate + 1
+            else:
+                high = candidate - 1
+    return selected, {
+        "requested_review_reserve": requested,
+        "applied_review_reserve": selected,
+        "remaining_tokens": remaining,
+        "synthesis_sources_fit": fits(selected),
+        "review_reserve_reduced": selected < requested,
+    }
+
+
 async def synthesize(llm, payload, diagnostics=None):
     diagnostics = diagnostics if diagnostics is not None else {}
     diagnostics.update(request_attempts=0, response_calls=0, error_code=None)
@@ -474,16 +525,9 @@ async def synthesize(llm, payload, diagnostics=None):
     if not llm.configured:
         diagnostics["error_code"] = "model_not_configured"
         return "unconfigured", [], []
-    remaining = getattr(llm, "remaining", 32768) - getattr(llm, "reserved_tokens", 0)
-    output_room = (
-        min(8192, max(512, (remaining - len(SYNTHESIS.encode())) // 3))
-        if getattr(llm, "reserved_tokens", 0)
-        else 8192
+    view, max_bytes = synthesis_view(
+        payload, getattr(llm, "remaining", 32768), getattr(llm, "reserved_tokens", 0)
     )
-    max_bytes = min(
-        16000, max(0, remaining - len(SYNTHESIS.encode()) - 256 - 2 - output_room)
-    )
-    view = bounded_context(payload, max_bytes)
     diagnostics.update(
         input_bytes=encoded_size(view),
         original_input_bytes=encoded_size(payload),

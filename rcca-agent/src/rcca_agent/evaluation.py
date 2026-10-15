@@ -9,7 +9,7 @@ from agent_common.contracts import now, incident_source
 
 from .analysis_review import analysis_draft, review_analysis, review_reserve
 from .evidence_interpretation import inspection_context, interpret_evidence, SENSITIVE
-from .synthesis import synthesize
+from .synthesis import synthesize, reserve_review_budget
 from .synthesis_context import bounded_context, encoded_size
 
 
@@ -188,7 +188,10 @@ async def evaluate_analysis(
     stop_override = None
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
-        llm.reserved_tokens = max(old_reserve, review_reserve(view, llm))
+        llm.reserved_tokens, allocation = reserve_review_budget(
+            llm, payload, review_reserve(view, llm)
+        )
+        synthesis_diag["budget_allocation"] = allocation
         started_at, started = now(), time.monotonic()
         before = dict(getattr(llm, "usage", {}))
         try:
