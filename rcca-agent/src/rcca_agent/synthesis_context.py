@@ -10,6 +10,14 @@ SECTIONS = (
     "device_observations",
     "pod_relations",
     "metric_observations",
+    "raw_excerpts",
+    "evidence_checks",
+    "interpretation_findings",
+    "interpretation_unknowns",
+    "interpretation_conflicts",
+    "interpretation_limitations",
+    "query_quality",
+    "runbook_plans",
 )
 
 
@@ -20,10 +28,13 @@ def encoded_size(value):
 def bounded_context(payload, max_bytes):
     # The limit applies to the serialized model view, not the source snapshots.
     view = {
-        k: v for k, v in payload.items() if k not in (*SECTIONS, "observation_refs")
+        k: v
+        for k, v in payload.items()
+        if k not in (*SECTIONS, "observation_refs", "input_evidence_refs")
     }
     view.update({k: [] for k in SECTIONS})
     view["observation_refs"] = []
+    view["input_evidence_refs"] = []
     coverage = {
         "method": "bounded_original_observations",
         "complete": False,
@@ -39,7 +50,7 @@ def bounded_context(payload, max_bytes):
     groups = defaultdict(list)
     for section in SECTIONS:
         for original in payload.get(section, []):
-            groups[(section, tuple(original["evidence_refs"]))].append(original)
+            groups[(section, tuple(original.get("evidence_refs", [])))].append(original)
     scheduled = [
         item
         for batch in zip_longest(
@@ -65,13 +76,19 @@ def bounded_context(payload, max_bytes):
                 "complete": len(indices) == len(samples),
             }
         previous_refs = view["observation_refs"]
+        previous_inputs = view["input_evidence_refs"]
         view[section].append(row)
-        view["observation_refs"] = sorted(
-            set(previous_refs) | set(row["evidence_refs"])
+        view["input_evidence_refs"] = sorted(
+            set(previous_inputs) | set(row.get("evidence_refs", []))
         )
+        if section in SECTIONS[:5]:
+            view["observation_refs"] = sorted(
+                set(previous_refs) | set(row.get("evidence_refs", []))
+            )
         if encoded_size(view) > max_bytes:
             view[section].pop()
             view["observation_refs"] = previous_refs
+            view["input_evidence_refs"] = previous_inputs
             continue
         coverage["omitted_observations"][section] -= 1
         if section == "metric_observations":

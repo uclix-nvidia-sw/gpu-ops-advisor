@@ -1,3 +1,4 @@
+import { RcaEvaluationTrace, rcaStages } from './RcaEvaluationTrace';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { canonical, obj, rows, str, useList, useResource, type Row } from '../lib/live';
@@ -235,6 +236,7 @@ export function StoredEvidence({
         기록은 생성 순번을 유지합니다. 기존 기록은 저장 시각과 계획으로 순서를 추정하며, 실제 실행
         시각·소요시간을 복원한 것이 아닙니다.
       </Notice>
+      <RcaEvaluationTrace items={q.items} onEvidence={onEvidence} />
       <Field label="불러온 기록에서 조회 ID·상태·사유 검색">
         <input
           value={filter}
@@ -253,7 +255,7 @@ export function StoredEvidence({
               <tr>
                 <th>조회·판단</th>
                 <th>기록 시각 (KST)</th>
-                <th>수집 상태·표본</th>
+                <th>수집 상태·표본 또는 단계 실행 상태</th>
                 <th>사유</th>
               </tr>
             </thead>
@@ -262,7 +264,8 @@ export function StoredEvidence({
                 <tr key={str(r.id)}>
                   <td>
                     <button className="text-link" onClick={() => onEvidence(str(r.id))}>
-                      {str(r.query_id, '조회 종류 미확인')}
+                      {rcaStages[str(r.query_id)]?.title || str(r.query_id, '조회 종류 미확인')} ·{' '}
+                      {str(r.query_id)}
                     </button>
                     <small className="cell-sub">{str(r.id)}</small>
                     <label className="check">

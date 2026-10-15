@@ -1,3 +1,4 @@
+import { RcaStageDetails } from './RcaEvaluationTrace';
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ApiError } from '../lib/api';
@@ -11,9 +12,11 @@ import { RawRecord } from './TraceView';
 export function RecordInspector({
   relation,
   onClose,
+  onEvidence,
 }: {
   relation: Relation;
   onClose: () => void;
+  onEvidence?: (id: string) => void;
 }) {
   const query = useResource(relation.path || null);
   const record = relation.path ? query.data : relation.record;
@@ -83,6 +86,7 @@ export function RecordInspector({
             {relation.path ? '연결 조건 확인 · API 조회 기록' : '현재 API 응답에 포함된 기록'}
           </h3>
           {relation.path?.startsWith('/incidents/') && <AlarmIdentity record={record} />}
+          <RcaStageDetails record={record} onEvidence={onEvidence} />
           <DataView
             value={
               relation.path?.startsWith('/knowledge/')

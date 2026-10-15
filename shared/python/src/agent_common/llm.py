@@ -33,6 +33,7 @@ class LLM:
         )
         self.http = http
         self.last_failure = None
+        self.reserved_tokens = 0
         self.usage = {
             "calls": 0,
             "request_attempts": 0,
@@ -62,7 +63,7 @@ class LLM:
             if stage == "synthesis"
             else self.settings.llm_default_max_tokens
         )
-        cap = min(cap, self.remaining - prompt_bound)
+        cap = min(cap, self.remaining - self.reserved_tokens - prompt_bound)
         if cap <= 0:
             self.last_failure = "llm_token_budget_exhausted"
             return None
@@ -156,7 +157,9 @@ class LLM:
                 choice = body.get("choices", [{}])[0]
                 if choice.get("finish_reason") == "length":
                     # Same endpoint only; doubled output stays within the remaining JC budget.
-                    doubled = min(cap * 2, self.remaining - prompt_bound)
+                    doubled = min(
+                        cap * 2, self.remaining - self.reserved_tokens - prompt_bound
+                    )
                     if attempt == 0 and doubled > cap:
                         cap = doubled
                         payload["max_tokens"] = cap

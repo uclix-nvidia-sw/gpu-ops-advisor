@@ -141,6 +141,27 @@ async def write_report(result, data, clues, evidence, llm):
                 "이는 해당 원본을 조회하지 못했다는 뜻이 아닙니다.",
                 diagnostic["evidence_refs"],
             )
+    evaluation = result.get("quality", {}).get("rca_evaluation")
+    if evaluation:
+        review = evaluation["review"]
+        verdict = {
+            "acceptable": "확보된 근거 범위에서 타당",
+            "revision_required": "수정 필요",
+            "undetermined": "판단 불가",
+        }.get(review["verdict"], "미검토")
+        collection = {
+            "complete": "계획한 조회 완료",
+            "partial": "부분 수집",
+            "failed": "수집 실패",
+            "not_requested": "수집 불필요",
+        }[evaluation["collection"]["status"]]
+        add(
+            "limits",
+            f"수집 상태: {collection}. 분석 품질: {verdict}. 조사 종료는 원인 확정을 뜻하지 않습니다.",
+            review["evidence_refs"],
+        )
+        if review.get("reason"):
+            add("limits", "검토 제한: " + review["reason"], review["evidence_refs"])
     candidates = result["cause_candidates"]
     mismatches = [
         h

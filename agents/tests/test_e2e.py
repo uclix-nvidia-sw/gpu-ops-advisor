@@ -4,6 +4,11 @@ Only upstream Grafana datasource responses and the inference endpoint are fixtur
 No production metrics or model-quality claims are made by this suite.
 """
 
+from evaluation_fixtures import (
+    interpretation_reply as rca_interpretation_reply,
+    review_reply,
+)
+
 import contextlib
 import csv
 import io
@@ -98,7 +103,11 @@ class Upstream(BaseHTTPRequestHandler):
             message = {
                 "role": "assistant",
                 "content": json.dumps(
-                    analysis_reply(data["observation_refs"])
+                    review_reply(data)
+                    if "rubric_version" in data
+                    else rca_interpretation_reply()
+                    if "Interpret incident evidence" in body["messages"][0]["content"]
+                    else analysis_reply(data["observation_refs"])
                     if "observation_refs" in data
                     else {"query_ids": data["available_queries"][:3]}
                     if "available_queries" in data
@@ -1473,6 +1482,13 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(q == "D09" and s == "ok" for q, s in evidence), evidence
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
+    evaluation = rca["quality"]["rca_evaluation"]
+    assert evaluation["schema_version"] == "1"
+    assert evaluation["evidence"]["execution_status"] == "complete"
+    assert evaluation["review"]["execution_status"] == "complete"
+    assert evaluation["review"]["verdict"] == "undetermined"
+    assert evaluation["review"]["analysis_id"] == evaluation["analysis_id"]
+    assert len(evaluation["review"]["criteria"]) == 6
     assert rca["narrative_status"] == "complete"
     assert {s["id"] for s in rca["narrative"]} >= {
         "problem",
@@ -1514,6 +1530,12 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert next(t for t in report["topics"] if t["topic_id"] == "O05")[
         "rca_references"
     ][0]["result_id"]
+    if any(t["topic_id"] == "O05" for t in report["topics"]):
+        refs = next(t for t in report["topics"] if t["topic_id"] == "O05").get(
+            "rca_references", []
+        )
+        if refs:
+            assert all("rca_evaluation" in ref for ref in refs)
     for artifact in report["artifacts"]:
         path = LOCAL / "artifacts" / artifact["object_key"]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact["checksum"]

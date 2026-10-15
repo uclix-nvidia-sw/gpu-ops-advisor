@@ -15,7 +15,9 @@ from agent_common.observation import Observation, usable_observation, evidence_s
 from agent_common.runtime import attempt_context
 from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
-from .synthesis import synthesis_input, synthesize
+from .synthesis import synthesis_input
+from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
+from .analysis_review import analysis_draft
 from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
 from .requirement_diagnostics import (
@@ -352,7 +354,9 @@ def rule_followup(books, plans, remaining, gaps, available):
     return ordered, governed, findings
 
 
-async def choose_followup(llm, remaining, gaps, diagnostics=None):
+async def choose_followup(
+    llm, remaining, gaps, diagnostics=None, review_questions=None
+):
     diagnostics = diagnostics if diagnostics is not None else {}
     diagnostics.update(status="not_needed", attempts=0, selected_queries=[])
     if not remaining:
@@ -371,6 +375,7 @@ async def choose_followup(llm, remaining, gaps, diagnostics=None):
                 "available_queries": remaining,
                 "query_descriptions": {q: query_label(q) for q in remaining},
                 "evidence_gap": gaps,
+                "review_questions": review_questions or [],
             },
             stage="investigation",
         )
@@ -404,6 +409,7 @@ async def choose_followup(llm, remaining, gaps, diagnostics=None):
                     "available_queries": remaining,
                     "query_descriptions": {q: query_label(q) for q in remaining},
                     "evidence_gap": gaps,
+                    "review_questions": review_questions or [],
                 },
                 stage="investigation",
             )
@@ -573,17 +579,104 @@ async def run(tools):
         "discovery": profile["limits"].get("max_discovery_calls", 64),
     }
     concurrency = profile["limits"].get("max_concurrency", 3)
-    analysis_status, model_candidates, analysis_limits = "skipped_runbook", [], []
+    analysis_status = "skipped_runbook"
     followups, gaps, gate = 0, [], "sufficient"
     stop_reason = None
     max_rounds = 2  # Required collection plus one bounded auxiliary batch.
 
-    async def evaluate_evidence(round_no, approved):
-        """Evaluate observations, apply investigation policies, and record one decision.
+    rule_refs = {}
+    evaluation_state = {"revisions": 0}
+    evaluation = None
+    synthesis_diagnostics = {}
+    error_events = []
+    candidates, recommendations = [], []
+    final_limits = [BASE_LIMIT]
+    planned_queries = list(queries)
 
-        Published Runbook policy fields and plan-extension provenance stay compatible;
-        only this stage writes the per-round evaluation record.
-        """
+    def assemble_rca_draft(model_candidates, health, facts, verified, applicable):
+        candidates = list(model_candidates)
+        recommendations = []
+        applicable_ids = {book["id"] for book in applicable}
+        for book in selected:
+            bid = rule_refs[book["id"]]
+            if book["id"] not in applicable_ids:
+                continue
+            observation_refs = [
+                e["id"]
+                for e in obs.evidence
+                if e["tool_status"] == "ok" and e["query_id"] in collected
+            ]
+            if book.get("general_investigation") or book["content"].get(
+                "investigation_only"
+            ):
+                continue
+            candidates.append(
+                dict(
+                    id=book["id"],
+                    claim=book["content"].get("claim", book["knowledge_key"]),
+                    causal_status="supported",
+                    supporting_refs=[eid, bid] + observation_refs,
+                    contradicting_refs=[],
+                    value_refs=[],
+                    missing_inputs=[],
+                )
+            )
+            for rec in book["content"].get("recommendations", []):
+                eligible = check_conditions(
+                    rec.get("preconditions", []),
+                    facts if schema_kind(book["content"]) == "legacy" else verified,
+                )
+                recommendations.append(
+                    dict(
+                        text=rec["text"],
+                        preconditions=rec.get("preconditions", []),
+                        eligibility="eligible" if eligible else "withheld",
+                        reason=None if eligible else "preconditions_not_verified",
+                        evidence_refs=[eid, bid],
+                        value_refs=[],
+                        execution="not_performed",
+                    )
+                )
+        if not candidates and health:
+            usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
+            candidate_health = [
+                h
+                for h in health
+                if h["check_status"] == "valid"
+                and set(h["evidence_refs"]) <= usable_ids
+            ]
+            supporting = list(
+                dict.fromkeys(
+                    r
+                    for h in candidate_health
+                    if h["normalized_health"] in ("degraded", "unhealthy")
+                    for r in h["evidence_refs"]
+                )
+            )
+            contradicting = list(
+                dict.fromkeys(
+                    r
+                    for h in candidate_health
+                    if h["normalized_health"] == "healthy"
+                    for r in h["evidence_refs"]
+                )
+            )
+            if supporting:
+                candidates.append(
+                    dict(
+                        id="observed_device_symptom",
+                        claim="수집 로그에 이상 상태가 보고됐으나 근본 원인과 현재 장비 상태는 추가 확인이 필요합니다.",
+                        causal_status="candidate",
+                        supporting_refs=supporting,
+                        contradicting_refs=contradicting,
+                        value_refs=[],
+                        missing_inputs=["causal_confirmation_evidence"],
+                    )
+                )
+        return candidates, recommendations
+
+    def evaluate_requirements(round_no, approved):
+        """Retain collection and Runbook requirement diagnostics independently of review."""
         health, facts, verified, relations, available = normalized_state(
             obs, collected, data, profile, initial_facts
         )
@@ -741,11 +834,146 @@ async def run(tools):
             if remaining
             else "insufficient_blocked"
         )
+        return dict(
+            health=health,
+            facts=facts,
+            verified=verified,
+            relations=relations,
+            available=available,
+            applicable=applicable,
+            pending=pending,
+            gaps=gaps,
+            gate=gate,
+            remaining=remaining,
+            approved=approved,
+            events=events,
+            policy_findings=policy_findings,
+            fallback_books=fallback_books,
+            unexpected_queries=unexpected_queries,
+            stopped_queries=stopped_queries,
+        )
+
+    async def analyze_round(state, round_no):
+        nonlocal evaluation, synthesis_diagnostics, analysis_status, error_events
+        nonlocal candidates, recommendations, final_limits
+        health = state["health"]
+        facts = state["facts"]
+        verified = state["verified"]
+        relations = state["relations"]
+        applicable = state["applicable"]
+        gaps = state["gaps"]
+        gate = state["gate"]
+        remaining = state["remaining"]
+        for book in selected:
+            if book["id"] in rule_refs:
+                continue
+            bid = str(uuid4())
+            obs.evidence.append(
+                dict(
+                    id=bid,
+                    query_id="runbook",
+                    query_version=str(book["revision"]),
+                    cluster_id=None,
+                    scope=data["scope"],
+                    time_range=data["time_range"],
+                    input={"revision_id": book["id"]},
+                    tool_status="ok",
+                    quality={
+                        "reviewed": book.get("origin") != "builtin",
+                        "origin": book.get("origin", "published"),
+                    },
+                    snapshot=book["content"],
+                    **evidence_stamp(),
+                )
+            )
+            rule_refs[book["id"]] = bid
+        error_events = (
+            []
+            if data.get("identity_conflicts")
+            else parse_events(obs.evidence, profile, data.get("target", {}))
+        )
+        if not fast_path:
+            payload = synthesis_input(
+                data,
+                obs.evidence,
+                health,
+                relations,
+                applicable,
+                selected,
+                error_events,
+            )
+            payload.update(evidence_gap=gaps, sufficiency=gate)
+            evaluation = await evaluate_analysis(
+                obs,
+                data,
+                profile,
+                health,
+                payload,
+                lambda model: assemble_rca_draft(
+                    model, health, facts, verified, applicable
+                ),
+                ctx["llm"],
+                evaluation_state,
+                round_no,
+                remaining,
+            )
+            synthesis_diagnostics = evaluation["synthesis"]
+            analysis_status = evaluation["synthesis_status"]
+            candidates = evaluation["draft"]["cause_candidates"]
+            recommendations = evaluation["draft"]["recommendations"]
+            final_limits = evaluation["draft"]["limitations"]
+        else:
+            candidates, recommendations = assemble_rca_draft(
+                [], health, facts, verified, applicable
+            )
+            draft = analysis_draft(candidates, recommendations, final_limits, {})
+            obs._evidence(
+                "rca_analysis_draft",
+                None,
+                data["time_range"],
+                {**draft, "input_view": {}},
+                "ok",
+                {},
+            )["id"]
+            evaluation = dict(
+                draft=draft,
+                review_output=None,
+                evidence=dict(
+                    execution_status="skipped", reason="fast_path", evidence_refs=[]
+                ),
+                review=dict(
+                    execution_status="skipped",
+                    verdict=None,
+                    reason="fast_path",
+                    analysis_id=draft["analysis_id"],
+                    evidence_refs=[],
+                ),
+            )
+        if time.monotonic() >= ctx["deadline"]:
+            raise TimeoutError("RCA evaluation deadline exhausted")
+
+    async def select_followup(state, round_no):
+        available = state["available"]
+        applicable = state["applicable"]
+        pending = state["pending"]
+        gaps = state["gaps"]
+        gate = state["gate"]
+        remaining = state["remaining"]
+        events = state["events"]
+        policy_findings = state["policy_findings"]
+        fallback_books = state["fallback_books"]
+        unexpected_queries = state["unexpected_queries"]
         stop_reason = (
             "fast_path"
             if fast_path
+            else evaluation["stop_reason"]
+            if evaluation.get("stop_reason")
+            else "review_accepted"
+            if evaluation["review"]["verdict"] == "acceptable"
+            and not evaluation["review_output"]["followup_questions"]
             else "sufficient"
             if gate == "sufficient"
+            and not (evaluation.get("review_output") or {}).get("followup_questions")
             else "no_remaining_queries"
             if not remaining
             else "query_budget_exhausted"
@@ -769,14 +997,14 @@ async def run(tools):
                 if q in remaining and (q not in governed or q in ruled)
             ]
             limit = max(0, min(3, budget["queries"]))
-            candidates = list(dict.fromkeys(policy_queries + ruled))
-            next_queries = candidates[:limit]
+            followup_candidates = list(dict.fromkeys(policy_queries + ruled))
+            next_queries = followup_candidates[:limit]
             selection_diagnostics = {
                 "status": "policy_selected" if next_queries else "conditions_not_met",
                 "method": "runbook_rules",
                 "selected_queries": next_queries,
                 "rule_findings": rule_findings,
-                "deferred_queries": candidates[limit:],
+                "deferred_queries": followup_candidates[limit:],
                 "attempts": 0,
             }
             # Missing authoring conditions never grant permission to consult the model.
@@ -795,7 +1023,13 @@ async def run(tools):
             selection_diagnostics["unconfigured_queries"] = unconfigured
             if not next_queries and exploratory:
                 await_queries = await choose_followup(
-                    ctx["llm"], exploratory, gaps, selection_diagnostics
+                    ctx["llm"],
+                    exploratory,
+                    gaps,
+                    selection_diagnostics,
+                    (evaluation.get("review_output") or {}).get(
+                        "followup_questions", []
+                    ),
                 )
                 next_queries = await_queries[:limit]
                 selection_diagnostics["method"] = "explicit_exploratory_llm"
@@ -836,21 +1070,7 @@ async def run(tools):
             "ok",
             {"deterministic": True},
         )
-        return (
-            health,
-            facts,
-            verified,
-            relations,
-            available,
-            applicable,
-            pending,
-            gaps,
-            gate,
-            stop_reason,
-            remaining,
-            next_queries,
-            approved,
-        )
+        return dict(stop_reason=stop_reason, next_queries=next_queries)
 
     for round_no in range(max_rounds):
         if not fast_path and queries:
@@ -859,59 +1079,45 @@ async def run(tools):
                     obs, queries, budget, round_no=round_no, concurrency=concurrency
                 )
             )
-        (
-            health,
-            facts,
-            verified,
-            relations,
-            available,
-            applicable,
-            pending,
-            gaps,
-            gate,
-            stop_reason,
-            remaining,
-            next_queries,
-            approved,
-        ) = await evaluate_evidence(round_no, approved)
-        if stop_reason:
-            break
-        queries = next_queries
-        followups += 1
-    synthesis_diagnostics = {}
-    error_events = (
-        []
-        if data.get("identity_conflicts")
-        else parse_events(obs.evidence, profile, data.get("target", {}))
-    )
-    if not fast_path:
-        payload = synthesis_input(
-            data, obs.evidence, health, relations, applicable, selected, error_events
-        )
-        payload.update(evidence_gap=gaps, sufficiency=gate)
-        analysis_status, model_candidates, analysis_limits = await synthesize(
-            ctx["llm"], payload, synthesis_diagnostics
+        state = evaluate_requirements(round_no, approved)
+        await analyze_round(state, round_no)
+        state.update(await select_followup(state, round_no))
+        health = state["health"]
+        relations, available = state["relations"], state["available"]
+        applicable, pending = state["applicable"], state["pending"]
+        gaps, gate, stop_reason = state["gaps"], state["gate"], state["stop_reason"]
+        remaining, next_queries, approved = (
+            state["remaining"],
+            state["next_queries"],
+            state["approved"],
         )
         obs._evidence(
-            "rca_synthesis",
+            "investigation_decision",
             None,
             data["time_range"],
             {
-                "status": analysis_status,
-                "input_evidence_refs": synthesis_diagnostics.get(
-                    "input_evidence_refs", []
-                ),
-                "diagnostics": synthesis_diagnostics,
-                "hypotheses": model_candidates,
-                "limitations": analysis_limits,
+                "round": round_no,
+                "action": "finish" if stop_reason else "collect",
+                "reason": stop_reason or "authorized_followup",
+                "analysis_id": evaluation["draft"]["analysis_id"],
+                "selected_queries": next_queries,
+                "revisions": evaluation_state["revisions"],
+                "remaining_budget": dict(budget),
+                "evidence_refs": evaluation["review"]["evidence_refs"],
             },
-            "ok" if analysis_status == "complete" else "unavailable",
+            "ok",
             {
-                "validated": analysis_status == "complete",
-                "reason": analysis_status,
-                "error_code": synthesis_diagnostics.get("error_code"),
+                "round": round_no,
+                "action": "finish" if stop_reason else "collect",
+                "reason": stop_reason or "authorized_followup",
+                "analysis_id": evaluation["draft"]["analysis_id"],
             },
         )
+        if stop_reason:
+            break
+        queries = next_queries
+        planned_queries.extend(q for q in queries if q not in planned_queries)
+        followups += 1
     analysis_missing = []
     if not fast_path and analysis_status != "complete":
         analysis_missing.append("synthesis_" + analysis_status)
@@ -926,67 +1132,6 @@ async def run(tools):
     if gate in ("degraded", "conflicted"):
         analysis_missing.append("observation_" + gate)
     analysis_missing.extend(gaps)
-    candidates = list(model_candidates)
-    recommendations = []
-    applicable_ids = {book["id"] for book in applicable}
-    for book in selected:
-        bid = str(uuid4())
-        obs.evidence.append(
-            dict(
-                id=bid,
-                query_id="runbook",
-                query_version=str(book["revision"]),
-                cluster_id=None,
-                scope=data["scope"],
-                time_range=data["time_range"],
-                input={"revision_id": book["id"]},
-                tool_status="ok",
-                quality={
-                    "reviewed": book.get("origin") != "builtin",
-                    "origin": book.get("origin", "published"),
-                },
-                snapshot=book["content"],
-                **evidence_stamp(),
-            )
-        )
-        if book["id"] not in applicable_ids:
-            continue
-        observation_refs = [
-            e["id"]
-            for e in obs.evidence
-            if e["tool_status"] == "ok" and e["query_id"] in collected
-        ]
-        if book.get("general_investigation") or book["content"].get(
-            "investigation_only"
-        ):
-            continue
-        candidates.append(
-            dict(
-                id=book["id"],
-                claim=book["content"].get("claim", book["knowledge_key"]),
-                causal_status="supported",
-                supporting_refs=[eid, bid] + observation_refs,
-                contradicting_refs=[],
-                value_refs=[],
-                missing_inputs=[],
-            )
-        )
-        for rec in book["content"].get("recommendations", []):
-            eligible = check_conditions(
-                rec.get("preconditions", []),
-                facts if schema_kind(book["content"]) == "legacy" else verified,
-            )
-            recommendations.append(
-                dict(
-                    text=rec["text"],
-                    preconditions=rec.get("preconditions", []),
-                    eligibility="eligible" if eligible else "withheld",
-                    reason=None if eligible else "preconditions_not_verified",
-                    evidence_refs=[eid, bid],
-                    value_refs=[],
-                    execution="not_performed",
-                )
-            )
     assessments = []
     for book in selected:
         missing = sorted(
@@ -1023,41 +1168,6 @@ async def run(tools):
         if e["tool_status"] == "unavailable" and e["query_id"] in collected
     ]
     conflicting = conflicting_health(health)
-    if not candidates and health:
-        usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
-        candidate_health = [
-            h
-            for h in health
-            if h["check_status"] == "valid" and set(h["evidence_refs"]) <= usable_ids
-        ]
-        supporting = list(
-            dict.fromkeys(
-                r
-                for h in candidate_health
-                if h["normalized_health"] in ("degraded", "unhealthy")
-                for r in h["evidence_refs"]
-            )
-        )
-        contradicting = list(
-            dict.fromkeys(
-                r
-                for h in candidate_health
-                if h["normalized_health"] == "healthy"
-                for r in h["evidence_refs"]
-            )
-        )
-        if supporting:
-            candidates.append(
-                dict(
-                    id="observed_device_symptom",
-                    claim="수집 로그에 이상 상태가 보고됐으나 근본 원인과 현재 장비 상태는 추가 확인이 필요합니다.",
-                    causal_status="candidate",
-                    supporting_refs=supporting,
-                    contradicting_refs=contradicting,
-                    value_refs=[],
-                    missing_inputs=["causal_confirmation_evidence"],
-                )
-            )
     reason = "evidence_sufficient" if not missing else "missing_data"
     if conflicting:
         reason = "conflicting_evidence"
@@ -1093,9 +1203,7 @@ async def run(tools):
         device_observations=health,
         result_status=result_status(assessments),
         evidence_refs=[e["id"] for e in obs.evidence],
-        limitations=[
-            "관측·권고는 원인 확정, 조치 수행 또는 업무 복구를 의미하지 않습니다."
-        ],
+        limitations=final_limits,
     )
     result["facts"] = [
         dict(
@@ -1169,7 +1277,39 @@ async def run(tools):
         for e in obs.evidence
         if e["query_id"].startswith("D")
     ]
-    result["limitations"].extend(analysis_limits)
+    final_stop = {
+        "sufficient": "analysis_unresolved",
+        "no_remaining_queries": "no_available_followup",
+    }.get(stop_reason, stop_reason)
+    if evaluation.get("stop_reason"):
+        final_stop = evaluation["stop_reason"]
+    elif (
+        evaluation["review"]["verdict"] == "acceptable"
+        and not evaluation["review_output"]["followup_questions"]
+    ):
+        final_stop = "review_accepted"
+    elif evaluation["review"].get("reason") == "model_not_configured":
+        final_stop = "model_unavailable"
+    elif evaluation["review"].get("reason") in {
+        "llm_token_budget_exhausted",
+    }:
+        final_stop = "llm_budget_exhausted"
+    result["quality"]["rca_evaluation"] = {
+        "schema_version": "1",
+        "collection": collection_status(planned_queries, collected, fast_path),
+        "evidence": evaluation["evidence"],
+        "analysis_id": evaluation["draft"]["analysis_id"],
+        "review": evaluation["review"],
+        "investigation": {
+            "status": "finished",
+            "stop_reason": final_stop,
+            "evidence_refs": [
+                e["id"]
+                for e in obs.evidence
+                if e["query_id"] == "investigation_decision"
+            ],
+        },
+    }
     await write_report(result, data, clues, obs.evidence, ctx["llm"])
     result["llm_usage"] = ctx["llm"].usage
     return {"result": result, "evidence": obs.evidence}

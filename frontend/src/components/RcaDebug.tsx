@@ -1,3 +1,4 @@
+import { RcaEvaluationTrace, RcaStageDetails } from './RcaEvaluationTrace';
 import { RcaObservations } from './RcaObservations';
 import { RcaNarrative } from './RcaNarrative';
 import { gapMeaning } from '../lib/rcaGuidance';
@@ -345,7 +346,7 @@ export function RcaEvidence({
   onEvidence: (id: string) => void;
 }) {
   const refs = [...new Set(strings(result.evidence_refs))],
-    [count, setCount] = useState(0);
+    [count, setCount] = useState(8);
   const queries = useQueries({
     queries: refs.slice(0, count).map((id) => ({
       queryKey: ['api', `/evidence/${encodeURIComponent(id)}`, job.id, job.attempt_no],
@@ -408,6 +409,7 @@ export function RcaEvidence({
           있는지 확인하세요.
         </p>
       )}
+      <RcaEvaluationTrace items={items} onEvidence={onEvidence} />
       {trace
         .filter((v) => v.query_id === 'evidence_evaluation')
         .map((v) => (
@@ -420,6 +422,7 @@ export function RcaEvidence({
             {trace.map((v) => (
               <article className="data-item" key={str(v.id)}>
                 <h4>{str(v.query_id)}</h4>
+                <RcaStageDetails record={v} onEvidence={onEvidence} />
                 <DataView value={v.snapshot} field="snapshot" />
                 <button className="text-link" onClick={() => onEvidence(str(v.id))}>
                   근거 상세 · {str(v.id)}
@@ -472,7 +475,7 @@ export function RcaResult({
             <summary>분석 요약·LLM 실행 기록</summary>
             <h3>분석 요약</h3>
             <dl className="details">
-              <dt>결과 품질</dt>
+              <dt>기존 요건 충족 상태</dt>
               <dd>
                 <Badge status={str(result.result_status) || null} />
               </dd>

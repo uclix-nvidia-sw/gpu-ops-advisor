@@ -337,6 +337,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
         </section>
         {relation && (
           <RecordInspector
+            onEvidence={onEvidence}
             relation={relation}
             onClose={() => {
               setKnowledgeIndex(null);

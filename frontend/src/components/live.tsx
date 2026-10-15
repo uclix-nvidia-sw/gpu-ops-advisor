@@ -97,7 +97,7 @@ const fieldLabels: Record<string, string> = {
   title: '제목',
   summary: '요약',
   text: '내용',
-  result_status: '결과 품질',
+  result_status: '요건 충족 상태',
   narrative_status: '설명 상태',
   unit: '단위',
   value: '값',
@@ -510,7 +510,7 @@ export function JobRows({ items }: { items: Row[] }) {
             {!rcaList && <th>종류</th>}
             <th>접수 시각</th>
             <th className="job-state-cell">실행 상태</th>
-            <th className="job-state-cell">결과 품질</th>
+            <th className="job-state-cell">요건 충족 상태</th>
             <th>{rcaList ? '실행 기록' : '최종 보고서'}</th>
           </tr>
         </thead>
@@ -644,7 +644,7 @@ function ReportHistory({ items, from }: { items: Row[]; from: string }) {
                   실행 상태 <Badge status={str(job.status) || null} />
                 </span>
                 <span>
-                  결과 품질 <Badge status={str(job.result_status) || null} />
+                  요건 충족 상태 <Badge status={str(job.result_status) || null} />
                 </span>
               </div>
             </header>

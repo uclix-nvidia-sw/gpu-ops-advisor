@@ -287,6 +287,9 @@ def validate_result(result, evidence):
 
     walk(result)
     if result["kind"] == "rca":
+        from .rca_evaluation import validate_evaluation
+
+        validate_evaluation(result, evidence)
         if (
             not {
                 "incident_id",

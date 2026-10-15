@@ -11,9 +11,10 @@
 | 집계 보고서 GPU 신원 전환 | 2026-10-14, base `a317bf7`: 계산/전환 46개, 기존 UI 소비자 35개, 전체 Agent/fixture E2E 1,211개 통과 기록 | Python 3.11.16, 임시 loopback PostgreSQL·실제 Worker/NAT/공식 MCP·가짜 Grafana/LLM. 운영 동시 부하·주간 최대 크기는 미검증 |
 | 기존 O계열 계산·수집 최소화 | 2026-10-12~13: 동일 합성 자료의 유지 지표·상태·참조 비교, 발행·삭제 fixture 검사 | 원천 실환경 지연·최대 메모리 개선의 증거가 아님 |
 | Ops 주제별 AI 해석 | 2026-10-14, PR #126 / main `2171929` 통합: 전체 Agent·격리 프로세스 E2E 1,575개 통과(128.55초, 건너뜀 없음), 설명 검증 40개 포함. 값·시간·참조 검증, 설명 실패 시 계산 유지, CSV 동일성과 HTML 발행 검사 | Python 3.11.16, 임시 PostgreSQL·실제 Worker/NAT/MCP·fixture Grafana/LLM. 실제 운영 모델 재생은 아래 별도 근거이며, 배포·대용량 부하는 미검증 |
+| RCA 평가 분리·GUI 디버깅 | 2026-10-15, base `a92a9a2`, 로컬 `feat/rca-evaluation-separation`: Python 3.12.14 전체 비 E2E 1,545 통과·기존 Windows 파일 정리 3 실패. 최종 집중 평가·조회 선택·입력 구성 119 통과. 새 임시 PostgreSQL·현재 소스 Backend/JC/Incident·실제 양 Worker/NAT/MCP·fixture Grafana/LLM E2E 8 통과. Frontend 294 통과. Playwright 고정 응답 화면에서 미검토 전환·검토 근거 ID 이동 확인 | 커밋·CI·배포 전 로컬 검증. 기존 파일 정리 3건은 열린 파일 삭제·디렉터리 재생성·flush의 Windows 동작으로 실패하며 이번 변경에서 수정하지 않음. 새 rubric의 실제 모델 의미 정확도(T79)·운영 환경 GUI는 미검증 |
 | 공통 Worker 수명주기 | CI가 양 Worker의 claim·lease·heartbeat·저장·공개·취소·원격 종료 불명 경로 검사 | fixture E2E는 실제 Grafana/LLM의 가용성·성능 검증이 아님 |
 
-검사 위치: [조건부 조회](tests/test_rca_rule_selection.py), [JSON 선택](tests/test_rca_batch_selection.py), [수정 예산](tests/test_rca_repairs.py), [모델 입력](tests/test_synthesis_context.py), [전환 검토](tests/test_runbook_transition.py), [프로세스 E2E](tests/test_e2e.py), [Ops 해석](tests/test_report_interpretation.py), [파일 정리](tests/test_report_cleanup.py), [파일 정리 DB E2E](tests/test_report_cleanup_e2e.py).
+검사 위치: [평가 분리·척도 계약](tests/test_rca_evaluation.py), [GUI 평가 표시](../frontend/src/components/RcaEvaluation.test.tsx), [조건부 조회](tests/test_rca_rule_selection.py), [JSON 선택](tests/test_rca_batch_selection.py), [수정 예산](tests/test_rca_repairs.py), [모델 입력](tests/test_synthesis_context.py), [전환 검토](tests/test_runbook_transition.py), [프로세스 E2E](tests/test_e2e.py), [Ops 해석](tests/test_report_interpretation.py), [파일 정리](tests/test_report_cleanup.py), [파일 정리 DB E2E](tests/test_report_cleanup_e2e.py).
 
 [PR #123 CI 실패 근거](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/actions/runs/38510572299): `test_repair_gate_records_specific_conditions`의 adaptive/deadline 두 경우와 `test_repair_gate_matches_real_transport_output_cap`. [PR #124](https://github.com/uclix-nvidia-sw/gpu-ops-advisor/pull/124)에서 고정 예산 fixture를 현재 프롬프트 크기에 맞췄다. 최신 revision의 전체 결과는 해당 commit의 CI에서 확인한다.
 
@@ -35,6 +36,7 @@
 
 ## 남은 검증
 
+- 평가 척도: [rubric 1](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#분석-품질-평가-척도--rubric-1)의 적절한/과장된 분석 쌍을 실제 모델에 재생하여 항목별 누락·오검출·비용을 사람이 원본과 대조해야 함. 고정 응답의 분기 통과는 의미 정확도 검증이 아님.
 - RCA: 실제 사건의 대상·발생 시각·현재 상태·원인 근거, 모델 응답의 의미 품질, 오류별 보완 D 선택과 지침의 적합성.
 - Runbook: [265개 전환 검토](../rcca-agent/runbooks/transition-review-20261014.json)의 196개 계약 통과는 의미 승인이나 발행이 아니다. 69개 보류와 기존 구조화 내용의 병합 검토, 최신 운영 revision/hash·profile 대조가 필요하다.
 - Ops: 운영 주간·최대 크기·동시 실행에서 지연과 RSS, 신원 변동과 원본 보존 부족, 예산 소진 시 부분 결과 확인.
