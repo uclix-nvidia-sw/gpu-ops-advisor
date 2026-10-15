@@ -84,7 +84,7 @@
         "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
         "revision": "Page last updated 2026-09-09; mutable upstream document",
         "section": "GPU Node Triage",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-15"
       },
       {
         "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L1671",
@@ -102,13 +102,13 @@
         "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
         "revision": "Page last updated 2026-09-09; mutable upstream document",
         "section": "Xids; Resolution Buckets; Steps 1-4",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-15"
       },
       {
         "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 79; Table 3 Resolution Buckets",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-15"
       }
     ],
     "limitations": [
@@ -146,11 +146,31 @@
       "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "NVIDIA 적용: A100, H100, B100, GB200.",
       "NVIDIA 조치 분류: immediate=RESTART_BM; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
-      "조건부 권고: 작업 배출·유지보수 승인·노드 범위를 확인한 뒤 운영자가 bare-metal 재시작을 검토한다."
+      "조건부 복구 권고: 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면, 원본 로그 보존·작업 배출·유지보수 승인 후 해당 호스트를 재시작한다. 로그만 시험 주입했고 접근 장애가 없는 경우에는 시험 로그만으로 재시작하지 않는다."
     ],
     "recommendations": [
       {
         "text": "운영자가 해당 GPU·노드의 원본 오류 로그와 장치 정보를 보존하고, 동시 PCIe 오류 및 벤더 진단에 필요한 자료를 확인한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:79"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "조건부 복구: NVIDIA 카탈로그 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면 호스트 재시작을 권고한다(RESTART_BM). 운영자는 대상 호스트·GPU 모델·운영 모드와 작업 중단 범위를 확인하고, 진단 로그 보존 및 작업 배출 후 수행한다. 로그만 주입한 시험은 실제 접근 장애와 구분한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:79"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "조치 후 확인: 운영자는 같은 GPU UUID의 인식·접근 회복과 작업 재개 결과를 확인한다. 재발하거나 접근이 회복되지 않으면 오류 원문·GPU 식별 정보·진단 자료·조치 이력을 첨부해 공급사 지원을 요청한다(CONTACT_SUPPORT). 확인 결과는 수행한 조치와 별도로 기록한다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -173,16 +193,16 @@
       "cause_note": "실제 장치에서 발생한 XID79라면 PCIe 연결 불량이나 전원 문제 등을 조사할 수 있습니다.",
       "next_checks": [
         {
-          "title": "어느 장치에서 발생했는지 확인하세요.",
-          "text": "오류 로그의 PCI 주소와 실제 장치 정보를 대조하세요. 시험 주입 로그인지도 확인해야 합니다. 같은 서버의 GPU 목록만으로 오류 장치를 확정하지 마세요."
+          "title": "보고서의 장치 연결 결과를 사용하세요.",
+          "text": "동일 서버에서 오류 PCI와 GPU UUID가 일치한 근거가 있으면 해당 GPU를 조사 대상으로 사용하세요. 연결 정보가 없거나 충돌한 경우에만 원본 장치 정보를 추가 대조하세요. 로그 주입 시험과 실제 GPU 접근 장애는 구분합니다."
         },
         {
           "title": "해당 GPU가 현재 정상적으로 인식되는지 확인하세요.",
           "text": "서버에서 GPU에 접근할 수 있는지 확인하고, 오류가 보고된 시간대의 PCIe 연결 오류 로그를 함께 살펴보세요."
         },
         {
-          "title": "재시작이 필요하다면 서비스 영향을 먼저 확인하세요.",
-          "text": "해당 서버에서 실행 중인 작업을 안전하게 종료하거나 다른 서버로 옮기고, 재시작할 서버와 작업 시간을 확인한 뒤 담당자의 승인을 받아 진행하세요. 현재 분석만으로 재시작이 필요하다고 확정한 것은 아닙니다."
+          "title": "조건에 맞는 실제 장애는 호스트 재시작을 권고합니다.",
+          "text": "적용 GPU 모델의 bare-metal 환경에서 실제 XID 79 장애가 발생했다면 원본 로그를 보존하고, 해당 서버의 작업을 안전하게 종료하거나 다른 서버로 옮긴 뒤 호스트를 재시작하세요. 모델·운영 모드가 미확인이라면 그 항목을 먼저 확인하세요. 재시작 후 같은 GPU의 접근 회복과 작업 재개를 확인하고 재발·미복구 시 공급사 지원을 요청하세요."
         }
       ],
       "references": [
@@ -196,7 +216,7 @@
         },
         {
           "title": "NVIDIA 문헌의 조치 안내",
-          "text": "물리 서버 재시작과 기술 지원 문의가 제시돼 있습니다. 현재 장비의 상태와 적용 조건을 확인한 뒤 검토해야 합니다.",
+          "text": "적용 모델의 bare-metal 장애에는 호스트 재시작(RESTART_BM)을 권고합니다. 재발하거나 접근이 회복되지 않으면 진단 자료와 조치 이력을 첨부해 기술 지원(CONTACT_SUPPORT)을 요청하세요. VM·운영 모드 미확인 환경에는 호스트 재시작을 그대로 적용하지 마세요.",
           "source_indices": [
             3,
             4

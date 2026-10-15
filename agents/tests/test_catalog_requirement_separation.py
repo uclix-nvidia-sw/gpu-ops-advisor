@@ -91,8 +91,35 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
             assert (
                 selection["before_content_sha256"] == followup["after_content_sha256"]
             )
-            assert digest == selection["after_content_sha256"]
             original = deepcopy(row["content"])
+            amendment = selection.get("operator_guidance_update")
+            if amendment:
+                assert amendment["status"] == "local_review_not_published"
+                assert (
+                    amendment["before_content_sha256"]
+                    == selection["after_content_sha256"]
+                )
+                assert digest == amendment["after_content_sha256"]
+                assert set(amendment["previous_values"]) == {
+                    "sources",
+                    "analysis_guidance",
+                    "recommendations",
+                    "operator_guidance",
+                }
+                original.update(amendment["previous_values"])
+                assert (
+                    hashlib.sha256(
+                        json.dumps(
+                            original,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()
+                    ).hexdigest()
+                    == selection["after_content_sha256"]
+                )
+            else:
+                assert digest == selection["after_content_sha256"]
             for step in original["observation_plan"]:
                 step.pop("selection", None)
             del original["operator_guidance"]

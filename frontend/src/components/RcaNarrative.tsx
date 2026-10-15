@@ -1,7 +1,7 @@
 import { RcaEvaluation } from './RcaEvaluation';
 import { structuredGuidance } from './StructuredGuidance';
 import { RcaGuidance } from './RcaGuidance';
-import { rows, str, type Row } from '../lib/live';
+import { obj, rows, str, type Row } from '../lib/live';
 import './RcaNarrative.css';
 
 // Localize only the explicitly labelled incident timestamp; preserve stored results.
@@ -75,8 +75,9 @@ export function RcaNarrative({
   result: Row;
   consolidateChecks?: boolean;
 }) {
+  const incidentFirst = obj(obj(result.quality).report).presentation === 'incident-first/1';
   const sections = rows(result.narrative).filter(
-    (s) => !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
+    (s) => incidentFirst || !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
   );
   if (!sections.length) return null;
   return (
@@ -96,13 +97,15 @@ export function RcaNarrative({
         </details>
       </header>
       <nav className="rca-narrative-nav" aria-label="최종 보고서 목차">
-        {sections.map((section, index) => (
-          <a key={index} href={`#rca-report-section-${index}`}>
-            {str(section.id) === 'guidance'
-              ? '다음에 확인할 내용'
-              : str(section.title) || '분석 설명'}
-          </a>
-        ))}
+        {sections.map((section, index) =>
+          incidentFirst && ['guidance', 'limits'].includes(str(section.id)) ? null : (
+            <a key={index} href={`#rca-report-section-${index}`}>
+              {str(section.id) === 'guidance'
+                ? '다음에 확인할 내용'
+                : str(section.title) || '분석 설명'}
+            </a>
+          ),
+        )}
       </nav>
       <div className="rca-narrative-sections">
         {sections.map((section, index) => {
@@ -110,6 +113,18 @@ export function RcaNarrative({
             .split(/\n\s*\n/)
             .filter((p) => p.trim());
           const list = ['next', 'limits'].includes(str(section.id));
+          if (incidentFirst && ['guidance', 'limits'].includes(str(section.id))) {
+            return (
+              <details key={index} className="rca-narrative-more">
+                <summary>{str(section.title)}</summary>
+                {section.id === 'guidance' ? (
+                  <RcaGuidance paragraphs={paragraphs} result={result} />
+                ) : (
+                  paragraphs.map((text, i) => <p key={i}>{text}</p>)
+                )}
+              </details>
+            );
+          }
           return (
             <section
               key={index}
