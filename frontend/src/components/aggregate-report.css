@@ -570,6 +570,27 @@
 .aggregate-workload-namespace {
   margin-top: 20px;
 }
+.aggregate-workload-highlights {
+  margin: 12px 0 4px;
+  padding-left: 20px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.aggregate-workload-highlights li + li {
+  margin-top: 4px;
+}
+.aggregate-workload-caption {
+  color: var(--muted);
+  font-size: 12px;
+}
+.aggregate-workload-detail {
+  margin-top: 12px;
+}
+.aggregate-workload-detail > summary {
+  color: #176b53;
+  cursor: pointer;
+  font-weight: 600;
+}
 .aggregate-workload-namespace + .aggregate-workload-namespace {
   padding-top: 20px;
   border-top: 1px solid #d9e3dd;
