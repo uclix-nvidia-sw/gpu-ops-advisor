@@ -49,6 +49,8 @@ Complete `llm_interpreted` narrative appears in each topic as **AI 운영 해석
 
 When every `narrative[].advice` item has a stored `summary`, show the LLM-authored bullet summaries first; fixed observations and conditions remain in the collapsed evidence section. The frontend does not rewrite model prose. Older advice and three-field narratives retain their renderer. / 저장된 AI 요약 불릿을 먼저 보여주고 상세 관측·조건은 접힌 근거에 보관합니다. 화면에서 분석 문장을 합성하거나 바꿔 쓰지 않습니다. 산식·제안 판정은 프런트엔드에서 만들지 않습니다.
 
+For workload evidence, each cluster first shows up to three namespaces with the largest positive observed Pending Pod peak and the first hour of that peak. The observed hourly rows, including zero values, and explicit missing-data labels remain behind “Namespace별 모든 시간대 보기”; completed Job evidence remains visible. The displayed peak is a count, never a waiting duration. / 작업 관측은 양수 대기가 컸던 Namespace 최대 3개와 최초 최대 관측 시간대만 먼저 보여주고 모든 시간대는 펼쳐 확인합니다. 대기 시간으로 읽지 않습니다.
+
 
 기존 `llm_prioritized` 결과는 **AI가 고른 주요 변화**로 표시합니다. 코드가 만든 문장 중 AI가 선택한 결과이며 새로 작성한 해석은 아닙니다. `deterministic_fallback`은 **계산 결과 요약**, 출처 미기록은 **저장된 주요 변화**로 구분하고 빈 narrative는 표시하지 않습니다. 기존 계산·저장 문장·RCA는 변경하지 않습니다. 새 해석의 시간대 근거는 선택된 Namespace·모델과 전후 구간의 저장 수치를 표시해 그래프·표와 대조할 수 있습니다.
 

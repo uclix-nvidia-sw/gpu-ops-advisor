@@ -30,6 +30,17 @@ export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
           rows(w.completed_jobs).map((j) => ({ ...j, namespace: w.namespace })),
         );
         const maxElapsed = Math.max(1, ...jobs.map((j) => Number(j.elapsed_seconds) || 0));
+        const pendingHighlights = clusterWorkloads.flatMap((w) => {
+          const hours = rows(w.hours).filter(
+            (h) => typeof h.pending_peak === 'number' && h.pending_peak > 0,
+          );
+          if (!hours.length) return [];
+          const peak = Math.max(...hours.map((h) => Number(h.pending_peak)));
+          const firstPeak = hours.find((h) => h.pending_peak === peak)!;
+          return [{ namespace: str(w.namespace), peak, firstPeak }];
+        });
+        pendingHighlights.sort((a, b) => b.peak - a.peak || a.namespace.localeCompare(b.namespace));
+        const shownPendingHighlights = pendingHighlights.slice(0, 3);
         return (
           <section
             key={cluster}
@@ -41,65 +52,97 @@ export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
             </div>
             <section className="aggregate-metric-chart">
               <h5 className="aggregate-chart-metric-title">시간대별 최대 대기 Pod 수 (개)</h5>
-              {clusterWorkloads.map((w) => {
-                const hours = rows(w.hours).filter((h) => typeof h.pending_peak === 'number');
-                return (
-                  <div
-                    key={str(w.namespace)}
-                    className="aggregate-workload-namespace"
-                    aria-label={`${cluster} ${w.namespace} 대기 관측`}
-                  >
-                    <h6>{str(w.namespace)}</h6>
-                    {!hours.length ? (
-                      <p>대기 자료 없음</p>
-                    ) : (
-                      <div
-                        className="aggregate-workload-bars"
-                        role="list"
-                        aria-label={`${w.namespace} 시간대별 최대 대기 Pod 수`}
-                      >
-                        {hours.map((h) => (
-                          <div role="listitem" key={str(h.start)}>
-                            <div className="aggregate-workload-period">
-                              <span>{reportRequestTime(str(h.start)).slice(0, -9)}</span>
-                              <strong>
-                                {reportRequestTime(str(h.start)).slice(-8, -3)}–
-                                {reportRequestTime(str(h.end)).slice(-8, -3)}
-                              </strong>
+              {pendingHighlights.length ? (
+                <ul className="aggregate-workload-highlights">
+                  {shownPendingHighlights.map(({ namespace, peak, firstPeak }) => (
+                    <li key={namespace}>
+                      <strong>{namespace}</strong> · 최대 {peak}개 ·{' '}
+                      {reportRequestTime(str(firstPeak.start)).slice(0, -9)}{' '}
+                      {reportRequestTime(str(firstPeak.start)).slice(-8, -3)}–
+                      {reportRequestTime(str(firstPeak.end)).slice(-8, -3)}
+                    </li>
+                  ))}
+                  {pendingHighlights.length > shownPendingHighlights.length && (
+                    <li>
+                      그 외 {pendingHighlights.length - shownPendingHighlights.length}개 Namespace는
+                      상세 보기
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p>
+                  {clusterWorkloads.some((w) =>
+                    rows(w.hours).some((h) => typeof h.pending_peak === 'number'),
+                  )
+                    ? '관측된 시간대에 대기 Pod가 없었습니다.'
+                    : '대기 관측 자료가 없습니다.'}
+                </p>
+              )}
+              <p className="aggregate-workload-caption">
+                첫 최대 관측 시간대입니다. 대기 시간은 아닙니다.
+              </p>
+              <details className="aggregate-workload-detail">
+                <summary>Namespace별 모든 시간대 보기</summary>
+                {clusterWorkloads.map((w) => {
+                  const hours = rows(w.hours).filter((h) => typeof h.pending_peak === 'number');
+                  return (
+                    <div
+                      key={str(w.namespace)}
+                      className="aggregate-workload-namespace"
+                      aria-label={`${cluster} ${w.namespace} 대기 관측`}
+                    >
+                      <h6>{str(w.namespace)}</h6>
+                      {!hours.length ? (
+                        <p>대기 자료 없음</p>
+                      ) : (
+                        <div
+                          className="aggregate-workload-bars"
+                          role="list"
+                          aria-label={`${w.namespace} 시간대별 최대 대기 Pod 수`}
+                        >
+                          {hours.map((h) => (
+                            <div role="listitem" key={str(h.start)}>
+                              <div className="aggregate-workload-period">
+                                <span>{reportRequestTime(str(h.start)).slice(0, -9)}</span>
+                                <strong>
+                                  {reportRequestTime(str(h.start)).slice(-8, -3)}–
+                                  {reportRequestTime(str(h.end)).slice(-8, -3)}
+                                </strong>
+                              </div>
+                              <svg
+                                viewBox="0 0 400 24"
+                                role="img"
+                                aria-label={`최대 대기 ${h.pending_peak}개`}
+                              >
+                                <title>
+                                  {`${reportRequestTime(str(h.start))} ~ ${reportRequestTime(str(h.end))}`}
+                                </title>
+                                <rect
+                                  x="0"
+                                  y="6"
+                                  width="360"
+                                  height="12"
+                                  className="aggregate-workload-track"
+                                />
+                                <rect
+                                  x="0"
+                                  y="6"
+                                  width={(Number(h.pending_peak) / maximum) * 360}
+                                  height="12"
+                                  className="aggregate-workload-bar"
+                                />
+                                <text x="370" y="17">
+                                  {Number(h.pending_peak)}개
+                                </text>
+                              </svg>
                             </div>
-                            <svg
-                              viewBox="0 0 400 24"
-                              role="img"
-                              aria-label={`최대 대기 ${h.pending_peak}개`}
-                            >
-                              <title>
-                                {`${reportRequestTime(str(h.start))} ~ ${reportRequestTime(str(h.end))}`}
-                              </title>
-                              <rect
-                                x="0"
-                                y="6"
-                                width="360"
-                                height="12"
-                                className="aggregate-workload-track"
-                              />
-                              <rect
-                                x="0"
-                                y="6"
-                                width={(Number(h.pending_peak) / maximum) * 360}
-                                height="12"
-                                className="aggregate-workload-bar"
-                              />
-                              <text x="370" y="17">
-                                {Number(h.pending_peak)}개
-                              </text>
-                            </svg>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </details>
             </section>
             <section className="aggregate-metric-chart">
               <h5 className="aggregate-chart-metric-title">완료 Job별 경과시간 · 대기·준비 포함</h5>
