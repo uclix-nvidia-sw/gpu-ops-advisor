@@ -6,6 +6,7 @@ import json
 import pytest
 from ops_agent.namespace_advice import (
     candidates,
+    elapsed_range,
     select_candidates,
     summary_context,
     validate_advice,
@@ -297,6 +298,20 @@ def test_model_prose_cannot_expand_permission_or_invent_observations(problem):
         )
     with pytest.raises(ValueError):
         validate_advice(s, dict(findings=p))
+
+
+def test_more_than_five_advice_items_gets_actionable_repair_feedback():
+    facts = candidates(topic())
+    reply = section(facts)
+    reply["advice"] *= 6
+    with pytest.raises(ValueError, match="1~5개"):
+        validate_advice(reply, dict(findings=facts))
+
+
+def test_job_elapsed_summary_uses_readable_exact_duration():
+    assert elapsed_range([10809, 21617]) == "3시간 9초~6시간 17초"
+    assert elapsed_range([0]) == "0초"
+    assert elapsed_range([1209]) == "20분 9초"
 
 
 async def test_new_interpretation_preserves_all_original_calculations_and_fallback():
@@ -644,11 +659,11 @@ def test_batch_window_uses_exact_completion_samples_not_report_average():
     before = deepcopy(t)
     fact = next(f for f in candidates(t) if f["kind"] == "batch_progress")
     values = summary_context(fact)["summary_tokens"]
-    assert values["{{completed}}"] == "2건"
-    assert values["{{elapsed}}"] == "1200~3600초"
+    assert values["{{completed}}"] == "1건"
+    assert values["{{elapsed}}"] == "1시간"
     assert values["{{pending_change}}"] == "2개 → 0개"
-    assert len(fact["completed_jobs"]) == 2
-    assert "일부" in fact["conditions"]
+    assert len(fact["completed_jobs"]) == 1
+    assert fact["selection_basis"]["pending_complete"]
     assert t == before
 
 
@@ -657,7 +672,7 @@ def batch_section(fact):
         "advice": [
             {
                 "fact_id": fact["fact_id"],
-                "summary": "{{target}} · {{period}}: 시간대별 최대 대기 Pod 수는 {{pending_change}}이며 완료 표본은 {{completed}}, 대기·준비 포함 Job 경과시간은 {{elapsed}}입니다. 다음 배치의 제출 시점과 작업 규모를 기록과 대조하여 제출 간격을 검토하세요.",
+                "summary": "{{target}} · {{period}}: 시간대별 최대 대기 Pod 수는 {{pending_change}}이며 완료 표본은 {{completed}}, 대기·준비 포함 Job 경과시간은 {{elapsed}}입니다. 스케줄러 대기 사유와 완료 Job의 작업 유형을 확인하세요.",
             }
         ]
     }
@@ -705,11 +720,71 @@ def test_completed_only_hour_does_not_attach_jobs_outside_its_reported_period():
     )
 
 
-def test_batch_summary_must_be_selected_and_duplicate_queue_checks_are_rejected():
-    facts = candidates(completed_topic())
+def test_batch_summary_must_be_selected_and_duplicate_queue_checks_are_folded():
+    t = completed_topic()
+    t["workloads"][0]["hours"][0]["pending_samples"] = 240
+    facts = candidates(t)
     queue = next(f for f in facts if f["kind"] == "queue_review")
+    batch = next(f for f in facts if f["kind"] == "batch_progress")
     with pytest.raises(ValueError, match="batch_progress_summary_required"):
         validate_advice(section([queue]), {"findings": facts})
+    reply = {"advice": batch_section(batch)["advice"] + section([queue])["advice"]}
+    out = validate_advice(reply, {"findings": facts})
+    assert [item["fact_id"] for item in out["advice"]] == [batch["fact_id"]]
+    assert out["source_fact_ids"] == [batch["fact_id"]]
+
+
+def test_incomplete_batch_is_not_offered_as_joined_operational_advice():
+    t = completed_topic()
+    t["workloads"][0]["hours"][1]["pending_samples"] = 100
+    facts = candidates(t)
+    selected, audit = select_candidates(facts)
+    assert all(f["kind"] != "batch_progress" for f in selected)
+    assert audit["required_batch_fact_id"] is None
+    assert any(f["kind"] == "queue_review" for f in selected)
+
+
+def test_complete_batch_remains_available_and_mandatory():
+    t = completed_topic()
+    t["workloads"][0]["hours"][0]["pending_samples"] = 240
+    facts = candidates(t)
+    selected, audit = select_candidates(facts)
+    batch = next(f for f in selected if f["kind"] == "batch_progress")
+    assert audit["required_batch_fact_id"] == batch["fact_id"]
+
+
+def test_complete_queue_and_jobs_remain_eligible_when_gpu_activity_has_gaps():
+    t = completed_topic()
+    t["rows"][0]["hours"][1]["reasons"] = ["unobserved_hour"]
+    selected, audit = select_candidates(candidates(t))
+    batch = next(f for f in selected if f["kind"] == "batch_progress")
+    assert not batch["selection_basis"]["activity_aligned"]
+    assert batch["selection_basis"]["pending_complete"]
+    assert "{{activity}}" not in summary_context(batch)["summary_tokens"]
+    assert audit["required_batch_fact_id"] == batch["fact_id"]
+
+
+def test_batch_summary_rejects_unsupported_submission_change():
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    reply = batch_section(fact)
+    reply["advice"][0]["summary"] += " 다음 배치의 제출 간격을 검토하세요."
+    with pytest.raises(ValueError, match="unsupported_submission_change"):
+        validate_advice(reply, {"findings": [fact]})
+
+
+@pytest.mark.parametrize("particle, expected", [("가", "이"), ("와", "과")])
+def test_batch_summary_normalizes_completed_count_particle(particle, expected):
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    reply = batch_section(fact)
+    reply["advice"][0]["summary"] = reply["advice"][0]["summary"].replace(
+        "완료 표본은 {{completed}}", f"{{{{completed}}}}{particle} 완료"
+    )
+    result = validate_advice(reply, {"findings": [fact]})
+    assert f"1건{expected} 완료" in result["advice"][0]["summary"]
 
 
 def test_four_cluster_weekly_candidate_selection_preserves_each_cluster_and_kind():
@@ -804,18 +879,54 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
         for f in wire["topics"][0]["findings"]
     )
     assert wire["topics"][0]["selection"]["omitted_count"] == 88
+    examples = wire["response_shape"]["sections"][0]["advice"]
+    by_id = {
+        f["fact_id"]: f["summary_tokens"]["{{target}}"].split(" / ")[0]
+        for f in wire["topics"][0]["findings"]
+    }
+    assert {by_id[item["fact_id"]] for item in examples} == {
+        "cpc-1",
+        "cpc-2",
+        "cpc-3",
+        "cpc-4",
+    }
 
 
-@pytest.mark.parametrize(
-    "suffix", ["{{completed}}건", "{{elapsed}}초", "{{pending}}개"]
-)
-def test_summary_cannot_duplicate_units_from_verified_tokens(suffix):
+@pytest.mark.parametrize("token,unit", [("completed", "건"), ("elapsed", "초")])
+def test_summary_normalizes_matching_repeated_units_from_verified_tokens(token, unit):
     fact = next(
         f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
     )
     reply = batch_section(fact)
-    reply["advice"][0]["summary"] += suffix
-    with pytest.raises(ValueError):
+    reply["advice"][0]["summary"] = reply["advice"][0]["summary"].replace(
+        "{{" + token + "}}", "{{" + token + "}}" + unit
+    )
+    summary = validate_advice(reply, {"findings": [fact]})["advice"][0]["summary"]
+    assert summary.count(unit + unit) == 0
+
+
+def test_summary_still_rejects_wrong_or_ambiguous_token_units():
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    for token, unit in (("completed", "개"), ("pending_change", "개")):
+        reply = batch_section(fact)
+        reply["advice"][0]["summary"] = reply["advice"][0]["summary"].replace(
+            "{{" + token + "}}", "{{" + token + "}}" + unit
+        )
+        with pytest.raises(ValueError, match="duplicate_summary_unit"):
+            validate_advice(reply, {"findings": [fact]})
+
+
+def test_device_memory_observation_cannot_recommend_allocation_optimization():
+    fact = next(
+        f
+        for f in candidates(topic(activity=1, memory=98))
+        if f["kind"] == "resident_memory"
+    )
+    reply = section([fact])
+    reply["advice"][0]["summary"] += " 메모리 할당 최적화를 검토하세요."
+    with pytest.raises(ValueError, match="unsupported_capacity_recommendation"):
         validate_advice(reply, {"findings": [fact]})
 
 
@@ -825,7 +936,7 @@ def test_job_reference_may_precede_its_elapsed_label_in_actual_model_prose():
     )
     reply = batch_section(fact)
     reply["advice"][0]["summary"] = (
-        "{{target}} · {{period}}: Job {{completed}}가 완료됐고 경과시간은 {{elapsed}}이며 최대 대기 Pod 수는 {{pending_change}}로 변했습니다. 다음 배치의 제출 시점과 작업 규모를 기록과 대조하여 제출 간격을 검토하세요."
+        "{{target}} · {{period}}: Job {{completed}}이 완료됐고 경과시간은 {{elapsed}}이며 최대 대기 Pod 수는 {{pending_change}}로 변했습니다. 스케줄러 대기 사유와 완료 Job의 작업 유형을 확인하세요."
     )
     assert (
         validate_advice(reply, {"findings": [fact]})["advice"][0]["summary_source"]
@@ -841,7 +952,7 @@ def test_elapsed_wording_can_use_natural_inflection_without_requiring_a_template
         "advice": [
             {
                 "fact_id": fact["fact_id"],
-                "summary": "{{target}} · {{period}}: {{completed}} 작업이 완료되었고 {{elapsed}} 경과되었으며 {{pending_change}} 대기 변화가 있었습니다. 다음 배치 제출 시점을 기록과 대조하여 나눠 제출 검토하세요.",
+                "summary": "{{target}} · {{period}}: {{completed}} 작업이 완료되었고 {{elapsed}} 경과되었으며 {{pending_change}} 대기 변화가 있었습니다. 스케줄러 대기 사유와 작업 유형을 기록과 대조하세요.",
             }
         ]
     }

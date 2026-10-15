@@ -2616,8 +2616,8 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
     advice = next(n for n in body["narrative"] if n["topic_id"] == "namespace_usage")[
         "advice"
     ]
-    assert advice[0]["kind"] == "batch_progress"
-    assert advice[0]["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert advice[0]["kind"] == "queue_review"
+    assert usage["workloads"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
     assert advice[0]["evidence_refs"]
     assert "대기 Pod" in advice[0]["observation"]
     assert usage["rows"][0]["activity_percent"] == activity
@@ -2778,8 +2778,8 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     advice = next(n for n in body["narrative"] if n["topic_id"] == "namespace_usage")[
         "advice"
     ]
-    assert advice[0]["kind"] == "batch_progress"
-    assert advice[0]["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert advice[0]["kind"] == "queue_review"
+    assert usage["workloads"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
     assert advice[0]["evidence_refs"]
     assert "대기 Pod" in advice[0]["observation"]
     assert usage["rows"][0]["activity_percent"] == 60

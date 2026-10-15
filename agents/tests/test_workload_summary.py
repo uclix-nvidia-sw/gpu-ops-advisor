@@ -10,6 +10,7 @@ from test_aggregate_report import DATA, fixture
 from test_gpu_memory import result
 from ops_agent.report_contract import previous_period
 from ops_agent.report_interpretation import payload_for
+from ops_agent.namespace_advice import candidates
 from ops_agent.workload_queries import workload_queries
 
 
@@ -79,9 +80,19 @@ def test_supplement_preserves_activity_memory_and_references():
     assert b"workload_completed_observed" in render(after)["csv"]
     proposal = payload_for(after)["topics"][0]
     assert proposal["advice_mode"]
-    assert proposal["findings"][0]["kind"] == "batch_progress"
-    assert proposal["findings"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
-    assert proposal["findings"][0]["evidence_refs"]
+    assert proposal["findings"][0]["kind"] == "queue_review"
+    assert not any(f["kind"] == "batch_progress" for f in proposal["findings"])
+    batch = next(f for f in candidates(b) if f["kind"] == "batch_progress")
+    assert batch["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert batch["evidence_refs"]
+
+
+def test_unjoined_completed_job_does_not_empty_namespace_interpretation():
+    after, _ = build(jobs())
+    proposal = payload_for(after)["topics"][0]
+    assert proposal["findings"]
+    assert not proposal.get("advice_mode")
+    assert after["topics"][0]["workloads"][0]["completed_observed"] == 1
 
 
 @pytest.mark.parametrize(
