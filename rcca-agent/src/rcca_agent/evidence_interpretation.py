@@ -281,7 +281,11 @@ async def interpret_evidence(llm, payload):
             "elapsed_seconds": 0,
             "attempts": 0,
             "usage": {},
-            "reason": "no_usable_evidence",
+            # Observations that exist but did not fit the remaining budget are a
+            # budget limit, not an absence of evidence.
+            "reason": "llm_context_budget_exhausted"
+            if payload.get("observation_refs")
+            else "no_usable_evidence",
             "input_evidence_refs": [],
             "input_view_hash": content_hash(view),
             "context_selection": view["context_selection"],

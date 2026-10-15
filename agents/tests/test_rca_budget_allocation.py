@@ -156,7 +156,10 @@ async def test_truncated_analysis_leaves_review_capacity(monkeypatch, reported):
     result, requests = await run_round(25000, reported, 1, monkeypatch, truncated=True)
     assert any(stage == "synthesis" for stage, _ in requests)
     assert result["synthesis"]["error_code"] == "llm_output_truncated"
-    assert result["review"]["execution_status"] == "complete"
+    # A deterministic fallback is not model-reviewed; the reserve stays unspent.
+    assert result["review"]["execution_status"] == "skipped"
+    assert result["review"]["reason"] == "synthesis_unavailable"
+    assert not any(stage == "review" for stage, _ in requests)
 
 
 def test_floor_and_existing_allocation_contract():
