@@ -85,7 +85,11 @@ async def test_event_identity_and_time_lead_report_without_promoting_recovery(ki
     first = sections["problem"]["text"].split("\n\n")[0]
     assert first.startswith("2026-10-15 13:17:48 KST, cluster-a / node-a")
     assert ("GPU-event와 일치" in first) == (kind == "xid")
-    assert ("NVSwitch·포트 연결 정보" in first) == (kind == "sxid")
+    # SXID names the switch; its port mapping is reported as absent, not assumed.
+    assert (
+        "스위치 포트와 연결된 GPU·파티션은 수집 원천에 없습니다"
+        in sections["problem"]["text"]
+    ) == (kind == "sxid")
     assert sections["problem"]["evidence_refs"] == ["log"]
     assert list(sections)[:5] == ["problem", "impact", "cause", "action", "next"]
     assert result["quality"]["analysis"]["error_events"][0] == original

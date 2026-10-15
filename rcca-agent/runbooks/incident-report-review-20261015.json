@@ -1,0 +1,329 @@
+{
+  "status": "local_review_not_published",
+  "scope": "RCA covers the GPU node; Kubernetes workload identity is outside it. Operator text states auto-collected evidence and decisive conditional recovery.",
+  "entries": [
+    {
+      "file": "xid/RB-XID-79.json",
+      "before_content_sha256": "116949e340bee68591e480ac9e5cf0a67f70c3570da1f0dd0bb44ba6339bc25b",
+      "after_content_sha256": "7e42ac28d327e6abc668196276e86d227a24efdc06d952fe6eb8ca3a87928cf6",
+      "change": "Remove D06 Pod UID history; add auxiliary D11 power; rewrite recommendations and operator guidance without deferring auto-collected checks. No new fact semantics.",
+      "previous_values": {
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_producer_contract",
+              "reported_error_code",
+              "producer_contract",
+              "error_code",
+              "normalized_health"
+            ],
+            "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          },
+          {
+            "query_id": "D44",
+            "priority": 2,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D02",
+            "priority": 5,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 전후 GPU 사용률 비교.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D06",
+            "priority": 6,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 시각 Pod UID·노드 이력을 조회하고 GPU 작업 라벨과 유효 시각을 대조한다. 같은 노드의 작업을 장애 GPU 사용자로 단정하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          }
+        ],
+        "recommendations": [
+          {
+            "text": "운영자가 해당 GPU·노드의 원본 오류 로그와 장치 정보를 보존하고, 동시 PCIe 오류 및 벤더 진단에 필요한 자료를 확인한다.",
+            "preconditions": [
+              {
+                "field": "error_code",
+                "equals": "xid:79"
+              }
+            ],
+            "execution": "not_performed"
+          },
+          {
+            "text": "조건부 복구: NVIDIA 카탈로그 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면 호스트 재시작을 권고한다(RESTART_BM). 운영자는 대상 호스트·GPU 모델·운영 모드와 작업 중단 범위를 확인하고, 진단 로그 보존 및 작업 배출 후 수행한다. 로그만 주입한 시험은 실제 접근 장애와 구분한다.",
+            "preconditions": [
+              {
+                "field": "error_code",
+                "equals": "xid:79"
+              }
+            ],
+            "execution": "not_performed"
+          },
+          {
+            "text": "조치 후 확인: 운영자는 같은 GPU UUID의 인식·접근 회복과 작업 재개 결과를 확인한다. 재발하거나 접근이 회복되지 않으면 오류 원문·GPU 식별 정보·진단 자료·조치 이력을 첨부해 공급사 지원을 요청한다(CONTACT_SUPPORT). 확인 결과는 수행한 조치와 별도로 기록한다.",
+            "preconditions": [
+              {
+                "field": "error_code",
+                "equals": "xid:79"
+              }
+            ],
+            "execution": "not_performed"
+          }
+        ],
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "XID79는 GPU가 PCIe 연결을 통해 접근되지 않는 상황을 나타내는 오류입니다. 이 이름만으로 물리적인 분리나 부품 고장을 확정할 수는 없습니다.",
+          "cause_note": "실제 장치에서 발생한 XID79라면 PCIe 연결 불량이나 전원 문제 등을 조사할 수 있습니다.",
+          "next_checks": [
+            {
+              "title": "보고서의 장치 연결 결과를 사용하세요.",
+              "text": "동일 서버에서 오류 PCI와 GPU UUID가 일치한 근거가 있으면 해당 GPU를 조사 대상으로 사용하세요. 연결 정보가 없거나 충돌한 경우에만 원본 장치 정보를 추가 대조하세요. 로그 주입 시험과 실제 GPU 접근 장애는 구분합니다."
+            },
+            {
+              "title": "해당 GPU가 현재 정상적으로 인식되는지 확인하세요.",
+              "text": "서버에서 GPU에 접근할 수 있는지 확인하고, 오류가 보고된 시간대의 PCIe 연결 오류 로그를 함께 살펴보세요."
+            },
+            {
+              "title": "조건에 맞는 실제 장애는 호스트 재시작을 권고합니다.",
+              "text": "적용 GPU 모델의 bare-metal 환경에서 실제 XID 79 장애가 발생했다면 원본 로그를 보존하고, 해당 서버의 작업을 안전하게 종료하거나 다른 서버로 옮긴 뒤 호스트를 재시작하세요. 모델·운영 모드가 미확인이라면 그 항목을 먼저 확인하세요. 재시작 후 같은 GPU의 접근 회복과 작업 재개를 확인하고 재발·미복구 시 공급사 지원을 요청하세요."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet의 기본 안내",
+              "text": "서버 재시작과 하드웨어 점검을 제시합니다. 이번 장비에서 두 조치가 모두 필요하다는 판정은 아닙니다.",
+              "source_indices": [
+                1,
+                2
+              ]
+            },
+            {
+              "title": "NVIDIA 문헌의 조치 안내",
+              "text": "적용 모델의 bare-metal 장애에는 호스트 재시작(RESTART_BM)을 권고합니다. 재발하거나 접근이 회복되지 않으면 진단 자료와 조치 이력을 첨부해 기술 지원(CONTACT_SUPPORT)을 요청하세요. VM·운영 모드 미확인 환경에는 호스트 재시작을 그대로 적용하지 마세요.",
+              "source_indices": [
+                3,
+                4
+              ]
+            },
+            {
+              "title": "적용 대상 확인",
+              "text": "저장된 문헌에는 A100·H100·B100·GB200이 기재돼 있습니다. 실제 GPU 모델과 문헌의 적용 범위가 맞는지 확인해야 합니다.",
+              "source_indices": [
+                3,
+                4
+              ]
+            },
+            {
+              "title": "추가로 확인할 오류",
+              "text": "지원되는 환경에서는 같은 장치·시간대의 XID154 복구 조치 정보를 함께 확인합니다. 반드시 동반된다는 뜻은 아닙니다. 저장된 연계 조건은 CUDA 12.7·드라이버 R565이며 자세한 조건은 출처에서 확인합니다.",
+              "source_indices": [
+                4
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "sxid/RB-SXID-11001.json",
+      "before_content_sha256": "9b8485396ec9d9620edbac308afb3f3d7fccb058c3ee8f56c48b16dbae1bee8a",
+      "after_content_sha256": "26f942c098619da71110ec63c97741d6c22f375c9fa9cc4e8a44ac6f0745e52d",
+      "change": "Remove D06 Pod UID history; rewrite recommendations and operator guidance without deferring auto-collected checks. No new fact semantics.",
+      "previous_values": {
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_producer_contract",
+              "reported_error_code",
+              "producer_contract",
+              "error_code",
+              "normalized_health"
+            ],
+            "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          },
+          {
+            "query_id": "D02",
+            "priority": 3,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 전후 GPU 사용률 비교.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D06",
+            "priority": 4,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 시각 Pod UID·노드 이력을 조회하고 GPU 작업 라벨과 유효 시각을 대조한다. 같은 노드의 작업을 장애 GPU 사용자로 단정하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D13",
+            "priority": 5,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 서버·기간의 보조 원본 로그를 수집한다. FM 원천이 연결되지 않았다면 일반 로그를 FM 로그·포트 토폴로지로 대체하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          }
+        ],
+        "recommendations": [
+          {
+            "text": "운영자가 원본 NVSwitch·Fabric Manager 로그와 플랫폼·버전·포트 정보를 보존하고 적용되는 벤더 조사 절차를 검토한다.",
+            "preconditions": [
+              {
+                "field": "error_code",
+                "equals": "sxid:11001"
+              }
+            ],
+            "execution": "not_performed"
+          }
+        ],
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "SXID11001은 NVSwitch의 수신 측에서 잘못된 명령을 감지했다는 오류(ingress invalid command)입니다. GPU 자체 고장이나 전체 서버 장애를 뜻한다고 단정할 수는 없습니다.",
+          "cause_note": "실제 NVSwitch에서 발생한 오류인지 확인한 뒤 같은 스위치·포트의 로그와 연결 상태를 조사해야 합니다. 오류 코드만으로 펌웨어 또는 링크 고장을 확정할 수 없습니다.",
+          "next_checks": [
+            {
+              "title": "어느 NVSwitch에서 발생했는지 확인하세요.",
+              "text": "오류 로그의 PCI 주소와 실제 장치 정보를 대조하세요. 시험 주입 로그인지도 확인해야 합니다. 같은 서버의 GPU 목록만으로 오류 장치를 확정하지 마세요."
+            },
+            {
+              "title": "같은 스위치와 시간대의 오류·연결 상태를 확인하세요.",
+              "text": "NVSwitch·Fabric Manager 원본 로그와 스위치 포트·연결 정보를 확인하세요. GPU 사용률만으로 스위치 상태나 오류 원인을 판단할 수 없습니다."
+            },
+            {
+              "title": "재시작이 필요하다면 서비스 영향을 먼저 확인하세요.",
+              "text": "해당 서버에서 실행 중인 작업을 안전하게 종료하거나 다른 서버로 옮기고, 재시작할 서버와 작업 시간을 확인한 뒤 담당자의 승인을 받아 진행하세요. 현재 분석만으로 재시작이 필요하다고 확정한 것은 아닙니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet의 기본 안내",
+              "text": "서버 재시작과 하드웨어 점검을 제시합니다. 이번 장비에서 두 조치가 모두 필요하다는 판정은 아닙니다.",
+              "source_indices": [
+                1,
+                2
+              ]
+            },
+            {
+              "title": "영향 범위와 적용 조건",
+              "text": "스위치 포트와 연결된 GPU·가상 머신·파티션을 확인하세요. GPU 연결 포트와 스위치 사이 포트에 따라 영향 범위가 다릅니다. 저장된 지침은 B200·B300에 적용하지 않으며 NVSwitch·Fabric Manager 버전과 운영 방식을 확인해야 합니다.",
+              "source_indices": [
+                0,
+                3
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

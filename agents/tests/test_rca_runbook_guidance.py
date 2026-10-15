@@ -54,7 +54,7 @@ async def test_investigation_guidance_survives_without_remediation(origin):
             "RESTART_BM",
             "R565",
             "A100",
-            "원본 오류 로그",
+            "호스트 진단 자료",
             "유지보수 승인",
             "동반 이벤트 부재",
         ):

@@ -1,6 +1,5 @@
 """Describe collection outcomes without promoting transport into device facts."""
 
-from agent_common.query_contract import mapping_query
 from .fleet_events import pci
 
 
@@ -101,15 +100,8 @@ def collection_checks(profile, planned, collected, relations, error_codes):
         ["D09"],
         "사건 서버·기간의 원본 로그 datasource와 검증된 D09 binding을 연결하세요.",
     )
-    add(
-        "workload_identity",
-        "GPU–작업 연결",
-        [mapping_query(profile), "D06"],
-        "동일 서버·GPU UUID의 작업 라벨과 Pod UID 이력 원천을 연결하세요.",
-    )
-    checks[-1]["relation_count"] = len(relations)
-    if checks[-1]["status"] == "collected" and not relations:
-        checks[-1]["status"] = "identity_unresolved"
+    # RCA covers the GPU node; Kubernetes workload identity is outside its scope,
+    # so no GPU–Pod connection is requested here.
     if any(code.startswith("sxid:") for code in error_codes):
         # Optional roles name registered queries only. They do not bypass the
         # published plan, binding validation, scope or query budget.

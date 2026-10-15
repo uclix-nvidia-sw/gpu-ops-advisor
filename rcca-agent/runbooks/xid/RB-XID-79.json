@@ -57,12 +57,12 @@
       },
       {
         "query_id": "D02",
-        "priority": 5,
+        "priority": 3,
         "required": false,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "사건 전후 GPU 사용률과 DCGM 장치 라벨(PCI·UUID·모델·드라이버)을 확인한다. 사용률은 접근 가능성의 대체 근거가 아니다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract",
@@ -79,13 +79,13 @@
         }
       },
       {
-        "query_id": "D06",
-        "priority": 6,
+        "query_id": "D11",
+        "priority": 4,
         "required": false,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 시각 Pod UID·노드 이력을 조회하고 GPU 작업 라벨과 유효 시각을 대조한다. 같은 노드의 작업을 장애 GPU 사용자로 단정하지 않는다.",
+        "purpose": "동일 GPU·기간의 전력 표본으로 사건 전후 전원 이상 징후를 보조 관측한다. 전력값만으로 전원 고장을 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract",
@@ -173,7 +173,7 @@
     ],
     "recommendations": [
       {
-        "text": "운영자가 해당 GPU·노드의 원본 오류 로그와 장치 정보를 보존하고, 동시 PCIe 오류 및 벤더 진단에 필요한 자료를 확인한다.",
+        "text": "Grafana로 수집한 오류 원문·장치 매핑·보조 지표는 RCA 근거로 자동 보존된다. 운영자는 재시작 전에 호스트 진단 자료(nvidia-bug-report.sh 결과, 사건 전후 커널 로그와 AER 기록)를 수집한다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -183,7 +183,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "조건부 복구: NVIDIA 카탈로그 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면 호스트 재시작을 권고한다(RESTART_BM). 운영자는 대상 호스트·GPU 모델·운영 모드와 작업 중단 범위를 확인하고, 진단 로그 보존 및 작업 배출 후 수행한다. 로그만 주입한 시험은 실제 접근 장애와 구분한다.",
+        "text": "복구: NVIDIA 카탈로그 적용 모델의 bare-metal 호스트이면 작업 배출과 유지보수 승인 후 호스트를 재시작한다(RESTART_BM). VM(패스스루)이면 해당 VM을 재시작하고, 로그 주입 시험이면 재시작하지 않는다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -193,7 +193,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "조치 후 확인: 운영자는 같은 GPU UUID의 인식·접근 회복과 작업 재개 결과를 확인한다. 재발하거나 접근이 회복되지 않으면 오류 원문·GPU 식별 정보·진단 자료·조치 이력을 첨부해 공급사 지원을 요청한다(CONTACT_SUPPORT). 확인 결과는 수행한 조치와 별도로 기록한다.",
+        "text": "조치 후 확인: 같은 GPU UUID가 다시 인식되고 Fleet XID 상태가 Healthy로 돌아왔는지 확인한다. 재발하거나 회복되지 않으면 오류 원문·GPU 식별 정보·진단 자료·조치 이력을 첨부해 공급사 지원을 요청한다(CONTACT_SUPPORT).",
         "preconditions": [
           {
             "field": "error_code",
@@ -212,50 +212,50 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "XID79는 GPU가 PCIe 연결을 통해 접근되지 않는 상황을 나타내는 오류입니다. 이 이름만으로 물리적인 분리나 부품 고장을 확정할 수는 없습니다.",
-      "cause_note": "실제 장치에서 발생한 XID79라면 PCIe 연결 불량이나 전원 문제 등을 조사할 수 있습니다.",
+      "meaning": "XID 79는 드라이버가 PCIe 버스로 GPU에 접근할 수 없게 된 상태(GPU has fallen off the bus)입니다. 이 GPU를 쓰던 작업은 계속 실행될 수 없고, 복구에는 재시작이 필요합니다.",
+      "cause_note": "PCIe 링크·슬롯·라이저 불량, 전원 공급 이상, GPU 하드웨어 결함, 드라이버 오류가 주요 원인 후보입니다.",
       "next_checks": [
         {
-          "title": "보고서의 장치 연결 결과를 사용하세요.",
-          "text": "동일 서버에서 오류 PCI와 GPU UUID가 일치한 근거가 있으면 해당 GPU를 조사 대상으로 사용하세요. 연결 정보가 없거나 충돌한 경우에만 원본 장치 정보를 추가 대조하세요. 로그 주입 시험과 실제 GPU 접근 장애는 구분합니다."
+          "title": "보고서의 장치 연결 결과를 조사 대상으로 사용합니다.",
+          "text": "RCA가 PCI 주소와 GPU UUID를 인벤토리·지표 라벨과 교차 대조합니다. 대조가 충돌하거나 단일 출처일 때만 호스트 GPU 목록과 PCI 주소를 맞춰 봅니다."
         },
         {
-          "title": "해당 GPU가 현재 정상적으로 인식되는지 확인하세요.",
-          "text": "서버에서 GPU에 접근할 수 있는지 확인하고, 오류가 보고된 시간대의 PCIe 연결 오류 로그를 함께 살펴보세요."
+          "title": "재시작 전에 호스트 진단 자료를 수집합니다.",
+          "text": "nvidia-bug-report.sh 결과와 사건 전후 커널 로그(AER 포함)는 재시작하면 사라지므로 먼저 확보합니다."
         },
         {
-          "title": "조건에 맞는 실제 장애는 호스트 재시작을 권고합니다.",
-          "text": "적용 GPU 모델의 bare-metal 환경에서 실제 XID 79 장애가 발생했다면 원본 로그를 보존하고, 해당 서버의 작업을 안전하게 종료하거나 다른 서버로 옮긴 뒤 호스트를 재시작하세요. 모델·운영 모드가 미확인이라면 그 항목을 먼저 확인하세요. 재시작 후 같은 GPU의 접근 회복과 작업 재개를 확인하고 재발·미복구 시 공급사 지원을 요청하세요."
+          "title": "적용 조건에 맞으면 호스트를 재시작합니다.",
+          "text": "적용 모델의 bare-metal 호스트이면 작업 배출·유지보수 승인 후 재시작합니다(RESTART_BM). VM이면 VM을, 로그 주입 시험이면 재시작하지 않습니다. 재시작 후 같은 GPU UUID 인식과 Fleet 상태 회복을 확인하고, 재발·미복구 시 공급사 지원을 요청합니다."
         }
       ],
       "references": [
         {
-          "title": "Fleet의 기본 안내",
-          "text": "서버 재시작과 하드웨어 점검을 제시합니다. 이번 장비에서 두 조치가 모두 필요하다는 판정은 아닙니다.",
+          "title": "Fleet 분류",
+          "text": "Fleet은 XID 79를 Fatal로 분류하고 시스템 재부팅과 하드웨어 점검을 기본 조치로 제시합니다.",
           "source_indices": [
             1,
             2
           ]
         },
         {
-          "title": "NVIDIA 문헌의 조치 안내",
-          "text": "적용 모델의 bare-metal 장애에는 호스트 재시작(RESTART_BM)을 권고합니다. 재발하거나 접근이 회복되지 않으면 진단 자료와 조치 이력을 첨부해 기술 지원(CONTACT_SUPPORT)을 요청하세요. VM·운영 모드 미확인 환경에는 호스트 재시작을 그대로 적용하지 마세요.",
+          "title": "NVIDIA 조치 분류",
+          "text": "즉시 조치는 bare-metal 호스트 재시작(RESTART_BM), 재발·미복구 시 조사 조치는 기술 지원 요청(CONTACT_SUPPORT)입니다.",
           "source_indices": [
             3,
             4
           ]
         },
         {
-          "title": "적용 대상 확인",
-          "text": "저장된 문헌에는 A100·H100·B100·GB200이 기재돼 있습니다. 실제 GPU 모델과 문헌의 적용 범위가 맞는지 확인해야 합니다.",
+          "title": "적용 대상",
+          "text": "A100·H100·B100·GB200이 NVIDIA 카탈로그 적용 대상입니다. 그 밖의 제품은 해당 세대 문헌을 따릅니다.",
           "source_indices": [
             3,
             4
           ]
         },
         {
-          "title": "추가로 확인할 오류",
-          "text": "지원되는 환경에서는 같은 장치·시간대의 XID154 복구 조치 정보를 함께 확인합니다. 반드시 동반된다는 뜻은 아닙니다. 저장된 연계 조건은 CUDA 12.7·드라이버 R565이며 자세한 조건은 출처에서 확인합니다.",
+          "title": "XID 154 연계",
+          "text": "CUDA 12.7·드라이버 R565 이상에서는 같은 장치의 복구 조치 안내(XID 154)가 함께 보고될 수 있습니다.",
           "source_indices": [
             4
           ]

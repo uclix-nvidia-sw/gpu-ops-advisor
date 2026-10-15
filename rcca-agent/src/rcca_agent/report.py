@@ -7,6 +7,8 @@ from .report_editor import prioritize
 
 from .report_labels import label, query_label
 from .fleet_events import pci
+from .incident_findings import incident_findings
+from .report_findings import statements as finding_statements
 
 
 TITLES = {
@@ -25,9 +27,38 @@ async def write_report(result, data, clues, evidence, llm):
 
     result.setdefault("quality", {})["runbook_guidance"] = project_guidance(evidence)
     statements = []
+    findings = incident_findings(result, evidence, data)
+    lead = (
+        finding_statements(
+            findings,
+            result,
+            data,
+            clues,
+            evidence,
+            result["quality"]["runbook_guidance"],
+        )
+        if findings
+        else None
+    )
+    if lead:
+        result["quality"]["incident_findings"] = findings
+
+    def put(section, text, refs=()):
+        statements.append(
+            dict(
+                id=f"{section}-{len(statements)}",
+                section=section,
+                text=text,
+                evidence_refs=list(dict.fromkeys(refs)),
+                value_refs=[],
+            )
+        )
 
     def add(section, text, refs=()):
-        if section == "next" and result.get("quality", {}).get("collection_checks"):
+        # Findings own the operator checklist; generic gaps stay in the appendix.
+        if section == "next" and (
+            lead or result.get("quality", {}).get("collection_checks")
+        ):
             section = "limits"
         statements.append(
             dict(
@@ -91,7 +122,9 @@ async def write_report(result, data, clues, evidence, llm):
         if codes
         else "알람이 발생했습니다. 상세 증상은 아래 원문을 확인하세요."
     )
-    for event in events:
+    for text, refs in (lead or {}).get("problem", [])[:-1]:
+        put("problem", text, refs)
+    for event in [] if lead else events:
         at = datetime.fromisoformat(event["event_time"].replace("Z", "+00:00"))
         at = at.astimezone(timezone(timedelta(hours=9))).strftime(
             "%Y-%m-%d %H:%M:%S KST"
@@ -158,16 +191,19 @@ async def write_report(result, data, clues, evidence, llm):
         "대상\n" + "\n".join(dict.fromkeys(primary or ["대상 미확인"])),
         incident_refs,
     )
-    add(
-        "problem",
-        f"사건 기준 시각: {data['incident_time']}\n"
-        + (
-            "오류 발생 시각은 위 이벤트 기록을 기준으로 표시했습니다."
-            if events
-            else "오류 발생 시각은 별도 이벤트 근거가 필요합니다."
-        ),
-        incident_refs,
-    )
+    if lead:
+        put("problem", *lead["problem"][-1])
+    else:
+        add(
+            "problem",
+            f"사건 기준 시각: {data['incident_time']}\n"
+            + (
+                "오류 발생 시각은 위 이벤트 기록을 기준으로 표시했습니다."
+                if events
+                else "오류 발생 시각은 별도 이벤트 근거가 필요합니다."
+            ),
+            incident_refs,
+        )
     add(
         "problem",
         "알람이 보고한 증상(원문):\n"
@@ -180,26 +216,16 @@ async def write_report(result, data, clues, evidence, llm):
             "대상 식별 정보\n" + "\n".join(dict.fromkeys(identifiers)),
             incident_refs,
         )
-    relations = result.get("pod_relations", [])
-    for relation in relations:
+    for text, refs in (lead or {}).get("impact", []):
+        put("impact", text, refs)
+    # RCA covers the GPU node; Kubernetes Pod relations are not reported.
+    if not lead:
         add(
             "impact",
-            f"사건 시각의 관측 연결: GPU {relation['gpu_uuid']} · "
-            f"Namespace {relation['namespace']} · Pod UID {relation['pod_uid']}. "
-            "작업 실패·중단 여부는 이 연결 정보만으로 판정하지 않습니다.",
-            relation["evidence_refs"],
+            "확인된 영향: 이번 수집에는 오류 이후 장치 상태를 확인한 근거가 없습니다. "
+            "심각도는 아래 오류 의미와 카탈로그 분류로 판단합니다.",
         )
-    add(
-        "impact",
-        "확인된 업무 영향: 이번 분석에는 작업 실패·서비스 중단을 입증한 결과가 없습니다. "
-        + (
-            "위 작업을 영향 확인 대상으로 사용하세요."
-            if relations
-            else "사건 시각의 작업과 오류 장비의 연결 근거가 필요합니다."
-        )
-        + " 심각도는 오류의 의미와 실제 영향 범위를 함께 판단해야 합니다.",
-    )
-    for guidance in result["quality"]["runbook_guidance"]:
+    for guidance in [] if lead else result["quality"]["runbook_guidance"]:
         add(
             "impact",
             "오류 의미(발행 지침): " + guidance["guidance"]["meaning"],
@@ -236,7 +262,11 @@ async def write_report(result, data, clues, evidence, llm):
             review["evidence_refs"],
         )
         if review.get("reason"):
-            add("limits", "검토 제한: " + review["reason"], review["evidence_refs"])
+            add(
+                "limits",
+                "검토 제한: " + label("reasons", review["reason"]),
+                review["evidence_refs"],
+            )
     candidates = result["cause_candidates"]
     mismatches = [
         h
@@ -251,7 +281,12 @@ async def write_report(result, data, clues, evidence, llm):
             "시험 주입 여부와 원본 장치 정보를 대조해야 합니다.",
             [ref for h in mismatches for ref in h.get("evidence_refs", [])],
         )
-    if not candidates:
+    for text, refs in (lead or {}).get("cause", []):
+        put("cause", text, refs)
+    if lead:
+        # The generic fallback symptom repeats the findings above without new support.
+        candidates = [c for c in candidates if c.get("id") != "observed_device_symptom"]
+    elif not candidates:
         add(
             "cause", "근본 원인을 판단할 유효한 근거가 부족합니다. 원인은 미확정입니다."
         )
@@ -262,7 +297,10 @@ async def write_report(result, data, clues, evidence, llm):
             "confirmed": "검토된 규칙으로 확인된 원인",
         }[candidate["causal_status"]]
         add("cause", f"{level}: {candidate['claim']}", candidate["supporting_refs"])
-    if not result["recommendations"]:
+    for text, refs in (lead or {}).get("action", []):
+        put("action", text, refs)
+    planned = bool(lead and lead["action"])
+    if not result["recommendations"] and not planned:
         published_actions = [
             entry
             for entry in evidence
@@ -295,7 +333,7 @@ async def write_report(result, data, clues, evidence, llm):
             "담당자 검토 후 수행 여부를 결정하세요. 이 시스템은 조치를 실행하지 않습니다.",
             rec["evidence_refs"],
         )
-    provider = clues.get("provider_actions")
+    provider = None if planned else clues.get("provider_actions")
     if provider:
         add(
             "action",
@@ -337,6 +375,8 @@ async def write_report(result, data, clues, evidence, llm):
     # Published investigation guidance is useful even when device-state gates
     # prevent actionable recommendations. Keep it separate from observed facts
     # and eligible remediation; cite only the selected immutable snapshots.
+    for text, refs in (lead or {}).get("guidance", []):
+        put("guidance", text, refs)
     for entry in evidence:
         if entry.get("query_id") != "runbook":
             continue
@@ -346,6 +386,21 @@ async def write_report(result, data, clues, evidence, llm):
         if not content.get("investigation_only"):
             continue
         refs = [entry["id"]]
+        if lead and lead["guidance"]:
+            # The incident-specific reference above replaces the authoring text;
+            # keep the immutable original in the appendix for traceability.
+            put(
+                "limits",
+                f"발행 조사 지침 원문: {content.get('title', '발행 Runbook')} · revision "
+                f"{entry.get('query_version', '?')}\n"
+                + "\n".join(
+                    [rec["text"] for rec in content.get("recommendations", [])]
+                    + list(content.get("analysis_guidance", []))
+                    + ["적용 한계: " + v for v in content.get("limitations", [])]
+                ),
+                refs,
+            )
+            continue
         add(
             "guidance",
             f"{content.get('title', '발행 Runbook')} · revision {entry.get('query_version', '?')}\n"
@@ -422,7 +477,14 @@ async def write_report(result, data, clues, evidence, llm):
             if h.get("time_basis") == "loki_recorded_at" and not h.get("fact_eligible")
         ]
         if "unknown_value" in result["missing_inputs"]:
-            if unverified:
+            if unverified and lead and findings["identity"]["status"] == "corroborated":
+                add(
+                    "limits",
+                    "수집된 Fleet 상태 보고는 생산자 시각이 없어 검증된 현재 상태로 승격하지 않았습니다. "
+                    "오류 장치 연결은 발생 내용의 교차 대조 결과를 따릅니다.",
+                    [ref for h in unverified for ref in h.get("evidence_refs", [])],
+                )
+            elif unverified:
                 add(
                     "next",
                     "수집된 로그 중 상태 의미가 미검증인 관측이 있습니다. 해당 원본의 상태 판정 조건과 장치 연결 정보를 추가 확인해야 합니다.",
@@ -454,8 +516,15 @@ async def write_report(result, data, clues, evidence, llm):
             "next",
             "담당자가 근거와 조치 조건을 검토하고, 조치 후 장비·업무 상태를 별도로 확인해야 합니다.",
         )
+    for text, refs in (lead or {}).get("next", []):
+        put("next", text, refs)
+    for text, refs in (lead or {}).get("limits", []):
+        put("limits", text, refs)
     checks = result.get("quality", {}).get("collection_checks", [])
     for check in checks:
+        if check.get("key") == "workload_identity":
+            # Stored by older workers; Kubernetes identity is outside RCA scope.
+            continue
         status = check["status"]
         label_text = {
             "collected": "자동 수집 완료",
@@ -468,21 +537,17 @@ async def write_report(result, data, clues, evidence, llm):
             "identity_unresolved": "자동 조회 완료·유효 시각의 장비–작업 연결 없음",
         }[status]
         add(
-            "action" if status == "collected" else "limits",
+            "action" if status == "collected" and not lead else "limits",
             f"{check['title']}: {label_text}. "
             + (", ".join(check["query_ids"]) or "등록된 조회 없음")
             + (" · " + ", ".join(check["reasons"]) if check["reasons"] else ""),
             check["evidence_refs"],
         )
         if status in {"connection_required", "plan_required", "identity_unresolved"}:
-            statements.append(
-                dict(
-                    id=f"next-{len(statements)}",
-                    section="next",
-                    text=f"{check['title']}: {label_text}. {check['connection_required']}",
-                    evidence_refs=check["evidence_refs"],
-                    value_refs=[],
-                )
+            put(
+                "next",
+                f"{check['title']}: {label_text}. {check['connection_required']}",
+                check["evidence_refs"],
             )
     if checks and not any(s["section"] == "next" for s in statements):
         statements.append(
@@ -589,7 +654,9 @@ async def write_report(result, data, clues, evidence, llm):
     result["narrative"] = [
         dict(
             id=section,
-            title=title,
+            title="이 오류에 대한 참고 안내"
+            if lead and section == "guidance"
+            else title,
             text="\n\n".join(s["text"] for s in ordered if s["section"] == section),
             evidence_refs=list(
                 dict.fromkeys(
@@ -607,7 +674,8 @@ async def write_report(result, data, clues, evidence, llm):
     result["narrative_status"] = editorial["narrative_status"]
     result["quality"]["report"] = {
         "status": "complete",
-        "presentation": "incident-first/1",
+        # /2: findings lead the report and the reference guidance is a primary section.
+        "presentation": "incident-first/2" if lead else "incident-first/1",
         "method": "llm_prioritized"
         if editorial["narrative_status"] == "complete"
         else "deterministic_fallback",
