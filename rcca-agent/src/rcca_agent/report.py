@@ -244,6 +244,24 @@ async def write_report(result, data, clues, evidence, llm):
             )
     evaluation = result.get("quality", {}).get("rca_evaluation")
     if evaluation:
+        interpretation = evaluation.get("evidence", {}).get("interpretation") or {}
+        for section in ("findings", "unknowns", "conflicts", "limitations"):
+            for row in interpretation.get(section, []):
+                add(
+                    "problem" if section == "findings" else "limits",
+                    "RCA 해석: " + row["statement"],
+                    row["evidence_refs"],
+                )
+        stop = evaluation["investigation"]["stop_reason"]
+        add(
+            "limits",
+            "조사 종료 이유: "
+            + {
+                "goal_achieved": "필수 조사 목적과 품질 검토 충족",
+                "goal_not_met": "목적 미달이며 현재 가능한 필수 보완 조회 없음",
+            }.get(stop, label("reasons", stop)),
+            evaluation["investigation"]["evidence_refs"],
+        )
         review = evaluation["review"]
         verdict = {
             "acceptable": "확보된 근거 범위에서 타당",

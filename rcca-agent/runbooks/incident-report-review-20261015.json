@@ -179,6 +179,18 @@
             }
           ]
         }
+      },
+      "decision_policy_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "7e42ac28d327e6abc668196276e86d227a24efdc06d952fe6eb8ca3a87928cf6",
+        "after_content_sha256": "480ee07c4a01a86b85406440e9d99eb3ea5a9c99601d80b70ba6a3e5e8ddaa48",
+        "previous_values": {
+          "schema": "gpu-rca-runbook/1.0"
+        },
+        "added_fields": [
+          "decision_policy"
+        ],
+        "change": "Add bounded error-report investigation completion criteria. Preserve cause, current-health and action uncertainty; publish as a new revision only after compatibility review."
       }
     },
     {
@@ -323,6 +335,18 @@
             }
           ]
         }
+      },
+      "decision_policy_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "26f942c098619da71110ec63c97741d6c22f375c9fa9cc4e8a44ac6f0745e52d",
+        "after_content_sha256": "382093af754d0cc4b35b75a71d536fb857c1d725ccc38f36d3c3baf8b888ef96",
+        "previous_values": {
+          "schema": "gpu-rca-runbook/1.0"
+        },
+        "added_fields": [
+          "decision_policy"
+        ],
+        "change": "Add bounded error-report investigation completion criteria. Preserve cause, current-health and action uncertainty; publish as a new revision only after compatibility review."
       }
     }
   ]

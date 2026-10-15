@@ -3,6 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { RcaWorkflowButton, RcaWorkflowRecord } from './RcaWorkflow';
 
 describe('developer RCA workflow entry and evidence', () => {
+  it('explains combined authoring and frozen RCA material separately from report composition', () => {
+    const render = (query_id: string, snapshot: Record<string, unknown>) =>
+      renderToStaticMarkup(
+        <RcaWorkflowRecord record={{ query_id, snapshot }} onEvidence={() => {}} />,
+      );
+    const author = render('rca_synthesis', { generation_mode: 'combined' });
+    expect(author).toContain('증거 해석·RCA 분석');
+    expect(author).toContain('작성 LLM');
+    expect(author).not.toContain('LLM ②');
+    const frozen = render('rca_result_frozen', { material_hash: 'material-hash' });
+    expect(frozen).toContain('material-hash');
+    expect(frozen).toContain('자료가 바뀌면 결과 공개를 중단');
+    const report = render('report_assembly', { report: { method: 'deterministic_fallback' } });
+    expect(report).toContain('코드의 기본 순서로 작성');
+    expect(report).toContain('RCA 판정은 다시 생성하지 않았습니다');
+  });
   it('connects the selected source to its selection without linking other selections', () => {
     const html = renderToStaticMarkup(
       <RcaWorkflowRecord

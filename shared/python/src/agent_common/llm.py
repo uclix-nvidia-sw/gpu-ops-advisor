@@ -34,6 +34,7 @@ class LLM:
         self.http = http
         self.last_failure = None
         self.reserved_tokens = 0
+        self.request_attempt_limit = 3
         self.usage = {
             "calls": 0,
             "request_attempts": 0,
@@ -105,7 +106,7 @@ class LLM:
             headers["Authorization"] = "Bearer " + self.settings.llm_api_key
         async with httpx.AsyncClient(trust_env=not self.settings.llm_routed) as client:
             client = self.http or client
-            for attempt in range(3):
+            for attempt in range(self.request_attempt_limit):
                 timeout = min(
                     self.settings.llm_request_timeout_seconds or float("inf"),
                     self.deadline - time.monotonic(),
@@ -154,7 +155,10 @@ class LLM:
                         response.status_code,
                         time.monotonic() - started,
                     )
-                if response.status_code in {429, 500, 502, 503, 504} and attempt < 2:
+                if (
+                    response.status_code in {429, 500, 502, 503, 504}
+                    and attempt + 1 < self.request_attempt_limit
+                ):
                     await asyncio.sleep(
                         min(0.25 * 2**attempt, max(0, self.deadline - time.monotonic()))
                     )
@@ -179,7 +183,11 @@ class LLM:
                     doubled = min(
                         cap * 2, self.remaining - self.reserved_tokens - prompt_bound
                     )
-                    if attempt == 0 and doubled > cap:
+                    if (
+                        attempt == 0
+                        and self.request_attempt_limit > 1
+                        and doubled > cap
+                    ):
                         cap = doubled
                         payload["max_tokens"] = cap
                         continue

@@ -50,7 +50,9 @@ No tools, new query expressions, measurements, device actions or new causes.
 Each reason/question/resolution is <= 800 characters. Validation feedback is not evidence."""
 
 
-def analysis_draft(candidates, recommendations, limitations, input_view):
+def analysis_draft(
+    candidates, recommendations, limitations, input_view, interpretation=None
+):
     claims = [
         {
             "id": f"cause:{c['id']}",
@@ -80,6 +82,34 @@ def analysis_draft(candidates, recommendations, limitations, input_view):
         "limitations": limitations,
         "input_view_hash": content_hash(input_view),
     }
+    if interpretation is not None:
+        body["interpretation"] = deepcopy(interpretation)
+        for section in ("findings", "unknowns", "conflicts", "limitations"):
+            for index, row in enumerate(interpretation.get(section, [])):
+                claims.append(
+                    {
+                        "id": f"interpretation:{section}:{row.get('id', index)}",
+                        "source": "interpretation",
+                        "statement": row["statement"],
+                        "supporting_refs": row["evidence_refs"],
+                        "contradicting_refs": [],
+                        "value_refs": [],
+                    }
+                )
+        for row in interpretation.get("criterion_assessments", []):
+            claims.append(
+                {
+                    "id": "criterion:" + row["criterion_id"],
+                    "source": "interpretation",
+                    "statement": "조사 기준 제안: "
+                    + row["criterion_id"]
+                    + " = "
+                    + row["status"],
+                    "supporting_refs": row["evidence_refs"],
+                    "contradicting_refs": [],
+                    "value_refs": [],
+                }
+            )
     return deepcopy({"analysis_id": content_hash(body), **body})
 
 
@@ -188,14 +218,25 @@ def validate_review(response, draft, refs, queries):
 
 def review_reserve(view, llm):
     output = getattr(getattr(llm, "settings", None), "llm_default_max_tokens", 4096)
-    return encoded_size(view) + len(REVIEW.encode()) + output + 4096 + 512
+    return encoded_size(view) + len(review_prompt(view).encode()) + output + 4096 + 512
+
+
+def review_prompt(view):
+    return REVIEW + (GOAL_REVIEW if view.get("decision_assessment") else "")
 
 
 def review_payload(draft, view, allowed_queries):
+    policy = view.get("decision_assessment")
     return {
-        "rubric_version": "1",
+        "rubric_version": "2" if policy else "1",
         "rubric": RUBRIC,
-        "draft": draft,
+        "draft": {
+            key: value
+            for key, value in draft.items()
+            if key not in {"cause_candidates", "recommendations", "interpretation"}
+        }
+        if "interpretation" in draft
+        else draft,
         "evidence_context": view,
         "input_evidence_refs": view.get("input_evidence_refs", []),
         "allowed_queries": allowed_queries,
@@ -208,10 +249,23 @@ async def review_analysis(llm, draft, view, allowed_queries):
     return await call_stage(
         llm,
         "analysis_review",
-        REVIEW,
+        review_prompt(view),
         payload,
         lambda value: validate_review(
             value, draft, set(payload["input_evidence_refs"]), set(allowed_queries)
         ),
         max_bytes=24000,
     )
+
+
+GOAL_REVIEW = """
+Rubric 2: judge the supplied investigation objective, not universal root-cause completeness.
+Review interpretation and criterion claims against original sources, never as independent evidence.
+Unknown root cause alone is not contradictory evidence. An error-report-only conclusion may
+mark alternatives not_applicable with an explicit reason when it chooses/excludes no cause.
+Optional uncollected queries alone do not fail quality. Concrete causal claims still require
+support and material alternatives. Never waive blocking conditions or required criteria.
+Review each proposed semantic criterion; unsupported completion must be revision_required.
+Propose followup only for unresolved required criteria, using supplied followup_links.
+D44 measures PCIe replay, D02 GPU activity; do not request driver logs from these queries.
+Questions do not authorize execution. Fix overstatement from existing evidence before collecting."""

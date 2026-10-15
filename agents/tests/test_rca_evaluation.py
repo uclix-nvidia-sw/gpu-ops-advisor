@@ -300,19 +300,9 @@ async def test_transport_failure_is_not_reclassified_as_input_or_token_limit(fai
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "mode",
-    [
-        "limited_valid",
-        "repair",
-        "unresolved",
-        "budget_after_repair",
-        "model_failure",
-        "fallback_model_failure",
-        "fallback_rejected",
-        "oversized_review",
-    ],
+    "mode", ["limited_valid", "review_rejected", "model_failure", "oversized_review"]
 )
-async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
+async def test_round_reviews_once_and_withholds_rejected_claims(mode):
     obs = Observation({}, {"queries": {}}, DATA, time.monotonic() + 60)
     obs.evidence.append(observation("partial", False))
     state = {"revisions": 0}
@@ -335,18 +325,10 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
             assert any(
                 c["id"] == "recommendation:0" for c in payload["draft"]["claims"]
             )
-            if mode == "model_failure" or (
-                mode == "fallback_model_failure" and len(seen_drafts) > 2
-            ):
+            if mode == "model_failure":
                 return None
-            if (
-                mode == "limited_valid"
-                or (mode == "repair" and len(seen_drafts) > 1)
-                or (len(seen_drafts) > 2 and mode != "fallback_rejected")
-            ):
+            if mode == "limited_valid":
                 return review_reply(payload, "acceptable")
-            if mode == "budget_after_repair" and len(seen_drafts) == 2:
-                self.remaining = 0
             issue = {
                 "claim_id": None,
                 "reason": "관측 공백으로 원인을 배제할 수 없습니다.",
@@ -393,11 +375,17 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
     assert all(
         c["causal_status"] == "candidate" for c in output["draft"]["cause_candidates"]
     )
-    if mode in {"unresolved", "budget_after_repair"}:
+    assert stages.count("synthesis") == 1
+    if mode == "review_rejected":
+        assert stages.count("analysis_review") == 1
         assert not output["draft"]["cause_candidates"]
         assert output["draft"]["recommendations"][0]["eligibility"] == "withheld"
         assert seen_drafts[0]["analysis_id"] != output["draft"]["analysis_id"]
-    if mode == "oversized_review":
+        assert output["review"]["execution_status"] == "skipped"
+        assert output["review"]["verdict"] is None
+        assert output["review"]["reason"] == "draft_changed_after_review"
+        assert output["review_output"]["issues"]
+    elif mode == "oversized_review":
         assert output["review"]["verdict"] is None
         assert output["review"]["reason"] == "llm_input_size_exceeded"
         assert output["stop_reason"] == "analysis_unresolved"
@@ -406,28 +394,11 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
             record["quality"]["request_checks"] == record["snapshot"]["request_checks"]
         )
         assert record["quality"]["attempts"] == 0
-    elif mode == "budget_after_repair":
-        assert output["review"]["execution_status"] == "skipped"
-        assert output["review"]["verdict"] is None
-        assert output["review"]["reason"] == "draft_changed_after_review"
-        assert output["stop_reason"] == "llm_budget_exhausted"
-        assert output["review"]["failure_reason"] == "llm_token_budget_exhausted"
-    elif mode in {"fallback_model_failure", "fallback_rejected"}:
-        assert output["review"]["verdict"] is None
-        assert output["review"]["reason"] == "draft_changed_after_review"
-        assert output["stop_reason"] == (
-            "revision_limit_reached"
-            if mode == "fallback_rejected"
-            else "analysis_unresolved"
-        )
-        if mode == "fallback_rejected":
-            assert not output["draft"]["cause_candidates"]
-            assert not output["draft"]["recommendations"]
     elif mode == "model_failure":
         assert output["review"]["verdict"] is None
     else:
         assert output["review"]["verdict"] == "acceptable"
-    assert state["revisions"] <= 1
+    assert state["revisions"] == 0
     body = {
         key: output["draft"][key]
         for key in ("cause_candidates", "recommendations", "limitations")

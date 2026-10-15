@@ -1,7 +1,9 @@
-"""Validate the optional v1 extension without changing historical result contracts."""
+"""Validate RCA evaluation versions while retaining historical result readers."""
 
 STOP_REASONS = {
     "review_accepted",
+    "goal_achieved",
+    "goal_not_met",
     "no_available_followup",
     "followup_not_selected",
     "selection_conditions_missing",
@@ -22,8 +24,19 @@ def validate_evaluation(result, evidence):
     evaluation = result.get("quality", {}).get("rca_evaluation")
     if evaluation is None:
         return
-    if not isinstance(evaluation, dict) or evaluation.get("schema_version") != "1":
+    if not isinstance(evaluation, dict) or evaluation.get("schema_version") not in {
+        "1",
+        "2",
+    }:
         raise ValueError("unsupported RCA evaluation schema")
+    combined = (
+        evaluation.get("schema_version") == "2"
+        and evaluation.get("generation_mode") == "combined"
+    )
+    if evaluation.get("schema_version") == "2" and evaluation.get(
+        "generation_mode"
+    ) not in {"combined", "separate"}:
+        raise ValueError("invalid generation mode")
     by_id = {e["id"]: e for e in evidence}
     collection = evaluation["collection"]
     if collection["status"] not in {"complete", "partial", "failed", "not_requested"}:
@@ -87,6 +100,8 @@ def validate_evaluation(result, evidence):
             "input_view_hash",
         )
     }
+    if "interpretation" in draft:
+        body["interpretation"] = draft["interpretation"]
     if (
         content_hash(body) != analysis_id
         or content_hash(draft["input_view"]) != body["input_view_hash"]
@@ -98,7 +113,7 @@ def validate_evaluation(result, evidence):
     ):
         raise ValueError("final result changed after review")
     for key, query in (
-        ("evidence", "evidence_interpretation"),
+        ("evidence", "rca_synthesis" if combined else "evidence_interpretation"),
         ("review", "analysis_review"),
     ):
         stage = evaluation[key]
@@ -117,6 +132,19 @@ def validate_evaluation(result, evidence):
             e["query_id"] == query for e in records
         ):
             raise ValueError("missing evaluation evidence")
+        if (
+            key == "evidence"
+            and combined
+            and stage["execution_status"] == "complete"
+            and not any(
+                e["query_id"] == "rca_synthesis"
+                and e["snapshot"].get("generation_mode") == "combined"
+                and e["snapshot"].get("interpretation_status") == "complete"
+                and isinstance(e["snapshot"].get("interpretation"), dict)
+                for e in records
+            )
+        ):
+            raise ValueError("combined interpretation missing")
         if key == "review":
             if stage["analysis_id"] != analysis_id:
                 raise ValueError("review draft mismatch")
@@ -133,7 +161,9 @@ def validate_evaluation(result, evidence):
                     for e in records
                 ):
                     raise ValueError("review evidence mismatch")
-                if stage.get("rubric_version") != "1" or any(
+                if stage.get("rubric_version") not in (
+                    {"1", "2"} if evaluation["schema_version"] == "2" else {"1"}
+                ) or any(
                     e["snapshot"]["review"]["criteria"] != stage.get("criteria")
                     for e in records
                 ):
@@ -147,6 +177,60 @@ def validate_evaluation(result, evidence):
     ):
         raise ValueError("invalid investigation state")
 
+    if investigation["stop_reason"] == "goal_achieved":
+        objective = investigation.get("objective", {})
+        decisions = [
+            by_id[ref]["snapshot"]
+            for ref in investigation["evidence_refs"]
+            if by_id[ref]["query_id"] == "investigation_decision"
+        ]
+        if (
+            evaluation["schema_version"] != "2"
+            or objective.get("status") != "achieved"
+            or objective.get("analysis_id") != analysis_id
+            or evaluation["review"]["execution_status"] != "complete"
+            or evaluation["review"]["verdict"] != "acceptable"
+            or evaluation["review"].get("rubric_version") != "2"
+            or not objective.get("compatible")
+            or not objective.get("policies")
+            or not decisions
+            or decisions[-1].get("decision_assessment") != objective
+            or any(
+                not policy["applicable"]
+                or policy.get("unmet_required_evidence")
+                or not policy["criteria"]
+                or not policy["blocking_conditions"]
+                or any(
+                    row["status"] != "satisfied"
+                    for row in policy["criteria"]
+                    if row["required"]
+                )
+                or any(
+                    row["status"] != "satisfied"
+                    for row in policy["blocking_conditions"]
+                )
+                for policy in objective["policies"]
+            )
+        ):
+            raise ValueError("invalid investigation completion")
+        answers = {
+            row["criterion_id"]: row
+            for row in draft.get("interpretation", {}).get("criterion_assessments", [])
+        }
+        if any(
+            row["method"] == "llm"
+            and (
+                row["key"] not in answers
+                or any(
+                    row[key] != answers[row["key"]][key]
+                    for key in ("status", "finding_refs", "evidence_refs")
+                )
+            )
+            for policy in objective["policies"]
+            for row in policy["criteria"]
+        ):
+            raise ValueError("completion does not match reviewed interpretation")
+
 
 def source_evaluation(body):
     """Ops carries source judgments without treating foreign IDs as local evidence."""
@@ -157,7 +241,7 @@ def source_evaluation(body):
             "review_status": "legacy_unreviewed",
             "limitations": body.get("limitations", []),
         }
-    if value.get("schema_version") != "1":
+    if value.get("schema_version") not in {"1", "2"}:
         return {
             "schema_version": value.get("schema_version"),
             "review_status": "unsupported_schema",
@@ -167,6 +251,10 @@ def source_evaluation(body):
     return {
         "schema_version": value.get("schema_version"),
         "analysis_id": value.get("analysis_id"),
+        "generation_mode": value.get("generation_mode"),
+        "objective_status": value.get("investigation", {})
+        .get("objective", {})
+        .get("status"),
         "collection_status": value.get("collection", {}).get("status"),
         "evidence_status": value.get("evidence", {}).get("execution_status"),
         "review_status": value.get("review", {}).get("execution_status"),

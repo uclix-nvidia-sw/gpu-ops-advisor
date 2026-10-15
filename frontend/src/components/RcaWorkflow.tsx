@@ -1,3 +1,4 @@
+import { RcaObjective } from './RcaEvaluation';
 import { useState } from 'react';
 import { obj, rows, str, strings, useList, useResource, type Row } from '../lib/live';
 import { relationMismatch } from '../lib/debug';
@@ -9,7 +10,7 @@ import { DataView, More, QueryState } from './live';
 import { RawRecord } from './TraceView';
 import { EvidenceEvaluation } from './RcaDebug';
 import { evaluationLabels } from './RcaEvaluation';
-import { rcaStages, RcaStageDetails } from './RcaEvaluationTrace';
+import { rcaStages, RcaStageDetails, stageForRecord } from './RcaEvaluationTrace';
 import './RcaWorkflow.css';
 
 const steps: Record<string, { title: string; actor: string; purpose: string }> = {
@@ -206,7 +207,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                 aria-current={record.id === id ? 'step' : undefined}
                 onClick={() => setSelected(str(record.id))}
               >
-                기록 {i + 1} · {stepFor(str(record.query_id)).title}
+                기록 {i + 1} · {(stageForRecord(record) || stepFor(str(record.query_id))).title}
                 <small>
                   {typeof record.round === 'number'
                     ? `${record.round + 1}회차 · `
@@ -269,7 +270,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                     className="text-link"
                     onClick={() => setSelected(str(r.id))}
                   >
-                    {stepFor(str(r.query_id)).title} · {str(r.id)}
+                    {(stageForRecord(r) || stepFor(str(r.query_id))).title} · {str(r.id)}
                   </button>
                 ))}
               <p>
@@ -296,7 +297,7 @@ export function RcaWorkflowRecord({
   onEvidence: (id: string) => void;
 }) {
   const kind = str(record.query_id),
-    step = stepFor(kind),
+    step = stageForRecord(record) || stepFor(kind),
     body = obj(record.snapshot),
     meta = obj(record.quality),
     diagnostics = obj(body.diagnostics);
@@ -389,10 +390,13 @@ export function RcaWorkflowRecord({
           <p>
             다음 행동:{' '}
             {(
-              { collect: '보완 수집', revise: '분석 수정', finish: '조사 종료' } as Record<
-                string,
-                string
-              >
+              {
+                collect: '보완 수집',
+                revise: '분석 수정',
+                withhold: '문제된 주장 보류',
+                reuse: '기존 RCA 판단 유지',
+                finish: '조사 종료',
+              } as Record<string, string>
             )[str(body.action)] || str(body.action)}
           </p>
         )}
@@ -471,6 +475,26 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>결과·남은 한계</h4>
+        <RcaObjective value={body.decision_assessment} />
+        {body.generation_mode === 'combined' && (
+          <section aria-label="통합 작성 결과">
+            <h4>증거 해석·RCA 분석 · 작성 LLM</h4>
+            <p>
+              한 논리 요청에서 해석과 원인 후보를 작성했습니다. 품질 검토는 별도 LLM이 수행합니다.
+            </p>
+            <p>
+              {diagnostics.adoption === 'interpretation_only'
+                ? '해석은 보존했지만 원인 분석은 채택하지 못했습니다.'
+                : diagnostics.adoption === 'validated_response'
+                  ? '해석·분석 응답이 코드 검증을 통과했습니다. 원인 확정이나 품질 검토 통과를 뜻하지 않습니다.'
+                  : '작성 결과를 채택하지 못했습니다. 실패 사유와 요청 이력을 확인하세요.'}
+            </p>
+            <details>
+              <summary>확인 내용·미확인·상충·한계</summary>
+              <DataView value={body.interpretation} />
+            </details>
+          </section>
+        )}
         <StoredOutcome record={record} />
         {/^D\d+$/.test(kind) ? (
           <>
@@ -529,7 +553,7 @@ export function RcaWorkflowRecord({
             같은 분석본의 관련 기록:{' '}
             {sameDraft.map((r) => (
               <button className="text-link" key={str(r.id)} onClick={() => onEvidence(str(r.id))}>
-                {stepFor(str(r.query_id)).title} · {str(r.id)}
+                {(stageForRecord(r) || stepFor(str(r.query_id))).title} · {str(r.id)}
               </button>
             ))}
           </p>

@@ -6,7 +6,7 @@
   "compatibility": {},
   "source_refs": [],
   "content": {
-    "schema": "gpu-rca-runbook/1.0",
+    "schema": "gpu-rca-runbook/1.1",
     "required_evidence": [
       "reported_producer_contract",
       "reported_error_code"
@@ -259,6 +259,83 @@
           "source_indices": [
             4
           ]
+        }
+      ]
+    },
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 XID:79 보고를 식별하고 한계를 설명했는가?",
+        "conclusion_scope": "보고 식별·조건부 안내. 근본 원인, 현재 고장·복구, 조치 수행은 확정하지 않음."
+      },
+      "applies_when": {
+        "reported_error_code": "xid:79",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 오류 코드 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "확인한 보고와 미확정 원인·현재 상태·시험 여부를 구분하고, 특정 장비나 원인을 과도하게 단정하지 않았는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D44",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다."
+        },
+        {
+          "query_id": "D02",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 GPU 사용률과 DCGM 장치 라벨(PCI·UUID·모델·드라이버)을 확인한다. 사용률은 접근 가능성의 대체 근거가 아니다."
+        },
+        {
+          "query_id": "D11",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "동일 GPU·기간의 전력 표본으로 사건 전후 전원 이상 징후를 보조 관측한다. 전력값만으로 전원 고장을 판정하지 않는다."
         }
       ]
     }

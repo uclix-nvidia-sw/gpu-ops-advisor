@@ -466,53 +466,53 @@ def validate_synthesis(
     return candidates
 
 
-def synthesis_view(payload, remaining, reserved):
+def synthesis_view(payload, remaining, reserved, prompt=SYNTHESIS):
     """Use the same bounded input/output allocation for planning and execution."""
     remaining -= reserved
     output_room = (
-        min(8192, max(512, (remaining - len(SYNTHESIS.encode())) // 3))
+        min(8192, max(512, (remaining - len(prompt.encode())) // 3))
         if reserved
         else 8192
     )
     max_bytes = min(
-        16000, max(0, remaining - len(SYNTHESIS.encode()) - 256 - 2 - output_room)
+        16000, max(0, remaining - len(prompt.encode()) - 256 - 2 - output_room)
     )
     view = bounded_context(payload, max_bytes)
     return view, max_bytes
 
 
-def reserve_review_budget(llm, payload, requested, floor=None):
+def reserve_review_budget(llm, payload, requested, floor=None, prompt=SYNTHESIS):
     """Release only excess reservation, retaining the caller and review floor."""
     remaining = getattr(llm, "remaining", 32768)
     previous = getattr(llm, "reserved_tokens", 0)
     requested = max(previous, requested)
     protected = floor is not None
     floor = max(previous, floor or 0)
-    view, limit = synthesis_view(payload, remaining, requested)
+    view, limit = synthesis_view(payload, remaining, requested, prompt)
 
     def usable(value, bound):
         return bool(value["observation_refs"]) and encoded_size(value) <= bound
 
     selected, reason = requested, "reservation_unchanged"
     if not usable(view, limit):
-        candidate, bound = synthesis_view(payload, remaining, max(1, floor))
+        candidate, bound = synthesis_view(payload, remaining, max(1, floor), prompt)
         if floor < requested and usable(candidate, bound):
             # Keep the largest reservation that admits an original observation.
             low, high = max(1, floor), requested
             while low < high:
                 mid = (low + high + 1) // 2
-                candidate, bound = synthesis_view(payload, remaining, mid)
+                candidate, bound = synthesis_view(payload, remaining, mid, prompt)
                 if usable(candidate, bound):
                     low = mid
                 else:
                     high = mid - 1
             selected, reason = low, "analysis_input_preserved"
-            view, limit = synthesis_view(payload, remaining, selected)
+            view, limit = synthesis_view(payload, remaining, selected, prompt)
         else:
             reason = "analysis_review_budget_insufficient"
             if not protected:
                 selected = floor
-                view, limit = synthesis_view(payload, remaining, selected)
+                view, limit = synthesis_view(payload, remaining, selected, prompt)
     return selected, {
         "remaining_tokens": remaining,
         "previous_reserved_tokens": previous,
@@ -559,7 +559,7 @@ async def synthesize(llm, payload, diagnostics=None):
         repair_attempts=0, repair_status="not_needed", validation_failures=[]
     )
     try:
-        for attempt in range(2):
+        for attempt in range(1 if getattr(llm, "request_attempt_limit", 3) == 1 else 2):
             request = dict(view)
             if attempt:
                 # Rebuild from immutable input while reserving repair output room.
@@ -771,6 +771,8 @@ async def synthesize(llm, payload, diagnostics=None):
             diagnostics["validation_failures"].append(
                 {"attempt": attempt + 1, "violations": feedback}
             )
+            if getattr(llm, "request_attempt_limit", 3) == 1:
+                diagnostics["repair_status"] = "same_evidence_rewrite_blocked"
     except (ValueError, TypeError, KeyError):
         diagnostics["error_code"] = "invalid_model_response"
     finally:

@@ -55,6 +55,43 @@ def interpretation_reply(data):
     return reply_for(data)
 
 
+def policy_interpretation_reply(data):
+    response = rca_interpretation_reply()
+    policies = data.get("decision_assessment", {}).get("policies", [])
+    if not policies:
+        return response
+    refs = data.get("observation_refs", [])
+    if refs:
+        response["findings"] = [
+            {
+                "id": "reported",
+                "kind": "observed",
+                "statement": "오류 보고를 확인했습니다. 근본 원인과 현재 상태는 미확정입니다.",
+                "evidence_refs": refs,
+            }
+        ]
+    response["criterion_assessments"] = [
+        {
+            "criterion_id": row["key"],
+            "status": "satisfied" if refs else "unknown",
+            "finding_refs": ["reported"] if refs else [],
+            "evidence_refs": refs,
+        }
+        for policy in policies
+        for row in policy["criteria"]
+        if row["method"] == "llm"
+    ]
+    return response
+
+
+def combined_reply(data):
+    return {
+        "interpretation": policy_interpretation_reply(data),
+        "hypotheses": [],
+        "limitations": ["원인과 현재 상태는 미확정입니다."],
+    }
+
+
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
@@ -105,7 +142,9 @@ class Upstream(BaseHTTPRequestHandler):
                 "content": json.dumps(
                     review_reply(data)
                     if "rubric_version" in data
-                    else rca_interpretation_reply()
+                    else combined_reply(data)
+                    if data.get("generation_mode") == "combined"
+                    else policy_interpretation_reply(data)
                     if "Interpret incident evidence" in body["messages"][0]["content"]
                     else analysis_reply(data["observation_refs"])
                     if "observation_refs" in data
@@ -2431,7 +2470,9 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
 
 
 @pytest.mark.e2e
-def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
+def test_rca_numeric_rejection_does_not_rewrite_same_evidence_before_publication(
+    stack, monkeypatch
+):
     original_reply = analysis_reply
     original_worker = worker_result
     captured = {}
@@ -2465,7 +2506,7 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
             ).fetchall()
         ]
     assert [row["round"] for row in rounds] == [0, 1]
-    assert calls == 3  # First analysis, numeric repair, then analysis after follow-up.
+    assert calls == 2  # Initial analysis and one analysis after new source evidence.
     diagnostic = rounds[0]["diagnostics"]
     assert rounds[1]["diagnostics"]["repair_status"] == "not_needed"
     assert rounds[1]["diagnostics"]["repair_attempts"] == 0
@@ -2473,11 +2514,9 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
         captured["result"]["quality"]["analysis"]["synthesis"]
         == rounds[1]["diagnostics"]
     )
-    assert diagnostic["repair_status"] == "repaired"
-    assert diagnostic["repair_attempts"] == 1
-    gate = diagnostic["repair_gate"]
-    assert not gate["budget_blocked"] and not gate["deadline_blocked"]
-    assert gate["remaining_seconds"] > 0 and gate["available_output_cap"] > 0
+    assert diagnostic["repair_status"] == "same_evidence_rewrite_blocked"
+    assert diagnostic["repair_attempts"] == 0
+    assert "repair_gate" not in diagnostic
     violation = diagnostic["validation_failures"][0]["violations"][0]
     assert violation["code"] == "unregistered_numeric_claim"
     assert len(violation["numeric_diagnostic"]["text_sha256"]) == 64
@@ -2902,3 +2941,88 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
         == 60
     )
     assert len(evidence) == 10
+
+
+@pytest.mark.e2e
+def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
+    stack, monkeypatch
+):
+    from copy import deepcopy
+
+    monkeypatch.setattr(Upstream, "fleet_reports", True)
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "review_reply",
+        lambda data: __import__("evaluation_fixtures").review_reply(data, "acceptable"),
+    )
+    profile = deepcopy(stack["profile"])
+    profile["rca"]["generation_mode"] = "combined"
+    profile["health_contracts"] = json.loads(
+        (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
+    )["health_contracts"]
+    config = LOCAL / "combined-profile.json"
+    config.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
+    book = json.loads(
+        (ROOT / "rcca-agent/runbooks/sxid/RB-SXID-11001.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    book["knowledge_key"] += "-goal-fixture-" + uuid4().hex
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,1,'runbook','published','common',%s,%s,%s,%s)",
+            (
+                str(uuid4()),
+                str(uuid4()),
+                book["knowledge_key"],
+                Jsonb(book["content"]),
+                content_hash(book["content"]),
+                content_hash(book["content"]),
+                Jsonb({"cluster_id": "cpc-2"}),
+            ),
+        )
+        iid = str(uuid4())
+        data = dict(
+            scope=SCOPE,
+            incident_id=iid,
+            evidence_version=1,
+            analysis_profile_revision="fixture-v1",
+            incident_time=PERIOD["start"],
+            time_range=PERIOD,
+            purpose_ids=["R01"],
+            target={"node": "node-1"},
+        )
+        snapshot = {"input": data, "alert": {"labels": {"reason": "SXID 11001"}}}
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+            (iid, Jsonb(SCOPE), data["incident_time"]),
+        )
+        conn.execute(
+            "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+            (iid, Jsonb(snapshot), content_hash(snapshot)),
+        )
+    jid = submit(stack, "rca", data)
+    result, evidence = worker_result(stack, "rca", jid, "-combined-goal")
+    evaluation = result["quality"]["rca_evaluation"]
+    assert evaluation["schema_version"] == "2"
+    assert evaluation["generation_mode"] == "combined"
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert evaluation["review"]["rubric_version"] == "2"
+    assert result["quality"]["report"]["status"] == "complete"
+    assert result["narrative"]
+    assert not any(q == "evidence_interpretation" for q, _ in evidence)
+    assert all(q == "D09" for q, _ in evidence if q.startswith("D"))
+    with psycopg.connect(stack["url"]) as conn:
+        stored = dict(
+            conn.execute(
+                "SELECT query_id,snapshot FROM evidence WHERE job_id=%s AND query_id IN ('rca_synthesis','rca_result_frozen','report_assembly')",
+                (jid,),
+            ).fetchall()
+        )
+    assert stored["rca_synthesis"]["diagnostics"]["request_attempts"] == 1
+    assert (
+        stored["rca_result_frozen"]["material_hash"]
+        == stored["report_assembly"]["material_hash"]
+    )
+    assert stored["rca_result_frozen"]["material"]["evaluation"] == evaluation

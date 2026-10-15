@@ -125,6 +125,8 @@ class RunbookContractTests(unittest.TestCase):
 
     def test_duplicate_and_required_only_fallback(self):
         row = deepcopy(XID)
+        row["content"]["schema"] = "gpu-rca-runbook/1.0"
+        row["content"].pop("decision_policy", None)
         row["content"]["observation_plan"].append(row["content"]["observation_plan"][0])
         with self.assertRaisesRegex(ValueError, "duplicate"):
             validate_runbook(row, QUERIES, ALLOWED, authoring=True)

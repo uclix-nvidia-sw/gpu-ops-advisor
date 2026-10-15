@@ -316,6 +316,8 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
             ).read_text(encoding="utf-8")
         )
         # This fixture explicitly tests the permitted exploratory path.
+        row["content"]["schema"] = "gpu-rca-runbook/1.0"
+        row["content"].pop("decision_policy", None)
         for step in row["content"]["observation_plan"]:
             step.pop("selection", None)
             if not step["required"]:
