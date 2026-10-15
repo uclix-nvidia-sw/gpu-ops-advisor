@@ -2842,7 +2842,9 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
     diagnostic = result["quality"]["analysis"]["synthesis"]
     assert diagnostic["completion_mode"] == "validated_subset"
     assert diagnostic["rejected_hypotheses"] == 1
-    assert diagnostic["repair_status"] == "failed"
+    assert diagnostic["repair_status"] == "same_evidence_rewrite_blocked"
+    assert diagnostic["repair_attempts"] == 0
+    assert diagnostic["request_attempts"] == 1
     assert "인벤토리에 없는 GPU와 관련되어" not in json.dumps(
         result, ensure_ascii=False
     )
