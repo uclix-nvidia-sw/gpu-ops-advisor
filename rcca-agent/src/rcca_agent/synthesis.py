@@ -481,39 +481,51 @@ def synthesis_view(payload, remaining, reserved):
     return view, max_bytes
 
 
-def reserve_review_budget(llm, payload, requested):
-    """Reserve review capacity without evicting every usable synthesis source.
-
-    Existing caller reservations remain a hard floor. A reduced review reserve
-    is a best-effort allocation, never a promise that later review will succeed.
-    """
-    floor = getattr(llm, "reserved_tokens", 0)
-    requested = max(floor, requested)
+def reserve_review_budget(llm, payload, requested, floor=None):
+    """Release only excess reservation, retaining the caller and review floor."""
     remaining = getattr(llm, "remaining", 32768)
+    previous = getattr(llm, "reserved_tokens", 0)
+    requested = max(previous, requested)
+    protected = floor is not None
+    floor = max(previous, floor or 0)
+    view, limit = synthesis_view(payload, remaining, requested)
 
-    def fits(reserved):
-        view, limit = synthesis_view(payload, remaining, reserved)
-        return bool(view["observation_refs"]) and encoded_size(view) <= limit
+    def usable(value, bound):
+        return bool(value["observation_refs"]) and encoded_size(value) <= bound
 
-    selected = requested
-    if not fits(requested):
-        # Positive reservations use adaptive output room; zero retains the
-        # historical unreserved synthesis policy. Search the monotone branch.
-        low, high = max(1, floor), requested
-        selected = floor
-        while low <= high:
-            candidate = (low + high) // 2
-            if fits(candidate):
-                selected = candidate
-                low = candidate + 1
-            else:
-                high = candidate - 1
+    selected, reason = requested, "reservation_unchanged"
+    if not usable(view, limit):
+        candidate, bound = synthesis_view(payload, remaining, max(1, floor))
+        if floor < requested and usable(candidate, bound):
+            # Keep the largest reservation that admits an original observation.
+            low, high = max(1, floor), requested
+            while low < high:
+                mid = (low + high + 1) // 2
+                candidate, bound = synthesis_view(payload, remaining, mid)
+                if usable(candidate, bound):
+                    low = mid
+                else:
+                    high = mid - 1
+            selected, reason = low, "analysis_input_preserved"
+            view, limit = synthesis_view(payload, remaining, selected)
+        else:
+            reason = "analysis_review_budget_insufficient"
+            if not protected:
+                selected = floor
+                view, limit = synthesis_view(payload, remaining, selected)
     return selected, {
-        "requested_review_reserve": requested,
-        "applied_review_reserve": selected,
         "remaining_tokens": remaining,
-        "synthesis_sources_fit": fits(selected),
+        "previous_reserved_tokens": previous,
+        "requested_review_reserve": requested,
+        "review_floor_tokens": floor,
+        "applied_review_reserve": selected,
+        "synthesis_sources_fit": usable(view, limit),
         "review_reserve_reduced": selected < requested,
+        "reason": reason,
+        "max_input_bytes": limit,
+        "input_bytes": encoded_size(view),
+        "input_evidence_refs": view["observation_refs"],
+        "context_selection": view["context_selection"],
     }
 
 

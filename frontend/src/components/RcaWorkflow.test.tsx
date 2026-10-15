@@ -3,6 +3,204 @@ import { describe, expect, it } from 'vitest';
 import { RcaWorkflowButton, RcaWorkflowRecord } from './RcaWorkflow';
 
 describe('developer RCA workflow entry and evidence', () => {
+  it('connects the selected source to its selection without linking other selections', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{ id: 'selection', query_id: 'runbook_selection', snapshot: [] }}
+        relatedRecords={[
+          {
+            id: 'chosen-source',
+            query_id: 'runbook',
+            quality: { selection_evidence_id: 'selection' },
+          },
+          {
+            id: 'unrelated-source',
+            query_id: 'runbook',
+            quality: { selection_evidence_id: 'other' },
+          },
+        ]}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('선택 결과 · 사용한 지침 원문');
+    expect(html).toContain('chosen-source');
+    expect(html).not.toContain('unrelated-source');
+    const source = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'runbook',
+          quality: { selection_evidence_id: 'selection' },
+          snapshot: {},
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(source).toContain('연결 근거');
+    expect(source).toContain('selection');
+  });
+
+  it('explains a stored runbook without inventing another execution or model call', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'runbook',
+          query_version: '4',
+          input: { revision_id: 'revision-1' },
+          quality: { origin: 'published', reviewed: true },
+          tool_status: 'ok',
+          snapshot: {
+            title: 'XID 오류 조사',
+            claim: '연결 상태 확인 필요',
+            limitations: ['장비 연결은 미확인'],
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    for (const text of [
+      '선택 Runbook 원문 보존',
+      '원문·중간 결과 보존',
+      '다시 실행한 것이 아닙니다',
+      'XID 오류 조사',
+      'revision-1',
+      '장비 연결은 미확인',
+      '개별 수행 사유는 기록 없음',
+    ])
+      expect(html).toContain(text);
+    expect(html).not.toContain('담당 미기록');
+    expect(html).not.toContain('모델 전송 시도');
+    expect(html).toContain('<summary>저장된 결과 원문</summary>');
+  });
+
+  it('explains candidate selection and numeric collection budgets in ordinary language', () => {
+    const selection = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'runbook_selection',
+          snapshot: [
+            { revision_id: 'r1', status: 'retrieved' },
+            { revision_id: 'r2', status: 'invalid_contract' },
+          ],
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(selection).toContain('사건 단서와 맞는 조사 후보');
+    expect(selection).toContain('선택에서 제외');
+    const plan = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'observation_plan',
+          snapshot: {
+            concurrency: 3,
+            assignments: [{ query_id: 'D09', budget: { queries: 0, discovery: 2 } }],
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(plan).toContain('조회 예산 0회');
+    expect(plan).toContain('탐색 예산 2회');
+    expect(plan).toContain('실제 시작 순서는 아닙니다');
+  });
+
+  it('shows legacy reservation diagnostics without inventing a protection floor', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'rca_synthesis',
+          snapshot: {
+            diagnostics: {
+              budget_allocation: {
+                requested_review_reserve: 20000,
+                applied_review_reserve: 18000,
+                remaining_tokens: 28000,
+              },
+            },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('20,000');
+    expect(html).toContain('18,000');
+    expect(html).toContain('검토 보호 하한: 기록 없음');
+    expect(html).toContain('모델 호출 여부 미확인');
+  });
+
+  it('links the same draft but does not infer evidence use from record order', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          id: 'draft',
+          query_id: 'rca_analysis_draft',
+          snapshot: { analysis_id: 'analysis-1' },
+        }}
+        relatedRecords={[
+          { id: 'review', query_id: 'analysis_review', quality: { analysis_id: 'analysis-1' } },
+          {
+            id: 'other-review',
+            query_id: 'analysis_review',
+            quality: { analysis_id: 'analysis-2' },
+          },
+        ]}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('같은 분석본의 관련 기록');
+    expect(html).not.toContain('other-review');
+    expect(html).toContain('이 근거를 사용했다고 판단하지 않습니다');
+  });
+
+  it('shows the synthesis preflight reason before a generic failed status', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'rca_synthesis',
+          quality: { reason: 'failed' },
+          snapshot: {
+            status: 'failed',
+            diagnostics: {
+              error_code: 'llm_context_budget_exhausted',
+              request_attempts: 0,
+              response_calls: 0,
+              input_bytes: 2154,
+              original_input_bytes: 48644,
+              input_evidence_refs: [],
+            },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    const why = html.slice(html.indexOf('왜 했나'), html.indexOf('어떻게 했나'));
+    expect(why).toContain('llm_context_budget_exhausted');
+    expect(why).not.toContain('<code>failed</code>');
+    expect(html).toContain('모델 호출 전 생략');
+    expect(html).toContain('없음 (빈 목록 기록)');
+    expect(html).toContain('48,644');
+  });
+
+  it('keeps a failed model response separate from a final unreviewed draft', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'analysis_review',
+          snapshot: {
+            execution_status: 'skipped',
+            reason: 'draft_changed_after_review',
+            failure_reason: 'llm_output_truncated',
+            usage: { request_attempts: 1, calls: 1 },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    expect(html).toContain('모델 출력 잘림');
+    expect(html).toContain('모델 전송 시도 1회 · 응답 기록 1건');
+    expect(html).toContain('최종 초안은 미검토');
+    expect(html).not.toContain('모델 호출 전 생략');
+  });
   it('provides a visible button without fetching records until opened', () => {
     const html = renderToStaticMarkup(<RcaWorkflowButton jobId="job" />);
     expect(html).toContain('워크플로우 디버깅');

@@ -191,8 +191,8 @@ def review_reserve(view, llm):
     return encoded_size(view) + len(REVIEW.encode()) + output + 4096 + 512
 
 
-async def review_analysis(llm, draft, view, allowed_queries):
-    payload = {
+def review_payload(draft, view, allowed_queries):
+    return {
         "rubric_version": "1",
         "rubric": RUBRIC,
         "draft": draft,
@@ -201,6 +201,10 @@ async def review_analysis(llm, draft, view, allowed_queries):
         "allowed_queries": allowed_queries,
         "context_selection": view.get("context_selection", {}),
     }
+
+
+async def review_analysis(llm, draft, view, allowed_queries):
+    payload = review_payload(draft, view, allowed_queries)
     return await call_stage(
         llm,
         "analysis_review",

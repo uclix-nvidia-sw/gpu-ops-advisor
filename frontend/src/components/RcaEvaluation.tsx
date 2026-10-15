@@ -84,6 +84,12 @@ export function RcaEvaluation({ result }: { result: Row }) {
         </dd>
       </dl>
       <p>해석 완료는 모든 사실의 확인을, 검토 통과와 조사 종료는 원인 확정을 뜻하지 않습니다.</p>
+      {!reviewed && (
+        <p>
+          미검토는 최종 초안의 상태입니다. 실제 요청·응답과 실패 이유는 개발측 ‘워크플로우 디버깅’의
+          분석 품질 검토 기록에서 확인하세요.
+        </p>
+      )}
       {reviewed && (
         <details>
           <summary>평가 척도·항목별 판단 근거</summary>

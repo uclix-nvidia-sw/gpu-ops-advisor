@@ -7,7 +7,13 @@ import json
 from agent_common.parsers import parse_health
 from agent_common.contracts import now, incident_source
 
-from .analysis_review import analysis_draft, review_analysis, review_reserve
+from .analysis_review import (
+    REVIEW,
+    analysis_draft,
+    review_analysis,
+    review_payload,
+    review_reserve,
+)
 from .evidence_interpretation import inspection_context, interpret_evidence, SENSITIVE
 from .synthesis import synthesize, reserve_review_budget
 from .synthesis_context import bounded_context, encoded_size
@@ -188,10 +194,32 @@ async def evaluate_analysis(
     stop_override = None
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
-        llm.reserved_tokens, allocation = reserve_review_budget(
-            llm, payload, review_reserve(view, llm)
+        base_candidates, base_recommendations = assemble([])
+        base_limits = [BASE_LIMIT, REVIEW_LIMIT]
+        if interpretation is None:
+            base_limits.append(
+                "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
+            )
+        baseline = review_payload(
+            analysis_draft(base_candidates, base_recommendations, base_limits, view),
+            view,
+            allowed,
         )
-        synthesis_diag["budget_allocation"] = allocation
+        output = getattr(getattr(llm, "settings", None), "llm_default_max_tokens", 4096)
+        # Preserve the actual rule draft, full review output and existing 512 margin.
+        floor = (
+            old_reserve + encoded_size(baseline) + len(REVIEW.encode()) + output + 512
+        )
+        reserved, allocation = reserve_review_budget(
+            llm, payload, review_reserve(view, llm), floor
+        )
+        allocation.update(
+            review_floor_basis="rule_draft_full_output",
+            review_baseline_input_bytes=encoded_size(baseline),
+            review_output_tokens=output,
+        )
+        synthesis_diag = {"budget_allocation": allocation}
+        llm.reserved_tokens = reserved
         started_at, started = now(), time.monotonic()
         before = dict(getattr(llm, "usage", {}))
         try:
