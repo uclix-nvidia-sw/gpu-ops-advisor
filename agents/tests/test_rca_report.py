@@ -6,6 +6,48 @@ import pytest
 
 from agent_common.llm import RemoteUncertain
 from rcca_agent.report import write_report, TITLES
+from rcca_agent.collection_checks import collection_checks
+
+
+@pytest.mark.asyncio
+async def test_additional_checks_only_request_missing_connections_not_repeated_queries():
+    class Model:
+        configured = False
+
+    evidence = [
+        dict(id=q, query_id=q, tool_status="ok", quality={"complete": True})
+        for q in ("D09", "D02", "D06", "D13")
+    ]
+    profile = {
+        "query_contract": "single-query-v3-draft",
+        "queries": {e["id"]: {} for e in evidence},
+    }
+    checks = collection_checks(
+        profile,
+        list(profile["queries"]),
+        {e["id"]: [e] for e in evidence},
+        [{"pod_uid": "pod"}],
+        ["sxid:11001"],
+    )
+    result = dict(
+        result_status="partial",
+        termination_reason="missing_data",
+        cause_candidates=[],
+        recommendations=[],
+        missing_inputs=["causal_confirmation_evidence", "normalized_health"],
+        limitations=[],
+        quality={"collection_checks": checks},
+    )
+    await write_report(
+        result, {"incident_time": "2026-10-15T04:18:10Z"}, {}, evidence, Model()
+    )
+    sections = {s["id"]: s for s in result["narrative"]}
+    assert "Fabric Manager" in sections["next"]["text"]
+    assert "NVSwitch 포트" in sections["next"]["text"]
+    assert "GPU–작업 연결" not in sections["next"]["text"]
+    assert "자동 수집 완료" in sections["action"]["text"]
+    assert "현재 장치 상태" in sections["limits"]["text"]
+    assert result["recommendations"] == []
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,7 @@
 
 | 기능 | 보존한 검증 근거 | 한계 |
 |---|---|---|
-| RCA 사건 우선 보고·분석 원문 예산 | 2026-10-15, base `1322f16` 로컬 변경: 전체 Agent 1,571 통과·Windows 파일 정리 2 실패·47 skip. 오류 이벤트 KST·PCI 연결·조건부 지침 표시·기존 권고 적격성 유지와 검토 예약으로 인한 분석 원문 소실 회귀검사 포함. Ruff 검사 통과 | 실패는 기존 열린 파일 삭제와 디렉터리 flush 사례. 추가로 현재 소스의 Backend·JC·Incident, 임시 loopback PostgreSQL과 공식 MCP v1.4.2에서 양 Worker 발행·RCA 수치 수정 진단·검토 입력 상한 E2E 3개 통과(28.02초). Grafana·LLM은 fixture이며 나머지 E2E는 미실행. 실제 모델 재생·새 지식 발행·배포 후 품질은 미검증 |
+| RCA 사건 우선 보고·자동 보완 수집 | 2026-10-15, main `dce3aea` 기반 후속 변경: Python 3.12.14 전체 Agent/프로세스 E2E 1,626 통과·Windows 파일 정리 2 실패·skip 없음(261.57초). 예산 소진·검토 수락 후 명시적 규칙 조회, PCI 신원 조인, 수집 상태별 보고, 변경된 보고 섹션 E2E 검사. Ruff 통과 | 임시 loopback PostgreSQL·현재 소스 Backend/JC/Incident·공식 MCP v1.4.2·fixture Grafana/LLM. 두 실패는 기존 열린 파일 삭제·디렉터리 flush의 Windows 제약이며 해당 Linux CI는 이전 revision에서 통과. 실제 자동 조인·모델 품질·지식 발행·배포 후 개선은 미검증 |
 | RCA 조건부 보완 조회·명시적 탐색 | 2026-10-14, PR #122: 비 E2E 1,201개 및 격리 PostgreSQL/Backend/JC/Incident/MCP fixture E2E 3개 통과 | Windows 파일 정리 모듈 제외. 실제 모델의 선택 품질과 운영 배포를 입증하지 않음 |
 | RCA 공통 수정 불변 조건·전환 검토 | 2026-10-14, PR #124 (`31a0bcc`): 프롬프트 크기에 맞춘 수정 예산 fixture, 집중 검사 360개와 JSON 선택·부분 결과 공개 E2E 2개 통과 기록 | #123의 수정 예산 테스트 실패를 fixture에서 수정. 실제 모델 품질·운영 배포를 입증하지 않음 |
 | 집계 보고서 GPU 신원 전환 | 2026-10-14, base `a317bf7`: 계산/전환 46개, 기존 UI 소비자 35개, 전체 Agent/fixture E2E 1,211개 통과 기록 | Python 3.11.16, 임시 loopback PostgreSQL·실제 Worker/NAT/공식 MCP·가짜 Grafana/LLM. 운영 동시 부하·주간 최대 크기는 미검증 |
@@ -23,6 +23,7 @@
 
 | 대상 | 확인한 사실 | 확인하지 못한 범위 |
 |---|---|---|
+| RCA 후속 조회 원천 | 2026-10-15 13:13–13:23 KST Grafana UI 읽기 조회: 사건 GPU의 PCI·UUID·A100 모델·Namespace/Pod 라벨, 같은 Pod의 UID·노드 이력 조회됨. 같은 서버 Loki에서 FM/source port/topology 관련 검색은 빈 결과 | MCP 직접 접속 검증이 아니며 사건 순간의 자동 조인·작업 실패·FM 원천의 전체 부재를 입증하지 않음. 저장소 기본 D13은 node 범위를 지원하지 않아 별도 binding이 필요함 |
 | 10/15 배포 후 RCA 검수 | 13:18 KST dgx01 XID79 (`c7d388a8-9e0d-45c2-8922-04d0a05eba99`)·SXID11001 (`da5f3b74-564d-448c-99f5-3e438d51b411`): 저장 근거 UI에서 양쪽 D09만 실행, 분석 작성 전송 0회·`llm_context_budget_exhausted`·입력 근거 참조 없음 확인. XID 재검토 출력 잘림, SXID 재검토 예산 부족. SXID의 저장 오류 이벤트 1개도 분석 입력에서 제외됨 | 운영 원본 읽기 검수. 이 관측은 로컬 수정 이후의 개선 검증이 아니며 직접 Grafana MCP 호출·복구 수행·현재 장애를 입증하지 않음 |
 | RCA 오류 주입 | 2026-10-14 11:57:34 KST dgx02 주입, 12:00:48경 작업. 당시 배포 코드와 XID79 revision 6·SXID11001 revision 5에서 규칙 선택 LLM 0회, XID D09/D44/D02·SXID D09/D02 성공, partial 결과와 complete 보고서 공개 | 실제 고장 원인·현재 장비 상태. 이후 코드가 배포됐다는 증거가 아님 |
 | 집계 신원 전환 | 2026-10-14 read-only 조사: 10월 13일 CPC-1 09–10/12–13시, CPC-2 13–14시의 11 GPU·13 GPU-hour 전환에서 이전/새 라벨 구간이 겹치지 않고 15초 간격임을 확인. 해당 경계를 코드에 재생해 8+3+2개 전환 검증 | 새 이미지의 운영 발행·LLM 지연·고빈도 전환·주간/최대 크기/동시 부하 |

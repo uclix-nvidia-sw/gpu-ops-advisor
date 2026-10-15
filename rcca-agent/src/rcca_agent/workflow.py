@@ -20,6 +20,7 @@ from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
 from .analysis_review import analysis_draft
 from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
+from .collection_checks import collection_checks, reported_gpu_identity
 from .requirement_diagnostics import (
     unmet_requirements,
     reported_facts,
@@ -275,9 +276,7 @@ def normalized_state(obs, collected, data, profile, initial_facts):
         ),
     )
     incident_at = timestamp(data["incident_time"])
-    mapping_identity = {
-        k: v for k, v in data.get("target", {}).items() if k in {"gpu_uuid", "pod_uid"}
-    }
+    mapping_identity, identity_refs = reported_gpu_identity(data, valid)
     relations = [
         dict(
             cluster_id=m["cluster_id"],
@@ -286,7 +285,7 @@ def normalized_state(obs, collected, data, profile, initial_facts):
             namespace=m["namespace"],
             relation_scope="incident_time_mapping",
             impact_status="not_assessed",
-            evidence_refs=m["evidence_refs"],
+            evidence_refs=list(dict.fromkeys(m["evidence_refs"] + identity_refs)),
         )
         for m in mapping
         if m["start"] <= incident_at < m["end"]
@@ -963,17 +962,22 @@ async def run(tools):
         policy_findings = state["policy_findings"]
         fallback_books = state["fallback_books"]
         unexpected_queries = state["unexpected_queries"]
+        ruled, governed, rule_findings = rule_followup(
+            selected, plans, remaining, gaps, available
+        )
         stop_reason = (
             "fast_path"
             if fast_path
             else evaluation["stop_reason"]
-            if evaluation.get("stop_reason")
+            if evaluation.get("stop_reason") not in (None, "llm_budget_exhausted")
             else "review_accepted"
             if evaluation["review"]["verdict"] == "acceptable"
             and not evaluation["review_output"]["followup_questions"]
+            and not ruled
             else "sufficient"
             if gate == "sufficient"
             and not (evaluation.get("review_output") or {}).get("followup_questions")
+            and not ruled
             else "no_remaining_queries"
             if not remaining
             else "query_budget_exhausted"
@@ -987,9 +991,6 @@ async def run(tools):
         next_queries = []
         selection_diagnostics = {"status": "not_requested"}
         if not stop_reason:
-            ruled, governed, rule_findings = rule_followup(
-                selected, plans, remaining, gaps, available
-            )
             # An explicit rule cannot be bypassed by a broad unexpected-event policy.
             policy_queries = [
                 q
@@ -1021,7 +1022,7 @@ async def run(tools):
                 if q not in governed and q not in permitted and q not in policy_queries
             ]
             selection_diagnostics["unconfigured_queries"] = unconfigured
-            if not next_queries and exploratory:
+            if not next_queries and exploratory and not evaluation.get("stop_reason"):
                 await_queries = await choose_followup(
                     ctx["llm"],
                     exploratory,
@@ -1061,6 +1062,7 @@ async def run(tools):
                     dict.fromkeys(b["id"] for b in fallback_books)
                 ),
                 "next_queries": next_queries,
+                "analysis_stop_reason": evaluation.get("stop_reason"),
                 "followup_selection": selection_diagnostics,
                 "remaining_queries": remaining,
                 "remaining_budget": dict(budget),
@@ -1277,6 +1279,19 @@ async def run(tools):
         for e in obs.evidence
         if e["query_id"].startswith("D")
     ]
+    result["quality"]["collection_checks"] = (
+        []
+        if fast_path
+        else collection_checks(
+            profile,
+            approved,
+            collected,
+            relations,
+            [h["error_code"] for h in health if h.get("error_code")]
+            + [event["error_code"] for event in error_events]
+            + clues.get("error_codes", []),
+        )
+    )
     final_stop = {
         "sufficient": "analysis_unresolved",
         "no_remaining_queries": "no_available_followup",

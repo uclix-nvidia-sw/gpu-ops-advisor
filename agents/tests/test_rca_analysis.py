@@ -86,6 +86,8 @@ def general_runbook(cluster="c"):
         "xid",
         "sxid",
         "unsafe_general",
+        "budget_followup",
+        "accepted_rule_followup",
     ],
 )
 async def test_query_first_collection_analysis_and_failure_boundaries(
@@ -126,6 +128,15 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         }
     }
     events = []
+    if mode == "budget_followup":
+        evaluate = workflow.evaluate_analysis
+
+        async def exhausted_review(*args, **kwargs):
+            result = await evaluate(*args, **kwargs)
+            result["stop_reason"] = "llm_budget_exhausted"
+            return result
+
+        monkeypatch.setattr(workflow, "evaluate_analysis", exhausted_review)
 
     async def logs(args):
         events.append("collect")
@@ -176,7 +187,12 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                 return interpretation_reply()
             if kwargs.get("stage") == "analysis_review":
                 events.append("review")
-                reply = review_reply(payload)
+                reply = review_reply(
+                    payload,
+                    "acceptable"
+                    if mode == "accepted_rule_followup"
+                    else "undetermined",
+                )
                 if mode == "review_followup" and payload["allowed_queries"]:
                     reply["followup_questions"] = [
                         {
@@ -221,6 +237,18 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
             return analysis_reply(payload["observation_refs"])
 
     books = [general_runbook()]
+    if mode == "accepted_rule_followup":
+        for step in books[0]["content"]["observation_plan"]:
+            if not step["required"]:
+                step["selection"] = dict(
+                    missing_any=["causal_confirmation_evidence"],
+                    requires_all=["observations"],
+                    independent=True,
+                )
+        books[0].update(
+            content_hash=content_hash(books[0]["content"]),
+            reviewed_content_hash=content_hash(books[0]["content"]),
+        )
     if mode in ("followup", "invalid_plan", "review_followup"):
         books[0]["content"]["unexpected_evidence"]["additional_queries"] = []
         books[0]["content"]["unexpected_evidence"]["fallback"] = "general_runbook"
@@ -395,6 +423,7 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                 "plan",
                 "collect",
                 "collect",
+                "collect",
                 "interpret",
                 "synthesize",
                 "review",
@@ -405,7 +434,11 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                 e for e in output["evidence"] if e["query_id"] == "evidence_evaluation"
             ]
             assert len(evaluations) == 2
-            assert set(evaluations[0]["snapshot"]["next_queries"]) == {"D44", "D02"}
+            assert set(evaluations[0]["snapshot"]["next_queries"]) == {
+                "D44",
+                "D02",
+                "D06",
+            }
             assert evaluations[1]["snapshot"]["stop_reason"] == "no_remaining_queries"
             assert analysis["remaining_queries"] == []
             assert analysis["collection_stop_reason"] == "no_remaining_queries"
@@ -434,7 +467,12 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         elif mode == "unconfigured":
             assert "synthesize" not in events
             assert "synthesis_unconfigured" in result["missing_inputs"]
-        elif mode in ("missing_runbook", "unsafe_general"):
+        elif mode in (
+            "missing_runbook",
+            "unsafe_general",
+            "budget_followup",
+            "accepted_rule_followup",
+        ):
             assert events == [
                 "collect",
                 "interpret",
@@ -445,7 +483,25 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                 "synthesize",
                 "review",
             ]
-            assert result["runbook_revisions"][0]["id"] == "builtin-general"
+            if mode == "budget_followup":
+                assert result["quality"]["analysis"]["followups"] == 1
+                assert (
+                    result["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
+                    == "llm_budget_exhausted"
+                )
+                assert "plan" not in events
+                decisions = [
+                    e["snapshot"]
+                    for e in output["evidence"]
+                    if e["query_id"] == "evidence_evaluation"
+                ]
+                assert decisions[0]["analysis_stop_reason"] == "llm_budget_exhausted"
+                assert decisions[0]["next_queries"] == ["D02"]
+            elif mode == "accepted_rule_followup":
+                assert result["quality"]["analysis"]["followups"] == 1
+                assert "plan" not in events
+            else:
+                assert result["runbook_revisions"][0]["id"] == "builtin-general"
             assert "causal_confirmation_evidence" in result["missing_inputs"]
         elif mode == "query_failed":
             assert events == [

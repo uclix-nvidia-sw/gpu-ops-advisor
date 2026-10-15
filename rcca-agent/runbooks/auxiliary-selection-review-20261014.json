@@ -119,13 +119,136 @@
             ]
           }
         }
+      },
+      "collection_update": {
+        "checked_at": "2026-10-15",
+        "status": "local_review_not_published",
+        "before_content_sha256": "429d3b27f397914dffeaa4762a7ad6b24ca488cae801f09c6c64ef8224dbc666",
+        "after_content_sha256": "116949e340bee68591e480ac9e5cf0a67f70c3570da1f0dd0bb44ba6339bc25b",
+        "change": "Add independent read-only Pod UID history and, for SXID, raw log context. No FM topology semantics or workload failure inferred. Preserve two collection rounds and three follow-up queries.",
+        "previous_values": {
+          "observation_plan": [
+            {
+              "query_id": "D09",
+              "priority": 1,
+              "required": true,
+              "fact_names": [
+                "reported_producer_contract",
+                "reported_error_code",
+                "producer_contract",
+                "error_code",
+                "normalized_health"
+              ],
+              "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+              "binding": "execution_profile",
+              "time_range": "incident",
+              "freshness": "query_contract"
+            },
+            {
+              "query_id": "D44",
+              "priority": 2,
+              "required": false,
+              "fact_names": [
+                "observations"
+              ],
+              "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
+              "binding": "execution_profile",
+              "time_range": "incident",
+              "freshness": "query_contract",
+              "selection": {
+                "missing_any": [
+                  "causal_confirmation_evidence",
+                  "normalized_health"
+                ],
+                "requires_all": [
+                  "reported_error_code",
+                  "reported_producer_contract"
+                ],
+                "independent": true
+              }
+            },
+            {
+              "query_id": "D02",
+              "priority": 5,
+              "required": false,
+              "fact_names": [
+                "observations"
+              ],
+              "purpose": "사건 전후 GPU 사용률 비교.",
+              "binding": "execution_profile",
+              "time_range": "incident",
+              "freshness": "query_contract",
+              "selection": {
+                "missing_any": [
+                  "causal_confirmation_evidence",
+                  "normalized_health"
+                ],
+                "requires_all": [
+                  "reported_error_code",
+                  "reported_producer_contract"
+                ],
+                "independent": true
+              }
+            }
+          ]
+        }
       }
     },
     {
       "file": "sxid/RB-SXID-11001.json",
       "before_content_sha256": "67081ab07a5bad940774ae881c92b59888755fd63a5531634eb19a1adeeab80e",
       "after_content_sha256": "ee1475be64daec318d40c435ee69a5c176b3019f21a177e47adfdde40dacaf0d",
-      "change": "Independent auxiliary selection requires scoped reported code/producer and an unmet cause/state gap. No new fact semantics or source claims."
+      "change": "Independent auxiliary selection requires scoped reported code/producer and an unmet cause/state gap. No new fact semantics or source claims.",
+      "collection_update": {
+        "checked_at": "2026-10-15",
+        "status": "local_review_not_published",
+        "before_content_sha256": "ee1475be64daec318d40c435ee69a5c176b3019f21a177e47adfdde40dacaf0d",
+        "after_content_sha256": "9b8485396ec9d9620edbac308afb3f3d7fccb058c3ee8f56c48b16dbae1bee8a",
+        "change": "Add independent read-only Pod UID history and, for SXID, raw log context. No FM topology semantics or workload failure inferred. Preserve two collection rounds and three follow-up queries.",
+        "previous_values": {
+          "observation_plan": [
+            {
+              "query_id": "D09",
+              "priority": 1,
+              "required": true,
+              "fact_names": [
+                "reported_producer_contract",
+                "reported_error_code",
+                "producer_contract",
+                "error_code",
+                "normalized_health"
+              ],
+              "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+              "binding": "execution_profile",
+              "time_range": "incident",
+              "freshness": "query_contract"
+            },
+            {
+              "query_id": "D02",
+              "priority": 3,
+              "required": false,
+              "fact_names": [
+                "observations"
+              ],
+              "purpose": "사건 전후 GPU 사용률 비교.",
+              "binding": "execution_profile",
+              "time_range": "incident",
+              "freshness": "query_contract",
+              "selection": {
+                "missing_any": [
+                  "causal_confirmation_evidence",
+                  "normalized_health"
+                ],
+                "requires_all": [
+                  "reported_error_code",
+                  "reported_producer_contract"
+                ],
+                "independent": true
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
