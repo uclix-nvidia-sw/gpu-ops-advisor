@@ -27,6 +27,8 @@ async def write_report(result, data, clues, evidence, llm):
     statements = []
 
     def add(section, text, refs=()):
+        if section == "next" and result.get("quality", {}).get("collection_checks"):
+            section = "limits"
         statements.append(
             dict(
                 id=f"{section}-{len(statements)}",
@@ -451,6 +453,46 @@ async def write_report(result, data, clues, evidence, llm):
         add(
             "next",
             "담당자가 근거와 조치 조건을 검토하고, 조치 후 장비·업무 상태를 별도로 확인해야 합니다.",
+        )
+    checks = result.get("quality", {}).get("collection_checks", [])
+    for check in checks:
+        status = check["status"]
+        label_text = {
+            "collected": "자동 수집 완료",
+            "connection_required": "추가 원천 연결 필요",
+            "plan_required": "발행 조사 계획에 조회 추가 필요",
+            "not_collected": "이번 수집 한도에서 실행되지 않음",
+            "empty": "자동 조회 완료·해당 범위 표본 없음",
+            "failed": "자동 조회 실패",
+            "partial": "자동 조회 부분 응답",
+            "identity_unresolved": "자동 조회 완료·유효 시각의 장비–작업 연결 없음",
+        }[status]
+        add(
+            "action" if status == "collected" else "limits",
+            f"{check['title']}: {label_text}. "
+            + (", ".join(check["query_ids"]) or "등록된 조회 없음")
+            + (" · " + ", ".join(check["reasons"]) if check["reasons"] else ""),
+            check["evidence_refs"],
+        )
+        if status in {"connection_required", "plan_required", "identity_unresolved"}:
+            statements.append(
+                dict(
+                    id=f"next-{len(statements)}",
+                    section="next",
+                    text=f"{check['title']}: {label_text}. {check['connection_required']}",
+                    evidence_refs=check["evidence_refs"],
+                    value_refs=[],
+                )
+            )
+    if checks and not any(s["section"] == "next" for s in statements):
+        statements.append(
+            dict(
+                id=f"next-{len(statements)}",
+                section="next",
+                text="추가 원천 연결 요청은 없습니다. 자동 조회의 실패·빈 응답·수집 한도와 원인 미확정 사항은 분석 한계에 기록했습니다.",
+                evidence_refs=[],
+                value_refs=[],
+            )
         )
     add(
         "limits",

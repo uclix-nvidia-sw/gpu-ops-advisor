@@ -1845,7 +1845,15 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert "causal_confirmation_evidence" in result["missing_inputs"]
     assert any(r["origin"] == "builtin" for r in result["runbook_revisions"])
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
-    assert len(result["narrative"]) == 5
+    assert [section["id"] for section in result["narrative"]] == [
+        "problem",
+        "impact",
+        "cause",
+        "action",
+        "next",
+        "limits",
+    ]
+    assert result["quality"]["report"]["presentation"] == "incident-first/1"
     assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
