@@ -15,6 +15,12 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "rcca-agent/runbooks"
 PROFILE = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))
 REVIEW = json.loads((CATALOG / "requirements-review-20261008.json").read_text("utf-8"))
+INCIDENT_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "incident-report-review-20261015.json").read_text("utf-8")
+    )["entries"]
+}
 ROWS = [json.loads((CATALOG / e["file"]).read_text("utf-8")) for e in REVIEW["entries"]]
 CODE_ROWS = [r for r in ROWS if r["knowledge_key"] != "RB-GENERAL-GPU-NODE"]
 
@@ -92,6 +98,20 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 selection["before_content_sha256"] == followup["after_content_sha256"]
             )
             original = deepcopy(row["content"])
+            revision = INCIDENT_REVIEW.get(e["file"])
+            if revision:
+                # Newest local review first: restore its previous values, then the chain.
+                assert digest == revision["after_content_sha256"]
+                original.update(deepcopy(revision["previous_values"]))
+                digest = hashlib.sha256(
+                    json.dumps(
+                        original,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest()
+                assert digest == revision["before_content_sha256"]
             collection = selection.get("collection_update")
             if collection:
                 assert collection["status"] == "local_review_not_published"

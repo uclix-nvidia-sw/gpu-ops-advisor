@@ -35,8 +35,8 @@ it('keeps literature separate from device facts and explains restart prerequisit
   };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaGuidance paragraphs={paragraphs} result={result} />);
-  expect(html).toContain('안전하게 종료하거나 다른 서버로 옮긴 뒤');
-  expect(html).toContain('물리적인 분리나 부품 고장을 확정할 수는 없습니다');
+  expect(html).toContain('작업 배출·유지보수 승인 후 재시작합니다');
+  expect(html).toContain('복구에는 재시작이 필요합니다');
   expect(html).toContain('revision 5');
   expect(html).toContain('<details><summary>적용 지침</summary><p>');
   expect(html).toContain('<h5 class="rca-reference-heading">이 오류에 대한 참고 안내</h5>');

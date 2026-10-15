@@ -39,7 +39,7 @@ class RunbookContractTests(unittest.TestCase):
                 elif row["knowledge_key"] in ("RB-XID-32", "RB-XID-79"):
                     expected = ["D09", "D44", "D02"]
                     if row["knowledge_key"] == "RB-XID-79":
-                        expected.append("D06")
+                        expected.append("D11")
                 elif row["knowledge_key"] == "RB-SXID-11001":
                     expected = ["D09", "D02", "D06", "D13"]
                 elif row["knowledge_key"] == "RB-XID-74":
@@ -73,7 +73,7 @@ class RunbookContractTests(unittest.TestCase):
         row["content"]["observation_plan"].reverse()
         plan = validate_runbook(row, QUERIES, ALLOWED)
         self.assertEqual(
-            [step["query_id"] for step in plan], ["D09", "D44", "D02", "D06"]
+            [step["query_id"] for step in plan], ["D09", "D44", "D02", "D11"]
         )
         plan[0]["fact_names"].append("incident_history")
         self.assertNotIn(

@@ -437,7 +437,7 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
             assert set(evaluations[0]["snapshot"]["next_queries"]) == {
                 "D44",
                 "D02",
-                "D06",
+                "D11",
             }
             assert evaluations[1]["snapshot"]["stop_reason"] == "no_remaining_queries"
             assert analysis["remaining_queries"] == []

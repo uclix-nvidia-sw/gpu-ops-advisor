@@ -21,8 +21,8 @@ def test_available_sources_and_missing_fabric_connection_are_distinct():
             profile, list(rows), rows, [{"pod_uid": "pod"}], ["sxid:11001"]
         )
     }
-    assert checks["workload_identity"]["status"] == "collected"
-    assert checks["workload_identity"]["relation_count"] == 1
+    # Kubernetes workload identity is outside the RCA scope.
+    assert "workload_identity" not in checks
     assert checks["raw_log_context"]["status"] == "collected"
     assert checks["fabric_manager_logs"]["status"] == "connection_required"
     assert checks["fabric_topology"]["status"] == "connection_required"

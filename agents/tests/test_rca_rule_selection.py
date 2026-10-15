@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.parametrize(
     "kind,key,expected",
     [
-        ("xid", "RB-XID-79", ["D44", "D02", "D06"]),
+        ("xid", "RB-XID-79", ["D44", "D02", "D11"]),
         ("sxid", "RB-SXID-11001", ["D02", "D06", "D13"]),
     ],
 )

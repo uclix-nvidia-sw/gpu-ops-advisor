@@ -25,6 +25,41 @@ describe('RCA report reading', () => {
     expect(html.indexOf('영향과 심각도')).toBeLessThan(html.indexOf('원인 분석'));
     expect(JSON.stringify(result)).toBe(before);
   });
+  it('shows findings-led reference guidance as a primary section without generic notes', () => {
+    const html = renderToStaticMarkup(
+      <RcaNarrative
+        result={{
+          quality: {
+            report: { presentation: 'incident-first/2' },
+            runbook_guidance: [
+              {
+                guidance: {
+                  schema: 'gpu-rca-guidance/1.0',
+                  cause_note: '일반 조사 방향 문장',
+                  meaning: '일반 의미',
+                  next_checks: [{ title: '일반 확인', text: '일반 확인 문장' }],
+                  references: [],
+                },
+              },
+            ],
+          },
+          narrative: [
+            { id: 'problem', title: '발생 내용', text: '사건 기록' },
+            { id: 'cause', title: '원인 분석', text: '판단: GPU 0 한 장치' },
+            { id: 'guidance', title: '이 오류에 대한 참고 안내', text: 'Fleet 분류 Fatal' },
+            { id: 'limits', title: '분석 한계', text: '발행 조사 지침 원문' },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain('<h4 id="rca-report-title-2">이 오류에 대한 참고 안내</h4>');
+    expect(html).toContain('<p>Fleet 분류 Fatal</p>');
+    expect(html).not.toContain('<summary>이 오류에 대한 참고 안내</summary>');
+    expect(html).not.toContain('일반 조사 방향 문장');
+    expect(html).not.toContain('일반 확인 문장');
+    expect(html).toContain('<summary>분석 한계</summary>');
+    expect(html.match(/href="#rca-report-section-/g)).toHaveLength(3);
+  });
   it('preserves published guidance separately from findings when checks are consolidated', () => {
     const html = renderToStaticMarkup(
       <RcaNarrative

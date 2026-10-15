@@ -25,7 +25,15 @@ function incidentTime(text: string): string {
   );
 }
 // Keep historical model text available while separating identity limits from causes.
-function CauseExplanation({ paragraphs, result }: { paragraphs: string[]; result: Row }) {
+function CauseExplanation({
+  paragraphs,
+  result,
+  findingsLed,
+}: {
+  paragraphs: string[];
+  result: Row;
+  findingsLed: boolean;
+}) {
   const mismatch = rows(result.device_observations).some(
     (o) => o.pci_inventory_relation === 'not_in_reported_inventory',
   );
@@ -34,7 +42,8 @@ function CauseExplanation({ paragraphs, result }: { paragraphs: string[]; result
   );
   return (
     <>
-      {structuredGuidance(result).map((entry, i) => (
+      {/* Findings-led reports already state the candidates with this incident's evidence. */}
+      {(findingsLed ? [] : structuredGuidance(result)).map((entry, i) => (
         <p key={i}>
           <strong>일반적인 조사 방향: </strong>
           {str((entry.guidance as Row).cause_note)}
@@ -75,7 +84,12 @@ export function RcaNarrative({
   result: Row;
   consolidateChecks?: boolean;
 }) {
-  const incidentFirst = obj(obj(result.quality).report).presentation === 'incident-first/1';
+  const presentation = str(obj(obj(result.quality).report).presentation);
+  const incidentFirst = presentation.startsWith('incident-first/');
+  // /2: deterministic incident findings lead and the reference guidance is a primary section.
+  const findingsLed = presentation === 'incident-first/2';
+  const collapsed = (id: string) =>
+    incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed));
   const sections = rows(result.narrative).filter(
     (s) => incidentFirst || !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
   );
@@ -98,9 +112,9 @@ export function RcaNarrative({
       </header>
       <nav className="rca-narrative-nav" aria-label="최종 보고서 목차">
         {sections.map((section, index) =>
-          incidentFirst && ['guidance', 'limits'].includes(str(section.id)) ? null : (
+          collapsed(str(section.id)) ? null : (
             <a key={index} href={`#rca-report-section-${index}`}>
-              {str(section.id) === 'guidance'
+              {str(section.id) === 'guidance' && !findingsLed
                 ? '다음에 확인할 내용'
                 : str(section.title) || '분석 설명'}
             </a>
@@ -113,7 +127,7 @@ export function RcaNarrative({
             .split(/\n\s*\n/)
             .filter((p) => p.trim());
           const list = ['next', 'limits'].includes(str(section.id));
-          if (incidentFirst && ['guidance', 'limits'].includes(str(section.id))) {
+          if (collapsed(str(section.id))) {
             return (
               <details key={index} className="rca-narrative-more">
                 <summary>{str(section.title)}</summary>
@@ -133,14 +147,20 @@ export function RcaNarrative({
               aria-labelledby={`rca-report-title-${index}`}
             >
               <h4 id={`rca-report-title-${index}`}>
-                {str(section.id) === 'guidance'
+                {str(section.id) === 'guidance' && !findingsLed
                   ? '다음에 확인할 내용'
                   : str(section.title) || '분석 설명'}
               </h4>
-              {str(section.id) === 'guidance' ? (
+              {str(section.id) === 'guidance' && findingsLed ? (
+                paragraphs.map((text, i) => <p key={i}>{text}</p>)
+              ) : str(section.id) === 'guidance' ? (
                 <RcaGuidance paragraphs={paragraphs} result={result} />
               ) : str(section.id) === 'cause' ? (
-                <CauseExplanation paragraphs={paragraphs} result={result} />
+                <CauseExplanation
+                  paragraphs={paragraphs}
+                  result={result}
+                  findingsLed={findingsLed}
+                />
               ) : list && paragraphs.length > 0 ? (
                 <>
                   <ul>
