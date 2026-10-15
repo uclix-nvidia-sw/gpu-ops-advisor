@@ -503,3 +503,136 @@ it('shows waiting-only namespace workload observations and keeps missing complet
   expect(html).toContain('자료 없음');
   expect(html).toContain('대기는 GPU 부족을 뜻하지 않습니다');
 });
+
+it('renders Namespace proposals with code observations, AI meaning and conditions', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          narrative_status: 'complete',
+          quality: { report: { method: 'llm_interpreted' } },
+          topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: 'verified observation',
+              meaning: 'AI meaning',
+              next_check: 'AI check',
+              observation_source: 'calculated',
+              advice: [
+                {
+                  fact_id: 'namespace-advice-0',
+                  target: { cluster_id: 'cpc-2', namespace: 'long-project-namespace' },
+                  recommendation: '작업 배치 제약 점검',
+                  observation: '해당 구간 최대 대기 Pod 수 2개',
+                  meaning: '대기는 있지만 할당 확대 근거는 부족합니다.',
+                  next_check: '스케줄러 이벤트와 배치 제약을 대조하세요.',
+                  conditions: '단일 날짜의 조건부 검토입니다.',
+                },
+              ],
+              evidence_refs: ['proof'],
+              value_refs: [],
+              source_fact_ids: ['namespace-advice-0'],
+            },
+          ],
+        }}
+        onEvidence={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('aggregate-namespace-advice');
+  expect(html).toContain('long-project-namespace');
+  expect(html).toContain('해당 구간 최대 대기 Pod 수 2개');
+  expect(html).toContain('스케줄러 이벤트와 배치 제약을 대조하세요.');
+  expect(html).toContain('단일 날짜의 조건부 검토입니다.');
+  expect(html).toContain('근거 1 확인');
+  expect(html).not.toContain('눈에 띄는 변화');
+});
+
+it('shows LLM bullet summaries before collapsed details without repeating advice labels', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        onEvidence={() => {}}
+        value={{
+          narrative_status: 'complete',
+          quality: { report: { method: 'llm_interpreted' } },
+          topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: 'code observation',
+              meaning: 'AI meaning',
+              next_check: 'AI check',
+              advice: [
+                {
+                  fact_id: 'namespace-advice-0',
+                  target: { cluster_id: 'cpc-1', namespace: 'long-project-name' },
+                  summary:
+                    'cpc-1 / long-project-name · 10/15 02:00~04:00: 활동이 적었습니다. 예약 일정을 확인한 뒤 이 시간대 배치 작업 실행을 검토하세요.',
+                  observation: 'detailed observation',
+                  meaning: 'detailed interpretation',
+                  next_check: 'detailed check',
+                  conditions: 'detailed condition',
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('aggregate-namespace-summary');
+  expect(html).toContain('AI가 작성한 요약');
+  expect(html.indexOf('활동이 적었습니다')).toBeLessThan(html.indexOf('<details'));
+  expect(html.indexOf('detailed observation')).toBeGreaterThan(html.indexOf('<details'));
+  expect(html).not.toContain('<strong>운영 제안</strong>');
+  expect(html).not.toContain('<strong>다음 확인</strong>');
+});
+
+it('shows stored selection criteria inside evidence details without changing the AI sentence', () => {
+  const summary = 'cpc-2의 대기 변화와 배치 완료를 확인하세요.';
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          quality: { report: { method: 'llm_interpreted' } },
+          narrative_status: 'complete',
+          topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: '관측',
+              meaning: '의미',
+              next_check: '확인',
+              advice: [
+                {
+                  fact_id: 'batch',
+                  summary,
+                  observation: '완료 표본 3건',
+                  conditions: '대기·준비 포함 Job 경과시간',
+                },
+              ],
+              selection: {
+                eligible_count: 22,
+                offered_count: 12,
+                criteria: {
+                  version: 'namespace-pattern-advice-v3',
+                  high_activity_percent: 80,
+                  low_activity_percent: 5,
+                  minimum_pattern_hours: 2,
+                },
+              },
+            },
+          ],
+        }}
+        onEvidence={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain(summary);
+  expect(html).toContain('선별 기준');
+  expect(html).toContain('근거 후보 22개 중 12개');
+  expect(html.indexOf(summary)).toBeLessThan(html.indexOf('해석 근거와 계산 결과'));
+  expect(html.indexOf('선별 기준')).toBeGreaterThan(html.indexOf('해석 근거와 계산 결과'));
+});

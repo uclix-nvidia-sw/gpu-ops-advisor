@@ -54,6 +54,11 @@ def result():
 def reply_for(payload):
     sections = []
     for t in payload["topics"]:
+        if t.get("advice_mode"):
+            from test_namespace_advice import section
+
+            sections.append(section(t["findings"]))
+            continue
         f = t["findings"][0]
         pair = f.get("hourly_pair", [])
         section = {
@@ -518,3 +523,39 @@ def test_incident_absence_is_not_current_health_or_no_check(result, text):
     reply["sections"][1]["meaning"] = text
     with pytest.raises(ValueError, match="unsupported_incident_assurance"):
         validate_sections(reply, payload, result)
+
+
+def test_incident_selection_ranks_recorded_firing_then_count_without_recounting(result):
+    incident = result["topics"][1]
+    incident["metrics"], incident["findings"] = [], []
+    for name, count, firing in (
+        ("quiet-node", 10, 0),
+        ("active-node", 2, 1),
+        ("more-active-node", 5, 1),
+    ):
+        ids = []
+        for field, value in (
+            ("node_alert_count", count),
+            ("node_alert_firing", firing),
+        ):
+            mid = f"incident_summary.{field}.{name}"
+            ids.append(mid)
+            incident["metrics"].append(
+                dict(id=mid, value=value, unit="events", period={}, quality={})
+            )
+        incident["findings"].append(
+            dict(
+                id=name,
+                text="저장된 알림",
+                target=dict(cluster_id="cpc-1", node=name, alert_type="XID"),
+                value_refs=ids,
+            )
+        )
+    before = deepcopy(result)
+    findings = payload_for(result)["topics"][1]["findings"]
+    assert [f["fact_id"] for f in findings] == [
+        "more-active-node",
+        "active-node",
+        "quiet-node",
+    ]
+    assert result == before

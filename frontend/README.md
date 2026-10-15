@@ -47,6 +47,9 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 Complete `llm_interpreted` narrative appears in each topic as **AI 운영 해석**: observation, meaning/limits and next check. The green surface distinguishes model-authored prose from calculated tables/graphs. Expandable sources show selected findings, stored hourly metrics and evidence links; code-supplied partial-data/report-time limits remain visible. Text is React-escaped and HTML export uses the same stored narrative. Generation and validation belong to [Ops](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation).
 
+When every `narrative[].advice` item has a stored `summary`, show the LLM-authored bullet summaries first; fixed observations and conditions remain in the collapsed evidence section. The frontend does not rewrite model prose. Older advice and three-field narratives retain their renderer. / 저장된 AI 요약 불릿을 먼저 보여주고 상세 관측·조건은 접힌 근거에 보관합니다. 화면에서 분석 문장을 합성하거나 바꿔 쓰지 않습니다. 산식·제안 판정은 프런트엔드에서 만들지 않습니다.
+
+
 기존 `llm_prioritized` 결과는 **AI가 고른 주요 변화**로 표시합니다. 코드가 만든 문장 중 AI가 선택한 결과이며 새로 작성한 해석은 아닙니다. `deterministic_fallback`은 **계산 결과 요약**, 출처 미기록은 **저장된 주요 변화**로 구분하고 빈 narrative는 표시하지 않습니다. 기존 계산·저장 문장·RCA는 변경하지 않습니다. 새 해석의 시간대 근거는 선택된 Namespace·모델과 전후 구간의 저장 수치를 표시해 그래프·표와 대조할 수 있습니다.
 
 ## RCA 실행별 제한과 수정 응답 — 2026-10-13
@@ -409,3 +412,6 @@ RCA final-report typography uses 18px section headings, a 16px emphasized proble
 작업 보조 관측은 기존 Namespace 분석 안에서 시간 구간별 최대 대기 Pod 수와 완료 Job별 시작·완료·경과시간을 표시합니다. 대기는 구간 최대값 막대이며 순간 상태를 연결한 선이 아닙니다. 보고 기간에 완료된 이전 실행 Job도 포함하고, 대기·준비 포함 경과시간을 순수 실행시간과 구분합니다.
 
 작업 대기·완료 UI는 기존 그래프와 같은 클러스터 헤더(18px), 지표 제목(16px), Namespace 제목/본문(14px)을 사용합니다. 같은 클러스터의 Namespace별 대기 막대를 함께 배치하고, 완료 Job은 한 표로 묶어 Namespace와 작은 Job 이름, 시작·완료 날짜/시간, 경과시간을 표시합니다. 좁은 화면은 표 안에서만 가로 스크롤하며 집계값·AI 원문은 변경하지 않습니다.
+
+
+Namespace 제안의 `selection.criteria`가 있는 새 결과는 접힌 근거에서 선별 기준과 전체/전달/요약 후보 수를 표시합니다. AI 요약 문장은 그대로 렌더링하고 완료 표본·시간대별 대기·Job 경과시간의 산식이나 후보를 화면에서 만들지 않습니다. 구 결과에 없는 기준은 추정하지 않습니다. 기준의 의미는 [Ops 운영 제안](../ops-agent/README.md#namespace별-조건부-운영-제안)을 따릅니다.

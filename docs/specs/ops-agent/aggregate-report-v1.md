@@ -49,6 +49,26 @@ Memory-supported interpretation fixes the observation target, time window and nu
 
 메모리 근거를 사용한 설명은 대상·시간·수치를 코드가 확정하고(`observation_source=calculated`), AI는 의미와 확인할 점을 작성합니다. 화면에서도 둘을 구분합니다. 검증을 통과하지 못한 AI 문장은 계산 요약으로 대체하며 기존 활동률·이전 기간 비교·사건 계산은 유지합니다.
 
+## Namespace별 조건부 제안
+
+`namespace-pattern-advice-v3` consumes existing hourly rows; it adds no numeric metric, source query, quality rule, allocation policy or RCA behavior. / 기존 시간대별 결과를 읽는 설명 전용 경로이며 산식·조회·품질 판정·RCA는 유지합니다.
+
+- An eligible activity hour has finite 0–100 activity, GPU IDs, no exclusion reasons and 238–242 samples per GPU. All observed models must be eligible for the identical interval. Adjacent windows must retain each model's GPU IDs and remain within one KST date. / 모든 모델의 같은 시간·신원 근거가 필요합니다. 짧은 연결 변경 구간은 기존 활동 계산에서 유효해도 전체 시간 제안에는 사용하지 않습니다.
+- Capacity review requires at least two consecutive hours with stable GPU identities, every model's hourly activity ≥80% and a positive Namespace Pending peak with all 240 workload evaluation points in each interval. Evaluation coverage is not proof of raw scrape completeness or instantaneous concurrence. It proposes checking allocation/guarantees, scheduler reasons and available cluster resources, never an additional GPU quantity. / 높은 활동과 대기가 같은 시간 구간에 집계된 경우의 조건부 확대 검토입니다.
+- Other positive observed Pending peaks lead to scheduler/placement checks, including partial windows with an explicit limitation. Unknown activity cannot be described as low activity. / 활동이 낮거나 미확인인 대기를 GPU 부족이나 할당 확대 근거로 단정하지 않습니다.
+- At least two consecutive eligible hours below 5% in every model, without a known positive Pending peak, can form a scheduling candidate. Unknown Pending is labelled unknown and must be checked before a trial. If any aligned model's memory ratio is ≥80%, suggest checking resident serving/cache instead. Missing memory is not zero. / 해당 Namespace의 후보 시간이며 클러스터 가용성 보장이 아닙니다.
+- These are editorial selection thresholds, not changes to stored activity, low-activity-hour, memory or workload metrics. Source periods, IDs, observation, conditions, evidence/value references and supporting hours are stored in `narrative[].advice`; existing `text` fields keep HTML readers compatible. CSV and original `topics` remain unchanged.
+- Preserve distinct operational questions per Namespace, reserve cluster/kind representatives and offer at most 12 candidates; the LLM prioritizes two or three distinct proposals (at most 5) and represents offered clusters when possible. It does not fill five slots with duplicate scheduler checks. It writes a concise `summary` combining observation and proposed next step, against allowed fact IDs; it does not also generate duplicate meaning/next-check prose for each candidate. Summary target/period/activity/pending/memory/completed/elapsed/pending_change tokens or exact matching literals (including same-date short period notation) are validated against that candidate; references are replaced with stored values and exact literal prose is kept unchanged; `summary_source=llm` records authorship. Unsupported numbers/names, missing context and invented job absence are rejected. Scheduling stays conditional; unknown Pending remains in stored observations/conditions and the visible pre-execution note instead of becoming zero. Legacy section meaning/next_check fields retain the same stored summaries for readers expecting those fields. The UI displays at most five summary bullets and collapses fixed observations and conditions; code still supplies fixed observations and action labels. Invalid format, invented observations or unsupported allocation claims trigger one repair, then the existing calculated fallback. Input stays ≤32KB with the existing token/deadline/cancellation budget. Candidates absent means the previous interpretation path remains active.
+- Policy integration, allocation execution/quantity, multi-day recurrence and actual waiting/execution duration are not inferred. Fixed wording/claim guards cannot prove all natural-language semantics; real replies still require evidence-based review. / 정책·할당 수량·매일 반복 패턴·별도 대기/실행 시간 측정은 후속 범위입니다.
+
+
+### 조건부 운영 제안의 선별·완료 연결
+
+현재 기준과 순서는 [Ops 전용 운영 제안](../../../ops-agent/README.md#namespace별-조건부-운영-제안)이 담당한다. `namespace-pattern-advice-v3`는 기존 `topics`·수치·품질·CSV를 바꾸지 않고 narrative에 후보별 근거와 선별 요약을 저장한다. `selection.criteria`는 설명 후보의 기준 revision이며 실제 부서 정책이 아니다. `source_hours`와 `completed_jobs`는 기존 결과의 해당 대상·기간에 속하는 표본이다. 완료 표본 수·경과시간 범위와 시간대별 처음/마지막 대기 최대값은 이 표본만 참조한다. 대기 건수는 대기 시간이 아니고 경과시간은 순수 연산시간이 아니다. 앞 구간이 일부 표본이면 이를 보존하며 마지막 구간이 불완전하면 대기 변화 참조를 만들지 않는다. 근거 공백은 정상·완료 0으로 해석하지 않는다.
+
+후보를 상한으로 잘라도 각 클러스터와 운영 질문 종류를 보존하는지, 같은 Namespace의 다른 시간대 후보가 남는지, 기간 밖 Job이 섞이지 않는지 검수한다. 모델 출력의 단위 중복·잘림·잘못된 참조는 계산 대체 상태를 유지하며 문장을 손으로 고쳐 AI 결과로 저장하지 않는다. 자동·수동은 같은 Worker 경로의 회귀 검사를 수행하되 운영 신규 발행과 구별한다.
+
+
 ## 사건·요약·증거
 
 - Ops 전용 읽기 전용 repeatable-read snapshot에서 기간 내 고유 사건 ID를 센다. webhook 수신 횟수를 사건 수로 세지 않는다. 이전 기간도 같은 snapshot에서 읽는다.

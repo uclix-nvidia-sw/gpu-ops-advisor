@@ -4,6 +4,15 @@ import json
 import re
 from datetime import datetime, timedelta, timezone
 
+from .namespace_advice import (
+    candidates,
+    select_candidates,
+    validate_advice,
+    summary_context,
+    SYSTEM as ADVICE_SYSTEM,
+    VERSION as ADVICE_VERSION,
+)
+
 TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
@@ -192,7 +201,34 @@ def payload_for(result):
 
             facts.sort(key=priority, reverse=True)
         if topic["topic_id"] == "incident_summary":
-            facts.sort(key=lambda f: bool(f["target"].get("node")), reverse=True)
+
+            def incident_priority(fact):
+                values = fact["values"]
+                firing = next(
+                    (
+                        v["value"]
+                        for v in values
+                        if v["metric_id"].startswith(
+                            "incident_summary.node_alert_firing."
+                        )
+                        and isinstance(v["value"], (int, float))
+                    ),
+                    0,
+                )
+                count = next(
+                    (
+                        v["value"]
+                        for v in values
+                        if v["metric_id"].startswith(
+                            "incident_summary.node_alert_count."
+                        )
+                        and isinstance(v["value"], (int, float))
+                    ),
+                    0,
+                )
+                return (bool(fact["target"].get("node")), firing, count)
+
+            facts.sort(key=incident_priority, reverse=True)
         facts = facts[:30]
         for fact in facts:
             target = fact["target"]
@@ -220,6 +256,18 @@ def payload_for(result):
                 "omitted_findings": max(0, len(topic.get("findings", [])) - len(facts)),
             }
         )
+    namespace = next(
+        (t for t in result["topics"] if t["topic_id"] == "namespace_usage"), None
+    )
+    patterns = candidates(namespace) if namespace else []
+    if patterns:
+        for t in topics:
+            if t["topic_id"] == "namespace_usage":
+                t["findings"], t["selection"] = select_candidates(patterns)
+                t["omitted_findings"] = t["selection"]["omitted_count"]
+                t["advice_mode"] = ADVICE_VERSION
+            else:
+                t["findings"] = t["findings"][:6]
     return {
         "interpretation_version": VERSION,
         "time_range": result["time_range"],
@@ -258,7 +306,7 @@ def validate_sections(reply, payload, result):
     expected = [t["topic_id"] for t in payload["topics"]]
     if not isinstance(sections, list) or len(sections) != len(expected):
         raise ValueError(
-            f"topic_sections_required: sections는 정확히 {len(expected)}개이며 topic_id 순서는 {expected}입니다. Namespace별 section을 만들지 말고 namespace_usage는 선택한 Namespace 하나의 section 하나만 반환하세요."
+            f"topic_sections_required: sections는 정확히 {len(expected)}개이며 topic_id 순서는 {expected}입니다. Namespace별 section을 만들지 마세요. namespace_usage의 advice_mode는 하나의 section 안에 advice 배열을 쓰고, 기존 모드는 선택한 Namespace 하나만 설명하세요."
         )
     output = []
     for section, topic in zip(sections, payload["topics"]):
@@ -267,6 +315,9 @@ def validate_sections(reply, payload, result):
             or section.get("topic_id") != topic["topic_id"]
         ):
             raise ValueError("topic_mismatch")
+        if topic.get("advice_mode"):
+            output.append(validate_advice(section, topic))
+            continue
         facts = {f["fact_id"]: f for f in topic["findings"]}
         ids = section.get("fact_ids")
         if (
@@ -579,14 +630,92 @@ async def interpret_report(result, llm):
     if not payload["topics"] or any(not t["findings"] for t in payload["topics"]):
         diagnostic["reason"] = "no_statements"
         return
-    if len(json.dumps(payload, ensure_ascii=False).encode()) > 32_000:
+    advice_mode = any(t.get("advice_mode") for t in payload["topics"])
+
+    def request_payload():
+        if not advice_mode:
+            return payload
+        return {
+            "interpretation_version": VERSION,
+            "response_shape": {
+                "sections": [
+                    {
+                        "topic_id": t["topic_id"],
+                        "advice": [
+                            {
+                                "fact_id": t["findings"][0]["fact_id"],
+                                "summary": "대상·시간·핵심 관측과 구체적 제안을 담은 짧은 최종 요약",
+                            }
+                        ],
+                    }
+                    if t.get("advice_mode")
+                    else {
+                        "topic_id": t["topic_id"],
+                        "fact_ids": [t["findings"][0]["fact_id"]],
+                        "observation": "참조된 관측의 설명",
+                        "meaning": "관측의 의미와 한계",
+                        "next_check": "기존 기록과 대조할 사항",
+                    }
+                    if not t["findings"][0]["values"]
+                    else {
+                        "topic_id": t["topic_id"],
+                        "fact_ids": [t["findings"][0]["fact_id"]],
+                        "observation": "{{target:"
+                        + t["findings"][0]["fact_id"]
+                        + "}}에서 {{period:"
+                        + t["findings"][0]["values"][0]["metric_id"]
+                        + "}} 동안 {{value:"
+                        + t["findings"][0]["values"][0]["metric_id"]
+                        + "}}의 저장 사건이 확인됐습니다.",
+                        "meaning": "저장된 알림 기록이며 같은 GPU의 반복 장애 여부는 확인이 필요합니다.",
+                        "next_check": "{{target:"
+                        + t["findings"][0]["fact_id"]
+                        + "}}의 {{period:"
+                        + t["findings"][0]["values"][0]["metric_id"]
+                        + "}} 알림 시각과 기존 조사·점검 기록을 대조하세요.",
+                    }
+                    for t in payload["topics"]
+                ]
+            },
+            "topics": [
+                {
+                    **t,
+                    "findings": [
+                        {
+                            **{
+                                k: v
+                                for k, v in f.items()
+                                if k
+                                in (
+                                    ("fact_id", "kind", "selection_basis")
+                                    if t.get("advice_mode")
+                                    else ("fact_id", "target", "values", "text")
+                                )
+                            },
+                            **(summary_context(f) if t.get("advice_mode") else {}),
+                        }
+                        for f in t["findings"]
+                    ],
+                }
+                for t in payload["topics"]
+            ],
+            **(
+                {"validation_feedback": payload["validation_feedback"]}
+                if "validation_feedback" in payload
+                else {}
+            ),
+        }
+
+    if len(json.dumps(request_payload(), ensure_ascii=False).encode()) > 32_000:
         diagnostic["reason"] = "interpretation_input_limit"
         return
     for attempt in range(2):
         diagnostic["attempts"] += 1
         # Existing transport owns deadlines, token budgets, cancellation and remote state.
         try:
-            reply = await llm.complete(SYSTEM, payload)
+            reply = await llm.complete(
+                ADVICE_SYSTEM if advice_mode else SYSTEM, request_payload()
+            )
             if reply is None:
                 diagnostic["reason"] = "model_response_unavailable"
                 break
@@ -597,11 +726,14 @@ async def interpret_report(result, llm):
                 **payload,
                 "validation_feedback": {
                     "error": str(exc),
-                    "instruction": "fact_ids와 target에는 findings의 fact_id만 쓰세요. metric_id를 fact_ids에 넣지 마세요. value/period는 metric_id입니다. 한국어로 작성하세요. 숫자·대상·시간은 토큰만 사용하세요. Namespace에 hourly_pair가 있으면 observation에 같은 대상+양쪽 시간+양쪽 값을, next_check에 같은 대상+after 시간을 반드시 참조하세요. 단위는 추가하지 마세요.",
+                    "instruction": "response_shape의 구조와 사건 토큰 형식을 따르세요. namespace advice_mode는 advice 배열의 fact_id와 summary만 반환하세요. summary는 허용된 후보 summary_tokens의 토큰을 써서 대상·시간·관측과 제안을 짧게 결합하고, Namespace 항목에 meaning/next_check는 반환하지 마세요. 허용된 제안 종류의 구체적 확인을 쓰세요. "
+                    "다른 주제는 fact_ids와 target에는 findings의 fact_id만 쓰세요. metric_id를 fact_ids에 넣지 마세요. value/period는 metric_id입니다. 한국어로 작성하세요. 숫자·대상·시간은 토큰만 사용하세요. Namespace에 hourly_pair가 있으면 observation에 같은 대상+양쪽 시간+양쪽 값을, next_check에 같은 대상+after 시간을 반드시 참조하세요. 단위는 추가하지 마세요.",
                 },
             }
             continue
         result["narrative"] = narrative
+        if advice_mode:
+            diagnostic["namespace_advice_version"] = ADVICE_VERSION
         result["narrative_status"] = "complete"
         diagnostic.update(
             method="llm_interpreted", reason="repaired" if attempt else "complete"
