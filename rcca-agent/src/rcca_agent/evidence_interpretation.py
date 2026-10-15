@@ -187,6 +187,7 @@ async def call_stage(llm, stage, prompt, payload, validator, *, max_bytes=16000)
         "model": settings.model_for(stage) if settings else None,
         "attempts": 0,
         "validation_failures": [],
+        "request_checks": [],
     }
     response = None
     try:
@@ -194,18 +195,36 @@ async def call_stage(llm, stage, prompt, payload, validator, *, max_bytes=16000)
             return None, diagnostics
         request = payload
         for attempt in range(2):
-            remaining = getattr(llm, "remaining", 32768) - getattr(
-                llm, "reserved_tokens", 0
-            )
-            if (
-                encoded_size(request) > max_bytes
-                or remaining <= encoded_size(request) + len(prompt.encode()) + 512
-            ):
-                diagnostics["reason"] = "llm_token_budget_exhausted"
+            remaining = getattr(llm, "remaining", 32768)
+            reserved = getattr(llm, "reserved_tokens", 0)
+            input_bytes = encoded_size(request)
+            required = input_bytes + len(prompt.encode()) + 512
+            check = {
+                "input_bytes": input_bytes,
+                "max_input_bytes": max_bytes,
+                "remaining_tokens": remaining,
+                "reserved_tokens": reserved,
+                "available_tokens": remaining - reserved,
+                "required_tokens": required,
+                "input_size_exceeded": input_bytes > max_bytes,
+                "token_budget_exhausted": remaining - reserved <= required,
+                "model_called": False,
+            }
+            if hasattr(llm, "request_budget"):
+                check.update(llm.request_budget(prompt, request, stage))
+            diagnostics["request_checks"].append(check)
+            if check["input_size_exceeded"] or check["token_budget_exhausted"]:
+                # Size is primary when both fail; retain both independent conditions.
+                diagnostics["reason"] = (
+                    "llm_input_size_exceeded"
+                    if check["input_size_exceeded"]
+                    else "llm_token_budget_exhausted"
+                )
                 return None, diagnostics
             if time.monotonic() >= getattr(llm, "deadline", float("inf")):
                 raise TimeoutError("RCA evaluation deadline exhausted")
             diagnostics.update(attempts=attempt + 1, execution_status="failed")
+            check["model_called"] = True
             try:
                 response = await llm.complete(prompt, request, stage=stage)
                 if response is None:

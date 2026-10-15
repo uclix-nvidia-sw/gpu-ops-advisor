@@ -4,7 +4,8 @@ import time
 
 import pytest
 
-from agent_common.llm import RemoteUncertain
+from agent_common.llm import LLM, RemoteUncertain
+from agent_common.settings import Settings
 from agent_common.observation import Observation
 from agent_common.rca_evaluation import source_evaluation, validate_evaluation
 from rcca_agent.analysis_review import analysis_draft, validate_review
@@ -14,7 +15,7 @@ from rcca_agent.evidence_interpretation import (
     inspection_context,
     validate_interpretation,
 )
-from rcca_agent.synthesis_context import bounded_context
+from rcca_agent.synthesis_context import bounded_context, encoded_size
 from evaluation_fixtures import interpretation_reply, review_reply
 from test_rca_analysis import analysis_reply
 
@@ -184,6 +185,120 @@ async def test_invalid_stage_repairs_once_without_storing_raw_output():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("stage", ["evidence_interpretation", "analysis_review"])
+@pytest.mark.parametrize(
+    "size_blocked,tokens_blocked",
+    [(True, False), (False, True), (True, True), (False, False)],
+)
+async def test_stage_limit_checks_are_independent_and_preserve_boundaries(
+    stage, size_blocked, tokens_blocked
+):
+    payload, prompt = {"text": "한글 원문"}, "fixture"
+    size = encoded_size(payload)
+    required = size + len(prompt.encode()) + 512
+
+    class Model(LLM):
+        calls = 0
+
+        async def complete(self, *args, **kwargs):
+            self.calls += 1
+            return {}
+
+    model = Model(
+        Settings(
+            kind="rca",
+            llm_base_url="http://fixture.invalid",
+            llm_model="fixture",
+            llm_api_key="fixture",
+        ),
+        time.monotonic() + 30,
+        required + 100 + (0 if tokens_blocked else 1),
+        lambda _: None,
+    )
+    model.reserved_tokens = 100
+    value, diagnostic = await call_stage(
+        model, stage, prompt, payload, lambda v: v, max_bytes=size - int(size_blocked)
+    )
+    blocked = size_blocked or tokens_blocked
+    assert model.calls == (0 if blocked else 1)
+    assert diagnostic["execution_status"] == ("skipped" if blocked else "complete")
+    assert (value is None) == blocked
+    assert diagnostic["reason"] == (
+        "llm_input_size_exceeded"
+        if size_blocked
+        else "llm_token_budget_exhausted"
+        if tokens_blocked
+        else None
+    )
+    check = diagnostic["request_checks"][0]
+    assert check["input_size_exceeded"] is size_blocked
+    assert check["token_budget_exhausted"] is tokens_blocked
+    assert check["input_bytes"] == size
+    assert (
+        check["remaining_tokens"] - check["reserved_tokens"]
+        == check["available_tokens"]
+    )
+    assert check["required_tokens"] == required
+    assert (
+        check["output_token_cap"]
+        == model.request_budget(prompt, payload, stage)["output_token_cap"]
+    )
+    assert "한글 원문" not in str(diagnostic)
+
+
+@pytest.mark.asyncio
+async def test_repair_size_failure_retains_first_call_and_both_checks():
+    class Model:
+        configured = True
+        remaining = 1000000
+        count = 0
+
+        async def complete(self, *args, **kwargs):
+            self.count += 1
+            return {"invalid": "never store this raw reply"}
+
+    model = Model()
+    value, diagnostic = await call_stage(
+        model,
+        "evidence_interpretation",
+        "prompt",
+        {},
+        lambda v: validate_interpretation(v, set()),
+        max_bytes=20,
+    )
+    assert value is None and model.count == 1
+    assert diagnostic["execution_status"] == "failed"
+    assert diagnostic["reason"] == "llm_input_size_exceeded"
+    assert [c["model_called"] for c in diagnostic["request_checks"]] == [True, False]
+    assert diagnostic["request_checks"][1]["input_bytes"] > 20
+    assert diagnostic["validation_failures"] == ["invalid_stage_output"]
+    assert "never store" not in str(diagnostic)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure", ["llm_http_error", "llm_deadline_exhausted", "llm_output_truncated"]
+)
+async def test_transport_failure_is_not_reclassified_as_input_or_token_limit(failure):
+    class Model:
+        configured = True
+        last_failure = failure
+
+        async def complete(self, *args, **kwargs):
+            return None
+
+    if failure == "llm_deadline_exhausted":
+        with pytest.raises(TimeoutError):
+            await call_stage(Model(), "analysis_review", "prompt", {}, lambda v: v)
+    else:
+        value, diagnostic = await call_stage(
+            Model(), "analysis_review", "prompt", {}, lambda v: v
+        )
+        assert value is None and diagnostic["reason"] == failure
+        assert diagnostic["attempts"] == 1
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "mode",
     [
@@ -194,6 +309,7 @@ async def test_invalid_stage_repairs_once_without_storing_raw_output():
         "model_failure",
         "fallback_model_failure",
         "fallback_rejected",
+        "oversized_review",
     ],
 )
 async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
@@ -242,7 +358,8 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
     def assemble(candidates):
         return candidates, [
             {
-                "text": "조건 확인 후 담당자가 검토하세요.",
+                "text": "조건 확인 후 담당자가 검토하세요."
+                * (1000 if mode == "oversized_review" else 1),
                 "eligibility": "eligible",
                 "execution": "not_performed",
                 "evidence_refs": ["log"],
@@ -267,7 +384,11 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
         0,
         [],
     )
-    assert stages[0:3] == ["evidence_interpretation", "synthesis", "analysis_review"]
+    assert stages[0:3] == (
+        ["evidence_interpretation", "synthesis"]
+        if mode == "oversized_review"
+        else ["evidence_interpretation", "synthesis", "analysis_review"]
+    )
     assert output["review"]["analysis_id"] == output["draft"]["analysis_id"]
     assert all(
         c["causal_status"] == "candidate" for c in output["draft"]["cause_candidates"]
@@ -276,11 +397,21 @@ async def test_round_reviews_final_rules_and_handles_repairs_and_limits(mode):
         assert not output["draft"]["cause_candidates"]
         assert output["draft"]["recommendations"][0]["eligibility"] == "withheld"
         assert seen_drafts[0]["analysis_id"] != output["draft"]["analysis_id"]
-    if mode == "budget_after_repair":
+    if mode == "oversized_review":
+        assert output["review"]["verdict"] is None
+        assert output["review"]["reason"] == "llm_input_size_exceeded"
+        assert output["stop_reason"] == "analysis_unresolved"
+        record = next(e for e in obs.evidence if e["query_id"] == "analysis_review")
+        assert (
+            record["quality"]["request_checks"] == record["snapshot"]["request_checks"]
+        )
+        assert record["quality"]["attempts"] == 0
+    elif mode == "budget_after_repair":
         assert output["review"]["execution_status"] == "skipped"
         assert output["review"]["verdict"] is None
         assert output["review"]["reason"] == "draft_changed_after_review"
         assert output["stop_reason"] == "llm_budget_exhausted"
+        assert output["review"]["failure_reason"] == "llm_token_budget_exhausted"
     elif mode in {"fallback_model_failure", "fallback_rejected"}:
         assert output["review"]["verdict"] is None
         assert output["review"]["reason"] == "draft_changed_after_review"
@@ -388,3 +519,44 @@ async def test_transport_reserves_review_budget_even_after_truncated_synthesis()
         llm.reserved_tokens = 0
         assert await llm.complete("review", {}, stage="analysis_review") == {}
         assert len(requests) == 2 and llm.remaining == 6900
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reported", [True, False])
+async def test_usage_distinguishes_reported_tokens_from_conservative_charge(reported):
+    import httpx
+    import json
+
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "{}"}}],
+                **({"usage": {"total_tokens": 10}} if reported else {}),
+            },
+        )
+
+    settings = Settings(
+        kind="rca",
+        llm_base_url="http://fixture.invalid/v1",
+        llm_model="fixture",
+        llm_api_key="fixture",
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 30, 10000, lambda _: None, http)
+        llm.reserved_tokens = 2000
+        budget = llm.request_budget("prompt", {}, "analysis_review")
+        assert await llm.complete("prompt", {}, "analysis_review") == {}
+        assert requests[0]["max_tokens"] == budget["output_token_cap"]
+        charged = (
+            10
+            if reported
+            else budget["prompt_token_bound"] + budget["output_token_cap"]
+        )
+        assert llm.usage["total_tokens"] == (10 if reported else 0)
+        assert llm.usage["charged_tokens"] == 10000 - llm.remaining == charged
+        assert llm.usage["estimated_tokens"] == (0 if reported else charged)
+        assert llm.usage["usage_missing_calls"] == (0 if reported else 1)

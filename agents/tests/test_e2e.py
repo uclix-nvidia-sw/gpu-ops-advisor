@@ -2448,6 +2448,59 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
 
 
 @pytest.mark.e2e
+def test_rca_review_input_limit_survives_publication_without_followup(
+    stack, monkeypatch
+):
+    original_reply, original_worker = analysis_reply, worker_result
+    captured = {}
+
+    def large_draft(refs):
+        reply = original_reply(refs)
+        reply["limitations"] = [
+            prefix + "관측 공백에 대한 추가 확인이 필요합니다. " * 50
+            for prefix in "가나다라마바사아자차카타"
+        ]
+        return reply
+
+    def capture(stack, kind, jid, suffix=""):
+        result, evidence = original_worker(stack, kind, jid, suffix)
+        captured.update(result=result, job_id=jid)
+        return result, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "analysis_reply", large_draft)
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_grafana_webhook_through_incident_jc_and_real_rca_worker(
+        stack, monkeypatch, False
+    )
+    evaluation = captured["result"]["quality"]["rca_evaluation"]
+    assert evaluation["review"]["verdict"] is None
+    assert evaluation["review"]["reason"] == "llm_input_size_exceeded"
+    assert evaluation["investigation"]["stop_reason"] == "analysis_unresolved"
+    with psycopg.connect(stack["url"]) as conn:
+        records = conn.execute(
+            "SELECT snapshot,quality FROM evidence WHERE job_id=%s AND query_id='analysis_review'",
+            (captured["job_id"],),
+        ).fetchall()
+        decisions = conn.execute(
+            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='investigation_decision' ORDER BY created_at",
+            (captured["job_id"],),
+        ).fetchall()
+    blocked = [r for r in records if r[1].get("reason") == "llm_input_size_exceeded"]
+    assert len(blocked) == 1
+    snapshot, quality = blocked[0]
+    # Collection before the first usable draft is allowed; this failure must end its round.
+    assert captured["result"]["quality"]["analysis"]["followups"] == snapshot["round"]
+    assert decisions[-1][0]["round"] == snapshot["round"]
+    assert decisions[-1][0]["action"] == "finish"
+    assert decisions[-1][0]["reason"] == "analysis_unresolved"
+    assert snapshot["review"] is None and quality["attempts"] == 0
+    assert quality["request_checks"] == snapshot["request_checks"]
+    check = quality["request_checks"][0]
+    assert check["input_size_exceeded"] and not check["token_budget_exhausted"]
+    assert check["input_bytes"] > check["max_input_bytes"] == 24000
+
+
+@pytest.mark.e2e
 def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
     from test_aggregate_report import DATA
     from ops_agent.report_contract import VERSION

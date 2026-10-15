@@ -35,6 +35,14 @@ export const evaluationLabels: Record<string, string> = {
   no_usable_evidence: '해석 가능한 증거 없음',
   model_unavailable: '모델 사용 불가',
   model_not_configured: '모델 미설정',
+  llm_input_size_exceeded: '모델 입력 크기 상한 초과',
+  llm_token_budget_exhausted: '남은 모델 토큰 예산 부족',
+  llm_http_error: '모델 서버 HTTP 오류',
+  llm_deadline_exhausted: '모델 요청 실행 기한 소진',
+  llm_output_truncated: '모델 출력 잘림',
+  llm_invalid_output: '모델 응답 형식 오류',
+  invalid_stage_output: '단계 출력 검증 실패',
+  llm_no_response: '유효한 모델 응답 없음',
   fast_path: '기존 규칙 경로',
   draft_changed_after_review: '검토 후 변경된 최종 초안은 미검토',
 };
@@ -67,6 +75,7 @@ export function RcaEvaluation({ result }: { result: Row }) {
         <dd>
           {reviewed ? label(review.verdict) : '미검토'}
           {review.reason ? ` · ${label(review.reason)}` : ''}
+          {review.failure_reason ? ` · 재검토 실패: ${label(review.failure_reason)}` : ''}
         </dd>
         <dt>조사 진행</dt>
         <dd>

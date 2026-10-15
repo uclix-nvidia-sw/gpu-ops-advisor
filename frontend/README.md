@@ -386,6 +386,10 @@ UI 단독 배포는 저장 결과에 없는 노드·알림 제목·장애 종류
 
 새 RCA는 회차별 근거 평가에서 제한·다음 조회·종료 이유를 함께 표시한다. 개발용
 원본 기록은 접힌 영역에 보존하며 과거 결과를 새 판단으로 다시 쓰지 않는다.
+진입 경로는 **개발측 → 사건·RCA → RCA 조사 결과 → 워크플로우 디버깅**이다. RCA 작업 상세 상단에도 같은 버튼이 있다. 팝업에서 조사 시도와 기록을 선택하면 수행 내용·저장된 이유·처리 기준·입력과 결과를 읽고 근거 ID로 이동할 수 있다. 저장 순서와 실제 호출 시작 순서를 구분하며, 없는 사유나 시간은 추정하지 않는다. 기존 근거 탭도 유지한다.
+
+증거 해석·품질 검토는 입력 크기 초과와 토큰 예산 부족, 두 조건 동시 발생을 구분한다. 요청 크기·예산 사전 검사에서 한도, 보수적 필요량, 최초 출력 상한, 실제 요청 여부를 확인한다. 과거 기록에 상세 진단이 없으면 기록 없음으로 표시한다. 단계별 모델 보고 토큰과 보수적 차감/추정량도 분리한다. 계약과 검수 범위는 [프런트엔드 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)와 [QA](QA.md)를 따른다.
+
 주요 보고서 제목과 참고 안내 제목은 18px, 세부 출처 제목과 설명은 15px로 맞춘다.
 
 RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.

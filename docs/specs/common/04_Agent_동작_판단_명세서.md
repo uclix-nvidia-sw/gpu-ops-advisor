@@ -309,6 +309,12 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 #### 기존 소비자와의 호환
 
+해석·검토 evidence의 snapshot과 quality에는 선택적 `request_checks[]`를 같은 순서로 저장한다. 최초와 형식 복구 요청별 `input_bytes/max_input_bytes`, `remaining_tokens/reserved_tokens/available_tokens`, `required_tokens`, `input_size_exceeded/token_budget_exhausted`, `model_called`를 담는다. `required_tokens`는 본문·프롬프트 바이트+512의 기존 보수적 사전 검사값이며, available이 이 값보다 커야 한다. 본문 바이트는 전송 envelope 전체 크기가 아니다. 전송 계산을 제공하는 모델은 `prompt_token_bound/configured_output_tokens/output_token_cap`도 남긴다. 출력 cap은 최초 전송 예정값으로, 생략된 요청의 실제 사용량이나 전송 재시도의 최종 cap이 아니다. 내용·키·응답 원문은 이 진단에 넣지 않는다.
+
+새 상세 사유 `llm_input_size_exceeded`는 기존 `llm_token_budget_exhausted`와 구분한다. 동시 발생 시 전자를 주 사유로 하고 두 boolean을 보존한다. 최종 종료 enum은 추가하지 않으며 각각 `analysis_unresolved`/`llm_budget_exhausted`로 연결한다. 변경된 초안 재검토의 실패는 기존 `draft_changed_after_review`와 선택적 `failure_reason`으로 함께 표현한다. 관련 단계 quality와 최종 `review`에도 보존한다.
+
+공통 `llm_usage`와 단계 usage delta의 기존 `total_tokens`는 모델 보고값을 유지한다. 선택적 `charged_tokens`는 실제 예산 차감량, `estimated_tokens`는 그중 total_tokens 미보고 응답의 보수적 차감량, `usage_missing_calls`는 해당 응답 수다. 실제 모델 측정치와 추정 차감량을 합쳐 실측 토큰이라고 표시하지 않는다. 이 추가 진단은 구 기록에 필수가 아니며 schema 1/결과 1.1의 기존 필수 필드와 공개 hash는 유지한다.
+
 - `result_status`, assessments, `quality.analysis`와 sufficiency 호환 요약, `termination_reason`, `causal_status`, `narrative_status`의 기존 의미와 값은 유지한다. 타당 판정만으로 ready/confirmed로 승격하지 않는다.
 - 과거 결과에 확장이 없으면 ‘평가 분리 기록 없음’으로 표시한다. 과거 호출 실패를 추정하거나 기본 acceptable을 넣지 않는다. 알 수 없는 확장 버전은 원본 보존·지원되지 않는 평가 형식으로 표시하고 기존 결과는 읽을 수 있게 한다.
 - 새 Worker는 자신이 쓰는 schema_version=1의 상태·refs·ID를 검증한다. Backend/JC는 기존 저장·공개 권한·hash를 검증하며 LLM 의미 평가를 대신하지 않는다.

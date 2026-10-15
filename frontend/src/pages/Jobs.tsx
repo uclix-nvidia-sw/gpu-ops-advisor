@@ -31,6 +31,7 @@ import { reportScopeClusters, reportTitle, reportTopics } from '../lib/workflow'
 import { JobDebug } from '../components/JobDebug';
 import { ReportDeletionNotice } from '../components/ReportDeletion';
 import { debugPath, returnPath } from '../lib/debug';
+import { RcaWorkflowButton } from '../components/RcaWorkflow';
 export function Jobs() {
   const app = useApp();
   const navigate = useNavigate();
@@ -331,9 +332,12 @@ export function JobDetail() {
         title={app.mode === 'developer' ? '작업 디버깅' : reportView ? reportTitle(j) : '작업 상세'}
         description={reportView ? `작업 ID · ${id || '미확인'}` : id || ''}
         actions={
-          <Link className="button" to={from} state={{ reportRow: obj(location.state).reportRow }}>
-            {from === '/jobs' ? '작업 목록' : '이전 목록·기록으로'}
-          </Link>
+          <>
+            {app.mode === 'developer' && j.kind === 'rca' && id && <RcaWorkflowButton jobId={id} />}
+            <Link className="button" to={from} state={{ reportRow: obj(location.state).reportRow }}>
+              {from === '/jobs' ? '작업 목록' : '이전 목록·기록으로'}
+            </Link>
+          </>
         }
       />
       <QueryState query={q}>

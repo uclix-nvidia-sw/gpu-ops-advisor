@@ -38,6 +38,8 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 
 새 작업의 수집 평가 기록은 `evidence_evaluation`이다. 과거 `unexpected_evidence`·`sufficiency` 기록은 기존 결과 조회용으로 남아 있고, `analysis.sufficiency`도 호환 요약으로 제공한다. `job.status`, `result_status`, Synthesis 상태, `narrative_status`는 각각 실행·판단 가능 범위·모델 응답·보고서 구성 상태다.
 
+증거 해석·품질 검토의 입력 크기 초과와 토큰 부족은 별도 사유와 `request_checks`로 기록한다. 두 조건이 함께 발생하면 모두 보존하며 검토 불가를 품질 통과로 표시하지 않는다. 모델 보고 토큰과 보수적 차감량도 구분한다. 상세 계약과 종료 처리는 [F0 설계](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#모델-요청-제한-진단-f0)를 따른다. GUI의 개발측 RCA 결과에서 **워크플로우 디버깅**을 누르면 시도·단계별 사유, 입력·결과, 관련 근거를 확인할 수 있다.
+
 ## Runbook 관리
 
 - [목록](runbooks/CATALOG.md) · [등록·검토·발행](runbooks/DB-WORKFLOW.md) · [구조 계약](src/rcca_agent/runbook_contract.py).

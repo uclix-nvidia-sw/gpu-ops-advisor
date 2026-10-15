@@ -34,6 +34,80 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
   },
 };
 const label = (v: unknown) => evaluationLabels[str(v)] || str(v, '기록 없음');
+const amount = (v: unknown) =>
+  typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : '기록 없음';
+
+function RequestChecks({ value }: { value: unknown }) {
+  const checks = rows(value);
+  if (!checks.length) return <p>요청 크기·예산 사전 검사: 기록 없음</p>;
+  return (
+    <details>
+      <summary>요청 크기·예산 사전 검사</summary>
+      <p>
+        토큰 필요량은 입력 바이트 기준의 보수적 계산이며 실제 사용량이 아닙니다. 출력 상한은 전송 시
+        최초 적용할 계산값입니다. 생략된 요청에는 적용되지 않았습니다.
+      </p>
+      {checks.map((check, i) => (
+        <div key={i}>
+          <h4>{i + 1}차 요청 확인</h4>
+          <p>
+            입력 크기:{' '}
+            {check.input_size_exceeded === true
+              ? '상한 초과'
+              : check.input_size_exceeded === false
+                ? '상한 이내'
+                : '기록 없음'}
+            {' · '}토큰 예산:{' '}
+            {check.token_budget_exhausted === true
+              ? '부족'
+              : check.token_budget_exhausted === false
+                ? '사전 검사 충족'
+                : '기록 없음'}
+            {' · '}
+            {check.model_called === true
+              ? '논리 모델 요청 실행'
+              : check.model_called === false
+                ? '모델 호출 전 생략'
+                : '호출 여부 미확인'}
+          </p>
+          <dl className="details">
+            <dt>요청 본문 / 크기 상한 (바이트)</dt>
+            <dd>
+              {amount(check.input_bytes)} / {amount(check.max_input_bytes)}
+            </dd>
+            <dt>남은 전체 / 예약 / 사용 가능 예산 (토큰)</dt>
+            <dd>
+              {amount(check.remaining_tokens)} / {amount(check.reserved_tokens)} /{' '}
+              {amount(check.available_tokens)}
+            </dd>
+            <dt>사전 검사 필요량 (토큰, 보수적 계산)</dt>
+            <dd>{amount(check.required_tokens)} 초과 필요</dd>
+            <dt>최초 출력 상한 (토큰, 계산값)</dt>
+            <dd>{amount(check.output_token_cap)}</dd>
+          </dl>
+        </div>
+      ))}
+    </details>
+  );
+}
+
+function StageUsage({ value }: { value: unknown }) {
+  const usage = obj(value);
+  if (typeof usage.request_attempts !== 'number') return null;
+  return (
+    <p>
+      전송 시도 {amount(usage.request_attempts)}회 · 모델 보고 토큰 {amount(usage.total_tokens)}
+      {typeof usage.charged_tokens === 'number' && (
+        <>
+          {' '}
+          · 예산 차감 {amount(usage.charged_tokens)}토큰 (미보고 응답{' '}
+          {amount(usage.usage_missing_calls)}건의 보수적 차감 {amount(usage.estimated_tokens)}토큰
+          포함)
+        </>
+      )}
+    </p>
+  );
+}
 
 export function RcaEvaluationTrace({
   items,
@@ -69,17 +143,16 @@ export function RcaEvaluationTrace({
                 {status ? label(status) : '기록됨'}
                 {meta.verdict ? ` · ${label(meta.verdict)}` : ''}
                 {meta.reason ? ` · ${label(meta.reason)}` : ''}
+                {meta.failure_reason ? ` · 재검토 실패: ${label(meta.failure_reason)}` : ''}
               </p>
               {typeof meta.attempts === 'number' && (
                 <p>
                   논리 모델 요청 {meta.attempts}회{meta.model ? ` · ${str(meta.model)}` : ''}
                 </p>
               )}
-              {typeof obj(meta.usage).request_attempts === 'number' && (
-                <p>
-                  전송 시도 {String(obj(meta.usage).request_attempts)}회 · 사용 토큰{' '}
-                  {String(obj(meta.usage).total_tokens ?? '미확인')}
-                </p>
+              <StageUsage value={meta.usage} />
+              {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
+                <RequestChecks value={meta.request_checks} />
               )}
               {meta.started_at != null && (
                 <p>
@@ -143,6 +216,21 @@ export function RcaStageDetails({
         {step.title} · {step.actor}
       </h3>
       <p>{step.purpose}</p>
+      {body.execution_status != null && <p>실행 상태: {label(body.execution_status)}</p>}
+      {body.reason != null && (
+        <p>
+          사유: {label(body.reason)} <code>{str(body.reason)}</code>
+        </p>
+      )}
+      {body.failure_reason != null && (
+        <p>
+          재검토 실패: {label(body.failure_reason)} <code>{str(body.failure_reason)}</code>
+        </p>
+      )}
+      {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
+        <RequestChecks value={body.request_checks} />
+      )}
+      <StageUsage value={body.usage} />
       {body.analysis_id != null && (
         <p>
           검토 대상 초안: <code>{str(body.analysis_id)}</code>

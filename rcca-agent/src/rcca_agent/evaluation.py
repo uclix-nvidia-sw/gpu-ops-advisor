@@ -79,6 +79,8 @@ async def evaluate_analysis(
                     "action",
                     "model",
                     "usage",
+                    "failure_reason",
+                    "request_checks",
                 )
                 if k in body
             }
@@ -235,6 +237,15 @@ async def evaluate_analysis(
         )
         review_ids.append(review_id)
         if not review or review["verdict"] != "revision_required":
+            if not review and review_diag.get("reason") in {
+                "llm_input_size_exceeded",
+                "llm_token_budget_exhausted",
+            }:
+                stop_override = (
+                    "analysis_unresolved"
+                    if review_diag["reason"] == "llm_input_size_exceeded"
+                    else "llm_budget_exhausted"
+                )
             break
         if not state.get("revisions") and status == "complete":
             state["revisions"] = 1
@@ -337,6 +348,11 @@ async def evaluate_analysis(
             evidence_refs=[review_ids[-1]],
             rubric_version="1",
             criteria=review["criteria"] if review else {},
+            **(
+                {"failure_reason": review_diag["failure_reason"]}
+                if review_diag.get("failure_reason")
+                else {}
+            ),
         ),
         review_output=review,
     )

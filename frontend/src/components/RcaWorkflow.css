@@ -1,0 +1,38 @@
+.rca-workflow-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.rca-workflow-layout nav .button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+.rca-workflow-layout article {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rca-workflow-layout article p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.rca-workflow-layout article section {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.rca-workflow-layout .text-link {
+  margin-right: 8px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .rca-workflow-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rca-workflow-layout nav {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+}
