@@ -60,6 +60,25 @@ def hourly_queries(cluster):
     }
 
 
+def memory_queries(cluster):
+    parts = []
+    for field, metric in (
+        ("used", "DCGM_FI_DEV_FB_USED"),
+        ("free", "DCGM_FI_DEV_FB_FREE"),
+    ):
+        gpu = selector(metric, cluster)
+        for measure, function in (
+            ("sum", "sum_over_time"),
+            ("count", "count_over_time"),
+            ("min", "min_over_time"),
+            ("max", "max_over_time"),
+        ):
+            parts.append(
+                f'label_replace({function}({gpu}[1h] offset 1ms), "measure", "{field}_{measure}", "", "")'
+            )
+    return {"hourly_gpu_memory": " or ".join(parts)}
+
+
 def matrix(response):
     if not isinstance(response, dict) or response.get("warnings"):
         raise ValueError("partial_or_invalid_prometheus_response")
@@ -98,18 +117,21 @@ class ReportQueries:
             raise ValueError("report_response_limit_exceeded")
         return response
 
-    async def collect(self, cluster, period):
+    async def collect(self, cluster, period, *, queries=None, uid=None):
         evidence = []
-        try:
-            uid, _ = await self.discovery.resolve(
-                "prometheus",
-                cluster["cluster_id"],
-                period,
-                cluster_labels=("cluster_id",),
-            )
-        except Exception:
-            uid = None
-        for name, expr in hourly_queries(cluster).items():
+        if queries is None:
+            try:
+                uid, _ = await self.discovery.resolve(
+                    "prometheus",
+                    cluster["cluster_id"],
+                    period,
+                    cluster_labels=("cluster_id",),
+                )
+            except Exception:
+                uid = None
+        for name, expr in (
+            hourly_queries(cluster) if queries is None else queries
+        ).items():
             before = time.monotonic()
             args = dict(
                 datasourceUid=uid,

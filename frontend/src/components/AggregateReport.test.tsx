@@ -327,6 +327,8 @@ it('shows generated interpretations inside each topic with source facts and snap
     </MemoryRouter>,
   );
   expect(html.match(/<h3>AI 운영 해석<\/h3>/g)).toHaveLength(2);
+  expect(html).toContain('1.1. Namespace별 비교');
+  expect(html.replace(/<!-- -->/g, '')).toContain('2.1. 장애 종류별 발생 현황');
   expect(html).not.toContain('id="report-summary-title"');
   expect(html).toContain('해석 근거와 계산 결과');
   expect(html).toContain('namespace_usage calculated fact');
@@ -394,4 +396,110 @@ it('keeps saved interpretation timestamps and text intact when adding wrap bound
   expect(observation.replace(/<[^>]+>/g, '')).toBe(text);
   expect(JSON.stringify(value)).toBe(before);
   expect(html).toContain('<dd>해석 유지</dd>');
+});
+
+it('shows optional device memory without interpreting missing memory as zero', () => {
+  const value = {
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        rows: [
+          {
+            cluster_id: 'cpc-1',
+            namespace: 'service',
+            gpu_model: 'A100',
+            activity_percent: 0,
+            hours: [],
+            gpu_memory: { used_gib_per_gpu: 0, free_gib_per_gpu: 80 },
+          },
+          {
+            cluster_id: 'cpc-2',
+            namespace: 'batch',
+            gpu_model: 'V100',
+            hours: [],
+            gpu_memory: { used_gib_per_gpu: null, free_gib_per_gpu: null },
+          },
+          {
+            cluster_id: 'cpc-2',
+            namespace: 'training',
+            gpu_model: 'A100',
+            hours: [],
+            gpu_memory: { used_gib_per_gpu: 60, free_gib_per_gpu: 20 },
+          },
+        ],
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} onEvidence={() => {}} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('0.00 GiB');
+  expect(html).toContain('80.00 GiB');
+  expect(html).toContain('0.0%');
+  expect(html).not.toContain('0.0% / 100.0%');
+  expect(html).toContain('GPU 메모리 사용 비율');
+  expect(html).toContain('사용 0.00 GiB / 전체 80.00 GiB');
+  expect(html).toContain('75.0%');
+  expect(html).toContain('사용 60.00 GiB / 전체 80.00 GiB');
+  expect(html).toContain('aggregate-namespace-memory');
+  expect(html).not.toContain('GPU 메모리 보조 관측');
+  expect(html).toContain('확인 불가');
+  expect(html).toContain('전용 사용량이나 할당량이 아닙니다');
+});
+
+it('distinguishes previous-only incident nodes and gives hidden captions accessible names', () => {
+  const value = {
+    topics: [
+      {
+        topic_id: 'incident_summary',
+        summary: {
+          count: 1,
+          categories: [
+            { cluster_id: 'cpc-2', name: 'XID 79', count: 0, previous_count: 2, nodes: [] },
+            { cluster_id: 'cpc-1', name: 'XID 79', count: 1, previous_count: 0, nodes: [] },
+          ],
+          incidents: [],
+        },
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} onEvidence={() => {}} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('이번 기간 발생 없음');
+  expect(html).toContain('노드 미확인');
+  expect(html).toContain('<caption class="sr-only">');
+});
+it('shows waiting-only namespace workload observations and keeps missing completions unknown', () => {
+  const value = {
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        rows: [],
+        workloads: [
+          {
+            cluster_id: 'cpc-2',
+            namespace: 'waiting-only',
+            pending_peak: 2,
+            unscheduled_peak: 1,
+            running_peak: 0,
+            completed_observed: null,
+            mean_elapsed_seconds: null,
+          },
+        ],
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} onEvidence={() => {}} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('waiting-only');
+  expect(html).toContain('자료 없음');
+  expect(html).toContain('대기는 GPU 부족을 뜻하지 않습니다');
 });

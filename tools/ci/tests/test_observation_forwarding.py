@@ -9,6 +9,22 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ForwardingTests(unittest.TestCase):
+    def test_workload_extension_is_additive_and_retained(self):
+        for old in (
+            MODULE.BASE,
+            MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS),
+            MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS + MODULE.POD_STATE),
+        ):
+            config = f'source_labels = ["__name__"]\nregex = "{old}"\naction = "keep"'
+            after = MODULE.extend(config, include_report_workload=True)
+            expanded = (
+                MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS + MODULE.REPORT_WORKLOAD)
+            )
+            self.assertEqual(after.replace(expanded, old), config)
+            self.assertEqual(MODULE.extend(after), after)
+            self.assertEqual(MODULE.extend(after, include_pod_state=True), after)
+            self.assertEqual(MODULE.extend(after, include_report_workload=True), after)
+
     def test_state_extension_preserves_original_and_expanded_routes(self):
         for original in (MODULE.BASE, MODULE.BASE + "|" + "|".join(MODULE.ADDITIONS)):
             config = (

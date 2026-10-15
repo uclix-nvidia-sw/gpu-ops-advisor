@@ -397,3 +397,15 @@ RCA 실패 요약과 워크플로우 상세는 저장된 상세 오류 코드를
 주요 보고서 제목과 참고 안내 제목은 18px, 세부 출처 제목과 설명은 15px로 맞춘다.
 
 RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.
+
+## Report GPU memory / 보고서 GPU 메모리
+
+`AggregateReport`는 `namespace_usage.rows[].gpu_memory`가 있는 새 결과에만 기존 Namespace 비교 표에 메모리 사용 비율(사용량 ÷ 사용·여유 합계 × 100)을 추가합니다. GPU당 평균 사용량 / 전체 용량(사용량과 여유량의 합계) GiB를 작은 보조 수치로 남깁니다. 여러 모델은 평균 범위를 표시하며 시간대 상세도 같은 형식입니다. 클러스터별로 활동률과 메모리 비율 그래프를 분리하고 시간축·색상을 공유합니다. 대주제는 굵은 구분선과 번호, 소주제는 얇은 구분선과 하위 번호로 구분합니다. AI 운영 해석에는 번호를 붙이지 않으며 이후 분석 항목부터 번호를 매깁니다. 고정 해석 기준·산식·알림 기준 안내는 옅은 회색으로 AI 해석의 녹색 배경과 구분합니다. 각 클러스터의 활동률·메모리 그래프 아래에 작은 독립 범례를 두며, Namespace 선택·전체 해제는 해당 그래프에만 적용됩니다. 메모리 사용/여유 전환도 해당 클러스터에만 적용됩니다. 자료 부재는 확인 불가, 실제 0은 0.0%로 구분합니다. 기존 활동 계산·RCA 화면은 유지합니다. AI 설명은 저장된 narrative를 표시하며 프런트엔드가 새 해석을 생성하지 않습니다.
+
+메모리 근거를 사용한 설명은 대상·시간·수치를 코드가 확정하고(`observation_source=calculated`), AI는 의미와 확인할 점을 작성합니다. 화면에서도 둘을 구분합니다. 검증을 통과하지 못한 AI 문장은 계산 요약으로 대체하며 기존 활동률·이전 기간 비교·사건 계산은 유지합니다.
+
+작업 보조 관측은 같은 Namespace 주제의 `workloads`를 표시합니다. 대기·미배치·실행은 관측 최대 Pod 수, 완료는 확인된 Job 표본이며 결측은 `자료 없음`으로 구분합니다. 과거 결과에 이 필드가 없으면 추가 표를 표시하지 않습니다. 사건 종류 표에서 이번 기간 0건인 비교 행은 `이번 기간 발생 없음`으로 표시하며, 실제 사건은 있으나 노드가 없는 경우와 구분합니다. 중복 표 제목은 시각적으로 숨기고 접근성 caption은 유지합니다.
+
+작업 보조 관측은 기존 Namespace 분석 안에서 시간 구간별 최대 대기 Pod 수와 완료 Job별 시작·완료·경과시간을 표시합니다. 대기는 구간 최대값 막대이며 순간 상태를 연결한 선이 아닙니다. 보고 기간에 완료된 이전 실행 Job도 포함하고, 대기·준비 포함 경과시간을 순수 실행시간과 구분합니다.
+
+작업 대기·완료 UI는 기존 그래프와 같은 클러스터 헤더(18px), 지표 제목(16px), Namespace 제목/본문(14px)을 사용합니다. 같은 클러스터의 Namespace별 대기 막대를 함께 배치하고, 완료 Job은 한 표로 묶어 Namespace와 작은 Job 이름, 시작·완료 날짜/시간, 경과시간을 표시합니다. 좁은 화면은 표 안에서만 가로 스크롤하며 집계값·AI 원문은 변경하지 않습니다.

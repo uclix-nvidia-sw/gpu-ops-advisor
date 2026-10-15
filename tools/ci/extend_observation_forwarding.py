@@ -19,9 +19,17 @@ ADDITIONS = (
     "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION",
 )
 POD_STATE = ("kube_pod_status_phase",)
+REPORT_WORKLOAD = (
+    "kube_pod_status_phase",
+    "kube_pod_status_scheduled",
+    "kube_pod_owner",
+    "kube_job_created",
+    "kube_job_status_start_time",
+    "kube_job_status_completion_time",
+)
 
 
-def extend(config, *, include_pod_state=False):
+def extend(config, *, include_pod_state=False, include_report_workload=False):
     """Fail closed on an unfamiliar rule; only replace one exact regex value."""
     pattern = re.compile(
         r'(source_labels\s*=\s*\["__name__"\]\s+regex\s*=\s*")'
@@ -29,8 +37,11 @@ def extend(config, *, include_pod_state=False):
     )
     standard = BASE + "|" + "|".join(ADDITIONS)
     with_state = standard + "|" + "|".join(POD_STATE)
+    with_workload = standard + "|" + "|".join(REPORT_WORKLOAD)
     matches = [
-        m for m in pattern.finditer(config) if m[2] in (BASE, standard, with_state)
+        m
+        for m in pattern.finditer(config)
+        if m[2] in (BASE, standard, with_state, with_workload)
     ]
     if len(matches) != 1:
         raise ValueError(
@@ -39,6 +50,8 @@ def extend(config, *, include_pod_state=False):
     match = matches[0]
     # Running the old/default mode must never remove a reviewed state extension.
     expanded = with_state if include_pod_state or match[2] == with_state else standard
+    if include_report_workload or match[2] == with_workload:
+        expanded = with_workload
     return config[: match.start(2)] + expanded + config[match.end(2) :]
 
 
@@ -60,6 +73,11 @@ def main():
         help="Also forward KSM Pod phase for D07 source validation; no scheduler scrape or binding activation",
     )
     parser.add_argument(
+        "--include-report-workload",
+        action="store_true",
+        help="Forward Ops Pod scheduling and batch Job timestamps; no RCA binding change",
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="Apply the selected reviewed metric extension",
@@ -69,8 +87,18 @@ def main():
         kubectl("-n", args.namespace, "get", "configmap", args.configmap, "-o", "json")
     )
     before = cm["data"][args.key]
-    after = extend(before, include_pod_state=args.include_pod_state)
-    requested = ADDITIONS + (POD_STATE if args.include_pod_state else ())
+    after = extend(
+        before,
+        include_pod_state=args.include_pod_state,
+        include_report_workload=args.include_report_workload,
+    )
+    requested = ADDITIONS + (
+        REPORT_WORKLOAD
+        if args.include_report_workload
+        else POD_STATE
+        if args.include_pod_state
+        else ()
+    )
     summary = {
         "metric_names_added": [
             name for name in requested if after.count(name) > before.count(name)
