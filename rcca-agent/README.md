@@ -7,9 +7,11 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 1. JC claim의 사건 snapshot·대상·기간·예산·지식 revision을 고정한다. [workflow.py](src/rcca_agent/workflow.py)가 전체 흐름을 소유한다.
 2. [retrieval.py](src/rcca_agent/retrieval.py)로 발행 Runbook을 검색하고 [runbook_contract.py](src/rcca_agent/runbook_contract.py)와 적용 조건을 검사한다. 검색 점수는 관련도이며 원인 확률이 아니다. 일반 조사 템플릿은 원인 확정 근거가 아니다.
 3. 선택한 Runbook의 필수 관측을 [observation_agents.py](src/rcca_agent/observation_agents.py)에서 수집한다. 허용된 독립 조회는 공유 예산 안에서 병렬 실행한다.
-4. 매 라운드 코드가 `evidence_evaluation`에 가용 사실·부족 조건·상충·선택 이유·종료 이유를 기록한다. 최초 수집과 보완 수집 1회, 최대 2라운드이며 보완 배치는 최대 3개 조회다.
-5. 수집 종료 후 [synthesis_context.py](src/rcca_agent/synthesis_context.py)가 제한된 모델 입력을 만들고 [synthesis.py](src/rcca_agent/synthesis.py)가 원인 후보·한계를 생성하고 검증한다. 기존 근거로 판단하는 fast path에서는 원인 Synthesis를 생략한다.
-6. [report.py](src/rcca_agent/report.py)가 근거가 연결된 보고서 문장을 구성하고 [report_editor.py](src/rcca_agent/report_editor.py)가 문장 ID의 우선순위를 선택한다. 선택되지 않은 원문도 보존한다. 결과·근거를 저장한 뒤 JC가 공개를 확정한다.
+4. 코드가 수집 상태와 형식·시각·식별자 정확 비교를 기록한다. [evidence_interpretation.py](src/rcca_agent/evidence_interpretation.py)의 LLM ①이 제한된 원문·관측에서 보고된 사실과 추론·미확인을 구분한다. 추론은 verified facts에 합치지 않는다.
+5. [synthesis.py](src/rcca_agent/synthesis.py)의 LLM ②가 후보·한계를 작성한다. 기존 수치·참조 검증과 Runbook 후보·권고를 결합해 초안을 고정한다.
+6. [analysis_review.py](src/rcca_agent/analysis_review.py)의 LLM ③이 초안 전체를 6개 평가 척도로 검토한다. 항목마다 판정·이유·근거를 남기며 초안 hash가 바뀌면 이전 판정을 재사용하지 않는다.
+7. [evaluation.py](src/rcca_agent/evaluation.py)에서 의미 수정은 attempt당 최대 1회다. 조건부 보완 수집은 최대 1라운드·3개 조회이며 해석부터 다시 수행한다. `evidence_evaluation`의 기존 요건 기록과 `investigation_decision`의 다음 행동·종료 이유를 구분한다. fast path는 기존 규칙 판단을 유지하고 해석·Synthesis·검토를 생략한다.
+8. [report.py](src/rcca_agent/report.py)가 상태·한계를 포함한 보고서 문장을 구성하고 [report_editor.py](src/rcca_agent/report_editor.py)가 문장 ID의 우선순위만 선택한다. 결과·근거를 저장한 뒤 JC가 공개를 확정한다.
 
 ## 보완 조회 선택
 
@@ -36,6 +38,8 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 
 새 작업의 수집 평가 기록은 `evidence_evaluation`이다. 과거 `unexpected_evidence`·`sufficiency` 기록은 기존 결과 조회용으로 남아 있고, `analysis.sufficiency`도 호환 요약으로 제공한다. `job.status`, `result_status`, Synthesis 상태, `narrative_status`는 각각 실행·판단 가능 범위·모델 응답·보고서 구성 상태다.
 
+증거 해석·품질 검토의 입력 크기 초과와 토큰 부족은 별도 사유와 `request_checks`로 기록한다. 두 조건이 함께 발생하면 모두 보존하며 검토 불가를 품질 통과로 표시하지 않는다. 모델 보고 토큰과 보수적 차감량도 구분한다. 상세 계약과 종료 처리는 [F0 설계](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#모델-요청-제한-진단-f0)를 따른다. GUI의 개발측 RCA 결과에서 **워크플로우 디버깅**을 누르면 시도·단계별 사유, 입력·결과, 관련 근거를 확인할 수 있다.
+
 ## Runbook 관리
 
 - [목록](runbooks/CATALOG.md) · [등록·검토·발행](runbooks/DB-WORKFLOW.md) · [구조 계약](src/rcca_agent/runbook_contract.py).
@@ -49,4 +53,4 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 
 현재 미완료인 작업은 오류별 보완 조회·출처·지침의 의미 검토, 발행 profile 재검증, 실제 모델·장비 사건으로 원인 분석 품질 검증이다. 중간 언어 검사/최종 한국어 표현의 분리도 구현돼 있지 않다.
 
-[수집·증거·분석 품질 분리 설계·개발](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발--미구현)은 별도 증거 해석·분석 검토 LLM, 제한된 수정·보완 수집, 결과·추적 필드와 Backend·Frontend·Ops 소비 범위를 정의한다. **아직 미구현**이며 위 현재 실행 흐름을 대체하지 않는다. 원인 정확도 점수나 자유로운 Runbook 재선택 루프를 추가하는 설계가 아니다. 공통 결과·실행·화면·검수의 담당 문서는 설계서에서 연결한다.
+[수집·증거·분석 품질 분리 설계·개발](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발)은 별도 증거 해석·분석 검토 LLM, 제한된 수정·보완 수집, 결과·추적 필드와 Backend·Frontend·Ops 소비 범위를 정의한다. 현재 코드에 구현했으며 실행별 결과는 `quality.rca_evaluation`에서 구분한다. 평가 척도는 근거 연결·대상/시각·상충·대안·한계·증거 활용의 6항목이며, 이유와 refs를 GUI에서 확인한다. 실제 모델의 의미 평가 정확도와 운영 배포는 별도 검증 대상이다. 원인 정확도 점수나 자유로운 Runbook 재선택 루프를 추가하는 설계가 아니다. 공통 결과·실행·화면·검수의 담당 문서는 설계서에서 연결한다.

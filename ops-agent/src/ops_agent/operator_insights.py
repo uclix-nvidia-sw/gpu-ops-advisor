@@ -1,5 +1,7 @@
 """Verified operator checks derived from existing report metrics and DB snapshots."""
 
+from agent_common.rca_evaluation import source_evaluation
+
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -257,7 +259,7 @@ def operator_insights(topic, data, context, db_evidence):
                 2 if state == "firing" else (4 if state == "resolved" else 3),
                 f"{label(target)} / 접수된 증상: {symptom}. 저장 시점 기준 {status_text}, 공개 RCA {len(linked)}건, 연결된 조치 기록 {len(actions)}건입니다.",
                 check
-                + " 알람 해제·분석 완료·조치 기록은 각각 별개이며 복구 완료를 뜻하지 않습니다.",
+                + " 알람 해제·분석 완료·조치 기록은 각각 별개이며 복구 완료를 뜻하지 않습니다. RCA의 분석 검토 상태와 남은 한계를 함께 확인하세요.",
                 counts,
                 target=target,
                 span={"at": incident.get("occurred_at", period["start"])},
@@ -265,6 +267,7 @@ def operator_insights(topic, data, context, db_evidence):
                 alarm_status=state or "unknown",
                 status_as_of=context.get("data_cutoff_at"),
                 rca_result_ids=[r["result_id"] for r in linked],
+                rca_evaluations=[source_evaluation(r["body"]) for r in linked],
                 action_record_ids=[a["id"] for a in actions],
             )
             topic["findings"][-1]["evidence_refs"] = [db_evidence["id"]]

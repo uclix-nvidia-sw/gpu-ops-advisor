@@ -1,18 +1,18 @@
 # 11. RCA Agent 실행 계약과 평가 분리 설계·개발
 
-현재 실행 설명은 [RCA README](../../../rcca-agent/README.md)가 소유한다. 이 문서는 현재 코드가 사용하는 계약과 판단 경계, RCA 평가 분리의 설계·개발 범위를 정리한다. **아래 ‘평가 분리 설계·개발’은 미구현 목표이며, 이 문서 작성으로 코드 변경·검수·배포가 완료된 것은 아니다.** 입력/실행은 [실행 계약](../common/14_모듈간_호출과_공통실행_계약.md), 결과 필드는 [공통 판단·결과 계약](../common/04_Agent_동작_판단_명세서.md), DB 소유권은 [Shared](../../../shared/README.md)를 따른다.
+현재 실행 설명은 [RCA README](../../../rcca-agent/README.md)가 소유한다. 이 문서는 현재 코드가 사용하는 계약과 판단 경계, RCA 평가 분리의 설계·개발 범위를 정리한다. **평가 분리의 코드·GUI 경로를 구현했다. 고정 응답 검증과 실제 모델의 평가 정확도·운영 배포는 구분하며, 실행 근거는 Agent QA에서 관리한다.** 입력/실행은 [실행 계약](../common/14_모듈간_호출과_공통실행_계약.md), 결과 필드는 [공통 판단·결과 계약](../common/04_Agent_동작_판단_명세서.md), DB 소유권은 [Shared](../../../shared/README.md)를 따른다.
 
 ## 문서 관계와 읽는 순서
 
-전체 방향을 함께 검토할 때는 [개선 목적](#평가-분리-설계개발--미구현) → 단계와 LLM 개입 → 사건 예시 → 함수별 변경 → 검수 기준 순으로 읽는다. 별도의 협의 항목이나 승인 절차를 만들지 않는다. 현재 동작과 목표를 비교할 때는 앞의 현행 계약 절과 RCA README를 함께 확인한다.
+전체 방향을 함께 검토할 때는 [개선 목적](#평가-분리-설계개발) → 단계와 LLM 개입 → 사건 예시 → 함수별 변경 → 검수 기준 순으로 읽는다. 별도의 협의 항목이나 승인 절차를 만들지 않는다. 현재 동작과 목표를 비교할 때는 앞의 현행 계약 절과 RCA README를 함께 확인한다.
 
 | 담당 문서 | 이 변경에서 소유하는 내용 |
 |---|---|
 | 이 문서 | RCA 조사 순서, LLM 역할, 반복·실패 처리, 함수별 개발 내용과 보존할 기능 |
-| [04 공통 판단](../common/04_Agent_동작_판단_명세서.md#81-rca-평가-분리-결과-확장--미구현) | 새 결과 필드·상태·참조와 기존 결과 호환 계약 |
-| [14 공통 실행](../common/14_모듈간_호출과_공통실행_계약.md#rca-평가-분리의-실행-호환--미구현) | 같은 attempt의 직렬 호출·예산·취소·공개 경계와 소비자 적용 순서 |
-| [07 Frontend](../frontend/07_프론트엔드_개발명세서.md#rca-평가-분리-표시--미구현) | 최종 결과와 디버깅 화면의 표시·구형 결과 처리 |
-| [05 검수](../05_테스트_검수_기준서.md#rca-평가-분리-검수--미구현) | 입력 사례별 기대 결과와 검증 범위 |
+| [04 공통 판단](../common/04_Agent_동작_판단_명세서.md#81-rca-평가-분리-결과-확장) | 새 결과 필드·상태·참조와 기존 결과 호환 계약 |
+| [14 공통 실행](../common/14_모듈간_호출과_공통실행_계약.md#rca-평가-분리의-실행-호환) | 같은 attempt의 직렬 호출·예산·취소·공개 경계와 소비자 적용 순서 |
+| [07 Frontend](../frontend/07_프론트엔드_개발명세서.md#rca-평가-분리-표시) | 최종 결과와 디버깅 화면의 표시·구형 결과 처리 |
+| [05 검수](../05_테스트_검수_기준서.md#rca-평가-분리-검수) | 입력 사례별 기대 결과와 검증 범위 |
 | RCA README / Agent QA | 실제 구현 상태 / 실행한 시험의 증거. 미구현 설계를 검증 완료로 옮기지 않음 |
 
 같은 필드·상태를 여러 문서에서 재정의하지 않는다. 기존 문서를 갱신하며 별도의 날짜별 설계 요약이나 개발 일지를 만들지 않는다.
@@ -59,7 +59,7 @@ Runbook 작성 필드·등록·검토·발행 명령은 [작성 안내](../../..
 
 ## 모델 입력과 원인 후보 검증
 
-Synthesis는 관측 라운드 종료 후 호출한다. fast path와 유효 근거 없음·모델 미설정은 별도 상태로 남긴다. [입력 구성](../../../rcca-agent/src/rcca_agent/synthesis_context.py)은 원본을 수정하지 않고 제한된 모델 뷰를 만든다. 입력 refs·원본/전달 크기·생략 수를 기록하고 수정 요청에서도 실제 입력 범위를 남긴다.
+각 수집 라운드에서 증거 해석 후 Synthesis를 호출하고, Runbook 후보·권고를 결합한 초안을 별도로 검토한다. fast path와 유효 근거 없음·모델 미설정은 별도 상태로 남긴다. [입력 구성](../../../rcca-agent/src/rcca_agent/synthesis_context.py)은 원본을 수정하지 않고 제한된 모델 뷰를 만든다. 입력 refs·원본/전달 크기·생략 수를 기록하고 수정 요청에서도 실제 입력 범위를 남긴다.
 
 모델은 `hypotheses`와 `limitations`를 반환한다. 후보에는 주장·지지 refs·반박 refs·부족 입력이 필요하다. [검증기](../../../rcca-agent/src/rcca_agent/synthesis.py)는 구조, 허용된 관측 참조, 상충 참조, 숫자·한국어 표현과 특정 원인 주장 패턴을 검사한다. 신원 불확실성을 원인으로 제시하는 검사와 미확정 장치의 기전 주장은 표현 검사보다 먼저 확인한다.
 
@@ -82,7 +82,7 @@ Runbook의 `operator_guidance`는 의미·주의·다음 확인·출처를 공�
 
 evidence와 candidate를 저장한 뒤 JC가 실행권·계약·hash 등을 확인해 공개한다. 과거 결과의 `analysis.sufficiency`와 이전 평가 기록은 조회 호환용으로 유지한다. 원본 snapshot·결과 hash·발행 revision은 변경하지 않는다.
 
-## 평가 분리 설계·개발 — 미구현
+## 평가 분리 설계·개발
 
 ### 개선 목적과 현재의 차이
 
@@ -94,9 +94,9 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 | 증거 상태 | 이 데이터로 무엇을 알 수 있는가? | 명확한 검사: 코드 / 의미 해석: LLM | 오류 보고 확인, 오류 대상 GPU 미확인 |
 | 분석 품질 | 이 근거로 이 결론을 내려도 되는가? | 구조·참조 검사: 코드 / 의미·논리 검토: 별도 LLM 호출 | 타당·수정 필요·판단 불가·미검토 |
 
-현재 `evaluate_evidence()`는 수집 제한·Runbook 요건·원인 확인 근거·추가 조회·종료 판단을 함께 처리하며, 수집 루프가 끝난 뒤 Synthesis를 수행한다. 현재의 `sufficient`는 새 분석 품질 판정으로 재사용하지 않는다. 목표는 요건 기록을 유지하면서 증거 해석과 분석 검토를 추가하고, 분석 후에도 같은 attempt 안에서 제한적으로 수정·보완하는 것이다.
+`evaluate_requirements()`는 수집·Runbook 요건을, `analyze_round()`/`evaluate_analysis()`는 해석·초안·검토를, `select_followup()`는 허용된 다음 조회와 종료를 담당한다. 기존 `sufficient`는 분석 품질 판정으로 재사용하지 않는다. 요건 기록을 유지하면서 같은 attempt 안에서 제한적으로 수정·보완한다.
 
-| 현재 | 변경 후 |
+| 이전 흐름 | 현재 흐름 |
 |---|---|
 | 정규화 관측을 중심으로 Synthesis 입력 구성 | 관측과 별도로 검증 진단·제한된 원문 발췌·증거 해석 제공 |
 | 코드로 Synthesis 구조·참조·일부 문장 패턴 검증 | 기존 검증 유지 + 최종 초안 전체의 의미·논리 검토 |
@@ -143,9 +143,28 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 별도 검토는 별도 호출이지 다른 모델·서비스 도입 요구가 아니다. 같은 모델을 사용할 수 있고 기존 job 모델 라우팅을 따른다. 추가 조회 선택, 의미 수정, 형식 복구, 최종 문장 편집에도 LLM이 호출될 수 있어 총 호출을 항상 3회로 표시하지 않는다. 선택 LLM은 기존 `exploratory_llm: true` 후보만 사용하며 규칙 배치의 빈자리를 채우지 않는다. 해석·분석·검토에는 조회·저장·장비 제어 도구를 주지 않는다.
 
+### 분석 품질 평가 척도 — rubric 1
+
+평가 대상은 **최종 초안이 전달된 증거 범위에 맞는가**이다. 원인 정답률·수집량·문장 유창성의 점수가 아니다. 규칙은 출력의 구조·참조·판정 일관성을 검사하며, 아래 의미 판단은 별도 LLM 호출이 수행한다. 모델이 판단한 이유를 사람이 원본과 대조할 수 있어야 한다.
+
+| 항목 / 코드 | 충족으로 볼 조건 | 수정 필요 사례 | 판단 불가 사례 |
+|---|---|---|---|
+| 근거와 결론의 연결 / `grounding` | 주요 주장·원인 배제·권고가 인용 증거의 범위를 지킴 | PCIe 일부 0값만으로 PCIe 원인 배제; 로그에 없는 고장 단정 | 판단에 필수인 인용 원문이 입력에서 빠져 확인 불가 |
+| 대상·시각 구분 / `identity_time` | 보고 대상·실제 장치·사건/기록/현재 시각을 구분 | 이름의 마침표 차이를 같은 GPU로 확정; 기록 시각을 장애 발생 시각으로 확정 | 초안의 대상 연결을 검토할 식별 근거 자체가 전달되지 않음 |
+| 반대 근거·모순 / `contradictions` | 서로 다른 관측을 함께 설명하거나 미해결로 표시 | 건강/이상 보고가 함께 있는데 한쪽만 채택 | 중요한 상충 자료의 세부 내용을 확인할 수 없음 |
+| 중요한 대안 / `alternatives` | 현재 증거로 남는 주요 대안과 배제 범위를 설명 | 하드웨어 고장만 단정하고 설명 가능한 연결·관측 문제 누락 | 주요 대안을 비교할 근거의 의미가 불명확 |
+| 수집·해석 한계 / `limitations` | 빈 결과·부분 수집·시간 공백·입력 생략이 결론을 어떻게 제한하는지 명시 | empty를 정상으로 처리; 검토하지 못한 기간까지 정상이라고 서술 | 제한이 결론에 미치는 영향을 판단할 문맥이 없음 |
+| 중요한 증거 활용 / `evidence_use` | 확보한 핵심 보고를 사용하면서 미확인을 구분 | 유효한 오류 보고가 있는데 ‘자료 부족’만 반복 | 핵심 자료가 해석 불가능하거나 검토 입력에서 생략됨 |
+
+항목마다 `pass/needs_revision/undetermined/not_applicable`, 이유, 실제 전달된 증거 ID를 기록한다. `not_applicable`에도 해당하지 않는 구체적 이유가 필요하다. 예컨대 반대 근거가 실제 제공되지 않은 경우와 반대 근거를 읽지 못한 경우를 혼동하지 않는다. 자료가 부족해도 ‘GPU 연결 미확인으로 해당 원인을 배제할 수 없다’는 설명은 충족일 수 있다.
+
+종합 판정은 코드로 일관성을 확인한다. 하나라도 `needs_revision`이면 `revision_required`, 그것이 없고 `undetermined`가 있으면 `undetermined`, 나머지는 `acceptable`이다. 항목을 생략하거나 종합 판정과 모순되면 형식 복구를 한 번 요청하고, 다시 실패하면 **미검토**로 남긴다. 점수 평균이나 임의 가중치로 중요한 문제를 상쇄하지 않는다.
+
+척도 자체를 검증할 기준 사례는 같은 자료에 대한 제한적 설명/과장된 설명 쌍, 식별자 오타, 관측 공백, 상충 보고, 핵심 증거 미사용이다. 기대 판정과 근거를 사람이 먼저 정하고 실제 모델 출력의 문제 누락·잘못된 지적·항목별 차이·호출 시간·토큰을 대조한다. 고정 응답 테스트는 이 평가의 저장·분기·참조 계약만 검증한다. 실제 모델의 의미 평가 정확도는 T79에서 별도로 검증한다.
+
 ### 다음 행동과 반복 제한
 
-요건 미충족은 조사 제약이며 그 자체로 잘못된 분석이라는 뜻이 아니다. `evaluate_requirements()`는 부족 조건과 정책 제안을 기록하고, `select_followup()`는 기존 Runbook 규칙·명시적 정책·허용 범위로 후보를 제한한다. `decide_next_step()`가 검토 결과와 실행 조건으로 실제 행동을 결정한다. LLM 제안은 등록 query ID와 목적·기대 효과만 포함하며 임의 조회식이나 새 Runbook 발행을 허용하지 않는다.
+요건 미충족은 조사 제약이며 그 자체로 잘못된 분석이라는 뜻이 아니다. 반대로 기존 요건이 충족돼도 검토자가 중요한 보완 질문을 남겼다면 허용된 조회와 실행 조건을 다시 확인한다. `evaluate_requirements()`는 부족 조건과 정책 제안을 기록하고, `select_followup()`는 기존 Runbook 규칙·명시적 정책·허용 범위로 후보를 제한한다. `select_followup()`와 `evaluate_analysis()`의 결정이 `investigation_decision`에 실제 행동과 이유를 기록한다. LLM 제안은 등록 query ID와 목적·기대 효과만 포함하며 임의 조회식이나 새 Runbook 발행을 허용하지 않는다.
 
 | 조건 | 행동 |
 |---|---|
@@ -162,9 +181,21 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 - 의미 수정은 attempt 전체에서 최대 1회다. 보완 수집 후 새 초안을 만드는 것은 수집 라운드에 속하며 수정 한도를 초기화하지 않는다.
 - 형식·참조 복구와 의미 수정은 별도 사유로 기록한다. 새 해석·검토 단계의 무효 출력 복구는 각 논리 호출당 최대 1회, 기존 Synthesis 복구도 최대 1회를 유지한다. 전송 재시도는 공통 LLM 한도를 재사용하고 바깥에 추가 재시도 루프를 두지 않는다.
 - 모든 LLM 호출은 같은 attempt에서 직렬로 실행하고 같은 token budget·deadline을 사용한다. 수집 예산·원격 실행 상태·취소 처리를 재설정하지 않는다.
-- 초안 생성·수정 전에 bounded 입력과 기존 출력 cap으로 다음 검토에 필요한 토큰 여유를 계산해 남긴다. 남은 예산이 검토 입력·출력을 수용하지 못하면 새 초안을 시작하지 않고 제한된 결과로 종료한다. 시간은 호출마다 남은 deadline을 확인하며 추정 시간만으로 검토 완료를 보장하지 않는다.
+- 초안 생성·수정 전에 bounded 입력과 기존 출력 cap으로 다음 검토에 필요한 토큰을 예약한다. 현재는 생성 실패 후에도 코드 후보 조립·검토를 시도할 수 있다. 검토 자체를 수용하지 못할 때 새 초안 시작까지 차단하는 사전 검사는 남은 예산 개선(F2) 범위다. 시간은 호출마다 남은 deadline을 확인하며 추정 시간만으로 검토 완료를 보장하지 않는다.
 
 ### 실패와 최종 초안 처리
+
+#### 모델 요청 제한 진단 (F0)
+
+`evidence_interpretation.call_stage()`는 해석·검토의 요청 본문 크기와 사용 가능한 토큰 예산을 독립적으로 검사한다. 입력 상한 초과는 `llm_input_size_exceeded`, 예산 부족은 `llm_token_budget_exhausted`다. 둘 다 해당하면 입력 상한 초과를 주 사유로 기록하고 두 조건을 모두 남긴다. 본문 크기가 상한과 같으면 허용하며, 기존의 보수적 필요량 이하인 예산은 거절한다. 상한·예약·기본 출력 cap은 확대하지 않는다.
+
+최초 요청과 형식 복구 요청마다 `request_checks`를 기록한다. 크기·예산·예약량·최초 출력 상한 계산값과 실제 논리 호출 여부는 [04의 중간 기록 계약](../common/04_Agent_동작_판단_명세서.md#기록의-관계와-검증)을 따른다. 복구 입력이 한도를 넘으면 첫 호출·검증 실패 기록을 보존하고 추가 호출을 하지 않는다. 이전 결과에 이 진단이 없으면 원인을 새로 추정하지 않는다.
+
+검토가 입력 상한으로 중단되면 `evaluate_analysis()`가 `analysis_unresolved`, 토큰 부족이면 `llm_budget_exhausted`로 종료 결정을 전달한다. `workflow.select_followup()`는 이 결정을 우선 적용하므로 입력을 줄이거나 모델 예산을 보충하려는 추가 조회는 발생하지 않는다. 검토는 `verdict=null`이며 수집·원인 상태를 정상으로 승격하지 않는다. 문제 주장 제거 후 재검토가 실패하면 기존 `draft_changed_after_review`와 별도로 `failure_reason`을 보존한다.
+
+모델 미설정·HTTP 오류·출력 검증 실패는 기존 사유를 유지한다. 취소·deadline·원격 종료 불명은 기존 예외/Worker 수명주기를 따르며 입력 제한 결과로 바꿔 공개하지 않는다. 공통 `LLM.request_budget()`은 기존 전송 cap 계산을 공유하고, 모델 보고 토큰과 usage 누락에 따른 보수적 예산 차감을 구분한다. 새 모델 호출·외부 서비스·DB 변경은 없다.
+
+#### 최종 결과 처리
 
 | 실패·생략 | 처리 |
 |---|---|
@@ -197,26 +228,26 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 가능한 최종 조합은 **부분 수집 / 오류 보고 확인·GPU 미확인 / 제한된 근거 안에서 타당 / 원인 미확정 / 조사 종료 / 추가 자료 확보 불가**다. 검토 LLM이 실패한 같은 사건은 ‘타당’ 대신 ‘미검토’다. 모든 조회에 성공했어도 근거 없는 단정이면 ‘수정 필요’다.
 
-기록은 `D09 → 해석 → 초안 → 검토 → 추가 확인 필요 → D44`처럼 인과 연결을 제공한다. D 번호는 조회 식별자이지 실행 순서가 아니다. 실제 선택 이유·입력 refs·라운드·초안 ID·결정 기록으로 순서를 설명하며 생성 시각만으로 시작 순서·소요시간을 추정하지 않는다. 표시 기준은 [07](../frontend/07_프론트엔드_개발명세서.md#rca-평가-분리-표시--미구현)을 따른다.
+기록은 `D09 → 해석 → 초안 → 검토 → 추가 확인 필요 → D44`처럼 인과 연결을 제공한다. D 번호는 조회 식별자이지 실행 순서가 아니다. 실제 선택 이유·입력 refs·라운드·초안 ID·결정 기록으로 순서를 설명하며 생성 시각만으로 시작 순서·소요시간을 추정하지 않는다. 표시 기준은 [07](../frontend/07_프론트엔드_개발명세서.md#rca-평가-분리-표시)을 따른다.
 
 ### 함수별 개발 내용과 유지 범위
 
-아래 신규 이름은 구현 대상이며 아직 함수·파일이 존재한다는 뜻이 아니다. 새 서비스·큐·DB 테이블을 전제하지 않고 기존 Worker·LLM·evidence/result 저장 경로를 재사용한다.
+아래 함수와 파일이 현재 구현 위치다. 새 서비스·큐·DB 테이블 없이 기존 Worker·LLM·evidence/result 저장 경로를 재사용한다.
 
 | 파일·함수 | 변경 내용 | 유지할 내용 |
 |---|---|---|
-| [workflow.py](../../../rcca-agent/src/rcca_agent/workflow.py) `run/evaluate_evidence` | 요건 결과 dict를 반환하는 `evaluate_requirements`, 선택을 맡는 `select_followup`, 행동을 정하는 `decide_next_step`로 나눔. 13개 위치 반환값 의존 제거, 라운드마다 해석·분석·검토 연결 | Runbook policy/extension provenance, scope·예산·종료 제한, 기존 수집 평가 기록 |
+| [workflow.py](../../../rcca-agent/src/rcca_agent/workflow.py) `run` | 요건 dict를 반환하는 `evaluate_requirements`, 라운드 분석 `analyze_round`, 선택·종료 `select_followup`로 분리. [evaluation.py](../../../rcca-agent/src/rcca_agent/evaluation.py)가 의미 수정·보류를 처리. 13개 위치 반환값 제거 | Runbook policy/extension provenance, scope·예산·종료 제한, 기존 수집 평가 기록 |
 | 같은 파일 `normalized_state` | 정규화 결과와 별도로 검사 diagnostics 전달 | verified facts·대상/시간·관계 조건 |
 | [공통 parsers.py](../../../shared/python/src/agent_common/parsers.py), [fleet_events.py](../../../rcca-agent/src/rcca_agent/fleet_events.py) | 필요한 파서에 선택적 diagnostics 인자를 추가해 실패 이유·위치 기록. 기존 파서를 중복 구현하지 않음 | 기존 반환 형식과 RCA/Ops 호출자, producer 시각·신원·단위 의미 |
 | [observation_agents.py](../../../rcca-agent/src/rcca_agent/observation_agents.py) `collect_round`, [공통 Observation](../../../shared/python/src/agent_common/observation.py) | 기존 query 상태·제한을 새 평가에 연결. 수집기 전면 재작성 없음 | 병렬 task·예산 분배·정산·alias·원본 기록 |
-| 신규 `evidence_interpretation.py` | `interpret_evidence`로 LLM ① 호출, `validate_interpretation`으로 구조·입력 refs·kind 검사 | 추론을 verified facts에 병합하지 않음 |
+| [evidence_interpretation.py](../../../rcca-agent/src/rcca_agent/evidence_interpretation.py) | `interpret_evidence`로 LLM ① 호출, `validate_interpretation`으로 구조·입력 refs·kind 검사 | 추론을 verified facts에 병합하지 않음 |
 | [synthesis.py](../../../rcca-agent/src/rcca_agent/synthesis.py) `synthesis_input/synthesize/validate_synthesis` | 해석·제한된 발췌·검토 피드백 입력 추가. 기존 반환 tuple 유지. 정규화 관측 없음과 해석 가능한 발췌도 없음의 생략 조건 분리 | 참조·수치·언어·인과 제한과 기존 복구 검증 |
 | [synthesis_context.py](../../../rcca-agent/src/rcca_agent/synthesis_context.py) `bounded_context` | 진단·발췌·해석도 같은 입력 크기 한도 안에 포함. 실제 전달 refs와 생략·view hash 기록 | 원본 불변, 표본 제한·context_selection |
-| `workflow.py` 후보·권고 조립 부분 | 필요 시 `assemble_rca_draft`로 추출하여 규칙 후보까지 모은 후 초안 hash·검토 생성 | 기존 causal_status·confirmation rule·권고 eligibility/미수행 의미 |
-| 신규 `analysis_review.py` | `review_analysis`로 LLM ③ 호출, `validate_review`로 초안 ID·claim ID·전달 증거 참조·판정 검사 | 검토는 진실성 증명이나 규칙 우회 수단이 아님 |
-| [prompts.py](../../../rcca-agent/src/rcca_agent/prompts.py) | 해석·검토 지침 추가, 기존 ‘수집 종료’ 전제를 제한된 후속 제안 계약으로 변경 | 로그 속 지시 무시, 도구 없는 분석·검토 |
+| `workflow.py` 후보·권고 조립 부분 | `assemble_rca_draft`로 추출하여 규칙 후보까지 모은 후 초안 hash·검토 생성 | 기존 causal_status·confirmation rule·권고 eligibility/미수행 의미 |
+| [analysis_review.py](../../../rcca-agent/src/rcca_agent/analysis_review.py) | `review_analysis`로 LLM ③ 호출, `validate_review`로 초안 ID·claim ID·전달 증거 참조·판정 검사 | 검토는 진실성 증명이나 규칙 우회 수단이 아님 |
+| [prompts.py](../../../rcca-agent/src/rcca_agent/prompts.py) | 해석·검토 지침은 해당 모듈의 prompt에 정의. 기존 ‘수집 종료’ 전제를 제한된 후속 제안 계약으로 변경 | 로그 속 지시 무시, 도구 없는 분석·검토 |
 | [공통 LLM](../../../shared/python/src/agent_common/llm.py), [settings.py](../../../shared/python/src/agent_common/settings.py) | 기존 `complete(stage=...)`에 `evidence_interpretation`, `analysis_review` stage 사용. stage별 usage delta·상태 기록, 검토 예산 확보 | 기존 모델 라우팅·기본 cap·직렬 호출·전송 재시도·원격 종료 불명 처리. 단계별 별도 모델 설정을 필수로 추가하지 않음 |
-| [contracts.py](../../../shared/python/src/agent_common/contracts.py) `validate_result` | [04 확장](../common/04_Agent_동작_판단_명세서.md#81-rca-평가-분리-결과-확장--미구현)이 있으면 필드·상태·refs·최종 초안 ID 검사 | 구 결과 허용, result_status 산식·원인 확정 규칙 |
+| [contracts.py](../../../shared/python/src/agent_common/contracts.py) `validate_result` | [04 확장](../common/04_Agent_동작_판단_명세서.md#81-rca-평가-분리-결과-확장)이 있으면 필드·상태·refs·최종 초안 ID 검사 | 구 결과 허용, result_status 산식·원인 확정 규칙 |
 | [report.py](../../../rcca-agent/src/rcca_agent/report.py), [report_editor.py](../../../rcca-agent/src/rcca_agent/report_editor.py) | 상태·한계·미검토/보류를 코드 문장에 반영. 필수 제한을 편집 결과 밖에서도 유지 | 문장 ID 편집만 허용, 결정적 fallback |
 
 ### 소비자와 개발 단위
@@ -235,7 +266,7 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 ### 검증과 완료 경계
 
-[05의 T66~T79](../05_테스트_검수_기준서.md#rca-평가-분리-검수--미구현)를 구현 검수 기준으로 사용한다. 현재 [test_rca_analysis](../../../agents/tests/test_rca_analysis.py), [test_rca_repairs](../../../agents/tests/test_rca_repairs.py), [test_synthesis_context](../../../agents/tests/test_synthesis_context.py), [test_rca_rule_selection](../../../agents/tests/test_rca_rule_selection.py), [test_rca_batch_selection](../../../agents/tests/test_rca_batch_selection.py), [test_rca_parallel](../../../agents/tests/test_rca_parallel.py), [test_e2e](../../../agents/tests/test_e2e.py)를 회귀 대상으로 유지한다. 신규 해석·검토 단위 테스트와 Frontend 표시 테스트를 추가한다.
+[05의 T66~T79](../05_테스트_검수_기준서.md#rca-평가-분리-검수)를 구현 검수 기준으로 사용한다. 현재 [test_rca_analysis](../../../agents/tests/test_rca_analysis.py), [test_rca_repairs](../../../agents/tests/test_rca_repairs.py), [test_synthesis_context](../../../agents/tests/test_synthesis_context.py), [test_rca_rule_selection](../../../agents/tests/test_rca_rule_selection.py), [test_rca_batch_selection](../../../agents/tests/test_rca_batch_selection.py), [test_rca_parallel](../../../agents/tests/test_rca_parallel.py), [test_e2e](../../../agents/tests/test_e2e.py)를 회귀 대상으로 유지한다. 신규 해석·검토 단위 테스트와 Frontend 표시 테스트를 추가한다.
 
 공통 Python 변경은 RCA/Ops 양쪽, 결과 변경은 Backend·Frontend·Ops와 Worker→JC 공개 경로를 함께 검사한다. 고정 LLM 응답으로 분기·참조·예산을 검증한 결과와 실제 모델이 과장·누락을 찾아낸 결과는 구분한다. 실제 사례는 같은 증거의 적절한 설명과 과장된 설명, 상충·대상 미확인·관측 공백을 포함하고 사람이 원본 근거와 비교한다. 호출 시간·토큰·검토 누락/오검출을 기록하며 보편적인 정확도 목표나 검토 점수를 임의로 만들지 않는다. 실행 증거가 생기기 전에는 Agent QA를 통과 기록으로 갱신하지 않는다.
 
@@ -244,7 +275,7 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 | 남은 과제 | 완료를 판단할 근거·소비자 |
 |---|---|
 | 오류별 보완 조회·지침 전환 | [265개 검토](../../../rcca-agent/runbooks/transition-review-20261014.json)의 미확정 정의·정보성 이벤트·병합 대상 검토, 최신 발행 hash/profile 대조, Backend/RCA 발행·소비 검증 |
-| 수집·증거·분석 품질 분리 | 위 미구현 설계의 해석·검토·제한된 수정/보완 수집, 04 결과 계약·07 표시·05 T66~T79 검수. 자유로운 Runbook 재선택이나 원인 확정 점수는 이번 범위가 아님 |
+| 평가 척도의 실제 모델 검증 | 구현된 6항목 rubric을 같은 증거의 적절한 설명/과장된 설명 쌍에 적용해 누락·오검출을 사람이 원본과 대조. 고정 응답 테스트를 의미 정확도로 대체하지 않음 |
 | 중간 분석과 최종 언어 표현 분리 | refs·수치·불확실성 보존, 의미 검사의 언어 의존 제거/대체, 최종 한국어 가독성 검수. 현재는 중간 한국어 검사가 실행됨 |
 | 실제 품질·부하 | 원천 대상/시각/상태와 실제 원인을 대조한 사례, 원본/모델 입력 생략 영향, 동시 실행·큰 evidence·조회 지연/RSS 측정 |
 

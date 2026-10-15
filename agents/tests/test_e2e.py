@@ -4,6 +4,11 @@ Only upstream Grafana datasource responses and the inference endpoint are fixtur
 No production metrics or model-quality claims are made by this suite.
 """
 
+from evaluation_fixtures import (
+    interpretation_reply as rca_interpretation_reply,
+    review_reply,
+)
+
 import contextlib
 import csv
 import io
@@ -98,7 +103,11 @@ class Upstream(BaseHTTPRequestHandler):
             message = {
                 "role": "assistant",
                 "content": json.dumps(
-                    analysis_reply(data["observation_refs"])
+                    review_reply(data)
+                    if "rubric_version" in data
+                    else rca_interpretation_reply()
+                    if "Interpret incident evidence" in body["messages"][0]["content"]
+                    else analysis_reply(data["observation_refs"])
                     if "observation_refs" in data
                     else {"query_ids": data["available_queries"][:3]}
                     if "available_queries" in data
@@ -1473,6 +1482,13 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(q == "D09" and s == "ok" for q, s in evidence), evidence
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
+    evaluation = rca["quality"]["rca_evaluation"]
+    assert evaluation["schema_version"] == "1"
+    assert evaluation["evidence"]["execution_status"] == "complete"
+    assert evaluation["review"]["execution_status"] == "complete"
+    assert evaluation["review"]["verdict"] == "undetermined"
+    assert evaluation["review"]["analysis_id"] == evaluation["analysis_id"]
+    assert len(evaluation["review"]["criteria"]) == 6
     assert rca["narrative_status"] == "complete"
     assert {s["id"] for s in rca["narrative"]} >= {
         "problem",
@@ -1514,6 +1530,12 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert next(t for t in report["topics"] if t["topic_id"] == "O05")[
         "rca_references"
     ][0]["result_id"]
+    if any(t["topic_id"] == "O05" for t in report["topics"]):
+        refs = next(t for t in report["topics"] if t["topic_id"] == "O05").get(
+            "rca_references", []
+        )
+        if refs:
+            assert all("rca_evaluation" in ref for ref in refs)
     for artifact in report["artifacts"]:
         path = LOCAL / "artifacts" / artifact["object_key"]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact["checksum"]
@@ -2385,9 +2407,9 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
             response["hypotheses"][0]["claim"] = "온도는 999도입니다."
         return response
 
-    def capture_result(*args, **kwargs):
-        result, evidence = original_worker(*args, **kwargs)
-        captured.update(result=result, evidence=evidence)
+    def capture_result(stack, kind, jid, suffix=""):
+        result, evidence = original_worker(stack, kind, jid, suffix)
+        captured.update(result=result, evidence=evidence, job_id=jid)
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", rejection_then_repair)
@@ -2395,8 +2417,24 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
     test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         stack, monkeypatch, True
     )
-    diagnostic = captured["result"]["quality"]["analysis"]["synthesis"]
-    assert calls == 2
+    with psycopg.connect(stack["url"]) as conn:
+        rounds = [
+            row[0]
+            for row in conn.execute(
+                "SELECT snapshot FROM evidence WHERE job_id=%s "
+                "AND query_id='rca_synthesis' ORDER BY (snapshot->>'round')::integer",
+                (captured["job_id"],),
+            ).fetchall()
+        ]
+    assert [row["round"] for row in rounds] == [0, 1]
+    assert calls == 3  # First analysis, numeric repair, then analysis after follow-up.
+    diagnostic = rounds[0]["diagnostics"]
+    assert rounds[1]["diagnostics"]["repair_status"] == "not_needed"
+    assert rounds[1]["diagnostics"]["repair_attempts"] == 0
+    assert (
+        captured["result"]["quality"]["analysis"]["synthesis"]
+        == rounds[1]["diagnostics"]
+    )
     assert diagnostic["repair_status"] == "repaired"
     assert diagnostic["repair_attempts"] == 1
     gate = diagnostic["repair_gate"]
@@ -2407,6 +2445,59 @@ def test_rca_numeric_repair_diagnostics_survive_publication(stack, monkeypatch):
     assert len(violation["numeric_diagnostic"]["text_sha256"]) == 64
     assert "999" not in json.dumps(violation)
     assert ("rca_synthesis", "ok") in captured["evidence"]
+
+
+@pytest.mark.e2e
+def test_rca_review_input_limit_survives_publication_without_followup(
+    stack, monkeypatch
+):
+    original_reply, original_worker = analysis_reply, worker_result
+    captured = {}
+
+    def large_draft(refs):
+        reply = original_reply(refs)
+        reply["limitations"] = [
+            prefix + "관측 공백에 대한 추가 확인이 필요합니다. " * 50
+            for prefix in "가나다라마바사아자차카타"
+        ]
+        return reply
+
+    def capture(stack, kind, jid, suffix=""):
+        result, evidence = original_worker(stack, kind, jid, suffix)
+        captured.update(result=result, job_id=jid)
+        return result, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "analysis_reply", large_draft)
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_grafana_webhook_through_incident_jc_and_real_rca_worker(
+        stack, monkeypatch, False
+    )
+    evaluation = captured["result"]["quality"]["rca_evaluation"]
+    assert evaluation["review"]["verdict"] is None
+    assert evaluation["review"]["reason"] == "llm_input_size_exceeded"
+    assert evaluation["investigation"]["stop_reason"] == "analysis_unresolved"
+    with psycopg.connect(stack["url"]) as conn:
+        records = conn.execute(
+            "SELECT snapshot,quality FROM evidence WHERE job_id=%s AND query_id='analysis_review'",
+            (captured["job_id"],),
+        ).fetchall()
+        decisions = conn.execute(
+            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='investigation_decision' ORDER BY created_at",
+            (captured["job_id"],),
+        ).fetchall()
+    blocked = [r for r in records if r[1].get("reason") == "llm_input_size_exceeded"]
+    assert len(blocked) == 1
+    snapshot, quality = blocked[0]
+    # Collection before the first usable draft is allowed; this failure must end its round.
+    assert captured["result"]["quality"]["analysis"]["followups"] == snapshot["round"]
+    assert decisions[-1][0]["round"] == snapshot["round"]
+    assert decisions[-1][0]["action"] == "finish"
+    assert decisions[-1][0]["reason"] == "analysis_unresolved"
+    assert snapshot["review"] is None and quality["attempts"] == 0
+    assert quality["request_checks"] == snapshot["request_checks"]
+    check = quality["request_checks"][0]
+    assert check["input_size_exceeded"] and not check["token_budget_exhausted"]
+    assert check["input_bytes"] > check["max_input_bytes"] == 24000
 
 
 @pytest.mark.e2e

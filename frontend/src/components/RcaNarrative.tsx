@@ -1,3 +1,4 @@
+import { RcaEvaluation } from './RcaEvaluation';
 import { structuredGuidance } from './StructuredGuidance';
 import { RcaGuidance } from './RcaGuidance';
 import { rows, str, type Row } from '../lib/live';
@@ -80,6 +81,7 @@ export function RcaNarrative({
   if (!sections.length) return null;
   return (
     <section id="final-report" className="rca-narrative" aria-label="RCA 최종 보고서">
+      <RcaEvaluation result={result} />
       <header className="rca-narrative-header">
         <h3>RCA 최종 보고서</h3>
         <p>무슨 문제가 보고됐는지, 원인은 무엇인지, 다음에 무엇을 해야 하는지 확인하세요.</p>

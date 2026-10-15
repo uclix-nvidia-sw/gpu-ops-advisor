@@ -1,3 +1,4 @@
+from agent_common.rca_evaluation import source_evaluation
 import asyncio
 from collections import defaultdict
 import contextlib
@@ -722,6 +723,7 @@ def calculate(
             {
                 "result_id": r["result_id"],
                 "content_hash": r["content_hash"],
+                "rca_evaluation": source_evaluation(r["body"]),
                 "cause_candidates": [
                     {
                         "claim": c["claim"],

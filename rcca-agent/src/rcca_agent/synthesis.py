@@ -474,8 +474,15 @@ async def synthesize(llm, payload, diagnostics=None):
     if not llm.configured:
         diagnostics["error_code"] = "model_not_configured"
         return "unconfigured", [], []
-    remaining = getattr(llm, "remaining", 32768)
-    max_bytes = min(16000, max(0, remaining - len(SYNTHESIS.encode()) - 256 - 2 - 8192))
+    remaining = getattr(llm, "remaining", 32768) - getattr(llm, "reserved_tokens", 0)
+    output_room = (
+        min(8192, max(512, (remaining - len(SYNTHESIS.encode())) // 3))
+        if getattr(llm, "reserved_tokens", 0)
+        else 8192
+    )
+    max_bytes = min(
+        16000, max(0, remaining - len(SYNTHESIS.encode()) - 256 - 2 - output_room)
+    )
     view = bounded_context(payload, max_bytes)
     diagnostics.update(
         input_bytes=encoded_size(view),
@@ -500,7 +507,9 @@ async def synthesize(llm, payload, diagnostics=None):
             request = dict(view)
             if attempt:
                 # Rebuild from immutable input while reserving repair output room.
-                repair_remaining = getattr(llm, "remaining", 32768)
+                repair_remaining = getattr(llm, "remaining", 32768) - getattr(
+                    llm, "reserved_tokens", 0
+                )
                 reserve = min(
                     4096, max(512, (repair_remaining - len(SYNTHESIS.encode())) // 3)
                 )
@@ -544,7 +553,9 @@ async def synthesize(llm, payload, diagnostics=None):
                     )
                     + 256
                 )
-                remaining = getattr(llm, "remaining", 32768)
+                remaining = getattr(llm, "remaining", 32768) - getattr(
+                    llm, "reserved_tokens", 0
+                )
                 configured_cap = getattr(
                     getattr(llm, "settings", None), "llm_synthesis_max_tokens", 8192
                 )

@@ -53,8 +53,12 @@ You may quote an XID/SXID identifier only when error_code in a cited device
 observation contains that exact code. A reported code is not a verified cause.
 context_selection and sample_selection describe omitted observations/samples.
 Never infer continuity, absence, peaks or aggregates from these sparse samples.
-Do not request observations, call tools, change completeness, or declare a cause
-confirmed. The orchestrator has already completed collection and sufficiency checks.
+Do not call tools, change completeness, or declare a cause confirmed.
+State needed confirmation in limitations; the orchestrator controls bounded follow-up.
+raw_excerpts are unverified source reports, never current health or confirmed identity.
+interpretation_* fields are fallible interpretations, not additional verified facts.
+If review_feedback is supplied, revise unsupported claims against original evidence;
+feedback is not evidence. An empty hypotheses list with accurate limitations is valid.
 RCA scope is GPU, NVSwitch and node hardware investigation, not Pod/workload investigation.
 Apply identity checks to the reported target type; do not require a GPU identity for a node issue.
 For repairs, apply every original evidence, identity, time, language and numeric rule,

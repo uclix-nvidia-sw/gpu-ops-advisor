@@ -26,6 +26,7 @@ import { ReportContent } from '../components/ReportContent';
 import { OperationsIncident } from '../components/OperationsResult';
 import { returnPath } from '../lib/debug';
 import { ReportDeleteButton, ReportDeletionNotice } from '../components/ReportDeletion';
+import { RcaWorkflowButton } from '../components/RcaWorkflow';
 export function ResultPage({ kind }: { kind: string }) {
   const { hash, state } = useLocation();
   const { id } = useParams(),
@@ -63,6 +64,9 @@ export function ResultPage({ kind }: { kind: string }) {
         description={kind === 'analysis' ? '' : id || ''}
         actions={
           <>
+            {app.mode === 'developer' && kind === 'analysis' && id && (
+              <RcaWorkflowButton jobId={id} />
+            )}
             {kind === 'report' && !deleted && r.result_ref != null && <ReportExports id={id!} />}
             {kind === 'report' && <ReportDeleteButton job={r} />}
             {kind !== 'incident' && (

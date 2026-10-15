@@ -56,12 +56,13 @@ export const rcaSteps: WorkflowStep[] = [
   },
   ...commonSteps,
   {
-    title: 'Runbook·근거 판단',
+    title: '수집 → 증거 해석 → 초안 → 분석 검토',
     owner: 'RCA Agent',
     purpose: 'Runbook 또는 근거 기반 조사 경로에서 사실·후보·목적별 판단을 만듭니다.',
-    inspect: 'quality.analysis · assessments · facts · cause_candidates · missing_inputs',
+    inspect:
+      'quality.rca_evaluation · quality.analysis · analysis_id · criteria · investigation_decision',
     expected:
-      'fast_path·evidence_evaluation·status와 후보의 지지/반박 근거를 함께 확인합니다. 성공 상태만으로 원인을 확정하지 않습니다.',
+      '수집 상태와 증거 해석 실행, 6개 평가 척도의 판단 이유를 구분합니다. 초안 ID·라운드·결정 기록으로 수정/보완 순서를 추적합니다.',
     missing:
       '아직 공개되지 않은 판단·내부 후보는 조회되지 않습니다. 근거 목록의 조사 단계 기록도 확인하세요.',
     fields: ['quality', 'assessments', 'facts', 'cause_candidates', 'missing_inputs'],

@@ -111,7 +111,7 @@ def fleet_item(raw, ns, contract, period):
     )
 
 
-def parse_health(evidence, contracts, queries=None):
+def parse_health(evidence, contracts, queries=None, diagnostics=None):
     results = []
     seen = {}
     for e in evidence:
@@ -138,12 +138,28 @@ def parse_health(evidence, contracts, queries=None):
                     if e["id"] not in observation["evidence_refs"]:
                         observation["evidence_refs"].append(e["id"])
                 continue
+
+            def check(name, outcome, reason):
+                if diagnostics is not None:
+                    diagnostics.append(
+                        dict(
+                            check=name,
+                            outcome=outcome,
+                            reason=reason,
+                            location={"line": line_no},
+                            evidence_refs=[e["id"]],
+                        )
+                    )
+
             begin = len(results)
             try:
                 raw = json.loads(line)
                 if not isinstance(raw, dict):
+                    check("json_object", "fail", "parsed_value_is_not_object")
                     continue
+                check("json_object", "pass", "json_object_readable")
             except ValueError:
+                check("json_object", "fail", "json_unreadable_original_preserved")
                 continue
             registered = contracts.get(
                 e["quality"].get("health_contract")
@@ -156,6 +172,7 @@ def parse_health(evidence, contracts, queries=None):
             if registered and registered.get("adapter") == "fleet_component_v1":
                 raw = fleet_item(raw, ns, registered, period)
                 if raw is None:
+                    check("registered_adapter", "unknown", "adapter_did_not_match")
                     continue
             children = raw.get("incidents", [raw])
             if not isinstance(children, list):
@@ -189,6 +206,11 @@ def parse_health(evidence, contracts, queries=None):
                         normalized_health="unknown",
                         severity="unknown",
                     )
+                check(
+                    "observation_contract",
+                    "pass" if normalized["check_status"] == "valid" else "unknown",
+                    "registered_contract_only",
+                )
                 results.append(normalized)
             if ns is not None:
                 seen[identity] = results[begin:]

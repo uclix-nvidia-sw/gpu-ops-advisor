@@ -373,7 +373,7 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_even
         > 0
     )
     synthesis_evidence = next(
-        e for e in output["evidence"] if e["query_id"] == "rca_synthesis"
+        e for e in reversed(output["evidence"]) if e["query_id"] == "rca_synthesis"
     )
     assert synthesis_evidence["snapshot"]["diagnostics"] == diagnostics
     assert result["quality"]["analysis"]["status"] == "complete"
