@@ -315,6 +315,10 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 공통 `llm_usage`와 단계 usage delta의 기존 `total_tokens`는 모델 보고값을 유지한다. 선택적 `charged_tokens`는 실제 예산 차감량, `estimated_tokens`는 그중 total_tokens 미보고 응답의 보수적 차감량, `usage_missing_calls`는 해당 응답 수다. 실제 모델 측정치와 추정 차감량을 합쳐 실측 토큰이라고 표시하지 않는다. 이 추가 진단은 구 기록에 필수가 아니며 schema 1/결과 1.1의 기존 필수 필드와 공개 hash는 유지한다.
 
+선택적 `quality.analysis.synthesis.budget_allocation`과 `rca_synthesis.snapshot.diagnostics.budget_allocation`은 분석 전 예약 결정 진단이다. 기존 요청/적용 예약·남은 예산·근거 수용 여부를 유지하며 검토 하한·산정 근거·조정 사유를 추가할 수 있다. 값이 없는 구 결과를 계산해 채우지 않는다. 수집·원인 확정·분석 검토 상태를 변경하는 필드가 아니며 실제 호출은 별도 횟수로 확인한다. 산식과 필드는 [11의 F2-A](../rca-agent/11_RCA_Agent_모듈_설계서.md)를 따른다.
+
+Runbook 원문 evidence의 선택적 `quality.selection_evidence_id`와 조사 계획 snapshot의 `selection_evidence_id`는 같은 attempt의 선택 진단 ID다. 최초·확장 계획의 `evidence_refs`는 실제 선택한 Runbook 원문 ID를 담는다. 본문 보존과 참조 연결이며 적용/원인 확정 상태를 추가하지 않는다. 구 기록에 없는 연결은 생성 시각으로 추정하지 않는다.
+
 - `result_status`, assessments, `quality.analysis`와 sufficiency 호환 요약, `termination_reason`, `causal_status`, `narrative_status`의 기존 의미와 값은 유지한다. 타당 판정만으로 ready/confirmed로 승격하지 않는다.
 - 과거 결과에 확장이 없으면 ‘평가 분리 기록 없음’으로 표시한다. 과거 호출 실패를 추정하거나 기본 acceptable을 넣지 않는다. 알 수 없는 확장 버전은 원본 보존·지원되지 않는 평가 형식으로 표시하고 기존 결과는 읽을 수 있게 한다.
 - 새 Worker는 자신이 쓰는 schema_version=1의 상태·refs·ID를 검증한다. Backend/JC는 기존 저장·공개 권한·hash를 검증하며 LLM 의미 평가를 대신하지 않는다.

@@ -27,6 +27,8 @@ describe('RCA diagnostics', () => {
       id: 'job',
       result_ref: 'result',
       result: {
+        termination_reason: 'missing_data',
+        missing_inputs: ['synthesis_failed'],
         llm_usage: { calls: 1 },
         quality: {
           analysis: {
@@ -44,6 +46,8 @@ describe('RCA diagnostics', () => {
     expect(html).toContain('RCA 분석 요청 시도</dt><dd>0건');
     expect(html).toContain('LLM 응답 사용 기록</dt><dd>1건');
     expect(html).toContain('분석 요청을 생략했습니다');
+    expect(html).toContain('모델 호출 전 생략');
+    expect(html).not.toContain('원인 분석이 검증을 통과하지 못했습니다');
     expect(html).toContain('최종 보고서 편집도 포함');
     expect(
       render(<RcaResult job={{ result_ref: 'old', result: {} }} onEvidence={() => {}} />),
@@ -612,7 +616,7 @@ it('does not describe rejected analysis as a usable subset', () => {
       onEvidence={() => {}}
     />,
   );
-  expect(html).toContain('LLM 분석 응답 미채택');
+  expect(html).toContain('LLM 분석 미완료');
   expect(html).not.toContain('응답 일부만 사용했습니다');
 });
 

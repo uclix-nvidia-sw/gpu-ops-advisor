@@ -1,7 +1,28 @@
 import labels from './rcaLabels.json';
+import { obj, rows, type Row } from './live';
 
 export const rcaLabels = labels;
 export const rcaReasons: Record<string, string> = labels.reasons;
+
+// A final draft's review status does not describe whether a request was sent.
+export function modelExecution(stage: Row): string {
+  const usage = obj(stage.usage);
+  const attempts = stage.request_attempts ?? usage.request_attempts;
+  const responses = stage.response_calls ?? usage.calls;
+  if (
+    (typeof attempts === 'number' && attempts > 0) ||
+    (typeof responses === 'number' && responses > 0)
+  )
+    return `모델 전송 시도 ${typeof attempts === 'number' ? attempts : '미기록'}회 · 응답 기록 ${typeof responses === 'number' ? responses : '미기록'}건`;
+  const checks = rows(stage.request_checks);
+  if (checks.some((c) => c.model_called === true)) return '논리 모델 요청 실행 · 전송 여부 미확인';
+  if (
+    (attempts === 0 && responses === 0) ||
+    (checks.length > 0 && checks.every((c) => c.model_called === false))
+  )
+    return '모델 호출 전 생략';
+  return '모델 호출 여부 미확인 · 단계별 기록 없음';
+}
 // UI classification only; stored result quality and evidence remain unchanged.
 const categories = [
   {

@@ -516,8 +516,38 @@ async def run(tools):
         if v is not None and v != "unknown"
     }
     runbooks, plans = select_runbooks(ctx["context"]["runbooks"], source, profile, obs)
+    selection_id = obs.evidence[-1]["id"]
     applicable, pending = matching_runbooks(runbooks, initial_facts, {}, data)
     selected = applicable + pending
+    rule_refs = {}
+
+    def preserve_runbook(book):
+        if book["id"] not in rule_refs:
+            bid = str(uuid4())
+            obs.evidence.append(
+                dict(
+                    id=bid,
+                    query_id="runbook",
+                    query_version=str(book["revision"]),
+                    cluster_id=None,
+                    scope=data["scope"],
+                    time_range=data["time_range"],
+                    input={"revision_id": book["id"]},
+                    tool_status="ok",
+                    quality={
+                        "reviewed": book.get("origin") != "builtin",
+                        "origin": book.get("origin", "published"),
+                        "selection_evidence_id": selection_id,
+                    },
+                    snapshot=book["content"],
+                    **evidence_stamp(),
+                )
+            )
+            rule_refs[book["id"]] = bid
+        return rule_refs[book["id"]]
+
+    for book in selected:
+        preserve_runbook(book)
     fast_path = bool(selected) and all(
         b in applicable and not b["content"].get("investigation_only") for b in selected
     )
@@ -568,6 +598,8 @@ async def run(tools):
             ],
             "required_queries": queries,
             "allowed_queries": approved,
+            "selection_evidence_id": selection_id,
+            "evidence_refs": [rule_refs[book["id"]] for book in selected],
         },
         "ok",
         {"deterministic": True},
@@ -583,7 +615,6 @@ async def run(tools):
     stop_reason = None
     max_rounds = 2  # Required collection plus one bounded auxiliary batch.
 
-    rule_refs = {}
     evaluation_state = {"revisions": 0}
     evaluation = None
     synthesis_diagnostics = {}
@@ -798,6 +829,7 @@ async def run(tools):
                             "required_evidence", []
                         ),
                         "unexpected_evidence": unexpected_policy(book["content"]),
+                        "evidence_refs": [preserve_runbook(book)],
                     },
                     "ok",
                     {"deterministic": True},
@@ -863,29 +895,6 @@ async def run(tools):
         gaps = state["gaps"]
         gate = state["gate"]
         remaining = state["remaining"]
-        for book in selected:
-            if book["id"] in rule_refs:
-                continue
-            bid = str(uuid4())
-            obs.evidence.append(
-                dict(
-                    id=bid,
-                    query_id="runbook",
-                    query_version=str(book["revision"]),
-                    cluster_id=None,
-                    scope=data["scope"],
-                    time_range=data["time_range"],
-                    input={"revision_id": book["id"]},
-                    tool_status="ok",
-                    quality={
-                        "reviewed": book.get("origin") != "builtin",
-                        "origin": book.get("origin", "published"),
-                    },
-                    snapshot=book["content"],
-                    **evidence_stamp(),
-                )
-            )
-            rule_refs[book["id"]] = bid
         error_events = (
             []
             if data.get("identity_conflicts")

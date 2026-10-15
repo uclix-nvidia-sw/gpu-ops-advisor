@@ -1,5 +1,6 @@
 import { obj, rows, str, strings, type Row } from '../lib/live';
 import { evaluationLabels } from './RcaEvaluation';
+import { modelExecution, rcaReasons } from '../lib/rcaLabels';
 
 export const rcaStages: Record<string, { title: string; actor: string; purpose: string }> = {
   evidence_validation: {
@@ -33,7 +34,7 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
     purpose: '수정·보완 수집·종료를 결정합니다.',
   },
 };
-const label = (v: unknown) => evaluationLabels[str(v)] || str(v, '기록 없음');
+const label = (v: unknown) => evaluationLabels[str(v)] || rcaReasons[str(v)] || str(v, '기록 없음');
 const amount = (v: unknown) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : '기록 없음';
 
@@ -197,6 +198,8 @@ export function RcaStageDetails({
   const body = obj(record.snapshot);
   const interpretation = obj(body.interpretation);
   const review = obj(body.review);
+  const synthesis = obj(body.diagnostics);
+  const allocation = obj(synthesis.budget_allocation);
   const refs = (value: unknown) => (
     <span>
       {strings(value).map((id) =>
@@ -216,7 +219,69 @@ export function RcaStageDetails({
         {step.title} · {step.actor}
       </h3>
       <p>{step.purpose}</p>
-      {body.execution_status != null && <p>실행 상태: {label(body.execution_status)}</p>}
+      {['evidence_interpretation', 'rca_synthesis', 'analysis_review'].includes(
+        str(record.query_id),
+      ) && (
+        <p>
+          {modelExecution(
+            record.query_id === 'rca_synthesis' ? { ...synthesis, usage: body.usage } : body,
+          )}
+        </p>
+      )}
+      {record.query_id === 'rca_synthesis' && (
+        <>
+          {synthesis.error_code != null && (
+            <p>
+              분석 실패 사유: {label(synthesis.error_code)} <code>{str(synthesis.error_code)}</code>
+            </p>
+          )}
+          <p>
+            분석 입력 크기: {amount(synthesis.input_bytes)} / 축약 전{' '}
+            {amount(synthesis.original_input_bytes)} 바이트
+          </p>
+          <p>
+            선택된 관측 근거:{' '}
+            {Array.isArray(synthesis.input_evidence_refs)
+              ? strings(synthesis.input_evidence_refs).length
+                ? refs(synthesis.input_evidence_refs)
+                : '없음 (빈 목록 기록)'
+              : '미기록'}
+          </p>
+          <p>
+            선택된 근거는 모델 전송 완료와 별개입니다. 입력 제한과 관측 부재가 같은 코드로 기록된 구
+            결과의 세부 원인은 추정하지 않습니다.
+          </p>
+          {Object.keys(allocation).length > 0 && (
+            <details>
+              <summary>분석·검토 예산 배분</summary>
+              <p>
+                검토 예약 요청 {amount(allocation.requested_review_reserve)} → 적용{' '}
+                {amount(allocation.applied_review_reserve)} 토큰
+              </p>
+              <p>
+                남은 전체 예산: {amount(allocation.remaining_tokens)} · 검토 보호 하한:{' '}
+                {amount(allocation.review_floor_tokens)} 토큰
+              </p>
+              <p>
+                조정 사유:{' '}
+                {(
+                  {
+                    reservation_unchanged: '기존 예약 유지',
+                    analysis_input_preserved:
+                      '분석에 쓸 근거를 담기 위해 검토 예약의 일부를 분석에 배정했습니다.',
+                    analysis_review_budget_insufficient: '분석과 검토를 함께 감당할 예산 부족',
+                  } as Record<string, string>
+                )[str(allocation.reason)] || str(allocation.reason, '미기록')}
+              </p>
+              <p>
+                하한은 규칙 초안·검토 입력·기본 출력 상한을 기준으로 합니다. 이후 모델이 추가한
+                주장이나 재시도 비용까지 보장하지 않습니다. 구 기록에 없는 하한은 추정하지 않습니다.
+              </p>
+            </details>
+          )}
+        </>
+      )}
+      {body.execution_status != null && <p>저장된 단계 상태: {label(body.execution_status)}</p>}
       {body.reason != null && (
         <p>
           사유: {label(body.reason)} <code>{str(body.reason)}</code>
@@ -331,9 +396,18 @@ export function RcaStageDetails({
       {rows(body.claims).map((claim) => (
         <p key={str(claim.id)}>
           <strong>
-            {str(claim.id)} · {str(claim.source)}
+            {claim.source === 'runbook'
+              ? '조사 지침에서 가져온 주장'
+              : claim.source === 'analysis'
+                ? '분석에서 작성한 주장'
+                : '출처 종류 미확인'}
           </strong>
           : {str(claim.statement)} {refs(claim.supporting_refs)}
+        </p>
+      ))}
+      {rows(body.hypotheses).map((candidate, i) => (
+        <p key={i}>
+          원인 후보: {str(candidate.claim, '설명 미기록')} {refs(candidate.supporting_refs)}
         </p>
       ))}
       {body.action != null && (

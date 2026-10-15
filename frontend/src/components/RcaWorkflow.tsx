@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { obj, rows, str, strings, useList, useResource, type Row } from '../lib/live';
 import { relationMismatch } from '../lib/debug';
 import { queryName } from '../lib/report';
+import { formatDate } from '../lib/domain';
 import { rcaReasons } from '../lib/rcaLabels';
 import { Field, Modal, Notice } from './ui';
 import { DataView, More, QueryState } from './live';
@@ -13,7 +14,7 @@ import './RcaWorkflow.css';
 
 const steps: Record<string, { title: string; actor: string; purpose: string }> = {
   incident_snapshot: {
-    title: '조사할 사건 고정',
+    title: '조사 대상 사건 원본 보존',
     actor: '코드',
     purpose: '실행 당시 사건·대상·기간을 고정된 원본에서 읽습니다.',
   },
@@ -23,12 +24,17 @@ const steps: Record<string, { title: string; actor: string; purpose: string }> =
     purpose: '알람의 오류 코드·대상 단서를 추출합니다. 원인이나 장치 신원 확정은 아닙니다.',
   },
   runbook_selection: {
-    title: 'Runbook 선택',
+    title: '조사 지침 선택',
     actor: '코드',
     purpose: '등록된 Runbook을 검색하고 적용·호환 조건을 확인합니다.',
   },
+  runbook: {
+    title: '선택 Runbook 원문 보존',
+    actor: '코드',
+    purpose: '선택한 조사 지침을 나중에 대조할 수 있도록 본문·버전·출처를 저장합니다.',
+  },
   investigation_plan: {
-    title: '조사 계획',
+    title: '조회할 자료와 목적 정리',
     actor: '코드',
     purpose: 'Runbook의 필수·허용 조회와 각 조회의 목적을 정합니다.',
   },
@@ -38,7 +44,7 @@ const steps: Record<string, { title: string; actor: string; purpose: string }> =
     purpose: '관측과 기존 정책에 따라 허용된 조사 범위를 보완합니다.',
   },
   observation_plan: {
-    title: '수집 배정',
+    title: '이번 회차 수집 계획',
     actor: '코드',
     purpose: '이번 회차 조회의 순서·의존성과 실행 예산을 배정합니다.',
   },
@@ -47,9 +53,36 @@ const steps: Record<string, { title: string; actor: string; purpose: string }> =
     actor: '코드 / 허용 시 선택 LLM',
     purpose: '수집 요건·부족 조건과 조회 허용 규칙으로 보완 수집 또는 종료를 결정합니다.',
   },
+  unexpected_evidence: {
+    title: '예상과 다른 관측에 대한 판단 · 구 기록',
+    actor: '코드',
+    purpose:
+      '예전 버전이 관측의 예외 조건과 Runbook의 대응 정책을 기록한 항목입니다. 프로그램 오류라는 뜻은 아닙니다. 기록된 조건과 조사 확장 여부를 확인하세요.',
+  },
   ...rcaStages,
 };
-const label = (v: unknown) => evaluationLabels[str(v)] || rcaReasons[str(v)] || str(v, '기록 없음');
+function recordType(id: string) {
+  if (/^D\d+$/.test(id)) return '자료 수집';
+  if (['incident_snapshot', 'runbook', 'rca_analysis_draft'].includes(id))
+    return '원문·중간 결과 보존';
+  if (['evidence_interpretation', 'rca_synthesis', 'analysis_review'].includes(id))
+    return 'LLM 처리';
+  return steps[id] ? '코드 판단' : '종류 미지원';
+}
+const label = (v: unknown) =>
+  evaluationLabels[str(v)] ||
+  rcaReasons[str(v)] ||
+  (
+    {
+      ok: '응답·기록 확보',
+      empty: '빈 응답',
+      partial: '일부만 수집',
+      unavailable: '수집 불가',
+    } as Record<string, string>
+  )[str(v)] ||
+  str(v, '기록 없음');
+const recorded = (v: unknown) =>
+  typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : str(v, '미기록');
 const stepFor = (id: string) =>
   steps[id] ||
   (/^D\d+$/.test(id)
@@ -100,8 +133,8 @@ function WorkflowAttempts({ job }: { job: Row }) {
   return (
     <div className="stack">
       <p>
-        단계를 선택하면 <strong>무엇을 했나 → 왜 했나 → 어떻게 했나 → 입력·결과 근거</strong>를
-        확인할 수 있습니다.
+        기록을 선택하면 <strong>무엇을 했나 → 왜 했나 → 어떻게 했나 → 결과·한계 → 연결 근거</strong>
+        를 확인할 수 있습니다.
       </p>
       <Field label="조사 시도">
         <select
@@ -120,7 +153,8 @@ function WorkflowAttempts({ job }: { job: Row }) {
       <Notice>
         아래는 저장 기록 순서입니다. 조회 번호·생성 시각만으로 실제 실행 시작 순서를 확정하지
         않습니다. 병렬 조회와 미기록 시간은 구분해야 합니다. 실행 중에는 아직 저장되지 않은 단계가
-        있을 수 있습니다.
+        있을 수 있습니다. 원문·중간 결과 보존 기록은 새로운 조회나 LLM 실행 단계가 아닙니다. LLM
+        담당 표시와 실제 모델 호출 여부도 구분해서 확인하세요.
       </Notice>
       {typeof attempt === 'number' && (
         <WorkflowRecords key={attempt} jobId={str(job.id)} attempt={attempt} />
@@ -212,6 +246,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                   <RcaWorkflowRecord
                     record={detail.data}
                     investigationPlan={validPlan}
+                    relatedRecords={q.items}
                     onEvidence={setSelected}
                   />
                 )
@@ -252,10 +287,12 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
 export function RcaWorkflowRecord({
   record,
   investigationPlan,
+  relatedRecords = [],
   onEvidence,
 }: {
   record: Row;
   investigationPlan?: Row;
+  relatedRecords?: Row[];
   onEvidence: (id: string) => void;
 }) {
   const kind = str(record.query_id),
@@ -263,7 +300,13 @@ export function RcaWorkflowRecord({
     body = obj(record.snapshot),
     meta = obj(record.quality),
     diagnostics = obj(body.diagnostics);
-  const reason = body.reason || body.stop_reason || meta.reason || diagnostics.error_code;
+  const reason =
+    body.failure_reason ||
+    diagnostics.error_code ||
+    body.reason ||
+    body.stop_reason ||
+    meta.failure_reason ||
+    meta.reason;
   const plan: Row[] = rows(body.runbooks).flatMap((book) =>
     rows(book.steps).map((s) => ({ ...s, revision_id: book.revision_id })),
   );
@@ -278,15 +321,33 @@ export function RcaWorkflowRecord({
       ...strings(body.evidence_refs),
       ...strings(body.observation_refs),
       ...strings(diagnostics.input_evidence_refs),
+      ...(typeof body.parent_plan_id === 'string' ? [body.parent_plan_id] : []),
+      ...(typeof body.validation_evidence_id === 'string' ? [body.validation_evidence_id] : []),
+      ...(typeof (body.selection_evidence_id ?? meta.selection_evidence_id) === 'string'
+        ? [str(body.selection_evidence_id ?? meta.selection_evidence_id)]
+        : []),
     ]),
   ];
+  const sameDraft =
+    body.analysis_id == null
+      ? []
+      : relatedRecords.filter(
+          (r) => r.id !== record.id && obj(r.quality).analysis_id === body.analysis_id,
+        );
+  const selectedBooks =
+    kind === 'runbook_selection'
+      ? relatedRecords.filter(
+          (r) => r.query_id === 'runbook' && obj(r.quality).selection_evidence_id === record.id,
+        )
+      : [];
   return (
     <article className="stack" aria-label="워크플로우 단계 판단 근거">
       <h3>{step.title}</h3>
       <section>
         <h4>무엇을 했나</h4>
+        <p>기록 성격: {recordType(kind)}</p>
         <p>
-          담당: {step.actor} · 실행/수집 상태:{' '}
+          담당: {step.actor} · 저장된 단계 상태:{' '}
           {label(
             body.execution_status || meta.execution_status || body.status || record.tool_status,
           )}
@@ -297,6 +358,7 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>왜 했나 · 저장된 이유와 결정</h4>
+        <p>공통 역할: {step.purpose}</p>
         {queryPlans.map((s, i) => (
           <p key={i}>
             저장된 조사 계획:{' '}
@@ -316,10 +378,7 @@ export function RcaWorkflowRecord({
             {label(reason)} <code>{str(reason)}</code>
           </p>
         ) : !queryPlans.length ? (
-          <p>
-            이 기록의 개별 수행 사유는 기록 없음. 조사 계획의 목적·필수 여부와 수집 평가의 선택
-            조건을 함께 확인하세요.
-          </p>
+          <p>이 기록의 개별 수행 사유는 기록 없음. 위 설명은 기록 종류의 공통 역할입니다.</p>
         ) : (
           <p>
             계획의 목적이며 실제 호출 시작 순서를 증명하지 않습니다. 선택 조회의 실행 조건은 해당
@@ -378,25 +437,81 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>어떻게 했나 · 처리 기준과 실행 기록</h4>
-        <p>구현된 단계 역할: {step.purpose}</p>
-        <p>이 역할 설명은 개별 실행 성공이나 모델이 실제로 읽은 자료 전체를 보증하지 않습니다.</p>
-        <DataView
-          value={{
-            started_at: body.started_at ?? meta.started_at,
-            completed_at: body.completed_at ?? meta.completed_at,
-            elapsed_seconds: body.elapsed_seconds ?? meta.elapsed_seconds,
-            model: body.model ?? meta.model,
-            attempts: body.attempts ?? meta.attempts,
-            input_view_hash: body.input_view_hash,
-          }}
-        />
+        <p>아래는 이 기록에 저장된 실행 정보입니다. 없는 시간·모델·횟수는 추정하지 않습니다.</p>
+        {kind === 'runbook' && (
+          <p>
+            선택한 지침의 버전 ID: <code>{str(obj(record.input).revision_id, '미기록')}</code>
+            {' · '}지침 버전: {str(record.query_version, '미기록')}
+            {' · '}출처:{' '}
+            {(
+              { published: '발행된 지침', builtin: '제품에 내장된 일반 조사 지침' } as Record<
+                string,
+                string
+              >
+            )[str(meta.origin)] || str(meta.origin, '미기록')}
+          </p>
+        )}
+        <details>
+          <summary>실행 시간·모델·횟수 상세</summary>
+          <DataView
+            value={{
+              started_at: body.started_at ?? meta.started_at,
+              completed_at: body.completed_at ?? meta.completed_at,
+              elapsed_seconds: body.elapsed_seconds ?? meta.elapsed_seconds,
+              model: body.model ?? meta.model,
+              attempts: body.attempts ?? meta.attempts,
+              input_view_hash: body.input_view_hash,
+            }}
+          />
+        </details>
         <RcaStageDetails record={record} onEvidence={onEvidence} />
         {meta.selection_reason != null && (
           <p>조회 연결 선택 사유: {label(meta.selection_reason)}</p>
         )}
       </section>
       <section>
+        <h4>결과·남은 한계</h4>
+        <StoredOutcome record={record} />
+        {/^D\d+$/.test(kind) ? (
+          <>
+            <p>
+              조회 범위: 클러스터 {str(record.cluster_id, '미기록')} · 노드{' '}
+              {str(obj(obj(record.input).target).node, '별도 필드 미기록')}
+            </p>
+            <p>
+              조회 기간: {formatDate(str(record.time_start ?? obj(record.time_range).start))} ~{' '}
+              {formatDate(str(record.time_end ?? obj(record.time_range).end))}
+            </p>
+            <p>
+              요청 결과: {label(record.tool_status)} · 수집 완료 표시:{' '}
+              {meta.complete === true ? '완료' : meta.complete === false ? '불완전' : '미기록'}
+            </p>
+            <p>
+              요청 성공은 필요한 증거 확보나 원인 확인을 뜻하지 않습니다. 아래 응답·품질 원문과 후속
+              해석을 함께 확인하세요.
+            </p>
+            <details>
+              <summary>수집 품질 원문</summary>
+              <DataView value={record.quality} />
+            </details>
+          </>
+        ) : !steps[kind] ? (
+          <p>이 종류의 결과 설명은 지원하지 않습니다. 저장 원문을 확인하세요.</p>
+        ) : null}
+        {strings(body.limitations).map((limit, i) => (
+          <p key={i}>{limit}</p>
+        ))}
         <h4>입력·결과와 판단 근거</h4>
+        {selectedBooks.length > 0 && (
+          <p>
+            선택 결과 · 사용한 지침 원문:{' '}
+            {selectedBooks.map((r) => (
+              <button className="text-link" key={str(r.id)} onClick={() => onEvidence(str(r.id))}>
+                {str(r.id)}
+              </button>
+            ))}
+          </p>
+        )}
         {refs.length ? (
           <p>
             연결 근거:{' '}
@@ -409,6 +524,20 @@ export function RcaWorkflowRecord({
         ) : (
           <p>별도 입력 근거 ID 기록 없음</p>
         )}
+        {sameDraft.length > 0 && (
+          <p>
+            같은 분석본의 관련 기록:{' '}
+            {sameDraft.map((r) => (
+              <button className="text-link" key={str(r.id)} onClick={() => onEvidence(str(r.id))}>
+                {stepFor(str(r.query_id)).title} · {str(r.id)}
+              </button>
+            ))}
+          </p>
+        )}
+        <p>
+          다음 저장 기록은 상단 버튼으로 이동합니다. 목록에는 개별 입력 참조가 없어, 뒤에 저장됐다는
+          이유만으로 이 근거를 사용했다고 판단하지 않습니다.
+        </p>
         <details>
           <summary>저장된 요청 인자·대상·기간</summary>
           <DataView
@@ -421,15 +550,161 @@ export function RcaWorkflowRecord({
           />
         </details>
         {!rcaStages[kind] && kind !== 'evidence_evaluation' && kind !== 'investigation_plan' && (
-          <DataView value={record.snapshot} />
+          <details>
+            <summary>저장된 결과 원문</summary>
+            <DataView value={record.snapshot} />
+          </details>
         )}
         {kind === 'rca_synthesis' && (
-          <DataView
-            value={{ hypotheses: body.hypotheses, limitations: body.limitations, diagnostics }}
-          />
+          <details>
+            <summary>분석 결과·진단 원문</summary>
+            <DataView
+              value={{ hypotheses: body.hypotheses, limitations: body.limitations, diagnostics }}
+            />
+          </details>
         )}
         <RawRecord value={record} label="전체 저장 원문 · 품질·입력·결과 대조" />
       </section>
     </article>
   );
+}
+
+function StoredOutcome({ record }: { record: Row }) {
+  const body = obj(record.snapshot);
+  switch (record.query_id) {
+    case 'unexpected_evidence':
+      return (
+        <>
+          <p>
+            기록된 예외 조건:{' '}
+            {Array.isArray(body.events)
+              ? strings(body.events).map(label).join(' · ') ||
+                '문장으로 표시할 조건 없음 · 원문 확인 필요'
+              : '미기록'}
+          </p>
+          <p>
+            일반 조사 확장 사유: {label(body.general_extension_reason)} · 확장 억제 여부:{' '}
+            {body.general_extension_suppressed === true
+              ? '억제함'
+              : body.general_extension_suppressed === false
+                ? '억제하지 않음'
+                : '미기록'}
+            . 실제 추가 조회는 이후 수집 기록에서 확인하세요.
+          </p>
+        </>
+      );
+    case 'runbook':
+      return (
+        <>
+          <p>저장한 조사 지침: {str(body.title, '제목 미기록')}</p>
+          <p>
+            지침에 적힌 원인 설명: {str(body.claim, '미기록')} (이번 사건에서 확인된 결론과는
+            다릅니다.)
+          </p>
+          <p>
+            이 지침을 다시 실행한 것이 아닙니다. 뒤의 분석·검토 기록에서 이 근거 ID를 실제로
+            사용했는지 확인하세요.
+          </p>
+        </>
+      );
+    case 'runbook_selection':
+      return (
+        <ul>
+          {rows(record.snapshot).map((row, i) => (
+            <li key={i}>
+              지침 {str(row.revision_id, '식별자 미기록')}:{' '}
+              {(
+                {
+                  retrieved:
+                    '사건 단서와 맞는 조사 후보로 찾았습니다. 적용 조건 충족 여부는 별도로 판단합니다.',
+                  invalid_contract: '지침 형식이 맞지 않아 선택에서 제외했습니다.',
+                  general_available:
+                    '일반 조사 지침을 추가 조사 후보로 준비했습니다. 실제 적용 여부는 조사 계획에서 확인하세요.',
+                } as Record<string, string>
+              )[str(row.status)] || '이 선택 결과의 설명은 지원하지 않습니다. 원문을 확인하세요.'}
+              {row.reason != null && <> · 기록된 이유: {label(row.reason)}</>}
+            </li>
+          ))}
+        </ul>
+      );
+    case 'alert_clues':
+      return (
+        <>
+          <p>
+            알람이 보고한 대상: {str(body.k8s_node_name, '미기록')} · 구성 요소:{' '}
+            {str(body.component, '미기록')}
+          </p>
+          <p>
+            알람에서 찾은 오류 코드:{' '}
+            {Array.isArray(body.error_codes)
+              ? strings(body.error_codes).join(', ') || '없음'
+              : '미기록'}
+          </p>
+          <p>알람 설명: {str(body.reason, '미기록')}</p>
+          <p>
+            서로 다른 값이 있어 사용하지 않은 단서:{' '}
+            {Array.isArray(body.conflicts)
+              ? strings(body.conflicts).join(', ') || '없음'
+              : '미기록'}
+            . 이 단서는 확인된 원인이 아닙니다.
+          </p>
+        </>
+      );
+    case 'observation_plan':
+      return (
+        <>
+          <p>
+            한 번에 실행하도록 설정한 조회 수:{' '}
+            {typeof body.concurrency === 'number' ? body.concurrency : '미기록'}. 아래 나열 순서가
+            실제 시작 순서는 아닙니다.
+          </p>
+          <ul>
+            {rows(body.assignments).map((row, i) => (
+              <li key={i}>
+                {queryName(str(row.query_id))} ({str(row.query_id)}) — 조회 예산{' '}
+                {recorded(obj(row.budget).queries)}회, 자료 연결 탐색 예산{' '}
+                {recorded(obj(row.budget).discovery)}회
+              </li>
+            ))}
+          </ul>
+        </>
+      );
+    case 'investigation_plan':
+      return (
+        <>
+          <p>
+            반드시 확인할 조회:{' '}
+            {strings(body.required_queries)
+              .map((q) => `${queryName(q)} (${q})`)
+              .join(' · ') || '기록 없음'}
+          </p>
+          <p>
+            수행 가능한 조회:{' '}
+            {strings(body.allowed_queries)
+              .map((q) => `${queryName(q)} (${q})`)
+              .join(' · ') || '기록 없음'}
+            . 허용됐다고 모두 실행하는 것은 아닙니다.
+          </p>
+        </>
+      );
+    case 'investigation_plan_extension':
+      return (
+        <>
+          <p>
+            추가한 조사 지침: {str(body.runbook_revision_id, '미기록')} · revision{' '}
+            {recorded(body.revision)}
+          </p>
+          <ul>
+            {rows(body.steps).map((row, i) => (
+              <li key={i}>
+                {queryName(str(row.query_id))} ({str(row.query_id)}):{' '}
+                {str(row.purpose, '목적 미기록')}
+              </li>
+            ))}
+          </ul>
+        </>
+      );
+    default:
+      return null;
+  }
 }

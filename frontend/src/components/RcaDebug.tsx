@@ -2,7 +2,7 @@ import { RcaEvaluationTrace, RcaStageDetails } from './RcaEvaluationTrace';
 import { RcaObservations } from './RcaObservations';
 import { RcaNarrative } from './RcaNarrative';
 import { gapMeaning } from '../lib/rcaGuidance';
-import { rcaReasons, missingGroups, purposeLabel } from '../lib/rcaLabels';
+import { rcaReasons, missingGroups, purposeLabel, modelExecution } from '../lib/rcaLabels';
 import { queryName } from '../lib/report';
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
@@ -462,7 +462,7 @@ export function RcaResult({
       {job.result_ref != null && (
         <>
           <RcaNarrative result={result} consolidateChecks />
-          <RcaObservations result={result} />
+          <RcaObservations result={result} onEvidence={onEvidence} />
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}
@@ -556,7 +556,7 @@ export function RcaResult({
               </dd>
               {synthesis.error_code != null && (
                 <>
-                  <dt>RCA 응답 검증 기록</dt>
+                  <dt>RCA 분석 실패·제한 사유</dt>
                   <dd>
                     <RcaReason value={synthesis.error_code} />
                   </dd>
@@ -566,7 +566,7 @@ export function RcaResult({
               <dd>
                 {analysis.status === 'failed' ? (
                   <span>
-                    LLM 분석 응답 미채택 <code>failed</code>
+                    LLM 분석 미완료 <code>failed</code> · {modelExecution(synthesis)}
                   </span>
                 ) : (
                   <RcaReason value={analysis.status} />
@@ -740,7 +740,7 @@ export function RcaQualityGuidance({ result }: { result: Row }) {
             분석 상태:{' '}
             {analysis.status === 'failed' ? (
               <span>
-                LLM 분석 응답 미채택 <code>failed</code>
+                LLM 분석 미완료 <code>failed</code> · {modelExecution(synthesis)}
               </span>
             ) : synthesis.completion_mode === 'validated_subset' ||
               (analysis.status === 'complete' && synthesis.repair_status === 'failed') ? (
