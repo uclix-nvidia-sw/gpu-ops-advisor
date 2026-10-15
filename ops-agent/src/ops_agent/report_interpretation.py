@@ -263,9 +263,11 @@ def payload_for(result):
     if patterns:
         for t in topics:
             if t["topic_id"] == "namespace_usage":
-                t["findings"], t["selection"] = select_candidates(patterns)
-                t["omitted_findings"] = t["selection"]["omitted_count"]
-                t["advice_mode"] = ADVICE_VERSION
+                selected, selection = select_candidates(patterns)
+                if selected:
+                    t["findings"], t["selection"] = selected, selection
+                    t["omitted_findings"] = selection["omitted_count"]
+                    t["advice_mode"] = ADVICE_VERSION
             else:
                 t["findings"] = t["findings"][:6]
     return {
@@ -643,9 +645,16 @@ async def interpret_report(result, llm):
                         "topic_id": t["topic_id"],
                         "advice": [
                             {
-                                "fact_id": t["findings"][0]["fact_id"],
-                                "summary": "대상·시간·핵심 관측과 구체적 제안을 담은 짧은 최종 요약",
+                                "fact_id": next(
+                                    f["fact_id"]
+                                    for f in t["findings"]
+                                    if f["target"]["cluster_id"] == cluster
+                                ),
+                                "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
                             }
+                            for cluster in dict.fromkeys(
+                                f["target"]["cluster_id"] for f in t["findings"]
+                            )
                         ],
                     }
                     if t.get("advice_mode")
