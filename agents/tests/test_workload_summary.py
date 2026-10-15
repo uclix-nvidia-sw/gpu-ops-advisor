@@ -77,10 +77,11 @@ def test_supplement_preserves_activity_memory_and_references():
     assert row["mean_elapsed_seconds"] == 300
     validate_result(after, ev)
     assert b"workload_completed_observed" in render(after)["csv"]
-    assert any(
-        f["fact_id"].startswith("namespace-workload")
-        for f in payload_for(after)["topics"][0]["findings"]
-    )
+    proposal = payload_for(after)["topics"][0]
+    assert proposal["advice_mode"]
+    assert proposal["findings"][0]["kind"] == "batch_progress"
+    assert proposal["findings"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert proposal["findings"][0]["evidence_refs"]
 
 
 @pytest.mark.parametrize(

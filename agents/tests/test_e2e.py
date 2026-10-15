@@ -2578,8 +2578,17 @@ def test_rca_review_input_limit_survives_publication_without_followup(
 
 
 @pytest.mark.e2e
-def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
+@pytest.mark.parametrize("activity", [60, 90])
+def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activity):
+    import test_aggregate_report
     from test_aggregate_report import DATA
+
+    original_fixture = test_aggregate_report.fixture
+    monkeypatch.setattr(
+        test_aggregate_report,
+        "fixture",
+        lambda *a, **kw: original_fixture(*a, **{**kw, "value": activity}),
+    )
     from ops_agent.report_contract import VERSION
 
     data = {**DATA, "scope": SCOPE}
@@ -2604,8 +2613,14 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
     assert ("hourly_gpu_memory", "ok") in evidence
     assert ("hourly_gpu_workload", "ok") in evidence
     assert ("hourly_gpu_jobs", "ok") in evidence
-    assert any("GiB/GPU" in n["meaning"] for n in body["narrative"])
-    assert usage["rows"][0]["activity_percent"] == 60
+    advice = next(n for n in body["narrative"] if n["topic_id"] == "namespace_usage")[
+        "advice"
+    ]
+    assert advice[0]["kind"] == "batch_progress"
+    assert advice[0]["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert advice[0]["evidence_refs"]
+    assert "대기 Pod" in advice[0]["observation"]
+    assert usage["rows"][0]["activity_percent"] == activity
     assert usage["rows"][0]["change_percentage_points"] == 0
     assert incident["summary"]["count"] == 0
     assert len(evidence) == 10
@@ -2760,7 +2775,13 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert ("hourly_gpu_memory", "ok") in evidence
     assert ("hourly_gpu_workload", "ok") in evidence
     assert ("hourly_gpu_jobs", "ok") in evidence
-    assert any("GiB/GPU" in n["meaning"] for n in body["narrative"])
+    advice = next(n for n in body["narrative"] if n["topic_id"] == "namespace_usage")[
+        "advice"
+    ]
+    assert advice[0]["kind"] == "batch_progress"
+    assert advice[0]["completed_jobs"][0]["elapsed_seconds"] == 300
+    assert advice[0]["evidence_refs"]
+    assert "대기 Pod" in advice[0]["observation"]
     assert usage["rows"][0]["activity_percent"] == 60
     assert usage["rows"][0]["change_percentage_points"] == 0
     summary = incident["summary"]

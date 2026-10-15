@@ -152,40 +152,103 @@ function TopicInterpretation({
   const facts = rows(topic.findings).filter((fact) =>
     strings(section.source_fact_ids).includes(str(fact.id)),
   );
+  const advice = rows(section.advice);
+  const hasSummary = advice.length > 0 && advice.every((item) => str(item.summary));
+  const selection = obj(section.selection);
+  const criteria = obj(selection.criteria);
   return (
     <section
       className="aggregate-interpretation"
       aria-label={`${str(topic.topic_id)} AI 운영 해석`}
     >
       <h3>AI 운영 해석</h3>
+      {hasSummary ? (
+        <ul className="aggregate-namespace-summary">
+          {advice.map((item) => (
+            <li key={str(item.fact_id)}>
+              <InterpretationText text={str(item.summary)} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <p className="aggregate-summary-source aggregate-static-note">
         <strong>작성 방식</strong>
-        {section.observation_source === 'calculated'
-          ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
-          : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
+        {hasSummary
+          ? 'AI가 작성한 요약이며, 대상·시간·수치는 저장된 근거로 검증했습니다. 작업 시간대 제안은 예약·대기와 사용 가능한 GPU를 확인한 뒤 검토하세요.'
+          : section.observation_source === 'calculated'
+            ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
+            : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
         확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.
       </p>
-      <dl>
-        {[
-          ['observation', '눈에 띄는 변화'],
-          ['meaning', '의미와 한계'],
-          ['next_check', '확인할 점'],
-        ].map(([key, label]) => (
-          <div key={key}>
-            <dt>
-              {key === 'observation' && section.observation_source === 'calculated'
-                ? '계산으로 확인한 관측'
-                : label}
-            </dt>
-            <dd>
-              <InterpretationText text={str(section[key])} />
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {hasSummary ? null : advice.length > 0 ? (
+        <ol className="aggregate-namespace-advice">
+          {rows(section.advice).map((item) => (
+            <li key={str(item.fact_id)}>
+              <h4>
+                {str(obj(item.target).cluster_id)} / {str(obj(item.target).namespace)} ·{' '}
+                {str(item.recommendation)}
+              </h4>
+              <p>
+                <InterpretationText text={str(item.observation)} />
+              </p>
+              <p>
+                <strong>운영 제안</strong> {str(item.meaning)}
+              </p>
+              <p>
+                <strong>다음 확인</strong> {str(item.next_check)}
+              </p>
+              <p className="aggregate-static-note">{str(item.conditions)}</p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <dl>
+          {[
+            ['observation', '눈에 띄는 변화'],
+            ['meaning', '의미와 한계'],
+            ['next_check', '확인할 점'],
+          ].map(([key, label]) => (
+            <div key={key}>
+              <dt>
+                {key === 'observation' && section.observation_source === 'calculated'
+                  ? '계산으로 확인한 관측'
+                  : label}
+              </dt>
+              <dd>
+                <InterpretationText text={str(section[key])} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <p className="aggregate-interpretation-limit">{str(section.interpretation_limit)}</p>
       <details>
         <summary>해석 근거와 계산 결과</summary>
+        {hasSummary && criteria.version ? (
+          <p className="aggregate-static-note">
+            선별 기준: 활동률 {String(criteria.high_activity_percent)}% 이상과 대기가 함께 관측된
+            연속 {String(criteria.minimum_pattern_hours)}시간, 활동률{' '}
+            {String(criteria.low_activity_percent)}% 미만인 연속 구간, 같은 구간의 메모리 점유, 대기
+            변화와 완료 Job 표본을 확인합니다. 운영정책에 따른 할당 기준은 아닙니다. 근거 후보{' '}
+            {String(selection.eligible_count)}개 중 {String(selection.offered_count)}개를 AI에
+            전달하고 {advice.length}개를 요약했습니다. 클러스터와 분석 종류를 먼저 보존한 뒤 자료
+            충족 여부와 관측 규모로 선별합니다.
+          </p>
+        ) : null}
+        {hasSummary
+          ? advice.map((item) => (
+              <div key={str(item.fact_id)}>
+                <h4>
+                  {str(obj(item.target).cluster_id)} / {str(obj(item.target).namespace)} ·{' '}
+                  {str(item.recommendation)}
+                </h4>
+                <p>
+                  <InterpretationText text={str(item.observation)} />
+                </p>
+                <p className="aggregate-static-note">{str(item.conditions)}</p>
+              </div>
+            ))
+          : null}
         {facts.map((fact) => (
           <p key={str(fact.id)}>{str(fact.text)}</p>
         ))}

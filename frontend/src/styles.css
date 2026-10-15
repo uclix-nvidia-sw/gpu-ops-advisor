@@ -5623,3 +5623,32 @@ body:has(dialog[open]) {
   margin-bottom: 14px;
   font-size: 16px;
 }
+
+.aggregate-namespace-advice {
+  padding-left: 1.25rem;
+}
+.aggregate-namespace-advice > li {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border, #dce4e0);
+}
+.aggregate-namespace-advice > li:last-child {
+  border-bottom: 0;
+}
+.aggregate-namespace-advice h4 {
+  margin: 0 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+.aggregate-namespace-advice p {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.aggregate-namespace-summary {
+  padding-left: 1.25rem;
+  margin: 1rem 0 1.5rem;
+}
+.aggregate-namespace-summary > li {
+  margin: 0.75rem 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
