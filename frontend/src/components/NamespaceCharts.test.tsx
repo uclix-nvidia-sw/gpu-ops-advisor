@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { activityPoints, NamespaceCharts, type NamespaceGroup } from './NamespaceCharts';
+import {
+  activityPoints,
+  memoryPercent,
+  NamespaceCharts,
+  type NamespaceGroup,
+} from './NamespaceCharts';
 
 const start = Date.parse('2026-10-13T00:00:00Z');
 const hour = (offset: number, value: unknown) => ({
@@ -48,6 +53,7 @@ const render = (hidden = new Set<string>(), data = groups) =>
   );
 it('starts with all cluster/namespace series and shares color but not model stroke', () => {
   const html = render();
+  expect(html.indexOf('role="img"')).toBeLessThan(html.indexOf('<fieldset'));
   expect((html.match(/role="img"/g) || []).length).toBe(2);
   expect((html.match(/checked=""/g) || []).length).toBe(3);
   const lines = [
@@ -62,10 +68,10 @@ it('starts with all cluster/namespace series and shares color but not model stro
   expect(lines[1][2]).toBe(lines[3][2]);
 });
 it('hides all models of only the selected cluster namespace and distinguishes empty from unavailable', () => {
-  const hidden = render(new Set([groups[0].key]));
+  const hidden = render(new Set([JSON.stringify(['activity', groups[0].key])]));
   expect(hidden).not.toContain('aria-label="dept-a / A100"');
   expect((hidden.match(/aria-label="dept-a \/ V100"/g) || []).length).toBe(1);
-  const allCleared = render(new Set(groups.map((g) => g.key)));
+  const allCleared = render(new Set(groups.map((g) => JSON.stringify(['activity', g.key]))));
   expect(allCleared).toContain('선택 없음 · 선과 점 숨김');
   expect((allCleared.match(/role="img"/g) || []).length).toBe(2);
   expect(allCleared).not.toContain('<g aria-label=');
@@ -87,4 +93,67 @@ it('keeps an empty chart safe when the report has no time boundaries', () => {
   expect(html).toContain('활동률을 계산할 수 있는 시간대가 없습니다');
   expect((html.match(/class="aggregate-grid"/g) || []).length).toBe(3);
   expect(html).not.toContain('Invalid Date');
+});
+
+it('separates memory units, preserves missing gaps, and keeps axes/selection aligned', () => {
+  const memoryHours = [0, 0.5, null, 0.8].map((v, i) => ({
+    ...hour(i, 40),
+    used_gib_per_gpu: v,
+    free_gib_per_gpu: v == null ? null : 16,
+  }));
+  const points = activityPoints(
+    memoryHours,
+    start,
+    start + 4 * 3600000,
+    'used_gib_per_gpu',
+    1,
+    ' GiB/GPU',
+  );
+  expect(points.map((p) => p.move)).toEqual([true, false, true]);
+  expect(points.map((p) => p.y)).toEqual([220, 130, 76]);
+  expect(points[0].label).toContain('0.00 GiB/GPU');
+  const data = groups.map((g) => ({
+    ...g,
+    models: g.models.map((r) => ({ ...r, gpu_memory: { hours: memoryHours } })),
+  }));
+  const html = render(new Set(), data);
+  expect((html.match(/role="img"/g) || []).length).toBe(4);
+  expect(html).toContain('GPU 메모리 사용 비율 (%)');
+  expect(html).toContain('<h4>cpc-1 클러스터</h4>');
+  expect(html).toContain('3.03%');
+  expect((html.match(/checked=""/g) || []).length).toBe(6);
+  const hidden = render(new Set([JSON.stringify(['activity', groups[0].key])]), data);
+  expect((hidden.match(/aria-label="dept-a \/ A100"/g) || []).length).toBe(1);
+  expect((hidden.match(/aria-label="dept-a \/ V100"/g) || []).length).toBe(3);
+  const empty = render(
+    new Set(
+      data.flatMap((g) => ['activity', 'memory'].map((metric) => JSON.stringify([metric, g.key]))),
+    ),
+    data,
+  );
+  expect(empty).not.toContain('<path');
+  expect(empty).not.toContain('<circle');
+  expect(empty.match(/<text[^>]*>.*?<\/text>/g)).toEqual(html.match(/<text[^>]*>.*?<\/text>/g));
+  const missing = render(new Set(), [
+    { ...data[0], models: [{ ...data[0].models[0], gpu_memory: { hours: [] } }] },
+  ]);
+  expect(missing).toContain('확인된 GPU 메모리 자료가 없습니다');
+});
+
+it('derives memory share only from valid used and free observations', () => {
+  expect(memoryPercent({ used_gib_per_gpu: 0, free_gib_per_gpu: 80 })).toBe(0);
+  expect(memoryPercent({ used_gib_per_gpu: 0, free_gib_per_gpu: 80 }, 'free_gib_per_gpu')).toBe(
+    100,
+  );
+  expect(memoryPercent({ used_gib_per_gpu: 60, free_gib_per_gpu: 20 })).toBe(75);
+  for (const [used, free] of [
+    [null, 80],
+    [8, null],
+    [0, 0],
+    [-1, 5],
+    [NaN, 2],
+    [1, Infinity],
+  ]) {
+    expect(memoryPercent({ used_gib_per_gpu: used, free_gib_per_gpu: free })).toBeNull();
+  }
 });

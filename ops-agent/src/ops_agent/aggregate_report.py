@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -12,7 +13,11 @@ from .report_interpretation import interpret_report
 
 from . import incident_summary, namespace_summary
 from .report_contract import MAX_BYTES, VERSION, previous_period, validate
-from .report_queries import ReportQueries
+from .report_queries import ReportQueries, memory_queries
+from .incident_findings import add_node_findings
+from .gpu_memory import enrich_memory
+from .workload_queries import QUERY_IDS, workload_queries
+from .workload_summary import enrich_workloads
 
 
 def topic(name, refs):
@@ -40,7 +45,11 @@ def build_result(claim, context, evidence):
             if (e["query_id"] == "report_incident_snapshot")
             == (name == "incident_summary")
         ]
-        refs = [e["id"] for e in inputs]
+        refs = [
+            e["id"]
+            for e in inputs
+            if e["query_id"] not in QUERY_IDS | {"hourly_gpu_memory"}
+        ]
         t = topic(name, refs)
 
         def put(name, value, unit, target=None, period=None):
@@ -61,12 +70,17 @@ def build_result(claim, context, evidence):
             return m["id"]
 
         if name == "namespace_usage":
+            activity_inputs = [
+                e
+                for e in inputs
+                if e["query_id"] not in QUERY_IDS | {"hourly_gpu_memory"}
+            ]
             current, errors = namespace_summary.summarize(
-                [e for e in inputs if e["time_range"] == data["time_range"]],
+                [e for e in activity_inputs if e["time_range"] == data["time_range"]],
                 data["time_range"],
             )
             before, old_errors = namespace_summary.summarize(
-                [e for e in inputs if e["time_range"] == previous], previous
+                [e for e in activity_inputs if e["time_range"] == previous], previous
             )
             rows = namespace_summary.compare(current, before)
             t["rows"] = rows
@@ -159,6 +173,8 @@ def build_result(claim, context, evidence):
             )
             if not rows:
                 t["missing_inputs"].append("namespace_observations_missing")
+            enrich_memory(t, inputs, data)
+            enrich_workloads(t, inputs, data)
         else:
             summary = incident_summary.summarize(context)
             t["summary"] = summary
@@ -211,6 +227,7 @@ def build_result(claim, context, evidence):
                         "value_refs": ids,
                     }
                 )
+            add_node_findings(t, put, refs)
         topics.append(t)
     result.update(
         topics=topics,
@@ -257,6 +274,36 @@ async def run(tools):
                 evidence.extend(
                     await collector.check_transitions(cluster, period, uid, collected)
                 )
+        # Optional memory follows all activity/identity work; keep time for interpretation.
+        for cluster, period, collected in pending:
+            if period == data["time_range"]:
+                collector.deadline = min(ctx["deadline"] - 30, time.monotonic() + 20)
+                try:
+                    evidence.extend(
+                        await collector.collect(
+                            cluster,
+                            period,
+                            queries=memory_queries(cluster),
+                            uid=collected[0]["input"]["datasourceUid"],
+                        )
+                    )
+                finally:
+                    collector.deadline = ctx["deadline"]
+        # Supplemental workloads are bounded and never consume base collection time.
+        for cluster, period, collected in pending:
+            if period == data["time_range"]:
+                collector.deadline = min(ctx["deadline"] - 30, time.monotonic() + 20)
+                try:
+                    evidence.extend(
+                        await collector.collect(
+                            cluster,
+                            period,
+                            queries=workload_queries(cluster),
+                            uid=collected[0]["input"]["datasourceUid"],
+                        )
+                    )
+                finally:
+                    collector.deadline = ctx["deadline"]
     if "incident_summary" in data["topic_ids"]:
         evidence.append(
             dict(

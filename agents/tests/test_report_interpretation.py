@@ -75,6 +75,25 @@ def reply_for(payload):
             section["next_check"] = (
                 f"{target}의 {periods[1]}에 작업이 시작됐는지 실행 기록과 대조해 보세요."
             )
+        if f.get("memory_refs"):
+            used, free = f["memory_refs"]
+            section["meaning"] = (
+                "{{target:"
+                + f["fact_id"]
+                + "}}의 {{period:"
+                + used
+                + "}} GPU당 사용 메모리는 {{value:"
+                + used
+                + "}}, 여유 메모리는 {{value:"
+                + free
+                + "}}입니다. 활동률과 메모리 점유를 함께 확인하세요."
+            )
+        if f.get("related_workload_fact_id"):
+            section["fact_ids"].append(f["related_workload_fact_id"])
+            section["meaning"] += (
+                " 대기 Pod 상태는 별도의 관측이며 같은 시각의 원인으로 단정할 수 없습니다."
+            )
+            section["next_check"] += " Pod 배치 기록을 대조하세요."
         sections.append(section)
     return {"sections": sections}
 
@@ -407,3 +426,95 @@ async def test_repair_identifies_rejected_field_and_literal(result):
     assert "namespace_usage.meaning" in feedback["error"]
     assert "회수" in feedback["error"]
     assert result["quality"]["report"]["reason"] == "repaired"
+
+
+@pytest.mark.parametrize(
+    "field,text",
+    [
+        ("meaning", "예측 대기 시간이 줄어들면서 작업이 완료되었습니다."),
+        (
+            "observation",
+            "대기 시간은 {{value:namespace_usage.workload_pending_peak.0}}입니다.",
+        ),
+        (
+            "observation",
+            "실행 시간은 {{value:namespace_usage.workload_mean_elapsed_seconds.1}}입니다.",
+        ),
+        ("meaning", "대기 Pod 수가 감소했습니다."),
+    ],
+)
+def test_workload_counts_do_not_prove_duration_or_trend(field, text):
+    from ops_agent.report_interpretation import validate_workload_wording
+
+    values = {"namespace_usage.workload_pending_peak.0": {"unit": "pods"}}
+    with pytest.raises(ValueError, match="unsupported_.*"):
+        validate_workload_wording(text, field, values)
+
+
+def test_workload_duration_check_is_not_a_measurement_claim():
+    from ops_agent.report_interpretation import validate_workload_wording
+
+    values = {"namespace_usage.workload_pending_peak.0": {"unit": "pods"}}
+    validate_workload_wording(
+        "대기 시간과 실행 시간을 Pod 기록에서 확인하세요.", "next_check", values
+    )
+    validate_workload_wording(
+        "Job 경과시간에는 대기·준비가 포함될 수 있습니다.", "meaning", values
+    )
+
+
+def test_related_workload_is_attached_and_values_are_unchanged(result):
+    topic = result["topics"][0]
+    target = {"cluster_id": "cpc-2", "namespace": "forecast"}
+    topic["findings"][0]["target"] = target
+    mid = "namespace_usage.workload_pending_peak.0"
+    topic["metrics"].append(
+        {
+            "id": mid,
+            "value": 2,
+            "unit": "pods",
+            "period": {"start": "2026-10-14T15:00:00Z", "end": "2026-10-15T15:00:00Z"},
+            "target": target,
+            "quality": {},
+        }
+    )
+    topic["findings"].append(
+        {
+            "id": "namespace-workload-0",
+            "text": "workload",
+            "target": target,
+            "value_refs": [mid],
+            "evidence_refs": ["workload-evidence"],
+        }
+    )
+    before = deepcopy(result)
+    payload = payload_for(result)
+    assert (
+        payload["topics"][0]["findings"][0]["related_workload_fact_id"]
+        == "namespace-workload-0"
+    )
+    reply = reply_for(payload)
+    sections = validate_sections(reply, payload, result)
+    assert "2개" in sections[0]["observation"]
+    assert "workload-evidence" in sections[0]["evidence_refs"]
+    assert result == before
+    incomplete = deepcopy(reply)
+    incomplete["sections"][0]["meaning"] = "메모리 점유를 확인하세요."
+    with pytest.raises(ValueError, match="workload_interpretation_required"):
+        validate_sections(incomplete, payload, result)
+    reply["sections"][0]["fact_ids"].remove("namespace-workload-0")
+    linked = validate_sections(reply, payload, result)
+    assert "namespace-workload-0" in linked[0]["source_fact_ids"]
+    assert "workload-evidence" in linked[0]["evidence_refs"]
+    assert result == before
+
+
+@pytest.mark.parametrize(
+    "text", ["알림 상태는 현재 기준입니다.", "사건이 없으므로 확인할 필요가 없습니다."]
+)
+def test_incident_absence_is_not_current_health_or_no_check(result, text):
+    payload = payload_for(result)
+    reply = reply_for(payload)
+    reply["sections"][1]["meaning"] = text
+    with pytest.raises(ValueError, match="unsupported_incident_assurance"):
+        validate_sections(reply, payload, result)

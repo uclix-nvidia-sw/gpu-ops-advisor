@@ -34,6 +34,21 @@
 
 시간대 평균 5% 미만을 낮은 활동으로 분류하고 인접 시간대를 묶어 표시한다. 이는 구버전의 ‘GPU별 5% 미만 연속 30분’ 판정을 대체하는 새 의미이며, 모든 순간의 유휴·회수 가능성을 뜻하지 않는다.
 
+## Namespace GPU 메모리 보조 관측 / Optional GPU memory
+
+`gpu-memory-v1`은 기존 `namespace_usage` 주제에만 추가된다. 자동·수동 신규 집계 보고서가 같은 경로를 사용하며 RCA, 기존 활동률·이전 기간 비교·사건 계산, 주제 수, DB schema, Helm 설정은 변경하지 않는다. 과거 결과를 다시 쓰지 않는다.
+
+- 모든 기본 활동/신원 조회와 연결 변경 검증 후 **현재 기간만 클러스터당 range 요청 1개**를 추가한다. `DCGM_FI_DEV_FB_USED/FREE` 각각의 시간당 sum/count/min/max를 원본 식별 라벨과 함께 조회한다. `[1h] offset 1ms`, step 3600을 유지한다. 15초 원본 배열은 저장하지 않는다.
+- 동일 GPU UUID·Namespace·Pod·모델·노드 및 수집 라벨, 동일 시간대, 기존 활동 검증 통과, 메모리/활동 표본 수 일치(238~242)를 요구한다. 중복·신원 전환·누락·음수·비유한 값·DCGM 오류값은 메모리 판단에서 제외한다. 활동의 전환 검증을 메모리에 자동 적용하지 않는다. 표본 수 검사는 모든 순간의 동시 관측을 보장하지 않는다.
+- GPU당 평균 GiB = 유효 MiB 표본 합 / 유효 표본 수 / 1024. 사용과 여유를 별도로 저장하며 장치 전체 관측이지 Namespace의 독점 사용량·할당량·예약량이 아니다. 모델별 평균을 유지한다. 메모리 값은 낮은 활동의 원인, 메모리 부족, 성능 병목, 회수 가능성을 증명하지 않는다.
+- `hourly_gpu_memory` evidence에 조회식·기간·시간 집계·수집 상태를 저장한다. `rows[].gpu_memory`에는 시간대별 사용/여유 평균·표본 수·결측 사유·근거 참조와 유효 표본 가중 기간 평균을 저장한다. 해석에 선택된 기존 활동 시간대에 메모리 수치가 있으면 `memory_used/free` metric과 `finding.memory_refs`를 추가한다. 기존 metric ID/값은 유지한다. CSV/HTML은 기존 공통 exporter가 추가 metric·AI 문장을 그대로 출력한다.
+- 보조 조회는 클러스터당 최대 20초, 공통 deadline 종료 30초 전까지만 사용한다. 기존 총 호출·응답 바이트 한도를 공유한다. 실패해도 기존 활동 결과·품질을 낮추거나 0으로 채우지 않는다. 메모리는 확인 불가로 남긴다. 결과 전체 크기 제한은 계속 적용된다.
+- AI는 선택된 메모리 근거의 대상·시간·사용/여유 값을 토큰으로 참조한다. 활동과 메모리를 함께 보고 요청량·상주 프로세스 기록 확인을 제안할 수 있다. 정책 대비 효율·배분 변경·새 장애 진단은 하지 않는다. 형식/참조 검증 실패 시 기존 계산 요약을 유지하며 자연어의 의미 정확성은 별도 검토 대상이다.
+
+Memory-supported interpretation fixes the observation target, time window and numeric values in code (`observation_source=calculated`). The LLM writes the meaning and suggested checks; the UI labels these separately. Invalid AI prose falls back to calculated findings. This does not change activity, comparison or incident calculations.
+
+메모리 근거를 사용한 설명은 대상·시간·수치를 코드가 확정하고(`observation_source=calculated`), AI는 의미와 확인할 점을 작성합니다. 화면에서도 둘을 구분합니다. 검증을 통과하지 못한 AI 문장은 계산 요약으로 대체하며 기존 활동률·이전 기간 비교·사건 계산은 유지합니다.
+
 ## 사건·요약·증거
 
 - Ops 전용 읽기 전용 repeatable-read snapshot에서 기간 내 고유 사건 ID를 센다. webhook 수신 횟수를 사건 수로 세지 않는다. 이전 기간도 같은 snapshot에서 읽는다.
@@ -130,3 +145,45 @@ A count of two identities during an hour does not prove simultaneous duplication
 **Limits / 한계:** One identity reappearing within an hour (A→B→A) can have overlapping first/last bounds and remains conservatively excluded. This bounded recovery is not a universal lifecycle or exclusive-allocation proof. Missing raw retention, large churn, or budget exhaustion retains partial analysis. It adds targeted read cost; no latency reduction is claimed. Weekly/max-size/concurrent production load and new-image publication need deployment validation.
 
 실제 CPC-1·CPC-2의 2026-10-13 세 시간대, GPU·시간대 조합 13건에서 확인한 연결 변경은 모두 시각상 비중복이었다. 조회 성공·표본 수만으로 추정하지 않고 실제 처음/마지막 시각과 Pod UID를 대조했다. 이 결과로 ‘모든 연결 변경은 정상’이라고 일반화하지 않는다. 상세 로컬 검사 범위는 [Agent QA](../../../agents/QA.md)를 따른다.
+
+## Ops 작업 대기·배치 완료 보조 관측
+
+Namespace 주제의 `workloads`는 [workload_queries.py](../../../ops-agent/src/ops_agent/workload_queries.py)와 [workload_summary.py](../../../ops-agent/src/ops_agent/workload_summary.py)가 담당한다. RCA D·공통 계산·기존 활동/메모리/사건 수치는 변경하지 않는다. 자동/수동 신규 집계 보고서가 같은 경로를 사용한다. 이전 결과와 일정은 재작성하지 않는다.
+
+| 항목 | 정의 | 제한 |
+| --- | --- | --- |
+| 대기 Pod | 일반 컨테이너가 `nvidia.com/gpu`를 요청하고 Pending인 Pod의 시간당 관측 최대 수 | GPU 부족 원인이 아님. init 전용 요청, MIG, Pod 생성 전 Run:ai 대기열은 대상 밖 |
+| 미배치 Pod | 위 Pending 중 scheduled=false의 시간당 관측 최대 수 | 이미지 다운로드 등 배치 후 준비 대기와 구분. 각 최대값의 발생 시각이 같다고 가정하지 않음 |
+| 실행 Pod | 같은 범위에서 Running인 Pod의 시간당 관측 최대 수 | 실제 연산·서빙 준비 완료 보장 아님 |
+| 확인된 완료 Job | GPU 요청 Pod의 controller owner가 Job이며, 생성/시작/완료 timestamp 순서와 분석기간 내 완료가 확인된 고유 Job | 전체 완료 수가 아닌 관측된 표본. 소멸이 빠르거나 scrape 사이에 끝난 Job은 누락 가능. 같은 이름 재생성/중복/시간 충돌 제외 |
+| 완료 표본 평균 소요 | 확인된 Job 각각의 completion_time − start_time 평균 | CPU 준비·대기·재시도 등이 포함될 수 있음. GPU 연산 시간이나 서빙 성능 아님 |
+
+현재 기간에 클러스터당 range 조회 두 개를 추가한다(HTTP step 1시간). 내부 `[1h:15s]` subquery는 **같은 시각의 GPU 요청·Pod UID·상태·Job owner를 연결하기 위한 서버 내 평가**다. 시간별 최고 대기를 서로 다른 Pod의 최고값 합으로 부풀리지 않으며 15초마다 HTTP 요청을 보내지 않는다. 반환·저장은 시간 집계다. 다만 Mimir 스캔 비용은 실데이터 규모 검증이 필요하다. 보조 조회 전체는 클러스터당 20초·기존 전역 호출/바이트/표본 제한 안에 두고 AI용 시간을 남긴다.
+
+Pod 상태는 namespace 내 GPU 요청 Pod 모두와 매칭되는 표본만 받는다. 구간 평가 수는 원본 scrape 완전성을 증명하지 않으며 관측 최대치만 제공한다. 누락은 null이며 표에서 자료 없음으로 표시한다. 완료 표본이 없다고 완료 0건으로 단정하지 않는다. Job 이름을 재사용하면 KSM Job gauge에 UID가 없으므로 해당 이름의 모호한 결과를 제외한다. 최대 Namespace 수 초과 시 보조 관측을 보류한다. 기존 Namespace 상태 판정은 그대로이며 보조 관측은 partial/unavailable로 별도 관리한다.
+
+### Alloy 준비 및 실제 검증 경계
+
+기존 [전송 목록 도구](../../../tools/ci/extend_observation_forwarding.py)에 `--include-report-workload`를 추가했다. 기존 지표·cluster_id·전송 목적지를 유지하면서 `kube_pod_status_phase`, `kube_pod_status_scheduled`, `kube_pod_owner`, `kube_job_created`, `kube_job_status_start_time`, `kube_job_status_completion_time`을 추가한다. 기본 실행은 읽기 전용이며 `--apply`는 별도 운영 적용이다. 기존 확장 옵션으로 재실행해도 작업 지표를 제거하지 않는다. Helm values 변경으로 외부 Alloy 설정이 자동 반영되지는 않는다.
+
+로컬 변경은 운영 Alloy를 바꾸지 않는다. 적용 후 두 클러스터에서 Pod UID·Job 이름·실제 상태/시각과 Mimir를 대조하고, Pending → 배치 → Running → 성공 완료 순서의 표본을 확보해야 한다. init/MIG/Run:ai queue는 별도 계약 전까지 해석하지 않는다. 과거 미전송 자료의 복원은 보장하지 않는다. 보조 지표 실측 확인 후 AI의 선택 기준·문구를 종합 조정하며, 현재 연결만으로 운영 해석 품질 개선이 검증됐다고 주장하지 않는다.
+
+KSM 의미 기준: [Pod metrics](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/pod-metrics.md), [Job metrics](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/job-metrics.md).
+
+
+### Cross-metric consistency / 보조 지표 간 일관성
+
+All additions preserve the existing activity rows, metric IDs/values, prior-period comparison, and incident totals. They share cluster/Namespace and report boundaries, but not the same population or aggregation operation.
+
+| 지표 | 대상·집계 기준 | 함께 읽을 때 지켜야 할 범위 |
+| --- | --- | --- |
+| GPU 활동률 | 연결이 검증된 GPU·모델의 시간별 sum/count, 기간값도 표본 수 가중 평균 | 기존 수식·이전 기간 비교 조건을 유지 |
+| GPU 메모리 | 같은 GPU 식별·시간 구간에서 used/free 표본 수가 활동률과 일치할 때 GPU당 평균 | 유효 시간만 평균하며 활동률과 유효 시간 집합이 다를 수 있음. 동일 표본 시각까지 증명하지는 않음. 전체 시간 검증 시 available, 일부 시간은 partial, 없으면 unavailable |
+| 대기·미배치·실행 Pod | GPU를 요청한 일반 컨테이너를 가진 Pod의 UID 기준 상태를 같은 평가 시각에 결합 후 Namespace별 시간 최대 | 물리 GPU 수가 아님. GPU 배정 전 대기 Pod도 포함하므로 활동률 행이 없는 Namespace도 별도 보존. 각 최대치가 발생한 시각은 다를 수 있음 |
+| 완료 Job·평균 소요 | 생성/시작/완료 시각과 GPU 요청 Pod의 Job owner를 확인한 표본, 이름별 중복 제거 | 완료 시각은 [보고 시작, 보고 종료)에 포함. 시작이 이전 기간이어도 전체 start→completion 소요를 사용하며 보고 기간으로 잘라 계산하지 않음. 전체 완료 수나 GPU 연산 시간이 아님 |
+
+Memory and workload queries currently cover the current report period only; no prior-period change is inferred for them. Workload subquery evaluation counts are not raw scrape coverage. Period peaks do not establish co-occurrence with an activity dip, and successful Job samples do not measure serving throughput. Their own missing status never changes the existing activity calculation/status.
+
+메모리와 작업 보조 지표는 현재 기간만 조회하므로 이전 기간 대비 증감을 만들지 않는다. 활동률과 메모리의 다른 유효 시간, 시간 평균과 기간 최고값, GPU와 Pod/Job 개수를 같은 기준의 수치처럼 직접 비교하지 않는다. 실제 작업과의 대조·운영 LLM 문구 검증은 별도다.
+
+Invalid numeric samples remain in duplicate detection so an invalid duplicate cannot be discarded to accept another value. Job timestamps must come from one consistent source label set; mixed sources, changed lifetimes and ambiguous duplicates are excluded. If no valid workload state or completed Job remains, its status is unavailable. These guards affect optional Ops observations only.

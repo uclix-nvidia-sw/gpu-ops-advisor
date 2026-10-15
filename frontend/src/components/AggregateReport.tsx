@@ -4,7 +4,8 @@ import { ReportPeriod } from './ReportMeta';
 import { Badge, Notice, TextLink } from './ui';
 import { reportRequestTime } from '../lib/reportPeriod';
 import './aggregate-report.css';
-import { NamespaceCharts } from './NamespaceCharts';
+import { memoryPercent, NamespaceCharts } from './NamespaceCharts';
+import { WorkloadCharts } from './WorkloadCharts';
 
 export const aggregateReasons: Record<string, string> = {
   unobserved_hour: '이 시간대 관측 없음',
@@ -94,6 +95,24 @@ export function namespaceActivity(models: Row[]) {
   return min === max ? pct(min) : `${pct(min)}–${pct(max)}`;
 }
 
+function memoryRange(models: Row[], field: string, percent = false) {
+  const values = models
+    .map((r) => {
+      const memory = obj(r.gpu_memory);
+      if (memoryPercent(memory) == null) return null;
+      return percent
+        ? memoryPercent(memory, field)
+        : field === 'total'
+          ? Number(memory.used_gib_per_gpu) + Number(memory.free_gib_per_gpu)
+          : memory[field];
+    })
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  if (!values.length) return '확인 불가';
+  const min = Math.min(...values),
+    max = Math.max(...values);
+  return `${min.toFixed(percent ? 1 : 2)}${min === max ? '' : `–${max.toFixed(percent ? 1 : 2)}`}${percent ? '%' : ' GiB'}`;
+}
+
 export function incidentShortTitle(value: string) {
   const title = value.replace(/\s+/g, ' ').trim();
   if (!title) return '장애 설명 미저장 · 사건 상세 확인';
@@ -139,9 +158,12 @@ function TopicInterpretation({
       aria-label={`${str(topic.topic_id)} AI 운영 해석`}
     >
       <h3>AI 운영 해석</h3>
-      <p className="aggregate-summary-source">
-        저장된 계산 결과를 바탕으로 AI가 작성했습니다. 확인할 점은 제안이며, 실제 조치나 장애 원인
-        판정이 아닙니다.
+      <p className="aggregate-summary-source aggregate-static-note">
+        <strong>작성 방식</strong>
+        {section.observation_source === 'calculated'
+          ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
+          : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
+        확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.
       </p>
       <dl>
         {[
@@ -150,7 +172,11 @@ function TopicInterpretation({
           ['next_check', '확인할 점'],
         ].map(([key, label]) => (
           <div key={key}>
-            <dt>{label}</dt>
+            <dt>
+              {key === 'observation' && section.observation_source === 'calculated'
+                ? '계산으로 확인한 관측'
+                : label}
+            </dt>
             <dd>
               <InterpretationText text={str(section[key])} />
             </dd>
@@ -205,6 +231,7 @@ export function AggregateReport({
   const incident = topics.find((t) => t.topic_id === 'incident_summary');
   const comparisons = rows(usage?.rows);
   const groups = namespaceGroups(comparisons);
+  const hasMemory = comparisons.some((r) => r.gpu_memory != null);
   const selectedNodes = (models: Row[]) =>
     [...new Set(models.flatMap((r) => strings(r.nodes)))].sort();
   const unattributed = comparisons.filter((r) => !str(r.namespace));
@@ -230,6 +257,7 @@ export function AggregateReport({
   const summaryMethod = str(obj(obj(value.quality).report).method);
   const aiInterpreted =
     value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted';
+  const incidentNumber = usage ? 2 : 1;
   const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
   const calculatedSummary = summaryMethod === 'deterministic_fallback';
   const summaryTitle = aiSelected
@@ -243,10 +271,11 @@ export function AggregateReport({
         <ReportPeriod value={value.time_range} />
         <p>직전 같은 길이의 기간과 비교합니다. 모든 시각은 한국 시간 기준입니다.</p>
       </header>
-      <Notice>
+      <p className="aggregate-static-note">
+        <strong>해석 기준</strong>
         활동률은 연결 GPU의 관측 표본 평균입니다. 부서의 독점 사용량·할당 효율이나 GPU 회수 가능량을
         뜻하지 않습니다.
-      </Notice>
+      </p>
       {!aiInterpreted && rows(value.narrative).length > 0 && (
         <section
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
@@ -270,8 +299,8 @@ export function AggregateReport({
         </section>
       )}
       {usage && (
-        <section aria-labelledby="namespace-summary-title">
-          <h2 id="namespace-summary-title">Namespace별 GPU 활동 현황</h2>
+        <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
+          <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
           {aiInterpreted && (
             <TopicInterpretation
               topic={usage}
@@ -279,6 +308,63 @@ export function AggregateReport({
               onEvidence={onEvidence}
             />
           )}
+          <h3 className="aggregate-subheading">1.1. Namespace별 비교</h3>
+          {str(usage.workload_unavailable_reason) && (
+            <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
+          )}
+          {rows(usage.workloads).length > 0 && (
+            <section aria-label="GPU 작업 보조 관측">
+              <h4>GPU 작업 대기·완료 관측</h4>
+              <p className="aggregate-static-note">
+                GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
+                완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
+                아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며
+                수집 공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로
+                다를 수 있습니다.
+              </p>
+              <div className="aggregate-table-scroll">
+                <table>
+                  <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
+                  <thead>
+                    <tr>
+                      <th>클러스터 / Namespace</th>
+                      <th>관측 최대 대기 Pod</th>
+                      <th>관측 최대 미배치 Pod</th>
+                      <th>관측 최대 실행 Pod</th>
+                      <th>확인된 완료 Job</th>
+                      <th>평균 Job 경과시간</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows(usage.workloads).map((w) => (
+                      <tr key={`${w.cluster_id}/${w.namespace}`}>
+                        <th>
+                          {str(w.cluster_id)}
+                          <br />
+                          {str(w.namespace)}
+                        </th>
+                        {[
+                          w.pending_peak,
+                          w.unscheduled_peak,
+                          w.running_peak,
+                          w.completed_observed,
+                        ].map((v, i) => (
+                          <td key={i}>{typeof v === 'number' ? v : '자료 없음'}</td>
+                        ))}
+                        <td>
+                          {typeof w.mean_elapsed_seconds === 'number'
+                            ? `${(w.mean_elapsed_seconds / 60).toFixed(1)}분`
+                            : '자료 없음'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <WorkloadCharts workloads={rows(usage.workloads)} />
+            </section>
+          )}
+
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
             있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
@@ -292,14 +378,17 @@ export function AggregateReport({
           ) : (
             <>
               <div className="aggregate-table-scroll">
-                <table className="aggregate-namespace-table">
-                  <caption>클러스터·Namespace별 관측 구성</caption>
+                <table
+                  className={`aggregate-namespace-table${hasMemory ? ' aggregate-namespace-memory' : ''}`}
+                >
+                  <caption className="sr-only">클러스터·Namespace별 관측 구성</caption>
                   <thead>
                     <tr>
                       <th>클러스터 / Namespace</th>
                       <th>관측 노드</th>
                       <th>관측 GPU 수</th>
                       <th>평균 GPU 활동률</th>
+                      {hasMemory && <th>GPU 메모리 사용 비율</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -319,17 +408,43 @@ export function AggregateReport({
                               <small>일부 자료 기준</small>
                             )}
                           </td>
+                          {hasMemory && (
+                            <td className="aggregate-number">
+                              <span className="aggregate-memory-percent">
+                                {memoryRange(group.models, 'used_gib_per_gpu', true)}
+                              </span>
+                              <small>
+                                사용 {memoryRange(group.models, 'used_gib_per_gpu')} / 전체{' '}
+                                {memoryRange(group.models, 'total')}
+                              </small>
+                              {group.models.some((r) =>
+                                rows(obj(r.gpu_memory).hours).some(
+                                  (h) => h.used_gib_per_gpu == null,
+                                ),
+                              ) && <small>일부 자료 기준</small>}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-              <p className="aggregate-table-note">
+              <p className="aggregate-table-note aggregate-static-note">
                 활동률은 확인된 자료의 평균입니다. 여러 GPU 모델을 사용하면 모델별 평균의 최소–최대
                 범위를 표시합니다. 자료가 일부뿐이면 전체 기간의 사용 패턴으로 단정하지 않습니다.
               </p>
+              {hasMemory && (
+                <p className="aggregate-table-note aggregate-static-note">
+                  메모리 사용 비율은 사용량 ÷ (사용량 + 여유량) × 100입니다. 보조 수치는 GPU당 평균
+                  사용량 / 전체 용량(GiB)입니다. 전체 용량은 관측된 사용량과 여유량의 합입니다. 연결
+                  GPU의 관측값이며 Namespace의 전용 사용량이나 할당량이 아닙니다. 활동률과 메모리는
+                  각각 확인된 구간의 평균이므로 반영 구간이 다를 수 있습니다. 시간대별 비교는 아래
+                  그래프에서 확인하세요. 여러 모델은 모델별 평균 범위를 표시합니다.
+                </p>
+              )}
               <NamespaceCharts
+                headingNumber="1.2"
                 groups={groups}
                 hidden={hiddenNamespaces}
                 onToggle={toggleNamespace}
@@ -344,6 +459,7 @@ export function AggregateReport({
                   })
                 }
               />
+              <h3 className="aggregate-subheading">1.3. 세부 수치와 사용 패턴</h3>
               <details className="aggregate-model-detail">
                 <summary>세부 수치와 자료 상태</summary>
                 <label className="aggregate-detail-selector">
@@ -430,6 +546,7 @@ export function AggregateReport({
                           <tr>
                             <th>시간대 시작</th>
                             <th>평균 활동률</th>
+                            {active?.gpu_memory != null && <th>메모리 사용 비율</th>}
                             <th>자료 상태</th>
                           </tr>
                         </thead>
@@ -438,6 +555,29 @@ export function AggregateReport({
                             <tr key={str(h.end)}>
                               <td>{reportRequestTime(str(h.start))}</td>
                               <td>{pct(h.activity_percent)}</td>
+                              {active?.gpu_memory != null && (
+                                <td>
+                                  {(() => {
+                                    const memory = rows(obj(active?.gpu_memory).hours).find(
+                                      (m) => m.end === h.end,
+                                    );
+                                    const percent = memory ? memoryPercent(memory) : null;
+                                    return percent == null || !memory ? (
+                                      '확인 불가'
+                                    ) : (
+                                      <>
+                                        <span className="aggregate-memory-percent">
+                                          {percent.toFixed(1)}%
+                                        </span>
+                                        <small>
+                                          사용 {Number(memory.used_gib_per_gpu).toFixed(2)} GiB ·
+                                          여유 {Number(memory.free_gib_per_gpu).toFixed(2)} GiB
+                                        </small>
+                                      </>
+                                    );
+                                  })()}
+                                </td>
+                              )}
                               <td>
                                 {strings(h.reasons)
                                   .map((r) => aggregateReasons[r] || r)
@@ -490,8 +630,8 @@ export function AggregateReport({
         </section>
       )}
       {incident && (
-        <section aria-labelledby="incident-summary-title">
-          <h2 id="incident-summary-title">기간 내 장애 알림 현황</h2>
+        <section className="aggregate-major-topic" aria-labelledby="incident-summary-title">
+          <h2 id="incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</h2>
           {aiInterpreted && (
             <TopicInterpretation
               topic={incident}
@@ -499,13 +639,18 @@ export function AggregateReport({
               onEvidence={onEvidence}
             />
           )}
-          {rows(incident.findings).map((f) => (
-            <p key={str(f.id)}>{str(f.text)}</p>
-          ))}
+          <h3 className="aggregate-subheading">{incidentNumber}.1. 장애 종류별 발생 현황</h3>
+          {rows(incident.findings)
+            .filter((f) => !str(f.id).startsWith('incident-node-'))
+            .map((f) => (
+              <p key={str(f.id)}>{str(f.text)}</p>
+            ))}
           {rows(summary.categories).length > 0 && (
             <div className="aggregate-table-scroll">
               <table className="aggregate-incident-types">
-                <caption>장애 종류별 발생 현황 · 동일 원인을 의미하지 않습니다</caption>
+                <caption className="sr-only">
+                  장애 종류별 발생 현황 · 동일 원인을 의미하지 않습니다
+                </caption>
                 <thead>
                   <tr>
                     <th>클러스터 / 장애 종류</th>
@@ -522,7 +667,11 @@ export function AggregateReport({
                         <span>{str(category.cluster_id)}</span>
                         {str(category.name)}
                       </th>
-                      <td>{strings(category.nodes).join(', ') || '노드 미확인'}</td>
+                      <td>
+                        {category.count === 0
+                          ? '이번 기간 발생 없음'
+                          : strings(category.nodes).join(', ') || '노드 미확인'}
+                      </td>
                       <td className="aggregate-number">
                         {String(category.count)}건
                         {Number(category.test_count) > 0 && (
@@ -550,6 +699,7 @@ export function AggregateReport({
             </Notice>
           )}
 
+          <h3 className="aggregate-subheading">{incidentNumber}.2. 사건별 알림 내용</h3>
           {summary.count === 0 ? (
             <Notice>
               선택한 범위·기간에 저장된 사건이 없습니다. 장비 전체의 무장애를 뜻하지 않습니다.
@@ -557,7 +707,8 @@ export function AggregateReport({
           ) : (
             rows(summary.incidents).length > 0 && (
               <div>
-                <p className="aggregate-data-note">
+                <p className="aggregate-data-note aggregate-static-note">
+                  <strong>알림 상태 기준</strong>
                   알림 상태는 보고서 작성 중 조회한 당시 기준이며, 현재 상태와 다를 수 있습니다.
                   <br />
                   기준 시각:{' '}
@@ -567,7 +718,7 @@ export function AggregateReport({
                 </p>
                 <div className="aggregate-table-scroll">
                   <table className="aggregate-incident-table">
-                    <caption>사건별 알림 내용</caption>
+                    <caption className="sr-only">사건별 알림 내용</caption>
                     <thead>
                       <tr>
                         <th>발생 시각</th>

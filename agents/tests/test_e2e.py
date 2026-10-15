@@ -112,7 +112,13 @@ class Upstream(BaseHTTPRequestHandler):
                     else {"query_ids": data["available_queries"][:3]}
                     if "available_queries" in data
                     else interpretation_reply(data)
-                    if data.get("interpretation_version") == "ops-interpretation-v2"
+                    if data.get("interpretation_version")
+                    in {
+                        "ops-interpretation-v2",
+                        "ops-interpretation-memory-v1",
+                        "ops-interpretation-workload-v1",
+                        "ops-interpretation-workload-v2",
+                    }
                     else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
                 ),
             }
@@ -175,14 +181,38 @@ class Upstream(BaseHTTPRequestHandler):
             expr = query["query"][0]
             assert float(query["step"][0]) == 3600
             assert "offset 1ms" in expr
+            if '"pending_peak"' in expr or '"created_min"' in expr:
+                from test_workload_summary import states, jobs
+
+                sample = states() if '"pending_peak"' in expr else jobs()
+                rows = sample["snapshot"]["series"]
+                original = rows[0]["values"][0][0]
+                for row in rows:
+                    row["metric"].update(cluster_id="cpc-2", namespace="dev")
+                    for point in row["values"]:
+                        point[0] = start
+                        if '"created_min"' in expr:
+                            point[1] = str(float(point[1]) + start - original)
+                return self.send(
+                    {
+                        "status": "success",
+                        "data": {"resultType": "matrix", "result": rows},
+                    }
+                )
             name = (
-                "hourly_gpu_activity"
+                "hourly_gpu_memory"
+                if "DCGM_FI_DEV_FB_USED" in expr
+                else "hourly_gpu_activity"
                 if "label_replace" in expr
                 else "hourly_pod_identity"
                 if "kube_pod_info" in expr
                 else "hourly_gpu_identity_count"
             )
             evidence = fixture(period, cluster="cpc-2", namespace="dev")
+            if name == "hourly_gpu_memory":
+                from test_gpu_memory import memory_fixture
+
+                evidence.append(memory_fixture(evidence))
             rows = next(
                 e["snapshot"]["series"] for e in evidence if e["query_id"] == name
             )
@@ -2531,17 +2561,24 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch):
     assert all(n["source_fact_ids"] and n["evidence_refs"] for n in body["narrative"])
     usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
     incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
+    assert usage["rows"][0]["gpu_memory"]["used_gib_per_gpu"] == 4
+    assert ("hourly_gpu_memory", "ok") in evidence
+    assert ("hourly_gpu_workload", "ok") in evidence
+    assert ("hourly_gpu_jobs", "ok") in evidence
+    assert any("GiB/GPU" in n["meaning"] for n in body["narrative"])
     assert usage["rows"][0]["activity_percent"] == 60
     assert usage["rows"][0]["change_percentage_points"] == 0
     assert incident["summary"]["count"] == 0
-    assert len(evidence) == 7
+    assert len(evidence) == 10
+    assert usage["workloads"][0]["pending_peak"] == 2
+    assert usage["workloads"][0]["completed_observed"] == 1
     assert not any(query.startswith("D") for query, _ in evidence)
     queries = [
         args
         for path, args in Upstream.requests[before:]
         if path.endswith("/api/v1/query_range")
     ]
-    assert len(queries) == 6
+    assert len(queries) == 9
     assert not any("/loki/" in path for path, _ in Upstream.requests[before:])
 
 
@@ -2676,10 +2713,15 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert context["previous_incidents"][0]["symptom"] == "XID fixture"
 
     jid = submit(stack, "report", data, execution_profile=VERSION)
-    body, _ = worker_result(stack, "report", jid, "-incident-details")
+    body, evidence = worker_result(stack, "report", jid, "-incident-details")
     usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
     incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
     assert usage["rows"][0]["nodes"] == ["test-node"]
+    assert usage["rows"][0]["gpu_memory"]["used_gib_per_gpu"] == 4
+    assert ("hourly_gpu_memory", "ok") in evidence
+    assert ("hourly_gpu_workload", "ok") in evidence
+    assert ("hourly_gpu_jobs", "ok") in evidence
+    assert any("GiB/GPU" in n["meaning"] for n in body["narrative"])
     assert usage["rows"][0]["activity_percent"] == 60
     assert usage["rows"][0]["change_percentage_points"] == 0
     summary = incident["summary"]
@@ -2859,4 +2901,4 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
         ]["activity_percent"]
         == 60
     )
-    assert len(evidence) == 7
+    assert len(evidence) == 10
