@@ -117,9 +117,9 @@ it('explains SXID11001 without GPU failure or XID restart guidance', () => {
       }}
     />,
   );
-  expect(html).toContain('수신 측에서 잘못된 명령');
-  expect(html).toContain('전체 서버 장애를 뜻한다고 단정할 수는 없습니다');
-  expect(html).toContain('B200·B300에 적용하지 않으며');
+  expect(html).toContain('수신(ingress) 측에서 잘못된 명령');
+  expect(html).not.toContain('단정할 수는 없습니다');
+  expect(html).toContain('B200·B300에는 이 지침을 적용하지 않습니다');
   expect(html).not.toContain('XID154');
   expect(html).not.toContain('GPU가 PCIe 연결을 통해');
 });

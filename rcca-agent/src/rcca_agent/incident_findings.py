@@ -268,6 +268,81 @@ def metric_context(gpu, node, at, evidence):
     return output
 
 
+def switch_identity(event, observations, evidence):
+    """Name the NVSwitch by its reported PCI address; GPU inventory only rules out a GPU."""
+    address = pci(event.get("reported_device"))
+    node = event.get("target", {}).get("node")
+    if address is None or not node:
+        return None
+    sources = [
+        dict(
+            source="fleet_event",
+            producer="fleet_intelligence",
+            evidence_refs=list(event.get("evidence_refs", [])),
+        )
+    ]
+    gpu_buses = set()
+    for row in observations:
+        if row.get("target", {}).get("node") != node:
+            continue
+        gpu_buses |= {
+            pci(g.get("bus_id"))
+            for g in row.get("gpu_candidates", [])
+            if g.get("bus_id")
+        }
+        if row.get("error_code") == event.get("error_code") and address in {
+            pci(a) for a in row.get("reported_pci_addresses", [])
+        }:
+            sources.append(
+                dict(
+                    source="fleet_status_message",
+                    producer="fleet_intelligence",
+                    evidence_refs=list(row.get("evidence_refs", [])),
+                )
+            )
+    for e, labels, _ in _series(evidence):
+        if _label(labels, e, "node", NODE_LABELS) == node and pci(
+            labels.get("pci_bus_id")
+        ):
+            gpu_buses.add(pci(labels["pci_bus_id"]))
+    models = sorted(
+        {
+            _label(labels, e, "model", MODEL_LABELS)
+            for e, labels, _ in _series(evidence)
+            if _label(labels, e, "node", NODE_LABELS) == node
+            and _label(labels, e, "model", MODEL_LABELS)
+        }
+    )
+    merged = {}
+    for s in sources:
+        entry = merged.setdefault(s["source"], dict(s, evidence_refs=[]))
+        entry["evidence_refs"] = list(
+            dict.fromkeys(entry["evidence_refs"] + s["evidence_refs"])
+        )
+    return dict(
+        kind="switch",
+        reported_device=event["reported_device"],
+        gpu_uuid=None,
+        # A switch address that is also a GPU bus means the identifiers disagree.
+        status="conflicting" if address in gpu_buses else "reported",
+        gpu_inventory_size=len(gpu_buses),
+        producers=sorted({s["producer"] for s in sources}),
+        sources=list(merged.values()),
+        models=models,
+        drivers=[],
+        gpu_indexes=[],
+        basis="reported_switch_address",
+    )
+
+
+GPUD = re.compile(
+    r"^GPUd 고정 정의: event_type=(\w+), PotentialFatal=(\w+), AlwaysFatal=(\w+)\.$"
+)
+GPUD_ACTIONS = re.compile(r"^GPUd 고정 기본 action: (.+)\.$")
+NOT_APPLIED = re.compile(r"([A-Z0-9]+(?:/[A-Z0-9]+)*)에는 적용하지 않는다")
+UNDEFINED = re.compile(r"^(?:nil|none|null|미정의|미기재)", re.I)
+
+
 def catalog_terms(evidence):
     """Read the reviewed catalog lines of the selected published Runbook only."""
     for e in evidence:
@@ -295,13 +370,31 @@ def catalog_terms(evidence):
             elif m := FLEET.match(line):
                 terms["fleet_name"] = m.group(1)
                 terms["fleet_event_type"] = m.group(2)
-                terms["fleet_actions"] = m.group(3).split(", ")
+                terms["fleet_actions"] = [
+                    a.strip()
+                    for a in m.group(3).split(", ")
+                    if a.strip() and not UNDEFINED.match(a.strip())
+                ]
+            elif m := GPUD_ACTIONS.match(line):
+                terms["gpud_actions"] = [
+                    a.strip()
+                    for a in m.group(1).split(", ")
+                    if a.strip() and not UNDEFINED.match(a.strip())
+                ]
+            elif m := GPUD.match(line):
+                terms["gpud_event_type"] = m.group(1)
+                terms["gpud_potential_fatal"] = m.group(2) == "true"
+            elif line.startswith("적용 조건:") and (m := NOT_APPLIED.search(line)):
+                # SXID authoring lines name excluded platforms instead of a table.
+                terms.setdefault("excludes", [])
+                terms["excludes"] += m.group(1).split("/")
         if len(terms) > 1:
             terms["sources"] = [
                 {k: s.get(k) for k in ("url", "section", "revision")}
                 for s in content.get("sources", [])
                 if isinstance(s, dict) and str(s.get("url", "")).startswith("https://")
             ]
+            terms["category"] = content.get("classification", {}).get("category")
             terms["title"] = content.get("title")
             terms["revision"] = e.get("query_version")
             return terms
@@ -309,15 +402,20 @@ def catalog_terms(evidence):
 
 
 def model_applicability(models, terms):
-    if not terms or "applies" not in terms or len(models) != 1:
+    if not terms or len(models) != 1:
+        return None
+    if "applies" not in terms and not terms.get("excludes"):
         return None
     family = FAMILY.search(models[0])
-    if not family:
-        return "unlisted"
-    name = family.group(1)
-    if name in terms["applies"]:
-        return "applies"
-    return "excluded" if name in terms.get("excludes", []) else "unlisted"
+    name = family.group(1) if family else None
+    if name and name in terms.get("excludes", []):
+        # An empty NVIDIA product list means no catalog action for these products.
+        return "not_listed" if terms.get("applies") == [] else "excluded"
+    if "applies" not in terms:
+        return "applies"  # Only exclusions are authored (SXID).
+    if not terms["applies"]:
+        return "not_listed"
+    return "applies" if name in terms["applies"] else "unlisted"
 
 
 def driver_supports_linkage(drivers, terms):
@@ -325,6 +423,44 @@ def driver_supports_linkage(drivers, terms):
         return None
     major = re.match(r"(\d+)\.", drivers[0])
     return int(major.group(1)) >= terms["xid154_driver"] if major else None
+
+
+# Catalog action codes grouped by what an operator does. Unknown codes are procedures.
+ACTION_KINDS = {
+    "RESTART_BM": "restart",
+    "RESTART_VM": "restart",
+    "RESET_GPU": "restart",
+    "REBOOT_SYSTEM": "restart",
+    "RESTART_APP": "application",
+    "CONTACT_SUPPORT": "support",
+    "HARDWARE_INSPECTION": "inspection",
+    "IGNORE": "none",
+    "IGNORE_NO_ACTION_REQUIRED": "none",
+}
+
+
+def action_plan(terms, applicability):
+    """Choose the catalog action to recommend; prefer NVIDIA, else Fleet/GPUd defaults."""
+    if not terms:
+        return None
+    nvidia = terms.get("immediate")
+    if nvidia and nvidia not in UNSTATED and applicability != "not_listed":
+        follow = terms.get("investigatory")
+        return dict(
+            source="nvidia",
+            action=nvidia,
+            kind=ACTION_KINDS.get(nvidia, "procedure"),
+            followup=follow if follow and follow not in UNSTATED else None,
+        )
+    fleet = terms.get("fleet_actions") or terms.get("gpud_actions") or []
+    if fleet:
+        return dict(
+            source="fleet" if terms.get("fleet_actions") else "gpud",
+            action=fleet[0],
+            kind=ACTION_KINDS.get(fleet[0], "procedure"),
+            followup=fleet[1] if len(fleet) > 1 else None,
+        )
+    return dict(source="none", action=None, kind="none_listed", followup=None)
 
 
 def incident_findings(result, evidence, data):
@@ -335,7 +471,14 @@ def incident_findings(result, evidence, data):
         return None
     event = events[0]
     observations = result.get("device_observations", [])
-    identity = device_identity(event, observations, evidence)
+    switch = event["error_code"].startswith("sxid:")
+    identity = (
+        switch_identity(event, observations, evidence)
+        if switch
+        else device_identity(event, observations, evidence)
+    )
+    if identity and not switch:
+        identity["kind"] = "gpu"
     terms = catalog_terms(evidence)
     findings = dict(
         schema="incident-findings/2",
@@ -359,11 +502,15 @@ def incident_findings(result, evidence, data):
     if gpu:
         at = timestamp(event["event_time"])
         findings["metrics"] = metric_context(gpu, findings["node"], at, evidence)
-        findings["model_applicability"] = model_applicability(identity["models"], terms)
         findings["xid154_supported"] = driver_supports_linkage(
             identity["drivers"], terms
         )
+    if identity and identity["status"] != "conflicting":
+        findings["model_applicability"] = model_applicability(identity["models"], terms)
+        findings["plan"] = action_plan(terms, findings["model_applicability"])
     # Host-only facts stay explicit; none is inferred from absence. RCA scope is the
     # GPU node; Kubernetes workload identity is outside it.
     findings["unknowns"] = ["operating_mode", "current_access", "synthetic_origin"]
+    if switch:
+        findings["unknowns"].append("switch_port_topology")
     return findings

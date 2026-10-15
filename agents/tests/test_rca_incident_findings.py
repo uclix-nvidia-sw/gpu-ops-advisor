@@ -208,18 +208,18 @@ async def test_corroborated_device_leads_report_with_decisive_recovery():
     assert "workload" not in findings
     problem = text["problem"].split("\n\n")
     assert problem[0] == (
-        "2026-10-15 14:37:51 KST, cluster-a / node-a의 PCI 0000:07:00에서 XID 79가 보고됐습니다. "
+        "2026-10-15 14:37:51 KST, cluster-a / node-a의 PCI 0000:07:00에서 XID 79 오류가 보고됐습니다. "
         f"수집된 인벤토리와 지표 라벨상 해당 주소는 GPU {GPU}(GPU 0, NVIDIA A100-SXM4-80GB)와 일치합니다."
     )
     assert "독립 생산자 2개" in problem[1]
     assert "14:37:24 Healthy → 14:38:24 Unhealthy(XID 79)" in problem[2]
-    assert "14:37:51은 그 사이" in problem[2]
+    assert "이벤트 시각(14:37:51)은 그 사이" in problem[2]
     assert "접수까지 79초" in text["problem"]
     assert "회복 보고가 없습니다" in text["impact"]
     assert "사용할 수 없는 상태입니다" in text["impact"]
     assert "심각도: 높음" in text["impact"]
     assert "team-a" not in "\n".join(text.values())
-    assert text["cause"].startswith("판단: node-a GPU 0 한 장치에서 XID 79가 발생했")
+    assert text["cause"].startswith("판단: node-a GPU 0에서 XID 79 오류가 발생했")
     assert "0→0, 증가 없음" in text["cause"]
     assert "마지막 0 초과 값은 14:21:24" in text["cause"]
     assert "XID 154 연계 조건(R565 이상)에 해당" in text["cause"]

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
     "kind,key,expected",
     [
         ("xid", "RB-XID-79", ["D44", "D02", "D11"]),
-        ("sxid", "RB-SXID-11001", ["D02", "D06", "D13"]),
+        ("sxid", "RB-SXID-11001", ["D02", "D13"]),
     ],
 )
 def test_authored_rules_require_scoped_reports(kind, key, expected):

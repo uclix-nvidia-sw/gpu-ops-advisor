@@ -180,6 +180,150 @@
           ]
         }
       }
+    },
+    {
+      "file": "sxid/RB-SXID-11001.json",
+      "before_content_sha256": "9b8485396ec9d9620edbac308afb3f3d7fccb058c3ee8f56c48b16dbae1bee8a",
+      "after_content_sha256": "26f942c098619da71110ec63c97741d6c22f375c9fa9cc4e8a44ac6f0745e52d",
+      "change": "Remove D06 Pod UID history; rewrite recommendations and operator guidance without deferring auto-collected checks. No new fact semantics.",
+      "previous_values": {
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_producer_contract",
+              "reported_error_code",
+              "producer_contract",
+              "error_code",
+              "normalized_health"
+            ],
+            "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          },
+          {
+            "query_id": "D02",
+            "priority": 3,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 전후 GPU 사용률 비교.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D06",
+            "priority": 4,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 시각 Pod UID·노드 이력을 조회하고 GPU 작업 라벨과 유효 시각을 대조한다. 같은 노드의 작업을 장애 GPU 사용자로 단정하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          },
+          {
+            "query_id": "D13",
+            "priority": 5,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 서버·기간의 보조 원본 로그를 수집한다. FM 원천이 연결되지 않았다면 일반 로그를 FM 로그·포트 토폴로지로 대체하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract",
+            "selection": {
+              "missing_any": [
+                "causal_confirmation_evidence",
+                "normalized_health"
+              ],
+              "requires_all": [
+                "reported_error_code",
+                "reported_producer_contract"
+              ],
+              "independent": true
+            }
+          }
+        ],
+        "recommendations": [
+          {
+            "text": "운영자가 원본 NVSwitch·Fabric Manager 로그와 플랫폼·버전·포트 정보를 보존하고 적용되는 벤더 조사 절차를 검토한다.",
+            "preconditions": [
+              {
+                "field": "error_code",
+                "equals": "sxid:11001"
+              }
+            ],
+            "execution": "not_performed"
+          }
+        ],
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "SXID11001은 NVSwitch의 수신 측에서 잘못된 명령을 감지했다는 오류(ingress invalid command)입니다. GPU 자체 고장이나 전체 서버 장애를 뜻한다고 단정할 수는 없습니다.",
+          "cause_note": "실제 NVSwitch에서 발생한 오류인지 확인한 뒤 같은 스위치·포트의 로그와 연결 상태를 조사해야 합니다. 오류 코드만으로 펌웨어 또는 링크 고장을 확정할 수 없습니다.",
+          "next_checks": [
+            {
+              "title": "어느 NVSwitch에서 발생했는지 확인하세요.",
+              "text": "오류 로그의 PCI 주소와 실제 장치 정보를 대조하세요. 시험 주입 로그인지도 확인해야 합니다. 같은 서버의 GPU 목록만으로 오류 장치를 확정하지 마세요."
+            },
+            {
+              "title": "같은 스위치와 시간대의 오류·연결 상태를 확인하세요.",
+              "text": "NVSwitch·Fabric Manager 원본 로그와 스위치 포트·연결 정보를 확인하세요. GPU 사용률만으로 스위치 상태나 오류 원인을 판단할 수 없습니다."
+            },
+            {
+              "title": "재시작이 필요하다면 서비스 영향을 먼저 확인하세요.",
+              "text": "해당 서버에서 실행 중인 작업을 안전하게 종료하거나 다른 서버로 옮기고, 재시작할 서버와 작업 시간을 확인한 뒤 담당자의 승인을 받아 진행하세요. 현재 분석만으로 재시작이 필요하다고 확정한 것은 아닙니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet의 기본 안내",
+              "text": "서버 재시작과 하드웨어 점검을 제시합니다. 이번 장비에서 두 조치가 모두 필요하다는 판정은 아닙니다.",
+              "source_indices": [
+                1,
+                2
+              ]
+            },
+            {
+              "title": "영향 범위와 적용 조건",
+              "text": "스위치 포트와 연결된 GPU·가상 머신·파티션을 확인하세요. GPU 연결 포트와 스위치 사이 포트에 따라 영향 범위가 다릅니다. 저장된 지침은 B200·B300에 적용하지 않으며 NVSwitch·Fabric Manager 버전과 운영 방식을 확인해야 합니다.",
+              "source_indices": [
+                0,
+                3
+              ]
+            }
+          ]
+        }
+      }
     }
   ]
 }

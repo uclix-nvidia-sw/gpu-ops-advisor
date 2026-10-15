@@ -41,7 +41,7 @@ class RunbookContractTests(unittest.TestCase):
                     if row["knowledge_key"] == "RB-XID-79":
                         expected.append("D11")
                 elif row["knowledge_key"] == "RB-SXID-11001":
-                    expected = ["D09", "D02", "D06", "D13"]
+                    expected = ["D09", "D02", "D13"]
                 elif row["knowledge_key"] == "RB-XID-74":
                     expected = ["D09", "D33", "D34", "D02"]
                 if row["knowledge_key"] == "RB-XID-48-63-64":

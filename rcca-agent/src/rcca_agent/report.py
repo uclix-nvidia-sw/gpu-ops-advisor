@@ -218,25 +218,12 @@ async def write_report(result, data, clues, evidence, llm):
         )
     for text, refs in (lead or {}).get("impact", []):
         put("impact", text, refs)
-    relations = [] if lead else result.get("pod_relations", [])
-    for relation in relations:
-        add(
-            "impact",
-            f"사건 시각의 관측 연결: GPU {relation['gpu_uuid']} · "
-            f"Namespace {relation['namespace']} · Pod UID {relation['pod_uid']}. "
-            "작업 실패·중단 여부는 이 연결 정보만으로 판정하지 않습니다.",
-            relation["evidence_refs"],
-        )
+    # RCA covers the GPU node; Kubernetes Pod relations are not reported.
     if not lead:
         add(
             "impact",
-            "확인된 업무 영향: 이번 분석에는 작업 실패·서비스 중단을 입증한 결과가 없습니다. "
-            + (
-                "위 작업을 영향 확인 대상으로 사용하세요."
-                if relations
-                else "사건 시각에 오류 GPU를 사용한 작업은 확인되지 않았습니다."
-            )
-            + " 심각도는 오류의 의미와 실제 영향 범위를 함께 판단해야 합니다.",
+            "확인된 영향: 이번 수집에는 오류 이후 장치 상태를 확인한 근거가 없습니다. "
+            "심각도는 아래 오류 의미와 카탈로그 분류로 판단합니다.",
         )
     for guidance in [] if lead else result["quality"]["runbook_guidance"]:
         add(
