@@ -47,4 +47,6 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 
 설치·환경 변수·timeout·Worker 실행은 [공통 Agent 안내](../agents/README.md), 검증 범위는 [Agent QA](../agents/QA.md), 상세 계약은 [RCA 명세](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md)를 따른다.
 
-현재 미완료인 작업은 오류별 보완 조회·출처·지침의 의미 검토, 발행 profile 재검증, 실제 모델·장비 사건으로 원인 분석 품질 검증이다. Synthesis 후 적절성 점수로 다른 Runbook을 재선택하는 루프와 중간 언어 검사/최종 한국어 표현의 분리는 구현돼 있지 않다. 이를 변경할 때 RCA 결과를 읽는 Backend·Frontend·Ops와 검수 사례를 함께 정의해야 한다.
+현재 미완료인 작업은 오류별 보완 조회·출처·지침의 의미 검토, 발행 profile 재검증, 실제 모델·장비 사건으로 원인 분석 품질 검증이다. 중간 언어 검사/최종 한국어 표현의 분리도 구현돼 있지 않다.
+
+[수집·증거·분석 품질 분리 설계·개발](../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발--미구현)은 별도 증거 해석·분석 검토 LLM, 제한된 수정·보완 수집, 결과·추적 필드와 Backend·Frontend·Ops 소비 범위를 정의한다. **아직 미구현**이며 위 현재 실행 흐름을 대체하지 않는다. 원인 정확도 점수나 자유로운 Runbook 재선택 루프를 추가하는 설계가 아니다. 공통 결과·실행·화면·검수의 담당 문서는 설계서에서 연결한다.

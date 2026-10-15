@@ -27,13 +27,15 @@ job.status는 10, tool_status=ok/partial/empty/unavailable/parse_error는 03, �
 | 분석·설명 | 추가 수집 후 원인 후보·지지/반박·권고·재조사 제안 | 현행 fact_ids 선택; 목표는 도구 없는 단일 Synthesis의 현황·변화·개선 조언·한계 | LLM, 수치·증거 참조. RCA의 기존 증거 충분 경로는 코드로 결과 작성 |
 | 검증·저장·완료 | 자기 후보·근거 | 자기 후보·근거·파일 | Worker 코드, LLM 선택 도구 아님 |
 
-RCA의 추가 조사 선택에는 도구 호출을 지원하는 모델과 NAT Tool Calling 구성을 검증해 사용한다. 보고서는 등록된 수집·계산 순서를 실행하며 LLM에 집계 산식을 생성시키지 않는다. NAT 호출 중에도 비동기 heartbeat가 계속 동작해야 하며 숨은 병렬 추론·중첩 재시도로 14의 한도를 초과하지 않는다.
+RCA의 추가 조회 선택은 11의 규칙·명시적 탐색 허용과 JSON query ID 계약을 따른다. 모델이 임의 도구를 실행하는 권한으로 해석하지 않는다. 보고서는 등록된 수집·계산 순서를 실행하며 LLM에 집계 산식을 생성시키지 않는다. NAT 호출 중에도 비동기 heartbeat가 계속 동작해야 하며 숨은 병렬 추론·중첩 재시도로 14의 한도를 초과하지 않는다.
 
 ## 3. RCA
 
-[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 입력·R01~R09 계약을 따른다. incident_id는 필수다. 변경 목표는 Incident의 에피소드별 최초 알람 전달 후 **Agent가 파싱·목적 선택·Runbook 적용/로그·지표 일반 조사를 결정**하는 구조다. Runbook과 로그 조회는 같은 workflow에서 결합할 수 있다. Incident가 목적을 정하는 기존 1.3과 목적 없는 신규 1.4 입력은 14의 이행 계약으로 구분하며 현재 구현 완료를 뜻하지 않는다.
+[11 RCA](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 입력·조사 계약을 따른다. incident_id는 필수다. 현재 Runbook-first 입력과 기존 목적 기반 입력의 버전·호환은 [14](14_모듈간_호출과_공통실행_계약.md)와 구현을 기준으로 구분한다. 이번 평가 분리는 입력 purpose 선택이나 Incident 에피소드 정책을 새로 도입하는 변경이 아니다.
 
-2026-09-28에 보완한 workflow는 **Runbook DB 조회·코드 검사 → 기존 증거 충분 시 MCP·원인 Synthesis 없이 판단 결과 작성 / 부족 시 승인 계획·병렬 MCP 수집 → 코드 충분성 판정·최대 1회 재조사 → 도구 없는 Synthesis → 코드 검증·공통 저장·JC 공개**다. 전용 Runbook이 없으면 승인된 일반 Runbook으로 대체하고 그것도 없으면 조사하지 않는다. Runbook 검색 일치나 MCP 조회 성공만으로 분석 완료를 판정하지 않는다. 유효 증거가 전혀 없으면 원인 Synthesis를 생략하고 미확정 판단을 최종 보고서에 남긴다. 모델 미구성·오류는 유효 사실을 보존하면서 분석 미완료를 명시하고 14의 실행 실패·슬롯 반환 계약을 유지한다. 상세 충분 기준·LLM 입출력·재조사 조건과 입력 1.3 구현/1.4 후속 단계 구분은 11 §2를 단일 기준으로 사용한다. 이 RCA 구현은 보고서 코드를 변경하지 않았으며 보고서의 후속 목표는 아래 §4를 따른다.
+현재 Runbook 선택·일반 조사 fallback·수집 라운드·Synthesis 검증은 [RCA README](../../../rcca-agent/README.md)와 [11의 현행 계약](../rca-agent/11_RCA_Agent_모듈_설계서.md)을 따른다. 검색 일치나 MCP 조회 성공만으로 원인 분석 품질을 판정하지 않는다. 모델 미구성·오류에서도 유효 사실과 미확정 사유를 보존하되 14의 실행 실패·슬롯 반환 계약이 우선한다. 신규 입력 계약과 기존 입력의 호환은 14를 따르며 과거 R 기반 목표를 현재 Runbook-first 흐름으로 설명하지 않는다.
+
+추가 개발 대상은 [11의 평가 분리 설계](../rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발--미구현)다. 수집 상태는 코드, 증거 의미는 코드의 명확한 검사와 LLM 해석, 분석 품질은 코드 검증과 별도 LLM 검토로 나눈다. 호출·반복 설계는 11, 공통 결과 구조는 아래 §8.1이 소유한다. 아직 구현·실제 품질 검증 완료를 뜻하지 않는다.
 
 ## 4. 보고서
 
@@ -182,7 +184,7 @@ LLM 입력에는 요청 scope·시간, 구조화 사실/수치·품질·evidence
 
 저장 전에는 JSON 스키마, 필수 필드, enum, 대상 scope, evidence ID 존재, 값·단위·기간·반올림 일치, 인과 판단 승격, 권고 선행 조건을 검사한다. 사실·수치는 구조화 값에서 렌더링하고 설명에 있는 수치 참조도 해당 필드와 연결한다. 검증 실패는 제한된 재생성 또는 설명 생략으로 처리하며 잘못된 설명을 정상 결과로 저장하지 않는다.
 
-수치 주장에는 §8의 value_refs가 필수다. evidence ID가 존재하는지만 검사하지 않고 참조된 값의 대상·기간·단위·산식·source가 문장 주장과 맞는지 검사한다. `%↔비율`, `W↔kWh`, 현재 수량↔기간 합계를 임의 변환하거나 같은 숫자의 다른 대상을 인용하면 발행을 차단한다. 인과 확정은 검토된 confirmation_rule과 근거 검사로 제한하며 LLM의 자기 평가를 검증 수단으로 사용하지 않는다.
+수치 주장에는 §8의 value_refs가 필수다. evidence ID가 존재하는지만 검사하지 않고 참조된 값의 대상·기간·단위·산식·source가 문장 주장과 맞는지 검사한다. `%↔비율`, `W↔kWh`, 현재 수량↔기간 합계를 임의 변환하거나 같은 숫자의 다른 대상을 인용하면 발행을 차단한다. 인과 확정은 검토된 confirmation_rule과 근거 검사로 제한하며 LLM의 자기 평가를 인과 확정의 검증 수단으로 사용하지 않는다. 11의 별도 LLM 검토는 과장·모순·누락을 찾는 보조 검토이며 이 원칙이나 코드 검증을 대체하지 않는다.
 
 모델 제품은 아직 확정하지 않는다. 실제 서빙 가능 여부·모델/엔진·정밀도·GPU·동시 처리 수치는 C06/C07에서 평가·기록한다. 모델 교체 시 아래 동일 사례와 T30을 재검증한다.
 
@@ -192,7 +194,7 @@ LLM 입력에는 요청 scope·시간, 구조화 사실/수치·품질·evidence
 
 facts는 `id,text,evidence_refs,value_refs`를 갖는다. 수치가 없으면 value_refs는 빈 배열이다. 수치 원본은 RCA·공통 도구의 measurements 또는 보고서 topics[].metrics 중 한 곳에만 두며 각 value의 id는 결과 전체에서 유일하다. value_refs는 그 id들의 배열이다. value는 `id,value,value_type,unit,target,period,method,quality,evidence_refs`를 포함한다. value_type은 number/integer/ratio/percentage이고 null은 quality.reason이 필수다. 백분율 값 3과 비율 0.03은 서로 다른 단위로 유지한다. measurements와 metrics를 수치 레지스트리로 해석하며 문장·HTML/CSV는 그 값을 참조해 렌더링한다.
 
-RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,cause_candidates,recommendations,missing_inputs,termination_reason`을 추가한다. assessments는 purpose_id별 status·missing_inputs·evidence_refs이며 결과 상단 산출 상태 계산에 사용한다. 현행 1.3은 요청한 목적, 신규 1.4 목표는 11 §3.1.2의 Agent 선택·관련성 평가와 trace를 기준으로 검증한다. 확인된 미적용은 not_applicable이며 미확정·근거 부족을 미적용으로 숨기지 않는다. 후보는 `id,claim,causal_status,supporting_refs,contradicting_refs,value_refs,missing_inputs,confirmation_rule_ref?`, 권고는 `text,preconditions,eligibility=eligible|withheld,reason,evidence_refs,value_refs,execution=not_performed`를 가진다.
+RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,cause_candidates,recommendations,missing_inputs,termination_reason`을 추가한다. assessments는 purpose_id별 status·missing_inputs·evidence_refs이며 결과 상단 산출 상태 계산에 사용한다. 입력 계약별 assessment와 trace의 연결은 11/14와 현재 validator를 따른다. 평가 확장만으로 기존 목적·Runbook assessment를 재해석하지 않는다. 확인된 미적용은 not_applicable이며 미확정·근거 부족을 미적용으로 숨기지 않는다. 후보는 `id,claim,causal_status,supporting_refs,contradicting_refs,value_refs,missing_inputs,confirmation_rule_ref?`, 권고는 `text,preconditions,eligibility=eligible|withheld,reason,evidence_refs,value_refs,execution=not_performed`를 가진다.
 
 보고서는 `topics[]`를 추가한다. 각 주제는 `topic_id,status,metrics,facts,findings,missing_inputs,quality,evidence_refs,recommendations`를 가진다. metric은 공통 value 필드에 denominator를 추가하며 값이 null이면 이유가 필수다. O10에는 입력 action_record_ids와 비교 기간, O07에는 실제 resource/단위를 결과에 보존한다.
 
@@ -232,6 +234,85 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 
 예시의 현재 수량은 기간 집계와 다른 기준 시각을 명시한다. 결과에 실제 evidence·query·모델 revision을 채우는 것은 실행 책임이다. 표·파일도 저장된 값에서 생성하며 화면마다 산식을 다시 적용하지 않는다.
 
+
+### 8.1 RCA 평가 분리 결과 확장 — 미구현
+
+아래는 [11의 설계·개발](../rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발--미구현)에 사용할 신규 결과 계약이다. **현재 생산되는 필드가 아니다.** `result_schema_version=1.1`의 선택적 `quality.rca_evaluation` 확장으로 구현하되, 모든 소비자가 추가 JSON을 보존하는지 호환 시험을 먼저 수행한다. 기존 필드의 의미나 필수성을 바꿔야 한다면 기존 버전에 덮어쓰지 말고 별도 버전 전환으로 처리한다.
+
+| 필드 | 형식·의미 |
+|---|---|
+| `schema_version` | 문자열 `"1"`. 평가 확장 자체의 버전이며 input/result_schema 버전과 별개 |
+| `collection` | `{status, reason, query_results, evidence_refs}`. status는 `complete/partial/failed/not_requested`. complete 이외에는 reason 필수 |
+| `evidence` | `{execution_status, reason, evidence_refs}`. refs는 검증된 해석 기록과 기초 진단 기록. 실행 완료는 모든 의미 확인 완료가 아님 |
+| `analysis_id` | 최종 발행할 초안의 hash. 코드 fallback도 ID를 생성; result content_hash와 별개 |
+| `review` | `{execution_status, verdict, reason, analysis_id, evidence_refs}`. 최종 초안에 대한 검토만 요약 |
+| `investigation` | `{status:"finished", stop_reason, evidence_refs}`. 이 attempt의 조사 종료이며 사건 종결·장비 회복과 다름 |
+
+`execution_status`는 `complete/failed/skipped`다. `reason`은 실패·생략이면 필수 문자열, 정상 완료이면 null을 허용한다. `review.verdict`는 complete일 때 `acceptable/revision_required/undetermined`, failed/skipped일 때 null이다. UI의 ‘미검토’는 failed/skipped의 표시이며 LLM 판정 값이 아니다. 참조된 해석 기록 안의 unknowns/conflicts가 비어 있지 않아도 해석 실행은 complete일 수 있다.
+
+수집 상태는 자료의 의미나 분석 판정으로 계산하지 않는다. query_results는 계획된 조회별 `query_id`, 실행 여부 `executed/skipped`, 기존 `tool_status`(미실행은 null), complete 여부·reason·evidence_refs를 가진다. 행/청크별 세부 제한은 기존 증거의 quality가 원본이다.
+
+- 계획된 조회가 없거나 fast path로 수집 자체가 필요 없으면 `not_requested`와 이유를 기록한다. 단순히 실제 호출이 0회라는 이유만으로 이 상태를 사용하지 않는다.
+- 계획한 수집이 모두 완료되고 각 응답이 ok/empty·완전하면 `complete`다. 빈 결과는 조회 완료이며 장애 없음의 증거가 아니다.
+- 일부 조회 완료(빈 응답 포함) 또는 부분 반환 자료가 있으나 잘림·실패·누락·미실행이 섞였으면 `partial`이다. 반환된 내용의 기초 검증·의미 해석 실패는 별도 축에 남긴다.
+- 계획했지만 반환 자료/완료된 빈 응답이 전혀 없고 모두 실패·미실행이면 `failed`다. 미실행의 예산·정책·조건 사유를 유지한다.
+
+`stop_reason`은 `review_accepted/no_available_followup/followup_not_selected/selection_conditions_missing/query_budget_exhausted/llm_budget_exhausted/round_limit_reached/revision_limit_reached/analysis_unresolved/no_usable_evidence/model_unavailable/fast_path` 중 하나다. 이는 발행 가능한 종료의 상세 사유이며 기존 `termination_reason` enum을 대체하지 않는다. 원격 종료 불명·취소·lease 상실·실행 deadline 초과는 이 필드로 정상 공개하지 않고 14의 실패 경로를 따른다. 검토 입력이 너무 커서 남은 예산에 들어가지 않는 경우는 `llm_budget_exhausted`와 단계 진단으로 남긴다.
+
+예시 값은 구조 설명용이며 실제 ID가 아니다.
+
+```json
+{
+  "schema_version": "1",
+  "collection": {
+    "status": "partial",
+    "reason": "incomplete_queries",
+    "query_results": [
+      {"query_id": "D09", "execution_status": "executed", "tool_status": "partial", "complete": false, "reason": "response_byte_limit", "evidence_refs": ["raw-record"]}
+    ],
+    "evidence_refs": ["raw-record"]
+  },
+  "evidence": {"execution_status": "complete", "reason": null, "evidence_refs": ["interpretation-record"]},
+  "analysis_id": "final-draft-hash",
+  "review": {
+    "execution_status": "complete",
+    "verdict": "acceptable",
+    "reason": null,
+    "analysis_id": "final-draft-hash",
+    "evidence_refs": ["review-record"]
+  },
+  "investigation": {"status": "finished", "stop_reason": "no_available_followup", "evidence_refs": ["decision-record"]}
+}
+```
+
+실제 결과의 query_results에는 모든 계획·실행 행을 채우고 각 참조를 저장된 evidence에 연결한다.
+
+#### 기록의 관계와 검증
+
+기존 evidence 저장소에 다음 stage의 구조화 기록을 추가한다. 아래 필드와 설명은 개발 계약이며 원시 모델 응답 전체나 내부 사고 과정을 저장하는 요구가 아니다.
+
+| 기록 | 필요한 내용 |
+|---|---|
+| `evidence_validation` | `checks[]`: check/outcome/reason/location/evidence_refs. outcome은 pass/fail/unknown/not_applicable; 정확 일치 검사 실패를 신원 불일치 확정으로 해석하지 않음 |
+| `evidence_interpretation` | `findings[]`: id/statement/kind(observed 또는 inferred)/evidence_refs, `unknowns/conflicts/limitations`: statement와 refs의 목록. unknown은 관측 ref가 없을 수 있으나 계획·실패 기록 또는 이유가 필요 |
+| `rca_analysis_draft` | analysis_id, input_view_hash, claims(id/source/statement/supporting_refs/contradicting_refs/value_refs), 권고·한계와 기존 결과 필드로의 연결 |
+| `analysis_review` | analysis_id, execution_status/verdict/reason, `issues[]`: claim_id 또는 초안 전체 대상/reason/evidence_refs/suggested_resolution, `followup_questions[]`: question/expected_effect/query_ids |
+| `investigation_decision` | action=`revise/collect/finish`, reason, 검토·초안·입력 기록 refs, 선택 query IDs, 라운드·수정 횟수·남은 예산 |
+
+새 단계에는 `round`, `stage`, `input_evidence_refs`, 실행 상태·시작/종료 시각을 기록한다. 모델 호출에는 실제 사용 모델, stage, 논리 호출 번호와 전송 시도 수, 토큰 사용량·경과시간·생략 이유, 실제 입력 refs·view hash·context_selection을 연결한다. API 키·원시 예외 메시지·숨겨진 사고 과정은 저장하지 않는다. `recorded_at/record_sequence/plan_order`의 기존 의미는 유지하며 timestamp만으로 단계 간 의존성을 만들지 않는다.
+
+검증기는 일반 `evidence_refs`뿐 아니라 `input_evidence_refs`, claim_id와 analysis_id 연결도 검사한다. LLM은 해당 호출에 실제 전달된 근거만 참조할 수 있고 존재하는 evidence라도 범위 밖·입력 미포함이면 거절한다. 상충 근거는 각 원문으로 연결한다. ID 존재 검사가 주장 진실성의 증명은 아니다. 가설·제안 query·권고를 검증된 facts/measurements에 병합하지 않는다.
+
+최종 `review.analysis_id`는 최종 `analysis_id`와 같아야 한다. 초안이 변경되면 재검토하거나 skipped/verdict=null로 바꾸고 사유를 남긴다. 이전 검토는 이전 초안 evidence에 보존하며 최종 통과로 표시하지 않는다. 검토에서 문제가 지적된 주장을 제거하는 것도 초안 변경이다. 입력 뷰에 증거가 추가되거나 해석이 변경돼도 새 초안 ID로 검토한다.
+
+#### 기존 소비자와의 호환
+
+- `result_status`, assessments, `quality.analysis`와 sufficiency 호환 요약, `termination_reason`, `causal_status`, `narrative_status`의 기존 의미와 값은 유지한다. 타당 판정만으로 ready/confirmed로 승격하지 않는다.
+- 과거 결과에 확장이 없으면 ‘평가 분리 기록 없음’으로 표시한다. 과거 호출 실패를 추정하거나 기본 acceptable을 넣지 않는다. 알 수 없는 확장 버전은 원본 보존·지원되지 않는 평가 형식으로 표시하고 기존 결과는 읽을 수 있게 한다.
+- 새 Worker는 자신이 쓰는 schema_version=1의 상태·refs·ID를 검증한다. Backend/JC는 기존 저장·공개 권한·hash를 검증하며 LLM 의미 평가를 대신하지 않는다.
+- Ops는 공개 결과 ID/hash와 원인 수준을 그대로 인용하고 새 검토 상태·한계를 함께 전달한다. 미검토·미확정·제외된 주장을 타당·확정·실제 조치로 바꾸지 않는다.
+- 결과 요약은 final draft만, 과거 초안·검토는 디버깅 기록만 참조한다. 보류 내용과 무효 모델 응답을 일반 보고서에 되살리지 않는다.
+- 기존 DB JSON/evidence 경로를 재사용하고 과거 결과·snapshot·hash를 backfill하지 않는다. 생산자 활성화 전에 소비자 호환성을 확인하며 실행 순서는 14를 따른다.
 
 ## 9. 검수
 
