@@ -22,6 +22,8 @@ diagnostics do not invent a reason.
 
 ## Runbook-driven RCA guidance
 
+개발용 RCA의 **워크플로우 디버깅 → 다음 행동 결정**은 Runbook 목적 달성 시 실제 수집한 조회와 추가로 수집하지 않은 선택 조회를 표시한다. ‘조사 목적과 완료 기준’에서 오류 보고·범위·한계 설명과 같은 분석본의 품질 검토를 확인한다. 새 기록에 `decision_policy_status=not_configured`가 있으면 실제 사용한 지침에 종료 기준이 없으며 Runbook 1.1 새 revision 발행이 필요함을 설명한다. 코드 배포·품질 검토 통과·근본 원인 확정을 서로 구분하고, 이 필드가 없는 과거 기록의 미적용 원인은 추정하지 않는다.
+
 RCA reads `quality.runbook_guidance` projected from selected published Runbook
 evidence. `gpu-rca-guidance/1.0` contains meaning, next checks, references and a
 conditional cause note. Unknown errors use the same renderer; legacy results show

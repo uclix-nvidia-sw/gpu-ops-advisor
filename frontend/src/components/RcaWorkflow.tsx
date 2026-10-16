@@ -1,4 +1,4 @@
-import { RcaObjective } from './RcaEvaluation';
+import { RcaDecisionSummary, RcaObjective } from './RcaEvaluation';
 import { useState } from 'react';
 import { obj, rows, str, strings, useList, useResource, type Row } from '../lib/live';
 import { relationMismatch } from '../lib/debug';
@@ -488,6 +488,9 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>결과·남은 한계</h4>
+        {['investigation_decision', 'evidence_evaluation'].includes(kind) && (
+          <RcaDecisionSummary value={body} />
+        )}
         <RcaObjective value={body.decision_assessment} />
         {kind === 'rca_synthesis' && body.generation_mode === 'combined' && (
           <section aria-label="통합 작성 결과">
