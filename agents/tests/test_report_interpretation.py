@@ -559,3 +559,118 @@ def test_incident_selection_ranks_recorded_firing_then_count_without_recounting(
         "quiet-node",
     ]
     assert result == before
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_malformed_json_gets_one_bounded_repair_in_both_origins(
+    result, origin, caplog
+):
+    import json
+    import time
+    import httpx
+    from agent_common.llm import LLM
+    from agent_common.settings import Settings
+
+    result["report_origin"] = origin
+    before = deepcopy(result)
+    requests = []
+    valid = reply_for(payload_for(result))
+
+    def respond(request):
+        data = json.loads(request.content)["messages"][1]["content"]
+        requests.append(json.loads(data))
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "content": '{"sections":'
+                            if len(requests) == 1
+                            else json.dumps(valid)
+                        },
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 20,
+                    "completion_tokens": 10,
+                    "total_tokens": 30,
+                },
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        llm = LLM(
+            Settings(
+                kind="report",
+                llm_base_url="http://fixture.invalid/v1",
+                llm_model="fixture",
+                llm_api_key="fixture-only",
+            ),
+            time.monotonic() + 60,
+            32768,
+            lambda state: None,
+            http=client,
+        )
+        await interpret_report(result, llm)
+    assert result["narrative_status"] == "complete"
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "llm_invalid_output"}
+    ]
+    assert len(requests) == 2
+    assert requests[1]["validation_feedback"]["error"] == "llm_invalid_output"
+    assert result["topics"] == before["topics"]
+    assert result["report_origin"] == origin
+    assert "reason=llm_invalid_output" in caplog.text
+    assert '"sections"' not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "llm_http_error",
+        "llm_output_truncated",
+        "llm_token_budget_exhausted",
+        "llm_deadline_exhausted",
+    ],
+)
+async def test_non_json_failures_are_recorded_without_extra_retry(result, failure):
+    llm = AsyncMock(configured=True, last_failure=failure)
+    llm.complete.return_value = None
+    await interpret_report(result, llm)
+    assert llm.complete.await_count == 1
+    assert result["narrative_status"] == "failed"
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": failure}
+    ]
+
+
+async def test_repair_transport_failure_preserves_initial_validation_reason(
+    result, caplog
+):
+    llm = AsyncMock(configured=True, last_failure="llm_invalid_output")
+    llm.complete.side_effect = [{"sections": []}, None]
+    await interpret_report(result, llm)
+    assert llm.complete.await_count == 2
+    assert result["narrative_status"] == "failed"
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "topic_sections_required"},
+        {"attempt": 2, "reason": "llm_invalid_output"},
+    ]
+    assert "reason=topic_sections_required" in caplog.text
+
+
+async def test_repeated_malformed_json_remains_honest_fallback(result):
+    before = deepcopy(result["topics"])
+    llm = AsyncMock(configured=True, last_failure="llm_invalid_output")
+    llm.complete.return_value = None
+    await interpret_report(result, llm)
+    assert llm.complete.await_count == 2
+    assert result["narrative_status"] == "failed"
+    assert result["topics"] == before
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "llm_invalid_output"},
+        {"attempt": 2, "reason": "llm_invalid_output"},
+    ]
