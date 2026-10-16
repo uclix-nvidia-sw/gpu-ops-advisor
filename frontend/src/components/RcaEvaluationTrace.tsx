@@ -46,10 +46,53 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
     purpose: '주장 보류·보완 수집·기존 판단 유지·종료를 결정합니다.',
   },
 };
-export function stageForRecord(record: Row) {
+export function stageForRecord(record: Row, related: Row[] = []) {
   const kind = str(record.query_id);
-  const combined =
-    (obj(record.snapshot).generation_mode ?? obj(record.quality).generation_mode) === 'combined';
+  const body = { ...obj(record.quality), ...obj(record.snapshot) };
+  const combined = body.generation_mode === 'combined';
+  const sent = Number(obj(body.usage).request_attempts) > 0 || Number(obj(body.usage).calls) > 0;
+  if (kind === 'analysis_review' && body.execution_status === 'skipped')
+    return {
+      title: body.reason === 'draft_changed_after_review' ? '변경 초안 미검토' : '품질 검토 미실행',
+      actor: sent ? '검토 LLM · 최종 상태 기록' : '코드 · 상태 기록',
+      purpose:
+        body.reason === 'draft_changed_after_review'
+          ? '초안이 바뀌어 이전 검토 결과를 적용할 수 없습니다. 최종 초안은 미검토 상태입니다.'
+          : '품질 검토를 실행하지 않은 이유를 기록했습니다.',
+    };
+  if (
+    kind === 'rca_analysis_draft' &&
+    (body.reason === 'review_claims_withheld' ||
+      (typeof record.job_id === 'string' &&
+        typeof record.attempt_no === 'number' &&
+        typeof body.analysis_id === 'string' &&
+        body.analysis_id.length > 0 &&
+        related.some((r) => {
+          const review = { ...obj(r.quality), ...obj(r.snapshot) };
+          return (
+            r.query_id === 'analysis_review' &&
+            review.analysis_id === body.analysis_id &&
+            review.reason === 'draft_changed_after_review' &&
+            review.execution_status === 'skipped' &&
+            review.attempts === 0 &&
+            r.job_id === record.job_id &&
+            r.attempt_no === record.attempt_no
+          );
+        })))
+  )
+    return {
+      ...rcaStages.rca_analysis_draft,
+      title:
+        body.reason === 'review_claims_withheld'
+          ? '주장 제외 후 초안 저장'
+          : '검토 후 변경 초안 저장',
+      purpose:
+        body.reason === 'review_claims_withheld'
+          ? '검토에서 지적한 주장을 제외하고 관련 권고를 보류한 초안을 저장했습니다. 새 LLM 호출은 없습니다.'
+          : '같은 초안 식별값에 변경 후 미검토 기록이 연결되어 있습니다. 이전 초안의 검토 결과를 적용하지 않습니다.',
+    };
+  if (kind === 'investigation_decision' && body.action === 'withhold')
+    return { ...rcaStages.investigation_decision, title: '검토 지적에 따라 주장 제외' };
   if (combined && kind === 'rca_synthesis')
     return {
       title: '증거 해석·RCA 분석',
@@ -64,6 +107,45 @@ export function stageForRecord(record: Row) {
 const label = (v: unknown) => evaluationLabels[str(v)] || rcaReasons[str(v)] || str(v, '기록 없음');
 const amount = (v: unknown) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : '기록 없음';
+
+export function reviewStatus(record: Row) {
+  const body = { ...obj(record.quality), ...obj(record.snapshot) };
+  if (record.query_id !== 'analysis_review') return null;
+  if (body.execution_status === 'skipped')
+    return body.attempts === 0 &&
+      !(Number(obj(body.usage).request_attempts) > 0 || Number(obj(body.usage).calls) > 0)
+      ? '미실행'
+      : '미검토';
+  if (body.execution_status === 'complete') {
+    const verdict = obj(body.review).verdict ?? body.verdict;
+    return `검토 완료 · ${verdict == null ? '판정 미기록' : label(verdict)}`;
+  }
+  return null;
+}
+
+const validationMeaning: Record<string, string> = {
+  author_shape: '통합 응답의 최상위 JSON 구조가 맞지 않습니다.',
+  interpretation_invalid: '증거 해석의 형식 또는 근거 참조가 맞지 않습니다.',
+  interpretation_dependency: '증거 해석이 검증되지 않아 원인 분석을 채택할 수 없습니다.',
+  finding_dependency: '이 응답의 해석 항목을 참조해야 하지만 참조가 없거나 잘못됐습니다.',
+  invalid_hypotheses: '원인 후보는 최대 8개인 목록이어야 합니다.',
+  invalid_hypothesis_shape: '원인 후보에 필요한 항목이 빠졌거나 허용하지 않은 항목이 있습니다.',
+  invalid_claim: '원인 후보 문장이 비어 있거나 문자열이 아니거나 길이 제한을 넘었습니다.',
+  invalid_hypothesis_references: '근거 참조 또는 추가 확인 목록의 형식·길이가 맞지 않습니다.',
+  invalid_evidence_references: '원인 후보의 근거 참조가 허용된 관측과 맞지 않습니다.',
+  empty_supporting_refs: '원인 후보를 뒷받침하는 관측 근거가 없습니다.',
+  unknown_observation_refs: '허용된 관측 근거에 없는 ID를 인용했습니다.',
+  overlapping_evidence_refs: '같은 근거를 지지 근거와 반대 근거에 중복 사용했습니다.',
+  identity_is_not_cause: '장치 연결의 불확실성을 장애 원인으로 제시해 코드 검증에서 제외했습니다.',
+  unresolved_device_mechanism:
+    '대상 장치가 미확정인 근거로 구체적인 고장 원인을 제시해 코드 검증에서 제외했습니다.',
+  numeric: '코드의 수치 표현 검사에서 허용되지 않은 표현을 발견했습니다.',
+  non_korean: '코드의 한국어 표현 검사에서 허용되지 않은 표현을 발견했습니다.',
+  precision_loss: '입력에 확인되지 않은 시각 정밀도 손실을 주장했습니다.',
+  assertion: '코드의 단정 표현 검사에 걸렸습니다. 품질 검토의 판정과는 별개입니다.',
+  invalid_limitations: '분석 한계 목록의 형식·길이가 맞지 않습니다.',
+  invalid_analysis_value: '분석 항목을 읽는 중 예상하지 않은 값 형식을 발견했습니다.',
+};
 
 export function RcaModelFailure({ diagnostic }: { diagnostic: Row }) {
   const code = str(diagnostic.error_code ?? diagnostic.failure_reason ?? diagnostic.reason);
@@ -142,13 +224,48 @@ export function RcaModelFailure({ diagnostic }: { diagnostic: Row }) {
         </p>
       )}
       {rows(diagnostic.validation_failures).map((attempt, i) => (
-        <ul key={i}>
-          {strings(attempt.reasons).map((reason) => (
-            <li key={reason}>
-              {reasons[reason] ?? '검증 사유 설명 미등록'} <code>{reason}</code>
-            </li>
-          ))}
-        </ul>
+        <div key={i}>
+          {rows(attempt.details).length ? (
+            rows(attempt.details).map((detail, j) => (
+              <div key={j}>
+                <p>
+                  <strong>
+                    {typeof detail.hypothesis_index === 'number'
+                      ? `원인 후보 ${detail.hypothesis_index + 1}`
+                      : typeof detail.limitation_index === 'number'
+                        ? `분석 한계 ${detail.limitation_index + 1}`
+                        : '응답 구조'}
+                    :{' '}
+                  </strong>
+                  {validationMeaning[str(detail.rule)] ??
+                    validationMeaning[str(detail.code)] ??
+                    '설명 미등록 · 세부 진단을 확인하세요.'}
+                </p>
+                <details>
+                  <summary>검증 위치·코드</summary>
+                  <p>
+                    위치: <code>{str(detail.path, '미기록')}</code>
+                  </p>
+                  <p>
+                    검증 코드: <code>{str(detail.code)}</code> · 규칙:{' '}
+                    <code>{str(detail.rule)}</code>
+                  </p>
+                  <p>
+                    항목 번호는 응답 목록 순서입니다. 첫 검증 실패를 기록하며 거절된 원문은 저장하지
+                    않습니다.
+                  </p>
+                </details>
+              </div>
+            ))
+          ) : (
+            <>
+              {strings(attempt.reasons).map((reason) => (
+                <p key={reason}>{reasons[reason] ?? '검증 사유 설명 미등록'}</p>
+              ))}
+              <p>이 기록에는 세부 검증 위치·사유가 저장되지 않았습니다.</p>
+            </>
+          )}
+        </div>
       ))}
     </section>
   );
@@ -308,9 +425,11 @@ export function RcaEvaluationTrace({
 export function RcaStageDetails({
   record,
   onEvidence,
+  compact = false,
 }: {
   record: Row;
   onEvidence?: (id: string) => void;
+  compact?: boolean;
 }) {
   const step = stageForRecord(record);
   if (!step) return null;
@@ -319,6 +438,33 @@ export function RcaStageDetails({
   const review = obj(body.review);
   const synthesis = obj(body.diagnostics);
   const allocation = obj(synthesis.budget_allocation);
+  if (
+    record.query_id === 'analysis_review' &&
+    body.execution_status === 'skipped' &&
+    body.reason === 'draft_changed_after_review' &&
+    body.attempts === 0 &&
+    !body.failure_reason &&
+    !(Number(obj(body.usage).request_attempts) > 0 || Number(obj(body.usage).calls) > 0)
+  )
+    return (
+      <section aria-label="평가 단계 상세">
+        {!compact && (
+          <>
+            <h3>{step.title}</h3>
+            <p>{step.purpose}</p>
+          </>
+        )}
+        <p>LLM 호출 없음</p>
+        {typeof body.previous_review_evidence_id === 'string' && onEvidence && (
+          <button
+            className="text-link"
+            onClick={() => onEvidence(body.previous_review_evidence_id as string)}
+          >
+            이전 검토 지적 확인
+          </button>
+        )}
+      </section>
+    );
   const refs = (value: unknown) => (
     <span>
       {strings(value).map((id) =>
@@ -334,10 +480,14 @@ export function RcaStageDetails({
   );
   return (
     <section aria-label="평가 단계 상세">
-      <h3>
-        {step.title} · {step.actor}
-      </h3>
-      <p>{step.purpose}</p>
+      {!compact && (
+        <>
+          <h3>
+            {step.title} · {step.actor}
+          </h3>
+          <p>{step.purpose}</p>
+        </>
+      )}
       {record.query_id === 'rca_result_frozen' && (
         <p>
           RCA 근거 자료 식별값: <code>{str(body.material_hash, '미기록')}</code>. 이후 보고서
@@ -419,7 +569,9 @@ export function RcaStageDetails({
           )}
         </>
       )}
-      {body.execution_status != null && <p>저장된 단계 상태: {label(body.execution_status)}</p>}
+      {!compact && body.execution_status != null && (
+        <p>{reviewStatus(record) ?? label(body.execution_status)}</p>
+      )}
       {body.reason != null && (
         <p>
           사유: {label(body.reason)} <code>{str(body.reason)}</code>
@@ -439,9 +591,10 @@ export function RcaStageDetails({
       )}
       <StageUsage value={body.usage} />
       {body.analysis_id != null && (
-        <p>
-          검토 대상 초안: <code>{str(body.analysis_id)}</code>
-        </p>
+        <details>
+          <summary>검토 대상 식별값</summary>
+          <code>{str(body.analysis_id)}</code>
+        </details>
       )}
       {Object.entries({
         findings: '관측 보고·추론',

@@ -190,7 +190,8 @@ describe('developer RCA workflow entry and evidence', () => {
       />,
     );
     const why = html.slice(html.indexOf('왜 했나'), html.indexOf('어떻게 했나'));
-    expect(why).toContain('llm_context_budget_exhausted');
+    expect(why).toContain('모델 입력 예산');
+    expect(html).toContain('llm_context_budget_exhausted');
     expect(why).not.toContain('<code>failed</code>');
     expect(html).toContain('모델 호출 전 생략');
     expect(html).toContain('없음 (빈 목록 기록)');
