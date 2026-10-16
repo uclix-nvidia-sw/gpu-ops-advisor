@@ -48,7 +48,11 @@ export function ReportDeleteDialog({ job, onClose }: { job: Row; onClose: () => 
         { version: num(job.version), idempotent: true },
       )
     ) {
-      app.notify('보고서를 삭제했습니다. 파일 정리 상태는 작업 이력에서 확인할 수 있습니다.');
+      app.notify(
+        app.mode === 'new'
+          ? '보고서를 삭제했습니다. 아래 삭제 기록에서 파일 정리 상태를 확인할 수 있습니다.'
+          : '보고서를 삭제했습니다. 파일 정리 상태는 작업 이력에서 확인할 수 있습니다.',
+      );
       onClose();
     }
   };

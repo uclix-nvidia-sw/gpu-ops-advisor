@@ -926,7 +926,7 @@ export function ReportContent({
   );
 }
 
-function ReportStatements({
+export function ReportStatements({
   title,
   items,
   metrics,
@@ -936,9 +936,10 @@ function ReportStatements({
   title: string;
   items: Row[];
   metrics: Row[];
-  onEvidence: (id: string) => void;
+  onEvidence?: (id: string) => void;
   recommendation?: boolean;
 }) {
+  if (!onEvidence && !items.length) return null;
   return (
     <div className="report-statements">
       <h4>{title}</h4>
@@ -966,8 +967,13 @@ function ReportStatements({
               {Array.isArray(item.preconditions) &&
               item.preconditions.every((p) => typeof p === 'string') ? (
                 <p>{strings(item.preconditions).map(reportReason).join(' ')}</p>
-              ) : (
+              ) : onEvidence ? (
                 <DataView reportDisplay value={item.preconditions} />
+              ) : (
+                <p>
+                  이전 형식의 전제 조건은 개발자 화면에서 확인해야 합니다. 조건 확인 전 조치를
+                  수행하지 마세요.
+                </p>
               )}
             </details>
           )}
@@ -977,11 +983,13 @@ function ReportStatements({
               <p className="report-value-ref" key={ref}>
                 {metric
                   ? `${metricName(ref)}: ${metricValue(metric)} ${metricUnit(metric)} · ${metricTarget(metric)}`
-                  : `수치 참조 미확인: ${ref}`}
+                  : onEvidence
+                    ? `수치 참조 미확인: ${ref}`
+                    : '연결된 수치를 확인할 수 없습니다.'}
               </p>
             );
           })}
-          {!!strings(item.evidence_refs).length && (
+          {onEvidence && !!strings(item.evidence_refs).length && (
             <details>
               <summary>관련 근거 {strings(item.evidence_refs).length}건 보기</summary>
               <div className="head-actions">
@@ -993,10 +1001,12 @@ function ReportStatements({
               </div>
             </details>
           )}
-          <details>
-            <summary>상세 기록</summary>
-            <DataView reportDisplay value={item} />
-          </details>
+          {onEvidence && (
+            <details>
+              <summary>상세 기록</summary>
+              <DataView reportDisplay value={item} />
+            </details>
+          )}
         </article>
       ))}
     </div>

@@ -144,7 +144,7 @@ function TopicInterpretation({
 }: {
   topic: Row;
   narrative: Row[];
-  onEvidence: (id: string) => void;
+  onEvidence?: (id: string) => void;
 }) {
   const section = narrative.find((item) => item.topic_id === topic.topic_id);
   if (!section || !['observation', 'meaning', 'next_check'].every((key) => str(section[key])))
@@ -266,16 +266,17 @@ function TopicInterpretation({
             </p>
           ))}
         <div className="aggregate-evidence-links">
-          {strings(section.evidence_refs).map((id, i) => (
-            <button
-              type="button"
-              className="button secondary"
-              key={id}
-              onClick={() => onEvidence(id)}
-            >
-              근거 {i + 1} 확인
-            </button>
-          ))}
+          {onEvidence &&
+            strings(section.evidence_refs).map((id, i) => (
+              <button
+                type="button"
+                className="button secondary"
+                key={id}
+                onClick={() => onEvidence(id)}
+              >
+                근거 {i + 1} 확인
+              </button>
+            ))}
         </div>
       </details>
     </section>
@@ -287,7 +288,7 @@ export function AggregateReport({
   onEvidence,
 }: {
   value: Row;
-  onEvidence: (id: string) => void;
+  onEvidence?: (id: string) => void;
 }) {
   const topics = rows(value.topics);
   const usage = topics.find((t) => t.topic_id === 'namespace_usage');
@@ -885,11 +886,12 @@ export function AggregateReport({
           <p key={text}>{text}</p>
         ))}
         <div className="aggregate-evidence-buttons">
-          {strings(value.evidence_refs).map((id, i) => (
-            <button key={id} className="button" onClick={() => onEvidence(id)}>
-              집계 근거 {i + 1}
-            </button>
-          ))}
+          {onEvidence &&
+            strings(value.evidence_refs).map((id, i) => (
+              <button key={id} className="button" onClick={() => onEvidence(id)}>
+                집계 근거 {i + 1}
+              </button>
+            ))}
         </div>
       </details>
     </section>

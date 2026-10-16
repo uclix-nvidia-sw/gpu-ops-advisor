@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useNewDraft, clearNewDraft } from '../lib/newDraft';
+import { type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHead, Panel, Notice } from '../components/ui';
 import { CommandError } from '../components/live';
@@ -19,11 +20,16 @@ export function AggregateReportForm() {
     command = useCommand(),
     navigate = useNavigate();
   const [params] = useSearchParams();
-  const [scheduled, setScheduled] = useState(params.get('schedule') === 'true');
-  const [frequency, setFrequency] = useState('daily');
-  const [lastDay, setLastDay] = useState(previousReportDay());
-  const [time, setTime] = useState('09:00');
-  const [weekday, setWeekday] = useState('1');
+  const draftKey = `report/${params.get('schedule') || 'manual'}`;
+  const [dirty, setDirty] = useNewDraft(`${draftKey}/dirty`, false);
+  const [scheduled, setScheduled] = useNewDraft(
+    `${draftKey}/scheduled`,
+    params.get('schedule') === 'true',
+  );
+  const [frequency, setFrequency] = useNewDraft(`${draftKey}/frequency`, 'daily');
+  const [lastDay, setLastDay] = useNewDraft(`${draftKey}/lastDay`, previousReportDay());
+  const [time, setTime] = useNewDraft(`${draftKey}/time`, '09:00');
+  const [weekday, setWeekday] = useNewDraft(`${draftKey}/weekday`, '1');
   let period;
   try {
     period = aggregatePeriod(lastDay, frequency);
@@ -57,12 +63,14 @@ export function AggregateReportForm() {
       const response = await command.run(scheduled ? '/schedules' : '/reports', body, {
         idempotent: true,
       });
-      if (response)
+      if (response) {
+        if (app.mode === 'new') clearNewDraft(draftKey);
         navigate(
           scheduled
             ? `/schedules/${str(response.id, str(response.schedule_id))}`
             : `/reports/${str(response.job_id)}`,
         );
+      }
     } catch (error) {
       command.setError(error instanceof Error ? error.message : '요청 조건을 확인해 주세요.');
     }
@@ -71,10 +79,14 @@ export function AggregateReportForm() {
     <div className="page aggregate-form">
       <PageHead
         eyebrow=""
-        title="운영 보고서 만들기"
+        title={app.mode === 'new' && scheduled ? '자동 보고서 일정 추가' : '운영 보고서 만들기'}
         description="Namespace별 GPU 활동과 기간 내 사건을 이전 기간과 비교합니다."
       />
-      <form onSubmit={submit}>
+      <form
+        data-dirty={app.mode === 'new' && dirty}
+        onChange={() => setDirty(true)}
+        onSubmit={submit}
+      >
         <Panel
           title="분석 범위와 기간"
           description="상단에서 선택한 클러스터·Namespace 범위로 분석합니다."
@@ -166,14 +178,22 @@ export function AggregateReportForm() {
           >
             {scheduled ? '자동 보고서 등록' : '보고서 생성 요청'}
           </button>
-          <Link to="/reports">목록으로</Link>
+          <Link to={app.mode === 'new' && scheduled ? '/schedules' : '/reports'}>
+            {app.mode === 'new'
+              ? scheduled
+                ? '자동 보고서 설정 목록으로'
+                : '보고서 목록으로'
+              : '목록으로'}
+          </Link>
         </div>
       </form>
-      <details>
-        <summary>이전 분석 방식</summary>
-        <p>기존 주제별 분석과 과거 보고서는 이전 계산 기준을 유지합니다.</p>
-        <Link to="/reports/new?legacy=true">이전 주제별 보고서 요청</Link>
-      </details>
+      {app.mode !== 'new' && (
+        <details>
+          <summary>이전 분석 방식</summary>
+          <p>기존 주제별 분석과 과거 보고서는 이전 계산 기준을 유지합니다.</p>
+          <Link to="/reports/new?legacy=true">이전 주제별 보고서 요청</Link>
+        </details>
+      )}
     </div>
   );
 }

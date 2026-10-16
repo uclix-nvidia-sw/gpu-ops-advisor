@@ -6,15 +6,21 @@ export function ViewMode() {
       {(
         [
           ['classic', '기존'],
-          ['operations', '운영측'],
-          ['developer', '개발측'],
+          ['operations', '운영'],
+          ['developer', '개발자'],
+          ['new', '신규'],
         ] as const
       ).map(([mode, label]) => (
         <button
           key={mode}
           type="button"
           aria-pressed={app.mode === mode}
-          onClick={() => app.setMode(mode)}
+          onClick={() => {
+            if (mode === app.mode) return;
+            const form = document.querySelector('form[data-dirty="true"]');
+            if (form && !window.confirm('작성 중인 입력을 두고 화면을 전환할까요?')) return;
+            app.setMode(mode);
+          }}
         >
           {label}
         </button>

@@ -181,3 +181,7 @@ readiness 실패는 `DATABASE_UNAVAILABLE`(DB/스키마 조회 실패), `SCHEMA_
 - `GET /jobs/{id}/evidence/{evidence_id}?attempt=1`: 작업·시도·근거 ID가 모두 일치하는 행만 반환한다. 다른 작업/시도는 404. 기존 snapshot 외에 저장된 LogQL/PromQL·datasource UID·요청 시간·limit·target 등 허용된 input 인자를 제공한다. 일반 `/evidence/{id}`의 응답 계약은 유지한다.
 
 기존 인증 없는 내부 GUI 계약을 따른다. 진단 응답도 기존 sanitize와 헤더·키·토큰 필드 제거를 적용하며 lease 자격증명, 내부 object_key, 임의 transport 설정, 미공개 후보 본문을 반환하지 않는다. 임의 SQL 실행이나 Grafana/Worker 직접 호출 API가 아니다. 새 migration은 없고, Incident/JC 테이블 미설치는 미제공 상태로 구분한다. Worker가 저장하지 않은 오류 원인·실행 시각은 추가하지 않는다.
+
+## 사건 분석 요약
+
+사건 목록과 상세는 `rca_summary.latest_job` 및 `rca_summary.latest_published`를 독립적으로 제공한다. 최신 조사 진행 중에도 이전 공개 결과를 읽을 수 있다. 공개 참조가 같은 job/kind의 후보를 가리키는 경우만 결과 상태를 제공하며 본문은 포함하지 않는다. 페이지당 한 번의 일괄 조회이며 기존 상세 `analyses`·cursor는 유지한다. 정확한 필드·null·정렬은 [02 조회 계약](../docs/specs/backend/02_백엔드_API_작업명세서.md#gui-개편용-사건-분석-요약)을 따른다.

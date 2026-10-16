@@ -8,7 +8,7 @@ RCA section headings remain 18px and the detected-problem summary 16px. Body, ch
 
 ## Unified RCA list / RCA 목록 통합 — 2026-10-14
 
-`/cases` has one RCA investigation list with server-side execution status filters,
+In classic/developer modes, `/cases` has one RCA investigation list with server-side execution status filters,
 alongside the incident tab. Legacy `?tab=reports` links open the same list filtered
 to completed jobs. Published result titles lead to the RCA report; unpublished
 jobs lead to execution history. Completion and result quality remain separate,
@@ -307,15 +307,20 @@ RCA 결과는 공개 상태, 결과 품질, 종료 사유, 근거 충분성, 분
 
 공개 결과의 evidence_refs를 기존 GET /evidence/{id}로 사용자가 8건씩 불러온다. 동일 job/attempt인지 검사하고 조회 실패는 별도 재조회로 제공한다. D-query별 구간·datasource UID·완전성·표본 수·안전한 오류 코드를 표시하며 구간 표본을 합산하지 않는다. 내부 조사 기록과 원본 결과는 펼쳐 볼 수 있다. 현재 API가 제외하는 input 쿼리 원문과 공개되지 않은 후보·webhook/outbox 기록은 제공하지 않는다. 화면은 운영 Grafana/LLM 검증을 대신하지 않는다.
 
-## 세 가지 GUI 관점 (2026-09-30)
+## 네 가지 GUI 탭
 
-상단의 **기존 / 운영측 / 개발측**에서 전환한다. 같은 Backend API, 관측 범위, URL과 저장 결과를 공유한다. 관점은 브라우저에 저장하며 사건·보고서 상세, 목록 필터와 작성 중인 요청 조건은 전환 시 유지한다.
+`기존(classic) / 운영(operations) / 개발자(developer) / 신규(new)` 순서로 비교할 수 있다. 저장 키는 `gpu-advisor-view`, 기본값은 classic이며 기존 선택값을 유지한다. 신규는 명시적으로 선택한다. 모드는 권한이나 인증 경계가 아니다.
 
-- **기존**: 기존 탐색 구조를 유지하고 보고서 Agent의 계산 기준, 주제별 수치·분모·제외 사유, 사실·판단·권고와 설명 실패 표시를 보강했다.
-- **운영측**: 가로 탐색 메뉴와 업무 중심 홈, 사건 대응 목록, 보고서 서재, 보고서 읽기 목차를 제공한다. 알람·사건 처리·검토 상태를 구분하고 사건 처리와 기록 작성으로 연결한다. 자산, 작업, 일정, 지식, 설정의 기존 기능도 접근 가능하다.
-- **개발측**: RCA와 보고서 흐름에서 단계별 확인 데이터·판단 기준·API 조회 한계를 안내한다. 작업/결과 상세에서는 제공된 필드를 함께 표시하고 저장 근거를 불러와 job/attempt를 대조한다. 현재 탭의 API 요청 경로·HTTP 상태·시간·요청 ID를 최근 50건까지 메모리에 표시한다. 쿼리 값, 본문, 다운로드와 Worker 내부 호출은 이 기록에 포함되지 않는다.
+- 기존·운영·개발자의 메뉴, 화면, 결과·디버깅 경로를 보존한다. 기존/개발자의 `/cases`는 사건/RCA 조사 두 탭, 운영은 사건/조사 이력/최종 보고서 세 탭이다.
+- 신규는 운영 현황·사건 분석·운영 보고서 세 메뉴다. Shell에서 전용 화면 구성을 선택하므로 기존 원본/진단 화면을 먼저 마운트하지 않는다. 개발 경로 직접 진입은 명시적 개발자 전환을 안내하고 `/jobs/:id`는 해당 결과 화면으로 연결한다.
+- 사건 목록은 한 사건당 한 항목이다. `rca_summary`의 최신 조사 상태와 마지막 공개 분석을 구분한다. 구 Backend에서 필드가 없으면 미확인으로 남기며 각 사건의 상세를 순회 조회하지 않는다.
+- 공개 RCA의 설명·한계·오류 이벤트·상태 보고, 집계 보고서의 표·그래프, 구 O계열의 수치·권고 자격을 읽는다. 원본 JSON, 근거 ID 입력, 모델/시도 디버깅은 신규에 포함하지 않는다.
+- 보고서 생성·일정·취소/재시도/삭제, 사건 처리, 검토·실제 조치·정정은 기존 API와 멱등/버전 계약을 쓴다. 조치 대상은 수행 시각의 자산에서 선택한다. 정정은 기존 주체와 근거 참조를 유지한다. 보고서·기록·일정 초안은 같은 브라우저 탭의 sessionStorage로 복원한다.
+- 신규의 링크는 목적지를 이름에 표시하고 제목·본문 링크에 밑줄을 사용한다. 보고서 목록·상세·생성·일정·안내 화면에 같은 보고서 메뉴를 유지한다. 일정 추가는 별도 제목과 자동 보고서 설정 목록 복귀 링크로 구분한다. 사건 상세 상단에는 결과·조사 이력·처리 상태·검토/조치 기록 바로가기가 있다. 본문 목차 이동에서도 출발 정보를 유지하며, 일정에서 연 보고서는 원래 일정으로 돌아간다. 조치 저장에 빠진 입력은 버튼 옆에 안내한다.
+- 신규의 **현재 화면 HTML 저장**은 화면에 렌더링된 결과와 범위/기간/제한을 저장한다. 선택된 그래프/화면 범위이며 전체 원본 내보내기가 아니다. 폼·버튼·링크를 제거하고 CSP를 포함한다. 기존 세 화면의 서버 HTML/CSV 내보내기는 유지한다.
+- 목록 필터는 URL, 추가 페이지와 읽던 위치는 탭 저장소로 복원한다. 외부 복귀 URL은 사용하지 않는다.
 
-보고서 흐름은 현재 구현인 DB 스냅샷 → 관측 수집 → 결정적 계산 → 설명 → 저장·공개를 따른다. 관측 수집은 계획·의존성·예산 기반 병렬 Observation으로 실행된다. 저장된 quality.collection의 task/근거 연결·호출량·시간 진단을 읽고, 미구현 보완 라운드·자유 생성형 Synthesis와 구분한다. 단계 가이드는 실시간 분산 추적이 아니며, 필드가 있다는 것만으로 정상 판정을 내리지 않는다. O08 criteria 1.2의 연결 GPU 활동률은 Namespace 실사용률·독점 할당량이 아니다. Backend가 제공하지 않는 내부 로그는 생성하지 않는다.
+설계·호환 조건은 [07](../docs/specs/frontend/07_프론트엔드_개발명세서.md), 화면별 계약은 [08](../docs/specs/frontend/08_GUI_화면설계서.md), 검수 기준은 [05](../docs/specs/05_테스트_검수_기준서.md#네-탭-gui-개편-검수), 실행 증거와 미검증은 [QA](QA.md)를 따른다. 로컬 구현은 운영 배포를 의미하지 않는다.
 
 ## 작업 중심 개발자 디버깅 — 2026-10-01
 
@@ -362,7 +367,7 @@ RCA result pages now use one final-report layout in both application modes. The
 `확인할 사항` section keeps stored next steps visible, explains missing-evidence
 codes in operational terms, and collapses repeated limitations and diagnostic codes.
 Opaque machine identifiers remain available under target correlation details;
-they do not establish which physical device failed. Cases defaults to RCA results,
+they do not establish which physical device failed. Classic/developer Cases defaults to RCA results,
 and incident details link directly to results. Report rendering is unchanged.
 
 

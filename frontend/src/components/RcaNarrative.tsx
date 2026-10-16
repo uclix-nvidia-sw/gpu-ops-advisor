@@ -80,23 +80,25 @@ function CauseExplanation({
 export function RcaNarrative({
   result,
   consolidateChecks = false,
+  reader = false,
 }: {
   result: Row;
   consolidateChecks?: boolean;
+  reader?: boolean;
 }) {
   const presentation = str(obj(obj(result.quality).report).presentation);
   const incidentFirst = presentation.startsWith('incident-first/');
   // /2: deterministic incident findings lead and the reference guidance is a primary section.
   const findingsLed = presentation === 'incident-first/2';
   const collapsed = (id: string) =>
-    incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed));
+    !reader && incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed));
   const sections = rows(result.narrative).filter(
     (s) => incidentFirst || !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
   );
   if (!sections.length) return null;
   return (
     <section id="final-report" className="rca-narrative" aria-label="RCA 최종 보고서">
-      <RcaEvaluation result={result} />
+      {!reader && <RcaEvaluation result={result} />}
       <header className="rca-narrative-header">
         <h3>RCA 최종 보고서</h3>
         <p>무슨 문제가 보고됐는지, 원인은 무엇인지, 다음에 무엇을 해야 하는지 확인하세요.</p>
@@ -132,7 +134,7 @@ export function RcaNarrative({
               <details key={index} className="rca-narrative-more">
                 <summary>{str(section.title)}</summary>
                 {section.id === 'guidance' ? (
-                  <RcaGuidance paragraphs={paragraphs} result={result} />
+                  <RcaGuidance paragraphs={paragraphs} result={result} reader={reader} />
                 ) : (
                   paragraphs.map((text, i) => <p key={i}>{text}</p>)
                 )}
@@ -154,7 +156,7 @@ export function RcaNarrative({
               {str(section.id) === 'guidance' && findingsLed ? (
                 paragraphs.map((text, i) => <p key={i}>{text}</p>)
               ) : str(section.id) === 'guidance' ? (
-                <RcaGuidance paragraphs={paragraphs} result={result} />
+                <RcaGuidance paragraphs={paragraphs} result={result} reader={reader} />
               ) : str(section.id) === 'cause' ? (
                 <CauseExplanation
                   paragraphs={paragraphs}
@@ -184,14 +186,16 @@ export function RcaNarrative({
               ) : paragraphs.length > 0 ? (
                 paragraphs.map((text, i) =>
                   str(section.id) === 'problem' && text.startsWith('대상 식별 정보') ? (
-                    <details key={i}>
-                      <summary>대상 연결용 식별자</summary>
-                      <p>
-                        아래 ID는 로그와 노드를 연결하는 식별자이며 GPU 모델명이나 고장 장치의 확정
-                        정보가 아닙니다.
-                      </p>
-                      <p>{text}</p>
-                    </details>
+                    reader ? null : (
+                      <details key={i}>
+                        <summary>대상 연결용 식별자</summary>
+                        <p>
+                          아래 ID는 로그와 노드를 연결하는 식별자이며 GPU 모델명이나 고장 장치의
+                          확정 정보가 아닙니다.
+                        </p>
+                        <p>{text}</p>
+                      </details>
+                    )
                   ) : (
                     <p key={i}>
                       {str(section.id) === 'problem'

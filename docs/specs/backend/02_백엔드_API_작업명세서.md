@@ -24,7 +24,7 @@
 
 | 작업 | 현재 구현·코드 근거 | 문제·영향 | 업그레이드 목표·완료 조건 |
 |---|---|---|---|
-| BE-01 사건 조회·소비 | [proxy.go](../../../backend/internal/api/proxy.go)의 목록은 `COALESCE(state,status)`로 필터링하고 DB 행을 반환한다. 상세는 RCA job 목록을 추가한다. PATCH는 `state`, `review_status`, `memo`를 Incident에 전달한다 | Frontend는 현재 `status`를 배지에 사용한다. 신규 Incident 행의 `state`와 legacy `status`가 달라 필터·표시가 어긋난다. 에피소드·분석 생략 사유의 전용 표시도 필요하다 | 사건의 기준 상태는 `state`로 소비하고 `alarm_status`·검토·분석 상태를 분리한다. legacy fallback과 13의 에피소드/이전 사건/생략 사유 응답을 Frontend와 확정한다. 종결 PATCH 후 재조회와 새 사건 연결을 확인한다 |
+| BE-01 사건 조회·소비 | [proxy.go](../../../backend/internal/api/proxy.go)의 목록은 `COALESCE(state,status)`로 필터링하고 상세는 RCA job_id/status를 추가한다. PATCH는 state/review_status/memo를 Incident에 전달한다. Frontend의 state 우선 표시·종결 입력은 구현되어 있다 | 목록·상세에 최신 실행/공개 분석 요약을 additive 필드로 제공한다 | 신규 GUI의 사건 중심 조회를 위해 [분석 요약 계약](#gui-개편용-사건-분석-요약)을 적용한다. 기존 알림·사건·검토 구분과 종결 PATCH를 보존한다 |
 | BE-02 RCA 목적·결과 조회 | [read.go](../../../backend/internal/api/read.go)의 `jobDTO()`는 입력 `purpose_ids`를 복사하고, 공개 candidate 본문만 결과로 반환한다 | 1.4에는 입력 목적이 없으므로 기존 필드만 보면 목적이 사라진다. 미공개 결과를 추정해 채울 수도 없다 | 기존 1.3 목적 표시를 유지하고 1.4는 공개 assessments·선택 근거를 소비한다. 아직 선택/발행되지 않은 목적은 미확정으로 표시한다. 14의 input_contract 전달을 선행 구현하고 두 버전의 목록·상세를 검사한다 |
 | BE-03 Runbook 작성·발행·검색 | [knowledge.go](../../../backend/internal/api/knowledge.go)는 content가 비어 있지 않은 객체인지, scope·근거 참조·검토 hash를 검사한다. code 필터는 `content.code`만 비교한다 | 검토 hash 일치만으로 query/fact/조건의 실행 가능성이 입증되지 않는다. 새 `search.codes`만 가진 Runbook은 기존 code 필터로 찾을 수 없다 | [11 §6.2](../rca-agent/11_RCA_Agent_모듈_설계서.md)의 신규/legacy content 검증 및 선언 코드 검색을 연결한다. 미지원 query·조건·미해석 참조는 실행 가능한 신규 발행을 막고, 기존 발행본은 수정하지 않는다. 관리 화면과 RCA가 같은 revision을 읽는지 확인한다 |
 
@@ -33,6 +33,33 @@ BE-01/02는 Incident·JC·Frontend와 접수 전환 전에 연결하고, BE-03�
 BE-01의 1.4 사건 응답은 `state`, `alarm_status`, `review_status`, `episode_started_at`, `last_observed_at`, `observation_count`, `ended_at`, `ended_reason`, `closed_at`, `prior_incident_id`, `rca_eligibility_reason`을 구분해 제공한다. last_observed_at/count는 재시도를 포함한 수신 기준이다. legacy의 에피소드 전용 값은 null이며 추정하지 않는다. state가 있는 경우 status로 덮어쓰지 않고, legacy state 부재일 때만 기존 status를 표시한다. 신규 state는 open/acknowledged/closed이며 resolved는 알람 상태다. 1.4 job/결과의 입력 버전은 14의 input_contract로 전달한다.
 
 검수 연결: [05](../05_테스트_검수_기준서.md)의 T28/T29(상태 표시), T30(지식), T48(구·신규 소비), T49~T52(에피소드). [기존 Backend E2E](../../../backend/tests/e2e_test.go)와 [실제 JC 연결 시험](../../../backend/tests/job_controller_test.go)은 기존 경로의 출발점이며 위 신규 조건 전체를 검증한 기록은 아니다. **이번 상태: 정적 대조 완료, 신규 구현·제품 테스트·실환경 검수 미실행.**
+
+## GUI 개편용 사건 분석 요약
+
+[07의 G2](../frontend/07_프론트엔드_개발명세서.md#구현-순서와-완료-조건)와 [08 사건 화면](../frontend/08_GUI_화면설계서.md#s05-장애-분석-목록)의 조회 계약이다. [incident_summary.go](../../../backend/internal/api/incident_summary.go)에 구현했다. BE-01의 상태 표시·종결 입력과 기존 상세 analyses를 보존하며, DB schema·JC/Worker 공개 소유권은 바꾸지 않는다.
+
+`GET /incidents`의 각 행과 `GET /incidents/{id}`에 선택적 `rca_summary`를 추가한다. 기존 사건 필드·상세 analyses·필터·정렬·cursor 의미는 유지한다. `rca_summary`는 조회 시점의 최신 연결 정보이며 사건 발생 당시 snapshot이나 과거 보고서의 저장 상태를 대체하지 않는다.
+
+| 필드 | 형태·의미 |
+|---|---|
+| rca_summary | 아래 두 키를 가진 객체. 필드 자체 부재는 구 Backend/미지원이며 분석 없음과 다름 |
+| rca_summary.latest_job | 해당 사건의 RCA 작업 중 `(created_at DESC, id DESC)` 첫 항목 또는 null |
+| latest_job.job_id / status / created_at | 작업 ID, 기존 실행 enum, 작업 접수 시각 |
+| latest_job.queue_reason / termination_reason | 저장된 대기/종료 사유 또는 null. 서버가 새 진단을 합성하지 않음 |
+| rca_summary.latest_published | 공개 참조가 유효한 RCA 작업 중 `(jobs.created_at DESC, jobs.id DESC)` 첫 항목 또는 null |
+| latest_published.job_id / result_ref | 해당 작업과 JC가 지정한 공개 candidate의 ID |
+| latest_published.created_at | 해당 작업의 접수 시각. 분석 완료/공개 시각이라고 표기하지 않음 |
+| latest_published.result_status / narrative_status | 기존 공개 결과 요약과 동일한 저장값. 미기록은 null |
+
+선정은 같은 incident_id·kind=rca에 제한하고 `published_result_id = candidate.id`, candidate.job_id = job.id, candidate.kind=rca 관계를 확인한다. 사건·작업의 scope 검증을 유지한다. 후보가 존재한다는 이유만으로 공개하지 않으며 미공개 candidate나 전체 결과/근거 본문을 목록에 싣지 않는다. 최신 실행의 상태가 succeeded여도 공개 참조가 없으면 latest_published로 만들지 않는다. latest_published의 순서는 작업 접수 순이며 늦게 공개된 과거 작업이 최신 작업을 대체하지 않는다.
+
+두 키는 독립적이다. 새 작업이 running이고 이전 작업에 공개 결과가 있으면 두 항목 모두 반환한다. 작업이 없으면 두 값 null, 작업은 있으나 공개 결과가 없으면 latest_published만 null이다. 이 계약을 구현한 Backend는 객체를 생략하지 않는다. 조회 실패는 오류 응답이지 null 요약이 아니다.
+
+기존 `/analyses?incident_id=...`의 페이지 조회는 이전 분석용으로 유지한다. 사건 목록의 페이지를 먼저 확정한 뒤 해당 사건들의 요약만 bounded join/일괄 조회로 구한다. 행별 추가 SQL/HTTP 요청, 전체 result body 전송, 모든 사건의 전체 작업 조회를 하지 않는다. 기존 `read.go`의 공개 결과 요약과 필드/null 의미를 재사용하되 범용 실행 계층을 새로 만들지 않는다.
+
+이번 필수 보완에 검색·검토/분석 상태 필터·전체 미검토 KPI·새 endpoint·DB migration은 포함하지 않는다. 사건 목록 기간은 발생 시각, 정렬/cursor는 created_at/id의 기존 의미를 유지한다. 필요 인덱스와 쿼리 계획은 G2의 실제 DB 검수에서 확인하고 근거 없이 schema 변경을 추가하지 않는다.
+
+담당은 B, 소비자는 A의 일반 사건 목록·상세·홈이다. Incident/JC/Worker의 쓰기·공개 정책과 저장 결과를 변경하지 않는다. 구현 시 [Backend API](../../../backend/API.md)와 조회 테스트를 함께 갱신한다. Backend 선배포 → 일반 UI 적용 순서로 진행할 수 있으며 실제 배포는 별도 승인 범위다. 구 Backend에 대한 UI fallback은 07을 따른다. 검수는 [05 G-API](../05_테스트_검수_기준서.md#네-탭-gui-개편-검수)다.
 
 ## 책임
 

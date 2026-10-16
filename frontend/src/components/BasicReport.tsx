@@ -37,7 +37,7 @@ export function ReportChecks({
   onEvidence,
 }: {
   topics: Row[];
-  onEvidence: (id: string) => void;
+  onEvidence?: (id: string) => void;
 }) {
   const findings = operationalFindings(topics);
   if (!findings.length) return null;
@@ -68,11 +68,12 @@ export function ReportChecks({
               사건·조사 상세
             </a>
           )}
-          {strings(finding.evidence_refs).map((id, index) => (
-            <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
-              근거 {index + 1}
-            </button>
-          ))}
+          {onEvidence &&
+            strings(finding.evidence_refs).map((id, index) => (
+              <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
+                근거 {index + 1}
+              </button>
+            ))}
         </div>
       </details>
     </li>

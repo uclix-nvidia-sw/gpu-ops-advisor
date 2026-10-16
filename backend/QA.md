@@ -1,3 +1,11 @@
+## Incident summary / 신규 GUI 사건 요약 계약
+
+2026-10-16, main `a92cfcf` 기반 로컬 변경. Go 1.26.2에서 Backend `go test ./...`, `go vet ./...`, `go test -race ./...`(CGO/w64devkit), `go build ./...` 통과. Windows 상위 경로의 대괄호로 인한 embed 제약을 피하기 위해 현재 Backend·공유 모듈 소스를 임시 경로로 복사해 검사했다.
+
+전용 loopback PostgreSQL의 새 UTF-8 DB에서 `go test -tags=e2e ./internal/api -count=1 -timeout=5m`와 `go test -tags=e2e ./tests -count=1 -timeout=10m` 통과. 최신 실행/이전 공개 결과의 독립 선택, 미공개 candidate 차단, 다른 job의 공개 포인터·scope 불일치 배제, 동률 정렬, null·페이지 경계, 기존 상세 projection 및 Backend/JC 계약 회귀를 포함한다. 사건 페이지당 한 번의 요약 조회이며 migration·운영 DB 변경은 없다.
+
+브라우저와 실제 Backend를 연결한 전체 신규 GUI 여정, 운영 발행·배포·실제 모델 품질은 미검증이다. PR은 `6fd65d4` 기준으로 통합했으며 검사한 Backend·공유 모듈 소스와 동일함을 확인했다.
+
 ## Runbook contract validation / Runbook 계약 검증
 
 2026-10-15, main `bf85dfd` 기반 로컬 변경: Runbook 1.0/1.1과 명시적인 목적·필수 기준·차단 조건·조회 연결을 검증한다. 현재 Backend 소스의 `go vet ./...`, `go test -race ./...`, `go build ./...` 통과. Windows 경로의 대괄호로 인한 embed 제약을 피하려고 ASCII 임시 경로에 현재 소스를 복사했으며 Go 1.26.2와 CGO/w64devkit을 사용했다. 새 PostgreSQL에서 Backend 생성→검토→발행과 실제 RCA Worker 소비·schema 2 결과 공개도 통과했다([Agent QA](../agents/QA.md)). 모델/Grafana는 fixture이며 운영 발행·배포·실제 모델 품질은 미검증이다. DB migration 변경은 없다.

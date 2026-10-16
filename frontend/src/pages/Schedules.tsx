@@ -1,3 +1,4 @@
+import { useNewDraft, clearNewDraft } from '../lib/newDraft';
 import { scheduleLabels, schedulePeriods, scheduleWindows } from '../lib/reportPeriod';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -9,8 +10,9 @@ import { useApp } from '../lib/store';
 import { reportTitle } from '../lib/workflow';
 import { ReportTimeNote, ReportScope } from '../components/ReportMeta';
 import { reportTabs } from '../lib/reportNavigation';
-export function Schedules() {
-  const { id } = useParams();
+export function Schedules({ scheduleId }: { scheduleId?: string } = {}) {
+  const { id: routeId } = useParams();
+  const id = scheduleId || routeId;
   return id ? <ScheduleDetail key={id} id={id} /> : <ScheduleList />;
 }
 function ScheduleList() {
@@ -21,14 +23,18 @@ function ScheduleList() {
       <PageHead
         eyebrow="REPORT SCHEDULES"
         title="자동 보고서 설정"
-        description="매일·매주·매월 지정한 시각에 보고서를 자동으로 만듭니다."
+        description={
+          app.mode === 'new'
+            ? '매일·매주 보고서를 만드는 일정을 관리합니다. 기존 월간 일정도 여기에서 확인할 수 있습니다.'
+            : '매일·매주·매월 지정한 시각에 보고서를 자동으로 만듭니다.'
+        }
         actions={
           <Link className="button primary" to="/reports/new?schedule=true">
-            자동 생성 설정
+            {app.mode === 'new' ? '자동 보고서 일정 추가' : '자동 생성 설정'}
           </Link>
         }
       />
-      <NavTabs items={reportTabs} />
+      {app.mode !== 'new' && <NavTabs items={reportTabs} />}
       <ReportTimeNote />
       <Panel title="등록된 일정">
         <QueryState query={q} empty={!q.items.length}>
@@ -50,6 +56,13 @@ function ScheduleList() {
                       <Link className="text-link" to={`/schedules/${str(s.id)}`}>
                         {str(s.name, reportTitle(obj(s.report_spec)))}
                       </Link>
+                      {app.mode === 'new' && (
+                        <p>
+                          <Link className="text-link" to={`/schedules/${str(s.id)}`}>
+                            일정 상세·편집 →
+                          </Link>
+                        </p>
+                      )}
                       <ReportScope job={obj(s.report_spec)} />
                     </td>
                     <td>
@@ -73,7 +86,10 @@ function ScheduleList() {
                           {s.awaiting_occurrence === true && (
                             <p className="cell-sub">마지막으로 기록된 회차</p>
                           )}
-                          <ScheduleExecution occurrence={obj(s.latest_occurrence)} />
+                          <ScheduleExecution
+                            occurrence={obj(s.latest_occurrence)}
+                            returnTo={app.mode === 'new' ? '/schedules' : undefined}
+                          />
                         </>
                       ) : (
                         <Badge
@@ -121,7 +137,7 @@ function ScheduleDetail({ id }: { id: string }) {
       <PageHead
         eyebrow="SCHEDULE DETAIL"
         title={str(s.name, reportTitle(obj(s.report_spec)))}
-        description={id}
+        description={app.mode === 'new' ? '실행 조건과 생성된 보고서를 확인하세요.' : id}
         actions={
           <Link className="button" to="/schedules">
             자동 보고서 설정 목록
@@ -140,16 +156,28 @@ function ScheduleDetail({ id }: { id: string }) {
               <span>
                 다음 실행 예정: {s.enabled ? formatDate(str(s.next_run_at)) : '일시 정지 중'}
               </span>
-              <span>revision {num(s.revision)}</span>
+              {app.mode !== 'new' && <span>revision {num(s.revision)}</span>}
             </div>
-            <DataView
-              reportDisplay
-              value={{ frequency: s.frequency, period: s.period, report_spec: s.report_spec }}
-            />
-            <details>
-              <summary>원본 일정 설정</summary>
-              <DataView value={{ local_time: s.local_time, timezone: s.timezone }} />
-            </details>
+            {app.mode === 'new' ? (
+              <>
+                <ReportScope job={obj(s.report_spec)} />
+                <p>
+                  {scheduleLabels[str(s.frequency)]} · {str(s.local_time)} · {str(s.timezone)} ·{' '}
+                  {scheduleWindows[str(s.frequency)]}
+                </p>
+              </>
+            ) : (
+              <>
+                <DataView
+                  reportDisplay
+                  value={{ frequency: s.frequency, period: s.period, report_spec: s.report_spec }}
+                />
+                <details>
+                  <summary>원본 일정 설정</summary>
+                  <DataView value={{ local_time: s.local_time, timezone: s.timezone }} />
+                </details>
+              </>
+            )}
             <div className="head-actions">
               <button
                 className="button"
@@ -184,14 +212,19 @@ function ScheduleDetail({ id }: { id: string }) {
               <div className="live-padding stack">
                 {occurrences.items.map((o) => (
                   <div className="data-item" key={str(o.id)}>
-                    <ScheduleExecution occurrence={o} />
+                    <ScheduleExecution
+                      occurrence={o}
+                      returnTo={app.mode === 'new' ? `/schedules/${id}#schedule-runs` : undefined}
+                    />
                     <p className="cell-sub">
                       분석 기간: {formatDate(str(o.period_start))} – {formatDate(str(o.period_end))}
                     </p>
-                    <details>
-                      <summary>회차 원본 기록</summary>
-                      <DataView value={o} />
-                    </details>
+                    {app.mode !== 'new' && (
+                      <details>
+                        <summary>회차 원본 기록</summary>
+                        <DataView value={o} />
+                      </details>
+                    )}
                     {app.mode === 'developer' && (
                       <details>
                         <summary>이 회차의 DB 키 연결 설명</summary>
@@ -236,10 +269,10 @@ function ScheduleDetail({ id }: { id: string }) {
                       {o.job_id != null && (
                         <Link
                           className="button"
-                          to={`/jobs/${str(o.job_id)}`}
+                          to={`/${app.mode === 'new' ? 'reports' : 'jobs'}/${str(o.job_id)}`}
                           state={{ from: `/schedules/${id}` }}
                         >
-                          작업 보기
+                          {app.mode === 'new' ? '보고서 현황 보기' : '작업 보기'}
                         </Link>
                       )}
                     </div>
@@ -263,7 +296,13 @@ const occurrenceReasons: Record<string, string> = {
   dispatch_deadline_exceeded: '작업 전달 기한이 지났습니다.',
 };
 
-export function ScheduleExecution({ occurrence }: { occurrence: Row }) {
+export function ScheduleExecution({
+  occurrence,
+  returnTo,
+}: {
+  occurrence: Row;
+  returnTo?: string;
+}) {
   const job = obj(occurrence.execution);
   const state = str(job.status);
   const started = Boolean(job.started_at) || num(job.attempt_no) > 0;
@@ -314,7 +353,11 @@ export function ScheduleExecution({ occurrence }: { occurrence: Row }) {
         <p className="cell-sub">{labels[str(job.queue_reason)] || str(job.queue_reason)}</p>
       )}
       {state === 'succeeded' && job.result_ref != null && occurrence.job_id != null && (
-        <Link className="text-link" to={`/reports/${str(occurrence.job_id)}#final-report`}>
+        <Link
+          className="text-link"
+          to={`/reports/${str(occurrence.job_id)}#final-report`}
+          state={returnTo ? { from: returnTo } : undefined}
+        >
           보고서 보기
         </Link>
       )}
@@ -324,14 +367,22 @@ export function ScheduleExecution({ occurrence }: { occurrence: Row }) {
 
 function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => void }) {
   const cmd = useCommand(),
+    app = useApp(),
     calendar = initial;
-  const [frequency, setFrequency] = useState(str(calendar.frequency, 'daily')),
-    [time, setTime] = useState(str(calendar.local_time, '09:00')),
-    [day, setDay] = useState(num(calendar.day, 1)),
-    [weekday, setWeekday] = useState(num(calendar.weekday, 1));
+  const draftKey = `schedule/${str(initial.id)}`;
+  const [dirty, setDirty] = useNewDraft(`${draftKey}/dirty`, false);
+  const [frequency, setFrequency] = useNewDraft(
+      `${draftKey}/frequency`,
+      str(calendar.frequency, 'daily'),
+    ),
+    [time, setTime] = useNewDraft(`${draftKey}/time`, str(calendar.local_time, '09:00')),
+    [day, setDay] = useNewDraft(`${draftKey}/day`, num(calendar.day, 1)),
+    [weekday, setWeekday] = useNewDraft(`${draftKey}/weekday`, num(calendar.weekday, 1));
   return (
     <Modal title="일정 실행 조건 편집" onClose={onClose}>
       <form
+        data-dirty={app.mode === 'new' && dirty}
+        onChange={() => setDirty(true)}
         className="stack"
         onSubmit={async (e) => {
           e.preventDefault();
@@ -347,17 +398,29 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
               },
               { method: 'PATCH', version: num(initial.version) },
             )
-          )
+          ) {
+            if (app.mode === 'new') clearNewDraft(draftKey);
             onClose();
+          }
         }}
       >
         <Field label="반복 주기">
           <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            {Object.entries(scheduleLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
+            {Object.entries(scheduleLabels)
+              .filter(
+                ([value]) =>
+                  app.mode !== 'new' ||
+                  !Array.isArray(obj(initial.report_spec).topic_ids) ||
+                  !(obj(initial.report_spec).topic_ids as string[]).some((id) =>
+                    ['namespace_usage', 'incident_summary'].includes(id),
+                  ) ||
+                  value !== 'monthly',
+              )
+              .map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
           </select>
         </Field>
         <Field
@@ -394,8 +457,10 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
           </Field>
         )}
         <Notice>
-          {scheduleWindows[frequency]} 전체를 분석합니다. 저장된 새 revision은 이후 회차에
-          적용됩니다.
+          {scheduleWindows[frequency]} 전체를 분석합니다.{' '}
+          {app.mode === 'new'
+            ? '변경 내용은 이후 회차부터 적용됩니다.'
+            : '저장된 새 revision은 이후 회차에 적용됩니다.'}
         </Notice>
         <CommandError error={cmd.error} />
         <button className="button primary" disabled={cmd.busy}>
