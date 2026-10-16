@@ -10,7 +10,7 @@ import { DataView, More, QueryState } from './live';
 import { RawRecord } from './TraceView';
 import { EvidenceEvaluation } from './RcaDebug';
 import { evaluationLabels } from './RcaEvaluation';
-import { rcaStages, RcaStageDetails, stageForRecord } from './RcaEvaluationTrace';
+import { rcaStages, RcaStageDetails, stageForRecord, reviewStatus } from './RcaEvaluationTrace';
 import './RcaWorkflow.css';
 
 const steps: Record<string, { title: string; actor: string; purpose: string }> = {
@@ -207,14 +207,16 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                 aria-current={record.id === id ? 'step' : undefined}
                 onClick={() => setSelected(str(record.id))}
               >
-                기록 {i + 1} · {(stageForRecord(record) || stepFor(str(record.query_id))).title}
+                기록 {i + 1} ·{' '}
+                {(stageForRecord(record, q.items) || stepFor(str(record.query_id))).title}
                 <small>
                   {typeof record.round === 'number'
                     ? `${record.round + 1}회차 · `
                     : typeof obj(record.quality).round === 'number'
                       ? `${Number(obj(record.quality).round) + 1}회차 · `
                       : ''}
-                  {label(obj(record.quality).execution_status || record.tool_status)}
+                  {reviewStatus(record) ??
+                    label(obj(record.quality).execution_status || record.tool_status)}
                 </small>
               </button>
             ))}
@@ -297,7 +299,7 @@ export function RcaWorkflowRecord({
   onEvidence: (id: string) => void;
 }) {
   const kind = str(record.query_id),
-    step = stageForRecord(record) || stepFor(kind),
+    step = stageForRecord(record, relatedRecords) || stepFor(kind),
     body = obj(record.snapshot),
     meta = obj(record.quality),
     diagnostics = obj(body.diagnostics);
@@ -346,20 +348,27 @@ export function RcaWorkflowRecord({
       <h3>{step.title}</h3>
       <section>
         <h4>무엇을 했나</h4>
-        <p>기록 성격: {recordType(kind)}</p>
+        <p>
+          기록 성격:{' '}
+          {kind === 'analysis_review' && reviewStatus(record) === '미실행'
+            ? '미실행 상태 기록'
+            : recordType(kind)}
+        </p>
         <p>
           담당: {step.actor} · 저장된 단계 상태:{' '}
-          {label(
-            body.execution_status || meta.execution_status || body.status || record.tool_status,
-          )}
+          {reviewStatus(record) ??
+            label(
+              body.execution_status || meta.execution_status || body.status || record.tool_status,
+            )}
         </p>
-        <p>
+        <details>
+          <summary>기록 식별값</summary>
           기록 ID: <code>{str(record.id)}</code> · 조회/단계 ID: <code>{kind}</code>
-        </p>
+        </details>
       </section>
       <section>
         <h4>왜 했나 · 저장된 이유와 결정</h4>
-        <p>공통 역할: {step.purpose}</p>
+        <p>{step.purpose}</p>
         {queryPlans.map((s, i) => (
           <p key={i}>
             저장된 조사 계획:{' '}
@@ -376,10 +385,14 @@ export function RcaWorkflowRecord({
         ))}
         {reason ? (
           <p>
-            {label(reason)} <code>{str(reason)}</code>
+            {reason === 'review_claims_withheld'
+              ? '검토 지적에 따라 주장 제외·권고 보류'
+              : label(reason)}
           </p>
         ) : !queryPlans.length ? (
-          <p>이 기록의 개별 수행 사유는 기록 없음. 위 설명은 기록 종류의 공통 역할입니다.</p>
+          <details>
+            <summary>수행 사유 기록</summary>개별 수행 사유는 기록 없음
+          </details>
         ) : (
           <p>
             계획의 목적이며 실제 호출 시작 순서를 증명하지 않습니다. 선택 조회의 실행 조건은 해당
@@ -441,7 +454,6 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>어떻게 했나 · 처리 기준과 실행 기록</h4>
-        <p>아래는 이 기록에 저장된 실행 정보입니다. 없는 시간·모델·횟수는 추정하지 않습니다.</p>
         {kind === 'runbook' && (
           <p>
             선택한 지침의 버전 ID: <code>{str(obj(record.input).revision_id, '미기록')}</code>
@@ -465,10 +477,11 @@ export function RcaWorkflowRecord({
               model: body.model ?? meta.model,
               attempts: body.attempts ?? meta.attempts,
               input_view_hash: body.input_view_hash,
+              reason,
             }}
           />
         </details>
-        <RcaStageDetails record={record} onEvidence={onEvidence} />
+        <RcaStageDetails record={record} onEvidence={onEvidence} compact />
         {meta.selection_reason != null && (
           <p>조회 연결 선택 사유: {label(meta.selection_reason)}</p>
         )}
@@ -476,12 +489,9 @@ export function RcaWorkflowRecord({
       <section>
         <h4>결과·남은 한계</h4>
         <RcaObjective value={body.decision_assessment} />
-        {body.generation_mode === 'combined' && (
+        {kind === 'rca_synthesis' && body.generation_mode === 'combined' && (
           <section aria-label="통합 작성 결과">
             <h4>증거 해석·RCA 분석 · 작성 LLM</h4>
-            <p>
-              한 논리 요청에서 해석과 원인 후보를 작성했습니다. 품질 검토는 별도 LLM이 수행합니다.
-            </p>
             <p>
               {diagnostics.adoption === 'interpretation_only'
                 ? '해석은 보존했지만 원인 분석은 채택하지 못했습니다.'

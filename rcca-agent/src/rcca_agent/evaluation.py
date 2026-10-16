@@ -398,7 +398,15 @@ async def evaluate_analysis(
             view,
             interpretation if combined or rubric == "2" else None,
         )
-        record("rca_analysis_draft", {**draft, "input_view": view})
+        record(
+            "rca_analysis_draft",
+            {
+                **draft,
+                "input_view": view,
+                "reason": "review_claims_withheld",
+                "previous_review_evidence_id": review_id,
+            },
+        )
         feedback_review = review
         review = None
         review_diag = {

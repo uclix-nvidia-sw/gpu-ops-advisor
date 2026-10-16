@@ -149,7 +149,7 @@ describe('separate RCA evaluations', () => {
     );
     for (const text of [
       '2회차',
-      'LLM ③',
+      '코드 · 상태 기록',
       '논리 모델 요청 0회',
       'new-draft',
       '최종 초안은 미검토',

@@ -385,6 +385,13 @@ async def test_round_reviews_once_and_withholds_rejected_claims(mode):
         assert output["review"]["verdict"] is None
         assert output["review"]["reason"] == "draft_changed_after_review"
         assert output["review_output"]["issues"]
+        drafts = [e for e in obs.evidence if e["query_id"] == "rca_analysis_draft"]
+        reviews = [e for e in obs.evidence if e["query_id"] == "analysis_review"]
+        assert len(drafts) == len(reviews) == 2
+        assert drafts[-1]["quality"]["reason"] == "review_claims_withheld"
+        assert drafts[-1]["snapshot"]["previous_review_evidence_id"] == reviews[0]["id"]
+        assert reviews[-1]["quality"]["attempts"] == 0
+        assert reviews[-1]["quality"]["reason"] == "draft_changed_after_review"
     elif mode == "oversized_review":
         assert output["review"]["verdict"] is None
         assert output["review"]["reason"] == "llm_input_size_exceeded"

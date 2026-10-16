@@ -60,13 +60,15 @@ def author_prompt(payload):
     )
 
 
-def validate_author(response, view, criteria):
+def validate_author(response, view, criteria, details=None):
+    details = details if details is not None else []
     interpretation, candidates, limitations, errors = None, [], [], []
     if not isinstance(response, dict) or set(response) != {
         "interpretation",
         "hypotheses",
         "limitations",
     }:
+        details.append({"code": "author_shape", "path": "$", "rule": "shape"})
         return None, [], [], ["author_shape"]
     try:
         interpretation = validate_interpretation(
@@ -77,24 +79,33 @@ def validate_author(response, view, criteria):
         )
     except (ValueError, TypeError, KeyError):
         errors.append("interpretation_invalid")
+        details.append(
+            {
+                "code": "interpretation_invalid",
+                "path": "$.interpretation",
+                "rule": "shape_or_refs",
+            }
+        )
     try:
         findings = {row["id"] for row in (interpretation or {}).get("findings", [])}
         hypotheses = response["hypotheses"]
-        if (
-            interpretation is None
-            or not isinstance(hypotheses, list)
-            or len(hypotheses) > 8
-        ):
-            raise ValueError("interpretation_dependency")
+        if interpretation is None:
+            raise SynthesisValidationError("interpretation_dependency")
+        if not isinstance(hypotheses, list) or len(hypotheses) > 8:
+            raise SynthesisValidationError("invalid_hypotheses")
         plain = []
-        for h in hypotheses:
+        for index, h in enumerate(hypotheses):
+            if not isinstance(h, dict):
+                raise SynthesisValidationError("invalid_hypothesis_shape", index=index)
             if (
-                not isinstance(h, dict)
-                or not isinstance(h.get("finding_refs"), list)
+                not isinstance(h.get("finding_refs"), list)
                 or not h["finding_refs"]
-                or not set(h["finding_refs"]) <= findings
+                or any(
+                    not isinstance(ref, str) or ref not in findings
+                    for ref in h["finding_refs"]
+                )
             ):
-                raise ValueError("finding_dependency")
+                raise SynthesisValidationError("finding_dependency", index=index)
             plain.append(
                 {key: value for key, value in h.items() if key != "finding_refs"}
             )
@@ -108,9 +119,30 @@ def validate_author(response, view, criteria):
         for candidate, hypothesis in zip(candidates, hypotheses, strict=True):
             candidate["finding_refs"] = hypothesis["finding_refs"]
         limitations = response["limitations"]
-    except (SynthesisValidationError, ValueError, TypeError, KeyError):
+    except (SynthesisValidationError, ValueError, TypeError, KeyError) as exc:
         candidates = []
         errors.append("analysis_invalid")
+        # The typed exception contains fixed codes/offsets only, never rejected text.
+        detail = (
+            dict(exc.diagnostic)
+            if isinstance(exc, SynthesisValidationError)
+            else {"code": "invalid_analysis_value", "rule": "shape"}
+        )
+        code = detail["code"]
+        path = "$.limitations" if code == "invalid_limitations" else "$.hypotheses"
+        if "limitation_index" in detail:
+            path += f"[{detail['limitation_index']}]"
+        if "hypothesis_index" in detail:
+            path += f"[{detail['hypothesis_index']}]"
+            if code == "finding_dependency":
+                path += ".finding_refs"
+            elif code not in {
+                "invalid_hypothesis_shape",
+                "invalid_hypothesis_references",
+                "invalid_evidence_references",
+            }:
+                path += ".claim"
+        details.append({**detail, "path": path})
     return interpretation, candidates, limitations, errors
 
 
@@ -173,12 +205,15 @@ async def generate(llm, payload, diagnostics):
                 getattr(llm, "last_failure", None) or "llm_no_response"
             )
         else:
+            details = []
             interpretation, candidates, limitations, errors = validate_author(
-                response, view, semantic_criteria(payload)
+                response, view, semantic_criteria(payload), details
             )
             if errors:
                 diagnostics["error_code"] = "invalid_author_response"
-                diagnostics["validation_failures"] = [{"attempt": 1, "reasons": errors}]
+                diagnostics["validation_failures"] = [
+                    {"attempt": 1, "reasons": errors, "details": details}
+                ]
     valid = interpretation is not None and not errors
     trace.update(
         interpretation="validated_response"

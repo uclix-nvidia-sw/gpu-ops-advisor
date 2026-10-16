@@ -19,7 +19,11 @@ XID 79와 SXID 11001 작성 원본에 Runbook 1.1 `decision_policy`를 넣었다
 
 통합 프롬프트는 기존 분석·해석의 판단 규칙만 재사용하며, 출력 지시는 `interpretation`·`hypotheses`·`limitations`를 가진 JSON 객체 하나로 제공한다. 해석의 목록은 `interpretation` 내부에, Runbook 의미 기준이 있으면 `criterion_assessments`도 그 내부에 둔다. 분리 모드의 프롬프트와 기존 형식·참조·부분 성공 검증은 유지한다.
 
-개발용 RCA의 **분석 요약·LLM 실행 기록**과 **워크플로우 단계 상세**는 요청 실패·호출 전 생략·응답 수신 후 검증 실패를 구분한다. `invalid_author_response` / `author_shape`는 응답을 받은 뒤 최상위 구조가 맞지 않아 거절한 경우이며 연결 실패가 아니다. HTTP 오류는 모델 서버 요청 실패로, `remote_call_state=unknown`은 통신 중단·원격 실행 상태 미확인으로 표시한다. 응답 횟수만으로 채택 여부를 판단하지 않으며, 실제 누락·추가 항목과 거절된 응답 원문은 저장하지 않으므로 기존 기록에서 추정하지 않는다. 회귀 검사는 [통합 프롬프트 계약](../agents/tests/test_rca_author_prompt.py)과 [GUI 실패 구분](../frontend/src/components/RcaModelFailure.test.tsx)을 포함한다. fixture 통과와 실제 운영 모델의 출력 개선은 별도 검증이다.
+개발용 RCA의 **분석 요약·LLM 실행 기록**과 **워크플로우 단계 상세**는 요청 실패·호출 전 생략·응답 수신 후 검증 실패를 구분한다. `invalid_author_response` / `author_shape`는 응답을 받은 뒤 최상위 구조가 맞지 않아 거절한 경우이며 연결 실패가 아니다. HTTP 오류는 모델 서버 요청 실패로, `remote_call_state=unknown`은 통신 중단·원격 실행 상태 미확인으로 표시한다. 응답 횟수만으로 채택 여부를 판단하지 않으며, 실제 누락·추가 항목과 거절된 응답 원문은 저장하지 않으므로 기존 기록에서 추정하지 않는다. 통합 응답의 검증 실패는 `diagnostics.validation_failures[].details`에 기존 검증기의 코드·규칙·응답 항목 경로를 보존한다. `hypothesis_index`와 `limitation_index`는 0부터 시작하며 GUI는 1부터 표시한다. 각 영역의 첫 실패를 기록하고 거절된 원문·임의 필드명·예외 메시지는 저장하지 않는다. `analysis_invalid`만 있는 과거 기록의 세부 원인은 복원하지 않는다.
+
+검토 완료와 검토 통과를 구분한다. 검토 지적을 반영해 코드가 주장을 제외하면 `review_claims_withheld` 사유와 이전 검토 ID를 가진 초안을 저장한다. 뒤의 `draft_changed_after_review`·`attempts=0` 기록은 **변경 초안 미검토** 상태이며 추가 LLM 호출이 아니다. GUI는 검토 판정·미실행·주장 제외를 구분하고, 상세 코드·식별값은 접어서 표시한다. 과거 초안은 같은 작업·시도·초안 식별값의 미실행 검토 기록이 연결되는 경우에만 변경 초안으로 표시한다.
+
+회귀 검사는 [통합 프롬프트 계약](../agents/tests/test_rca_author_prompt.py)과 [GUI 실패 구분](../frontend/src/components/RcaModelFailure.test.tsx)을 포함한다. fixture 통과와 실제 운영 모델의 출력 개선은 별도 검증이다.
 
 ## 보완 조회 선택
 
