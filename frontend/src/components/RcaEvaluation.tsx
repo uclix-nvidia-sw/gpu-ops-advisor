@@ -1,4 +1,4 @@
-import { obj, rows, str, type Row } from '../lib/live';
+import { obj, rows, str, strings, type Row } from '../lib/live';
 
 export const evaluationLabels: Record<string, string> = {
   complete: '완료',
@@ -170,6 +170,12 @@ export function RcaObjective({ value }: { value: unknown }) {
   return (
     <section aria-label="조사 목적과 완료 기준">
       <h4>{evaluationLabels[str(objective.status)] || '조사 기준 확인 중'}</h4>
+      {objective.status === 'achieved' && (
+        <p>
+          대상·기간의 오류 보고와 해석의 한계를 확인했고, 같은 분석본의 품질 검토도 통과했습니다.
+          Runbook의 조사 목적을 충족했으므로 선택 조회가 남아 있어도 추가 수집 없이 종료합니다.
+        </p>
+      )}
       <p>
         목적 달성과 근본 원인 확정은 다릅니다. 아래 필수 기준과 같은 최종 초안의 품질 검토가 모두
         충족되어야 목적 달성으로 종료합니다.
@@ -249,5 +255,37 @@ export function RcaObjective({ value }: { value: unknown }) {
         </div>
       ))}
     </section>
+  );
+}
+
+export function RcaDecisionSummary({ value }: { value: unknown }) {
+  const decision = obj(value);
+  const collected = strings(decision.collected_queries);
+  const deferred = strings(decision.deferred_queries);
+  return (
+    <>
+      {decision.decision_policy_status === 'not_configured' && (
+        <p>
+          이 작업이 사용한 Runbook에는 조사 목적에 따른 종료 기준이 없습니다. 품질 검토를 통과해도
+          기존 보완 조회 규칙에 따라 수집이 이어질 수 있습니다. 종료 기준을 적용하려면
+          decision_policy가 있는 Runbook 1.1을 새 revision으로 발행해야 합니다. 코드 배포만으로
+          발행된 지침이 바뀌지는 않습니다.
+        </p>
+      )}
+      {decision.decision_policy_status === 'mixed' && (
+        <p>
+          일부 조사 지침에 종료 기준이 없거나 조사 범위가 확장되어 목적 달성 종료를 적용하지
+          못했습니다.
+        </p>
+      )}
+      {(decision.reason === 'goal_achieved' || decision.stop_reason === 'goal_achieved') && (
+        <>
+          {collected.length > 0 && <p>목표 확인에 사용한 수집: {collected.join(', ')}</p>}
+          {deferred.length > 0 && (
+            <p>목표를 충족해 추가로 수집하지 않은 선택 조회: {deferred.join(', ')}</p>
+          )}
+        </>
+      )}
+    </>
   );
 }

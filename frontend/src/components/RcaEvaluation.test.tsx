@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RcaEvaluation } from './RcaEvaluation';
+import { RcaDecisionSummary, RcaEvaluation } from './RcaEvaluation';
 import { RcaEvaluationTrace, RcaStageDetails } from './RcaEvaluationTrace';
 
 describe('separate RCA evaluations', () => {
@@ -84,12 +84,41 @@ describe('separate RCA evaluations', () => {
       '보고 내용의 한계',
       'original-log',
       '현재 장치 상태',
+      '선택 조회가 남아 있어도 추가 수집 없이 종료',
     ])
       expect(html).toContain(text);
     value.quality.rca_evaluation.review.analysis_id = 'old-draft';
     const stale = renderToStaticMarkup(<RcaEvaluation result={value} />);
     expect(stale).not.toContain('<h4>조사 목적 달성</h4>');
     expect(stale).toContain('미검토');
+    expect(stale).not.toContain('선택 조회가 남아 있어도 추가 수집 없이 종료');
+  });
+  it.each([
+    ['XID 79', ['D44', 'D02', 'D11']],
+    ['SXID 11001', ['D02', 'D13']],
+  ])('explains completed D09 collection and skipped optional queries for %s', (_, deferred) => {
+    const html = renderToStaticMarkup(
+      <RcaDecisionSummary
+        value={{
+          reason: 'goal_achieved',
+          decision_policy_status: 'applied',
+          collected_queries: ['D09'],
+          deferred_queries: deferred,
+        }}
+      />,
+    );
+    expect(html).toContain('목표 확인에 사용한 수집: D09');
+    expect(html).toContain('목표를 충족해 추가로 수집하지 않은 선택 조회');
+    for (const query of deferred) expect(html).toContain(query);
+    expect(html).not.toContain('새 revision으로 발행');
+  });
+  it('explains missing published policy without inventing a policy for historical records', () => {
+    const html = renderToStaticMarkup(
+      <RcaDecisionSummary value={{ decision_policy_status: 'not_configured' }} />,
+    );
+    expect(html).toContain('품질 검토를');
+    expect(html).toContain('Runbook 1.1을 새 revision으로 발행');
+    expect(renderToStaticMarkup(<RcaDecisionSummary value={{}} />)).toBe('');
   });
   it('shows partial collection with an acceptable limited analysis without changing existing status', () => {
     const before = JSON.stringify(result);

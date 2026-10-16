@@ -120,10 +120,76 @@ async def test_goal_stops_without_optional_queries_and_keeps_cause_unknown(kind)
     reviewer = result["model_calls"][1]["input"]
     assert any(c["source"] == "interpretation" for c in reviewer["draft"]["claims"])
     assert not reviewer["evidence_context"]["interpretation_findings"]
+    decision = next(
+        e["snapshot"]
+        for e in output["evidence"]
+        if e["query_id"] == "investigation_decision"
+    )
+    assert decision["reason"] == "goal_achieved"
+    assert decision["decision_policy_status"] == "applied"
+    assert decision["collected_queries"] == ["D09"]
+    assert set(decision["deferred_queries"]) == (
+        {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
+    )
+    assert decision["selected_queries"] == []
 
 
-async def test_semantic_unknown_cannot_be_overridden_by_acceptable_review():
-    case = policy_case()
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_new_policy_revision_is_selected_while_old_published_revision_remains(
+    kind,
+):
+    case = policy_case(kind)
+    current = case["attempt"]["context"]["runbooks"][0]
+    old = deepcopy(current)
+    old["id"] = "old-published-revision"
+    old["content"].pop("decision_policy")
+    old["content"]["schema"] = "gpu-rca-runbook/1.0"
+    old["content_hash"] = old["reviewed_content_hash"] = content_hash(old["content"])
+    current["revision"] = old["revision"] + 1
+    case["attempt"]["context"]["runbooks"].insert(0, old)
+    result = await replay(case)
+    assert not result["missing_inputs"]
+    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert len(result["query_calls"]) == 1
+    assert [
+        p["runbook_revision_id"]
+        for p in evaluation["investigation"]["objective"]["policies"]
+    ] == [current["id"]]
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_published_legacy_policy_is_not_silently_upgraded(kind):
+    case = policy_case(kind)
+    book = case["attempt"]["context"]["runbooks"][0]
+    book["content"].pop("decision_policy")
+    book["content"]["schema"] = "gpu-rca-runbook/1.0"
+    book["content_hash"] = book["reviewed_content_hash"] = content_hash(book["content"])
+    for response in case["responses"]["synthesis"]:
+        response["response"]["interpretation"].pop("criterion_assessments", None)
+    result = await replay(case)
+    review = next(
+        e["snapshot"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "analysis_review"
+    )
+    assert review["review"]["verdict"] == "acceptable"
+    decision = next(
+        e["snapshot"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "investigation_decision"
+    )
+    assert decision["reason"] == "authorized_followup"
+    assert decision["decision_policy_status"] == "not_configured"
+    assert decision["collected_queries"] == ["D09"]
+    assert set(decision["selected_queries"]) == (
+        {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
+    )
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_semantic_unknown_cannot_be_overridden_by_acceptable_review(kind):
+    case = policy_case(kind)
     case["responses"]["synthesis"][0]["response"]["interpretation"][
         "criterion_assessments"
     ][0]["status"] = "unknown"
@@ -179,8 +245,9 @@ async def test_valid_interpretation_survives_invalid_causal_refs_and_is_reviewed
     assert len([c for c in result["model_calls"] if c["stage"] == "synthesis"]) == 1
 
 
-async def test_scope_mismatch_blocks_goal_even_with_forged_model_satisfaction():
-    case = policy_case()
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_scope_mismatch_blocks_goal_even_with_forged_model_satisfaction(kind):
+    case = policy_case(kind)
     query = case["queries"][0]
     raw = json.loads(query["response"]["data"]["result"][0]["values"][0][1])
     raw["resources"]["k8s.node.name"] = "other-node"
@@ -239,10 +306,11 @@ def test_runbook_policy_rejects_unsafe_contract(mutation):
 
 
 @pytest.mark.parametrize("failure", ["invalid_json", "truncated", "review_rejected"])
-async def test_same_evidence_never_reauthors_and_report_is_retained(failure):
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_same_evidence_never_reauthors_and_report_is_retained(failure, kind):
     from rca_replay_cases import review
 
-    case = policy_case()
+    case = policy_case(kind)
     if failure == "invalid_json":
         case["responses"]["synthesis"] = [
             {"raw_text": "{broken", "usage": {"total_tokens": 1000}}

@@ -1182,6 +1182,13 @@ async def run(tools):
                 "next_queries": next_queries,
                 "analysis_stop_reason": evaluation.get("stop_reason"),
                 "followup_selection": selection_diagnostics,
+                "decision_policy_status": (
+                    "applied"
+                    if objective and objective["compatible"]
+                    else "mixed"
+                    if objective
+                    else "not_configured"
+                ),
                 **(
                     {
                         "decision_assessment": objective,
@@ -1199,7 +1206,11 @@ async def run(tools):
             "ok",
             {"deterministic": True},
         )
-        return dict(stop_reason=stop_reason, next_queries=next_queries)
+        return dict(
+            stop_reason=stop_reason,
+            next_queries=next_queries,
+            deferred_queries=deferred_queries,
+        )
 
     for round_no in range(max_rounds):
         if not fast_path and queries:
@@ -1231,6 +1242,15 @@ async def run(tools):
                 "analysis_id": evaluation["draft"]["analysis_id"],
                 "selected_queries": next_queries,
                 "revisions": evaluation_state["revisions"],
+                "collected_queries": list(collected),
+                "deferred_queries": state["deferred_queries"],
+                "decision_policy_status": (
+                    "applied"
+                    if (state.get("decision_assessment") or {}).get("compatible")
+                    else "mixed"
+                    if state.get("decision_assessment")
+                    else "not_configured"
+                ),
                 **(
                     {"decision_assessment": state["decision_assessment"]}
                     if state.get("decision_assessment")

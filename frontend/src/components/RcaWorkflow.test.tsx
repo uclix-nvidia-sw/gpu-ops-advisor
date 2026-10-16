@@ -3,6 +3,43 @@ import { describe, expect, it } from 'vitest';
 import { RcaWorkflowButton, RcaWorkflowRecord } from './RcaWorkflow';
 
 describe('developer RCA workflow entry and evidence', () => {
+  it('shows the actual goal decision with collected and omitted queries in workflow details', () => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'investigation_decision',
+          snapshot: {
+            action: 'finish',
+            reason: 'goal_achieved',
+            decision_policy_status: 'applied',
+            collected_queries: ['D09'],
+            deferred_queries: ['D44', 'D02', 'D11'],
+            decision_assessment: {
+              status: 'achieved',
+              policies: [
+                {
+                  runbook_revision_id: 'published-policy',
+                  goal: { question: 'XID 79 보고를 식별했는가?' },
+                  criteria: [],
+                  blocking_conditions: [],
+                  non_blocking_unknowns: ['current_health'],
+                },
+              ],
+            },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    for (const text of [
+      '조사 목적 달성',
+      'XID 79 보고',
+      '목표 확인에 사용한 수집: D09',
+      '목표를 충족해 추가로 수집하지 않은 선택 조회: D44, D02, D11',
+      '현재 장치 상태',
+    ])
+      expect(html).toContain(text);
+  });
   it('explains combined authoring and frozen RCA material separately from report composition', () => {
     const render = (query_id: string, snapshot: Record<string, unknown>) =>
       renderToStaticMarkup(
