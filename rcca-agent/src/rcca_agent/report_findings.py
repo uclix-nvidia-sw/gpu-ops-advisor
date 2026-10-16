@@ -277,7 +277,11 @@ def statements(findings, result, data, clues, evidence, guidance):
             f"{health['first_unhealthy_state']}로 보고됐고 회복 보고가 없습니다."
         )
         if access_loss and not switch:
-            text += " 이 GPU는 복구 전까지 사용할 수 없는 상태입니다."
+            # A Fleet report is not a verified current-access state (Runbook rule).
+            text += (
+                " 현재 접근 가능 여부는 수집 근거로 확인하지 않았으므로, 복구가 확인될 "
+                "때까지 이 GPU에 작업을 배치하지 마십시오."
+            )
         elif fatal:
             text += " 복구가 확인될 때까지 이 장치에 작업을 배치하지 마십시오."
         out["impact"].append((text, health["evidence_refs"]))
@@ -454,11 +458,23 @@ def statements(findings, result, data, clues, evidence, guidance):
             )
         else:
             if restart:
-                if activity and activity.get("window_max") == 0:
+                # Restart takes down every GPU on the node, so judge load node-wide.
+                busy = (
+                    activity["node_series"] - activity["node_series_zero"]
+                    if activity and activity.get("node_series")
+                    else None
+                )
+                if busy == 0:
                     steps.append(
-                        f"작업 확인: 수집 구간 동안 {node}의 GPU {activity['node_series_zero']}개가 "
+                        f"작업 확인: 수집 구간 동안 {node}의 GPU {activity['node_series']}개 모두 "
                         "사용률 0%로, 배출할 GPU 부하는 관측되지 않았습니다. 남은 작업이 없는지 "
                         "확인하고 유지보수 승인을 받으십시오."
+                    )
+                elif busy:
+                    steps.append(
+                        f"작업 배출: 수집 구간 동안 {node}의 GPU {activity['node_series']}개 중 "
+                        f"{busy}개에서 사용률이 0%를 넘었습니다. 재시작하면 이 작업도 중단되므로 "
+                        "중지하거나 다른 서버로 옮기고 유지보수 승인을 받으십시오."
                     )
                 else:
                     steps.append(

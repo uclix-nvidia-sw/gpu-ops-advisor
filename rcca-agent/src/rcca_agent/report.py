@@ -259,21 +259,33 @@ async def write_report(result, data, clues, evidence, llm):
             + {
                 "goal_achieved": "필수 조사 목적과 품질 검토 충족",
                 "goal_not_met": "목적 미달이며 현재 가능한 필수 보완 조회 없음",
+                "review_accepted": "품질 검토 통과, 추가 조회 요청 없음",
             }.get(stop, label("reasons", stop)),
             evaluation["investigation"]["evidence_refs"],
         )
         review = evaluation["review"]
-        verdict = {
-            "acceptable": "확보된 근거 범위에서 타당",
-            "revision_required": "수정 필요",
-            "undetermined": "판단 불가",
-        }.get(review["verdict"], "미검토")
+        analysis = result.get("quality", {}).get("analysis", {})
+        adoption = analysis.get("synthesis", {}).get("adoption")
+        verdict = (
+            # The reviewer then judged the code-built fallback draft, not an LLM analysis.
+            "LLM 작성 결과 미채택, 검토는 규칙 기반 대체 초안 대상"
+            if adoption not in (None, "validated_response")
+            else {
+                "acceptable": "확보된 근거 범위에서 타당",
+                "revision_required": "수정 필요",
+                "undetermined": "판단 불가",
+            }.get(review["verdict"], "미검토")
+        )
         collection = {
-            "complete": "계획한 조회 완료",
+            "complete": "실행한 조회 완료",
             "partial": "부분 수집",
             "failed": "수집 실패",
             "not_requested": "수집 불필요",
         }[evaluation["collection"]["status"]]
+        if analysis.get("remaining_queries"):
+            collection += (
+                "(미실행 보조 조회: " + "·".join(analysis["remaining_queries"]) + ")"
+            )
         add(
             "limits",
             f"수집 상태: {collection}. 분석 품질: {verdict}. 조사 종료는 원인 확정을 뜻하지 않습니다.",

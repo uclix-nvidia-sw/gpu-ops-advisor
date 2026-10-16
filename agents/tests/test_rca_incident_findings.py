@@ -216,7 +216,9 @@ async def test_corroborated_device_leads_report_with_decisive_recovery():
     assert "이벤트 시각(14:37:51)은 그 사이" in problem[2]
     assert "접수까지 79초" in text["problem"]
     assert "회복 보고가 없습니다" in text["impact"]
-    assert "사용할 수 없는 상태입니다" in text["impact"]
+    # A Fleet report alone does not establish current access (Runbook rule).
+    assert "사용할 수 없는 상태" not in text["impact"]
+    assert "현재 접근 가능 여부는 수집 근거로 확인하지 않았" in text["impact"]
     assert "심각도: 높음" in text["impact"]
     assert "team-a" not in "\n".join(text.values())
     assert text["cause"].startswith("판단: node-a GPU 0에서 XID 79 오류가 발생했")
@@ -287,8 +289,25 @@ async def test_idle_node_is_stated_without_workload_identity():
         in text["impact"]
     )
     assert "0% 유지(같은 노드 2개 중 2개가 같은 상태)" in text["cause"]
-    assert "2. 작업 확인: 수집 구간 동안 node-a의 GPU 2개가 사용률 0%" in text["action"]
+    assert (
+        "2. 작업 확인: 수집 구간 동안 node-a의 GPU 2개 모두 사용률 0%" in text["action"]
+    )
     assert "위 작업" not in "\n".join(text.values())
+
+
+@pytest.mark.asyncio
+async def test_idle_target_on_busy_node_still_requires_drain():
+    # Production 061a39a7: target GPU 0% but siblings at 77-97%; a host restart
+    # would stop them, so "no load to drain" must not be stated.
+    result, data, clues, evidence = fixture()
+    for e in evidence:
+        if e["query_id"] == "D02":
+            for s in e["snapshot"]["data"]:
+                busy = "0" if s["metric"]["UUID"] == GPU else "97"
+                s["values"] = [[t, busy] for t, _ in s["values"]]
+    _, text = await report(result, data, clues, evidence)
+    assert "배출할 GPU 부하는 관측되지 않았습니다" not in text["action"]
+    assert "node-a의 GPU 2개 중 1개에서 사용률이 0%를 넘었습니다" in text["action"]
 
 
 @pytest.mark.asyncio

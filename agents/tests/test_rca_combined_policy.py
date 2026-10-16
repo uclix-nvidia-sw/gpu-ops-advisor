@@ -168,7 +168,12 @@ async def test_valid_interpretation_survives_invalid_causal_refs_and_is_reviewed
         for e in result["output"]["evidence"]
         if e["query_id"] == "rca_synthesis"
     )
-    assert record["diagnostics"]["adoption"] == "interpretation_only"
+    # The invented-ref hypothesis is removed; the valid remainder is adopted.
+    assert record["diagnostics"]["adoption"] == "validated_response"
+    assert record["hypotheses"] == []
+    assert [d["code"] for d in record["diagnostics"]["dropped_items"]] == [
+        "invalid_evidence_references"
+    ]
     assert ev["evidence"]["interpretation"]["findings"]
     assert ev["review"]["execution_status"] == "complete"
     assert len([c for c in result["model_calls"] if c["stage"] == "synthesis"]) == 1
