@@ -144,6 +144,9 @@ async def test_prompt_conditions_and_corrected_response_reach_adoption_and_revie
     assert record["diagnostics"]["validation_failures"] == []
     assert record["diagnostics"]["adoption"] == "validated_response"
     assert record["interpretation"]["unknowns"] == []
+    # Same scenario as the E2E goal test: a dropped caveat never completes the goal.
+    ev = bad["output"]["result"]["quality"]["rca_evaluation"]
+    assert ev["investigation"]["stop_reason"] == "goal_not_met"
     interpretation["unknowns"][0]["reason"] = (
         "No available source establishes current health"
     )
@@ -292,12 +295,32 @@ async def test_production_item_error_drops_only_that_item(field, item, code):
     result = await replay(case)
     record = synthesis_record(result)
     diagnostics = record["diagnostics"]
+    # Adopted instead of the former whole rejection, but a lost caveat withholds
+    # the semantic criteria so the objective cannot complete.
     assert diagnostics["adoption"] == "validated_response"
-    assert [d["code"] for d in diagnostics["dropped_items"]] == [code]
+    assert [d["code"] for d in diagnostics["dropped_items"]] == [
+        code,
+        "criterion_withheld",
+    ]
     assert record["interpretation"]["findings"]
     assert item not in record["interpretation"][field]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    # Before salvage the whole author response was rejected and the goal unmet.
+    assert evaluation["investigation"]["stop_reason"] == "goal_not_met"
+
+
+async def test_dropped_finding_does_not_withhold_supported_criteria():
+    # A removed positive claim cannot make the conclusion look surer.
+    case = policy_case()
+    interpretation = case["responses"]["synthesis"][0]["response"]["interpretation"]
+    interpretation["findings"].append(
+        dict(id="extra", statement="근거 없는 발견", kind="observed", evidence_refs=[])
+    )
+    result = await replay(case)
+    record = synthesis_record(result)
+    assert [d["code"] for d in record["diagnostics"]["dropped_items"]] == [
+        "interpretation_missing_support"
+    ]
+    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
     assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
 
 
