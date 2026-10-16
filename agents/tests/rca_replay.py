@@ -9,6 +9,8 @@ import time
 
 import httpx
 
+from rca_report_fixture import report_reply
+
 from agent_common.contracts import content_hash, validate_result
 from agent_common.llm import LLM
 from agent_common.runtime import attempt_context
@@ -48,7 +50,13 @@ class FixtureSettings(Settings):
 class ReplayLLM(LLM):
     async def complete(self, system, data, stage="synthesis"):
         # The existing editor uses the synthesis stage; keep its costs separate.
-        role = "report_ordering" if "facts" in data else stage
+        role = (
+            "report_writing"
+            if "source_items" in data
+            else "report_ordering"
+            if "facts" in data
+            else stage
+        )
         record = {
             "stage": role,
             "transport_stage": stage,
@@ -144,7 +152,10 @@ async def replay(case):
         if text is None:
             try:
                 text = json.dumps(
-                    bind(scripted["response"], inputs), ensure_ascii=False
+                    report_reply(inputs)
+                    if scripted.get("compose_sources")
+                    else bind(scripted["response"], inputs),
+                    ensure_ascii=False,
                 )
             except (ValueError, KeyError, IndexError, TypeError):
                 missing.append(f"fixture_binding:{stage}:{index}")

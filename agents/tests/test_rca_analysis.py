@@ -202,6 +202,11 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                         }
                     ]
                 return reply
+            if "source_items" in payload:
+                from rca_report_fixture import report_reply
+
+                events.append("report")
+                return report_reply(payload)
             if "facts" in payload:
                 events.append("report")
                 return {"fact_ids": [f["id"] for f in payload["facts"]]}

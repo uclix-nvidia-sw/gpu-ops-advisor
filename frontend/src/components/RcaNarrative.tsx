@@ -87,13 +87,18 @@ export function RcaNarrative({
   reader?: boolean;
 }) {
   const presentation = str(obj(obj(result.quality).report).presentation);
+  const materialReport = presentation === 'rca-material/1';
   const incidentFirst = presentation.startsWith('incident-first/');
   // /2: deterministic incident findings lead and the reference guidance is a primary section.
   const findingsLed = presentation === 'incident-first/2';
   const collapsed = (id: string) =>
     !reader && incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed));
   const sections = rows(result.narrative).filter(
-    (s) => incidentFirst || !consolidateChecks || !['next', 'limits'].includes(str(s.id)),
+    (s) =>
+      materialReport ||
+      incidentFirst ||
+      !consolidateChecks ||
+      !['next', 'limits'].includes(str(s.id)),
   );
   if (!sections.length) return null;
   return (
@@ -106,12 +111,32 @@ export function RcaNarrative({
           <summary>보고서 작성 방식</summary>
           <p className="muted">
             {result.narrative_status === 'complete'
-              ? '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
+              ? materialReport
+                ? '고정된 RCA 분석 자료를 보고서 LLM이 문장으로 작성했습니다.'
+                : '확인된 내용을 LLM이 우선순위에 따라 정리했습니다.'
               : 'LLM 설명을 사용하지 못해 저장된 근거와 판단으로 기본 보고서를 작성했습니다.'}{' '}
             보고서 작성과 원인 확정은 별개입니다.
           </p>
         </details>
+        {materialReport && (
+          <details>
+            <summary>서술 전 RCA 자료와 대조</summary>
+            <p>
+              형식·참조 검증은 문장의 의미 일치를 보장하지 않습니다. 분석의 한계와 아래 원문을 함께
+              확인하세요.
+            </p>
+            {rows(obj(obj(result.quality).report).source_items).map((item) => (
+              <p key={str(item.id)}>{str(item.text)}</p>
+            ))}
+          </details>
+        )}
       </header>
+      {materialReport && rows(obj(result.quality).runbook_guidance).length > 0 && (
+        <details className="rca-narrative-more">
+          <summary>발행 Runbook 참고 안내 · 사건 분석과 구분</summary>
+          <RcaGuidance paragraphs={[]} result={result} reader={reader} />
+        </details>
+      )}
       <nav className="rca-narrative-nav" aria-label="최종 보고서 목차">
         {sections.map((section, index) =>
           collapsed(str(section.id)) ? null : (

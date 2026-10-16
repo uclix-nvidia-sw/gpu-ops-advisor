@@ -362,23 +362,42 @@ async def evaluate_analysis(
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
         global_issue = None in affected
-        if interpretation is not None and (
-            global_issue
-            or any(
-                str(item).startswith(("interpretation:", "criterion:"))
-                for item in affected
-            )
-        ):
-            interpretation = None
-            interpretation_diag = {
-                "execution_status": "failed",
-                "reason": "review_rejected_interpretation",
-            }
+        removed_findings = set()
+        if interpretation is not None:
+            if global_issue:
+                interpretation = None
+                interpretation_diag = {
+                    "execution_status": "failed",
+                    "reason": "review_rejected_interpretation",
+                }
+            else:
+                interpretation = deepcopy(interpretation)
+                caveat_removed = False
+                for section in ("findings", "unknowns", "conflicts", "limitations"):
+                    retained = []
+                    for index, row in enumerate(interpretation.get(section, [])):
+                        claim_id = f"interpretation:{section}:{row.get('id', index)}"
+                        if claim_id in affected:
+                            if section == "findings":
+                                removed_findings.add(row["id"])
+                            else:
+                                caveat_removed = True
+                        else:
+                            retained.append(row)
+                    interpretation[section] = retained
+                for row in interpretation.get("criterion_assessments", []):
+                    if (
+                        "criterion:" + row["criterion_id"] in affected
+                        or caveat_removed
+                        or removed_findings.intersection(row["finding_refs"])
+                    ):
+                        row.update(status="unknown", finding_refs=[], evidence_refs=[])
         candidates = [
             c
             for c in candidates
             if not global_issue
             and "cause:" + c["id"] not in affected
+            and not removed_findings.intersection(c.get("finding_refs", []))
             and not (combined and interpretation is None and "finding_refs" in c)
         ]
         recommendations = [
@@ -387,7 +406,9 @@ async def evaluate_analysis(
             else r
             for r in recommendations
         ]
-        limits = [BASE_LIMIT, REVIEW_LIMIT]
+        limits = list(
+            dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *([] if global_issue else limits)])
+        )
         limits.append(
             "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다. 원인 판단은 추가 확인이 필요합니다."
         )

@@ -51,6 +51,13 @@ export function stageForRecord(record: Row, related: Row[] = []) {
   const body = { ...obj(record.quality), ...obj(record.snapshot) };
   const combined = body.generation_mode === 'combined';
   const sent = Number(obj(body.usage).request_attempts) > 0 || Number(obj(body.usage).calls) > 0;
+  if (kind === 'report_assembly' && obj(body.report).presentation === 'rca-material/1')
+    return {
+      title: '최종 보고서 서술',
+      actor: '보고서 LLM + 코드 검증',
+      purpose:
+        '고정된 RCA 자료를 완성된 문장으로 구성합니다. 원본 재분석·별도 문장 정렬 호출은 없습니다. 실패하면 RCA 자료를 기본 표시합니다.',
+    };
   if (kind === 'analysis_review' && body.execution_status === 'skipped')
     return {
       title: body.reason === 'draft_changed_after_review' ? '변경 초안 미검토' : '품질 검토 미실행',
@@ -465,9 +472,9 @@ export function RcaEvaluationTrace({
                 </p>
               )}
               <StageUsage value={meta.usage} />
-              {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
-                <RequestChecks value={meta.request_checks} />
-              )}
+              {['evidence_interpretation', 'analysis_review', 'report_assembly'].includes(
+                str(record.query_id),
+              ) && <RequestChecks value={meta.request_checks} />}
               {meta.started_at != null && (
                 <p>
                   시작 {str(meta.started_at)} → 완료 {str(meta.completed_at, '미확인')}
@@ -577,18 +584,21 @@ export function RcaStageDetails({
       {record.query_id === 'report_assembly' && (
         <p>
           작성 방식:{' '}
-          {obj(body.report).method === 'llm_prioritized'
-            ? '확정된 문장을 LLM이 정렬'
-            : obj(body.report).method === 'deterministic_fallback'
-              ? '코드의 기본 순서로 작성'
-              : '미기록'}
-          . 원인과 RCA 판정은 다시 생성하지 않았습니다.
+          {obj(body.report).method === 'llm_composed'
+            ? '고정된 RCA 자료를 보고서 LLM이 서술'
+            : obj(body.report).method === 'llm_prioritized'
+              ? '확정된 문장을 LLM이 정렬'
+              : obj(body.report).method === 'deterministic_fallback'
+                ? '코드의 기본 순서로 작성'
+                : '미기록'}
+          . 저장된 RCA 판정은 유지합니다. 보고서 문장의 의미 일치 여부는 연결된 원문과 대조할 수
+          있습니다.
           {obj(body.report).fallback_reason != null && (
             <> 기본 순서 사용 이유: {label(obj(body.report).fallback_reason)}.</>
           )}
         </p>
       )}
-      {['evidence_interpretation', 'rca_synthesis', 'analysis_review'].includes(
+      {['evidence_interpretation', 'rca_synthesis', 'analysis_review', 'report_assembly'].includes(
         str(record.query_id),
       ) && (
         <p>
@@ -662,19 +672,39 @@ export function RcaStageDetails({
           재검토 실패: {label(body.failure_reason)} <code>{str(body.failure_reason)}</code>
         </p>
       )}
-      {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) &&
+      {['evidence_interpretation', 'analysis_review', 'report_assembly'].includes(
+        str(record.query_id),
+      ) &&
         (body.failure_reason != null || body.execution_status === 'failed') && (
           <RcaModelFailure diagnostic={body} />
         )}
-      {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
-        <RequestChecks value={body.request_checks} />
-      )}
+      {['evidence_interpretation', 'analysis_review', 'report_assembly'].includes(
+        str(record.query_id),
+      ) && <RequestChecks value={body.request_checks} />}
       {body.execution_status === 'complete' && rows(body.validation_details).length > 0 && (
         <details>
           <summary>이전 응답의 검증·수정 이력</summary>
           <RcaValidationDetails diagnostic={body} />
         </details>
       )}
+      {record.query_id === 'report_assembly' &&
+        obj(body.report).presentation === 'rca-material/1' && (
+          <>
+            <p>
+              결과 저장 준비: {body.assembly_status === 'complete' ? '완료' : '미기록'} · 보고서
+              호출 상태와 RCA 품질 판정은 별개입니다.
+            </p>
+            <p>조사 종료 이유: {label(body.stop_reason)}</p>
+            <details>
+              <summary>보고서에 전달한 RCA 자료 · 원문 대조</summary>
+              {rows(obj(body.report).source_items).map((item) => (
+                <p key={str(item.id)}>
+                  <code>{str(item.id)}</code> {str(item.text)} {refs(item.evidence_refs)}
+                </p>
+              ))}
+            </details>
+          </>
+        )}
       <StageUsage value={body.usage} />
       {body.analysis_id != null && (
         <details>

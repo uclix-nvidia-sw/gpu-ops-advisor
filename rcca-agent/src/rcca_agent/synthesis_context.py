@@ -56,6 +56,7 @@ def bounded_context(payload, max_bytes):
         ),
     }
     view["context_selection"] = coverage
+    inventories = {}
     # Reserve room for the coverage counters and evidence IDs before admitting rows.
     # Admit one row per evidence source before more rows from that source.
     groups = defaultdict(list)
@@ -78,6 +79,18 @@ def bounded_context(payload, max_bytes):
     )
     for section, original in scheduled:
         row = dict(original)
+        inventory_key = None
+        if section == "device_observations" and row.get("gpu_candidates"):
+            inventory = row.pop("gpu_candidates")
+            signature = json.dumps(inventory, sort_keys=True, ensure_ascii=False)
+            inventory_key = inventories.get(signature)
+            if inventory_key is None:
+                inventory_key = f"inventory-{len(inventories) + 1}"
+                inventories[signature] = inventory_key
+            row["gpu_inventory_ref"] = inventory_key
+            tables = view.setdefault("gpu_inventories", {})
+            new_inventory = inventory_key not in tables
+            tables[inventory_key] = inventory
         if section == "metric_observations":
             samples = original.get("samples", [])
             # Sparse original samples are not aggregates or proof of continuity.
@@ -106,6 +119,10 @@ def bounded_context(payload, max_bytes):
             view[section].pop()
             view["observation_refs"] = previous_refs
             view["input_evidence_refs"] = previous_inputs
+            if inventory_key and new_inventory:
+                del view["gpu_inventories"][inventory_key]
+                if not view["gpu_inventories"]:
+                    del view["gpu_inventories"]
             continue
         coverage["omitted_observations"][section] -= 1
         if section == "metric_observations":

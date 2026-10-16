@@ -54,7 +54,7 @@ describe('developer RCA workflow entry and evidence', () => {
     expect(frozen).toContain('자료가 바뀌면 결과 공개를 중단');
     const report = render('report_assembly', { report: { method: 'deterministic_fallback' } });
     expect(report).toContain('코드의 기본 순서로 작성');
-    expect(report).toContain('RCA 판정은 다시 생성하지 않았습니다');
+    expect(report).toContain('저장된 RCA 판정은 유지합니다');
   });
   it('connects the selected source to its selection without linking other selections', () => {
     const html = renderToStaticMarkup(
@@ -339,3 +339,46 @@ describe('developer RCA workflow entry and evidence', () => {
     expect(html).not.toContain('근거 범위에서 타당');
   });
 });
+
+it.each(['complete', 'failed', 'skipped'])(
+  'traces report writing separately from assembly: %s',
+  (status) => {
+    const html = renderToStaticMarkup(
+      <RcaWorkflowRecord
+        record={{
+          query_id: 'report_assembly',
+          snapshot: {
+            execution_status: status,
+            assembly_status: 'complete',
+            attempts: status === 'skipped' ? 0 : 1,
+            reason: status === 'failed' ? 'invalid_stage_output' : null,
+            stop_reason: 'goal_not_met',
+            usage: {
+              request_attempts: status === 'skipped' ? 0 : 1,
+              calls: status === 'skipped' ? 0 : 1,
+              total_tokens: 321,
+            },
+            report: {
+              presentation: 'rca-material/1',
+              method: status === 'complete' ? 'llm_composed' : 'deterministic_fallback',
+              source_items: [
+                { id: 'source-1', text: '근본 원인은 미확정', evidence_refs: ['ref-1'] },
+              ],
+            },
+          },
+        }}
+        onEvidence={() => {}}
+      />,
+    );
+    for (const text of [
+      '최종 보고서 서술',
+      '보고서 LLM',
+      '별도 문장 정렬 호출은 없습니다',
+      '원문 대조',
+      '근본 원인은 미확정',
+      'ref-1',
+    ])
+      expect(html).toContain(text);
+    expect(html).not.toContain('선택적 문장 정렬 LLM');
+  },
+);

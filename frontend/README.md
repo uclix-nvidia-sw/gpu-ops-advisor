@@ -20,6 +20,10 @@ Evidence evaluation explains explicit model stop, malformed selection, unavailab
 model and a bounded selection repair separately. Legacy records without those
 diagnostics do not invent a reason.
 
+## RCA 작성·검토·보고서 호출 구분
+
+`rca-material/1` 결과는 고정된 RCA 자료를 보고서 LLM이 서술한 결과다. 워크플로우는 저장 순서를 유지하면서 `report_assembly`의 실제 호출 상태·횟수·시간·모델·usage·실패 경로와 결과 구성 완료를 구분한다. 보고서 실패에도 기본 자료는 표시하며 RCA 검토 통과나 원인 확정으로 바꾸지 않는다. 보고서 본문과 디버깅의 ‘서술 전 RCA 자료’에서 `source_items` 원문을 대조한다. 새 결과에는 과거 원인 문장 보정 렌더를 적용하지 않으며 한계/추가 확인을 중복 제거 옵션으로 숨기지 않는다. 과거 정렬 방식 결과는 기존 설명으로 유지한다. 역할·계약은 [RCA](../rcca-agent/README.md#보고서와-조회-호환)를 따른다.
+
 ## Runbook-driven RCA guidance
 
 개발용 RCA의 **워크플로우 디버깅 → 다음 행동 결정**은 Runbook 목적 달성 시 실제 수집한 조회와 추가로 수집하지 않은 선택 조회를 표시한다. ‘조사 목적과 완료 기준’에서 오류 보고·범위·한계 설명과 같은 분석본의 품질 검토를 확인한다. 새 기록에 `decision_policy_status=not_configured`가 있으면 실제 사용한 지침에 종료 기준이 없으며 Runbook 1.1 새 revision 발행이 필요함을 설명한다. 코드 배포·품질 검토 통과·근본 원인 확정을 서로 구분하고, 이 필드가 없는 과거 기록의 미적용 원인은 추정하지 않는다.

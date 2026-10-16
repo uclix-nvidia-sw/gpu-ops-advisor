@@ -4,6 +4,8 @@ Only upstream Grafana datasource responses and the inference endpoint are fixtur
 No production metrics or model-quality claims are made by this suite.
 """
 
+from rca_report_fixture import report_reply
+
 from evaluation_fixtures import (
     interpretation_reply as rca_interpretation_reply,
     review_reply,
@@ -140,7 +142,9 @@ class Upstream(BaseHTTPRequestHandler):
             message = {
                 "role": "assistant",
                 "content": json.dumps(
-                    review_reply(data)
+                    report_reply(data)
+                    if "source_items" in data and "material_hash" in data
+                    else review_reply(data)
                     if "rubric_version" in data
                     else combined_reply(data)
                     if data.get("generation_mode") == "combined"
@@ -3173,6 +3177,13 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         == stored["report_assembly"]["material_hash"]
     )
     assert stored["rca_result_frozen"]["material"]["evaluation"] == evaluation
+    assert result["quality"]["report"]["method"] == "llm_composed"
+    assert stored["report_assembly"]["attempts"] == 1
+    assert stored["report_assembly"]["stage"] == "report_writing"
+    assert (
+        stored["report_assembly"]["input_material_hash"]
+        == stored["rca_result_frozen"]["material_hash"]
+    )
 
     diagnostics = stored["rca_synthesis"]["diagnostics"]
     if invalid_interpretation:

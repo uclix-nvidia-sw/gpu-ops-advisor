@@ -193,7 +193,7 @@ def workflow_case():
             "evidence_interpretation": [reply(interpretation)] * 2,
             "synthesis": [reply(synthesis)] * 2,
             "analysis_review": [reply(review())] * 2,
-            "report_ordering": [reply({"fact_ids": [{"$input": "/facts/0/id"}]})],
+            "report_writing": [{**reply({}), "compose_sources": True}],
         },
     }
 
