@@ -1,6 +1,7 @@
 """One bounded author request, independent interpretation/causal reference domains."""
 
 from copy import deepcopy
+import re
 import time
 
 from agent_common.contracts import content_hash
@@ -61,8 +62,70 @@ def author_prompt(payload):
     )
 
 
-def validate_author(response, view, criteria, details=None):
+ITEM_PATH = re.compile(r"^\$\.(findings|unknowns|conflicts|limitations)\[(\d+)\]")
+
+
+def salvage_interpretation(value, refs, criteria, observation_refs, dropped):
+    """Drop invalid list items one at a time; structural errors still reject all."""
+    value = deepcopy(value)
+    unknown = [
+        {
+            "criterion_id": key,
+            "status": "unknown",
+            "finding_refs": [],
+            "evidence_refs": [],
+        }
+        for key in sorted(criteria or ())
+    ]
+    # ponytail: re-validates per dropped item; bounded by 4 lists x 16 items + criteria.
+    for _ in range(4 * 16 + 2):
+        try:
+            return validate_interpretation(value, refs, criteria, observation_refs)
+        except ResponseValidationError as exc:
+            detail, item = exc.diagnostic, ITEM_PATH.match(exc.diagnostic["path"])
+            if item and isinstance(value, dict):
+                del value[item[1]][int(item[2])]
+            elif (
+                criteria is not None
+                and isinstance(value, dict)
+                and detail["path"].startswith("$.criterion_assessments")
+                and value.get("criterion_assessments") != unknown
+            ):
+                # An invalid semantic answer means "not established", never "satisfied".
+                value["criterion_assessments"] = unknown
+            else:
+                raise
+            dropped.append(
+                {
+                    **detail,
+                    "path": "$.interpretation" + detail["path"][1:],
+                    "action": "dropped",
+                }
+            )
+    raise ResponseValidationError("interpretation_list", "$", "salvage_limit")
+
+
+def analysis_path(detail):
+    code = detail["code"]
+    path = "$.limitations" if code == "invalid_limitations" else "$.hypotheses"
+    if "limitation_index" in detail:
+        path += f"[{detail['limitation_index']}]"
+    if "hypothesis_index" in detail:
+        path += f"[{detail['hypothesis_index']}]"
+        if code == "finding_dependency":
+            path += ".finding_refs"
+        elif code not in {
+            "invalid_hypothesis_shape",
+            "invalid_hypothesis_references",
+            "invalid_evidence_references",
+        }:
+            path += ".claim"
+    return path
+
+
+def validate_author(response, view, criteria, details=None, dropped=None):
     details = details if details is not None else []
+    dropped = dropped if dropped is not None else []
     interpretation, candidates, limitations, errors = None, [], [], []
     if not isinstance(response, dict) or set(response) != {
         "interpretation",
@@ -72,11 +135,12 @@ def validate_author(response, view, criteria, details=None):
         details.append({"code": "author_shape", "path": "$", "rule": "shape"})
         return None, [], [], ["author_shape"]
     try:
-        interpretation = validate_interpretation(
+        interpretation = salvage_interpretation(
             response["interpretation"],
             view["input_evidence_refs"],
             criteria,
             view["observation_refs"],
+            dropped,
         )
     except (ValueError, TypeError, KeyError) as exc:
         errors.append("interpretation_invalid")
@@ -97,32 +161,55 @@ def validate_author(response, view, criteria, details=None):
             raise SynthesisValidationError("interpretation_dependency")
         if not isinstance(hypotheses, list) or len(hypotheses) > 8:
             raise SynthesisValidationError("invalid_hypotheses")
-        plain = []
-        for index, h in enumerate(hypotheses):
-            if not isinstance(h, dict):
-                raise SynthesisValidationError("invalid_hypothesis_shape", index=index)
-            if (
-                not isinstance(h.get("finding_refs"), list)
-                or not h["finding_refs"]
-                or any(
-                    not isinstance(ref, str) or ref not in findings
-                    for ref in h["finding_refs"]
+        hypotheses = list(hypotheses)
+        stated = response["limitations"]
+        stated = list(stated) if isinstance(stated, list) else stated
+        # ponytail: one dropped claim per pass; bounded by 8 hypotheses + 32 limitations.
+        for _ in range(8 + 32 + 1):
+            try:
+                plain = []
+                for index, h in enumerate(hypotheses):
+                    if not isinstance(h, dict):
+                        raise SynthesisValidationError(
+                            "invalid_hypothesis_shape", index=index
+                        )
+                    if (
+                        not isinstance(h.get("finding_refs"), list)
+                        or not h["finding_refs"]
+                        or any(
+                            not isinstance(ref, str) or ref not in findings
+                            for ref in h["finding_refs"]
+                        )
+                    ):
+                        raise SynthesisValidationError(
+                            "finding_dependency", index=index
+                        )
+                    plain.append({k: v for k, v in h.items() if k != "finding_refs"})
+                candidates = validate_synthesis(
+                    {"hypotheses": plain, "limitations": stated},
+                    view["observation_refs"],
+                    view["device_observations"] + view["error_events"],
+                    identifier_tokens(view),
+                    view["query_quality"],
                 )
-            ):
-                raise SynthesisValidationError("finding_dependency", index=index)
-            plain.append(
-                {key: value for key, value in h.items() if key != "finding_refs"}
-            )
-        candidates = validate_synthesis(
-            {"hypotheses": plain, "limitations": response["limitations"]},
-            view["observation_refs"],
-            view["device_observations"] + view["error_events"],
-            identifier_tokens(view),
-            view["query_quality"],
-        )
+                break
+            except SynthesisValidationError as exc:
+                # A rejected claim is removed, not rewritten; shape errors reject all.
+                detail = dict(exc.diagnostic)
+                if "hypothesis_index" in detail:
+                    del hypotheses[detail["hypothesis_index"]]
+                elif "limitation_index" in detail:
+                    del stated[detail["limitation_index"]]
+                else:
+                    raise
+                dropped.append(
+                    {**detail, "path": analysis_path(detail), "action": "dropped"}
+                )
+        else:
+            raise SynthesisValidationError("invalid_hypotheses", rule="salvage_limit")
         for candidate, hypothesis in zip(candidates, hypotheses, strict=True):
             candidate["finding_refs"] = hypothesis["finding_refs"]
-        limitations = response["limitations"]
+        limitations = stated
     except (SynthesisValidationError, ValueError, TypeError, KeyError) as exc:
         candidates = []
         errors.append("analysis_invalid")
@@ -132,21 +219,7 @@ def validate_author(response, view, criteria, details=None):
             if isinstance(exc, SynthesisValidationError)
             else {"code": "invalid_analysis_value", "rule": "shape"}
         )
-        code = detail["code"]
-        path = "$.limitations" if code == "invalid_limitations" else "$.hypotheses"
-        if "limitation_index" in detail:
-            path += f"[{detail['limitation_index']}]"
-        if "hypothesis_index" in detail:
-            path += f"[{detail['hypothesis_index']}]"
-            if code == "finding_dependency":
-                path += ".finding_refs"
-            elif code not in {
-                "invalid_hypothesis_shape",
-                "invalid_hypothesis_references",
-                "invalid_evidence_references",
-            }:
-                path += ".claim"
-        details.append({**detail, "path": path})
+        details.append({**detail, "path": analysis_path(detail)})
     return interpretation, candidates, limitations, errors
 
 
@@ -159,7 +232,10 @@ async def generate(llm, payload, diagnostics):
         getattr(llm, "reserved_tokens", 0),
         prompt,
     )
-    view = bounded_context(payload, min(limit, 6000))
+    # Send the same bounded view the budget planned; a smaller fixed cap dropped
+    # every auxiliary metric source in production (D09 only, ~5.9KB).
+    view = bounded_context(payload, limit)
+    dropped = []
     check = {
         "input_bytes": encoded_size(view),
         "max_input_bytes": limit,
@@ -211,7 +287,7 @@ async def generate(llm, payload, diagnostics):
         else:
             details = []
             interpretation, candidates, limitations, errors = validate_author(
-                response, view, semantic_criteria(payload), details
+                response, view, semantic_criteria(payload), details, dropped
             )
             if errors:
                 diagnostics["error_code"] = "invalid_author_response"
@@ -231,6 +307,7 @@ async def generate(llm, payload, diagnostics):
         request_attempts=usage.get("request_attempts", 0)
         - before.get("request_attempts", 0),
         response_calls=usage.get("calls", 0) - before.get("calls", 0),
+        dropped_items=dropped,
         input_view=view,
         input_view_hash=content_hash(view),
         input_evidence_refs=view["input_evidence_refs"],

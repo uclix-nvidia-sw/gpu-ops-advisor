@@ -30,12 +30,15 @@ def synthesis_input(
     ]
     events = [event for event in events if set(event["evidence_refs"]) <= valid_ids]
     metrics = series(complete)
-    # Prefer incident-node measurements over broad Pod inventory in a bounded view.
+    # Prefer incident-node measurements over broad Pod inventory in a bounded view,
+    # and the reported device's series over its siblings on that node.
     target = data.get("target", {})
+    devices = {e.get("inventory_gpu_candidate") for e in events} - {None}
     metrics.sort(
         key=lambda row: (
             row["labels"].get("node")
             != target.get("node", target.get("k8s_node_name")),
+            not devices & set(map(str, row["labels"].values())),
             row["labels"].get("__name__") == "kube_pod_info",
         )
     )

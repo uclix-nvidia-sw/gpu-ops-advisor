@@ -70,6 +70,12 @@ def bounded_context(payload, max_bytes):
         for item in batch
         if item is not None
     ]
+    # Passed format checks carry no incident meaning; admit them only after observations.
+    scheduled.sort(
+        key=lambda item: (
+            item[0] == "evidence_checks" and item[1].get("outcome") == "pass"
+        )
+    )
     for section, original in scheduled:
         row = dict(original)
         if section == "metric_observations":

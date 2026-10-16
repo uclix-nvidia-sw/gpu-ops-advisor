@@ -124,14 +124,19 @@ async def test_author_preserves_specific_failure_without_rejected_text(
         if e["query_id"] == "rca_synthesis"
     )
     diagnostic = record["diagnostics"]
-    assert diagnostic["adoption"] == "interpretation_only"
+    # Only the offending claim is removed; the rest of the response is adopted.
+    assert diagnostic["adoption"] == "validated_response"
     assert record["interpretation"]["findings"]
-    assert record["hypotheses"] == []
+    # A bad limitation no longer discards the valid hypothesis next to it.
+    assert len(record["hypotheses"]) == (1 if failure == "language" else 0)
     assert diagnostic["request_attempts"] == diagnostic["response_calls"] == 1
-    failure = diagnostic["validation_failures"][0]
-    assert failure["reasons"] == ["analysis_invalid"]
-    assert failure["details"][0]["code"] == code
-    assert failure["details"][0]["path"] == path
+    assert diagnostic["validation_failures"] == []
+    dropped = diagnostic["dropped_items"][0]
+    assert (dropped["code"], dropped["path"], dropped["action"]) == (
+        code,
+        path,
+        "dropped",
+    )
     assert "private-rejected-id" not in json.dumps(result["output"])
     assert "private rejected text" not in json.dumps(result["output"])
 
