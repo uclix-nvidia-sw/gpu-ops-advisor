@@ -23,6 +23,7 @@
 
 ## 상세 계약과 근거
 
+- [네 탭 GUI 개편 계획](specs/frontend/07_프론트엔드_개발명세서.md) · [화면 설계](specs/frontend/08_GUI_화면설계서.md): 기존 세 화면 보존과 신규 탭의 화면·API·호환·검수 계약. 구현과 검증 상태는 모듈 README·QA에서 확인.
 - [명세 목차](specs/README.md): 공통 데이터·판단·실행 계약과 모듈별 상세 규칙.
 - [RCA 평가 분리 설계·개발](specs/rca-agent/11_RCA_Agent_모듈_설계서.md#평가-분리-설계개발): 수집 상태·증거 해석·분석 품질의 분리, LLM 개입 위치, 함수별 변경과 검수 기준. 공통 결과·실행·화면 계약은 해당 문서로 연결한다.
 - [공통 D binding](specs/common/d-binding-runtime.md) · [D 매핑](specs/common/d-query-mapping.md): RCA와 기존 O계열 보고서의 관측 계약.

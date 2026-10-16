@@ -4,8 +4,8 @@ import { apiRequest } from './api';
 import { currentRange } from './live';
 import type { Scope, TimeRange } from './types';
 type AppState = {
-  mode: 'classic' | 'operations' | 'developer';
-  setMode: (mode: 'classic' | 'operations' | 'developer') => void;
+  mode: 'classic' | 'operations' | 'developer' | 'new';
+  setMode: (mode: 'classic' | 'operations' | 'developer' | 'new') => void;
   scope: Scope;
   registeredScope: Scope;
   setScope: (s: Scope) => void;
@@ -26,7 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mode, updateMode] = useState<AppState['mode']>(() => {
     try {
       const saved = localStorage.getItem('gpu-advisor-view');
-      return saved === 'operations' || saved === 'developer' ? saved : 'classic';
+      return saved === 'operations' || saved === 'developer' || saved === 'new' ? saved : 'classic';
     } catch {
       return 'classic';
     }

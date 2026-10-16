@@ -11,7 +11,7 @@ import (
 )
 
 // The table and predicate are code-owned; only bound values come from clients.
-func (s *Server) page(w http.ResponseWriter, q *Request, table, predicate string, args []any, transform func(Object) Object) error {
+func (s *Server) page(w http.ResponseWriter, q *Request, table, predicate string, args []any, transform func(Object) Object, enrich ...func([]Object) error) error {
 	if e := validateList(q); e != nil {
 		return e
 	}
@@ -66,6 +66,11 @@ func (s *Server) page(w http.ResponseWriter, q *Request, table, predicate string
 	if transform != nil {
 		for i, v := range items {
 			items[i] = transform(v)
+		}
+	}
+	for _, apply := range enrich {
+		if e := apply(items); e != nil {
+			return e
 		}
 	}
 	s.write(w, q.ID, 200, Object{"items": items, "next_cursor": next})

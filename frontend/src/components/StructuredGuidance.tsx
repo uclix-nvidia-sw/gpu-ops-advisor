@@ -6,7 +6,13 @@ export function structuredGuidance(result: Row) {
   );
 }
 
-export function StructuredGuidance({ entries }: { entries: Row[] }) {
+export function StructuredGuidance({
+  entries,
+  reader = false,
+}: {
+  entries: Row[];
+  reader?: boolean;
+}) {
   return (
     <>
       {entries.map((entry, index) => {
@@ -14,12 +20,14 @@ export function StructuredGuidance({ entries }: { entries: Row[] }) {
         const sources = rows(entry.sources);
         return (
           <section key={str(entry.evidence_id) || index}>
-            <details>
-              <summary>적용 지침</summary>
-              <p>
-                {str(entry.title)} · revision {String(entry.revision ?? '?')}
-              </p>
-            </details>
+            {!reader && (
+              <details>
+                <summary>적용 지침</summary>
+                <p>
+                  {str(entry.title)} · revision {String(entry.revision ?? '?')}
+                </p>
+              </details>
+            )}
             <ol>
               {rows(guidance.next_checks).map((check, i) => (
                 <li key={i}>

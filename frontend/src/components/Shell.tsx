@@ -22,6 +22,7 @@ import { scopeLabel } from '../lib/domain';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
 import { Empty, Field, Modal, NavTabs, PageHead } from './ui';
+import { NewWorkspace } from '../pages/NewWorkspace';
 import { ViewMode } from './ViewMode';
 import { ApiInspector, DeveloperContext } from './DeveloperContext';
 const nav = [
@@ -65,7 +66,14 @@ export function Shell() {
             '연결·구성',
           ]
         : nav.map((n) => n.label);
-  const menus = nav.map((n, i) => ({ ...n, label: names[i] }));
+  const menus =
+    app.mode === 'new'
+      ? [
+          { ...nav[0], label: '운영 현황' },
+          { ...nav[2], label: '사건 분석' },
+          { ...nav[3], label: '운영 보고서' },
+        ]
+      : nav.map((n, i) => ({ ...n, label: names[i] }));
   const [mobile, setMobile] = useState(false),
     [scopeOpen, setScopeOpen] = useState(false),
     [draft, setDraft] = useState(app.scope),
@@ -122,16 +130,20 @@ export function Shell() {
       <div className="sidebar-bottom">
         <div className="environment">
           <span className={app.ready ? 'pulse-dot' : ''} />
-          <span>{app.ready ? '로컬 API 연결' : '연결 확인 중'}</span>
+          <span>
+            {app.ready ? (app.mode === 'new' ? '데이터 연결됨' : '로컬 API 연결') : '연결 확인 중'}
+          </span>
           <span className="version">v1.3</span>
         </div>
-        <div className="profile">
-          <span className="avatar">D</span>
-          <span>
-            <b>{app.ready ? 'GPU Operations' : '연결 확인 중'}</b>
-            <small>개발 환경 · 인증 제외</small>
-          </span>
-        </div>
+        {app.mode !== 'new' && (
+          <div className="profile">
+            <span className="avatar">D</span>
+            <span>
+              <b>{app.ready ? 'GPU Operations' : '연결 확인 중'}</b>
+              <small>개발 환경 · 인증 제외</small>
+            </span>
+          </div>
+        )}
       </div>
     </>
   );
@@ -165,85 +177,99 @@ export function Shell() {
             <ViewMode />
           </div>
         </header>
-        {!isGuide && (
-          <div className="scopebar">
-            {isSavedReport ? (
-              <>
-                <div className="scope-left">
-                  <span className="scope-label">이 보고서의 분석 범위</span>
-                  <div className="scope-chips">
-                    {savedScope.length ? (
-                      savedScope.map(({ cluster, namespaces }) => (
-                        <span key={cluster}>
-                          {cluster} / {namespaces}
-                        </span>
-                      ))
-                    ) : (
-                      <span>{report.isPending ? '불러오는 중' : '분석 범위 미확인'}</span>
-                    )}
+        {!isGuide &&
+          (app.mode !== 'new' ||
+            ['/dashboard', '/cases', '/reports', '/reports/new', '/schedules'].includes(
+              location.pathname,
+            )) && (
+            <div className="scopebar">
+              {isSavedReport ? (
+                <>
+                  <div className="scope-left">
+                    <span className="scope-label">이 보고서의 분석 범위</span>
+                    <div className="scope-chips">
+                      {savedScope.length ? (
+                        savedScope.map(({ cluster, namespaces }) => (
+                          <span key={cluster}>
+                            {cluster} / {namespaces}
+                          </span>
+                        ))
+                      ) : (
+                        <span>{report.isPending ? '불러오는 중' : '분석 범위 미확인'}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <span className="muted">생성 당시 범위 · 분석 기간은 본문에 표시</span>
-              </>
-            ) : (
-              <>
-                <div className="scope-left">
-                  <span className="scope-label">관측 범위</span>
-                  <button
-                    className="scope-button"
-                    disabled={!app.ready || !app.registeredScope.clusters.length}
-                    onClick={() => {
-                      setDraft(structuredClone(app.scope));
-                      setScopeError('');
-                      setScopeOpen(true);
-                    }}
-                  >
-                    {app.scope.clusters.length}개 CPC
-                    <ChevronDown size={14} />
-                  </button>
-                  <div className="scope-chips">
-                    {app.scope.clusters.map((c) => (
-                      <span key={c.cluster_id}>
-                        {c.cluster_id.toUpperCase()} /{' '}
-                        {c.namespaces?.join(', ') || '전체 Namespace'}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="scope-right">
-                  <span className="time-zone">Asia/Seoul</span>
-                  {!isJobHistory && !location.pathname.startsWith('/reports') && (
-                    <select
-                      aria-label="조회 기간"
-                      value={app.period}
-                      onChange={(e) => app.setPeriod(e.target.value)}
+                  <span className="muted">생성 당시 범위 · 분석 기간은 본문에 표시</span>
+                </>
+              ) : (
+                <>
+                  <div className="scope-left">
+                    <span className="scope-label">관측 범위</span>
+                    <button
+                      className="scope-button"
+                      disabled={!app.ready || !app.registeredScope.clusters.length}
+                      onClick={() => {
+                        setDraft(structuredClone(app.scope));
+                        setScopeError('');
+                        setScopeOpen(true);
+                      }}
                     >
-                      <option value="1h">최근 1시간</option>
-                      <option value="6h">최근 6시간</option>
-                      <option value="24h">최근 24시간</option>
-                    </select>
-                  )}
-                  <button
-                    className="icon-button"
-                    aria-label="데이터 새로고침"
-                    onClick={app.refresh}
-                  >
-                    <RefreshCw size={17} />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                      {app.scope.clusters.length}개 CPC
+                      <ChevronDown size={14} />
+                    </button>
+                    <div className="scope-chips">
+                      {app.scope.clusters.map((c) => (
+                        <span key={c.cluster_id}>
+                          {c.cluster_id.toUpperCase()} /{' '}
+                          {c.namespaces?.join(', ') || '전체 Namespace'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="scope-right">
+                    <span className="time-zone">Asia/Seoul</span>
+                    {!isJobHistory &&
+                      !location.pathname.startsWith('/reports') &&
+                      (app.mode !== 'new' ||
+                        ['/dashboard', '/cases'].includes(location.pathname)) && (
+                        <select
+                          aria-label="조회 기간"
+                          value={app.period}
+                          onChange={(e) => app.setPeriod(e.target.value)}
+                        >
+                          <option value="1h">최근 1시간</option>
+                          <option value="6h">최근 6시간</option>
+                          <option value="24h">최근 24시간</option>
+                        </select>
+                      )}
+                    <button
+                      className="icon-button"
+                      aria-label="데이터 새로고침"
+                      onClick={app.refresh}
+                    >
+                      <RefreshCw size={17} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         <main id="main-content">
           {app.mode === 'developer' && <DeveloperContext />}
-          {location.pathname === '/reports' &&
+          {app.mode !== 'new' &&
+            location.pathname === '/reports' &&
             (me.isPending || me.isError || !app.registeredScope.clusters.length) && (
               <div className="live-padding">
                 <NavTabs items={reportTabs} />
               </div>
             )}
-          {isGuide ? (
+          {app.mode === 'new' && isGuide ? (
+            <NewWorkspace />
+          ) : app.mode === 'new' ? (
+            <QueryState query={me}>
+              <NewWorkspace />
+            </QueryState>
+          ) : isGuide ? (
             <Outlet />
           ) : (
             <QueryState query={me}>
@@ -274,7 +300,9 @@ export function Shell() {
           {app.mode === 'developer' && <ApiInspector />}
         </main>
         <footer className="app-footer">
-          <span>GPU Ops Advisor · Go API · PostgreSQL</span>
+          <span>
+            {app.mode === 'new' ? 'GPU Ops Advisor' : 'GPU Ops Advisor · Go API · PostgreSQL'}
+          </span>
           <span>관측에서 근거로, 근거에서 판단으로.</span>
         </footer>
       </div>
