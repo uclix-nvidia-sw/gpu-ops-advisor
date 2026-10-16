@@ -17,6 +17,10 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 
 XID 79와 SXID 11001 작성 원본에 Runbook 1.1 `decision_policy`를 넣었다. 현재 목적은 **해당 대상·기간의 오류 보고 식별**이며 실제 고장 원인이나 회복 확인이 아니다. Python·Backend Go가 계약을 검증하고 GUI·Ops가 평가 schema 1/2를 읽는다. 운영 적용에는 새 Runbook revision 발행과 코드 배포가 필요하다. 실제 모델 비교·의미 품질은 아직 검증하지 않았다.
 
+통합 프롬프트는 기존 분석·해석의 판단 규칙만 재사용하며, 출력 지시는 `interpretation`·`hypotheses`·`limitations`를 가진 JSON 객체 하나로 제공한다. 해석의 목록은 `interpretation` 내부에, Runbook 의미 기준이 있으면 `criterion_assessments`도 그 내부에 둔다. 분리 모드의 프롬프트와 기존 형식·참조·부분 성공 검증은 유지한다.
+
+개발용 RCA의 **분석 요약·LLM 실행 기록**과 **워크플로우 단계 상세**는 요청 실패·호출 전 생략·응답 수신 후 검증 실패를 구분한다. `invalid_author_response` / `author_shape`는 응답을 받은 뒤 최상위 구조가 맞지 않아 거절한 경우이며 연결 실패가 아니다. HTTP 오류는 모델 서버 요청 실패로, `remote_call_state=unknown`은 통신 중단·원격 실행 상태 미확인으로 표시한다. 응답 횟수만으로 채택 여부를 판단하지 않으며, 실제 누락·추가 항목과 거절된 응답 원문은 저장하지 않으므로 기존 기록에서 추정하지 않는다. 회귀 검사는 [통합 프롬프트 계약](../agents/tests/test_rca_author_prompt.py)과 [GUI 실패 구분](../frontend/src/components/RcaModelFailure.test.tsx)을 포함한다. fixture 통과와 실제 운영 모델의 출력 개선은 별도 검증이다.
+
 ## 보완 조회 선택
 
 선택 조건은 발행 Runbook의 `observation_plan`에 둔다. `selection.missing_any`는 부족 조건, `requires_all`은 필요한 scoped fact, `independent: true`는 독립 조회를 뜻한다. 조건을 만족한 항목을 priority와 query ID 순으로 선택한다. 명시적 `unexpected_evidence.additional_queries` 정책도 지원하되 단계의 selection 규칙을 우회하지 않는다.

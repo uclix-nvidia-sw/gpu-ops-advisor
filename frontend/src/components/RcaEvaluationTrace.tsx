@@ -65,6 +65,95 @@ const label = (v: unknown) => evaluationLabels[str(v)] || rcaReasons[str(v)] || 
 const amount = (v: unknown) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('ko-KR') : '기록 없음';
 
+export function RcaModelFailure({ diagnostic }: { diagnostic: Row }) {
+  const code = str(diagnostic.error_code ?? diagnostic.failure_reason ?? diagnostic.reason);
+  if (!code) return null;
+  const failures: Record<string, [string, string]> = {
+    invalid_author_response: [
+      '응답 수신 · 통합 분석 검증 실패',
+      '모델이 답했지만 요구한 형식·근거 참조 검사를 통과하지 못했습니다. 연결 실패가 아닙니다. 채택 여부는 아래 기록을 확인하세요.',
+    ],
+    invalid_stage_output: [
+      '응답 수신 · 단계 검증 실패',
+      '응답을 받았지만 해당 단계의 형식·근거 검사를 통과하지 못했습니다.',
+    ],
+    invalid_model_response: [
+      '응답 수신 · 분석 검증 실패',
+      '응답을 받았지만 분석 결과로 사용할 수 있는 형식이 아닙니다.',
+    ],
+    llm_invalid_output: [
+      '응답 수신 · JSON 해석 실패',
+      '모델 응답을 JSON으로 읽지 못했습니다. 연결 실패가 아닙니다.',
+    ],
+    llm_output_truncated: [
+      '응답 수신 · 출력 잘림',
+      '출력 한도에 도달해 응답이 잘렸습니다. 완성된 분석으로 채택하지 않았습니다.',
+    ],
+    llm_http_error: [
+      '모델 요청 실패 · HTTP 오류',
+      '서버가 오류 응답을 반환했습니다. 모델 분석 응답의 내용 검증까지 진행하지 못했습니다. 이 코드만으로 연결 불가나 인증 실패를 단정할 수 없습니다.',
+    ],
+    llm_no_response: [
+      '유효한 응답 없음 · 원인 미확인',
+      '연결 실패인지 응답 처리 문제인지는 이 기록만으로 확정할 수 없습니다.',
+    ],
+    model_not_configured: ['호출 전 생략 · 모델 미설정', '모델 설정이 없어 요청하지 않았습니다.'],
+    llm_input_size_exceeded: [
+      '호출 전 생략 · 입력 크기 초과',
+      '해당 요청은 입력 크기 검사에서 차단됐습니다. 앞선 요청 기록과 구분하세요.',
+    ],
+    llm_token_budget_exhausted: [
+      '호출 전 생략 · 토큰 예산 부족',
+      '해당 요청에 필요한 예산이 부족합니다. 앞선 요청의 응답 유무와는 별개입니다.',
+    ],
+    llm_context_budget_exhausted: [
+      '호출 전 생략 · 분석 입력 구성 불가',
+      '입력 한도 또는 관측 근거 부재로 분석 요청을 생략했습니다. 구 기록의 두 원인은 이 코드만으로 구분할 수 없습니다.',
+    ],
+    llm_deadline_exhausted: [
+      '요청 실행 기한 소진',
+      '남은 실행 시간이 없습니다. 이 코드만으로 연결 실패를 단정할 수 없습니다.',
+    ],
+  };
+  const failure = failures[code];
+  const reasons: Record<string, string> = {
+    author_shape:
+      '통합 응답의 최상위 구조가 다릅니다. interpretation(증거 해석), hypotheses(원인 후보), limitations(분석 한계)만 가진 JSON 객체가 필요합니다. 실제 누락·추가 항목은 이 기록에 저장되지 않았습니다.',
+    interpretation_invalid: '증거 해석의 형식 또는 근거 참조 검증에 실패했습니다.',
+    analysis_invalid: '원인 분석의 형식·근거 참조 또는 해석과의 연결 검증에 실패했습니다.',
+  };
+  return (
+    <section aria-label="모델 호출과 응답 검증 구분">
+      <strong>{failure?.[0] ?? '실패 유형 미분류 · 저장 사유 확인'}</strong>
+      <p>{failure?.[1] ?? '이 사유만으로 연결 실패나 응답 검증 실패를 추정하지 않습니다.'}</p>
+      <p>
+        저장 사유: <code>{code}</code>
+      </p>
+      {diagnostic.adoption != null && (
+        <p>
+          응답 채택:{' '}
+          {(
+            {
+              none: '해석·분석 모두 미채택',
+              interpretation_only: '증거 해석만 보존 · 원인 분석 미채택',
+              validated_response: '검증된 응답 채택',
+            } as Record<string, string>
+          )[str(diagnostic.adoption)] ?? '미확인'}
+        </p>
+      )}
+      {rows(diagnostic.validation_failures).map((attempt, i) => (
+        <ul key={i}>
+          {strings(attempt.reasons).map((reason) => (
+            <li key={reason}>
+              {reasons[reason] ?? '검증 사유 설명 미등록'} <code>{reason}</code>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </section>
+  );
+}
+
 function RequestChecks({ value }: { value: unknown }) {
   const checks = rows(value);
   if (!checks.length) return <p>요청 크기·예산 사전 검사: 기록 없음</p>;
@@ -283,11 +372,7 @@ export function RcaStageDetails({
           {body.generation_mode === 'combined' && (
             <RequestChecks value={rows(synthesis.requests).map((row) => row.request_check)} />
           )}
-          {synthesis.error_code != null && (
-            <p>
-              분석 실패 사유: {label(synthesis.error_code)} <code>{str(synthesis.error_code)}</code>
-            </p>
-          )}
+          {synthesis.error_code != null && <RcaModelFailure diagnostic={synthesis} />}
           <p>
             분석 입력 크기: {amount(synthesis.input_bytes)} / 축약 전{' '}
             {amount(synthesis.original_input_bytes)} 바이트
@@ -345,6 +430,10 @@ export function RcaStageDetails({
           재검토 실패: {label(body.failure_reason)} <code>{str(body.failure_reason)}</code>
         </p>
       )}
+      {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) &&
+        (body.failure_reason != null || body.execution_status === 'failed') && (
+          <RcaModelFailure diagnostic={body} />
+        )}
       {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
         <RequestChecks value={body.request_checks} />
       )}
