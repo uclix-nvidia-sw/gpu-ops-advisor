@@ -1,4 +1,4 @@
-import { RcaEvaluationTrace, RcaStageDetails } from './RcaEvaluationTrace';
+import { RcaEvaluationTrace, RcaStageDetails, RcaModelFailure } from './RcaEvaluationTrace';
 import { RcaObservations } from './RcaObservations';
 import { RcaNarrative } from './RcaNarrative';
 import { gapMeaning } from '../lib/rcaGuidance';
@@ -132,6 +132,7 @@ export function IncidentDebug({ incident }: { incident: Row }) {
 export function RcaJobSummary({ job }: { job: Row }) {
   const published = job.result_ref != null,
     result = obj(job.result);
+  const attempt = rows(job.attempts).find((row) => row.attempt_no === job.attempt_no);
   return (
     <div className="stack">
       <AlarmIdentity record={job} rcaView />
@@ -168,6 +169,13 @@ export function RcaJobSummary({ job }: { job: Row }) {
             />
           ))}
       </Notice>
+      {attempt?.remote_call_state === 'unknown' && (
+        <Notice>
+          모델 통신 중단 · 원격 실행 상태 미확인. 연결 문제·응답 대기 시간 초과·취소 등을 구분하려면
+          해당 시도의 실행 로그가 필요합니다. 응답 검증 실패를 뜻하지 않으며, 모델 서버에서 실행이
+          끝났는지도 확인되지 않았습니다.
+        </Notice>
+      )}
       <p className="muted">
         서버 단계: <code>{str(job.stage, '미확인')}</code> · 시도{' '}
         {typeof job.attempt_no === 'number' ? job.attempt_no : '미확인'}. 개별 조회의 실시간
@@ -558,7 +566,7 @@ export function RcaResult({
                 <>
                   <dt>RCA 분석 실패·제한 사유</dt>
                   <dd>
-                    <RcaReason value={synthesis.error_code} />
+                    <RcaModelFailure diagnostic={synthesis} />
                   </dd>
                 </>
               )}
