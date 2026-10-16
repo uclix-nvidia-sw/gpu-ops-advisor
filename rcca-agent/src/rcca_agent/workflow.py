@@ -21,6 +21,7 @@ from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
 from .analysis_review import analysis_draft
 from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
+from .operator_guidance import project_guidance
 from .collection_checks import collection_checks, reported_gpu_identity
 from .requirement_diagnostics import (
     unmet_requirements,
@@ -1485,6 +1486,8 @@ async def run(tools):
             ],
         },
     }
+    # Published guidance remains reference data, never a second RCA conclusion.
+    result["quality"]["runbook_guidance"] = project_guidance(obs.evidence)
     material_fields = (
         "cause_candidates",
         "recommendations",
@@ -1514,7 +1517,7 @@ async def run(tools):
         "ok",
         {"execution_status": "complete"},
     )["id"]
-    await write_report(result, data, clues, obs.evidence, ctx["llm"])
+    await write_report(result, data, clues, obs.evidence, ctx["llm"], material)
     if (
         content_hash(
             {
@@ -1531,15 +1534,34 @@ async def run(tools):
         None,
         data["time_range"],
         {
-            "execution_status": "complete",
+            **result["quality"]["report"].get("writer", {}),
+            "assembly_status": "complete",
             "analysis_id": evaluation["draft"]["analysis_id"],
-            "reason": final_stop,
+            "stop_reason": final_stop,
             "report": result["quality"]["report"],
             "material_hash": material_hash,
             "evidence_refs": [frozen_id],
         },
         "ok",
-        {"execution_status": "complete", "reason": final_stop},
+        {
+            **{
+                k: v
+                for k, v in result["quality"]["report"].get("writer", {}).items()
+                if k
+                in {
+                    "execution_status",
+                    "reason",
+                    "started_at",
+                    "completed_at",
+                    "elapsed_seconds",
+                    "model",
+                    "usage",
+                    "attempts",
+                }
+            },
+            "assembly_status": "complete",
+            "stop_reason": final_stop,
+        },
     )
     result["evidence_refs"] = list(
         dict.fromkeys(result["evidence_refs"] + [frozen_id, obs.evidence[-1]["id"]])

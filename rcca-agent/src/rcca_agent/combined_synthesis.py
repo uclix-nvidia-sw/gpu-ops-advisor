@@ -40,7 +40,11 @@ Return JSON with exactly these keys:
  "limitations":[]}
 This is the only top-level output contract. Replace example text and refs with
 supported content; never copy placeholders or invent a hypothesis to match the example.
-Interpretation limitations are objects with statement/evidence_refs;
+Interpretation lists contain objects, never strings:
+unknowns: {"statement":"...", "evidence_refs":[], "reason":"..."};
+conflicts/limitations: {"statement":"...", "evidence_refs":["actual id"]}.
+Compare timestamps: Healthy then Unhealthy may be a transition, not a conflict.
+Return concise analytical material, not report prose;
 top-level limitations and hypothesis missing_inputs are Korean strings.
 Each hypothesis also requires finding_refs referencing findings in THIS response.
 Hypothesis supporting_refs must cite observation_refs, never diagnostics or Runbook IDs.

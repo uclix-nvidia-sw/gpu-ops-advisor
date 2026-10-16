@@ -107,7 +107,8 @@ def analysis_draft(
             claims.append(
                 {
                     "id": "criterion:" + row["criterion_id"],
-                    "source": "interpretation",
+                    "source": "criterion_assessment",
+                    "criterion_status": row["status"],
                     "statement": "조사 기준 제안: "
                     + row["criterion_id"]
                     + " = "
@@ -239,9 +240,7 @@ def review_payload(draft, view, allowed_queries):
             key: value
             for key, value in draft.items()
             if key not in {"cause_candidates", "recommendations", "interpretation"}
-        }
-        if "interpretation" in draft
-        else draft,
+        },
         "evidence_context": view,
         "input_evidence_refs": view.get("input_evidence_refs", []),
         "allowed_queries": allowed_queries,
@@ -266,11 +265,13 @@ async def review_analysis(llm, draft, view, allowed_queries):
 GOAL_REVIEW = """
 Rubric 2: judge the supplied investigation objective, not universal root-cause completeness.
 Review interpretation and criterion claims against original sources, never as independent evidence.
-Unknown root cause alone is not contradictory evidence. An error-report-only conclusion may
+Unknown root cause is not contradictory evidence. An unknown criterion is an unresolved
+assessment, not an unsupported claim merely because refs are empty. Do not mark it satisfied. An error-report-only conclusion may
 mark alternatives not_applicable with an explicit reason when it chooses/excludes no cause.
 Optional uncollected queries alone do not fail quality. Concrete causal claims still require
 support and material alternatives. Never waive blocking conditions or required criteria.
 Review each proposed semantic criterion; unsupported completion must be revision_required.
 Propose followup only for unresolved required criteria, using supplied followup_links.
 D44 measures PCIe replay, D02 GPU activity; do not request driver logs from these queries.
+Use brief pass reasons; detail failures once per affected claim.
 Questions do not authorize execution. Fix overstatement from existing evidence before collecting."""

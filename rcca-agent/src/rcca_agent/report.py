@@ -22,7 +22,14 @@ TITLES = {
 }
 
 
-async def write_report(result, data, clues, evidence, llm):
+async def write_report(result, data, clues, evidence, llm, material=None):
+    if material is not None:
+        from .report_writer import write_material_report
+
+        return await write_material_report(result, material, llm)
+
+    # Pre-evaluation callers retain their historical report contract. New workflows
+    # always supply frozen material and never enter this legacy reconstruction path.
     from .operator_guidance import project_guidance
 
     result.setdefault("quality", {})["runbook_guidance"] = project_guidance(evidence)

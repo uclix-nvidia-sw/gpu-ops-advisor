@@ -296,7 +296,9 @@ def validate_interpretation(response, refs, criteria=None, observation_refs=None
     return response
 
 
-async def call_stage(llm, stage, prompt, payload, validator, *, max_bytes=16000):
+async def call_stage(
+    llm, stage, prompt, payload, validator, *, max_bytes=16000, max_attempts=2
+):
     """Two structured stages share the existing serial transport and failure fences."""
     started = time.monotonic()
     before = dict(getattr(llm, "usage", {}))
@@ -321,7 +323,7 @@ async def call_stage(llm, stage, prompt, payload, validator, *, max_bytes=16000)
         if not llm.configured:
             return None, diagnostics
         request = payload
-        for attempt in range(2):
+        for attempt in range(max_attempts):
             remaining = getattr(llm, "remaining", 32768)
             reserved = getattr(llm, "reserved_tokens", 0)
             input_bytes = encoded_size(request)

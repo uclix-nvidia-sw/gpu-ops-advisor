@@ -4,6 +4,8 @@ Only upstream Grafana datasource responses and the inference endpoint are fixtur
 No production metrics or model-quality claims are made by this suite.
 """
 
+from rca_report_fixture import report_reply
+
 from evaluation_fixtures import (
     interpretation_reply as rca_interpretation_reply,
     review_reply,
@@ -140,7 +142,9 @@ class Upstream(BaseHTTPRequestHandler):
             message = {
                 "role": "assistant",
                 "content": json.dumps(
-                    review_reply(data)
+                    report_reply(data)
+                    if "source_items" in data and "material_hash" in data
+                    else review_reply(data)
                     if "rubric_version" in data
                     else combined_reply(data)
                     if data.get("generation_mode") == "combined"
@@ -1916,19 +1920,36 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
     assert [section["id"] for section in result["narrative"]] == [
         "problem",
-        "impact",
         "cause",
         "action",
         "next",
         "limits",
     ]
-    assert result["quality"]["report"]["presentation"] == "incident-first/1"
+    report = result["quality"]["report"]
+    assert report["presentation"] == "rca-material/1"
+    assert report["method"] == (
+        "deterministic_fallback" if llm_failed else "llm_composed"
+    )
+    assert report["writer"]["stage"] == "report_writing"
+    assert report["writer"]["usage"]["request_attempts"] == 1
     assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
-    assert "XID 79" in text and "미확정" in text
-    assert "실행 적격성 미검증" in text and "REBOOT_SYSTEM" in text
+    if result["cause_candidates"]:
+        assert "원인 후보(확정 아님)" in text
+    else:
+        assert "근본 원인은 확정되지 않았습니다" in text
+    # An alert's proposed action is preserved as input, not promoted by the writer.
+    assert "REBOOT_SYSTEM" not in text
+    if llm_failed:
+        assert "채택된 증거 해석이 없습니다" in text
     with psycopg.connect(stack["url"]) as conn:
+        frozen = conn.execute(
+            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='rca_result_frozen'",
+            (jid,),
+        ).fetchone()[0]
+        assert report["material_hash"] == content_hash(frozen["material"])
+        assert frozen["material"]["evaluation"] == result["quality"]["rca_evaluation"]
         saved = conn.execute(
             "SELECT snapshot,content_hash FROM incident_evidence_versions WHERE incident_id=%s",
             (iid,),
@@ -2053,8 +2074,23 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
         for path, body in Upstream.requests[request_start:]
         if path == "/v1/chat/completions"
     ]
-    assert len(model_requests) == 1 and "facts" in model_requests[0]
+    assert len(model_requests) == 1
+    request = model_requests[0]
+    assert request["material_hash"] == result["quality"]["report"]["material_hash"]
+    assert "facts" not in request and "raw_excerpts" not in request
+    assert any(
+        "등록 오류 조건이 충족됐습니다." in row["text"]
+        for row in request["source_items"]
+        if row["section"] == "cause"
+    )
+    assert any(
+        "장비의 연결 상태를 확인하세요." in row["text"]
+        and "registered_error" in row["text"]
+        for row in request["source_items"]
+        if row["section"] == "action"
+    )
     assert result["narrative_status"] == "complete"
+    assert result["quality"]["report"]["method"] == "llm_composed"
 
 
 @pytest.mark.e2e
@@ -3173,6 +3209,13 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         == stored["report_assembly"]["material_hash"]
     )
     assert stored["rca_result_frozen"]["material"]["evaluation"] == evaluation
+    assert result["quality"]["report"]["method"] == "llm_composed"
+    assert stored["report_assembly"]["attempts"] == 1
+    assert stored["report_assembly"]["stage"] == "report_writing"
+    assert (
+        stored["report_assembly"]["input_material_hash"]
+        == stored["rca_result_frozen"]["material_hash"]
+    )
 
     diagnostics = stored["rca_synthesis"]["diagnostics"]
     if invalid_interpretation:

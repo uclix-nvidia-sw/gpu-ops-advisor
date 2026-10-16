@@ -107,7 +107,7 @@ async def test_goal_stops_without_optional_queries_and_keeps_cause_unknown(kind)
     assert [call["stage"] for call in result["model_calls"]] == [
         "synthesis",
         "analysis_review",
-        "report_ordering",
+        "report_writing",
     ]
     assert not any(
         e["query_id"] == "evidence_interpretation" for e in output["evidence"]
@@ -414,7 +414,7 @@ async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(mod
 
 async def test_report_editor_failure_preserves_frozen_material_and_code_report():
     case = policy_case()
-    case["responses"]["report_ordering"] = [
+    case["responses"]["report_writing"] = [
         {"raw_text": "not json", "usage": {"total_tokens": 100}}
     ] * 2
     result = await replay(case)

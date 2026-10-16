@@ -352,7 +352,11 @@ export function RcaWorkflowRecord({
           기록 성격:{' '}
           {kind === 'analysis_review' && reviewStatus(record) === '미실행'
             ? '미실행 상태 기록'
-            : recordType(kind)}
+            : kind === 'report_assembly' && obj(body.report).presentation === 'rca-material/1'
+              ? body.execution_status === 'skipped'
+                ? 'LLM 미실행 · 기본 결과 구성'
+                : 'LLM 처리 · 결과 구성'
+              : recordType(kind)}
         </p>
         <p>
           담당: {step.actor} · 저장된 단계 상태:{' '}
