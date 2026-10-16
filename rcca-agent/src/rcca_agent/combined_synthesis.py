@@ -10,6 +10,7 @@ from .evidence_interpretation import (
     CRITERIA_PROMPT,
     semantic_criteria,
     validate_interpretation,
+    ResponseValidationError,
 )
 from .prompts import SYNTHESIS_CONTEXT, SYNTHESIS_RULES
 from .synthesis import (
@@ -77,15 +78,18 @@ def validate_author(response, view, criteria, details=None):
             criteria,
             view["observation_refs"],
         )
-    except (ValueError, TypeError, KeyError):
+    except (ValueError, TypeError, KeyError) as exc:
         errors.append("interpretation_invalid")
-        details.append(
-            {
-                "code": "interpretation_invalid",
-                "path": "$.interpretation",
-                "rule": "shape_or_refs",
+        detail = (
+            exc.diagnostic
+            if isinstance(exc, ResponseValidationError)
+            else {
+                "code": "invalid_stage_value",
+                "path": "$",
+                "rule": "unexpected_value_type",
             }
         )
+        details.append({**detail, "path": "$.interpretation" + detail["path"][1:]})
     try:
         findings = {row["id"] for row in (interpretation or {}).get("findings", [])}
         hypotheses = response["hypotheses"]

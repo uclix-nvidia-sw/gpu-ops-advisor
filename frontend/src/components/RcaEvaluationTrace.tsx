@@ -124,6 +124,30 @@ export function reviewStatus(record: Row) {
 }
 
 const validationMeaning: Record<string, string> = {
+  object_type: 'JSON 객체여야 하는 항목의 타입이 다릅니다.',
+  list_type: '목록이어야 하는 항목의 타입이 다릅니다.',
+  string_type: '문자열이어야 하는 항목의 타입이 다릅니다.',
+  missing_field: '필수 필드가 응답에서 빠졌습니다.',
+  unexpected_fields: '허용하지 않은 필드가 응답에 포함됐습니다.',
+  list_type_or_limit: '목록 형식이 아니거나 허용된 항목 수를 넘었습니다.',
+  empty_text: '필수 설명이 비어 있습니다.',
+  text_limit: '설명이 800자 제한을 넘었습니다.',
+  item_limit: '허용된 항목 수를 넘었습니다.',
+  invalid_or_duplicate_id: '해석 ID가 비어 있거나 문자열이 아니거나 다른 항목과 중복됩니다.',
+  invalid_enum: '허용된 상태·유형 값이 아닙니다.',
+  unknown_reference: '이 단계에 허용된 근거·항목 ID가 아닌 값을 참조했습니다.',
+  missing_support: '필수 근거 참조가 없습니다. 근거 없는 미확인 항목에는 이유가 필요합니다.',
+  criterion_count: 'method=llm인 Runbook 기준마다 정확히 한 개의 판단을 반환해야 합니다.',
+  unknown_or_duplicate_criterion:
+    'Runbook 기준의 전체 key와 일치하지 않거나 같은 기준을 중복 답했습니다. 짧은 id는 사용할 수 없습니다.',
+  draft_mismatch: '요청한 초안의 식별값과 응답의 식별값이 다릅니다.',
+  rubric_mismatch: '척도별 판정과 최종 검토 판정이 서로 맞지 않습니다.',
+  issue_verdict_mismatch:
+    '수정 필요 판정에는 지적 사항이 필요하고, 통과 판정에는 지적 사항이 없어야 합니다.',
+  query_count: '추가 확인 질문에는 허용된 조회를 1~3개 지정해야 합니다.',
+  selection_shape: '조회 선택 응답에는 query_ids 목록 또는 기존 query_id 형식만 허용됩니다.',
+  json_syntax: '응답을 JSON으로 읽지 못했습니다. 내부 필드 검증 이전의 실패입니다.',
+  unexpected_value_type: '예상하지 않은 값 타입으로 검증을 완료하지 못했습니다.',
   author_shape: '통합 응답의 최상위 JSON 구조가 맞지 않습니다.',
   interpretation_invalid: '증거 해석의 형식 또는 근거 참조가 맞지 않습니다.',
   interpretation_dependency: '증거 해석이 검증되지 않아 원인 분석을 채택할 수 없습니다.',
@@ -198,12 +222,6 @@ export function RcaModelFailure({ diagnostic }: { diagnostic: Row }) {
     ],
   };
   const failure = failures[code];
-  const reasons: Record<string, string> = {
-    author_shape:
-      '통합 응답의 최상위 구조가 다릅니다. interpretation(증거 해석), hypotheses(원인 후보), limitations(분석 한계)만 가진 JSON 객체가 필요합니다. 실제 누락·추가 항목은 이 기록에 저장되지 않았습니다.',
-    interpretation_invalid: '증거 해석의 형식 또는 근거 참조 검증에 실패했습니다.',
-    analysis_invalid: '원인 분석의 형식·근거 참조 또는 해석과의 연결 검증에 실패했습니다.',
-  };
   return (
     <section aria-label="모델 호출과 응답 검증 구분">
       <strong>{failure?.[0] ?? '실패 유형 미분류 · 저장 사유 확인'}</strong>
@@ -223,51 +241,113 @@ export function RcaModelFailure({ diagnostic }: { diagnostic: Row }) {
           )[str(diagnostic.adoption)] ?? '미확인'}
         </p>
       )}
-      {rows(diagnostic.validation_failures).map((attempt, i) => (
-        <div key={i}>
-          {rows(attempt.details).length ? (
-            rows(attempt.details).map((detail, j) => (
-              <div key={j}>
-                <p>
-                  <strong>
-                    {typeof detail.hypothesis_index === 'number'
-                      ? `원인 후보 ${detail.hypothesis_index + 1}`
-                      : typeof detail.limitation_index === 'number'
-                        ? `분석 한계 ${detail.limitation_index + 1}`
-                        : '응답 구조'}
-                    :{' '}
-                  </strong>
-                  {validationMeaning[str(detail.rule)] ??
-                    validationMeaning[str(detail.code)] ??
-                    '설명 미등록 · 세부 진단을 확인하세요.'}
-                </p>
-                <details>
-                  <summary>검증 위치·코드</summary>
-                  <p>
-                    위치: <code>{str(detail.path, '미기록')}</code>
-                  </p>
-                  <p>
-                    검증 코드: <code>{str(detail.code)}</code> · 규칙:{' '}
-                    <code>{str(detail.rule)}</code>
-                  </p>
-                  <p>
-                    항목 번호는 응답 목록 순서입니다. 첫 검증 실패를 기록하며 거절된 원문은 저장하지
-                    않습니다.
-                  </p>
-                </details>
-              </div>
-            ))
-          ) : (
-            <>
-              {strings(attempt.reasons).map((reason) => (
-                <p key={reason}>{reasons[reason] ?? '검증 사유 설명 미등록'}</p>
-              ))}
-              <p>이 기록에는 세부 검증 위치·사유가 저장되지 않았습니다.</p>
-            </>
-          )}
-        </div>
-      ))}
+      <RcaValidationDetails diagnostic={diagnostic} />
     </section>
+  );
+}
+
+function validationLocation(detail: Row): string {
+  const path = str(detail.path);
+  const rootFields: Record<string, string> = {
+    analysis_id: '검토 대상 초안',
+    verdict: '최종 검토 판정',
+    query_id: '선택 조회',
+    query_ids: '선택 조회',
+  };
+  const rootField = path.match(/^\$\.(analysis_id|verdict|query_ids?)(?:\[(\d+)\])?$/);
+  if (rootField)
+    return (
+      rootFields[rootField[1]] + (rootField[2] == null ? '' : ' ' + (Number(rootField[2]) + 1))
+    );
+  const sections: Record<string, string> = {
+    findings: '해석',
+    unknowns: '미확인',
+    conflicts: '상충',
+    limitations: '한계',
+    criterion_assessments: 'Runbook 판단 기준',
+    issues: '검토 지적',
+    followup_questions: '추가 확인 질문',
+  };
+  const fields: Record<string, string> = {
+    statement: '설명',
+    reason: '이유',
+    evidence_refs: '근거 참조',
+    finding_refs: '해석 연결',
+    criterion_id: '판단 기준 ID',
+    kind: '보고·추론 구분',
+    status: '판정',
+    id: '해석 ID',
+    query_ids: '조회 ID',
+    suggested_resolution: '수정 제안',
+    claim_id: '주장 ID',
+    expected_effect: '기대 효과',
+    question: '질문',
+  };
+  const item = path.match(
+    /^\$(?:\.interpretation)?\.(findings|unknowns|conflicts|limitations|criterion_assessments|issues|followup_questions)(?:\[(\d+)\])?(?:\.(\w+))?(?:\[(\d+)\])?$/,
+  );
+  if (item)
+    return `${sections[item[1]]}${item[2] == null ? '' : ` ${Number(item[2]) + 1}`}${item[3] ? ` · ${fields[item[3]] ?? '필드'}` : ''}${item[4] == null ? '' : ` ${Number(item[4]) + 1}`}`;
+  const criterion = path.match(/^\$\.criteria\.(\w+)(?:\.(\w+))?(?:\[(\d+)\])?$/);
+  if (criterion)
+    return `검토 척도 · ${label(criterion[1])}${criterion[2] ? ` · ${fields[criterion[2]] ?? '필드'}` : ''}${criterion[3] == null ? '' : ` ${Number(criterion[3]) + 1}`}`;
+  return typeof detail.hypothesis_index === 'number'
+    ? `원인 후보 ${detail.hypothesis_index + 1}`
+    : typeof detail.limitation_index === 'number'
+      ? `분석 한계 ${detail.limitation_index + 1}`
+      : '응답 구조';
+}
+
+export function RcaValidationDetails({ diagnostic }: { diagnostic: Row }) {
+  const reasons: Record<string, string> = {
+    author_shape:
+      '통합 응답의 최상위 구조가 다릅니다. interpretation(증거 해석), hypotheses(원인 후보), limitations(분석 한계)만 가진 JSON 객체가 필요합니다. 실제 누락·추가 항목은 이 기록에 저장되지 않았습니다.',
+    interpretation_invalid: '증거 해석의 형식 또는 근거 참조 검증에 실패했습니다.',
+    analysis_invalid: '원인 분석의 형식·근거 참조 또는 해석과의 연결 검증에 실패했습니다.',
+  };
+  return (
+    <>
+      {[...rows(diagnostic.validation_failures), ...rows(diagnostic.validation_details)]
+        .filter((attempt) => Object.keys(attempt).length > 0)
+        .map((attempt, i) => (
+          <div key={i}>
+            {typeof attempt.attempt === 'number' && <p>{attempt.attempt}차 응답 검증</p>}
+            {rows(attempt.details).length ? (
+              rows(attempt.details).map((detail, j) => (
+                <div key={j}>
+                  <p>
+                    <strong>{validationLocation(detail)}: </strong>
+                    {validationMeaning[str(detail.rule)] ??
+                      validationMeaning[str(detail.code)] ??
+                      '설명 미등록 · 세부 진단을 확인하세요.'}
+                  </p>
+                  <details>
+                    <summary>검증 위치·코드</summary>
+                    <p>
+                      위치: <code>{str(detail.path, '미기록')}</code>
+                    </p>
+                    <p>
+                      검증 코드: <code>{str(detail.code)}</code> · 규칙:{' '}
+                      <code>{str(detail.rule)}</code>
+                    </p>
+                    <p>
+                      항목 번호는 응답 목록 순서입니다. 첫 검증 실패를 기록하며 거절된 원문은
+                      저장하지 않습니다.
+                    </p>
+                  </details>
+                </div>
+              ))
+            ) : (
+              <>
+                {strings(attempt.reasons).map((reason) => (
+                  <p key={reason}>{reasons[reason] ?? '검증 사유 설명 미등록'}</p>
+                ))}
+                <p>이 기록에는 세부 검증 위치·사유가 저장되지 않았습니다.</p>
+              </>
+            )}
+          </div>
+        ))}
+    </>
   );
 }
 
@@ -588,6 +668,12 @@ export function RcaStageDetails({
         )}
       {['evidence_interpretation', 'analysis_review'].includes(str(record.query_id)) && (
         <RequestChecks value={body.request_checks} />
+      )}
+      {body.execution_status === 'complete' && rows(body.validation_details).length > 0 && (
+        <details>
+          <summary>이전 응답의 검증·수정 이력</summary>
+          <RcaValidationDetails diagnostic={body} />
+        </details>
       )}
       <StageUsage value={body.usage} />
       {body.analysis_id != null && (

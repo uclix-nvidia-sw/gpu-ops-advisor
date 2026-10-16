@@ -3075,8 +3075,9 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
 
 
 @pytest.mark.e2e
+@pytest.mark.parametrize("invalid_interpretation", [False, True])
 def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
-    stack, monkeypatch
+    stack, monkeypatch, invalid_interpretation
 ):
     from copy import deepcopy
 
@@ -3086,6 +3087,17 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         "review_reply",
         lambda data: __import__("evaluation_fixtures").review_reply(data, "acceptable"),
     )
+    if invalid_interpretation:
+        original_reply = combined_reply
+
+        def malformed_reply(data):
+            response = original_reply(data)
+            response["interpretation"]["unknowns"] = [
+                {"statement": "Current health unknown", "evidence_refs": []}
+            ]
+            return response
+
+        monkeypatch.setattr(sys.modules[__name__], "combined_reply", malformed_reply)
     profile = deepcopy(stack["profile"])
     profile["rca"]["generation_mode"] = "combined"
     profile["health_contracts"] = json.loads(
@@ -3099,12 +3111,14 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
             encoding="utf-8"
         )
     )
-    book["knowledge_key"] += "-goal-fixture-" + uuid4().hex
+    # Parameter variants share the same published revision, not duplicate policies.
+    book_id = stack.setdefault("combined_goal_book_id", str(uuid4()))
+    book["knowledge_key"] += "-goal-fixture-" + book_id
     with psycopg.connect(stack["url"]) as conn:
         conn.execute(
-            "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,1,'runbook','published','common',%s,%s,%s,%s)",
+            "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,1,'runbook','published','common',%s,%s,%s,%s) ON CONFLICT (id) DO NOTHING",
             (
-                str(uuid4()),
+                book_id,
                 str(uuid4()),
                 book["knowledge_key"],
                 Jsonb(book["content"]),
@@ -3138,7 +3152,9 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     evaluation = result["quality"]["rca_evaluation"]
     assert evaluation["schema_version"] == "2"
     assert evaluation["generation_mode"] == "combined"
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert evaluation["investigation"]["stop_reason"] == (
+        "goal_not_met" if invalid_interpretation else "goal_achieved"
+    )
     assert evaluation["review"]["rubric_version"] == "2"
     assert result["quality"]["report"]["status"] == "complete"
     assert result["narrative"]
@@ -3157,3 +3173,15 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         == stored["report_assembly"]["material_hash"]
     )
     assert stored["rca_result_frozen"]["material"]["evaluation"] == evaluation
+
+    diagnostics = stored["rca_synthesis"]["diagnostics"]
+    if invalid_interpretation:
+        assert diagnostics["adoption"] == "none"
+        assert diagnostics["validation_failures"][0]["details"][0] == {
+            "code": "interpretation_missing_support",
+            "path": "$.interpretation.unknowns[0].reason",
+            "rule": "missing_support",
+        }
+    else:
+        assert diagnostics["adoption"] == "validated_response"
+        assert diagnostics["validation_failures"] == []

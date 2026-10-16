@@ -4,7 +4,14 @@ from copy import deepcopy
 
 from agent_common.contracts import content_hash
 
-from .evidence_interpretation import call_stage
+from .evidence_interpretation import (
+    call_stage,
+    ResponseValidationError,
+    response_object,
+    response_refs,
+    response_list,
+    response_text,
+)
 from .synthesis_context import encoded_size
 
 
@@ -114,44 +121,46 @@ def analysis_draft(
 
 
 def validate_review(response, draft, refs, queries):
-    if not isinstance(response, dict) or set(response) != {
-        "analysis_id",
-        "verdict",
-        "issues",
-        "followup_questions",
-        "criteria",
-    }:
-        raise ValueError("review_shape")
-    if response["analysis_id"] != draft["analysis_id"] or response["verdict"] not in {
+    response_object(
+        response,
+        {"analysis_id", "verdict", "issues", "followup_questions", "criteria"},
+        "review_shape",
+        "$",
+    )
+    if response["analysis_id"] != draft["analysis_id"]:
+        raise ResponseValidationError(
+            "review_subject", "$.analysis_id", "draft_mismatch"
+        )
+    if not isinstance(response["verdict"], str) or response["verdict"] not in {
         "acceptable",
         "revision_required",
         "undetermined",
     }:
-        raise ValueError("review_subject")
+        raise ResponseValidationError("review_subject", "$.verdict", "invalid_enum")
     criteria = response["criteria"]
-    if not isinstance(criteria, dict) or set(criteria) != set(RUBRIC):
-        raise ValueError("review_criteria")
+    response_object(criteria, RUBRIC, "review_criteria", "$.criteria")
     statuses = []
-    for item in criteria.values():
-        if not isinstance(item, dict) or set(item) != {
-            "status",
-            "reason",
-            "evidence_refs",
-        }:
-            raise ValueError("review_criterion")
-        if item["status"] not in {
+    for key in RUBRIC:
+        item, path = criteria[key], f"$.criteria.{key}"
+        response_object(
+            item, {"status", "reason", "evidence_refs"}, "review_criterion", path
+        )
+        if not isinstance(item["status"], str) or item["status"] not in {
             "pass",
             "needs_revision",
             "undetermined",
             "not_applicable",
         }:
-            raise ValueError("review_criterion_status")
-        if not isinstance(item["reason"], str) or not 1 <= len(item["reason"]) <= 800:
-            raise ValueError("review_criterion_reason")
-        if not isinstance(item["evidence_refs"], list) or any(
-            not isinstance(r, str) or r not in refs for r in item["evidence_refs"]
-        ):
-            raise ValueError("review_criterion_refs")
+            raise ResponseValidationError(
+                "review_criterion_status", path + ".status", "invalid_enum"
+            )
+        response_text(item["reason"], "review_criterion_reason", path + ".reason")
+        response_refs(
+            item["evidence_refs"],
+            refs,
+            "review_criterion_refs",
+            path + ".evidence_refs",
+        )
         statuses.append(item["status"])
     expected = (
         "revision_required"
@@ -161,58 +170,54 @@ def validate_review(response, draft, refs, queries):
         else "acceptable"
     )
     if response["verdict"] != expected:
-        raise ValueError("review_criterion_verdict")
+        raise ResponseValidationError(
+            "review_criterion_verdict", "$.verdict", "rubric_mismatch"
+        )
     issues, questions = response["issues"], response["followup_questions"]
-    if (
-        not isinstance(issues, list)
-        or len(issues) > 16
-        or not isinstance(questions, list)
-        or len(questions) > 3
-    ):
-        raise ValueError("review_lists")
+    for key, limit in (("issues", 16), ("followup_questions", 3)):
+        response_list(response[key], limit, "review_lists", f"$.{key}")
     if (response["verdict"] == "acceptable" and issues) or (
         response["verdict"] == "revision_required" and not issues
     ):
-        raise ValueError("review_verdict")
+        raise ResponseValidationError(
+            "review_verdict", "$.issues", "issue_verdict_mismatch"
+        )
     ids = {c["id"] for c in draft["claims"]}
-    for issue in issues:
-        if not isinstance(issue, dict) or set(issue) != {
-            "claim_id",
-            "reason",
-            "evidence_refs",
-            "suggested_resolution",
-        }:
-            raise ValueError("review_issue")
+    for index, issue in enumerate(issues):
+        path = f"$.issues[{index}]"
+        response_object(
+            issue,
+            {"claim_id", "reason", "evidence_refs", "suggested_resolution"},
+            "review_issue",
+            path,
+        )
         if issue["claim_id"] is not None and (
             not isinstance(issue["claim_id"], str) or issue["claim_id"] not in ids
         ):
-            raise ValueError("review_claim")
-        cited = issue["evidence_refs"]
-        if not isinstance(cited, list) or any(
-            not isinstance(r, str) or r not in refs for r in cited
-        ):
-            raise ValueError("review_refs")
+            raise ResponseValidationError(
+                "review_claim", path + ".claim_id", "unknown_reference"
+            )
+        response_refs(
+            issue["evidence_refs"], refs, "review_refs", path + ".evidence_refs"
+        )
         for key in ("reason", "suggested_resolution"):
-            if not isinstance(issue[key], str) or not 1 <= len(issue[key]) <= 800:
-                raise ValueError("review_text")
-    for question in questions:
-        if not isinstance(question, dict) or set(question) != {
-            "question",
-            "expected_effect",
-            "query_ids",
-        }:
-            raise ValueError("review_question")
+            response_text(issue[key], "review_text", path + "." + key)
+    for index, question in enumerate(questions):
+        path = f"$.followup_questions[{index}]"
+        response_object(
+            question,
+            {"question", "expected_effect", "query_ids"},
+            "review_question",
+            path,
+        )
         for key in ("question", "expected_effect"):
-            if not isinstance(question[key], str) or not 1 <= len(question[key]) <= 800:
-                raise ValueError("review_text")
+            response_text(question[key], "review_text", path + "." + key)
         values = question["query_ids"]
-        if (
-            not isinstance(values, list)
-            or not values
-            or len(values) > 3
-            or any(not isinstance(q, str) or q not in queries for q in values)
-        ):
-            raise ValueError("review_query")
+        response_refs(values, queries, "review_query", path + ".query_ids")
+        if not values or len(values) > 3:
+            raise ResponseValidationError(
+                "review_query", path + ".query_ids", "query_count"
+            )
     return response
 
 

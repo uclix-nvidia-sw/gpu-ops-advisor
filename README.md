@@ -1,6 +1,6 @@
 # GPU Ops Advisor
 
-GPU·Node·Pod 관측을 바탕으로 장애 원인 조사(RCA)와 운영보고서를 제공하는 서비스입니다. **현재 개발 기준은 v1.3**입니다. Frontend·Backend·Incident·Job Controller·두 Agent와 Grafana MCP 연결 코드가 있으며, 현재 구현과 시험 범위는 아래 안내 및 모듈별 QA에서 확인할 수 있습니다.
+GPU·NVSwitch·Node·Pod의 로그와 지표로 장애 원인을 조사하고, 기간별 운영보고서를 만드는 서비스입니다. **개발 범위는 v1.3**이며 RCA 조사와 운영보고서는 각각 독립된 Agent가 수행합니다. RCA는 확인한 사실·원인 후보·판단 한계를 근거 자료로 고정한 뒤 화면용 보고서로 구성합니다. 아래 설명은 저장소의 현재 구현 기준이며 운영 배포와 Runbook 발행 상태는 별도로 확인합니다.
 
 ## [Architecture · Sequence 다이어그램 바로 보기 ↗](https://gpu-ops-advisor-diagrams.uclick-ljw.chatgpt.site)
 
@@ -33,8 +33,8 @@ Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모�
 
 Job Controller는 큐 관리와 **기존 자원 한도 안에서 잡 배분**을 맡습니다. 처리 여유가 없으면 큐에서 대기합니다. Backend·Incident·Job Controller·RCA·보고서는 각각 독립 실행·배포합니다. 두 Agent는 **NVIDIA NeMo Agent Toolkit(NAT)** 워크플로를 내부에서 실행하며, 공통 정규화·계산 함수만 라이브러리로 재사용합니다.
 
-- RCA: Runbook 검색·적용 조건 확인 → 필요한 사고 증거를 Grafana MCP로 조회 → 원인·권고 분석 → 결과·근거 저장.
-- 보고서: Incident·공개 RCA 결과 DB + Grafana MCP의 기간 지표·로그 → 집계·계산 → 설명·보고서 저장.
+- RCA: 발행 Runbook 선택 → 필수 증거 수집 → 증거 해석·원인 분석 통합 작성 → 독립 품질 검토 → 조사 목적 달성·보완·종료 판단 → 근거 자료 확정 → 보고서 구성·공개.
+- 운영보고서: 사건·공개 RCA 결과 + Grafana MCP 기간 관측 → 코드 집계·계산 → 주제별 AI 운영 해석 → 보고서·HTML/CSV 저장. 신규 보고서는 Namespace 사용과 사건 현황을 직전 기간과 비교하며 기존 O계열 보고서·일정도 유지합니다.
 
 Grafana MCP는 관측 조회 연결을 맡으며 최종 결과 공개는 Job Controller 완료 검증을 거칩니다. 실제 Incident·JC·Worker·공식 MCP 프로세스를 연결한 시험 기록이 있습니다. 해당 시험의 Grafana 데이터와 LLM 응답은 fixture이며 운영 환경의 데이터·모델 품질 검수와 구분합니다.
 
@@ -47,12 +47,36 @@ Chatbot/Assistant, GUI 직접 RCA 실행, 독립 Scheduler, HPA/자동 확장, �
 | 범위 | 현재 동작 | 담당 문서 |
 |---|---|---|
 | 사건·작업 | Incident 접수, JC claim·lease·결과 공개 | [Incident](incident/README.md) · [JC](job-controller/README.md) |
-| RCA | Runbook 검색, 필수 수집과 보완 1회, evidence 평가, Synthesis 검증, 문장 ID 편집 | [RCA](rcca-agent/README.md) |
-| 신규 기본 보고서 | Ops 전용 시간 집계, Namespace 사용·사건 요약과 직전 기간 비교 | [Ops](ops-agent/README.md) · [집계 계약](docs/specs/ops-agent/aggregate-report-v1.md) |
+| RCA | 해석·분석 통합 작성, 독립 품질 검토, Runbook 조사 목적 판단, 근거 자료 확정과 보고서 구성 | [RCA](rcca-agent/README.md) |
+| 신규 기본 보고서 | Ops 전용 시간 집계, 활동·메모리·작업 관측, 사건 비교, 근거를 연결한 AI 해석·운영 제안 | [Ops](ops-agent/README.md) · [집계 계약](docs/specs/ops-agent/aggregate-report-v1.md) |
 | 기존 보고서 | O계열 요청·일정·저장 결과 호환, 공통 D binding 사용 | [Ops](ops-agent/README.md) |
-| 조회·일정·화면 | Backend API·일정, Frontend 결과·근거·다운로드 | [Backend](backend/README.md) · [Frontend](frontend/README.md) |
+| 조회·일정·화면 | 기존·운영·개발자·신규 관점, RCA 조사 목록과 단계별 디버깅, 보고서·일정·다운로드 | [Backend](backend/README.md) · [Frontend](frontend/README.md) |
 
 수집·판단 근거가 부족하면 partial/blocked가 될 수 있습니다. 작업 성공, 원인 근거 충분, 모델 응답 채택, 보고서 구성은 별개입니다. 검증 근거는 [Agent QA](agents/QA.md)와 각 모듈 QA를 확인합니다.
+
+## RCA 결과와 디버깅 읽는 법
+
+RCA의 기본 분석은 **작성 LLM → 독립 검토 LLM** 두 단계입니다. 작성 모델이 증거 해석과 원인 후보를 함께 만들고, 검토 모델은 그 주장과 원본 근거를 대조합니다. 별도 조회 선택·보고서 문장 정렬 호출이 있을 수 있으므로 전체 모델 호출이 항상 두 번이라는 뜻은 아닙니다. 비교용 `separate` 설정과 과거 결과 읽기는 유지합니다.
+
+| 구분 | 확인하는 내용 |
+|---|---|
+| 수집 상태 | 요청 성공, 빈 결과, 일부 수집, 시간 초과 등 조회 과정 |
+| 증거 상태 | 확인된 보고·추론·미확인 내용과 각 근거 |
+| 분석 품질 | 근거와 결론의 연결, 대안·모순·대상·시각·한계 설명 |
+| 조사 종료 | Runbook 목적의 필수 기준과 차단 조건, 추가 자료의 필요·확보 가능성 |
+
+Runbook 1.1의 `decision_policy`가 있으면 코드 검사와 LLM의 의미 판단, 같은 초안의 품질 검토를 함께 사용합니다. 목적을 달성하면 선택 조회가 남아 있어도 종료할 수 있습니다. 예를 들어 오류 보고 식별이 목적이라면 이를 달성해도 물리적 고장 원인과 현재 복구 여부는 미확정으로 남을 수 있습니다. 검토 실패만으로 같은 증거를 계속 다시 작성하지 않으며, 추가 관측이 생겼을 때 다음 분석을 진행합니다. 상세 조건은 [RCA 현재 흐름](rcca-agent/README.md#현재-실행-흐름)을 따릅니다.
+
+개발자가 실패 원인을 확인하는 경로는 다음과 같습니다.
+
+1. GUI 관점을 **개발자**로 전환합니다.
+2. **사건·RCA 연결**의 RCA 조사 목록(`/cases`)에서 결과를 열거나, **작업 디버깅**(`/jobs?kind=rca`)에서 해당 작업을 엽니다.
+3. 결과(`/analyses/{job_id}`) 또는 작업 상세(`/jobs/{job_id}`)의 **워크플로우 디버깅** 버튼을 누릅니다.
+4. 작업 시도와 기록을 선택해 **무엇을 했나 → 왜 했나 → 어떻게 했나 → 결과·남은 한계**를 확인합니다. **분석 요약·LLM 실행 기록**에서도 단계별 요약을 볼 수 있습니다.
+
+모델 요청 실패, 입력 예산 때문에 호출하지 못한 경우, 응답을 받았으나 검증에서 제외한 경우를 구분합니다. 새 검증 실패 기록은 “미확인 1번의 이유 누락”처럼 실패 항목과 이유를 표시하고, 펼치면 정확한 필드 경로·오류 코드를 보여줍니다. 예전 기록에 없는 원인은 추정하지 않습니다. **변경 초안 미검토**처럼 호출하지 않은 상태 기록을 추가 LLM 실행으로 읽지 않습니다.
+
+Runbook 작성 파일을 바꾸는 것과 운영 지식을 갱신하는 것은 별개입니다. 실제 조사에는 작업에 고정된 발행 revision이 사용됩니다. [Runbook 등록·검토·발행](rcca-agent/runbooks/DB-WORKFLOW.md)과 [진단·채택 계약](rcca-agent/README.md)을 확인하세요.
 
 ## 처음 읽는 순서
 

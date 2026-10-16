@@ -379,7 +379,12 @@ async def choose_followup(
             },
             stage="investigation",
         )
-        selected = parse_followup_args(response, remaining)
+        details = []
+        selected = parse_followup_args(response, remaining, details)
+        if details:
+            diagnostics.setdefault("validation_details", []).append(
+                {"attempt": 1, "details": details}
+            )
         if selected is None:
             failure = getattr(llm, "last_failure", None)
             diagnostics["initial_failure"] = (
@@ -413,7 +418,12 @@ async def choose_followup(
                 },
                 stage="investigation",
             )
-            selected = parse_followup_args(response, remaining)
+            details = []
+            selected = parse_followup_args(response, remaining, details)
+            if details:
+                diagnostics.setdefault("validation_details", []).append(
+                    {"attempt": 2, "details": details}
+                )
         if selected is None:
             failure = getattr(llm, "last_failure", None)
             if failure in {
@@ -433,22 +443,44 @@ async def choose_followup(
         return selected
     except (ValueError, KeyError, TypeError, IndexError):
         diagnostics["status"] = "invalid_response"
+        diagnostics.setdefault("validation_details", []).append(
+            {
+                "attempt": diagnostics["attempts"],
+                "details": [
+                    {
+                        "code": "invalid_selection",
+                        "path": "$",
+                        "rule": "unexpected_value_type",
+                    }
+                ],
+            }
+        )
         return []
 
 
-def parse_followup_args(args, remaining):
-    if not isinstance(args, dict):
+def parse_followup_args(args, remaining, details=None):
+    def invalid(path, rule):
+        if details is not None and args is not None:
+            details.append({"code": "invalid_selection", "path": path, "rule": rule})
         return None
+
+    if not isinstance(args, dict):
+        return invalid("$", "object_type")
     if set(args) == {"query_ids"}:
-        ids = args["query_ids"]
+        ids, path = args["query_ids"], "$.query_ids"
     elif set(args) == {"query_id"}:
         ids = [] if args["query_id"] == "stop" else [args["query_id"]]
+        path = "$.query_id"
     else:
-        return None
+        return invalid("$", "selection_shape")
     if not isinstance(ids, list) or len(ids) > 3:
-        return None
-    if any(not isinstance(q, str) or q not in remaining for q in ids):
-        return None
+        return invalid(path, "list_type_or_limit")
+    for index, query in enumerate(ids):
+        item_path = path + (f"[{index}]" if path == "$.query_ids" else "")
+        if not isinstance(query, str):
+            return invalid(item_path, "string_type")
+        if query not in remaining:
+            return invalid(item_path, "unknown_reference")
     return list(dict.fromkeys(ids))
 
 
