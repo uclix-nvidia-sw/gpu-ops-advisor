@@ -2942,6 +2942,114 @@ def test_aggregate_report_transition_verification_is_published(
 
 
 @pytest.mark.e2e
+def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch):
+    from agent_common.artifacts import render
+    from test_aggregate_report import DATA
+
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
+    process = stack["spawn"](
+        [binary],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "false",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "true",
+            "DSX_JOB_CONTROLLER_URL": stack["jc"].removesuffix("/internal/v1"),
+        },
+        "scheduled-interpretation-backend",
+    )
+    wait_http(backend + "/health/ready", process)
+    send = Upstream.send
+    corrupted = []
+
+    def send_with_one_malformed_reply(self, body, status=200):
+        if (
+            self.path == "/v1/chat/completions"
+            and body.get("choices")
+            and not corrupted
+        ):
+            corrupted.append(True)
+            body = {
+                **body,
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": '{"sections":'}}
+                ],
+            }
+        return send(self, body, status)
+
+    monkeypatch.setattr(Upstream, "send", send_with_one_malformed_reply)
+    spec = {k: v for k, v in DATA.items() if k not in ("time_range", "timezone")}
+    spec["scope"] = SCOPE
+    with httpx.Client(base_url=backend, timeout=30) as client:
+        response = client.post(
+            "/schedules",
+            json={
+                "enabled": True,
+                "frequency": "daily",
+                "period": "previous_complete_day",
+                "timezone": "Asia/Seoul",
+                "local_time": "09:00",
+                "report_spec": spec,
+            },
+            headers={"Idempotency-Key": uuid4().hex},
+        )
+        assert response.status_code == 201, response.text
+        schedule_id = response.json()["id"]
+        # Advance only this isolated fixture schedule; no production clock or data is touched.
+        with psycopg.connect(stack["url"]) as conn:
+            conn.execute(
+                "UPDATE schedules SET next_run_at=clock_timestamp()-interval '1 second' WHERE id=%s",
+                (schedule_id,),
+            )
+        jid = None
+        for _ in range(100):
+            with psycopg.connect(stack["url"]) as conn:
+                row = conn.execute(
+                    "SELECT job_id::text FROM schedule_occurrences WHERE schedule_id=%s AND status='accepted'",
+                    (schedule_id,),
+                ).fetchone()
+            if row:
+                jid = row[0]
+                break
+            time.sleep(0.1)
+        assert jid, "scheduler did not deliver the fixture occurrence"
+        scheduled, _ = worker_result(stack, "report", jid, "-scheduled-json-repair")
+        assert (
+            scheduled["versions"]["source_snapshot_ref"]["schedule_id"] == schedule_id
+        )
+        corrupted.clear()
+        response = client.post(
+            "/reports",
+            json={
+                **spec,
+                "time_range": scheduled["time_range"],
+                "timezone": "Asia/Seoul",
+            },
+            headers={"Idempotency-Key": uuid4().hex},
+        )
+        assert response.status_code == 202, response.text
+        manual, _ = worker_result(
+            stack, "report", response.json()["job_id"], "-manual-json-repair"
+        )
+    for result in (scheduled, manual):
+        assert result["narrative_status"] == "complete"
+        assert result["quality"]["report"]["reason"] == "repaired"
+        assert result["quality"]["report"]["failures"] == [
+            {"attempt": 1, "reason": "llm_invalid_output"}
+        ]
+        assert {n["topic_id"] for n in result["narrative"]} == {
+            "namespace_usage",
+            "incident_summary",
+        }
+    assert scheduled["time_range"] == manual["time_range"]
+    assert render(scheduled)["csv"] == render(manual)["csv"]
+
+
+@pytest.mark.e2e
 def test_aggregate_invalid_interpretation_keeps_published_calculations(
     stack, monkeypatch
 ):

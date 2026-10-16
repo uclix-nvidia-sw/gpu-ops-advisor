@@ -35,6 +35,10 @@ JC에서 보고서 작업을 인수하고 관측·사건을 집계해 결과와 
 
 `ops-interpretation-workload-v2`는 같은 Namespace의 활동·메모리 근거와 작업 근거를 함께 선택합니다. Pending 최대값은 Pod 개수이며 대기 시간이 아닙니다. Job 경과시간은 시작~완료 차이로 대기·준비를 포함할 수 있습니다. 서로 다른 기간의 관측으로 동시 발생이나 대기 원인을 단정하지 않습니다. 해석 검증 실패 시 계산 결과는 유지하고 AI 실패 상태를 표시합니다.
 
+해석 시도별 실패 코드는 `quality.report.failures`의 `attempt`·`reason`과 `Ops interpretation rejected` Worker 로그에 보존합니다. 의미 검증 뒤 JSON 형식 오류가 나더라도 앞선 사유를 지우지 않습니다. 첫 응답이 `llm_invalid_output`이면 기존 최대 두 번의 해석 시도 안에서 JSON 형식 수정을 한 번 요청합니다. HTTP 오류·출력 잘림·예산/마감 소진에는 이 추가 수정 요청을 보내지 않으며, 원격 종료 미확인·취소는 기존 실행 경로로 전파합니다. 로그·진단에는 응답 원문이나 예외 메시지를 넣지 않습니다. 자동·수동 보고서는 같은 함수를 사용하며 과거 발행 결과를 재작성하지 않습니다.
+
+Interpretation failures retain bounded reason codes per attempt. A first malformed JSON response gets one repair within the existing two-interpretation limit; transport, deadline, token and evidence validation protections remain in force. This Ops-only recovery does not change RCA or report calculations.
+
 메모리는 단일 GPU 신원·전체 시간대의 표본 수 일치를 검증하므로 짧은 실행·연결 변경 구간이 제외될 수 있습니다.
 
 ### Namespace별 조건부 운영 제안

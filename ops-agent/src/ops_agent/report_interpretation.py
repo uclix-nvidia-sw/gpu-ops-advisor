@@ -1,6 +1,7 @@
 """Ops-only explanations of stored findings; never recalculate observations."""
 
 import json
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +19,7 @@ TOPICS = {
     "incident_summary": "기간 내 장애 알림 해석",
 }
 VERSION = "ops-interpretation-workload-v2"
+log = logging.getLogger(__name__)
 FIELDS = ("observation", "meaning", "next_check")
 LABELS = ("눈에 띄는 변화", "의미와 한계", "확인할 점")
 TOKEN = re.compile(
@@ -718,6 +720,21 @@ async def interpret_report(result, llm):
     if len(json.dumps(request_payload(), ensure_ascii=False).encode()) > 32_000:
         diagnostic["reason"] = "interpretation_input_limit"
         return
+
+    def record_failure(attempt, reason):
+        # Persist only bounded codes; upstream text can contain credentials or evidence.
+        if not isinstance(reason, str) or not re.fullmatch(r"[a-z_]{1,80}", reason):
+            reason = "model_response_unavailable"
+        diagnostic.setdefault("failures", []).append(
+            {"attempt": attempt + 1, "reason": reason}
+        )
+        log.warning(
+            "Ops interpretation rejected job=%s attempt=%d reason=%s",
+            result.get("job_id", "unknown"),
+            attempt + 1,
+            reason,
+        )
+
     for attempt in range(2):
         diagnostic["attempts"] += 1
         # Existing transport owns deadlines, token budgets, cancellation and remote state.
@@ -726,11 +743,23 @@ async def interpret_report(result, llm):
                 ADVICE_SYSTEM if advice_mode else SYSTEM, request_payload()
             )
             if reply is None:
+                failure = getattr(llm, "last_failure", None)
+                record_failure(attempt, failure)
                 diagnostic["reason"] = "model_response_unavailable"
+                if failure == "llm_invalid_output" and attempt == 0:
+                    payload = {
+                        **payload,
+                        "validation_feedback": {
+                            "error": "llm_invalid_output",
+                            "instruction": "JSON 객체만 반환하세요. 설명·코드블록 없이 sections 배열과 response_shape 구조를 따르고 모든 문자열을 닫으세요.",
+                        },
+                    }
+                    continue
                 break
             narrative = validate_sections(reply, payload, result)
         except (ValueError, TypeError, KeyError) as exc:
             diagnostic["reason"] = "invalid_interpretation"
+            record_failure(attempt, str(exc).partition(":")[0])
             payload = {
                 **payload,
                 "validation_feedback": {
