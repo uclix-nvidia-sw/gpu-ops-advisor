@@ -1,4 +1,9 @@
-import { RcaEvaluationTrace, RcaStageDetails, RcaModelFailure } from './RcaEvaluationTrace';
+import {
+  RcaEvaluationTrace,
+  RcaStageDetails,
+  RcaModelFailure,
+  RcaValidationDetails,
+} from './RcaEvaluationTrace';
 import { RcaObservations } from './RcaObservations';
 import { RcaNarrative } from './RcaNarrative';
 import { gapMeaning } from '../lib/rcaGuidance';
@@ -330,6 +335,9 @@ export function EvidenceEvaluation({ record }: { record: Row }) {
           {selectionText[str(selection.status)]}
           {selection.attempts === 2 ? ' 선택 응답의 형식 복구를 한 차례 시도했습니다.' : ''}
         </p>
+      )}
+      {rows(selection.validation_details).length > 0 && (
+        <RcaValidationDetails diagnostic={selection} />
       )}
       {record.stop_reason != null && (
         <p>

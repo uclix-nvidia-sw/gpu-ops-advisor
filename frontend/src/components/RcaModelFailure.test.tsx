@@ -237,3 +237,76 @@ it('does not show author adoption on review or draft records', () => {
     expect(html).not.toContain('작성 결과를 채택하지 못했습니다');
   }
 });
+
+it.each([
+  [
+    '$.interpretation.unknowns[0].reason',
+    'interpretation_missing_support',
+    'missing_support',
+    '미확인 1 · 이유',
+    '근거 없는 미확인 항목에는 이유가 필요합니다',
+  ],
+  [
+    '$.interpretation.criterion_assessments[1].criterion_id',
+    'criterion_status',
+    'unknown_or_duplicate_criterion',
+    'Runbook 판단 기준 2 · 판단 기준 ID',
+    '짧은 id는 사용할 수 없습니다',
+  ],
+  [
+    '$.criteria.grounding.evidence_refs[0]',
+    'review_criterion_refs',
+    'unknown_reference',
+    '검토 척도 · 근거와 결론의 연결 · 근거 참조 1',
+    '허용된 근거·항목 ID가 아닌 값을 참조했습니다',
+  ],
+  [
+    '$.interpretation.findings[0].statement',
+    'interpretation_statement',
+    'empty_text',
+    '해석 1 · 설명',
+    '필수 설명이 비어 있습니다',
+  ],
+])('explains the exact failed field %s', (path, code, rule, location, explanation) => {
+  const html = renderToStaticMarkup(
+    <RcaModelFailure
+      diagnostic={{
+        error_code: 'invalid_stage_output',
+        validation_details: [{ attempt: 1, details: [{ path, code, rule }] }],
+      }}
+    />,
+  );
+  expect(html).toContain(location);
+  expect(html).toContain(explanation);
+  expect(html).toContain(path);
+  expect(html).toContain(code);
+  expect(html).not.toContain('세부 검증 위치·사유가 저장되지 않았습니다');
+});
+
+it('keeps validation repair history visible after review succeeds', () => {
+  const html = renderToStaticMarkup(
+    <RcaWorkflowRecord
+      record={{
+        query_id: 'analysis_review',
+        snapshot: {
+          execution_status: 'complete',
+          verdict: 'acceptable',
+          attempts: 2,
+          validation_failures: ['invalid_stage_output'],
+          validation_details: [
+            {
+              attempt: 1,
+              details: [{ code: 'review_subject', path: '$.analysis_id', rule: 'draft_mismatch' }],
+            },
+          ],
+        },
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain('이전 응답의 검증·수정 이력');
+  expect(html).toContain('검토 대상 초안:');
+  expect(html).toContain('요청한 초안의 식별값과 응답의 식별값이 다릅니다');
+  expect(html).not.toContain('응답 수신 · 단계 검증 실패');
+  expect(html).not.toContain('세부 검증 위치·사유가 저장되지 않았습니다');
+});
