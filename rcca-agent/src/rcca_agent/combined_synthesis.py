@@ -102,6 +102,23 @@ def salvage_interpretation(value, refs, criteria, observation_refs, dropped):
                     "action": "dropped",
                 }
             )
+            if (
+                item
+                and item[1] != "findings"
+                and criteria is not None
+                and value.get("criterion_assessments") != unknown
+            ):
+                # Unknowns, conflicts and limitations bound the conclusion. Losing one
+                # would make it look surer, so semantic criteria cannot complete the goal.
+                value["criterion_assessments"] = unknown
+                dropped.append(
+                    {
+                        "code": "criterion_withheld",
+                        "path": "$.interpretation.criterion_assessments",
+                        "rule": "caveat_dropped",
+                        "action": "withheld",
+                    }
+                )
     raise ResponseValidationError("interpretation_list", "$", "salvage_limit")
 
 

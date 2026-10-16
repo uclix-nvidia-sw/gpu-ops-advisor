@@ -3176,12 +3176,24 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
 
     diagnostics = stored["rca_synthesis"]["diagnostics"]
     if invalid_interpretation:
-        assert diagnostics["adoption"] == "none"
-        assert diagnostics["validation_failures"][0]["details"][0] == {
-            "code": "interpretation_missing_support",
-            "path": "$.interpretation.unknowns[0].reason",
-            "rule": "missing_support",
-        }
+        # The malformed caveat is dropped and the rest adopted, but semantic criteria
+        # are withheld so the objective above stays unmet.
+        assert diagnostics["adoption"] == "validated_response"
+        assert diagnostics["validation_failures"] == []
+        assert diagnostics["dropped_items"] == [
+            {
+                "code": "interpretation_missing_support",
+                "path": "$.interpretation.unknowns[0].reason",
+                "rule": "missing_support",
+                "action": "dropped",
+            },
+            {
+                "code": "criterion_withheld",
+                "path": "$.interpretation.criterion_assessments",
+                "rule": "caveat_dropped",
+                "action": "withheld",
+            },
+        ]
     else:
         assert diagnostics["adoption"] == "validated_response"
         assert diagnostics["validation_failures"] == []
