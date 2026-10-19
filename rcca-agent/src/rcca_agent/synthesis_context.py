@@ -4,6 +4,7 @@ import json
 from collections import defaultdict
 from itertools import zip_longest
 
+from .report_observations import event_devices_by_scope, report_scope
 
 SECTIONS = (
     "error_events",
@@ -63,6 +64,16 @@ def bounded_context(payload, max_bytes):
     for section in SECTIONS:
         for original in payload.get(section, []):
             groups[(section, tuple(original.get("evidence_refs", [])))].append(original)
+    # Prefer the reported incident device over earlier sibling-device reports.
+    # Keep all original rows in evidence; only order the bounded model view.
+    devices = event_devices_by_scope(payload.get("error_events", []))
+    for (section, _), rows in groups.items():
+        if section == "device_observations" and devices:
+            rows.sort(
+                key=lambda row: not devices.get(report_scope(row), set()).intersection(
+                    row.get("reported_pci_addresses", [])
+                )
+            )
     scheduled = [
         item
         for batch in zip_longest(

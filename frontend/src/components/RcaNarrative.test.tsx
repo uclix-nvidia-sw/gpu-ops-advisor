@@ -243,3 +243,56 @@ it('does not apply the XID interpretation to an unfamiliar error', () => {
   expect(html).not.toContain('전원 문제');
   expect(html).toContain('원인 미확인');
 });
+
+it('keeps failed objective visible while collapsing processing details', () => {
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        narrative: [{ id: 'problem', title: '발생 내용', text: 'SXID 이벤트 1건' }],
+        quality: {
+          rca_evaluation: { schema_version: '2', investigation: { stop_reason: 'goal_not_met' } },
+        },
+      }}
+    />,
+  );
+  expect(html).toContain(
+    '<summary>분석 처리: 목적 미달 · 가능한 보완 없음 · 수집·검토 상세</summary>',
+  );
+  expect(html).not.toContain('<details open');
+  expect(html).toContain('SXID 이벤트 1건');
+  expect(html).toContain('수집·증거 해석·분석 품질');
+});
+
+it('opens evaluation details for developers without changing report content', () => {
+  const result = { narrative: [{ id: 'problem', title: '발생 내용', text: '관측 원문' }] };
+  const developer = renderToStaticMarkup(<RcaNarrative result={result} evaluationExpanded />);
+  const classic = renderToStaticMarkup(<RcaNarrative result={result} />);
+  expect(developer).toContain('<details open="">');
+  expect(classic).not.toContain('<details open');
+  expect(developer).toContain('관측 원문');
+  expect(classic).toContain('관측 원문');
+});
+
+it('does not present stale objective achievement as reviewed success in the summary', () => {
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        narrative: [{ id: 'problem', text: '관측 원문' }],
+        quality: {
+          rca_evaluation: {
+            schema_version: '2',
+            analysis_id: 'new',
+            review: { execution_status: 'complete', analysis_id: 'old', verdict: 'acceptable' },
+            investigation: {
+              stop_reason: 'goal_achieved',
+              objective: { status: 'achieved', analysis_id: 'old' },
+            },
+          },
+        },
+      }}
+    />,
+  );
+  expect(html).toContain(
+    '<summary>분석 처리: 종료 · 최종 분석 검토 기록 확인 · 수집·검토 상세</summary>',
+  );
+});
