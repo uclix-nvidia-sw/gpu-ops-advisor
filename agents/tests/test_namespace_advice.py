@@ -1213,3 +1213,50 @@ async def test_all_invalid_sentences_repair_in_one_request_and_keep_valid_ones()
     assert len(llm.complete.call_args.args[1]["summary_repair"]) == 2
     assert result["narrative_status"] == "complete"
     assert llm.complete.await_count == 2
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "GPU는 미사용입니다.",
+        "GPU를 사용하지 않았습니다.",
+        "GPU 사용이 없었습니다.",
+        "활동이 없었습니다.",
+    ],
+)
+def test_observed_zero_does_not_prove_nonuse(claim):
+    t = topic(activity=0)
+    before = deepcopy(t)
+    facts = candidates(t)
+    reply = section(facts)
+    accepted = validate_advice(reply, dict(findings=facts))
+    assert "0.00%" in accepted["advice"][0]["summary"]
+    reply["advice"][0]["summary"] += " " + claim
+    with pytest.raises(ValueError, match="observed_zero_is_not_proof_of_nonuse"):
+        validate_advice(reply, dict(findings=facts))
+    assert t == before
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_observed_zero_nonuse_claim_repairs_without_changing_metrics(origin):
+    result = {
+        "topics": [topic(activity=0)],
+        "quality": {},
+        "time_range": {},
+        "report_origin": origin,
+    }
+    before = deepcopy(result)
+    payload = payload_for(result)
+    valid_section = section(payload["topics"][0]["findings"])
+    invalid = {"sections": [deepcopy(valid_section)]}
+    invalid["sections"][0]["advice"][0]["summary"] += " GPU는 미사용입니다."
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"advice": valid_section["advice"]}]
+    await interpret_report(result, llm)
+    assert result["topics"][0]["metrics"] == before["topics"][0]["metrics"]
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "observed_zero_is_not_proof_of_nonuse"}
+    ]
+    assert result["topics"] == before["topics"]
+    assert "미사용" not in json.dumps(result["narrative"], ensure_ascii=False)

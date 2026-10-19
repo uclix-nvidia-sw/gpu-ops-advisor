@@ -138,3 +138,5 @@ Interpretation criteria are owned by `namespace_advice.py` and this section. Exi
 [공통 실행 안내](../agents/README.md) · [Agent QA](../agents/QA.md) · [삭제 회귀](../agents/tests/test_report_cleanup.py) · [격리 DB 삭제 검증](../agents/tests/test_report_cleanup_e2e.py).
 
 실환경 지연·최대 메모리·운영 PVC의 삭제·복구와 원인/업무 영향 해석은 각 검증 근거의 범위를 따른다. 저장소 원본이나 fixture 테스트만으로 운영 배포와 성능 개선을 확정하지 않는다.
+
+관측 GPU 활동률이 0%여도 실제 GPU 미사용이나 연산 부재를 뜻하지 않습니다. 짧은 연산과 측정 주기가 맞물리면 표본에 잡히지 않을 수 있습니다. Namespace 운영 문장은 저장된 활동률을 관측값으로 표현하며, 미사용·활동 부재 단정은 재작성 대상으로 검증합니다. 표본 수 충족은 연산 전체를 빠짐없이 측정했다는 보장이 아닙니다. 기존 수치·기간·품질 판정 계산은 바꾸지 않습니다.
