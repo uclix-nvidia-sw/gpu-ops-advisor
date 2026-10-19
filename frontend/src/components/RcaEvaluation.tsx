@@ -22,6 +22,7 @@ export const evaluationLabels: Record<string, string> = {
   not_requested: '수집 불필요',
   skipped: '생략',
   acceptable: '근거 범위에서 타당',
+  acceptable_after_feedback: '지적 주장 제외 후 근거 범위에서 타당',
   revision_required: '수정 필요',
   undetermined: '판단 불가',
   pass: '충족',
@@ -81,7 +82,7 @@ export function RcaEvaluation({ result }: { result: Row }) {
           ...obj(investigation.objective),
           ...(obj(investigation.objective).status === 'achieved' &&
           (!reviewed ||
-            review.verdict !== 'acceptable' ||
+            !['acceptable', 'acceptable_after_feedback'].includes(String(review.verdict)) ||
             obj(investigation.objective).analysis_id !== evaluation.analysis_id)
             ? { status: 'unknown' }
             : {}),

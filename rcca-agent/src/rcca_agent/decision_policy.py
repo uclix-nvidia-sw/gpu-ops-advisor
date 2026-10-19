@@ -2,6 +2,9 @@
 
 from copy import deepcopy
 
+from agent_common.rca_evaluation import review_scope_status
+
+from .analysis_review import ACCEPTED_VERDICTS
 from .requirement_diagnostics import _scoped_reports, reported_facts
 
 BLOCKERS = {
@@ -256,7 +259,9 @@ def assess_policies(books, data, health, events, gaps):
     }
 
 
-def finish_assessment(assessment, interpretation, review, analysis_id):
+def finish_assessment(
+    assessment, interpretation, review, analysis_id, caveat_withheld=False
+):
     value = deepcopy(assessment)
     if not value:
         return None
@@ -264,14 +269,23 @@ def finish_assessment(assessment, interpretation, review, analysis_id):
         r["criterion_id"]: r
         for r in (interpretation or {}).get("criterion_assessments", [])
     }
+    # Without a retained finding nothing explains the report; a caveat lost to
+    # format repair would make the reviewed draft look surer than the author wrote.
+    scope = (
+        review_scope_status(review)
+        if (interpretation or {}).get("findings") and not caveat_withheld
+        else "unknown"
+    )
     for policy in value["policies"]:
         for row in policy["criteria"]:
-            if row["method"] == "llm" and row["key"] in answers:
+            if row["method"] == "llm":
+                # The author's self-assessment is advisory; the independent review
+                # rubric decides whether the conclusion stayed within the evidence.
                 row.update(
-                    {
-                        key: answers[row["key"]][key]
-                        for key in ("status", "evidence_refs", "finding_refs")
-                    }
+                    status=scope,
+                    evidence_refs=list(review["evidence_refs"]),
+                    finding_refs=[],
+                    author_status=answers.get(row["key"], {}).get("status"),
                 )
     criteria_met = value["compatible"] and all(
         p["applicable"]
@@ -284,7 +298,7 @@ def finish_assessment(assessment, interpretation, review, analysis_id):
         status="achieved"
         if criteria_met
         and review["execution_status"] == "complete"
-        and review["verdict"] == "acceptable"
+        and review["verdict"] in ACCEPTED_VERDICTS
         and review["analysis_id"] == analysis_id
         else "not_achieved",
         analysis_id=analysis_id,

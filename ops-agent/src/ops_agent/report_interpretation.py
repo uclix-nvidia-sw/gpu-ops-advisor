@@ -814,6 +814,7 @@ async def interpret_report(result, llm):
                             "batch_job_elapsed_required",
                             "batch_elapsed_is_not_execution_time",
                             "batch_samples_do_not_prove_throughput_or_queue_resolution",
+                            "observed_zero_is_not_proof_of_nonuse",
                         }
                         else "response_shape의 구조와 사건 토큰 형식을 따르세요. namespace advice_mode는 advice 배열의 fact_id와 summary만 반환하세요. summary는 허용된 후보 summary_tokens의 토큰을 써서 대상·시간·관측과 제안을 짧게 결합하고, Namespace 항목에 meaning/next_check는 반환하지 마세요. 허용된 제안 종류의 구체적 확인을 쓰세요. "
                         "다른 주제는 fact_ids와 target에는 findings의 fact_id만 쓰세요. metric_id를 fact_ids에 넣지 마세요. value/period는 metric_id입니다. 한국어로 작성하세요. 숫자·대상·시간은 토큰만 사용하세요. Namespace에 hourly_pair가 있으면 observation에 같은 대상+양쪽 시간+양쪽 값을, next_check에 같은 대상+after 시간을 반드시 참조하세요. 단위는 추가하지 마세요."
@@ -831,6 +832,7 @@ async def interpret_report(result, llm):
                     "batch_job_elapsed_required",
                     "batch_elapsed_is_not_execution_time",
                     "batch_samples_do_not_prove_throughput_or_queue_resolution",
+                    "observed_zero_is_not_proof_of_nonuse",
                     "unsupported_capacity_recommendation",
                     "unsupported_namespace_advice_claim",
                 }

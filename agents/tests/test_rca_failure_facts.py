@@ -24,7 +24,7 @@ async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
         case["responses"]["synthesis"][0]["finish_reason"] = "length"
     outcome = await replay(case)
     assert not outcome["missing_inputs"]
-    assert len(outcome["query_calls"]) == 1
+    assert sum(c["matched"] for c in outcome["query_calls"]) == 1
     assert [c["stage"] for c in outcome["model_calls"]] == [
         "synthesis",
         "analysis_review",
@@ -114,7 +114,7 @@ async def test_author_and_writer_failure_keep_facts_and_conditional_guidance(kin
     outcome = await replay(case)
     result = outcome["output"]["result"]
     assert not outcome["missing_inputs"]
-    assert len(outcome["query_calls"]) == 1
+    assert sum(c["matched"] for c in outcome["query_calls"]) == 1
     assert len(outcome["model_calls"]) == 3
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
     assert result["quality"]["report"]["method"] == "deterministic_fallback"

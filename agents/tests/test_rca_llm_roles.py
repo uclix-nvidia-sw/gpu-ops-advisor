@@ -226,8 +226,7 @@ async def test_three_roles_and_goal_stop_with_no_ordering_call(kind):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("target", ["criterion", "finding"])
-async def test_review_withholds_only_affected_interpretation_and_dependencies(target):
+async def test_review_withholds_only_affected_interpretation_and_dependencies():
     from rca_replay_cases import reply, review
 
     case = policy_case()
@@ -236,17 +235,9 @@ async def test_review_withholds_only_affected_interpretation_and_dependencies(ta
     extra.update(id="finding-2", statement="추가로 보존할 관측 보고입니다.")
     author["findings"].append(extra)
     verdict = review("revision_required")
-    # The policy fixture binds the criterion key dynamically; bind the review issue too.
-    claim = (
-        "criterion:"
-        + case["attempt"]["context"]["runbooks"][0]["id"]
-        + ":bounded_conclusion"
-        if target == "criterion"
-        else "interpretation:findings:finding-1"
-    )
     verdict["issues"] = [
         {
-            "claim_id": claim,
+            "claim_id": "interpretation:findings:finding-1",
             "reason": "해당 항목은 보류해야 합니다.",
             "evidence_refs": {"$input": "/input_evidence_refs"},
             "suggested_resolution": "다른 유효한 관측은 보존하세요.",
@@ -258,12 +249,14 @@ async def test_review_withholds_only_affected_interpretation_and_dependencies(ta
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
     kept = evaluation["evidence"]["interpretation"]
     assert any(row["id"] == "finding-2" for row in kept["findings"])
-    assert (any(row["id"] == "finding-1" for row in kept["findings"])) == (
-        target == "criterion"
-    )
+    assert not any(row["id"] == "finding-1" for row in kept["findings"])
     assert kept["criterion_assessments"][0]["status"] == "unknown"
-    assert evaluation["review"]["execution_status"] == "skipped"
-    assert evaluation["investigation"]["stop_reason"] != "goal_achieved"
+    # The retained draft is the reviewed draft minus the challenged claim; every
+    # issue named a withheld claim, so the review rubric settles the scope.
+    assert evaluation["review"]["execution_status"] == "complete"
+    assert evaluation["review"]["verdict"] == "acceptable_after_feedback"
+    assert evaluation["review"]["unattributed_issues"] is False
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
 
 
 def test_report_retains_counter_evidence_and_withheld_action_conditions():

@@ -279,6 +279,7 @@ async def write_report(result, data, clues, evidence, llm, material=None):
             if adoption not in (None, "validated_response")
             else {
                 "acceptable": "확보된 근거 범위에서 타당",
+                "acceptable_after_feedback": "지적 주장 제외 후 근거 범위에서 타당",
                 "revision_required": "수정 필요",
                 "undetermined": "판단 불가",
             }.get(review["verdict"], "미검토")

@@ -269,17 +269,27 @@ def synthesis_record(result):
     )
 
 
+async def test_extra_item_field_is_stripped_and_caveat_kept():
+    # 2026-10-16 12:54 SXID 11001 (e04ce3ee) and 2026-10-19 14:50 XID 79 (8d1246e8):
+    # an extra key on a caveat used to drop it and withhold the goal criteria.
+    case = policy_case()
+    interpretation = case["responses"]["synthesis"][0]["response"]["interpretation"]
+    item = dict(statement="확인되지 않음", evidence_refs=[], reason="원천 없음")
+    interpretation["unknowns"] = interpretation["unknowns"] + [{**item, "id": "u"}]
+    result = await replay(case)
+    record = synthesis_record(result)
+    dropped = record["diagnostics"]["dropped_items"]
+    assert [(d["code"], d["rule"], d["action"]) for d in dropped] == [
+        ("interpretation_item", "unexpected_fields", "stripped")
+    ]
+    assert item in record["interpretation"]["unknowns"]
+    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+
+
 @pytest.mark.parametrize(
     "field,item,code",
     [
-        # 2026-10-16 12:54 SXID 11001 (e04ce3ee): unknowns[0] unexpected_fields.
-        (
-            "unknowns",
-            dict(
-                statement="확인되지 않음", evidence_refs=[], reason="원천 없음", id="u"
-            ),
-            "interpretation_item",
-        ),
         # 2026-10-16 12:49 XID 79 (8151e6fa): limitations[1] missing_support.
         (
             "limitations",
@@ -336,8 +346,15 @@ async def test_invalid_criterion_answer_is_unknown_not_whole_rejection():
         "unknown"
     }
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    # A malformed semantic answer must never complete the Runbook objective.
-    assert evaluation["investigation"]["stop_reason"] != "goal_achieved"
+    # The malformed self-assessment is kept only as advisory author_status; the
+    # independent review rubric decides the semantic criterion.
+    row = next(
+        r
+        for r in evaluation["investigation"]["objective"]["policies"][0]["criteria"]
+        if r["method"] == "llm"
+    )
+    assert row["author_status"] == "unknown"
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
 
 
 async def test_author_view_uses_planned_budget_and_admits_observations_first():
@@ -401,6 +418,8 @@ async def test_report_does_not_call_fallback_review_a_valid_analysis():
     case["responses"]["synthesis"][0]["response"] = response["interpretation"]
     result = await replay(case)
     text = json.dumps(result["output"]["result"]["narrative"], ensure_ascii=False)
-    assert "LLM 작성 결과 미채택" in text
+    # The failed analysis is stated once, not again as a generic caveat.
+    assert "증거 해석·분석이 완료되지 않았습니다" in text
+    assert "LLM 작성 결과 미채택" not in text
     assert "분석 품질: 확보된 근거 범위에서 타당" not in text
     assert "의미 미확인(review_accepted)" not in text

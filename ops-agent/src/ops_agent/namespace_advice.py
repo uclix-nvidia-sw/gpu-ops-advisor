@@ -36,7 +36,7 @@ namespace_usage: {"topic_id":"namespace_usage","advice":[{"fact_id":"후보 ID",
 summary는 줄바꿈 없이 짧은 두 문장 이내로 '대상·시간의 핵심 관측 → 무엇을 왜 확인할지'를 쉽게 씁니다. 완료 Job의 경과 차이를 점검하는 질문과 아직 대기 중인 Pod의 스케줄링 제약을 점검하는 질문을 구분하세요. 각 writing_focus의 이유를 쓰되 새로운 원인·제약·작업 목적은 만들지 마세요. 한글 문장과 입력의 필수 참조·기술 용어만 사용하고 다른 언어 문자는 섞지 마세요. 반환 전 같은 조언·수치 토큰 반복과 '검토하도록 검토하세요' 같은 겹말을 없애세요.
 {{target}}, {{period}}와 required_summary_tokens를 각각 한 번씩 쓰세요. summary_tokens에 있는 참조만 쓰고 숫자·대상·시간·URL·마크업을 직접 넣지 마세요. 토큰 값에 단위가 있으므로 개·건·%·초를 덧붙이지 마세요. meaning/next_check는 반환하지 마세요.
 value_meanings는 각 수치의 의미입니다. 범위는 최소~최대이며 평균으로 부르지 마세요. 서로 다른 시간 집계는 '같은 구간에서 관측'으로 쓰고 '동시에 관측/발생'이라고 쓰지 마세요. pending_change는 '처음→마지막 시간대 최대 대기 {{pending_change}}'처럼 표현하세요. elapsed는 'Job 경과시간 범위 {{elapsed}}'로 쓰면 됩니다. 문장 안에서 평균이 아니라는 용어 설명을 반복하지 마세요. 마지막 값만 설명하면서 변화 토큰 전체를 붙이지 마세요.
-대기 수는 관측 구간의 시간대별 최대값이며 '현재 대기'나 '계속 대기'가 아닙니다. pending_change는 처음/마지막 시간대 최대값의 비교입니다. 같은 Pod 추적·대기 시간·완료에 의한 대기 감소로 해석하지 마세요. pending_complete=false는 일부 표본이며 미확인은 0이 아닙니다. 활동·메모리 토큰이 없으면 낮음·높음을 추측하지 마세요.
+대기 수는 관측 구간의 시간대별 최대값이며 '현재 대기'나 '계속 대기'가 아닙니다. pending_change는 처음/마지막 시간대 최대값의 비교입니다. 같은 Pod 추적·대기 시간·완료에 의한 대기 감소로 해석하지 마세요. pending_complete=false는 일부 표본이며 미확인은 0이 아닙니다. 활동·메모리 토큰이 없으면 낮음·높음을 추측하지 마세요. 관측 활동률이 영이어도 미사용·사용하지 않음·활동이 없었다고 단정하지 마세요. 짧은 연산은 측정 사이에 빠질 수 있으므로 관측된 활동률로만 표현하세요.
 허용 제안:
 capacity_review: 높은 활동과 양수 대기가 같은 GPU 구성의 연속 두 시간 이상에 관측됐습니다. 현재 할당량·스케줄러 대기 사유 확인 후 할당 확대 여부를 '검토'하세요. 동시 발생·GPU 부족을 단정하거나 추가 수량을 정하지 마세요.
 queue_review: 스케줄러 이벤트의 대기 사유·배치 제약을 확인하도록 쓰세요. 활동과 연결할 근거가 부족하며, 시간대 추천·할당 확대는 부정문에서도 쓰지 마세요.
@@ -707,6 +707,13 @@ def validate_advice(section, topic):
             v > 0 for h in fact["source_hours"] for v in h["activity"]
         ) and re.search(r"활동(?:이|은)?\s*없", summary):
             raise ValueError("low_activity_is_not_zero_activity")
+        if re.search(
+            r"미사용|사용(?:이|은)?\s*없|사용하지\s*않|쓰지\s*않|활동(?:이|은)?\s*없",
+            summary,
+        ):
+            raise ValueError(
+                f"observed_zero_is_not_proof_of_nonuse: {item['fact_id']}.summary에서 관측 활동률이 영이어도 미사용이나 활동 부재를 단정하지 말고, 필수 활동률 토큰을 보존해 관측값으로만 설명하세요"
+            )
         if fact["kind"] == "queue_review" and re.search(
             r"시간대.*(?:실행|배치)|시범\s*배치", summary
         ):

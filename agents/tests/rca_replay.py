@@ -195,6 +195,14 @@ async def replay(case):
                     "matched": len(matches) == 1,
                 }
             )
+            if (
+                not matches
+                and case.get("empty_unscripted_queries")
+                and name in ("query_prometheus", "query_loki_logs")
+            ):
+                # Auxiliary queries the case does not script return no series.
+                kind = "matrix" if name == "query_prometheus" else "streams"
+                return {"status": "success", "data": {"resultType": kind, "result": []}}
             if len(matches) != 1:
                 missing.append(f"query_fixture:{name}:{content_hash(args)}")
                 raise ValueError("missing or ambiguous query fixture")

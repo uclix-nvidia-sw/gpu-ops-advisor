@@ -18,7 +18,7 @@ from importlib.resources import files
 from .synthesis import synthesis_input
 from .decision_policy import assess_policies, finish_assessment, model_assessment
 from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
-from .analysis_review import analysis_draft
+from .analysis_review import analysis_draft, ACCEPTED_VERDICTS
 from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
 from .report_observations import summarize_reports
@@ -308,6 +308,19 @@ def normalized_state(obs, collected, data, profile, initial_facts):
     if payload["observation_refs"]:
         available.add("observations")
     return health, facts, verified, relations, available
+
+
+# ponytail: fixed headroom; auxiliary evidence enlarges the review reserve, and at the
+# 32k chart default it can crowd out the author input. Derive from the measured
+# review floor if budgets diverge further.
+AUX_PREFETCH_MIN_TOKENS = 65536
+
+
+def caveat_withheld(evaluation):
+    return any(
+        row.get("code") == "criterion_withheld"
+        for row in (evaluation.get("synthesis") or {}).get("dropped_items", [])
+    )
 
 
 def conflicting_health(health):
@@ -800,9 +813,13 @@ async def run(tools):
             events.append("conflicting_evidence")
         if degraded:
             events.append("query_failed")
+        # Fleet baseline reports ("Healthy" without an error code) are left unmapped
+        # by the producer contract. When error-coded reports exist, only those carry
+        # the values this investigation needs; baseline reports stay context.
+        relevant = [h for h in health if h.get("error_code")] or health
         if any(
             h["check_status"] != "valid" or h["normalized_health"] == "unknown"
-            for h in health
+            for h in relevant
         ) or (any(collected.get(q) for q in ("D05", "D09")) and not health):
             events.append("unknown_value")
             gaps.append("unknown_value")
@@ -975,6 +992,7 @@ async def run(tools):
                     evaluation.get("interpretation"),
                     evaluation["review"],
                     evaluation["draft"]["analysis_id"],
+                    caveat_withheld=caveat_withheld(evaluation),
                 )
                 return
             evaluation_state["authored_sources"].update(source_hashes)
@@ -1004,6 +1022,7 @@ async def run(tools):
                 evaluation.get("interpretation"),
                 evaluation["review"],
                 evaluation["draft"]["analysis_id"],
+                caveat_withheld=caveat_withheld(evaluation),
             )
             synthesis_diagnostics = evaluation["synthesis"]
             analysis_status = evaluation["synthesis_status"]
@@ -1090,7 +1109,7 @@ async def run(tools):
             if objective and not remaining
             else "review_accepted"
             if not objective
-            and evaluation["review"]["verdict"] == "acceptable"
+            and evaluation["review"]["verdict"] in ACCEPTED_VERDICTS
             and not evaluation["review_output"]["followup_questions"]
             and not ruled
             else "sufficient"
@@ -1222,6 +1241,32 @@ async def run(tools):
                 )
             )
         state = evaluate_requirements(round_no, approved)
+        if (
+            not fast_path
+            and round_no == 0
+            and budget["queries"] > 0
+            and getattr(ctx["llm"], "remaining", 0) >= AUX_PREFETCH_MIN_TOKENS
+        ):
+            # Authored rule-eligible auxiliary queries are deterministic and
+            # independent; collect them before the single analysis instead of
+            # deferring them behind a round the goal policy would then skip.
+            prefetch, _, _ = rule_followup(
+                selected, plans, state["remaining"], state["gaps"], state["available"]
+            )
+            prefetch = [q for q in prefetch if q in profile["queries"]][:3]
+            if prefetch:
+                collected.update(
+                    await collect_round(
+                        obs,
+                        prefetch,
+                        budget,
+                        round_no=round_no,
+                        concurrency=concurrency,
+                        first_index=len(queries),
+                    )
+                )
+                planned_queries.extend(q for q in prefetch if q not in planned_queries)
+                state = evaluate_requirements(round_no, approved)
         await analyze_round(state, round_no)
         state.update(await select_followup(state, round_no))
         health = state["health"]
@@ -1457,7 +1502,7 @@ async def run(tools):
         final_stop = evaluation["stop_reason"]
     elif (
         not objective
-        and evaluation["review"]["verdict"] == "acceptable"
+        and evaluation["review"]["verdict"] in ACCEPTED_VERDICTS
         and not evaluation["review_output"]["followup_questions"]
     ):
         final_stop = "review_accepted"
