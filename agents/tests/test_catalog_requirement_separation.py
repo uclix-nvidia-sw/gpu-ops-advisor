@@ -100,6 +100,20 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
             original = deepcopy(row["content"])
             revision = INCIDENT_REVIEW.get(e["file"])
             if revision:
+                guidance_update = revision.get("guidance_update")
+                if guidance_update:
+                    assert guidance_update["status"] == "local_review_not_published"
+                    assert digest == guidance_update["after_content_sha256"]
+                    original.update(deepcopy(guidance_update["previous_values"]))
+                    digest = hashlib.sha256(
+                        json.dumps(
+                            original,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()
+                    ).hexdigest()
+                    assert digest == guidance_update["before_content_sha256"]
                 policy_update = revision.get("decision_policy_update")
                 if policy_update:
                     assert policy_update["status"] == "local_review_not_published"

@@ -97,6 +97,7 @@ def combined_reply(data):
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
+    author_http_fail = False
     reject_tool_requests = False
     api_key = "fixture-only"
     logs_fail = False
@@ -141,6 +142,8 @@ class Upstream(BaseHTTPRequestHandler):
             if body.get("tools") and self.reject_tool_requests:
                 return self.send({"error": "fixture tool protocol failure"}, 500)
             data = json.loads(body["messages"][1]["content"])
+            if self.author_http_fail and data.get("generation_mode") == "combined":
+                return self.send({"error": "fixture author failure"}, 400)
             message = {
                 "role": "assistant",
                 "content": json.dumps(
@@ -3111,7 +3114,7 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("invalid_interpretation", [False, True])
+@pytest.mark.parametrize("invalid_interpretation", [False, True, "http"])
 @pytest.mark.parametrize("component", ["sxid", "disk"])
 def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
     stack, monkeypatch, invalid_interpretation, component
@@ -3124,7 +3127,9 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         "review_reply",
         lambda data: __import__("evaluation_fixtures").review_reply(data, "acceptable"),
     )
-    if invalid_interpretation:
+    if invalid_interpretation == "http":
+        monkeypatch.setattr(Upstream, "author_http_fail", True)
+    elif invalid_interpretation:
         original_reply = combined_reply
 
         def malformed_reply(data):
@@ -3242,7 +3247,14 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     )
 
     diagnostics = stored["rca_synthesis"]["diagnostics"]
-    if invalid_interpretation:
+    if invalid_interpretation == "http":
+        assert evaluation["evidence"]["reason"] == "llm_http_error"
+        problem = next(row for row in result["narrative"] if row["id"] == "problem")
+        assert "node-1" in problem["text"]
+        assert "로그 기록 시각" in problem["text"]
+        assert problem["evidence_refs"]
+        assert stored["rca_result_frozen"]["material"]["reported_observations"]
+    elif invalid_interpretation:
         # The malformed caveat is dropped and the rest adopted, but semantic criteria
         # are withheld so the objective above stays unmet.
         assert diagnostics["adoption"] == "validated_response"

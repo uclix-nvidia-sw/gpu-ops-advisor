@@ -148,6 +148,8 @@ async def replay(case):
             detail.update(finish_reason=None, output_bytes=None, fixture_missing=True)
             return httpx.Response(400, json={"error": "missing replay response"})
         scripted = supplied[index]
+        if scripted.get("http_status"):
+            return httpx.Response(scripted["http_status"], json={"error": "fixture"})
         text = scripted.get("raw_text")
         if text is None:
             try:

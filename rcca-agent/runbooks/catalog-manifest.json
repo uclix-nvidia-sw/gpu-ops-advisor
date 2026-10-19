@@ -1528,7 +1528,11 @@
       "immediate_action": "RESTART_BM",
       "investigatory_action": "CONTACT_SUPPORT",
       "gpud_potential_fatal": null,
-      "gpud_always_fatal": null
+      "gpud_always_fatal": null,
+      "guidance_review": {
+        "checked_at": "2026-10-19",
+        "scope": "Conditional wording and current NVIDIA source sections; authoring only, not operational publication"
+      }
     },
     {
       "code": "xid:80",
@@ -3393,7 +3397,11 @@
       "immediate_action": null,
       "investigatory_action": null,
       "gpud_potential_fatal": true,
-      "gpud_always_fatal": false
+      "gpud_always_fatal": false,
+      "guidance_review": {
+        "checked_at": "2026-10-19",
+        "scope": "Conditional wording and current NVIDIA source sections; authoring only, not operational publication"
+      }
     },
     {
       "code": "sxid:11004",
