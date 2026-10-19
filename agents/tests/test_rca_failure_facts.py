@@ -126,3 +126,119 @@ async def test_author_and_writer_failure_keep_facts_and_conditional_guidance(kin
             continue
         for check in entry["guidance"]["next_checks"]:
             assert check["text"] in str(result["narrative"])
+
+
+def test_verified_report_summary_wins_over_model_repetition_and_hides_diagnostics():
+    material = {
+        "evaluation": {
+            "evidence": {
+                "execution_status": "failed",
+                "reason": "review_rejected_interpretation",
+                "interpretation": {
+                    "findings": [
+                        {
+                            "kind": "observed",
+                            "statement": "오류가 반복적으로 발생했다",
+                            "evidence_refs": ["e"],
+                        }
+                    ]
+                },
+            },
+            "review": {},
+            "investigation": {},
+        },
+        "reported_observations": [
+            {
+                "text": "node-a SXID 오류 이벤트 1건, 상태 보고 5건",
+                "evidence_refs": ["e"],
+            }
+        ],
+    }
+    sources = report_sources(material)
+    problem = [row for row in sources if row["section"] == "problem"]
+    assert len(problem) == 1 and problem[0]["fixed"]
+    assert "1건" in problem[0]["text"] and "반복" not in problem[0]["text"]
+    assert not any("review_rejected_interpretation" in row["text"] for row in sources)
+    assert all(
+        row["section"] == "limits" for row in sources if "분석 처리 상태" in row["text"]
+    )
+
+
+def test_context_reports_do_not_displace_incident_in_report_body():
+    material = {
+        "evaluation": {},
+        "reported_observations": [
+            {"text": "사건 장치 bd:00 오류 이벤트 1건", "evidence_refs": ["e"]},
+            {
+                "text": "다른 장치 87:00 상태 보고 5건",
+                "evidence_refs": ["e"],
+                "context_only": True,
+            },
+        ],
+    }
+    sources = report_sources(material)
+    assert all(
+        "87:00" not in row["text"] for row in sources if row["section"] == "problem"
+    )
+    assert any("87:00" in row["text"] and row["section"] == "limits" for row in sources)
+
+
+def test_reader_preserves_arbitrary_runbook_prose_without_sentence_exceptions():
+    from rcca_agent.report_writer import reader_text
+
+    for text in (
+        "이번 사건의 작업 영향과 현재 접근 상태는 수집된 관측에 따라 설명합니다.",
+        "새 Fleet 오류의 의미와 적용 조건을 그대로 보존합니다.",
+    ):
+        assert reader_text(text) == text
+
+
+@pytest.mark.parametrize("code", ["xid:48", "sxid:11012", "fleet:new-error"])
+def test_context_selection_respects_component_identity_and_usable_events(code):
+    from rcca_agent.report_observations import event_devices_by_scope, report_scope
+
+    event = {
+        "cluster_id": "c1",
+        "target": {"node": "n1"},
+        "component": "device-check",
+        "status": "reported_event",
+        "time_basis": "producer_event_time",
+        "event_time": "2026-10-19T01:00:00Z",
+        "reported_device": "PCI:0000:01:00",
+        "error_code": code,
+        "evidence_refs": ["e1"],
+    }
+    state = {
+        "cluster_id": "c1",
+        "target": {"node": "n1"},
+        "component": "device-check",
+        "check_status": "valid",
+        "time_basis": "loki_recorded_at",
+        "observed_at": "2026-10-19T01:01:00Z",
+        "raw_health": "Unhealthy",
+        "reason": "reported error",
+        "evidence_refs": ["e1"],
+    }
+    data = {"target": {"cluster_id": "c1", "node": "n1"}}
+    disk = {**state, "component": "disk", "reason": "read-only filesystem"}
+    summary = summarize_reports([state, disk], [event], data)
+    assert next(r for r in summary if "read-only" in r["text"])["context_only"] is False
+    assert (
+        next(r for r in summary if "device-check" in r["text"])["context_only"] is True
+    )
+    for invalid in (
+        {"evidence_refs": []},
+        {"time_basis": "unknown"},
+        {"event_time": None},
+    ):
+        assert all(
+            not row["context_only"]
+            for row in summarize_reports([state, disk], [{**event, **invalid}], data)
+        )
+    devices = event_devices_by_scope([event])
+    for other in (
+        {"cluster_id": "c2"},
+        {"target": {"node": "n2"}},
+        {"component": "disk"},
+    ):
+        assert not devices.get(report_scope({**state, **other}))

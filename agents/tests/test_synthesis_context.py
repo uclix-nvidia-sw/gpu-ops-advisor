@@ -602,3 +602,36 @@ async def test_korean_repair_still_rejects_new_identity_cause():
     assert diagnostics["completion_mode"] == "validated_subset"
     assert diagnostics["repair_error_code"] == "unsupported_identity_cause"
     assert "현재 장치 상태를 확인하지 못했습니다." in limitations
+
+
+def test_bounded_context_prioritizes_event_device_without_mutating_history():
+    raw = {
+        "error_events": [
+            {
+                "reported_device": "PCI:0000:bd:00",
+                "evidence_refs": ["log"],
+                "status": "reported_event",
+                "time_basis": "producer_event_time",
+                "event_time": "2026-10-19T01:00:00Z",
+            }
+        ],
+        "device_observations": [
+            {
+                "reported_pci_addresses": ["PCI:0000:87:00"],
+                "evidence_refs": ["log"],
+                "reason": "old" * 150,
+            },
+            {
+                "reported_pci_addresses": ["PCI:0000:bd:00"],
+                "evidence_refs": ["log"],
+                "reason": "incident",
+            },
+        ],
+    }
+    before = copy.deepcopy(raw)
+    view = bounded_context(raw, 1100)
+    assert raw == before
+    assert view["device_observations"][0]["reported_pci_addresses"] == [
+        "PCI:0000:bd:00"
+    ]
+    assert encoded_size(view) <= 1100

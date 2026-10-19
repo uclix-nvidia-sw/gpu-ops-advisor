@@ -263,15 +263,15 @@ async def review_analysis(llm, draft, view, allowed_queries):
 
 
 GOAL_REVIEW = """
-Rubric 2: judge the supplied investigation objective, not universal root-cause completeness.
-Review interpretation and criterion claims against original sources, never as independent evidence.
-Unknown root cause is not contradictory evidence. An unknown criterion is an unresolved
-assessment, not an unsupported claim merely because refs are empty. Do not mark it satisfied. An error-report-only conclusion may
-mark alternatives not_applicable with an explicit reason when it chooses/excludes no cause.
-Optional uncollected queries alone do not fail quality. Concrete causal claims still require
-support and material alternatives. Never waive blocking conditions or required criteria.
-Review each proposed semantic criterion; unsupported completion must be revision_required.
-Propose followup only for unresolved required criteria, using supplied followup_links.
-D44 measures PCIe replay, D02 GPU activity; do not request driver logs from these queries.
-Use brief pass reasons; detail failures once per affected claim.
-Questions do not authorize execution. Fix overstatement from existing evidence before collecting."""
+Rubric 2: judge the supplied objective, not universal root-cause completeness.
+Check claims against original sources. Unknown criteria with empty refs are unresolved,
+not unsupported assertions; never mark them satisfied. For error identification with no
+causal conclusion, alternatives may be not_applicable. Optional uncollected data is not a
+quality failure. Require support for causal claims; inventory lookup is not a cause.
+Different PCI/time reports alone are not identity conflicts; bounded omissions prove no
+contradiction. Repeated state reports are not repeated error events.
+Never waive required criteria or blockers. Unsupported completion is revision_required.
+Propose queries only for unresolved required criteria via followup_links: D44 is PCIe
+replay, D02 activity, neither driver logs. Questions authorize no execution.
+Give brief pass reasons and concrete claim-linked failures. Fix overstatement before
+collecting; do not demand hypothetical causes for an error-identification objective."""
