@@ -11,6 +11,8 @@ from ops_agent.namespace_advice import (
     summary_context,
     validate_advice,
     SYSTEM,
+    WRITING_FOCUS,
+    VALUE_MEANINGS,
 )
 from ops_agent.report_interpretation import interpret_report, payload_for
 from agent_common.llm import LLM
@@ -880,16 +882,16 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
     )
     assert wire["topics"][0]["selection"]["omitted_count"] == 88
     examples = wire["response_shape"]["sections"][0]["advice"]
-    by_id = {
-        f["fact_id"]: f["summary_tokens"]["{{target}}"].split(" / ")[0]
+    assert examples == [
+        {
+            "fact_id": "선택한 후보의 fact_id",
+            "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
+        }
+    ]
+    assert {
+        f["summary_tokens"]["{{target}}"].split(" / ")[0]
         for f in wire["topics"][0]["findings"]
-    }
-    assert {by_id[item["fact_id"]] for item in examples} == {
-        "cpc-1",
-        "cpc-2",
-        "cpc-3",
-        "cpc-4",
-    }
+    } == {"cpc-1", "cpc-2", "cpc-3", "cpc-4"}
 
 
 @pytest.mark.parametrize("token,unit", [("completed", "건"), ("elapsed", "초")])
@@ -972,3 +974,242 @@ def test_partial_positive_pending_cannot_be_offered_as_a_quiet_work_window():
     t["workloads"][0]["hours"][1]["pending_peak"] = 0
     quiet = next(f for f in candidates(t) if f["kind"] == "schedule_candidate")
     assert quiet["period"]["end"] == "2026-10-14T02:00:00Z"
+
+
+@pytest.mark.parametrize(
+    "old,new,code",
+    [
+        ("Job 경과시간", "경과시간", "batch_job_elapsed_required"),
+        ("입니다.", "이며 순수 실행입니다.", "batch_elapsed_is_not_execution_time"),
+        ("입니다.", "이며 실행 시간입니다.", "batch_elapsed_is_not_execution_time"),
+        (
+            "입니다.",
+            "이며 모든 작업이 완료됐습니다.",
+            "batch_samples_do_not_prove_throughput_or_queue_resolution",
+        ),
+        (
+            "입니다.",
+            "이며 처리량이 개선됐습니다.",
+            "batch_samples_do_not_prove_throughput_or_queue_resolution",
+        ),
+        (
+            "입니다.",
+            "이며 대기가 해소됐습니다.",
+            "batch_samples_do_not_prove_throughput_or_queue_resolution",
+        ),
+    ],
+)
+def test_batch_rejections_keep_rules_and_identify_specific_failure(old, new, code):
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    reply = batch_section(fact)
+    before = deepcopy(fact)
+    validate_advice(reply, {"findings": [fact]})
+    reply["advice"][0]["summary"] = reply["advice"][0]["summary"].replace(old, new)
+    with pytest.raises(ValueError, match="^" + code + ":") as error:
+        validate_advice(reply, {"findings": [fact]})
+    assert fact["fact_id"] + ".summary" in str(error.value)
+    assert fact == before
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+@pytest.mark.parametrize(
+    "old,new,code,repair",
+    [
+        ("Job 경과시간", "경과시간", "batch_job_elapsed_required", "명시하세요"),
+        (
+            "입니다.",
+            "이며 실행 시간입니다.",
+            "batch_elapsed_is_not_execution_time",
+            "고치세요",
+        ),
+        (
+            "입니다.",
+            "이며 대기가 해소됐습니다.",
+            "batch_samples_do_not_prove_throughput_or_queue_resolution",
+            "단정을 빼세요",
+        ),
+    ],
+)
+async def test_batch_repair_targets_failure_in_both_origins(
+    origin, old, new, code, repair
+):
+    result = {
+        "topics": [completed_topic()],
+        "quality": {},
+        "time_range": {},
+        "report_origin": origin,
+    }
+    before = deepcopy(result)
+    payload = payload_for(result)
+    batch = next(
+        f for f in payload["topics"][0]["findings"] if f["kind"] == "batch_progress"
+    )
+    valid = {"sections": [{"topic_id": "namespace_usage", **batch_section(batch)}]}
+    invalid = deepcopy(valid)
+    fact = next(
+        a for a in invalid["sections"][0]["advice"] if "Job 경과시간" in a["summary"]
+    )
+    fact["summary"] = fact["summary"].replace(old, new)
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        invalid,
+        {"advice": [valid["sections"][0]["advice"][0]]},
+    ]
+    await interpret_report(result, llm)
+    assert llm.complete.await_count == 2
+    feedback = {
+        "error": llm.complete.call_args_list[1].args[1]["summary_repair"][0][
+            "validation_error"
+        ],
+        "instruction": llm.complete.call_args_list[1].args[1]["instruction"],
+    }
+    assert feedback["error"].startswith(code + ":")
+    assert repair in feedback["error"]
+    assert fact["fact_id"] + ".summary" in feedback["error"]
+    assert "summary_repair" in llm.complete.call_args_list[1].args[1]
+    assert "topics" not in llm.complete.call_args_list[1].args[1]
+    assert "hourly_pair" not in feedback["instruction"]
+    assert result["quality"]["report"]["failures"] == [{"attempt": 1, "reason": code}]
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["narrative_status"] == "complete"
+    assert result["topics"] == before["topics"]
+    assert result["report_origin"] == origin
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+@pytest.mark.parametrize(
+    "problem", ["missing_target", "missing_check", "oversize_previous"]
+)
+async def test_summary_repair_preserves_previous_answer_within_input_limit(
+    origin, problem
+):
+    result = dict(
+        topics=[topic(pending=2)], quality={}, time_range={}, report_origin=origin
+    )
+    before = deepcopy(result)
+    facts = payload_for(result)["topics"][0]["findings"]
+    valid = {"sections": [section(facts)]}
+    invalid = deepcopy(valid)
+    item = invalid["sections"][0]["advice"][0]
+    if problem == "missing_target":
+        item["summary"] = item["summary"].replace("{{target}}", "")
+        code = "namespace_summary_tokens_required"
+    else:
+        item["summary"] = item["summary"].split("스케줄러")[0]
+        code = "actionable_namespace_summary_required"
+    if problem == "oversize_previous":
+        invalid["unused"] = "x" * 32_000
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        invalid,
+        {"advice": [valid["sections"][0]["advice"][0]]},
+    ]
+    await interpret_report(result, llm)
+    first, second = [c.args[1] for c in llm.complete.call_args_list]
+    assert first["value_meanings"] == second["value_meanings"] == VALUE_MEANINGS
+    feedback = {
+        "error": second["summary_repair"][0]["validation_error"],
+        "instruction": second["instruction"],
+    }
+    assert feedback["error"].startswith(code + ":")
+    assert item["fact_id"] in feedback["error"]
+    assert "hourly_pair" not in feedback["instruction"]
+    assert second["summary_repair"][0]["previous_summary"] == item["summary"]
+    assert second["summary_repair"][0]["fact_id"] == item["fact_id"]
+    assert "previous_response" not in feedback
+    assert len(json.dumps(second, ensure_ascii=False).encode()) < 4000
+    assert first["topics"][0]["topic_id"] == "namespace_usage"
+    assert result["narrative_status"] == "complete"
+    assert result["topics"] == before["topics"]
+    assert "previous_response" not in json.dumps(result)
+    assert llm.complete.await_count == 2
+
+
+def test_writing_focus_keeps_evidence_requirements_and_historical_semantics():
+    fact = candidates(topic(activity=1, memory=98))[0]
+    before = deepcopy(fact)
+    context = summary_context(fact)
+    assert "상주 서빙" in WRITING_FOCUS[fact["kind"]]
+    assert set(context["required_summary_tokens"]) == {
+        "{{target}}",
+        "{{period}}",
+        "{{activity}}",
+        "{{memory}}",
+    }
+    assert fact == before
+    assert "현재 대기" in SYSTEM and "시간대별 최대값" in SYSTEM
+    assert "평균" in VALUE_MEANINGS["elapsed"]
+    assert "처음 시간대 최대값" in VALUE_MEANINGS["pending_change"]
+    assert "같은 순간" in VALUE_MEANINGS["activity"]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"fact_id": "other", "summary": "wrong"},
+        {"fact_id": "namespace-advice-0", "summary": None},
+        {"fact_id": "namespace-advice-0", "summary": "wrong", "sections": []},
+        {"fact_id": "namespace-advice-0", "summary": "대기 시간이 줄었습니다."},
+    ],
+)
+async def test_summary_repair_cannot_change_scope_or_bypass_full_validation(patch):
+    result = dict(topics=[topic(pending=2)], quality={}, time_range={})
+    before = deepcopy(result)
+    valid = {"sections": [section(payload_for(result)["topics"][0]["findings"])]}
+    invalid = deepcopy(valid)
+    invalid["sections"][0]["advice"][0]["summary"] = (
+        "{{target}} · {{period}}: 대기 Pod 수는 {{pending}}입니다."
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    assert result["narrative_status"] == "failed"
+    assert result["topics"] == before["topics"]
+    assert llm.complete.await_count == 2
+
+
+async def test_summary_repair_preserves_other_valid_model_sentences():
+    t = topic(pending=2)
+    other = deepcopy(t)
+    for k in ("rows", "workloads"):
+        other[k][0]["cluster_id"] = "cpc-2"
+        t[k].extend(other[k])
+    result = dict(topics=[t], quality={}, time_range={})
+    facts = payload_for(result)["topics"][0]["findings"]
+    valid = {"sections": [section(facts)]}
+    invalid = deepcopy(valid)
+    invalid["sections"][0]["advice"][0]["summary"] = invalid["sections"][0]["advice"][
+        0
+    ]["summary"].replace("{{target}}", "")
+    first = deepcopy(invalid)
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        invalid,
+        {"advice": [valid["sections"][0]["advice"][0]]},
+    ]
+    await interpret_report(result, llm)
+    assert result["narrative_status"] == "complete"
+    expected = validate_advice(valid["sections"][0], payload_for(result)["topics"][0])
+    assert result["narrative"][0]["advice"] == expected["advice"]
+    assert invalid == first
+
+
+async def test_all_invalid_sentences_repair_in_one_request_and_keep_valid_ones():
+    t = topic(pending=2)
+    other = deepcopy(t)
+    for k in ("rows", "workloads"):
+        other[k][0]["cluster_id"] = "cpc-2"
+        t[k].extend(other[k])
+    result = dict(topics=[t], quality={}, time_range={})
+    valid = {"sections": [section(payload_for(result)["topics"][0]["findings"])]}
+    invalid = deepcopy(valid)
+    for item in invalid["sections"][0]["advice"]:
+        item["summary"] = item["summary"].replace("{{target}}", "")
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"advice": valid["sections"][0]["advice"]}]
+    await interpret_report(result, llm)
+    assert len(llm.complete.call_args.args[1]["summary_repair"]) == 2
+    assert result["narrative_status"] == "complete"
+    assert llm.complete.await_count == 2
