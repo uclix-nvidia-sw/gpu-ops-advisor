@@ -46,6 +46,14 @@ def summarize_reports(health, events, data):
                 detail = "오류 이벤트 " + row["error_code"]
                 if row.get("reported_device"):
                     detail += " · 보고된 장치 " + row["reported_device"]
+                if row.get("device_mapping") == "inventory_match" and row.get(
+                    "inventory_gpu_candidate"
+                ):
+                    # A unique same-host inventory match names the reported GPU; it
+                    # is not a current-access or hardware-state claim.
+                    detail += (
+                        " · 같은 호스트 GPU 재고 대응 " + row["inventory_gpu_candidate"]
+                    )
             else:
                 if row.get("time_basis") != "loki_recorded_at":
                     continue

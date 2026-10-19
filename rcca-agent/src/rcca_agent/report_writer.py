@@ -19,6 +19,7 @@ def label(code):
     known = {key: value for group in LABELS.values() for key, value in group.items()}
     known.update(
         acceptable="검토 통과",
+        acceptable_after_feedback="검토 지적 주장 제외 후 통과",
         revision_required="수정 필요",
         draft_changed_after_review="변경 초안 미검토",
         goal_not_met="조사 목표 미달",
@@ -90,6 +91,20 @@ def report_sources(material):
             return
         items.append({"id": f"source-{len(items) + 1}", **item})
 
+    policies = [
+        p
+        for p in (evaluation.get("investigation", {}).get("objective") or {}).get(
+            "policies", []
+        )
+        if p.get("applicable")
+    ]
+    # Unknowns every applied goal declares non-blocking lie outside the report's
+    # conclusion scope; they stay in diagnostics instead of repeating as limits.
+    out_of_scope = (
+        set.intersection(*(set(p.get("non_blocking_unknowns", [])) for p in policies))
+        if policies
+        else set()
+    )
     observations = material.get("reported_observations", [])
     if observations:
         for row in observations:
@@ -148,7 +163,8 @@ def report_sources(material):
                 row["contradicting_refs"],
             )
         for missing in row.get("missing_inputs", []):
-            add("limits", label(missing))
+            if missing not in out_of_scope:
+                add("limits", label(missing))
     for row in material.get("recommendations", []):
         status = (
             "조건부 권고(수행 사실 아님)"
@@ -184,7 +200,8 @@ def report_sources(material):
                 row.get("evidence_refs", []),
             )
     for missing in material.get("missing_inputs", []):
-        add("limits", label(missing))
+        if missing not in out_of_scope:
+            add("limits", label(missing))
     for entry in material.get("runbook_guidance", []):
         if entry.get("report_applicability") == "reference_only":
             continue
@@ -222,7 +239,11 @@ def report_sources(material):
             "action",
             "채택된 조치 권고가 없습니다. 이 시스템은 장비 조치를 수행하지 않습니다.",
         )
-    if evaluation.get("evidence", {}).get("execution_status") != "complete":
+    if evaluation.get("evidence", {}).get("execution_status") not in {
+        "complete",
+        "failed",
+        "skipped",
+    }:
         add(
             "limits",
             "LLM 작성 결과 미채택 또는 해석 미완료. 남은 자료의 검토 결과를 분석 성공으로 읽지 마세요.",

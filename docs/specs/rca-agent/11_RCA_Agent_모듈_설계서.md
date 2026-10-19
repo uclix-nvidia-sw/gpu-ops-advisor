@@ -233,7 +233,7 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 검토한 초안은 정규화한 claims/recommendations/limitations와 입력 뷰 hash를 묶은 `analysis_id`로 고정한다. 기존 `content_hash()`를 재사용하며 job 전체 content_hash와 구분한다. LLM·Runbook 출처는 유지하고 권고에도 초안 내 local claim ID를 연결한다. 원인 후보·권고·한계를 변경하면 새 ID를 만들고 재검토해야 한다.
 
-제외·보류로 최종 초안이 달라졌는데 재검토 예산이 없으면 **최종 초안의 review는 skipped/verdict=null**, 사유는 `draft_changed_after_review`로 남긴다. 이전 검토는 이전 ID의 evidence 이력에만 연결하고 최종 초안의 통과로 표시하지 않는다. 검토 완료·타당 판정을 단순히 문장 삭제 후 승계하지 않는다. 기존 assessment/result_status는 최종 유효 근거와 기존 규칙으로 다시 계산하며 검토 통과로 상향하지 않는다.
+제외·보류로 최종 초안이 달라지면 재검토 호출은 하지 않는다. 지적된 주장만 제외한 초안은 검토한 초안의 부분집합이므로 최종 review를 `complete`·`verdict=acceptable_after_feedback`로 기록하고 이전 검토 ID와 기준을 함께 연결한다. 특정 주장을 가리키지 않는 전체 지적은 `grounding`·`identity_time`이 모두 `pass`이면 주장을 무효화하지 않는 피드백으로 보존한다. 그렇지 않은 전체 지적으로 해석 전체를 제외한 경우에만 **최종 초안의 review는 skipped/verdict=null**, 사유는 `draft_changed_after_review`로 남긴다. (2026-10-19 변경: 이전에는 모든 주장 제외 뒤 검토 판정을 승계하지 않아, 대안·누락 맥락 같은 전체 지적만으로도 목적 달성이 불가능했다.) 기존 assessment/result_status는 최종 유효 근거와 기존 규칙으로 다시 계산하며 검토 통과로 상향하지 않는다.
 
 형식 검증을 통과한 초안·구조화 검토는 기존 evidence에 저장하되, 거절된 원시 모델 응답 전체를 새로 저장하지 않는다. 기존 사유·위치·hash 진단 및 민감정보 제한을 유지한다. 보류된 내용은 일반 보고서·Ops의 정상 후보로 인용하지 않는다.
 
@@ -921,7 +921,7 @@ GUI의 저장 근거·실패 표시, F2-A 예약 보호 및 PR #134 사건별 �
 
 ### Runbook 기준·종료·GUI의 추가 검수
 
-실행에 고정된 **발행 revision**을 기준으로 검사한다. 저장소 XID 79·SXID 11001 원본의 1.1 정책과 운영 발행본 1.0을 혼동하지 않는다. 새 수집 평가·다음 행동 기록은 `decision_policy_status=applied/mixed/not_configured`로 적용 여부를 남기고, 다음 행동 기록의 `collected_queries/deferred_queries`로 목표 확인에 사용한 조회와 목적 밖 선택 조회를 구분한다. GUI는 목적 달성 시 D09 등 실제 수집과 생략한 선택 조회를 설명하고, 정책 미설정 시 새 Runbook revision 발행이 필요함을 표시한다. 정책 없는 과거 기록에 적용 상태를 소급 추정하지 않는다. 기존 1.0의 규칙을 변경하는 대신 [새 revision 적용 절차](../../../rcca-agent/runbooks/DB-WORKFLOW.md#기존-발행본에-종료-기준-적용)를 따른다.
+실행에 고정된 **발행 revision**을 기준으로 검사한다. 저장소 XID 79·SXID 11001 원본의 1.1 정책과 운영 발행본 1.0을 혼동하지 않는다. 새 수집 평가·다음 행동 기록은 `decision_policy_status=applied/mixed/not_configured`로 적용 여부를 남기고, 다음 행동 기록의 `collected_queries/deferred_queries`로 목표 확인에 사용한 조회와 목적 밖 선택 조회를 구분한다. `selection` 규칙을 충족한 선택 조회는 LLM 잔여 예산이 충분하면(65,536 토큰 이상) 첫 라운드에 함께 수집되어 `collected_queries`에 들어간다. GUI는 목적 달성 시 D09 등 실제 수집과 생략한 선택 조회를 설명하고, 정책 미설정 시 새 Runbook revision 발행이 필요함을 표시한다. 정책 없는 과거 기록에 적용 상태를 소급 추정하지 않는다. 기존 1.0의 규칙을 변경하는 대신 [새 revision 적용 절차](../../../rcca-agent/runbooks/DB-WORKFLOW.md#기존-발행본에-종료-기준-적용)를 따른다.
 
 아래는 유지할 검수 기준이다. 코드·fixture에서 확인한 항목은 QA와 05의 T80~T86에 기록하며 실제 모델의 의미 품질은 아직 통과로 표시하지 않는다. 고정 응답은 계약·분기, 실제 모델 재생은 의미 판단을 검사한다. 기존 테스트에 사례를 추가하고 실행 가능한 항목은 05에 반영한다. 호출 통합의 참조 영역·부분 성공·출력 잘림 기준은 앞 절을 그대로 적용한다.
 

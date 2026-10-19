@@ -15,6 +15,7 @@ from rca_replay_cases import ROOT, cases, reply
 def policy_case(kind="xid"):
     case = cases()["enough_budget"]
     case["id"] = "combined_" + kind
+    case["empty_unscripted_queries"] = True
     code, key = ("79", "RB-XID-79") if kind == "xid" else ("11001", "RB-SXID-11001")
     profile = case["attempt"]["profile"]
     profile["rca"]["generation_mode"] = "combined"
@@ -91,8 +92,11 @@ def policy_case(kind="xid"):
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_goal_stops_without_optional_queries_and_keeps_cause_unknown(kind):
+async def test_goal_collects_rule_queries_in_first_round_and_keeps_cause_unknown(
+    kind,
+):
     case = policy_case(kind)
+    aux = {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
     result = await replay(case)
     assert result["missing_inputs"] == []
     output = result["output"]
@@ -103,7 +107,7 @@ async def test_goal_stops_without_optional_queries_and_keeps_cause_unknown(kind)
         "summary"
     ]
     assert evaluation["review"]["rubric_version"] == "2"
-    assert len(result["query_calls"]) == 1
+    assert sum(c["matched"] for c in result["query_calls"]) == 1
     assert [call["stage"] for call in result["model_calls"]] == [
         "synthesis",
         "analysis_review",
@@ -127,10 +131,10 @@ async def test_goal_stops_without_optional_queries_and_keeps_cause_unknown(kind)
     )
     assert decision["reason"] == "goal_achieved"
     assert decision["decision_policy_status"] == "applied"
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["deferred_queries"]) == (
-        {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
-    )
+    # Rule-eligible auxiliary queries join the first round; no LLM round is added.
+    assert decision["collected_queries"][0] == "D09"
+    assert set(decision["collected_queries"][1:]) == aux
+    assert decision["deferred_queries"] == []
     assert decision["selected_queries"] == []
 
 
@@ -151,7 +155,7 @@ async def test_new_policy_revision_is_selected_while_old_published_revision_rema
     assert not result["missing_inputs"]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
     assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
-    assert len(result["query_calls"]) == 1
+    assert sum(c["matched"] for c in result["query_calls"]) == 1
     assert [
         p["runbook_revision_id"]
         for p in evaluation["investigation"]["objective"]["policies"]
@@ -179,12 +183,13 @@ async def test_published_legacy_policy_is_not_silently_upgraded(kind):
         for e in result["output"]["evidence"]
         if e["query_id"] == "investigation_decision"
     )
-    assert decision["reason"] == "authorized_followup"
+    assert decision["reason"] == "review_accepted"
     assert decision["decision_policy_status"] == "not_configured"
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["selected_queries"]) == (
+    assert decision["collected_queries"][0] == "D09"
+    assert set(decision["collected_queries"][1:]) == (
         {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
     )
+    assert decision["selected_queries"] == []
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -391,7 +396,10 @@ async def test_new_required_fact_cannot_be_bypassed_by_goal_policy():
 
 
 @pytest.mark.parametrize("mode", ["combined", "separate"])
-async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(mode):
+async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(
+    mode, monkeypatch
+):
+    monkeypatch.setattr("rcca_agent.workflow.AUX_PREFETCH_MIN_TOKENS", 10**9)
     case = cases()["followup_changes_review"]
     case["attempt"]["profile"]["rca"]["generation_mode"] = mode
     case["queries"][1]["response"] = deepcopy(case["queries"][0]["response"])

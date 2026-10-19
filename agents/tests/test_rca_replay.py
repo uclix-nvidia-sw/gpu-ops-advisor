@@ -19,6 +19,9 @@ def no_real_network(monkeypatch):
 
 @pytest.mark.parametrize("name", list(cases()))
 async def test_frozen_replay_contract(name, monkeypatch):
+    # These frozen cases pin the round-1 follow-up path (used below the prefetch
+    # budget); first-round prefetch is covered by the combined policy tests.
+    monkeypatch.setattr("rcca_agent.workflow.AUX_PREFETCH_MIN_TOKENS", 10**9)
     monkeypatch.setenv("LLM_BASE_URL", "https://must-not-be-used.invalid")
     monkeypatch.setenv("LLM_MODEL_ANALYSIS_REVIEW", "must-not-be-used")
     case = cases()[name]
@@ -126,7 +129,8 @@ async def test_compare_requires_same_frozen_inputs():
         compare(tampered, after)
 
 
-async def test_summary_explains_followup_and_retained_partial_result():
+async def test_summary_explains_followup_and_retained_partial_result(monkeypatch):
+    monkeypatch.setattr("rcca_agent.workflow.AUX_PREFETCH_MIN_TOKENS", 10**9)
     result = await replay(cases()["accepted_rule_followup"])
     text = readable_summary(result)
     assert "추가 수집 D02(GPU 활동)" in text
