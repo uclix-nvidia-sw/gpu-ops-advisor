@@ -92,7 +92,7 @@ def policy_case(kind="xid"):
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_goal_collects_rule_queries_in_first_round_and_keeps_cause_unknown(
+async def test_goal_defers_optional_queries_and_keeps_cause_unknown(
     kind,
 ):
     case = policy_case(kind)
@@ -131,10 +131,9 @@ async def test_goal_collects_rule_queries_in_first_round_and_keeps_cause_unknown
     )
     assert decision["reason"] == "goal_achieved"
     assert decision["decision_policy_status"] == "applied"
-    # Rule-eligible auxiliary queries join the first round; no LLM round is added.
-    assert decision["collected_queries"][0] == "D09"
-    assert set(decision["collected_queries"][1:]) == aux
-    assert decision["deferred_queries"] == []
+    # Optional evidence does not displace a sufficient scoped report.
+    assert decision["collected_queries"] == ["D09"]
+    assert set(decision["deferred_queries"]) == aux
     assert decision["selected_queries"] == []
 
 
@@ -183,13 +182,12 @@ async def test_published_legacy_policy_is_not_silently_upgraded(kind):
         for e in result["output"]["evidence"]
         if e["query_id"] == "investigation_decision"
     )
-    assert decision["reason"] == "review_accepted"
+    assert decision["reason"] == "authorized_followup"
     assert decision["decision_policy_status"] == "not_configured"
-    assert decision["collected_queries"][0] == "D09"
-    assert set(decision["collected_queries"][1:]) == (
+    assert decision["collected_queries"] == ["D09"]
+    assert set(decision["selected_queries"]) == (
         {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
     )
-    assert decision["selected_queries"] == []
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -406,9 +404,8 @@ async def test_new_required_fact_cannot_be_bypassed_by_goal_policy():
 
 @pytest.mark.parametrize("mode", ["combined", "separate"])
 async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(
-    mode, monkeypatch
+    mode,
 ):
-    monkeypatch.setattr("rcca_agent.workflow.AUX_PREFETCH_MIN_TOKENS", 10**9)
     case = cases()["followup_changes_review"]
     case["attempt"]["profile"]["rca"]["generation_mode"] = mode
     case["queries"][1]["response"] = deepcopy(case["queries"][0]["response"])

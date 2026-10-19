@@ -2,7 +2,7 @@
 
 ## 이번 개발 기준
 
-**작업: 판단 기준 구체화, Runbook 기반 일괄 보완 수집·재분석과 판단·실행의 재생 검수. 상태: 설계, 미구현.** 코드 비교 기준은 `7b95d6a`(2026-10-19 조회한 main, PR #158 병합 포함)다. 실제 실행 설명은 [RCA README](../../../rcca-agent/README.md), 실행한 검증의 범위는 [Agent QA](../../../agents/QA.md)가 소유한다. 이 문서는 이번에 구현할 기준과 유지할 계약을 정의하며 배포 완료를 뜻하지 않는다.
+**작업: 판단 기준 구체화, Runbook 기반 일괄 보완 수집·재분석과 판단·실행의 재생 검수. 상태: 설계, 미구현.** 코드 비교 기준은 `756f204`(2026-10-19 조회한 main, PR #160 병합 포함)다. 실제 실행 설명은 [RCA README](../../../rcca-agent/README.md), 실행한 검증의 범위는 [Agent QA](../../../agents/QA.md)가 소유한다. 이 문서는 이번에 구현할 기준과 유지할 계약을 정의하며 배포 완료를 뜻하지 않는다.
 
 목표는 **부족한 판단을 어떤 증거로 보완할지 설명하고, 그 계획대로 조사·수정·종료하는 RCA**다. 현재는 `model_assessment()`가 선택 followup 설명을 제외하고 `select_followup()`도 필수 링크 중심으로 후보를 줄인다. 검토자는 D의 의미를 충분히 받지 못하며, 구체적 오해를 발견해도 동일 증거 재작성 제한 때문에 수정할 수 없다. 이 세 부분을 연결해서 고친다.
 
@@ -28,7 +28,7 @@
 | R02 | 개별 입력 제한 → 카탈로그까지 포함한 실제 검토 입력·예약·출력 여유 검사 | `review_payload`, `reserve_review_budget`, `bounded_context`; 중요 근거·반대 근거 보존, input/catalog hash·refs·생략·요청별 cap/usage | V03·V04·V07·V17·V22·V28 |
 | R03 | 6개 rubric의 상태/이유 → 조건별 확인·부족·영향·해결·완료 조건과 독립 목적 평가 | [analysis_review](../../../rcca-agent/src/rcca_agent/analysis_review.py)의 `review_prompt/validate_review/review_analysis`, [decision_policy](../../../rcca-agent/src/rcca_agent/decision_policy.py)의 `finish_assessment`; 현행 `review_scope_status`의 독립 검토 우선 원칙 활용, 세 rubric 통과를 새 목적별 평가 전체로 대체하지 않음. 작성자 제안과 검토자 판단 분리, 구 GOAL_REVIEW의 필수 링크 한정·일괄 수정 우선 지시를 새 계획 분기로 대체 | V05·V06·V07·V23 |
 | R04 | 질문/기대 효과 → revise/collect/finish와 일괄 보완 필요성 판단 | 새 검토 응답·plan ID·batch version, criterion/issue/catalog refs, 일괄 수집 이유·예상 판단 변화·결과 활용. 코드가 Runbook 전체 선택 D로 실행 목록 구성 | V02·V08·V09·V23·V29·V32·V33 |
-| R05 | `required=false` 링크 제외 → collect 승인 시 Runbook의 남은 선택 D 전체 수집 | [workflow](../../../rcca-agent/src/rcca_agent/workflow.py)의 `select_followup/rule_followup/choose_followup`, `model_assessment` 입력 분리. 예산 65,536 이상일 때 첫 라운드 선택 조회를 미리 실행하는 기존 경로도 새 모드에서 제거. 모델의 개별 D 선별·별도 선택 LLM 없이 집합/실행 전제 검사 | V08·V09·V10·V18·V26 |
+| R05 | `required=false` 링크 제외 → collect 승인 시 Runbook의 남은 선택 D 전체 수집 | [workflow](../../../rcca-agent/src/rcca_agent/workflow.py)의 `select_followup/rule_followup/choose_followup`, `model_assessment` 입력 분리. 현재와 같이 예산만으로 선택 D를 선조회하지 않으며, 새 모드는 독립 검토의 일괄 보완 승인 뒤 실행한다. 모델의 개별 D 선별·별도 선택 LLM 없이 집합/실행 전제 검사 | V08·V09·V10·V18·V26 |
 | R06 | 제안과 실행의 간접 연결 → scope·인자·전제·한도 검증 후 실행/거절 기록 | `investigation_decision`, request/plan/evidence 연결. 모델이 의미를 판단하고 코드는 권한·계약 검사 | V09·V10·V11·V14 |
 | R07 | 고정 2회차·query별 결과 등록 → Runbook별 기본 수집 + 일괄 보완 1회, 누적 재분석 최대 1회 | `workflow.run/analyze_round/observation_hashes`, [collect_round](../../../rcca-agent/src/rcca_agent/observation_agents.py). 전역 `max_rounds` 대신 Runbook별 기본/보완 상태 관리. `collected`·`remaining`·요청 키·누적 refs/hash·`summarize_reports` 집계 연결. 실행 묶음 사이 작성/검토 없음 | V11·V12·V13·V25·V26·V27·V30·V34 |
 | R08 | 동일 증거 재작성 전면 차단 → 구체적 검토 지적이 있는 의미 수정만 attempt당 1회 | `evaluate_analysis`, [combined_synthesis.generate](../../../rcca-agent/src/rcca_agent/combined_synthesis.py); parent_analysis_id/revision_no/issue refs, 수정본 새 검토. 실패 시 기존 보류 유지 | V12·V14·V15·V22 |
@@ -336,7 +336,7 @@ Runbook 지침은 조건부 참고 자료다. 포함 여부와 섹션은 새 조
 
 | 단계 | 대상 | 완료해야 다음 단계로 진행할 수 있는 조건 |
 |---|---|---|
-| S0 기준선·재생 | 전 항목 | 기존 [rca_replay.py](../../../agents/tests/rca_replay.py)의 실제 workflow/검토 호출 경로를 재사용. main의 독립 검토 목적 판정·피드백 후 부분집합 채택·예산 기반 첫 선택 조회도 현재 동작으로 재현하되 새 정책과 구분. 비식별 자료·원본 hash·Runbook/profile/모델 버전 고정, 현행 호출·계획·종료 재현. `7b95d6a`의 XID/SXID 콘텐츠, 사건 장치 입력 정렬·검토 프롬프트·원본 보고 표시를 기준선에 포함하고 저장소 hash와 실제 발행 revision을 구분. 같은 콘텐츠로 구/새 실행을 비교하며 콘텐츠·입력 선택·프롬프트 변경 효과는 구분해 기록. 누락 자료는 부분 재생 표시 |
+| S0 기준선·재생 | 전 항목 | 기존 [rca_replay.py](../../../agents/tests/rca_replay.py)의 실제 workflow/검토 호출 경로를 재사용. main의 독립 검토 목적 판정·피드백 후 부분집합 채택·필수 조회 후 기존 후속 판정을 재현하되 새 정책과 구분. 예산만으로 선택 D를 선조회하지 않는 경계는 유지하고, 목적 없는 기존 Runbook의 규칙 기반 후속 조회도 기준선에 포함. 비식별 자료·원본 hash·Runbook/profile/모델 버전 고정, 현행 호출·계획·종료 재현. `756f204`의 XID/SXID 콘텐츠, 사건 장치 입력 정렬·검토 프롬프트·원본 보고 표시를 기준선에 포함하고 저장소 hash와 실제 발행 revision을 구분. 같은 콘텐츠로 구/새 실행을 비교하며 콘텐츠·입력 선택·프롬프트 변경 효과는 구분해 기록. 누락 자료는 부분 재생 표시 |
 | S1 계약·콘텐츠 | R01·R03·R04·R07·R10·R11·R12 | Runbook별 유지/재작성/대체/폐기 대응표, 정상/실패/구 버전 fixture와 새 필드·상한·권한 정의. D 설명과 binding 대조. 아래 S1 필수 산출물로 루프 실패 분기·채택 계약·관측 집계를 확정. 시간 진단 저장/조회는 별도 T1에서 확정. 소비자 읽기 지원부터 준비하고 발행본을 덮어쓰지 않음 |
 | S2 입력·예산 | R01·R02 | 실제 카탈로그 포함 입력과 일괄 보완 평가를 포함한 검토 출력이 각 cap·전체 예산에 들어가는지 측정. 많은 D·큰 증거·작은 예산과 전체 보완 누적 V03/04/22/25/28 통과. 현재 성공 사례의 검토 불가 회귀와 S2/V25에 명시한 deadline/결과 저장 회귀도 검사. 미충족이면 통합 검토·계획 활성화 보류 |
 | S3 검토·계획 | R03·R04·R10 | 검토자 단독 실제 모델 평가와 fixture 모두 수행. 기준별 설명·D 의미·계획 참조와 검토 실패/종료 제안 오류 V32/V33 검사. 성급한 종료/불필요한 일괄 수집·D 능력 오해를 사람이 확인 |
