@@ -457,10 +457,12 @@ export function RcaResult({
   job,
   onEvidence,
   showEvidence = true,
+  evaluationExpanded = false,
 }: {
   job: Row;
   onEvidence: (id: string) => void;
   showEvidence?: boolean;
+  evaluationExpanded?: boolean;
 }) {
   const result = obj(job.result),
     analysis = obj(obj(result.quality).analysis),
@@ -477,7 +479,7 @@ export function RcaResult({
       <RcaJobSummary job={job} />
       {job.result_ref != null && (
         <>
-          <RcaNarrative result={result} consolidateChecks />
+          <RcaNarrative result={result} consolidateChecks evaluationExpanded={evaluationExpanded} />
           <RcaObservations result={result} onEvidence={onEvidence} />
           {showEvidence && (
             <RcaEvidence

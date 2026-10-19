@@ -158,7 +158,12 @@ export function ResultPage({ kind }: { kind: string }) {
                 <IncidentDebug incident={r} />
               )
             ) : (
-              <RcaResult key={str(r.id)} job={r} onEvidence={setEvidence} />
+              <RcaResult
+                key={str(r.id)}
+                job={r}
+                onEvidence={setEvidence}
+                evaluationExpanded={app.mode === 'developer'}
+              />
             )}
             <div className="head-actions">
               {kind !== 'incident' && (

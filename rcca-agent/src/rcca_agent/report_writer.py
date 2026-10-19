@@ -27,6 +27,7 @@ def label(code):
         complete="완료",
         skipped="미실행",
         failed="실패",
+        review_rejected_interpretation="검토에서 분석 해석을 채택하지 않았습니다",
     )
     return known.get(code, str(code or "미기록"))
 
@@ -49,6 +50,7 @@ of current device state, physical failure, recovery, or an action having been pe
 Never invent a cause, identity, number, action, diagnosis or completion. Unreviewed material
 is not accepted analysis. Source order is not chronology. Do not infer a transition unless
 explicitly supplied. Do not restate fixed limitations; they are displayed verbatim separately.
+Do not add generic uncertainty sentences when a source supplies only an error definition.
 Compose readable complete prose, not an ID ordering response. No Markdown headings or HTML.
 Lead with observed location, error and evidence meaning. State a material restriction once,
 beside the claim it limits; avoid repetitive '모른다', '미확정', '확인할 수 없다' framing.
@@ -61,7 +63,7 @@ NUMBERS = re.compile(r"\d+(?:[.:/-]\d+)*")
 
 
 def reader_text(text):
-    """Translate known diagnostics only; original analysis stays in frozen material."""
+    """Translate known diagnostic vocabulary; preserve arbitrary source prose."""
     return re.sub(
         r"(?<!\w)[`'\"]?producer_time_status[`'\"]?\s*(?:[=:]\s*)?[`'\"]?missing_or_zero\b[`'\"]?",
         "상태 보고의 발생 시각이 비어 있거나 초기값입니다",
@@ -88,30 +90,37 @@ def report_sources(material):
             return
         items.append({"id": f"source-{len(items) + 1}", **item})
 
-    for row in interpretation.get("findings", []):
-        prefix = "관측 보고: " if row["kind"] == "observed" else "해석: "
-        add("problem", prefix + row["statement"], row["evidence_refs"])
-    if not interpretation.get("findings"):
-        for row in material.get("reported_observations", []):
-            add("problem", row["text"], row["evidence_refs"], fixed=True)
-        if material.get("reported_observations"):
+    observations = material.get("reported_observations", [])
+    if observations:
+        for row in observations:
             add(
-                "problem",
-                "위 내용은 수집 원본의 보고 사실입니다. 현재 장치 상태·원인·회복 판정과 구분합니다.",
+                "limits" if row.get("context_only") else "problem",
+                row["text"],
+                row["evidence_refs"],
                 fixed=True,
             )
+        for row in interpretation.get("findings", []):
+            add(
+                "cause" if row["kind"] == "inferred" else "limits",
+                "채택된 해석: " + row["statement"],
+                row["evidence_refs"],
+            )
+    else:
+        for row in interpretation.get("findings", []):
+            prefix = "관측 보고: " if row["kind"] == "observed" else "해석: "
+            add("problem", prefix + row["statement"], row["evidence_refs"])
     evidence = evaluation.get("evidence", {})
     review = evaluation.get("review", {})
     if evidence.get("execution_status") in {"failed", "skipped"}:
         add(
-            "cause",
+            "limits",
             "분석 처리 상태: 증거 해석·분석이 완료되지 않았습니다. "
             + label(evidence.get("reason") or evidence["execution_status"]),
             fixed=True,
         )
     elif review.get("execution_status") in {"failed", "skipped"}:
         add(
-            "cause",
+            "limits",
             "분석 처리 상태: 독립 품질 검토가 완료되지 않았습니다. "
             + label(review.get("reason") or review["execution_status"]),
             fixed=True,
@@ -124,7 +133,7 @@ def report_sources(material):
     ]
     if recorded:
         add(
-            "cause",
+            "limits",
             "상태 보고는 로그 기록 시각을 기준으로 사건 구간에 연결했습니다. 이 시각은 보고 순서 대조에 사용하며, 장애 발생·회복 시각 판정에는 사용하지 않습니다.",
             [ref for row in recorded for ref in row.get("evidence_refs", [])],
             fixed=True,
@@ -185,7 +194,7 @@ def report_sources(material):
         for check in guidance["next_checks"]:
             add(
                 "action",
-                "Runbook 대응 지침: " + check["title"] + " " + check["text"],
+                check["title"] + " " + check["text"],
                 refs,
                 fixed=True,
             )
