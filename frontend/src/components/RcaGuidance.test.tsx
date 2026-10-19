@@ -35,8 +35,10 @@ it('keeps literature separate from device facts and explains restart prerequisit
   };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaGuidance paragraphs={paragraphs} result={result} />);
-  expect(html).toContain('작업 배출·유지보수 승인 후 재시작합니다');
-  expect(html).toContain('복구에는 재시작이 필요합니다');
+  expect(html).toContain('작업 배출·유지보수 승인 후 호스트를 재시작합니다');
+  expect(html).not.toContain('복구에는 재시작이 필요합니다');
+  expect(html).toContain('로그 주입 시험에는 재시작을 적용하지 않습니다');
+  expect(html).toContain('실제 XID 79 장애');
   expect(html).toContain('revision 5');
   expect(html).toContain('<details><summary>적용 지침</summary><p>');
   expect(html).toContain('<h5 class="rca-reference-heading">이 오류에 대한 참고 안내</h5>');
@@ -117,7 +119,10 @@ it('explains SXID11001 without GPU failure or XID restart guidance', () => {
       }}
     />,
   );
-  expect(html).toContain('수신(ingress) 측에서 잘못된 명령');
+  expect(html).toContain('수신(ingress) 측의 잘못된 명령 보고');
+  expect(html).toContain('access 포트');
+  expect(html).toContain('trunk 포트');
+  expect(html).not.toContain('B200/B300이 아닌 플랫폼이면');
   expect(html).not.toContain('단정할 수는 없습니다');
   expect(html).toContain('B200·B300에는 이 지침을 적용하지 않습니다');
   expect(html).not.toContain('XID154');
