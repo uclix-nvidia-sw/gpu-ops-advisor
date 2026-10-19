@@ -210,6 +210,7 @@ async def evaluate_analysis(
     review_ids = []
     stop_override = None
     feedback_review = None
+    unattributed = False
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
         base_candidates, base_recommendations = assemble([])
@@ -362,6 +363,7 @@ async def evaluate_analysis(
         )
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
+        unattributed = None in affected
         assertions_valid = all(
             review["criteria"].get(key, {}).get("status") == "pass"
             for key in ("grounding", "identity_time")
@@ -493,6 +495,7 @@ async def evaluate_analysis(
             evidence_refs=[review_ids[-1]],
             rubric_version=rubric,
             criteria=review["criteria"] if review else {},
+            unattributed_issues=unattributed,
             **(
                 {"failure_reason": review_diag["failure_reason"]}
                 if review_diag.get("failure_reason")

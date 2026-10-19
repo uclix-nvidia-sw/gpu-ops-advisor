@@ -17,6 +17,36 @@ STOP_REASONS = {
     "fast_path",
 }
 
+ACCEPTED_REVIEW_VERDICTS = frozenset({"acceptable", "acceptable_after_feedback"})
+# Review rubric keys that answer a goal's "conclusion bounded by evidence" criterion.
+SCOPE_RUBRIC = ("grounding", "identity_time", "limitations")
+
+
+def review_scope_status(review):
+    """Judge a semantic goal criterion from the independent review, not the author.
+
+    An author grading its own conclusion is not evidence. The reviewer already
+    checks grounding, identity/time and limitations per draft; a needs_revision
+    there counts as resolved only when every issue named a claim that code then
+    withheld. Older records without the flag stay unknown.
+    """
+    if (
+        review.get("execution_status") != "complete"
+        or review.get("verdict") not in ACCEPTED_REVIEW_VERDICTS
+    ):
+        return "unknown"
+    resolved = review["verdict"] == "acceptable_after_feedback" and (
+        review.get("unattributed_issues") is False
+    )
+    for key in SCOPE_RUBRIC:
+        status = (review.get("criteria") or {}).get(key, {}).get("status")
+        if status in {"pass", "not_applicable"}:
+            continue
+        if status == "needs_revision" and resolved:
+            continue
+        return "unknown"
+    return "satisfied"
+
 
 def validate_evaluation(result, evidence):
     from .contracts import content_hash
@@ -190,8 +220,8 @@ def validate_evaluation(result, evidence):
             or objective.get("status") != "achieved"
             or objective.get("analysis_id") != analysis_id
             or evaluation["review"]["execution_status"] != "complete"
-            or evaluation["review"]["verdict"]
-            not in {"acceptable", "acceptable_after_feedback"}
+            or evaluation["review"]["verdict"] not in ACCEPTED_REVIEW_VERDICTS
+            or evaluation["evidence"]["execution_status"] != "complete"
             or evaluation["review"].get("rubric_version") != "2"
             or not objective.get("compatible")
             or not objective.get("policies")
@@ -215,23 +245,17 @@ def validate_evaluation(result, evidence):
             )
         ):
             raise ValueError("invalid investigation completion")
-        answers = {
-            row["criterion_id"]: row
-            for row in draft.get("interpretation", {}).get("criterion_assessments", [])
-        }
+        review = evaluation["review"]
         if any(
             row["method"] == "llm"
             and (
-                row["key"] not in answers
-                or any(
-                    row[key] != answers[row["key"]][key]
-                    for key in ("status", "finding_refs", "evidence_refs")
-                )
+                row["status"] != review_scope_status(review)
+                or row["evidence_refs"] != review["evidence_refs"]
             )
             for policy in objective["policies"]
             for row in policy["criteria"]
         ):
-            raise ValueError("completion does not match reviewed interpretation")
+            raise ValueError("completion does not match independent review")
 
 
 def source_evaluation(body):

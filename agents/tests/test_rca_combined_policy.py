@@ -193,7 +193,9 @@ async def test_published_legacy_policy_is_not_silently_upgraded(kind):
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_semantic_unknown_cannot_be_overridden_by_acceptable_review(kind):
+async def test_author_self_assessment_is_advisory_and_review_decides_scope(kind):
+    # 2026-10-19 14:50 SXID 11001 (b5ba138e): the author graded its own conclusion
+    # "unknown" and the goal could never complete despite a passing review.
     case = policy_case(kind)
     case["responses"]["synthesis"][0]["response"]["interpretation"][
         "criterion_assessments"
@@ -201,8 +203,15 @@ async def test_semantic_unknown_cannot_be_overridden_by_acceptable_review(kind):
     result = await replay(case)
     ev = result["output"]["result"]["quality"]["rca_evaluation"]
     assert ev["review"]["verdict"] == "acceptable"
-    assert ev["investigation"]["stop_reason"] == "goal_not_met"
-    assert ev["investigation"]["objective"]["status"] == "not_achieved"
+    assert ev["investigation"]["stop_reason"] == "goal_achieved"
+    row = next(
+        r
+        for r in ev["investigation"]["objective"]["policies"][0]["criteria"]
+        if r["method"] == "llm"
+    )
+    assert row["status"] == "satisfied"
+    assert row["author_status"] == "unknown"
+    assert row["evidence_refs"] == ev["review"]["evidence_refs"]
 
 
 async def test_runbook_goal_also_works_without_combined_authoring():

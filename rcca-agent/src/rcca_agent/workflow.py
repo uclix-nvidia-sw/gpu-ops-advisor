@@ -316,6 +316,13 @@ def normalized_state(obs, collected, data, profile, initial_facts):
 AUX_PREFETCH_MIN_TOKENS = 65536
 
 
+def caveat_withheld(evaluation):
+    return any(
+        row.get("code") == "criterion_withheld"
+        for row in (evaluation.get("synthesis") or {}).get("dropped_items", [])
+    )
+
+
 def conflicting_health(health):
     groups = {}
     for h in health:
@@ -985,6 +992,7 @@ async def run(tools):
                     evaluation.get("interpretation"),
                     evaluation["review"],
                     evaluation["draft"]["analysis_id"],
+                    caveat_withheld=caveat_withheld(evaluation),
                 )
                 return
             evaluation_state["authored_sources"].update(source_hashes)
@@ -1014,6 +1022,7 @@ async def run(tools):
                 evaluation.get("interpretation"),
                 evaluation["review"],
                 evaluation["draft"]["analysis_id"],
+                caveat_withheld=caveat_withheld(evaluation),
             )
             synthesis_diagnostics = evaluation["synthesis"]
             analysis_status = evaluation["synthesis_status"]
