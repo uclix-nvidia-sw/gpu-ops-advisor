@@ -262,7 +262,9 @@ async def test_review_withholds_only_affected_interpretation_and_dependencies(ta
         target == "criterion"
     )
     assert kept["criterion_assessments"][0]["status"] == "unknown"
-    assert evaluation["review"]["execution_status"] == "skipped"
+    # The retained draft is the reviewed draft minus the challenged claim.
+    assert evaluation["review"]["execution_status"] == "complete"
+    assert evaluation["review"]["verdict"] == "acceptable_after_feedback"
     assert evaluation["investigation"]["stop_reason"] != "goal_achieved"
 
 

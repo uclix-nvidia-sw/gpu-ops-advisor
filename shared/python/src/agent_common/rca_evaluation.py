@@ -151,6 +151,7 @@ def validate_evaluation(result, evidence):
             if stage["execution_status"] == "complete":
                 if stage["verdict"] not in {
                     "acceptable",
+                    "acceptable_after_feedback",
                     "revision_required",
                     "undetermined",
                 }:
@@ -189,7 +190,8 @@ def validate_evaluation(result, evidence):
             or objective.get("status") != "achieved"
             or objective.get("analysis_id") != analysis_id
             or evaluation["review"]["execution_status"] != "complete"
-            or evaluation["review"]["verdict"] != "acceptable"
+            or evaluation["review"]["verdict"]
+            not in {"acceptable", "acceptable_after_feedback"}
             or evaluation["review"].get("rubric_version") != "2"
             or not objective.get("compatible")
             or not objective.get("policies")

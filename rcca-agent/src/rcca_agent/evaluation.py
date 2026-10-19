@@ -13,6 +13,7 @@ from .analysis_review import (
     review_analysis,
     review_payload,
     review_reserve,
+    WITHHELD_VERDICT,
 )
 from .evidence_interpretation import inspection_context, interpret_evidence, SENSITIVE
 from .synthesis import synthesize, reserve_review_budget
@@ -361,6 +362,14 @@ async def evaluate_analysis(
         )
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
+        assertions_valid = all(
+            review["criteria"].get(key, {}).get("status") == "pass"
+            for key in ("grounding", "identity_time")
+        )
+        # Unattributed critiques (alternatives, wording, completeness) do not make
+        # grounded, correctly targeted assertions invalid; keep them as feedback.
+        if assertions_valid:
+            affected.discard(None)
         global_issue = None in affected
         removed_findings = set()
         if interpretation is not None:
@@ -409,9 +418,10 @@ async def evaluate_analysis(
         limits = list(
             dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *([] if global_issue else limits)])
         )
-        limits.append(
-            "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다. 원인 판단은 추가 확인이 필요합니다."
-        )
+        if affected:
+            limits.append(
+                "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다."
+            )
         draft = analysis_draft(
             candidates,
             recommendations,
@@ -429,22 +439,32 @@ async def evaluate_analysis(
             },
         )
         feedback_review = review
-        review = None
-        review_diag = {
-            "execution_status": "skipped",
-            "reason": "draft_changed_after_review",
-            "attempts": 0,
-        }
+        if global_issue:
+            review = None
+            review_diag = {
+                "execution_status": "skipped",
+                "reason": "draft_changed_after_review",
+                "attempts": 0,
+            }
+        else:
+            # The retained draft is the reviewed draft minus every challenged
+            # claim; no unreviewed text was added, so the review still covers it.
+            review = {
+                **review,
+                "verdict": WITHHELD_VERDICT,
+                "analysis_id": draft["analysis_id"],
+            }
+            review_diag = {"execution_status": "complete", "attempts": 0}
         review_ids.append(
             record(
                 "analysis_review",
                 {
                     **review_diag,
                     "analysis_id": draft["analysis_id"],
-                    "review": None,
+                    "review": review,
                     "previous_review_evidence_id": review_id,
                 },
-                "unavailable",
+                "ok" if review else "unavailable",
             )
         )
         break

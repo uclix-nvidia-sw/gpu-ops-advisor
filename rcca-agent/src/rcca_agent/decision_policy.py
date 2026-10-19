@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 
+from .analysis_review import ACCEPTED_VERDICTS
 from .requirement_diagnostics import _scoped_reports, reported_facts
 
 BLOCKERS = {
@@ -284,7 +285,7 @@ def finish_assessment(assessment, interpretation, review, analysis_id):
         status="achieved"
         if criteria_met
         and review["execution_status"] == "complete"
-        and review["verdict"] == "acceptable"
+        and review["verdict"] in ACCEPTED_VERDICTS
         and review["analysis_id"] == analysis_id
         else "not_achieved",
         analysis_id=analysis_id,

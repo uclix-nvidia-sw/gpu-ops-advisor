@@ -81,12 +81,36 @@ def salvage_interpretation(value, refs, criteria, observation_refs, dropped):
         }
         for key in sorted(criteria or ())
     ]
-    # ponytail: re-validates per dropped item; bounded by 4 lists x 16 items + criteria.
-    for _ in range(4 * 16 + 2):
+    # ponytail: re-validates per repaired item; bounded by 4 lists x 16 items
+    # (strip then drop) + criteria.
+    for _ in range(2 * 4 * 16 + 2):
         try:
             return validate_interpretation(value, refs, criteria, observation_refs)
         except ResponseValidationError as exc:
             detail, item = exc.diagnostic, ITEM_PATH.match(exc.diagnostic["path"])
+            if (
+                item
+                and detail["rule"] == "unexpected_fields"
+                and isinstance(value, dict)
+                and detail["path"] == item[0]
+            ):
+                # Extra keys add no meaning to a statement; keep the item, including
+                # its caveat, instead of dropping it and withholding the goal.
+                keep = {"statement", "evidence_refs", "reason"} | (
+                    {"id", "kind"} if item[1] == "findings" else set()
+                )
+                rows = value[item[1]]
+                rows[int(item[2])] = {
+                    k: v for k, v in rows[int(item[2])].items() if k in keep
+                }
+                dropped.append(
+                    {
+                        **detail,
+                        "path": "$.interpretation" + detail["path"][1:],
+                        "action": "stripped",
+                    }
+                )
+                continue
             if item and isinstance(value, dict):
                 del value[item[1]][int(item[2])]
             elif (

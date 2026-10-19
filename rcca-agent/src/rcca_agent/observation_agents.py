@@ -9,7 +9,9 @@ from agent_common.observation import Observation
 from agent_common.parallel import run_bounded
 
 
-async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
+async def collect_round(
+    parent, query_ids, budget, *, round_no, concurrency=3, first_index=0
+):
     requested = list(dict.fromkeys(query_ids))
     aliases = {
         q: parent.profile["queries"].get(q, {}).get("derived_from", q)
@@ -35,7 +37,7 @@ async def collect_round(parent, query_ids, budget, *, round_no, concurrency=3):
         assignments.append(
             dict(
                 query_id=query,
-                sub_agent_id=f"observation-{round_no}-{index}",
+                sub_agent_id=f"observation-{round_no}-{first_index + index}",
                 budget=allocation,
             )
         )
