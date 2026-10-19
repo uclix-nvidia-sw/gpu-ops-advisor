@@ -32,10 +32,10 @@ def label(code):
 
 
 TITLES = {
-    "problem": "확인된 사실과 인사이트",
-    "cause": "원인 후보와 판단 범위",
-    "action": "권고와 적용 조건",
-    "next": "미확인 사항과 추가 확인",
+    "problem": "발생 내용",
+    "cause": "분석 결과",
+    "action": "권고 대응과 적용 조건",
+    "next": "조치 후 확인",
     "limits": "수집·분석 한계와 종료 이유",
 }
 PROMPT = """You write the final Korean RCA report, not a new investigation.
@@ -50,8 +50,23 @@ Never invent a cause, identity, number, action, diagnosis or completion. Unrevie
 is not accepted analysis. Source order is not chronology. Do not infer a transition unless
 explicitly supplied. Do not restate fixed limitations; they are displayed verbatim separately.
 Compose readable complete prose, not an ID ordering response. No Markdown headings or HTML.
+Lead with observed location, error and evidence meaning. State a material restriction once,
+beside the claim it limits; avoid repetitive '모른다', '미확정', '확인할 수 없다' framing.
+Published Runbook guidance describes conditional procedures, not actions already performed
+or causes proved by this incident. Preserve model/version, maintenance and verification
+conditions. Missing evidence is not an instruction to the operator. Internal diagnostic
+codes belong in technical details; explain their practical meaning in Korean.
 """
 NUMBERS = re.compile(r"\d+(?:[.:/-]\d+)*")
+
+
+def reader_text(text):
+    """Translate known diagnostics only; original analysis stays in frozen material."""
+    return re.sub(
+        r"(?<!\w)[`'\"]?producer_time_status[`'\"]?\s*(?:[=:]\s*)?[`'\"]?missing_or_zero\b[`'\"]?",
+        "상태 보고의 발생 시각이 비어 있거나 초기값입니다",
+        text,
+    )
 
 
 def report_sources(material):
@@ -60,13 +75,14 @@ def report_sources(material):
     interpretation = evaluation.get("evidence", {}).get("interpretation") or {}
     items = []
 
-    def add(section, text, refs=()):
+    def add(section, text, refs=(), *, fixed=False):
         if not text:
             return
         item = {
             "section": section,
-            "text": text,
+            "text": reader_text(text),
             "evidence_refs": list(dict.fromkeys(refs)),
+            "fixed": fixed,
         }
         if any(all(row[k] == v for k, v in item.items()) for row in items):
             return
@@ -75,6 +91,19 @@ def report_sources(material):
     for row in interpretation.get("findings", []):
         prefix = "관측 보고: " if row["kind"] == "observed" else "해석: "
         add("problem", prefix + row["statement"], row["evidence_refs"])
+    recorded = [
+        row
+        for row in material.get("device_observations", [])
+        if row.get("time_basis") == "loki_recorded_at"
+        and row.get("producer_time_status") == "missing_or_zero"
+    ]
+    if recorded:
+        add(
+            "cause",
+            "상태 보고는 로그 기록 시각을 기준으로 사건 구간에 연결했습니다. 이 시각은 보고 순서 대조에 사용하며, 장애 발생·회복 시각 판정에는 사용하지 않습니다.",
+            [ref for row in recorded for ref in row.get("evidence_refs", [])],
+            fixed=True,
+        )
     for row in material.get("cause_candidates", []):
         add("cause", "원인 후보(확정 아님): " + row["claim"], row["supporting_refs"])
         if row.get("contradicting_refs"):
@@ -85,7 +114,7 @@ def report_sources(material):
                 row["contradicting_refs"],
             )
         for missing in row.get("missing_inputs", []):
-            add("next", label(missing))
+            add("limits", label(missing))
     for row in material.get("recommendations", []):
         status = (
             "조건부 권고(수행 사실 아님)"
@@ -103,7 +132,7 @@ def report_sources(material):
         )
     for row in interpretation.get("unknowns", []):
         add(
-            "next",
+            "limits",
             row["statement"]
             + (" / 이유: " + row["reason"] if row.get("reason") else ""),
             row["evidence_refs"],
@@ -121,23 +150,43 @@ def report_sources(material):
                 row.get("evidence_refs", []),
             )
     for missing in material.get("missing_inputs", []):
-        add("next", label(missing))
+        add("limits", label(missing))
+    for entry in material.get("runbook_guidance", []):
+        if entry.get("report_applicability") == "reference_only":
+            continue
+        guidance = entry["guidance"]
+        refs = [entry["evidence_id"]]
+        add("cause", "발행 Runbook의 오류 설명: " + guidance["meaning"], refs)
+        for check in guidance["next_checks"]:
+            add(
+                "action",
+                "Runbook 대응 지침: " + check["title"] + " " + check["text"],
+                refs,
+                fixed=True,
+            )
+        # Reference qualifications (models, versions, repair categories) remain
+        # attached to the procedure, including on deterministic writer fallback.
+        for reference in guidance["references"]:
+            add(
+                "action",
+                reference["title"] + ": " + reference["text"],
+                refs,
+                fixed=True,
+            )
     if not any(row["section"] == "problem" for row in items):
         add(
             "problem",
             "채택된 증거 해석이 없습니다. 수집 원본과 검증·검토 진단을 확인해야 합니다.",
         )
-    if not material.get("cause_candidates"):
-        add("cause", "채택된 원인 후보가 없으며, 근본 원인은 확정되지 않았습니다.")
+    if not any(row["section"] == "cause" for row in items):
+        add(
+            "cause",
+            "분석 범위는 위 관측 내용이며, 별도의 원인 후보는 채택하지 않았습니다.",
+        )
     if not any(row["section"] == "action" for row in items):
         add(
             "action",
             "채택된 조치 권고가 없습니다. 이 시스템은 장비 조치를 수행하지 않습니다.",
-        )
-    if not any(row["section"] == "next" for row in items):
-        add(
-            "next",
-            "추가 확인 항목은 기록되지 않았습니다. 원인 확정이나 복구 완료를 뜻하지 않습니다.",
         )
     if evaluation.get("evidence", {}).get("execution_status") != "complete":
         add(
@@ -207,13 +256,16 @@ async def write_material_report(result, material, llm):
     sections = [
         key
         for key in TITLES
-        if key != "limits" and any(r["section"] == key for r in sources)
+        if key != "limits"
+        and any(r["section"] == key and not r["fixed"] for r in sources)
     ]
     payload = {
         "material_hash": content_hash(material),
         "analysis_id": material["evaluation"]["analysis_id"],
         "sections": sections,
-        "source_items": [row for row in sources if row["section"] != "limits"],
+        "source_items": [
+            row for row in sources if row["section"] != "limits" and not row["fixed"]
+        ],
         "fixed_limitations": [
             row["text"] for row in sources if row["section"] == "limits"
         ],
@@ -249,7 +301,10 @@ async def write_material_report(result, material, llm):
         if not selected:
             continue
         text = (
-            by_section[section]["text"]
+            "\n\n".join(
+                [by_section[section]["text"]]
+                + [row["text"] for row in selected if row["fixed"]]
+            )
             if section in by_section
             else "\n\n".join(row["text"] for row in selected)
         )

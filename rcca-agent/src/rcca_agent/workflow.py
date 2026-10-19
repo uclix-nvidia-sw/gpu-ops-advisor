@@ -1487,7 +1487,15 @@ async def run(tools):
         },
     }
     # Published guidance remains reference data, never a second RCA conclusion.
-    result["quality"]["runbook_guidance"] = project_guidance(obs.evidence)
+    selected_revisions = {b["id"] for b in selected}
+    result["quality"]["runbook_guidance"] = project_guidance(
+        [
+            e
+            for e in obs.evidence
+            if e.get("input", {}).get("revision_id") in selected_revisions
+        ],
+        reported_facts(health, error_events, data),
+    )
     material_fields = (
         "cause_candidates",
         "recommendations",
@@ -1501,6 +1509,7 @@ async def run(tools):
     material = {key: result.get(key, []) for key in material_fields}
     material["evaluation"] = result["quality"]["rca_evaluation"]
     material["analysis"] = result["quality"]["analysis"]
+    material["runbook_guidance"] = result["quality"]["runbook_guidance"]
     material_hash = content_hash(material)
     frozen_id = obs._evidence(
         "rca_result_frozen",
@@ -1524,6 +1533,7 @@ async def run(tools):
                 **{key: result.get(key, []) for key in material_fields},
                 "evaluation": result["quality"]["rca_evaluation"],
                 "analysis": result["quality"]["analysis"],
+                "runbook_guidance": result["quality"]["runbook_guidance"],
             }
         )
         != material_hash

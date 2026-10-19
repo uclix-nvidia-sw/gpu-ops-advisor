@@ -36,7 +36,7 @@ def validate_operator_guidance(value, sources):
                 require(all(type(i) is int and 0 <= i < len(sources) for i in indexes))
 
 
-def project_guidance(evidence):
+def project_guidance(evidence, reported=None):
     """Copy only the selected published immutable evidence, with provenance."""
     output = []
     for entry in evidence:
@@ -50,6 +50,18 @@ def project_guidance(evidence):
         if guidance is None:
             continue
         validate_operator_guidance(guidance, content.get("sources", []))
+        applicability = {}
+        if reported is not None:
+            applies = content.get("decision_policy", {}).get("applies_when", {})
+            codes = content.get("search", {}).get("codes", [])
+            matched = (
+                all(reported.get(key) == value for key, value in applies.items())
+                if applies
+                else bool(codes) and reported.get("reported_error_code") in codes
+            )
+            applicability = {
+                "report_applicability": "matched" if matched else "reference_only"
+            }
         output.append(
             {
                 "evidence_id": entry["id"],
@@ -57,6 +69,7 @@ def project_guidance(evidence):
                 "title": content.get("title", "Runbook"),
                 "guidance": deepcopy(guidance),
                 "sources": deepcopy(content["sources"]),
+                **applicability,
             }
         )
     return output

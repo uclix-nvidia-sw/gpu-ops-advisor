@@ -59,11 +59,23 @@ FM 전용 원천은 선택 사항인 실행 프로파일 `rca.evidence_roles.fab
 
 현재 Worker는 구조화된 RCA 작성 → 독립 품질 검토 → 목적 종료 → 자료 고정 → 보고서 서술 순서다. `quality.report.presentation=rca-material/1`, `method=llm_composed`는 보고서 LLM이 고정된 자료로 문장을 작성한 결과다. `deterministic_fallback`은 서술을 채택하지 못해 동일 자료를 기본 표시한 결과이며, 보고서 실패가 RCA 판정·자료를 변경하지 않는다. 보고서 작성은 기존 synthesis 전송 모델·출력 cap·예산 검사와 16,000바이트 입력 한도를 사용하며 전송·응답 복구·정렬 재호출을 하지 않는다. 원격 실행 종료 불명·취소는 기존 Worker fencing을 유지한다.
 
-[report_sources()](src/rcca_agent/report_writer.py)는 채택된 해석·후보·권고·미확인·한계·수집 제한·검토·종료 상태를 한 번씩 투영한다. 원본 로그나 카탈로그를 재분석해 회복·하드웨어 원인 문구를 추가하지 않는다. 권고는 보류/적격과 조건을 함께 표시한다. 검토 실패 후 남은 자료를 검토 통과로 승격하지 않는다. 서술 입력 크기를 초과하면 조용히 잘라 보내지 않고 원문 기본 표시와 사유를 남긴다.
+[report_sources()](src/rcca_agent/report_writer.py)는 발생 내용·분석 결과·권고 대응을 중심으로 자료를 투영한다. 자유 형식 `missing_inputs`와 unknowns는 조사 제한에 보존하며 운영자 조치로 변환하지 않는다. 원인 후보가 없다는 상투적 문구를 반복하지 않고, 선택한 발행 Runbook의 오류 설명과 조건부 대응을 연결한다. 원본 로그나 카탈로그를 재분석해 회복·하드웨어 원인 문구를 추가하지 않는다. 권고는 보류/적격과 조건을 함께 표시한다. 검토 실패 후 남은 자료를 검토 통과로 승격하지 않는다. 서술 입력 크기를 초과하면 조용히 잘라 보내지 않고 원문 기본 표시와 사유를 남긴다.
 
 `source_items`와 `material_hash`를 저장하고 GUI에서 서술 전 자료를 대조한다. 형식·참조·수치 검증은 의미 일치의 보장이 아니다(`semantic_fidelity=not_independently_verified`). 실제 모델이 불확실성·반대 근거·조치 조건을 유지하는지는 배포 후 사람의 전후 비교 대상이다. 고정 한계는 LLM이 줄이거나 제거하지 않는다.
 
-과거 `incident-first/1`, `incident-first/2`, `llm_prioritized` 결과 조회는 유지한다. 고정 자료 인자가 없는 구 호출자는 기존 [report.py](src/rcca_agent/report.py) 경로를 유지하지만 현재 Worker는 항상 고정 자료를 전달하므로 사건 재해석·정렬 경로를 실행하지 않는다. 발행 Runbook의 참고 안내는 분석과 구분한 펼침 영역에 보존하고 보고서 LLM 입력으로 재전송하지 않는다. 별도 Ops 운영보고서는 변경하지 않는다.
+과거 `incident-first/1`, `incident-first/2`, `llm_prioritized` 결과 조회는 유지한다. 고정 자료 인자가 없는 구 호출자는 기존 [report.py](src/rcca_agent/report.py) 경로를 유지하지만 현재 Worker는 항상 고정 자료를 전달하므로 사건 재해석·정렬 경로를 실행하지 않는다. 최종 선택한 발행 Runbook의 `operator_guidance`와 출처·revision도 자료 hash에 포함한다. 수집된 보고가 정책의 `applies_when`(정책 없는 코드 지침은 명시한 코드)에 맞을 때만 본문에 반영한다. 나머지는 `reference_only` 참고 자료다. 오류 설명은 서술 입력에 포함하되 대응·모델/버전 조건·조치 후 확인은 `fixed` 원문으로 삽입해 LLM이 생략하거나 새 지시로 바꾸지 못하게 한다. GUI는 이 보고서에 일반 원인 문장을 덧붙이지 않으며 상세 제한은 펼침 영역에서 보존한다. 별도 Ops 운영보고서는 변경하지 않는다.
+
+생산자 시각이 누락·초기값인 상태 보고는 이미 검증한 Loki 기록 시각으로 사건 구간에 연결한다. 보고서에 이 대체 기준과 사용 범위(보고 순서)를 한 번 설명하며, 발생·회복 시각이나 현재 상태로 승격하지 않는다. 원본 시각·내부 상태·근거는 그대로 유지한다.
+
+### 비코드 Fleet 오류와 평가
+
+Runbook `gpu-rca-runbook/1.2`는 기존 코드 목표 외에 `reported_producer_contract + reported_component + reported_normalized_health=unhealthy` 조합을 지원한다. 컴포넌트 이름은 정확히 일치해야 하며 설명문에 이름이 있다는 이유만으로 지침을 고르지 않는다. 등록된 Fleet `component_data` 원천, 대상·기간·생산자와 비정상 보고를 검사하고 동일한 `reported_error/scoped_source` 및 독립 의미 검토로 종료한다. 보고 사실은 조치 precondition이나 현재 상태 fact로 사용할 수 없다. 서로 다른 상태가 섞이면 기록 시각만으로 회복을 추정하지 않는다.
+
+같은 컴포넌트 안에서 오류별 대응이 다르면 `applies_when.reported_reason`을 추가해 원본 사유의 정확한 일치까지 요구한다. 검색에서도 구조화된 `reason`을 대조하므로 설명문의 부분 일치로 다른 오류의 절차를 선택하지 않는다. 예를 들어 disk의 읽기 전용 전환과 이벤트 조회 실패를 같은 복구 절차로 취급하지 않는다. 안정된 사유 문자열이 없는 원천은 컴포넌트 공통 조사 범위의 지침을 사용하고, 구체적 이벤트 식별은 검증된 원천 계약을 추가한다.
+
+신규 오류는 검증한 producer의 `health_contracts.components` 등록과 출처·적용 조건·대응 지침을 갖춘 새 Runbook revision으로 추가한다. 현재 기본 프로파일/카탈로그는 XID·SXID 범위이며 모든 Fleet 오류의 운영 지침이 이미 발행됐다는 뜻은 아니다. 이벤트 전용·새 payload 원천은 별도 검증된 parser/binding이 필요하다. 조회는 등록된 실행 프로파일과 Runbook 계획에서 선택하며 D09를 모든 원천의 보편 조회로 가정하지 않는다.
+
+Scoring의 위치는 유지한다: 조회 전 BM25는 Runbook 관련도, 수집 후 코드는 근거의 대상·시각·의미·완전성, 기존 독립 검토는 grounding/identity_time/contradictions/alternatives/limitations/evidence_use를 평가한다. 이를 원인 확률 하나로 합치지 않는다. 일반 성공 경로는 작성·검토·보고서 각각 1회이며 별도 scoring/번역/런북 선택 LLM이나 workflow 단계를 추가하지 않는다. 대응의 필수 조건을 판단할 유효한 조회만 기존 계획·예산 안에서 수행하고, 목표를 충족한 D09 결과 뒤에 선택 조회를 강제하지 않는다.
 
 ### 중복 처리와 검토 상태
 

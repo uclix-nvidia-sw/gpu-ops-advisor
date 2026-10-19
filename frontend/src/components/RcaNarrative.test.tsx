@@ -3,6 +3,34 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaNarrative } from './RcaNarrative';
 
 describe('RCA report reading', () => {
+  it('keeps frozen guidance conditions and avoids injecting generic causes', () => {
+    const result = {
+      quality: {
+        report: { presentation: 'rca-material/1' },
+        runbook_guidance: [
+          {
+            guidance: {
+              schema: 'gpu-rca-guidance/1.0',
+              cause_note: '추가된 일반 원인',
+              next_checks: [],
+              references: [],
+            },
+          },
+        ],
+      },
+      narrative: [
+        { id: 'cause', title: '분석 결과', text: 'Fleet disk 비정상 보고입니다.' },
+        { id: 'action', title: '권고 대응', text: '유지보수 승인 후 점검합니다.' },
+        { id: 'limits', title: '개발자 상세', text: 'producer_time_status missing_or_zero' },
+      ],
+    };
+    const before = JSON.stringify(result);
+    const html = renderToStaticMarkup(<RcaNarrative result={result} />);
+    expect(html).toContain('유지보수 승인 후 점검합니다.');
+    expect(html).not.toContain('일반적인 조사 방향:');
+    expect(html).toContain('<summary>개발자 상세</summary>');
+    expect(JSON.stringify(result)).toBe(before);
+  });
   it('keeps the five operator sections visible and supporting material collapsed', () => {
     const result = {
       quality: { report: { presentation: 'incident-first/1' } },

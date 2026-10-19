@@ -5,7 +5,7 @@ import . "gpu-ops-advisor/backend/internal/contract"
 // Only the bounded report-identification objective is supported; no rule expressions.
 func validDecisionPolicy(c Object) bool {
 	raw, exists := c["decision_policy"]
-	if c["schema"] != "gpu-rca-runbook/1.1" {
+	if c["schema"] != "gpu-rca-runbook/1.1" && c["schema"] != "gpu-rca-runbook/1.2" {
 		return !exists
 	}
 	p, ok := raw.(map[string]any)
@@ -17,7 +17,12 @@ func validDecisionPolicy(c Object) bool {
 		return false
 	}
 	applies, ok := p["applies_when"].(map[string]any)
-	if !ok || len(applies) != 2 || !runbookText(applies["reported_producer_contract"]) || !runbookCode.MatchString(String(applies, "reported_error_code")) {
+	if !ok || !runbookText(applies["reported_producer_contract"]) {
+		return false
+	}
+	codeGoal := len(applies) == 2 && runbookCode.MatchString(String(applies, "reported_error_code"))
+	componentGoal := c["schema"] == "gpu-rca-runbook/1.2" && (len(applies) == 3 || len(applies) == 4 && runbookText(applies["reported_reason"])) && runbookText(applies["reported_component"]) && applies["reported_normalized_health"] == "unhealthy"
+	if !codeGoal && !componentGoal {
 		return false
 	}
 	blockers, ok := runbookStrings(p["blocking_conditions"])

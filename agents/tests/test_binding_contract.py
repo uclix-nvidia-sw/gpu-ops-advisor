@@ -166,6 +166,8 @@ def test_d09_binding_preserves_producer_time_and_freshness_fact_gates():
     state = normalized_state(obs, {"D09": [e]}, data, config, {})
     assert state[0][0]["normalized_health"] == "unhealthy"
     assert state[1] == {
+        "reported_component": "accelerator-nvidia-error-sxid",
+        "reported_normalized_health": "unhealthy",
         "reported_error_code": "sxid:11001",
         "reported_producer_contract": "fleet-component-log-v1",
     }

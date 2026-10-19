@@ -26,7 +26,7 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if _, exists := c["schema"]; !exists {
 		return nil
 	} // Existing legacy knowledge.
-	if c["schema"] != "gpu-rca-runbook/1.0" && c["schema"] != "gpu-rca-runbook/1.1" {
+	if !Has([]string{"gpu-rca-runbook/1.0", "gpu-rca-runbook/1.1", "gpu-rca-runbook/1.2"}, String(c, "schema")) {
 		return Invalid("runbook.schema")
 	}
 	if err := only(c, "schema", "title", "description", "claim", "classification", "search", "required_evidence", "applicability_conditions", "exclusion_conditions", "required_queries", "observation_plan", "recommendations", "sources", "analysis_guidance", "operator_guidance", "limitations", "investigation_only", "unexpected_evidence", "decision_policy"); err != nil {
@@ -72,13 +72,13 @@ func validateRunbook(content, compatibility any, publishing bool) error {
 	if clues == 0 {
 		return Invalid("runbook.search")
 	}
-	facts := []string{"reported_error_code", "reported_producer_contract", "producer_contract", "error_code", "incident_mapping", "observations", "incident_history", "topology", "current_mapping", "action_policy", "action_records", "device_recovery_evidence", "workload_evidence", "normalized_health", "component", "severity"}
+	facts := []string{"reported_reason", "reported_component", "reported_normalized_health", "reported_error_code", "reported_producer_contract", "producer_contract", "error_code", "incident_mapping", "observations", "incident_history", "topology", "current_mapping", "action_policy", "action_records", "device_recovery_evidence", "workload_evidence", "normalized_health", "component", "severity"}
 	required, ok := runbookStrings(c["required_evidence"])
 	if !ok || len(required) == 0 {
 		return Invalid("runbook.required_evidence")
 	}
 	for _, v := range required {
-		if !Has(facts, v) || (!investigation && (v == "reported_error_code" || v == "reported_producer_contract")) {
+		if !Has(facts, v) || (!investigation && strings.HasPrefix(v, "reported_")) {
 			return Invalid("runbook.required_evidence")
 		}
 	}

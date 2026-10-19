@@ -143,7 +143,45 @@ def retrieve_runbooks(rows, source, top_k=5, exact_code_boost=12.0):
     count = len(documents)
     query_codes = {term for term in query if term.startswith(("xid:", "sxid:"))}
     ranked = []
+
+    def selectors(value, field):
+        if not isinstance(value, dict):
+            return set()
+        result = {value[field]} if isinstance(value.get(field), str) else set()
+        for key in (
+            "target",
+            "alert",
+            "labels",
+            "annotations",
+            "commonLabels",
+            "commonAnnotations",
+        ):
+            result.update(selectors(value.get(key), field))
+        for alert in (
+            value.get("alerts", []) if isinstance(value.get("alerts"), list) else []
+        ):
+            result.update(selectors(alert, field))
+        return result
+
+    query_components = selectors(source, "component")
+    query_reasons = selectors(source, "reason")
     for row, document in zip(rows, documents):
+        required_component = (
+            row.get("content", {})
+            .get("decision_policy", {})
+            .get("applies_when", {})
+            .get("reported_component")
+        )
+        if required_component and query_components != {required_component}:
+            continue
+        required_reason = (
+            row.get("content", {})
+            .get("decision_policy", {})
+            .get("applies_when", {})
+            .get("reported_reason")
+        )
+        if required_reason and query_reasons != {required_reason}:
+            continue
         # Declared trigger codes are an eligibility boundary for retrieval, not
         # just a score boost. Prose overlap cannot select a different code or
         # select a code-specific investigation for a code-free CPU/disk alert.

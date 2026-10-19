@@ -17,7 +17,7 @@ def validate_policy(content):
     from .runbook_contract import _require, _strings, _text, CODE
 
     policy = content.get("decision_policy")
-    if content.get("schema") != "gpu-rca-runbook/1.1":
+    if content.get("schema") not in {"gpu-rca-runbook/1.1", "gpu-rca-runbook/1.2"}:
         _require(policy is None, "decision_policy requires Runbook 1.1")
         return
     _require(
@@ -49,14 +49,32 @@ def validate_policy(content):
     applies = policy["applies_when"]
     _require(
         isinstance(applies, dict)
-        and set(applies) == {"reported_error_code", "reported_producer_contract"},
+        and (
+            set(applies) == {"reported_error_code", "reported_producer_contract"}
+            or content.get("schema") == "gpu-rca-runbook/1.2"
+            and set(applies) - {"reported_reason"}
+            == {
+                "reported_component",
+                "reported_normalized_health",
+                "reported_producer_contract",
+            }
+        ),
         "decision_policy: applies_when",
     )
-    _require(
-        isinstance(applies["reported_error_code"], str)
-        and CODE.fullmatch(applies["reported_error_code"]),
-        "decision_policy: error code",
-    )
+    if "reported_error_code" in applies:
+        _require(
+            isinstance(applies["reported_error_code"], str)
+            and CODE.fullmatch(applies["reported_error_code"]),
+            "decision_policy: error code",
+        )
+    else:
+        _text(applies["reported_component"], "decision_policy.component")
+        _require(
+            applies["reported_normalized_health"] == "unhealthy",
+            "decision_policy: error health",
+        )
+        if "reported_reason" in applies:
+            _text(applies["reported_reason"], "decision_policy.reason")
     _text(applies["reported_producer_contract"], "decision_policy.producer")
     _require(
         set(_strings(policy["blocking_conditions"], "blocking_conditions")) == BLOCKERS,
@@ -169,6 +187,19 @@ def assess_policies(books, data, health, events, gaps):
     rows = []
     for book in policies:
         policy = book["content"]["decision_policy"]
+        policy_blockers = dict(blockers)
+        if "reported_component" in policy["applies_when"]:
+            # A component report goal must not require an NVIDIA numeric code.
+            # Mixed reported states still block completion; recorded time alone
+            # cannot establish a recovery transition.
+            states = {
+                r.get("normalized_health")
+                for r in reports
+                if r.get("component") == policy["applies_when"]["reported_component"]
+            }
+            policy_blockers["conflicting_reports"] = (
+                "satisfied" if states == {"unhealthy"} else "unknown"
+            )
         matched = all(
             facts.get(key) == value for key, value in policy["applies_when"].items()
         )
@@ -208,7 +239,7 @@ def assess_policies(books, data, health, events, gaps):
                 "criteria": criteria,
                 "blocking_conditions": [
                     {"id": key, "status": value, "evidence_refs": refs}
-                    for key, value in blockers.items()
+                    for key, value in policy_blockers.items()
                 ],
                 "non_blocking_unknowns": policy["non_blocking_unknowns"],
                 "followup_links": policy["followup_links"],
