@@ -40,6 +40,8 @@ XID 144–150에는 NVIDIA Table 2의 버전별 decoder 행을 보존했다. R57
 
 ## DB 등록 및 실행 범위
 
+비코드 Fleet 오류는 Runbook 1.2의 생산자·컴포넌트·비정상 보고 목표로 확장한다. 이 목록의 267건은 그대로 유지하며, disk·CPU·네트워크 등 신규 오류 지침이 이미 작성·발행됐다는 의미가 아니다. 원천 컴포넌트의 등록, 오류 사유별 적용 범위, 출처 revision, GPUd repair suggestions의 조건, 조치 후 확인을 검토한 새 revision을 발행한다. 상세 계약과 workflow/평가 재사용은 [RCA README](../README.md#비코드-fleet-오류와-평가)를 따른다.
+
 **267건 모두 `investigation_only: true`, `compatibility: {}`인 작성 초안**이다. 파일과 문헌 검토 범위의 콘텐츠 작성은 끝냈으며 실제 환경 연결은 별도 작업이다. Backend에 draft로 등록할 수 있고 적용 조건을 검수하기 전 승인·발행·RCA 런타임 적용은 차단한다. 환경 조건을 채워 발행한 뒤에도 조사용 콘텐츠 자체를 supported 원인·조기 완료·최종 eligible 조치의 근거로 쓰지 않는다.
 
 현재 실행 가능한 공통 계획은 D09 원본 로그, D05 상태, D02 선택 사용률이다. Runbook이 추가로 요구하는 PCIe AER/ECC 카운터/FM 토폴로지/전력·열/앱 재현 자료는 운영 query와 parser가 실제 제공하는지 확인해야 한다. 임의의 D코드나 metric 이름을 만들지 않았으며 미연결 증거는 missing_inputs로 남긴다. 실제 조치 자동 실행은 없다.

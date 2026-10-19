@@ -126,6 +126,7 @@ def event_item(raw, ns, contract, period, target, cluster):
         return None
     return {
         "component": component,
+        "producer_contract": contract["producer_contract"],
         "cluster_id": cluster,
         "target": identity,
         "error_code": f"{kind}:{code}",

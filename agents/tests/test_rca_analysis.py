@@ -389,7 +389,6 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         "problem",
         "cause",
         "action",
-        "next",
         "limits",
     }
     assert all(section["text"] for section in result["narrative"])

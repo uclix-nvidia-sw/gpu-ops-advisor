@@ -107,6 +107,8 @@ class Upstream(BaseHTTPRequestHandler):
     prometheus_max_seconds = None
     prometheus_rows = {}
     fleet_reports = False
+    fleet_component = "accelerator-nvidia-error-sxid"
+    fleet_reason = "SXID 11001(ingress invalid command)"
     cluster_id = "cpc-2"
 
     def log_message(self, *args):
@@ -406,10 +408,10 @@ class Upstream(BaseHTTPRequestHandler):
                 line = json.dumps(
                     {
                         "attributes": {
-                            "component": "accelerator-nvidia-error-sxid",
+                            "component": self.fleet_component,
                             "health": "Unhealthy",
                             "log_type": "component_data",
-                            "reason": "SXID 11001(ingress invalid command)",
+                            "reason": self.fleet_reason,
                         },
                         "resources": {
                             "machine.id": "fixture-machine",
@@ -1567,7 +1569,6 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
         "problem",
         "cause",
         "action",
-        "next",
         "limits",
     }
     assert rca["device_observations"] and rca["cause_candidates"]
@@ -1922,7 +1923,6 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
         "problem",
         "cause",
         "action",
-        "next",
         "limits",
     ]
     report = result["quality"]["report"]
@@ -3112,8 +3112,9 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("invalid_interpretation", [False, True])
+@pytest.mark.parametrize("component", ["sxid", "disk"])
 def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
-    stack, monkeypatch, invalid_interpretation
+    stack, monkeypatch, invalid_interpretation, component
 ):
     from copy import deepcopy
 
@@ -3139,6 +3140,12 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     profile["health_contracts"] = json.loads(
         (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
     )["health_contracts"]
+    if component == "disk":
+        profile["health_contracts"]["fleet-component-log-v1"]["components"]["disk"] = (
+            "component"
+        )
+        monkeypatch.setattr(Upstream, "fleet_component", "disk")
+        monkeypatch.setattr(Upstream, "fleet_reason", "filesystem is read-only")
     config = LOCAL / "combined-profile.json"
     config.write_text(json.dumps(profile), encoding="utf-8")
     monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
@@ -3148,7 +3155,11 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         )
     )
     # Parameter variants share the same published revision, not duplicate policies.
-    book_id = stack.setdefault("combined_goal_book_id", str(uuid4()))
+    if component == "disk":
+        from test_rca_component_guidance import component_case
+
+        book = deepcopy(component_case()["attempt"]["context"]["runbooks"][0])
+    book_id = stack.setdefault("combined_goal_book_id_" + component, str(uuid4()))
     book["knowledge_key"] += "-goal-fixture-" + book_id
     with psycopg.connect(stack["url"]) as conn:
         conn.execute(
@@ -3175,6 +3186,12 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
             target={"node": "node-1"},
         )
         snapshot = {"input": data, "alert": {"labels": {"reason": "SXID 11001"}}}
+        if component == "disk":
+            data["target"]["component"] = "disk"
+            snapshot["alert"]["labels"] = {
+                "component": "disk",
+                "reason": "filesystem is read-only",
+            }
         conn.execute(
             "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
             (iid, Jsonb(SCOPE), data["incident_time"]),
@@ -3209,6 +3226,13 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         == stored["report_assembly"]["material_hash"]
     )
     assert stored["rca_result_frozen"]["material"]["evaluation"] == evaluation
+    assert (
+        stored["rca_result_frozen"]["material"]["runbook_guidance"]
+        == result["quality"]["runbook_guidance"]
+    )
+    if component == "disk":
+        assert "유지보수 승인" in str(result["narrative"])
+        assert "RESTART_BM" not in str(result["narrative"])
     assert result["quality"]["report"]["method"] == "llm_composed"
     assert stored["report_assembly"]["attempts"] == 1
     assert stored["report_assembly"]["stage"] == "report_writing"
