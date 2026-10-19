@@ -174,4 +174,4 @@ XID 79·SXID 11001 작성 원본은 `decision_policy`를 포함한다. 목적은
 
 `goal(id/question/conclusion_scope)`, `applies_when(reported_error_code/reported_producer_contract)`, `completion_criteria(id/question/method/required)`, `blocking_conditions`, `non_blocking_unknowns`, `followup_links(query_id/criterion_ids/required/expected_effect)`를 모두 요구한다. 첫 목적 ID는 `identify_error_report`, 코드 필수 기준은 `reported_error/scoped_source`다. 필수 LLM 기준도 하나 이상 있어야 한다. 차단 조건은 `scope_unverified/identity_conflict/required_query_incomplete/conflicting_reports` 네 항목이다. 모든 계획 query에 목적을 연결하며 기존 required를 false로 낮추거나 새 query를 끼워 넣을 수 없다. 지원하지 않는 필드·실행 표현식은 거절한다.
 
-Python과 Backend Go가 구조를 검사하고, 실행 코드는 scoped 보고·필수 근거·차단 조건을 확인한다. LLM의 기준 충족 제안에는 같은 응답 finding ID와 원본 관측 refs가 필요하며 독립 품질 검토를 통과해야 종료에 사용한다. 자세한 판단/표시는 [11 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#runbook-판단-기준과-품질-검토종료-설계)를 따른다. 1.0/legacy 지침의 선택·종료 의미와 기존 발행 hash는 유지한다.
+Python과 Backend Go가 구조를 검사하고, 실행 코드는 scoped 보고·필수 근거·차단 조건을 확인한다. LLM의 기준 충족 제안에는 같은 응답 finding ID와 원본 관측 refs가 필요하며 독립 품질 검토를 통과해야 종료에 사용한다. 자세한 판단/표시는 [RCA 현재 실행 흐름](../README.md#현재-실행-흐름)을 따른다. 1.0/legacy 지침의 선택·종료 의미와 기존 발행 hash는 유지한다.
