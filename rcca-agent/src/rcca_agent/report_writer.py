@@ -91,6 +91,31 @@ def report_sources(material):
     for row in interpretation.get("findings", []):
         prefix = "관측 보고: " if row["kind"] == "observed" else "해석: "
         add("problem", prefix + row["statement"], row["evidence_refs"])
+    if not interpretation.get("findings"):
+        for row in material.get("reported_observations", []):
+            add("problem", row["text"], row["evidence_refs"], fixed=True)
+        if material.get("reported_observations"):
+            add(
+                "problem",
+                "위 내용은 수집 원본의 보고 사실입니다. 현재 장치 상태·원인·회복 판정과 구분합니다.",
+                fixed=True,
+            )
+    evidence = evaluation.get("evidence", {})
+    review = evaluation.get("review", {})
+    if evidence.get("execution_status") in {"failed", "skipped"}:
+        add(
+            "cause",
+            "분석 처리 상태: 증거 해석·분석이 완료되지 않았습니다. "
+            + label(evidence.get("reason") or evidence["execution_status"]),
+            fixed=True,
+        )
+    elif review.get("execution_status") in {"failed", "skipped"}:
+        add(
+            "cause",
+            "분석 처리 상태: 독립 품질 검토가 완료되지 않았습니다. "
+            + label(review.get("reason") or review["execution_status"]),
+            fixed=True,
+        )
     recorded = [
         row
         for row in material.get("device_observations", [])

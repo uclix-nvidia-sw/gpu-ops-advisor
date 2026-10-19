@@ -32,6 +32,8 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 - 실제 검증: 격리 PostgreSQL에서 Backend 등록·검토·발행, JC revision 고정, 실제 RCA Worker/NAT/MCP 수집·Synthesis·결과 공개를 확인했다. 그래프 데이터와 모델 응답은 fixture다. 테스트 DB는 실행 후 정리하며 운영 DB에는 등록하지 않았다.
 - 저장소 JSON의 compatibility는 여전히 비어 있다. 실제 배포 조건을 만들거나 검증했다고 주장하지 않으며 초안 저장은 가능하지만 승인·발행은 차단한다.
 
+XID 79·SXID 11001 작성 원본은 보고 사실 중심 설명과 플랫폼별 대응 조건을 보강했다. XID는 진단 자료 보존·실제 장애/시험 주입 구분·bare metal/가상화 적용 조건, SXID는 NVSwitch 신원·FM access/trunk 포트 영향·B200/B300 제외·운영 모드별 복구와 조치 후 확인을 명시한다. 기존 종료 기준·필수 조회·schema는 유지한다. **코드 배포만으로 이 문구가 운영 Runbook에 반영되지 않는다.** 기존 환경에서 검수한 compatibility를 유지해 각 지식의 새 revision을 등록·검토·발행해야 하며, 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. 기존 발행 revision 및 과거 RCA는 변경하지 않는다. LLM 실패 시 수집 사실 표시 자체는 코드 변경으로 적용되며 이 새 문구 발행과 별개다.
+
 XID 79·SXID 11001의 1.1 변경 hash와 이전 1.0 복원 정보는 [기존 검토 기록](incident-report-review-20261015.json)의 `decision_policy_update`에 연결했다. 이는 로컬 구조 검토이며 운영 발행 승인 기록이 아니다.
 
 ### 기존 DB와의 대응

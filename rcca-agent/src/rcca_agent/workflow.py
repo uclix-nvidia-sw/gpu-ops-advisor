@@ -21,6 +21,7 @@ from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
 from .analysis_review import analysis_draft
 from .fleet_events import parse_events, enrich_report_inventory
 from .report import write_report
+from .report_observations import summarize_reports
 from .operator_guidance import project_guidance
 from .collection_checks import collection_checks, reported_gpu_identity
 from .requirement_diagnostics import (
@@ -1510,6 +1511,7 @@ async def run(tools):
     material["evaluation"] = result["quality"]["rca_evaluation"]
     material["analysis"] = result["quality"]["analysis"]
     material["runbook_guidance"] = result["quality"]["runbook_guidance"]
+    material["reported_observations"] = summarize_reports(health, error_events, data)
     material_hash = content_hash(material)
     frozen_id = obs._evidence(
         "rca_result_frozen",
@@ -1534,6 +1536,7 @@ async def run(tools):
                 "evaluation": result["quality"]["rca_evaluation"],
                 "analysis": result["quality"]["analysis"],
                 "runbook_guidance": result["quality"]["runbook_guidance"],
+                "reported_observations": summarize_reports(health, error_events, data),
             }
         )
         != material_hash
