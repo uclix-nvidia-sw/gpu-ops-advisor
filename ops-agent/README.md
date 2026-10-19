@@ -39,6 +39,10 @@ JC에서 보고서 작업을 인수하고 관측·사건을 집계해 결과와 
 
 Interpretation failures retain bounded reason codes per attempt. A first malformed JSON response gets one repair within the existing two-interpretation limit; transport, deadline, token and evidence validation protections remain in force. This Ops-only recovery does not change RCA or report calculations.
 
+완료·경과시간 설명의 기존 거절 조건은 그대로 두고, 경과시간의 Job 표기 누락(`batch_job_elapsed_required`), 실행시간과의 혼동(`batch_elapsed_is_not_execution_time`), 전체 완료·처리량·대기 해소 단정(`batch_samples_do_not_prove_throughput_or_queue_resolution`)을 구분합니다. 해당 오류의 보완 요청에는 거절된 fact_id·summary 필드와 구체적인 수정 안내를 전달합니다. 필수 토큰 누락·확인 제안 누락도 fact_id와 누락 항목 또는 후보별 작성 초점을 짚어 보완합니다. 오류가 특정 Namespace 문장을 가리키면 각 선택 문장을 기존 검증으로 점검하고 보완이 필요한 후보의 근거·이전 문장·실패 사유만 전달해 LLM이 `advice` 배열의 `fact_id/summary`를 한 번에 다시 작성합니다. 다른 후보로의 변경·필드 추가는 거절하며, 코드가 이전 응답의 해당 문장들만 교체한 뒤 전체 응답을 동일한 기존 검증으로 다시 확인합니다. 다른 올바른 문장과 사건 해석은 그대로 보존합니다. 나머지 오류는 기존 전체 응답 보완 경로를 사용합니다. 최초 작성과 문장 보완 모두에 수치 의미를 전달합니다. 시간 평균 활동과 최대 대기는 같은 구간의 별도 집계로, 완료 Job 경과시간은 최소~최대 범위로, 대기 변화는 처음→마지막 시간대 최대값 비교로 쓰도록 안내합니다. 종류별 작성 초점은 활동과 대기의 불일치, 상주 메모리 점검, 조건부 실행 시간대 검토 등 서로 다른 점검 이유를 설명하며, 표현만 바꾼 반복 조언은 피하도록 요청합니다. 대표 완료를 포함하되 다른 클러스터에 다른 종류의 근거가 있으면 같은 완료 조언을 복제하는 대신 그 근거를 선택하도록 안내하며, 다른 종류가 없으면 기존 클러스터 포함 조건을 우선합니다. 필수 완료 후보 → 아직 포함하지 않은 클러스터의 다른 종류 → 메모리·실행 시간대 질문 순으로 선택하도록 작성 지시를 정리합니다. 완료 Job별 경과 차이 점검과 Pending Pod의 배치 제약 점검을 구분하고, 한국어 문장·중복된 검토 표현도 반환 전에 점검하도록 요청합니다. 응답 형식 예시에 특정 후보 ID를 미리 넣지 않아 같은 완료 후보를 복제 선택하도록 유도하지 않으며, 실제 후보·클러스터 포함·대표 완료·최대 개수 등의 기존 선택 검증은 유지합니다. 기존 32KB 입력 상한·토큰 예산·최대 두 번의 해석 시도·통과/탈락 조건·계산·후보 선별은 유지합니다. 모델 응답을 코드가 운영 문장으로 다시 쓰지는 않습니다.
+
+Batch explanation diagnostics distinguish a missing Job elapsed-time label, execution-time confusion, and unsupported throughput/queue-resolution claims. The same ordered checks still decide acceptance; reason codes and targeted repair guidance change. A fact-specific Namespace repair sends only the relevant evidence and prior sentence; the model supplies replacements for all individually invalid summaries in one bounded repair. Other model sentences remain unchanged and the full merged response must pass the existing validators. Both drafting and repair include value semantics: separate aggregates within a period are not simultaneous samples, Job elapsed min–max is not an average, and Pending change compares the first and last hourly maxima. The response-shape example contains no preselected candidate IDs; existing coverage, representative-batch and count checks remain unchanged. Candidate-specific guidance separates completed-Job elapsed differences from Pending Pod placement constraints, and asks the model to cover other kinds of evidence before duplicating batch advice across clusters. It also requests Korean wording and a check for repeated phrases; model wording still requires semantic review.
+
 메모리는 단일 GPU 신원·전체 시간대의 표본 수 일치를 검증하므로 짧은 실행·연결 변경 구간이 제외될 수 있습니다.
 
 ### Namespace별 조건부 운영 제안
@@ -62,6 +66,55 @@ Namespace당 하나로 자르지 않고 서로 다른 질문의 후보를 보존
 AI는 서로 다른 운영 판단 3~5개를 목표로 하되 근거가 부족하면 개수를 채우지 않고 짧은 `summary` 불릿을 직접 작성합니다. 클러스터별 표현을 보존하고 같은 클러스터의 같은 종류는 대표 하나만 선택합니다. 충분히 연결된 완료·대기 대표 근거가 있으면 포함합니다. 같은 완료 설명이 대기를 다루면 그 Namespace의 같은 구간 대기 점검을 중복 나열하지 않습니다. 대상·시간·수치·조건은 코드가 확인하며 `target/period/activity/pending/memory/completed/elapsed/pending_change` 중 해당 후보에서 제공된 참조만 사용합니다. 정확히 일치하는 근거 값의 직접 표기도 검증할 수 있지만 모델 문장은 다시 쓰지 않습니다. 대기 사유와 작업 목적이 확인되지 않은 상태의 제출 간격 변경 제안, 미확인 자료의 0 처리, 대기 건수와 대기 시간 혼동, 근거 없는 전체 완료·처리량·원인 주장은 거절합니다.
 
 모델에는 수치 참조와 선별 근거만 전달해 원문 관측·공통 조건의 반복을 줄입니다. 기존 32KB 입력 상한·실행 토큰 예산·최대 두 번 요청·실패 시 계산 요약을 유지합니다. 녹색 AI 영역은 실제 모델 요약을 먼저 보여주고 상세 관측·조건·선별 기준은 접힌 근거에 둡니다. HTML도 같은 저장 문장을 사용합니다. 새 후보가 없으면 기존 해석 경로를 유지합니다. 운영정책 연계, 반복 일자 분석과 제안 실행은 범위 밖입니다.
+
+#### 수집 지표에서 운영 판단까지
+
+위 표는 **현재 코드의 후보 조건**입니다. 아래는 그 후보를 운영자가 이해할 판단으로 설명하기 위한 기준입니다. 문장 품질 검토 기준을 제품의 통과/탈락 검사와 혼동하지 않습니다. 이번 문서 보강은 수집·계산·후보 임계값·검증 조건을 바꾸지 않습니다.
+
+| 근거 | 현재 보고서에서 읽는 의미 | 판단에 사용하지 않는 의미 |
+|---|---|---|
+| GPU 활동률 | 연결 GPU의 유효 시간대별 평균. 후보 구간의 표시는 시간·모델별 평균의 최소~최대 | Namespace 독점 사용률, 실제 할당량, GPU 부족, 순간 최대 성능 |
+| 장치 메모리 사용 비율 | 같은 GPU 신원·시간대에서 검증한 사용량 ÷ (사용량 + 여유량). 값이 있는 시간만 연결 | Namespace가 예약한 메모리, 메모리 대역폭 사용률, OOM·성능 병목 |
+| Pending·미배치 Pod | GPU를 요청한 Pod 상태의 시간대별 관측 최대 개수. 상태와 배치 여부를 구분 | 대기 시간, 동일 Pod의 연속 대기, GPU 부족이라는 확정 사유 |
+| 성공 완료 Job·경과시간 | 후보 구간에 성공 완료가 확인된 표본과 각 Job 시작~완료의 최소~최대. 시작은 후보 구간보다 이를 수 있음 | 순수 GPU 실행시간, 평균 대기시간, 전체 제출 대비 완료율·처리량·성능 개선 |
+| 사건·노드·알림 종류 | 저장된 고유 사건의 범위·건수·작성 당시 상태와 공개 조사 참조 | 현재 장애·실제 복구·같은 GPU의 반복 원인. UUID·증상 식별 부족은 그대로 표시 |
+
+Namespace가 같아도 보고서 하루 평균 활동률과 다른 시간대의 대기를 한 상황처럼 묶지 않습니다. `source_hours`의 같은 구간·모델·GPU 신원을 확인하고, 없는 연결은 미확인으로 둡니다. 대기 최대 7개와 평균 활동률 20%를 함께 관측했더라도 “GPU가 남는데 작업을 못 돌렸다”는 결론은 아닙니다. 대기 사유·작업 목적·정책과 연결하지 않은 값은 추가 확인 대상입니다. 표나 원천에 요청량·라벨이 존재해도 현재 `summary_tokens`·후보 근거에 제공되지 않은 실제 할당량·작업 목적은 LLM이 안다고 취급하지 않습니다.
+
+#### 질문별로 어떤 답을 쓰는가
+
+| 기존 후보 | 설명할 운영 판단과 다음 확인 | 멈춰야 할 결론 |
+|---|---|---|
+| `capacity_review` | 높은 활동과 양수 대기가 이어진 대상·시간을 짚고, 스케줄러 사유·현재 할당·가용 자원을 대조한 뒤 확대 검토 | 대기만 보고 GPU 증설, 추가 GPU 수량 산정 |
+| `queue_review` | 활동 근거만으로 대기를 설명할 수 없다는 점을 짚고, 해당 시간대 대기 Pod의 스케줄러 이벤트·배치 제약 확인 | 낮은 활동이므로 대기가 없어야 함, 확인하지 않은 anti-affinity·쿼터·자원 부족 원인 단정 |
+| `resident_memory` | 연산 활동은 낮지만 장치 메모리가 점유된 구간을 짚고, 상주 서비스·캐시·장기 실행 목적 확인 | 빈 GPU·회수 대상·메모리 부족으로 단정 |
+| `schedule_candidate` | 관측 날짜의 낮은 활동 구간을 시범 실행 검토 시간대로 제시하고, 예약·대기·가용 GPU 확인을 실행 전 조건으로 붙임 | 매일 그 시간에 작업이 없다고 일반화, 확인 없이 작업 이동 지시 |
+| `batch_progress` | 처음/마지막 시간대 최대 대기와 완료 표본·Job 경과시간 범위를 구분하고, 경과 차이를 스케줄러 이력·작업 유형과 대조 | 완료 때문에 대기가 줄었다는 인과, 서로 다른 작업의 성능 비교, 경과시간을 대기시간으로 치환 |
+
+예를 들어 시간대 후보의 **문서용 문장 예시**는 “해당 Namespace는 이 구간의 활동률이 낮았습니다. 예약·대기와 사용 가능한 GPU를 확인한 뒤 이 시간대에 배치 작업을 실행하는 것을 검토하세요.”입니다. 실제 보고서는 해당 후보의 대상·기간·필수 수치를 보존한 실제 LLM 문장을 사용합니다. 이 예시를 AI 실행 결과로 저장하거나 표시하지 않습니다.
+
+#### 선별과 문장 품질은 별도로 확인
+
+1. **근거 연결:** `candidates()`·`windows()`가 같은 구간의 유효 관측을 구성합니다. 전송된 지표가 있다는 사실과 제안에 쓸 만큼 연결됐다는 판단은 다릅니다.
+2. **후보 전달:** `select_candidates()`가 기존 종류 순서와 클러스터·종류 대표를 보존해 최대 12개를 전달합니다. 완료·대기 연결이 부족한 표본은 표에 남기되 해당 AI 후보에서 제외합니다. 노드·Namespace 수만큼 LLM 호출을 늘리지 않습니다.
+3. **첫 화면 선택:** LLM은 최대 5개 안에서 서로 다른 운영 질문을 선택합니다. 기존 검증의 클러스터 포함·대표 완료 필수 조건은 유지합니다. 다른 클러스터에 다른 질문이 있으면 같은 완료 설명을 복제하기보다 그 질문을 선택하도록 작성 지시하지만, 이는 현재 중복을 완전히 차단하는 코드 규칙이 아닙니다.
+4. **짧은 판단:** 한 불릿은 대상·시간의 핵심 관측과 그 때문에 확인할 대상 하나를 두 문장 이내로 연결합니다. “확인하도록 검토하세요” 대신 확인할 일은 “확인하세요”, 조건부 자원 변경·시간대 이동은 “확인한 뒤 검토하세요”로 구분하는 것을 문장 품질 목표로 둡니다. 필수 수치를 빼서 짧게 만들거나 근거 없는 이유를 덧붙이지 않습니다.
+5. **의미 검수:** 근거·참조 검사 통과와 별도로 최대값/범위 표시, 완료와 대기의 다른 질문, 조언 반복, 쉬운 표현을 원문과 대조합니다. 실패한 항목은 [Agent QA](../agents/QA.md)에 남기며 통과율만으로 유용성을 주장하지 않습니다. 이 의미 검수 항목은 기존 런타임 검증을 추가·완화한 것이 아닙니다.
+
+#### 현재 기준에서 추가로 발전시킬 항목
+
+다음은 **미구현**이며, 위 다섯 후보의 현재 지원 범위로 표시하지 않습니다.
+
+| 보강할 질문 | 지금의 근거로 가능한 범위와 추가 작업 |
+|---|---|
+| 활동은 높은데 메모리 점유는 낮은가 | 시간·신원·모델이 연결된 활동/메모리를 바탕으로 연산 활동과 장치 메모리 점유의 대비를 설명할 수 있음. 현재 별도 후보는 없음. 낮은 메모리 기준과 유효 표본 조건·선별 순서를 먼저 정의하고 경계/결측 검사를 추가해야 함. 메모리 여유만으로 GPU 공유·축소 또는 연산 병목을 권하지 않음 |
+| 대기 중 GPU 활동이 낮은 시간과 높은 시간을 구분할 수 있는가 | 현재 높은 활동+대기 조건은 확대 검토, 그 외 양수 대기는 배치 제약 점검으로 분리. 더 구체적인 원인 분기는 스케줄러 이벤트·배치 제약의 저장·연결이 필요. 테스트용 의도된 대기를 자원 부족으로 바꾸지 않음 |
+| 같은 종류의 작업 경과시간이 달라졌는가 | 현재는 완료 표본의 경과 범위만 설명. 작업 유형 라벨·요청 GPU/모델·입력 조건과 비교 기간을 연결해야 동등한 작업끼리 비교 가능. 현재 완료 건수와 경과 범위만으로 처리량·성능 순위를 만들지 않음 |
+| 반복해서 비는 시간대로 작업을 옮길 수 있는가 | 현재는 관측한 날짜의 시간대 후보만 제시. 여러 날짜에서 같은 신원/구성·표본 조건으로 반복성을 검증하고 예약·대기·작업 마감 조건을 연결해야 반복 일정 추천으로 확장 가능 |
+
+먼저 기존 다섯 질문이 서로 다른 판단과 명확한 다음 확인을 짧게 내놓는지 실자료로 검수합니다. 새 후보는 그다음에 같은 근거 연결·선별·문장 검증 경로에 추가하며, 새 대주제나 Namespace별 무제한 설명을 만들지 않습니다. 임계값 변경은 글쓰기 수정과 분리해 비교하고 `CRITERIA` revision·QA에 남겨야 합니다.
+
+Interpretation criteria are owned by `namespace_advice.py` and this section. Existing gates, metrics, candidate thresholds and RCA stay unchanged. Proposed extensions are explicitly unimplemented; evidence acceptance and useful operational writing remain separate checks.
 
 ## 기존 O계열 보고서
 
