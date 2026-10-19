@@ -187,8 +187,8 @@
       "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
       "next_checks": [
         {
-          "title": "보고서의 스위치 식별 결과를 조사 대상으로 사용합니다.",
-          "text": "오류 원문의 NVSwitch PCI 주소를 조사 대상으로 사용합니다. GPU 재고로 스위치 신원을 확정하지 않습니다. 연결된 Fabric Manager 원천이 제공하는 source port와 access/trunk·GPU·VM·파티션 관계를 함께 대조합니다."
+          "title": "오류 원문의 NVSwitch를 조사 대상으로 사용합니다.",
+          "text": "오류 원문의 NVSwitch PCI 주소가 조사 대상입니다. GPU 재고와 GPU 지표(D02)로는 스위치나 영향 GPU를 정할 수 없습니다. 영향 GPU·VM·파티션은 Fabric Manager 로그의 같은 시각 source port와 access/trunk 관계로 정합니다."
         },
         {
           "title": "조치 전에 Fabric Manager 로그와 진단 자료를 수집합니다.",
