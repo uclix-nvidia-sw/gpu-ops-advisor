@@ -92,7 +92,9 @@ export function RcaNarrative({
   // /2: deterministic incident findings lead and the reference guidance is a primary section.
   const findingsLed = presentation === 'incident-first/2';
   const collapsed = (id: string) =>
-    !reader && incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed));
+    !reader &&
+    ((materialReport && id === 'limits') ||
+      (incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed))));
   const sections = rows(result.narrative).filter(
     (s) =>
       materialReport ||
@@ -106,7 +108,7 @@ export function RcaNarrative({
       {!reader && <RcaEvaluation result={result} />}
       <header className="rca-narrative-header">
         <h3>RCA 최종 보고서</h3>
-        <p>무슨 문제가 보고됐는지, 원인은 무엇인지, 다음에 무엇을 해야 하는지 확인하세요.</p>
+        <p>어디서 무엇이 보고됐고, 무엇을 알며, 다음에 무엇을 해야 하는지 확인하세요.</p>
         <details className="rca-narrative-method">
           <summary>보고서 작성 방식</summary>
           <p className="muted">
@@ -182,7 +184,7 @@ export function RcaNarrative({
                 paragraphs.map((text, i) => <p key={i}>{text}</p>)
               ) : str(section.id) === 'guidance' ? (
                 <RcaGuidance paragraphs={paragraphs} result={result} reader={reader} />
-              ) : str(section.id) === 'cause' ? (
+              ) : str(section.id) === 'cause' && !materialReport ? (
                 <CauseExplanation
                   paragraphs={paragraphs}
                   result={result}

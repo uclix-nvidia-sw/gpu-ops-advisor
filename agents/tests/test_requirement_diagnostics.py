@@ -127,6 +127,7 @@ def test_historical_event_explains_code_only_not_current_health():
 def test_reported_facts_preserve_state_boundary():
     data, row = fixture()
     assert reported_facts([row], [], data) == {
+        "reported_normalized_health": "unhealthy",
         "reported_error_code": "xid:79",
         "reported_producer_contract": "fleet-component-log-v1",
     }

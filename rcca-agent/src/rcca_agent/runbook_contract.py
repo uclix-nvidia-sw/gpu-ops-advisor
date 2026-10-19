@@ -30,7 +30,13 @@ def unexpected_policy(content):
 
 
 CODE = re.compile(r"(?:xid|sxid):(0|[1-9][0-9]*)")
-REPORTED_FACTS = {"reported_error_code", "reported_producer_contract"}
+REPORTED_FACTS = {
+    "reported_error_code",
+    "reported_producer_contract",
+    "reported_component",
+    "reported_reason",
+    "reported_normalized_health",
+}
 FACT_NAMES = {
     *REPORTED_FACTS,
     "producer_contract",
@@ -135,7 +141,7 @@ def schema_kind(content):
     if "schema" not in content:
         return "legacy"
     _require(
-        content["schema"] in {SCHEMA, "gpu-rca-runbook/1.1"},
+        content["schema"] in {SCHEMA, "gpu-rca-runbook/1.1", "gpu-rca-runbook/1.2"},
         "content.schema: unsupported schema",
     )
     return "v1"

@@ -100,6 +100,44 @@ func TestDecisionPolicyCannotRelaxCompletion(t *testing.T) {
 	}
 }
 
+func TestComponentReportGoalRequiresVersionAndUnhealthyReport(t *testing.T) {
+	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, variant := range []string{"valid", "exact_reason", "empty_reason", "old_schema", "healthy", "missing_component", "action_fact"} {
+		t.Run(variant, func(t *testing.T) {
+			var row Object
+			if err := json.Unmarshal(b, &row); err != nil {
+				t.Fatal(err)
+			}
+			c := row["content"].(map[string]any)
+			c["schema"] = "gpu-rca-runbook/1.2"
+			c["required_evidence"] = []any{"reported_component", "reported_normalized_health", "reported_producer_contract"}
+			applies := Object{"reported_component": "disk", "reported_normalized_health": "unhealthy", "reported_producer_contract": "fleet-component-log-v1"}
+			c["decision_policy"].(map[string]any)["applies_when"] = applies
+			switch variant {
+			case "exact_reason":
+				applies["reported_reason"] = "filesystem is read-only"
+			case "empty_reason":
+				applies["reported_reason"] = ""
+			case "old_schema":
+				c["schema"] = "gpu-rca-runbook/1.1"
+			case "healthy":
+				applies["reported_normalized_health"] = "healthy"
+			case "missing_component":
+				delete(applies, "reported_component")
+			case "action_fact":
+				c["recommendations"] = []any{Object{"text": "restart", "preconditions": []any{Object{"field": "reported_normalized_health", "equals": "unhealthy"}}, "execution": "not_performed"}}
+			}
+			err := validateRunbook(c, Object{}, false)
+			if (err == nil) != (variant == "valid" || variant == "exact_reason") {
+				t.Fatalf("unexpected validation: %v", err)
+			}
+		})
+	}
+}
+
 func TestReportedRequirementsRemainInvestigationOnly(t *testing.T) {
 	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
 	if err != nil {

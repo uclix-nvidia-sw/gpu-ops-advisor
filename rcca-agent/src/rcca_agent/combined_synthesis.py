@@ -49,8 +49,8 @@ top-level limitations and hypothesis missing_inputs are Korean strings.
 Each hypothesis also requires finding_refs referencing findings in THIS response.
 Hypothesis supporting_refs must cite observation_refs, never diagnostics or Runbook IDs.
 Interpretation may cite input_evidence_refs. Interpretation is not independent evidence.
-An empty hypotheses list with useful findings and explicit unknowns is valid.
-Do not invent a cause to fill the list. Return concise Korean statements.
+Empty hypotheses are valid. Lead with location, error and evidence meaning in Korean.
+State each limitation once in unknowns/limitations. Never invent causes or actions.
 This is one author request, not a self-review. A separate reviewer checks all claims.
 Validation feedback concerns response structure, not new evidence."""
 )

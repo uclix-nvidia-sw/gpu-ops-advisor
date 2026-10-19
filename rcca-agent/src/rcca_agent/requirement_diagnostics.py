@@ -74,15 +74,29 @@ def reported_facts(health, events, data):
     """Scoped source reports; never current-health or action-condition facts."""
     reports, reported_events = _scoped_reports(health, events, data)
     result = {}
-    for field in ("error_code", "producer_contract"):
-        rows = reports + (reported_events if field == "error_code" else [])
+    for field in ("error_code", "producer_contract", "component", "normalized_health"):
+        rows = reports + reported_events
         values = {
             r.get(field)
             for r in rows
-            if r.get("evidence_refs") and r.get(field) not in (None, "unknown", "")
+            if r.get("evidence_refs")
+            and isinstance(r.get(field), str)
+            and r[field] not in ("unknown", "")
         }
         if len(values) == 1:
             result["reported_" + field] = values.pop()
+    # Free-text reasons are exact report selectors, never parsed error codes or
+    # remediation conditions. Avoid duplicating code-report prose in model facts.
+    if "reported_component" in result and "reported_error_code" not in result:
+        reasons = {
+            r.get("reason")
+            for r in reports
+            if r.get("evidence_refs")
+            and isinstance(r.get("reason"), str)
+            and r["reason"].strip()
+        }
+        if len(reasons) == 1:
+            result["reported_reason"] = reasons.pop()
     return result
 
 
