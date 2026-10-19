@@ -310,12 +310,6 @@ def normalized_state(obs, collected, data, profile, initial_facts):
     return health, facts, verified, relations, available
 
 
-# ponytail: fixed headroom; auxiliary evidence enlarges the review reserve, and at the
-# 32k chart default it can crowd out the author input. Derive from the measured
-# review floor if budgets diverge further.
-AUX_PREFETCH_MIN_TOKENS = 65536
-
-
 def caveat_withheld(evaluation):
     return any(
         row.get("code") == "criterion_withheld"
@@ -1241,32 +1235,6 @@ async def run(tools):
                 )
             )
         state = evaluate_requirements(round_no, approved)
-        if (
-            not fast_path
-            and round_no == 0
-            and budget["queries"] > 0
-            and getattr(ctx["llm"], "remaining", 0) >= AUX_PREFETCH_MIN_TOKENS
-        ):
-            # Authored rule-eligible auxiliary queries are deterministic and
-            # independent; collect them before the single analysis instead of
-            # deferring them behind a round the goal policy would then skip.
-            prefetch, _, _ = rule_followup(
-                selected, plans, state["remaining"], state["gaps"], state["available"]
-            )
-            prefetch = [q for q in prefetch if q in profile["queries"]][:3]
-            if prefetch:
-                collected.update(
-                    await collect_round(
-                        obs,
-                        prefetch,
-                        budget,
-                        round_no=round_no,
-                        concurrency=concurrency,
-                        first_index=len(queries),
-                    )
-                )
-                planned_queries.extend(q for q in prefetch if q not in planned_queries)
-                state = evaluate_requirements(round_no, approved)
         await analyze_round(state, round_no)
         state.update(await select_followup(state, round_no))
         health = state["health"]
