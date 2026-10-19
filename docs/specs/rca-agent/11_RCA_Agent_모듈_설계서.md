@@ -699,6 +699,8 @@ XID 79 보고만으로 ‘펌웨어/드라이버가 가짜 XID 79를 만들었�
 | `non_blocking_unknowns` | 해당 목적에서는 남겨도 되는 항목과 허용되는 설명 범위 | 근본 원인·현재 접근 가능 여부 등을 한계로 보존. 구체적 복구 권고의 전제까지 면제하지 않음 |
 | `followup_links` | 기준 ID와 기존 observation plan 단계/query ID의 연결, 이 목적의 필수/선택 여부·기대 정보 | 기존 required/권한/선택 조건을 약화하지 않음. Runbook에 없는 새 조회를 허용하지 않음 |
 
+`method=llm` 완료 기준(`bounded_conclusion`)은 작성 LLM의 자기평가가 아니라 독립 검토 루브릭으로 판정한다(`agent_common.rca_evaluation.review_scope_status`). 검토가 완료되어 `acceptable`/`acceptable_after_feedback`이고 `grounding`·`identity_time`·`limitations`가 `pass`/`not_applicable`이면 `satisfied`다. `needs_revision`은 모든 지적이 특정 주장을 가리켜 코드가 그 주장을 제외한 경우(`unattributed_issues=false`)에만 해소로 본다. 채택된 해석에 남은 finding이 없거나 형식 복구로 caveat이 빠진 경우(`criterion_withheld`)는 `unknown`이다. 작성 LLM의 답은 `author_status`로만 보존하고 검토 대상 주장으로 보내지 않는다. 결과 검증기도 같은 함수로 완료 기준과 검토 근거 ID의 일치를 확인한다. (2026-10-19 변경: SXID 11001 `b5ba138e`에서 작성 LLM이 자기 결론을 `unknown`으로 답해 검토 통과와 무관하게 목적이 미달되던 문제.)
+
 기존 조건 검사와 등록된 증거 이름을 재사용하고 임의 Python·SQL·쿼리 표현식을 평가하는 새 규칙 언어는 만들지 않는다. `analysis_guidance`·`operator_guidance`의 자유 문장을 코드 조건으로 추정하지 않는다. 문자열 비교도 명시된 파서·정규화 규격에 한정하며 오타 추측으로 장비를 합치지 않는다. `reported_error_code=xid:79` 확인은 보고 사실의 조건이며 검증된 `error_code`나 실제 고장 원인을 생성하지 않는다.
 
 조건별 실행 결과는 **충족 / 불충족 / 미확정**으로 저장한다. 각 항목에 기준 ID, 판단 담당(코드/LLM), 비교한 값 또는 설명, 원본 refs·위치, 제한, Runbook revision/hash를 남긴다. 근거 없음·해석 실패·생략은 미확정이며 false나 충족으로 바꾸지 않는다. LLM이 완료라고 제안해도 코드상 불충족·미확정인 필수 항목을 덮어쓸 수 없다.

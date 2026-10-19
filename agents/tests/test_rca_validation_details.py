@@ -346,8 +346,15 @@ async def test_invalid_criterion_answer_is_unknown_not_whole_rejection():
         "unknown"
     }
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    # A malformed semantic answer must never complete the Runbook objective.
-    assert evaluation["investigation"]["stop_reason"] != "goal_achieved"
+    # The malformed self-assessment is kept only as advisory author_status; the
+    # independent review rubric decides the semantic criterion.
+    row = next(
+        r
+        for r in evaluation["investigation"]["objective"]["policies"][0]["criteria"]
+        if r["method"] == "llm"
+    )
+    assert row["author_status"] == "unknown"
+    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
 
 
 async def test_author_view_uses_planned_budget_and_admits_observations_first():
