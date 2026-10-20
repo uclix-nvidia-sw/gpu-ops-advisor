@@ -446,3 +446,239 @@ def test_report_pci_comparison_never_promotes_device_identity(address, relation)
     assert enriched["pci_inventory_relation"] == relation
     assert enriched["fact_eligible"] is False
     assert enriched["gpu_candidates"][0]["verified"] is False
+
+
+GPU_UUID = "GPU-00000000-0000-4000-8000-000000000001"
+REASONS = {
+    "xid": "XID 79 GPU has fallen off the bus detected on GPU PCI:0000:01:00"
+    f" UUID:{GPU_UUID}",
+    "sxid": "SXID 11001(ingress invalid command) detected on PCI:0000:c7:00.0",
+}
+DEVICES = {"xid": "PCI:0000:01:00", "sxid": "PCI:0000:c7:00.0"}
+CODES = {"xid": "xid:79", "sxid": "sxid:11001"}
+
+
+def alert(kind="xid"):
+    return {
+        "component": "accelerator-nvidia-error-" + kind,
+        "machine_id": "machine-1",
+        "k8s_node_name": "node-1",
+        "reason": REASONS[kind],
+        "error_codes": [CODES[kind]],
+    }
+
+
+def state_report(kind="xid", **change):
+    return {
+        "raw_health": "Unhealthy",
+        "component": "accelerator-nvidia-error-" + kind,
+        "target": {"machine_id": "machine-1", "node": "node-1"},
+        "reason": REASONS[kind],
+        "evidence_refs": ["report"],
+        **change,
+    }
+
+
+def kmsg_event(kind="xid", **change):
+    return {
+        "component": "accelerator-nvidia-error-" + kind,
+        "error_code": CODES[kind],
+        "reported_device": DEVICES[kind],
+        "inventory_gpu_candidate": GPU_UUID if kind == "xid" else None,
+        "evidence_refs": ["event"],
+        **change,
+    }
+
+
+@pytest.mark.parametrize(
+    "kind,change,status",
+    [
+        ("xid", None, "match"),
+        ("sxid", None, "match"),
+        ("xid", "event_pci_function", "match"),
+        ("xid", "no_code", "error_code_unparsed"),
+        ("xid", "other_component_code", "error_code_unparsed"),
+        ("xid", "no_report", "alert_report_not_found"),
+        ("xid", "healthy_report", "alert_report_not_found"),
+        ("xid", "other_machine", "alert_report_not_found"),
+        ("xid", "reason", "report_reason_changed"),
+        ("xid", "no_event", "event_not_found"),
+        ("xid", "pci", "pci_mismatch"),
+        ("sxid", "sxid_function", "pci_mismatch"),
+        ("xid", "two_devices", "multiple_devices"),
+        ("xid", "alert_without_uuid", "uuid_unresolved"),
+        ("xid", "inventory_unmapped", "uuid_unresolved"),
+        ("xid", "uuid", "uuid_mismatch"),
+    ],
+)
+def test_alert_match_compares_report_and_event_by_error_family(kind, change, status):
+    from rcca_agent.fleet_events import match_alert
+
+    clues, reports, events = alert(kind), [state_report(kind)], [kmsg_event(kind)]
+    if change == "event_pci_function":
+        # XID kmsg addresses carry no PCI function; the comparison ignores it.
+        events = [kmsg_event(reported_device="PCI:0000:01:00.0")]
+    elif change == "no_code":
+        clues["error_codes"] = []
+    elif change == "other_component_code":
+        clues["error_codes"] = ["sxid:11001"]
+    elif change == "no_report":
+        reports = []
+    elif change == "healthy_report":
+        reports = [state_report(raw_health="Healthy")]
+    elif change == "other_machine":
+        reports = [state_report(target={"machine_id": "machine-2", "node": "node-1"})]
+    elif change == "reason":
+        reports = [state_report(reason="XID 48 detected on GPU PCI:0000:01:00")]
+    elif change == "no_event":
+        events = [kmsg_event(error_code="xid:13")]
+    elif change == "pci":
+        events = [kmsg_event(reported_device="PCI:0000:02:00")]
+    elif change == "sxid_function":
+        # SXID addresses an NVSwitch function; the function is compared.
+        events = [kmsg_event("sxid", reported_device="PCI:0000:c7:00.1")]
+    elif change == "two_devices":
+        events.append(kmsg_event(reported_device="PCI:0000:02:00"))
+    elif change == "alert_without_uuid":
+        clues["reason"] = reports[0]["reason"] = REASONS["xid"].split(" UUID:")[0]
+    elif change == "inventory_unmapped":
+        events = [kmsg_event(inventory_gpu_candidate=None)]
+    elif change == "uuid":
+        other = GPU_UUID.replace("0001", "0002")
+        events = [kmsg_event(inventory_gpu_candidate=other)]
+    result = match_alert(clues, reports, events)
+    assert result["status"] == status, result
+    if status == "match":
+        assert result["alert"]["error_code"] == CODES[kind]
+        assert result["alert"]["gpu_uuid"] == (GPU_UUID if kind == "xid" else None)
+        assert set(result["evidence_refs"]) == {"report", "event"}
+    if change == "no_event":
+        assert result["detail"] == {"other_codes": ["xid:13"]}
+
+
+def fleet_line(kind, log_type, ns):
+    attributes = {"component": "accelerator-nvidia-error-" + kind, "log_type": log_type}
+    if log_type == "component_data":
+        attributes.update(health="Unhealthy", reason=REASONS[kind])
+    else:
+        at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(ns) // 10**9))
+        code = int(CODES[kind].split(":")[1])
+        attributes.update(
+            event_name="error_" + kind,
+            event_type="Fatal",
+            event_id="fixture-" + kind,
+            extra_info={
+                "data": {
+                    "time": at,
+                    "data_source": "kmsg",
+                    kind: code,
+                    "device_uuid": DEVICES[kind],
+                    "raw_kmsg": f"NVRM: {kind.upper()} ({DEVICES[kind]}): {code}",
+                }
+            },
+        )
+    inventory = [{"uuid": GPU_UUID, "busID": "00000000:01:00.0"}]
+    resources = {
+        "machine.id": "machine-1",
+        "k8s.node.name": "node-1",
+        "gpuInfo.gpus": json.dumps(inventory),
+    }
+    return [ns, json.dumps({"attributes": attributes, "resources": resources})]
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+def test_parsed_d09_report_and_event_match_the_alert(kind):
+    from rcca_agent.fleet_events import enrich_report_inventory, match_alert
+    from rcca_agent.fleet_events import parse_events
+
+    p, e = profile(), evidence()
+    e["snapshot"]["data"]["result"][0]["values"] = [
+        fleet_line(kind, "event", NS),
+        fleet_line(kind, "component_data", NS),
+    ]
+    health = enrich_report_inventory(
+        parse_health([e], p["health_contracts"], p["queries"]), [e]
+    )
+    target = {"cluster_id": "c", "node": "node-1", "machine_id": "machine-1"}
+    events = parse_events([e], p, target)
+    assert match_alert(alert(kind), health, events)["status"] == "match"
+
+
+# The D09 LogQL the workflow builds from the alert's component and node labels.
+D09_LOGQL = (
+    "{} | drop dsx_json_0, dsx_json_0_extracted, dsx_json_1, dsx_json_1_extracted"
+    ' | json dsx_json_0="attributes[\\"component\\"]",'
+    ' dsx_json_1="resources[\\"k8s.node.name\\"]" | __error__=""'
+    ' | (dsx_json_0="accelerator-nvidia-error-xid"'
+    ' or dsx_json_0_extracted="accelerator-nvidia-error-xid")'
+    ' | (dsx_json_1="node-1" or dsx_json_1_extracted="node-1")'
+)
+
+
+def match_case(change=None):
+    from test_rca_combined_policy import policy_case
+
+    case = policy_case("xid")
+    labels = {k: v for k, v in alert().items() if k != "error_codes"}
+    case["attempt"]["claim"]["input"]["incident_snapshot"] = {
+        "alert": {"labels": labels}
+    }
+    d09 = case["queries"][0]
+    d09["arguments"]["logql"] = D09_LOGQL
+    start = int(d09["response"]["data"]["result"][0]["values"][0][0])
+    event = fleet_line("xid", "event", str(start + 10 * 10**9))
+    if change == "pci":
+        event[1] = event[1].replace(DEVICES["xid"], "PCI:0000:02:00")
+    d09["response"]["data"]["result"][0]["values"] = [
+        event,
+        fleet_line("xid", "component_data", str(start + 20 * 10**9)),
+    ]
+    return case
+
+
+async def test_alert_match_skips_analysis_and_review_models():
+    from rca_replay import replay
+
+    result = await replay(match_case())
+    output = result["output"]["result"]
+    analysis = output["quality"]["analysis"]
+    assert analysis["alert_match"]["status"] == "match"
+    assert analysis["collection_stop_reason"] == "alert_match"
+    assert [c["stage"] for c in result["model_calls"]] == ["report_writing"]
+    assert [c["matched"] for c in result["query_calls"]] == [True]
+    evaluation = output["quality"]["rca_evaluation"]
+    assert evaluation["review"]["reason"] == "alert_match"
+    assert not any(m.startswith("synthesis_") for m in output["missing_inputs"])
+    assert not any(
+        c["id"] == "observed_device_symptom" for c in output["cause_candidates"]
+    )
+    sources = output["quality"]["report"]["source_items"]
+    assert any(s["text"].startswith("알람·D09 대조:") for s in sources)
+    assert any(s["text"].startswith("이번 조사 범위 밖:") for s in sources)
+    assert not any("분석 처리 상태" in s["text"] for s in sources)
+
+
+async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
+    from rca_replay import replay
+
+    result = await replay(match_case("pci"))
+    output = result["output"]
+    analysis = output["result"]["quality"]["analysis"]
+    assert analysis["alert_match"]["status"] == "pci_mismatch"
+    assert "pci_mismatch" in output["result"]["missing_inputs"]
+    decision = next(
+        e["snapshot"]
+        for e in output["evidence"]
+        if e["query_id"] == "investigation_decision"
+    )
+    assert decision["reason"] == "alert_mismatch"
+    assert set(decision["selected_queries"]) == {"D44", "D02", "D11"}
+    # Analysis and review run once, after the auxiliary batch.
+    assert [c["stage"] for c in result["model_calls"]] == [
+        "synthesis",
+        "analysis_review",
+        "report_writing",
+    ]
+    author = result["model_calls"][0]["input"]
+    assert author["alert_match"]["status"] == "pci_mismatch"
+    assert "pci_mismatch" in author["evidence_gap"]

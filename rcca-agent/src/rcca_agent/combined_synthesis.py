@@ -44,6 +44,7 @@ Interpretation lists contain objects, never strings:
 unknowns: {"statement":"...", "evidence_refs":[], "reason":"..."};
 conflicts/limitations: {"statement":"...", "evidence_refs":["actual id"]}.
 Compare timestamps: Healthy then Unhealthy may be a transition, not a conflict.
+alert_match and evidence_gap are code results; explain them, never restate as unknowns.
 Return concise analytical material, not report prose;
 top-level limitations and hypothesis missing_inputs are Korean strings.
 Each hypothesis also requires finding_refs referencing findings in THIS response.

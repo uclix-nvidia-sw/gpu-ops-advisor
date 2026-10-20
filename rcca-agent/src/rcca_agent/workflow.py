@@ -19,7 +19,12 @@ from .synthesis import synthesis_input
 from .decision_policy import assess_policies, finish_assessment, model_assessment
 from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
 from .analysis_review import analysis_draft, ACCEPTED_VERDICTS
-from .fleet_events import parse_events, enrich_report_inventory
+from .fleet_events import (
+    MISMATCH_CODES,
+    enrich_report_inventory,
+    match_alert,
+    parse_events,
+)
 from .report import write_report
 from .report_observations import summarize_reports
 from .operator_guidance import project_guidance
@@ -666,7 +671,9 @@ async def run(tools):
     final_limits = [BASE_LIMIT]
     planned_queries = list(queries)
 
-    def assemble_rca_draft(model_candidates, health, facts, verified, applicable):
+    def assemble_rca_draft(
+        model_candidates, health, facts, verified, applicable, matched=False
+    ):
         candidates = list(model_candidates)
         recommendations = []
         applicable_ids = {book["id"] for book in applicable}
@@ -710,7 +717,7 @@ async def run(tools):
                         execution="not_performed",
                     )
                 )
-        if not candidates and health:
+        if not candidates and health and not matched:
             usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
             candidate_health = [
                 h
@@ -794,6 +801,22 @@ async def run(tools):
                 gaps.append("mapping_source_unavailable")
         if data["identity_conflicts"]:
             gaps.append("target_identity_conflict")
+        alert_match = None
+        if not fast_path:
+            alert_match = match_alert(
+                clues,
+                health,
+                []
+                if data.get("identity_conflicts")
+                else parse_events(obs.evidence, profile, data.get("target", {})),
+            )
+            d09 = collected.get("D09")
+            if alert_match["status"] != "error_code_unparsed" and not (
+                d09 and all(usable_observation(e) for e in d09)
+            ):
+                alert_match = {**alert_match, "status": "collection_failed"}
+            if alert_match["status"] in MISMATCH_CODES:
+                gaps.append(alert_match["status"])
         degraded = any(
             e["tool_status"] in ("unavailable", "partial")
             for es in collected.values()
@@ -929,6 +952,11 @@ async def run(tools):
             fallback_books=fallback_books,
             unexpected_queries=unexpected_queries,
             stopped_queries=stopped_queries,
+            alert_match=alert_match,
+            # Skipping analysis needs the code's own published Runbook guidance.
+            matched=bool(alert_match)
+            and alert_match["status"] == "match"
+            and any(not b.get("general_investigation") for b in applicable),
         )
 
     async def analyze_round(state, round_no):
@@ -947,7 +975,7 @@ async def run(tools):
             if data.get("identity_conflicts")
             else parse_events(obs.evidence, profile, data.get("target", {}))
         )
-        if not fast_path:
+        if not fast_path and not state["matched"]:
             payload = synthesis_input(
                 data,
                 obs.evidence,
@@ -995,6 +1023,8 @@ async def run(tools):
             if mode not in {"combined", "separate"}:
                 raise ValueError("unsupported RCA generation mode")
             payload.update(evidence_gap=gaps, sufficiency=gate, generation_mode=mode)
+            if (state["alert_match"] or {}).get("status") in MISMATCH_CODES:
+                payload["alert_match"] = state["alert_match"]
             if objective:
                 payload["decision_assessment"] = model_assessment(objective)
             evaluation = await evaluate_analysis(
@@ -1024,8 +1054,13 @@ async def run(tools):
             recommendations = evaluation["draft"]["recommendations"]
             final_limits = evaluation["draft"]["limitations"]
         else:
+            # Fast path or alert/D09 match: the report comes from code and the
+            # published Runbook guidance; no analysis or review model is called.
+            skipped = "alert_match" if state["matched"] else "fast_path"
+            if state["matched"]:
+                analysis_status = "skipped_alert_match"
             candidates, recommendations = assemble_rca_draft(
-                [], health, facts, verified, applicable
+                [], health, facts, verified, applicable, matched=state["matched"]
             )
             draft = analysis_draft(candidates, recommendations, final_limits, {})
             obs._evidence(
@@ -1040,12 +1075,12 @@ async def run(tools):
                 draft=draft,
                 review_output=None,
                 evidence=dict(
-                    execution_status="skipped", reason="fast_path", evidence_refs=[]
+                    execution_status="skipped", reason=skipped, evidence_refs=[]
                 ),
                 review=dict(
                     execution_status="skipped",
                     verdict=None,
-                    reason="fast_path",
+                    reason=skipped,
                     analysis_id=draft["analysis_id"],
                     evidence_refs=[],
                 ),
@@ -1095,6 +1130,8 @@ async def run(tools):
         stop_reason = (
             "fast_path"
             if fast_path
+            else "alert_match"
+            if state["matched"]
             else evaluation["stop_reason"]
             if evaluation.get("stop_reason") not in (None, "llm_budget_exhausted")
             else "goal_achieved"
@@ -1234,7 +1271,58 @@ async def run(tools):
                     obs, queries, budget, round_no=round_no, concurrency=concurrency
                 )
             )
+            if (
+                round_no == 0
+                and "D09" in queries
+                and not all(usable_observation(e) for e in collected.get("D09", []))
+                and budget["queries"] > 0
+            ):
+                # One retry for a transient required-log failure. A complete D09
+                # returns the same window again, so it is never re-queried.
+                for e in collected.get("D09", []):
+                    e["quality"]["superseded_by_retry"] = True
+                collected.update(
+                    await collect_round(
+                        obs,
+                        ["D09"],
+                        budget,
+                        round_no=round_no,
+                        concurrency=concurrency,
+                        first_index=len(queries),
+                    )
+                )
         state = evaluate_requirements(round_no, approved)
+        if (
+            round_no == 0
+            and state["alert_match"]
+            and state["alert_match"]["status"] in MISMATCH_CODES
+            and state["remaining"]
+            and budget["queries"] > 0
+        ):
+            # Alert and D09 disagree: collect the Runbook's auxiliary queries once,
+            # then analyze D09 and the added evidence together in the next round.
+            queries = state["remaining"][:3]
+            approved = state["approved"]
+            obs._evidence(
+                "investigation_decision",
+                None,
+                data["time_range"],
+                {
+                    "round": round_no,
+                    "action": "collect",
+                    "reason": "alert_mismatch",
+                    "alert_match": state["alert_match"],
+                    "selected_queries": queries,
+                    "collected_queries": list(collected),
+                    "remaining_budget": dict(budget),
+                    "evidence_refs": state["alert_match"]["evidence_refs"],
+                },
+                "ok",
+                {"round": round_no, "action": "collect", "reason": "alert_mismatch"},
+            )
+            planned_queries.extend(q for q in queries if q not in planned_queries)
+            followups += 1
+            continue
         await analyze_round(state, round_no)
         state.update(await select_followup(state, round_no))
         health = state["health"]
@@ -1288,7 +1376,7 @@ async def run(tools):
         planned_queries.extend(q for q in queries if q not in planned_queries)
         followups += 1
     analysis_missing = []
-    if not fast_path and analysis_status != "complete":
+    if not fast_path and analysis_status not in {"complete", "skipped_alert_match"}:
         analysis_missing.append("synthesis_" + analysis_status)
     if not any(
         not b.get("general_investigation")
@@ -1334,7 +1422,9 @@ async def run(tools):
     failures = [
         e
         for e in obs.evidence
-        if e["tool_status"] == "unavailable" and e["query_id"] in collected
+        if e["tool_status"] == "unavailable"
+        and e["query_id"] in collected
+        and not e["quality"].get("superseded_by_retry")
     ]
     conflicting = conflicting_health(health)
     reason = "evidence_sufficient" if not missing else "missing_data"
@@ -1388,6 +1478,23 @@ async def run(tools):
             missing, health, error_events, data
         ),
         "fast_path": fast_path,
+        "alert_match": state["alert_match"],
+        # Unknowns every selected Runbook declares outside its conclusion scope.
+        "out_of_scope": sorted(
+            set.intersection(
+                *(
+                    set(
+                        b["content"]
+                        .get("decision_policy", {})
+                        .get("non_blocking_unknowns", [])
+                    )
+                    for b in selected
+                    if not b.get("general_investigation")
+                )
+            )
+            if any(not b.get("general_investigation") for b in selected)
+            else set()
+        ),
         "followups": followups,
         "plan_evidence_id": plan_id,
         "evidence_evaluation": {"decision": gate, "stop_reason": stop_reason},

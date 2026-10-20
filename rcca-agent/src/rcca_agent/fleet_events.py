@@ -9,6 +9,21 @@ from agent_common.contracts import timestamp
 from agent_common.observation import usable_observation
 from agent_common.parsers import ERROR_CODE, log_entries
 
+PCI_TEXT = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
+STATUS_UUID = re.compile(r"UUID:(GPU-[0-9a-f-]{36})", re.I)
+# Alert-to-D09 comparison outcomes besides "match". error_code_unparsed and
+# collection_failed keep the existing Runbook path; the rest are comparison gaps
+# that trigger one auxiliary collection. Codes route only; they are never facts.
+MISMATCH_CODES = (
+    "alert_report_not_found",
+    "report_reason_changed",
+    "event_not_found",
+    "pci_mismatch",
+    "multiple_devices",
+    "uuid_unresolved",
+    "uuid_mismatch",
+)
+
 
 def object_value(value):
     if isinstance(value, str):
@@ -189,6 +204,111 @@ def parse_events(evidence, profile, target):
     return list(results.values())
 
 
+def match_alert(clues, health, events):
+    """Compare the alert's Fleet state report with D09 reports and kmsg events.
+
+    GPUAlert fires on a Fleet Unhealthy component report, whose reason names the
+    most severe retained XID/SXID. A match means the alert, that report and one
+    kmsg event agree on code and device. It routes the investigation only; it is
+    not verified current health, physical origin or independent device identity.
+    """
+    component = clues.get("component") or ""
+    kind = component.rsplit("-", 1)[-1]
+    codes = clues.get("error_codes", [])
+    reason = clues.get("reason") or ""
+    alert = {"error_code": None, "pci": None, "gpu_uuid": None}
+
+    def result(status, refs=(), **detail):
+        return {
+            "status": status,
+            "alert": alert,
+            "evidence_refs": list(dict.fromkeys(refs)),
+            "detail": detail,
+        }
+
+    if (
+        kind not in ("xid", "sxid")
+        or len(codes) != 1
+        or not codes[0].startswith(kind + ":")
+    ):
+        return result("error_code_unparsed")
+    addresses = sorted(set(PCI_TEXT.findall(reason)))
+    uuids = sorted(set(STATUS_UUID.findall(reason)))
+    alert.update(
+        error_code=codes[0],
+        pci=addresses[0] if len(addresses) == 1 else None,
+        # SXID names an NVSwitch; a GPU UUID never identifies it.
+        gpu_uuid=uuids[0] if kind == "xid" and len(uuids) == 1 else None,
+    )
+    scope = {
+        k: v
+        for k, v in (
+            ("machine_id", clues.get("machine_id")),
+            ("node", clues.get("k8s_node_name")),
+        )
+        if v
+    }
+    reports = [
+        h
+        for h in health
+        if h.get("raw_health") == "Unhealthy"
+        and h.get("component") == component
+        and all(h.get("target", {}).get(k) == v for k, v in scope.items())
+    ]
+    if not reports:
+        return result("alert_report_not_found")
+    same = [h for h in reports if h.get("reason") == reason]
+    if not same:
+        # Fleet rewrites the reason when a later Fatal error becomes the summary.
+        return result(
+            "report_reason_changed",
+            [r for h in reports for r in h["evidence_refs"]],
+            reported_reasons=sorted({str(h.get("reason")) for h in reports}),
+        )
+    refs = [r for h in same for r in h["evidence_refs"]]
+    matched = [
+        e for e in events if e["component"] == component and e["error_code"] == codes[0]
+    ]
+    if not matched:
+        # A component report persists until reboot, while its kmsg event is
+        # exported once; the event may precede the collection window.
+        return result(
+            "event_not_found",
+            refs,
+            other_codes=sorted({e["error_code"] for e in events} - {codes[0]}),
+        )
+    refs += [r for e in matched for r in e["evidence_refs"]]
+    # XID kmsg addresses carry no PCI function; SXID addresses do.
+    width = 3 if kind == "xid" else 4
+
+    def device(value):
+        address = pci(value)
+        return address[:width] if address else str(value)
+
+    devices = {device(e["reported_device"]) for e in matched}
+    if len(devices) > 1:
+        return result(
+            "multiple_devices",
+            refs,
+            event_devices=sorted({str(e["reported_device"]) for e in matched}),
+        )
+    if not alert["pci"] or device(alert["pci"]) not in devices:
+        return result(
+            "pci_mismatch", refs, event_device=str(matched[0]["reported_device"])
+        )
+    if kind == "xid":
+        candidates = {e["inventory_gpu_candidate"] for e in matched}
+        if not alert["gpu_uuid"] or candidates == {None}:
+            return result("uuid_unresolved", refs)
+        if candidates != {alert["gpu_uuid"]}:
+            return result(
+                "uuid_mismatch",
+                refs,
+                inventory_gpu_candidates=sorted(str(c) for c in candidates),
+            )
+    return result("match", refs)
+
+
 def enrich_report_inventory(health, evidence):
     """Read inventory strings for RCA only; never promote device or health facts."""
     originals = {e["id"]: e for e in evidence}
@@ -235,11 +355,7 @@ def enrich_report_inventory(health, evidence):
             and gpu["uuid"].strip()
         ]
         reason = object_value(raw.get("attributes")).get("reason", "")
-        addresses = re.findall(
-            r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?",
-            reason if isinstance(reason, str) else "",
-            re.I,
-        )
+        addresses = PCI_TEXT.findall(reason if isinstance(reason, str) else "")
         inventory_addresses = [
             gpu["bus_id"]
             for gpu in report["gpu_candidates"]

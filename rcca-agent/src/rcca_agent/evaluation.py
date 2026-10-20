@@ -23,6 +23,10 @@ from .synthesis_context import bounded_context, encoded_size
 
 BASE_LIMIT = "관측·권고는 원인 확정, 조치 수행 또는 업무 복구를 의미하지 않습니다."
 REVIEW_LIMIT = "LLM 검토는 정답을 보장하지 않으며 원본 증거와 남은 불확실성을 함께 확인해야 합니다."
+INTERPRETATION_LIMIT = "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
+UNRESOLVED_LIMIT = "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다."
+# Code-authored limitations; model-authored ones stay in diagnostics only.
+FIXED_LIMITS = (BASE_LIMIT, REVIEW_LIMIT, INTERPRETATION_LIMIT, UNRESOLVED_LIMIT)
 
 
 def collection_status(planned, collected, fast_path=False):
@@ -216,9 +220,7 @@ async def evaluate_analysis(
         base_candidates, base_recommendations = assemble([])
         base_limits = [BASE_LIMIT, REVIEW_LIMIT]
         if interpretation is None:
-            base_limits.append(
-                "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
-            )
+            base_limits.append(INTERPRETATION_LIMIT)
         baseline = review_payload(
             analysis_draft(base_candidates, base_recommendations, base_limits, view),
             view,
@@ -323,9 +325,7 @@ async def evaluate_analysis(
         candidates, recommendations = assemble(model_candidates)
         limits = list(dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *limits]))
         if interpretation is None:
-            limits.append(
-                "증거 의미 해석을 완료하지 못해 해석 결과는 미검토 상태입니다."
-            )
+            limits.append(INTERPRETATION_LIMIT)
         draft = analysis_draft(
             candidates,
             recommendations,
@@ -421,9 +421,7 @@ async def evaluate_analysis(
             dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *([] if global_issue else limits)])
         )
         if affected:
-            limits.append(
-                "검토에서 해결하지 못한 주장은 제외하고 관련 권고는 보류했습니다."
-            )
+            limits.append(UNRESOLVED_LIMIT)
         draft = analysis_draft(
             candidates,
             recommendations,

@@ -15,6 +15,7 @@ STOP_REASONS = {
     "no_usable_evidence",
     "model_unavailable",
     "fast_path",
+    "alert_match",
 }
 
 ACCEPTED_REVIEW_VERDICTS = frozenset({"acceptable", "acceptable_after_feedback"})

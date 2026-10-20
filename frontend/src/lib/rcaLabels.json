@@ -162,7 +162,18 @@
     "followup_not_selected": "남은 후보 중 이번 제한을 보완할 추가 조회가 선택되지 않았습니다.",
     "query_budget_exhausted": "이번 실행의 조회 예산을 모두 사용했습니다.",
     "deadline_exhausted": "이번 실행의 수집 가능 시간이 끝났습니다.",
-    "fast_path": "검증된 기존 근거를 사용해 추가 조회를 생략했습니다."
+    "fast_path": "검증된 기존 근거를 사용해 추가 조회를 생략했습니다.",
+    "match": "알람의 Fleet 상태 보고와 D09의 상태 보고·오류 이벤트가 코드와 장치에서 일치합니다.",
+    "alert_match": "알람의 Fleet 상태 보고와 D09 원본이 일치해 분석·검토 모델 없이 Runbook 안내로 보고서를 작성했습니다.",
+    "error_code_unparsed": "알람 사유에서 XID·SXID 코드를 읽지 못했습니다. 일반 조사로 진행했습니다.",
+    "collection_failed": "재조회 후에도 D09 오류 로그를 완전하게 수집하지 못했습니다.",
+    "alert_report_not_found": "알람을 일으킨 Unhealthy 상태 보고를 D09에서 찾지 못했습니다. D09 조회 조건과 알람 규칙의 대상 로그가 같은지 점검하세요.",
+    "report_reason_changed": "D09의 Unhealthy 상태 보고 사유가 알람 사유와 다릅니다. 이후 다른 Fatal 오류가 보고됐을 수 있습니다.",
+    "event_not_found": "알람 오류 코드의 원본 이벤트가 D09 조회 구간에 없습니다. 상태는 재부팅 전까지 유지되므로 이벤트가 구간 이전에 발생했을 수 있습니다.",
+    "pci_mismatch": "알람의 PCI 주소와 D09 원본 이벤트의 PCI 주소가 다릅니다.",
+    "multiple_devices": "같은 오류 코드의 원본 이벤트가 서로 다른 장치에서 보고돼 대상 장치를 하나로 정할 수 없습니다.",
+    "uuid_unresolved": "알람 또는 D09 재고에서 이 PCI 주소의 GPU UUID를 확인하지 못했습니다.",
+    "uuid_mismatch": "알람의 GPU UUID와 D09 재고에서 같은 PCI 주소에 대응된 UUID가 다릅니다."
   },
   "groups": {
     "design": {
