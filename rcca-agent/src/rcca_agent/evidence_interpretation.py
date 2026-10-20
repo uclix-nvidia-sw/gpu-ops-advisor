@@ -98,6 +98,8 @@ def inspection_context(data, evidence, health, diagnostics):
                     truncated=len(line) > 1200,
                     location={"line": index},
                     query_id=entry["query_id"],
+                    source_recorded_at_ns=str(ns) if ns is not None else None,
+                    time_basis="loki_recorded_at" if ns is not None else "unavailable",
                     interpretation_only=True,
                     evidence_refs=[entry["id"]],
                 )

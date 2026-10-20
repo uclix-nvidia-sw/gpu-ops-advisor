@@ -52,6 +52,7 @@ important alternatives, omitted evidence, underuse of evidence and missing limit
 Partial collection can support a valid limited conclusion. Successful requests alone
 cannot justify a conclusion. No observations does not mean healthy hardware.
 Review ALL claims, including rule-derived candidates and recommendations.
+unresolved_assessments are unanswered criteria, not claims or achieved objectives.
 Interpretation is fallible; compare it to the source material. Do not upgrade causality.
 If essential context is omitted or missing, use undetermined or request clarification.
 revision_required requires an issue; acceptable requires no issues.
@@ -228,9 +229,20 @@ def review_payload(draft, view, allowed_queries):
         "rubric_version": "2" if policy else "1",
         "rubric": RUBRIC,
         "draft": {
-            key: value
-            for key, value in draft.items()
-            if key not in {"cause_candidates", "recommendations", "interpretation"}
+            **{
+                key: value
+                for key, value in draft.items()
+                if key not in {"cause_candidates", "recommendations", "interpretation"}
+            },
+            "unresolved_assessments": deepcopy(
+                [
+                    row
+                    for row in draft.get("interpretation", {}).get(
+                        "criterion_assessments", []
+                    )
+                    if row["status"] == "unknown"
+                ]
+            ),
         },
         "evidence_context": view,
         "input_evidence_refs": view.get("input_evidence_refs", []),

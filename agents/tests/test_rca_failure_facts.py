@@ -101,7 +101,8 @@ def test_event_summary_never_promotes_inventory_or_current_health():
         "inventory_gpu_candidate": "GPU-not-a-switch",
     }
     rows = summarize_reports([], [row], {"target": {"cluster_id": "c1", "node": "n1"}})
-    assert "sxid:11001" in str(rows) and "PCI:0000:c4:00.0" in str(rows)
+    assert "SXID 11001" in str(rows) and "PCI:0000:c4:00.0" in str(rows)
+    assert "2026-10-19 10:00:00 KST, c1의 n1에서" in rows[0]["text"]
     assert "생산자 이벤트 시각" in str(rows)
     assert "GPU-not-a-switch" not in str(rows)
 
