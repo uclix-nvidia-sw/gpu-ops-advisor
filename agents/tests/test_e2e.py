@@ -1958,6 +1958,8 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
     assert [section["id"] for section in result["narrative"]] == [
         "problem",
+        "investigation",
+        "comparison",
         "cause",
         "action",
         "limits",
