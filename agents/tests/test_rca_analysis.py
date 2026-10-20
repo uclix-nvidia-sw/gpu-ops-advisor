@@ -510,15 +510,25 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
                 assert result["runbook_revisions"][0]["id"] == "builtin-general"
             assert "causal_confirmation_evidence" in result["missing_inputs"]
         elif mode == "query_failed":
+            # A transient required D09 failure is retried once in the same round.
             assert events == [
                 "collect",
+                "collect",
+                "interpret",
+                "synthesize",
                 "review",
                 "collect",
                 "interpret",
                 "synthesize",
                 "review",
             ]
-            assert result["termination_reason"] == "query_failed"
+            failed = [
+                e
+                for e in output["evidence"]
+                if e["query_id"] == "D09" and e["tool_status"] == "unavailable"
+            ]
+            assert failed and all(e["quality"]["superseded_by_retry"] for e in failed)
+            assert result["termination_reason"] != "query_failed"
             assert result["quality"]["analysis"]["followups"] == 1
         elif mode == "invalid_plan":
             assert events == ["collect", "interpret", "synthesize", "review", "plan"]

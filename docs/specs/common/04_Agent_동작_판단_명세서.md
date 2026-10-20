@@ -259,7 +259,7 @@ RCA는 `incident_id,incident_time,current_checked_at,pod_relations,assessments,c
 - 일부 조회 완료(빈 응답 포함) 또는 부분 반환 자료가 있으나 잘림·실패·누락·미실행이 섞였으면 `partial`이다. 반환된 내용의 기초 검증·의미 해석 실패는 별도 축에 남긴다.
 - 계획했지만 반환 자료/완료된 빈 응답이 전혀 없고 모두 실패·미실행이면 `failed`다. 미실행의 예산·정책·조건 사유를 유지한다.
 
-`stop_reason`은 `review_accepted/no_available_followup/followup_not_selected/selection_conditions_missing/query_budget_exhausted/llm_budget_exhausted/round_limit_reached/revision_limit_reached/analysis_unresolved/no_usable_evidence/model_unavailable/fast_path` 중 하나다. 이는 발행 가능한 종료의 상세 사유이며 기존 `termination_reason` enum을 대체하지 않는다. 원격 종료 불명·취소·lease 상실·실행 deadline 초과는 이 필드로 정상 공개하지 않고 14의 실패 경로를 따른다. 검토 입력이 너무 커서 남은 예산에 들어가지 않는 경우는 `llm_budget_exhausted`와 단계 진단으로 남긴다.
+`stop_reason`은 `review_accepted/no_available_followup/followup_not_selected/selection_conditions_missing/query_budget_exhausted/llm_budget_exhausted/round_limit_reached/revision_limit_reached/analysis_unresolved/no_usable_evidence/model_unavailable/fast_path/alert_match` 중 하나다. `alert_match`는 알람과 D09의 상태 보고·kmsg 이벤트가 일치해 작성·검토 LLM 없이 Runbook 안내로 종료했다는 뜻이다(현재 상태·원인 확정 아님). 이는 발행 가능한 종료의 상세 사유이며 기존 `termination_reason` enum을 대체하지 않는다. 원격 종료 불명·취소·lease 상실·실행 deadline 초과는 이 필드로 정상 공개하지 않고 14의 실패 경로를 따른다. 검토 입력이 너무 커서 남은 예산에 들어가지 않는 경우는 `llm_budget_exhausted`와 단계 진단으로 남긴다.
 
 schema 2는 `generation_mode=combined/separate`를 명시한다. combined의 evidence refs는 기초 진단과 `rca_synthesis`의 채택된 `interpretation`에 연결하며 독립 해석 완료 기록을 만들지 않는다. `evidence.interpretation`은 최종 자료에 남은 해석이며 실패/보류는 null일 수 있다. 초안 hash에 해석과 실제 입력 view hash를 포함한다. 원본 관측 refs와 진단 포함 input refs를 구분하고 생성된 finding ID는 별도 의존 참조다.
 

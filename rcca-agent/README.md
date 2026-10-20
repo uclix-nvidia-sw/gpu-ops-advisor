@@ -7,11 +7,15 @@ Incident가 접수한 GPU·NVSwitch·노드 사건을 Job Controller에서 인�
 1. JC claim의 사건 snapshot·대상·기간·예산·지식 revision을 고정한다. [workflow.py](src/rcca_agent/workflow.py)가 전체 흐름을 소유한다.
 2. [retrieval.py](src/rcca_agent/retrieval.py)로 발행 Runbook을 검색하고 [runbook_contract.py](src/rcca_agent/runbook_contract.py)와 적용 조건을 검사한다. 검색 점수는 관련도이며 원인 확률이 아니다. 일반 조사 템플릿은 원인 확정 근거가 아니다.
 3. 선택한 Runbook의 필수 관측을 [observation_agents.py](src/rcca_agent/observation_agents.py)에서 수집한다. 허용된 독립 조회는 공유 예산 안에서 병렬 실행한다.
-4. 코드가 수집 상태와 형식·시각·식별자의 명확한 조건을 확인한다. 원문과 진단은 보존한다.
+4. 코드가 수집 상태와 형식·시각·식별자의 명확한 조건을 확인한다. 원문과 진단은 보존한다. 필수 D09가 실패·불완전하면 같은 라운드에서 한 번만 다시 조회하고, 이전 결과는 `superseded_by_retry`로 남긴다. 이어서 [fleet_events.match_alert](src/rcca_agent/fleet_events.py)가 알람(Fleet `Unhealthy` 상태 보고)과 D09의 같은 사유 상태 보고·kmsg 이벤트를 대조한다. XID는 오류 코드·PCI(function 제외)·알람 UUID와 재고 대응 UUID를, SXID는 오류 코드·스위치 PCI(function 포함)를 비교한다. 결과는 `quality.analysis.alert_match`에 남는다.
+   - `match`이고 해당 코드의 발행 Runbook이 적용되면 작성·검토 LLM을 호출하지 않는다. 보고서는 코드 자료와 Runbook `operator_guidance`로 만들고 종료 이유는 `alert_match`다.
+   - `alert_report_not_found`·`report_reason_changed`·`event_not_found`·`pci_mismatch`·`multiple_devices`·`uuid_unresolved`·`uuid_mismatch`는 근거 공백(gap)으로 기록한다. 남은 Runbook 선택 조회를 한 번(최대 3개) 모은 뒤 다음 라운드에서 D09와 추가 증거로 작성·검토를 한 번 수행한다. 작성 LLM 입력에는 대조 결과가 포함된다.
+   - `error_code_unparsed`(알람 사유에 XID·SXID 코드 없음)와 `collection_failed`(재조회 후에도 D09 불완전)는 기존 Runbook 경로를 따른다.
+   - 대조는 경로 선택에만 쓴다. 현재 장치 상태·실제 장애 여부·독립 장치 신원을 검증한 사실로 승격하지 않는다.
 5. [통합 작성](src/rcca_agent/combined_synthesis.py)이 **증거 해석과 원인 분석을 한 번의 작성 LLM 요청**으로 처리한다. 출력은 보고서가 아닌 사실·추론·미확인·원인 후보·근거 참조를 담은 구조화된 RCA 자료다.
 6. [독립 품질 검토](src/rcca_agent/analysis_review.py)가 전체 주장과 원본을 대조한다. 검토 실패가 같은 증거의 재작성이나 재검토 루프를 유발하지 않는다. 특정 가능한 부적절 주장을 코드로 보류하면 새 초안은 미검토로 기록하고 이전 검토 지적을 보존한다.
 7. [Runbook 판단](src/rcca_agent/decision_policy.py)이 조사 목적의 필수 기준·차단 조건·같은 초안의 검토를 확인한다. 목적을 달성하면 선택 조회가 남아도 종료한다. 미달이면 허용된 필수 보완 조회 또는 한계 종료를 결정한다. 새 관측이 추가된 경우에만 다음 RCA 작성이 가능하다.
-8. `rca_result_frozen`에 RCA 자료와 hash를 고정한다. [report_writer.py](src/rcca_agent/report_writer.py)는 채택 자료만 투영해 **보고서 LLM 한 번**으로 완성된 문장을 작성한다. 원본 로그·Runbook을 다시 읽어 판단하지 않으며 문장 정렬 호출을 추가하지 않는다. 서술의 필수 섹션·출처 범위·전체 자료 참조·새 수치 여부를 코드로 검사하고, 한계와 검토 상태·종료 이유는 원문 그대로 붙인다. 입력 초과·예산 부족·모델 미설정·출력 실패에는 동일 자료를 기본 표시한다. `report_assembly`에는 작성 호출의 시간·모델·usage·입력 hash·실패 위치와 결과 구성 상태를 따로 저장한다. 저장·공개는 기존 Worker/JC가 담당한다.
+8. `rca_result_frozen`에 RCA 자료와 hash를 고정한다. [report_writer.py](src/rcca_agent/report_writer.py)는 채택 자료만 투영해 **보고서 LLM 한 번**으로 완성된 문장을 작성한다. 원본 로그·Runbook을 다시 읽어 판단하지 않으며 문장 정렬 호출을 추가하지 않는다. 서술의 필수 섹션·출처 범위·전체 자료 참조·새 수치 여부를 코드로 검사하고, 한계와 검토 상태·종료 이유는 원문 그대로 붙인다. 작성 LLM의 `unknowns`·`conflicts`·`limitations` 자유 문장과 원인 후보의 비코드 `missing_inputs`는 진단·검토에만 남기고 보고서에는 넣지 않는다. 보고서의 불확실성은 코드가 정한 gap 라벨, 대조 결과, `non_blocking_unknowns`를 묶은 "이번 조사 범위 밖" 문장, 고정 한계 문구(`evaluation.FIXED_LIMITS`)로만 표시한다. 입력 초과·예산 부족·모델 미설정·출력 실패에는 동일 자료를 기본 표시한다. `report_assembly`에는 작성 호출의 시간·모델·usage·입력 hash·실패 위치와 결과 구성 상태를 따로 저장한다. 저장·공개는 기존 Worker/JC가 담당한다.
 
 기본 작성 방식은 `combined`다. 비교·회귀용 profile의 `rca.generation_mode=separate`는 기존 해석·분석 호출을 유지하지만 같은 증거 재작성 제한은 동일하다. 한 attempt 안에서 원본 내용 hash를 비교하므로 UUID 변경·같은 응답 재수집·모델 입력 축약·검토 feedback은 새 증거가 아니다. 작성은 HTTP 오류·출력 잘림에도 재전송하지 않는다. 다른 명시적 작업/attempt의 재평가는 별도 실행이다. 분석·검토 두 단계와 보고서 서술·선택 호출을 합쳐 ‘전체 호출 두 번’이라고 표시하지 않는다. fast path, 기존 결과 읽기, 취소·원격 종료 불명 처리는 유지한다.
 

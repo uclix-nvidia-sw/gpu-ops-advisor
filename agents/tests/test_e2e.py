@@ -1645,6 +1645,14 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(p == "/v1/chat/completions" for p, _ in Upstream.requests)
 
 
+# Tests monkeypatch this to change the webhook alert labels the helper posts.
+alert_label_overrides = {}
+# An alert reason without an XID/SXID code is `error_code_unparsed`: it keeps the
+# analysis-first path with rule/model follow-up selection instead of the
+# alert/D09 mismatch batch. Tests covering that path post this reason.
+UNCODED_ALERT_REASON = "Fleet component report without an error code (fixture)"
+
+
 @pytest.mark.e2e
 @pytest.mark.parametrize("fleet_reports", [False, True, "discovery"])
 def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
@@ -1688,6 +1696,7 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         path.write_text(json.dumps(profile))
         stack = {**stack, "env": {**stack["env"], "AGENT_CONFIG_FILE": str(path)}}
         monkeypatch.setattr(Upstream, "fleet_reports", True)
+    alert["labels"].update(alert_label_overrides)
     if fleet_reports == "discovery":
         cluster_id = "new-site-" + uuid4().hex
         alert["labels"]["cluster_id"] = cluster_id
@@ -1820,7 +1829,10 @@ def test_grafana_webhook_through_incident_jc_and_real_rca_worker(
             "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='alert_clues'",
             (jid,),
         ).fetchone()[0]
-        assert clues["error_codes"] == (["sxid:11001"] if fleet_reports else ["xid:79"])
+        expected_codes = ["sxid:11001"] if fleet_reports else ["xid:79"]
+        if alert["labels"]["reason"] == UNCODED_ALERT_REASON:
+            expected_codes = []
+        assert clues["error_codes"] == expected_codes
         assert clues["provider_actions"]["execution"] == "not_performed"
         saved_snapshot, checksum = conn.execute(
             "SELECT snapshot,checksum FROM evidence WHERE job_id=%s AND query_id='incident_snapshot'",
@@ -2554,6 +2566,13 @@ def test_rca_numeric_rejection_does_not_rewrite_same_evidence_before_publication
 
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", rejection_then_repair)
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
+    # A second analysis needs a second round. The alert/D09 mismatch batch
+    # analyzes once after collecting; the uncoded alert keeps two rounds.
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "alert_label_overrides",
+        {"reason": UNCODED_ALERT_REASON},
+    )
     test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         stack, monkeypatch, True
     )
@@ -2896,6 +2915,13 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
     monkeypatch.setattr(Upstream, "reject_tool_requests", True)
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", unsafe_reply)
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
+    # Rule/model follow-up selection runs only outside the alert/D09 mismatch
+    # batch; an uncoded alert reason keeps that path.
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "alert_label_overrides",
+        {"reason": UNCODED_ALERT_REASON},
+    )
     # The isolated fixture normally forces D02 by policy; remove only that force
     # to exercise the actual model selection/repair path (D02 remains approved).
     with psycopg.connect(stack["url"], autocommit=True) as conn:

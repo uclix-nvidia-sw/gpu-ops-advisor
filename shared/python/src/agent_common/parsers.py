@@ -115,9 +115,10 @@ def parse_health(evidence, contracts, queries=None, diagnostics=None):
     results = []
     seen = {}
     for e in evidence:
-        if e["query_id"] not in ("D05", "D09") or e["tool_status"] not in (
-            "ok",
-            "partial",
+        if (
+            e["query_id"] not in ("D05", "D09")
+            or e["tool_status"] not in ("ok", "partial")
+            or e["quality"].get("superseded_by_retry")
         ):
             continue
         period = e["quality"].get("request_time_range", e["time_range"])

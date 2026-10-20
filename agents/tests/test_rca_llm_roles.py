@@ -14,6 +14,7 @@ from rcca_agent.report_writer import (
 from rcca_agent.synthesis_context import bounded_context, encoded_size
 from rcca_agent.analysis_review import review_payload, analysis_draft
 from rcca_agent.evidence_interpretation import ResponseValidationError
+from rcca_agent.evaluation import BASE_LIMIT
 from rca_report_fixture import report_reply
 from rca_replay import replay
 from test_rca_combined_policy import policy_case
@@ -54,7 +55,7 @@ def material():
         },
         "cause_candidates": [],
         "recommendations": [],
-        "limitations": ["실제 고장이나 복구를 확정하지 않습니다."],
+        "limitations": [BASE_LIMIT, "모델이 작성한 한계 문장입니다."],
         "missing_inputs": [],
         "analysis": {"raw_log": "DO NOT SEND RAW LOGS"},
     }
@@ -106,9 +107,11 @@ async def test_writer_only_rephrases_frozen_material_once(failure):
     )
     assert report["writer"]["usage"]["total_tokens"] == 42
     assert report["material_hash"] == before
-    assert "단일 출처 보고입니다." in next(
-        r["text"] for r in result["narrative"] if r["id"] == "limits"
-    )
+    limits = next(r["text"] for r in result["narrative"] if r["id"] == "limits")
+    # Model-authored caveats stay in diagnostics; the report keeps fixed ones.
+    assert "단일 출처 보고입니다." not in limits
+    assert "모델이 작성한 한계 문장입니다." not in limits
+    assert BASE_LIMIT in limits
     if failure in {"number", "refs"}:
         assert report["writer"]["validation_details"][0]["details"][0][
             "path"
@@ -134,15 +137,17 @@ async def test_report_preflight_keeps_complete_sources_and_never_raises_budget(m
         model.configured = False
     if mode == "budget":
         model.remaining = 1
+    finding = source["evaluation"]["evidence"]["interpretation"]["findings"][0]
     if mode == "input":
-        source["limitations"] = ["한계" * 10000]
+        finding["statement"] = "관측" * 10000
     remaining = model.remaining
     result = {"quality": {}}
     await write_material_report(result, source, model)
     assert not model.inputs
     assert model.remaining == remaining
     assert result["quality"]["report"]["writer"]["execution_status"] == "skipped"
-    assert source["limitations"][0] in str(result["narrative"])
+    assert finding["statement"] in str(result["narrative"])
+    assert BASE_LIMIT in str(result["narrative"])
 
 
 def test_report_cannot_drop_sections_or_cross_reference_other_sections():
@@ -280,7 +285,8 @@ def test_report_retains_counter_evidence_and_withheld_action_conditions():
         "현재 시점 자료가 없습니다."
     )
     rows = report_sources(source)
-    assert any("현재 시점 자료가 없습니다." in row["text"] for row in rows)
+    # Model unknowns are not report prose; coded gaps and fixed text are.
+    assert not any("현재 시점 자료가 없습니다." in row["text"] for row in rows)
     assert any(
         "counter" in row["evidence_refs"] and row["section"] == "limits" for row in rows
     )

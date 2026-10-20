@@ -12,6 +12,7 @@ from .evidence_interpretation import (
     response_list,
     response_refs,
 )
+from .evaluation import FIXED_LIMITS
 from .report_labels import LABELS
 
 
@@ -60,6 +61,18 @@ or causes proved by this incident. Preserve model/version, maintenance and verif
 conditions. Missing evidence is not an instruction to the operator. Internal diagnostic
 codes belong in technical details; explain their practical meaning in Korean.
 """
+OUT_OF_SCOPE = {
+    "causal_confirmation_evidence": "원인 확정",
+    "current_health": "현재 장치 상태",
+    "physical_or_synthetic_origin": "실제 장애·주입 시험 구분",
+}
+MATCH_DETAIL = {
+    "reported_reasons": "D09 상태 보고 사유",
+    "other_codes": "D09의 다른 오류 코드",
+    "event_devices": "D09 이벤트 장치",
+    "event_device": "D09 이벤트 장치",
+    "inventory_gpu_candidates": "D09 재고 대응 GPU",
+}
 NUMBERS = re.compile(r"\d+(?:[.:/-]\d+)*")
 
 
@@ -104,7 +117,9 @@ def report_sources(material):
         set.intersection(*(set(p.get("non_blocking_unknowns", [])) for p in policies))
         if policies
         else set()
-    )
+    ) | set(material.get("analysis", {}).get("out_of_scope", []))
+    alert_match = material.get("analysis", {}).get("alert_match") or {}
+    known = {key for group in LABELS.values() for key in group}
     observations = material.get("reported_observations", [])
     if observations:
         for row in observations:
@@ -126,14 +141,44 @@ def report_sources(material):
             add("problem", prefix + row["statement"], row["evidence_refs"])
     evidence = evaluation.get("evidence", {})
     review = evaluation.get("review", {})
-    if evidence.get("execution_status") in {"failed", "skipped"}:
+    if alert_match.get("status"):
+        add(
+            "limits" if alert_match["status"] != "match" else "problem",
+            "알람·D09 대조: "
+            + label(alert_match["status"])
+            + "".join(
+                f" / {name}: {', '.join(value) if isinstance(value, list) else value}"
+                for name, value in [
+                    ("알람 PCI", alert_match.get("alert", {}).get("pci")),
+                    ("알람 GPU UUID", alert_match.get("alert", {}).get("gpu_uuid")),
+                    *(
+                        (MATCH_DETAIL.get(k, k), v)
+                        for k, v in alert_match.get("detail", {}).items()
+                    ),
+                ]
+                if value and alert_match["status"] != "match"
+            ),
+            alert_match.get("evidence_refs", []),
+            fixed=True,
+        )
+    if out_of_scope:
+        add(
+            "limits",
+            "이번 조사 범위 밖: "
+            + ", ".join(sorted(OUT_OF_SCOPE.get(c, label(c)) for c in out_of_scope))
+            + ". 확인 방법은 권고 대응의 확인 작업을 따르세요.",
+            fixed=True,
+        )
+    # An alert/D09 match skips analysis by design; it is not left incomplete.
+    by_design = evidence.get("reason") == "alert_match"
+    if not by_design and evidence.get("execution_status") in {"failed", "skipped"}:
         add(
             "limits",
             "분석 처리 상태: 증거 해석·분석이 완료되지 않았습니다. "
             + label(evidence.get("reason") or evidence["execution_status"]),
             fixed=True,
         )
-    elif review.get("execution_status") in {"failed", "skipped"}:
+    elif not by_design and review.get("execution_status") in {"failed", "skipped"}:
         add(
             "limits",
             "분석 처리 상태: 독립 품질 검토가 완료되지 않았습니다. "
@@ -163,7 +208,8 @@ def report_sources(material):
                 row["contradicting_refs"],
             )
         for missing in row.get("missing_inputs", []):
-            if missing not in out_of_scope:
+            # Model-authored missing inputs are free text; only coded ones print.
+            if missing not in out_of_scope and missing in known:
                 add("limits", label(missing))
     for row in material.get("recommendations", []):
         status = (
@@ -180,18 +226,11 @@ def report_sources(material):
             + json.dumps(row.get("preconditions", []), ensure_ascii=False),
             row["evidence_refs"],
         )
-    for row in interpretation.get("unknowns", []):
-        add(
-            "limits",
-            row["statement"]
-            + (" / 이유: " + row["reason"] if row.get("reason") else ""),
-            row["evidence_refs"],
-        )
-    for section in ("conflicts", "limitations"):
-        for row in interpretation.get(section, []):
-            add("limits", row["statement"], row["evidence_refs"])
+    # Model unknowns/conflicts/limitations stay in diagnostics for review. The
+    # report states uncertainty only through coded gaps and fixed sentences.
     for text in material.get("limitations", []):
-        add("limits", text)
+        if text in FIXED_LIMITS:
+            add("limits", text)
     for row in evaluation.get("collection", {}).get("query_results", []):
         if not row.get("complete"):
             add(
@@ -200,7 +239,7 @@ def report_sources(material):
                 row.get("evidence_refs", []),
             )
     for missing in material.get("missing_inputs", []):
-        if missing not in out_of_scope:
+        if missing not in out_of_scope and missing != alert_match.get("status"):
             add("limits", label(missing))
     for entry in material.get("runbook_guidance", []):
         if entry.get("report_applicability") == "reference_only":
@@ -254,15 +293,16 @@ def report_sources(material):
             "LLM 작성 결과 미채택 또는 해석 미완료. 남은 자료의 검토 결과를 분석 성공으로 읽지 마세요.",
         )
     review = evaluation.get("review", {})
-    add(
-        "limits",
-        "분석 품질 검토: "
-        + label(
-            review.get("verdict")
-            or review.get("reason")
-            or review.get("execution_status")
-        ),
-    )
+    if review.get("reason") != "alert_match":  # the stop reason already says so
+        add(
+            "limits",
+            "분석 품질 검토: "
+            + label(
+                review.get("verdict")
+                or review.get("reason")
+                or review.get("execution_status")
+            ),
+        )
     add(
         "limits",
         "조사 종료 이유: "

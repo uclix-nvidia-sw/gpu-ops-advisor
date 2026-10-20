@@ -51,6 +51,7 @@ Interpretation cites input_evidence_refs; it is not independent evidence.
 Top-level limitations and hypothesis missing_inputs are Korean strings.
 State each limit once in unknowns/limitations. Never invent causes or actions.
 A separate reviewer checks all claims; this request does not self-review.
+alert_match and evidence_gap are code results; explain them, never restate as unknowns.
 Validation feedback concerns response structure, not new evidence."""
 )
 

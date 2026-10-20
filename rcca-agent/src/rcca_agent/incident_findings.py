@@ -10,13 +10,12 @@ from datetime import datetime, timezone
 from agent_common.contracts import timestamp
 from agent_common.observation import usable_observation
 
-from .fleet_events import pci
+from .fleet_events import STATUS_UUID, pci
 
 MODEL_LABELS = ("modelName", "model_name")
 DRIVER_LABELS = ("DCGM_FI_DRIVER_VERSION", "driver_version")
 UUID_LABELS = ("UUID", "uuid", "gpu_uuid")
 NODE_LABELS = ("node", "Hostname", "host_name")
-STATUS_UUID = re.compile(r"UUID:(GPU-[0-9a-f-]{36})", re.I)
 FAMILY = re.compile(r"\b(GB\d{3}|[ABHLV]\d{2,3})\b")
 APPLIES = re.compile(r"^NVIDIA 적용: (.+?)(?:; 제외: (.+?))?\.$")
 ACTIONS = re.compile(

@@ -55,6 +55,7 @@ export const evaluationLabels: Record<string, string> = {
   invalid_stage_output: '단계 출력 검증 실패',
   llm_no_response: '유효한 모델 응답 없음',
   fast_path: '기존 규칙 경로',
+  alert_match: '알람·D09 일치로 분석·검토 생략',
   draft_changed_after_review: '검토 후 변경된 최종 초안은 미검토',
 };
 
