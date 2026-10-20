@@ -3031,8 +3031,18 @@ def test_aggregate_report_transition_verification_is_published(
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("failure", ["json", "mixed_topics"])
-def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, failure):
+@pytest.mark.parametrize(
+    "failure,pattern",
+    [
+        ("json", None),
+        ("mixed_topics", None),
+        ("json", "repeated_activity"),
+        ("json", "relative_activity"),
+    ],
+)
+def test_scheduled_and_manual_reports_repair_same_data(
+    stack, monkeypatch, failure, pattern
+):
     from agent_common.artifacts import render
     from test_aggregate_report import DATA
 
@@ -3057,6 +3067,33 @@ def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, failu
     corrupted = []
 
     def send_with_one_malformed_reply(self, body, status=200):
+        if pattern and urlparse(self.path).path.endswith("/api/v1/query_range"):
+            query = parse_qs(urlparse(self.path).query)
+            start, end = float(query["start"][0]), float(query["end"][0])
+            if '"created_min"' in query["query"][0]:
+                body["data"]["result"] = []
+            for row in body.get("data", {}).get("result", []):
+                measure = row["metric"].get("measure", "")
+                if measure in ("activity_sum", "minimum", "maximum"):
+                    for point in row["values"]:
+                        hour = int((point[0] - start) / 3600)
+                        activity = (
+                            (85 if hour in (1, 3) else 20)
+                            if pattern == "repeated_activity"
+                            else (80 if hour < 2 else 20)
+                        )
+                        point[1] = str(
+                            activity * (240 if measure == "activity_sum" else 1)
+                        )
+                elif measure.startswith(("pending_", "unscheduled_", "running_")):
+                    value = (
+                        240
+                        if measure.endswith("samples")
+                        else (2 if pattern == "repeated_activity" else 0)
+                    )
+                    row["values"] = [
+                        [at, str(value)] for at in range(int(start), int(end) + 1, 3600)
+                    ]
         if (
             self.path == "/v1/chat/completions"
             and body.get("choices")
@@ -3135,6 +3172,14 @@ def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, failu
         manual, _ = worker_result(
             stack, "report", response.json()["job_id"], "-manual-json-repair"
         )
+        for result in (scheduled, manual):
+            fetched = client.get(f"/reports/{result['job_id']}")
+            assert fetched.status_code == 200, fetched.text
+            if pattern:
+                assert pattern in fetched.text, (
+                    result["quality"]["report"],
+                    [n.get("selection") for n in result["narrative"]],
+                )
     for result in (scheduled, manual):
         assert result["narrative_status"] == "complete"
         assert result["quality"]["report"]["reason"] == "repaired"
@@ -3149,6 +3194,26 @@ def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, failu
             "namespace_usage",
             "incident_summary",
         }
+        namespace = next(
+            n for n in result["narrative"] if n["topic_id"] == "namespace_usage"
+        )
+        assert namespace["advice"]
+        if pattern:
+            item = next(a for a in namespace["advice"] if a["kind"] == pattern)
+            assert item["source_hours"] and item["evidence_refs"]
+            assert item["observed_periods"]
+            if pattern == "relative_activity":
+                assert item["reference_period"] != item["period"]
+                assert item["reference_hours"]
+            html = render(result)["html"].decode()
+            assert item["summary_parts"]["evidence"] in html
+        assert all(
+            a["decision"]["option"] and a["decision"]["needed"]
+            for a in namespace["advice"]
+        )
+        assert {d["fact_id"] for d in namespace["selection"]["decisions"]} == set(
+            namespace["source_fact_ids"]
+        )
     assert scheduled["time_range"] == manual["time_range"]
     assert render(scheduled)["csv"] == render(manual)["csv"]
 

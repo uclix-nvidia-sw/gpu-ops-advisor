@@ -137,6 +137,74 @@ function InterpretationText({ text }: { text: string }) {
   );
 }
 
+function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: string) => void }) {
+  const parts = obj(item.summary_parts);
+  const decision = str(parts.decision);
+  const evidence = str(parts.evidence);
+  // Only display exact stored slices; old or inconsistent records keep their full prose.
+  const separated =
+    !!decision &&
+    !!evidence &&
+    (`${decision} ${evidence}` === str(item.summary) ||
+      `${decision}${evidence}` === str(item.summary));
+  const target = obj(item.target);
+  return (
+    <li>
+      {str(target.cluster_id) && str(target.namespace) ? (
+        <dl className="aggregate-advice-target">
+          <div>
+            <dt>클러스터</dt>
+            <dd>
+              <code>{str(target.cluster_id)}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>네임스페이스</dt>
+            <dd>
+              <code>{str(target.namespace)}</code>
+            </dd>
+          </div>
+        </dl>
+      ) : null}
+      <p className="aggregate-advice-decision">
+        <InterpretationText text={separated ? decision : str(item.summary)} />
+      </p>
+      {['relative_activity', 'schedule_candidate'].includes(str(item.kind)) ? (
+        <p className="aggregate-advice-scope">
+          네임스페이스를 유지하고 작업 시작 시간대만 조정하는 제안입니다.
+        </p>
+      ) : null}
+      <details className="aggregate-advice-evidence">
+        <summary>
+          판단 근거와 적용 조건
+          <span className="sr-only">
+            {' '}
+            · {str(target.cluster_id)} / {str(target.namespace)}
+          </span>
+        </summary>
+        <p>
+          <InterpretationText text={separated ? evidence : str(item.observation)} />
+        </p>
+        <p className="aggregate-static-note">{str(item.conditions)}</p>
+        {onEvidence ? (
+          <div className="aggregate-evidence-links">
+            {strings(item.evidence_refs).map((id, i) => (
+              <button
+                type="button"
+                className="button secondary"
+                key={id}
+                onClick={() => onEvidence(id)}
+              >
+                원본 근거 {i + 1}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </details>
+    </li>
+  );
+}
+
 function TopicInterpretation({
   topic,
   narrative,
@@ -165,20 +233,18 @@ function TopicInterpretation({
       {hasSummary ? (
         <ul className="aggregate-namespace-summary">
           {advice.map((item) => (
-            <li key={str(item.fact_id)}>
-              <InterpretationText text={str(item.summary)} />
-            </li>
+            <AdviceSummary key={str(item.fact_id)} item={item} onEvidence={onEvidence} />
           ))}
         </ul>
       ) : null}
       <p className="aggregate-summary-source aggregate-static-note">
         <strong>작성 방식</strong>
         {hasSummary
-          ? 'AI가 작성한 요약이며, 대상·시간·수치는 저장된 근거로 검증했습니다. 작업 시간대 제안은 예약·대기와 사용 가능한 GPU를 확인한 뒤 검토하세요.'
+          ? 'AI가 작성한 요약입니다. 관측한 구간의 조건부 제안이며 실제 할당·대기 원인은 별도 확인이 필요합니다.'
           : section.observation_source === 'calculated'
             ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
             : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
-        확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.
+        {hasSummary ? null : '확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.'}
       </p>
       {hasSummary ? null : advice.length > 0 ? (
         <ol className="aggregate-namespace-advice">
@@ -221,9 +287,17 @@ function TopicInterpretation({
           ))}
         </dl>
       )}
-      <p className="aggregate-interpretation-limit">{str(section.interpretation_limit)}</p>
+      {hasSummary ? null : (
+        <p className="aggregate-interpretation-limit">{str(section.interpretation_limit)}</p>
+      )}
       <details>
         <summary>해석 근거와 계산 결과</summary>
+        {hasSummary ? (
+          <p className="aggregate-static-note">
+            {str(section.interpretation_limit)} 작업 시간대 제안은 예약·대기와 사용 가능한 GPU를
+            확인한 뒤 검토하세요. 실제 조치나 장애 원인 판정이 아닙니다.
+          </p>
+        ) : null}
         {hasSummary && criteria.version ? (
           <p className="aggregate-static-note">
             선별 기준: 활동률 {String(criteria.high_activity_percent)}% 이상과 대기가 함께 관측된
@@ -235,20 +309,6 @@ function TopicInterpretation({
             충족 여부와 관측 규모로 선별합니다.
           </p>
         ) : null}
-        {hasSummary
-          ? advice.map((item) => (
-              <div key={str(item.fact_id)}>
-                <h4>
-                  {str(obj(item.target).cluster_id)} / {str(obj(item.target).namespace)} ·{' '}
-                  {str(item.recommendation)}
-                </h4>
-                <p>
-                  <InterpretationText text={str(item.observation)} />
-                </p>
-                <p className="aggregate-static-note">{str(item.conditions)}</p>
-              </div>
-            ))
-          : null}
         {facts.map((fact) => (
           <p key={str(fact.id)}>{str(fact.text)}</p>
         ))}

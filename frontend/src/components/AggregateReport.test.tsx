@@ -636,3 +636,112 @@ it('shows stored selection criteria inside evidence details without changing the
   expect(html.indexOf(summary)).toBeLessThan(html.indexOf('해석 근거와 계산 결과'));
   expect(html.indexOf('선별 기준')).toBeGreaterThan(html.indexOf('해석 근거와 계산 결과'));
 });
+
+it.each([
+  ['spaced', true],
+  ['unspaced', true],
+  ['invalid', false],
+] as const)('uses only exact stored summary slices (%s)', (variant, matching) => {
+  const decision = '다른 작업을 넣기 전에 상주 메모리 유지 필요성을 확인하세요.';
+  const evidence = 'cpc-1 / serving · 10/19 02:00~10/19 05:00 KST: 활동률 0.36%, 메모리 98%입니다.';
+  const summary = variant === 'unspaced' ? `${decision}${evidence}` : `${decision} ${evidence}`;
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          quality: { report: { method: 'llm_interpreted' } },
+          narrative_status: 'complete',
+          topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: '관측',
+              meaning: '의미',
+              next_check: '점검',
+              advice: [
+                {
+                  fact_id: 'memory',
+                  target: { cluster_id: 'cpc-1', namespace: 'serving' },
+                  summary,
+                  summary_parts: { decision: matching ? decision : 'changed', evidence },
+                  observation: '계산한 장치 관측',
+                  conditions: 'Namespace 전용 사용량이 아닙니다.',
+                  evidence_refs: ['source-a'],
+                },
+              ],
+            },
+          ],
+        }}
+        onEvidence={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('판단 근거와 적용 조건');
+  expect(html).toContain('원본 근거 1');
+  expect(html).toContain('Namespace 전용 사용량이 아닙니다.');
+  expect(html).not.toContain('changed');
+  expect(html).toContain('<dt>클러스터</dt>');
+  expect(html).toContain('<dt>네임스페이스</dt>');
+  expect(html).toContain('<code>cpc-1</code>');
+  expect(html).toContain('<code>serving</code>');
+  expect(html.indexOf('aggregate-advice-target')).toBeLessThan(html.indexOf(decision));
+  if (matching) {
+    expect(html.indexOf(decision)).toBeLessThan(html.indexOf('<details'));
+    expect(html.indexOf('활동률 0.36%')).toBeGreaterThan(html.indexOf('<details'));
+    expect(html).toContain('aggregate-advice-target');
+  } else {
+    expect(html.indexOf('활동률 0.36%')).toBeLessThan(html.indexOf('<details'));
+    expect(html).toContain('aggregate-advice-target');
+  }
+});
+
+it.each([
+  ['repeated_activity', '10/19 18:00~10/19 19:00 KST / 10/19 21:00~10/19 22:00 KST'],
+  ['relative_activity', '후보 10/19 21:00~10/19 23:00 KST, 비교 10/19 19:00~10/19 21:00 KST'],
+])('preserves separate observation and comparison periods (%s)', (kind, periods) => {
+  const decision = '대상과 실행 조건을 대조하세요.';
+  const evidence = `cpc-1 / example · ${periods}: 관측 근거입니다.`;
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          quality: { report: { method: 'llm_interpreted' } },
+          narrative_status: 'complete',
+          topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: '관측',
+              meaning: '의미',
+              next_check: '점검',
+              advice: [
+                {
+                  fact_id: kind,
+                  kind,
+                  target: { cluster_id: 'cpc-1', namespace: 'example' },
+                  summary: `${decision} ${evidence}`,
+                  summary_parts: { decision, evidence },
+                  observation: evidence,
+                  conditions: '구간 사이의 관측을 추정하지 않습니다.',
+                  evidence_refs: ['source'],
+                },
+              ],
+            },
+          ],
+        }}
+        onEvidence={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  const visible = html.replace(/<\/?span[^>]*>/g, '');
+  expect(visible).toContain(periods);
+  expect(visible.indexOf(decision)).toBeLessThan(visible.indexOf('<details'));
+  expect(visible.indexOf(periods)).toBeGreaterThan(visible.indexOf('<details'));
+  expect(html).toContain('구간 사이의 관측을 추정하지 않습니다.');
+  expect(html.includes('네임스페이스를 유지하고')).toBe(kind === 'relative_activity');
+  if (kind === 'relative_activity') {
+    expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-scope'));
+    expect(html.indexOf('aggregate-advice-scope')).toBeLessThan(html.indexOf('<details'));
+  }
+  expect(html.indexOf('<code>example</code>')).toBeLessThan(html.indexOf(decision));
+});

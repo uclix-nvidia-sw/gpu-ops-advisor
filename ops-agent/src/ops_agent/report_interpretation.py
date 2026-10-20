@@ -8,6 +8,8 @@ from datetime import datetime, timedelta, timezone
 
 from .namespace_advice import (
     candidates,
+    present_advice,
+    decision_context,
     MAX_ADVICE,
     writing_candidates,
     validate_advice,
@@ -270,7 +272,10 @@ def payload_for(result):
             if t["topic_id"] == "namespace_usage":
                 selected, selection = writing_candidates(patterns)
                 if selected:
-                    t["findings"], t["selection"] = selected, selection
+                    t["findings"] = [
+                        {**f, "decision": decision_context(f)} for f in selected
+                    ]
+                    t["selection"] = selection
                     t["omitted_findings"] = selection["omitted_count"]
                     t["advice_mode"] = ADVICE_VERSION
             else:
@@ -771,7 +776,11 @@ async def interpret_report(result, llm):
                         "advice": [
                             {
                                 "fact_id": fact["fact_id"],
-                                "summary": "짧은 운영 선택과 이유. 대상·기간·필수 관측 토큰.",
+                                "summary": (
+                                    summary_context(fact)["decision"]["option"]
+                                    + " "
+                                    + summary_context(fact)["summary_start"]
+                                ),
                             }
                             for fact in t["findings"]
                         ]
@@ -962,6 +971,8 @@ async def interpret_report(result, llm):
                     diagnostic["reason"] = "interpretation_input_limit"
                     break
             continue
+        if advice_mode:
+            present_advice(narrative)
         result["narrative"] = narrative
         if advice_mode:
             diagnostic["namespace_advice_version"] = ADVICE_VERSION
