@@ -11,6 +11,7 @@ from agent_common.observation import series, usable_observation
 
 from .prompts import SYNTHESIS
 from .synthesis_context import bounded_context, encoded_size
+from .investigation_summary import investigation_summary
 
 
 def synthesis_input(
@@ -49,8 +50,14 @@ def synthesis_input(
             for r in h["evidence_refs"]
         }
     )
+    comparisons = [
+        row
+        for row in investigation_summary(data, evidence, health, events)
+        if row["section"] != "investigation"
+    ]
     return {
         "incident_time": data["incident_time"],
+        **({"investigation_summary": comparisons} if comparisons else {}),
         "scope": data["scope"],
         "target": data.get("target", {}),
         "device_observations": observations,
@@ -478,7 +485,7 @@ def synthesis_view(payload, remaining, reserved, prompt=SYNTHESIS):
         else 8192
     )
     max_bytes = min(
-        16000, max(0, remaining - len(prompt.encode()) - 256 - 2 - output_room)
+        64000, max(0, remaining - len(prompt.encode()) - 256 - 2 - output_room)
     )
     view = bounded_context(payload, max_bytes)
     return view, max_bytes

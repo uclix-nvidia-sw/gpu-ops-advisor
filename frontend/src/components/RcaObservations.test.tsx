@@ -27,14 +27,14 @@ it('renders event-only evidence and a reported inventory match without upgrading
     '생산자 이벤트 시각',
     event.event_time,
     event.loki_timestamp_ns,
-    '보고된 재고와 연결 일치',
+    '수집된 GPU 목록과 주소 일치',
     'GPU-fixture',
-    '장치 신원 독립 검증 없음',
     'event-evidence',
   ])
     expect(html).toContain(text);
   expect(html).toContain('<button');
   expect(html).not.toContain('생산자 시각 없음');
+  expect(html).not.toContain('장치 신원 독립 검증 없음');
   expect(JSON.stringify(result)).toBe(before);
 });
 
@@ -62,8 +62,8 @@ it('separates missing report time from event time and does not choose a GPU from
     '생산자 시각 누락·초기값 1건',
     '생산자 이벤트 시각',
     'Loki 기록 시각',
-    '오류 PCI 주소가 수집 GPU 인벤토리와 일치',
-    '보고된 GPU 재고 · 오류 장치 확정 아님',
+    '오류에 적힌 주소가 수집된 GPU 목록과 일치',
+    '수집된 GPU 목록 · 각 GPU의 장애 여부와 구분',
     'GPU-other',
     'status-evidence',
   ])

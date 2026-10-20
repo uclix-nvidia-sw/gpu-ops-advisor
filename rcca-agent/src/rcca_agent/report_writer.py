@@ -36,8 +36,10 @@ def label(code):
 
 TITLES = {
     "problem": "발생 내용",
+    "investigation": "무엇을 조사했나요?",
+    "comparison": "자료를 비교한 결과",
     "cause": "분석 결과",
-    "action": "권고 대응과 적용 조건",
+    "action": "다음에 할 일",
     "next": "조치 후 확인",
     "limits": "수집·분석 한계와 종료 이유",
 }
@@ -54,6 +56,11 @@ is not accepted analysis. Source order is not chronology. Do not infer a transit
 explicitly supplied. Do not restate fixed limitations; they are displayed verbatim separately.
 Do not add generic uncertainty sentences when a source supplies only an error definition.
 Compose readable complete prose, not an ID ordering response. No Markdown headings or HTML.
+Assume the reader does not know which queries ran. Explain the question checked,
+the records compared, what they showed, and why that matters, in that order.
+Use everyday Korean: GPU 목록 rather than 재고, 오류·상태 로그 rather than D09.
+Do not describe samples as 표본 when 측정 기록 conveys the meaning. A limit needs a
+concrete explanation (another GPU's measurement, an earlier report), not a bare disclaimer.
 Lead with observed location, error and evidence meaning. State a material restriction once,
 beside the claim it limits; avoid repetitive '모른다', '미확정', '확인할 수 없다' framing.
 Published Runbook guidance describes conditional procedures, not actions already performed
@@ -71,18 +78,32 @@ MATCH_DETAIL = {
     "other_codes": "D09의 다른 오류 코드",
     "event_devices": "D09 이벤트 장치",
     "event_device": "D09 이벤트 장치",
-    "inventory_gpu_candidates": "D09 재고 대응 GPU",
+    "inventory_gpu_candidates": "로그의 GPU 목록에서 대응된 GPU",
 }
 NUMBERS = re.compile(r"\d+(?:[.:/-]\d+)*")
 
 
 def reader_text(text):
     """Translate known diagnostic vocabulary; preserve arbitrary source prose."""
-    return re.sub(
+    text = re.sub(
         r"(?<!\w)[`'\"]?producer_time_status[`'\"]?\s*(?:[=:]\s*)?[`'\"]?missing_or_zero\b[`'\"]?",
         "상태 보고의 발생 시각이 비어 있거나 초기값입니다",
         text,
     )
+    for old, new in {
+        "D09": "오류·상태 로그",
+        "D02": "GPU 사용률",
+        "D11": "GPU 전력",
+        "D44": "PCIe 재전송 횟수",
+        "D13": "장치 연결 정보",
+        "GPU 재고": "수집된 GPU 목록",
+        "GPU 인벤토리": "수집된 GPU 목록",
+        "표본": "측정 기록",
+    }.items():
+        text = re.sub(
+            r"(?<![A-Za-z0-9])" + re.escape(old) + r"(?![A-Za-z0-9])", new, text
+        )
+    return text
 
 
 def report_sources(material):
@@ -121,6 +142,8 @@ def report_sources(material):
     alert_match = material.get("analysis", {}).get("alert_match") or {}
     known = {key for group in LABELS.values() for key in group}
     observations = material.get("reported_observations", [])
+    for row in material.get("investigation_summary", []):
+        add(row["section"], row["text"], row["evidence_refs"], fixed=True)
     if observations:
         for row in observations:
             add(
@@ -131,7 +154,7 @@ def report_sources(material):
             )
         for row in interpretation.get("findings", []):
             add(
-                "cause" if row["kind"] == "inferred" else "limits",
+                "cause" if row["kind"] == "inferred" else "comparison",
                 "채택된 해석: " + row["statement"],
                 row["evidence_refs"],
             )
@@ -143,8 +166,8 @@ def report_sources(material):
     review = evaluation.get("review", {})
     if alert_match.get("status"):
         add(
-            "limits" if alert_match["status"] != "match" else "problem",
-            "알람·D09 대조: "
+            "comparison",
+            "알림과 오류·상태 로그를 비교한 결과: "
             + label(alert_match["status"])
             + "".join(
                 f" / {name}: {', '.join(value) if isinstance(value, list) else value}"
@@ -161,6 +184,25 @@ def report_sources(material):
             alert_match.get("evidence_refs", []),
             fixed=True,
         )
+        if evidence.get("reason") == "alert_match":
+            add(
+                "investigation",
+                "알림에 적힌 오류 코드와 장치 주소를 상태 보고·오류 이벤트와 대조해 "
+                "같은 오류 보고임을 확인했습니다. 이 조사에 필요한 확인을 마쳤으므로 "
+                "더 이상의 보완 조회 없이, 해당 오류의 대응 지침을 정리했습니다. "
+                "장비를 직접 점검하거나 복구 작업을 수행한 것은 아닙니다.",
+                alert_match.get("evidence_refs", []),
+                fixed=True,
+            )
+        elif alert_match["status"] != "match":
+            add(
+                "investigation",
+                "알림과 로그만으로 대상 장치나 오류 보고를 연결하지 못한 항목이 있어 "
+                "추가 조사가 필요했습니다. 실제 확보한 자료와 대조 결과를 아래에 설명합니다. "
+                "조회하지 못한 자료는 수집·분석 한계에 따로 표시합니다.",
+                alert_match.get("evidence_refs", []),
+                fixed=True,
+            )
     if out_of_scope:
         add(
             "limits",
@@ -252,10 +294,38 @@ def report_sources(material):
             refs,
             fixed=True,
         )
-        for check in guidance["next_checks"]:
+        if alert_match.get("status") in {
+            "uuid_unresolved",
+            "uuid_mismatch",
+            "pci_mismatch",
+            "multiple_devices",
+        }:
             add(
                 "action",
-                check["title"] + " " + check["text"],
+                "먼저 알림에 적힌 장치 주소와 서버의 장치 목록을 확인하세요. "
+                "대상을 연결하기 전에는 아래 일반 오류 대응 안내를 특정 장치의 "
+                "재시작·교체 지시로 적용하지 마세요.",
+                alert_match.get("evidence_refs", []),
+                fixed=True,
+            )
+        for check in guidance["next_checks"]:
+            # Device identification belongs to this investigation's comparisons,
+            # not unconditional legacy operator prose. Preserve that guidance in
+            # the expandable source section and never imply an unresolved mapping.
+            identity_instruction = any(
+                word in check["text"]
+                for word in ("독립적인 신원", "하나로 대응된 GPU UUID")
+            )
+            add(
+                "next" if identity_instruction else "action",
+                (
+                    "별도의 현장 점검이 필요할 때 참고할 지침(이번 자동 분석의 완료 조건은 아님): "
+                    if identity_instruction
+                    else ""
+                )
+                + check["title"]
+                + " "
+                + check["text"],
                 refs,
                 fixed=True,
             )
@@ -366,9 +436,6 @@ async def write_material_report(result, material, llm):
         "source_items": [
             row for row in sources if row["section"] != "limits" and not row["fixed"]
         ],
-        "fixed_limitations": [
-            row["text"] for row in sources if row["section"] == "limits"
-        ],
         "review": {
             k: material["evaluation"].get("review", {}).get(k)
             for k in ("execution_status", "verdict", "reason")
@@ -377,8 +444,8 @@ async def write_material_report(result, material, llm):
             {ref for row in sources for ref in row["evidence_refs"]}
         ),
     }
-    # Keep the existing report transport stage, model and output cap. No new budget
-    # calculation, truncation, repair or ordering request is introduced.
+    # Fixed sources are rendered verbatim below, so do not spend model input on
+    # them again. Retain every source the model actually rewrites.
     previous = getattr(llm, "request_attempt_limit", 3)
     llm.request_attempt_limit = 1
     try:
@@ -388,6 +455,7 @@ async def write_material_report(result, material, llm):
             PROMPT,
             payload,
             lambda response: validate_report(response, payload),
+            max_bytes=None,
             max_attempts=1,
         )
     finally:

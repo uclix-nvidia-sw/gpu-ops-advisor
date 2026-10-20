@@ -46,7 +46,13 @@ def bounded_context(payload, max_bytes):
     }
     view.update({k: [] for k in SECTIONS})
     view["observation_refs"] = []
-    view["input_evidence_refs"] = []
+    view["input_evidence_refs"] = sorted(
+        {
+            ref
+            for row in payload.get("investigation_summary", [])
+            for ref in row.get("evidence_refs", [])
+        }
+    )
     coverage = {
         "method": "bounded_original_observations",
         "complete": False,

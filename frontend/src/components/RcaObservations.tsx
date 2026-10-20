@@ -93,7 +93,7 @@ export function RcaObservations({
                     </td>
                     <td>
                       {event.device_mapping === 'inventory_match'
-                        ? '보고된 재고와 연결 일치'
+                        ? '수집된 GPU 목록과 주소 일치'
                         : event.device_mapping === 'conflicting'
                           ? '보고된 장치 식별자 상충'
                           : event.device_mapping === 'unresolved'
@@ -105,22 +105,22 @@ export function RcaObservations({
                         </p>
                       )}
                       <p>
-                        재고 연결은 독립적인 장치 신원·물리 원인 확정이 아닙니다. 현재 접근 상태와
-                        업무 영향은 별도 관측이 필요합니다.
+                        로그가 어느 장치를 가리키는지 대조한 결과입니다. 장비를 직접 점검하거나 복구
+                        작업을 수행한 결과는 아닙니다.
                       </p>
-                      {strings(event.limitations).map((limit) => (
-                        <p key={limit}>
-                          {(
-                            {
-                              current_health_unverified: '현재 상태 미검증',
-                              physical_or_synthetic_origin_unverified:
-                                '실제 장애·시험 주입 여부 미검증',
-                              device_identity_not_independently_verified:
-                                '장치 신원 독립 검증 없음',
-                            } as Record<string, string>
-                          )[limit] || limit}
-                        </p>
-                      ))}
+                      {strings(event.limitations)
+                        .filter((limit) => limit !== 'device_identity_not_independently_verified')
+                        .map((limit) => (
+                          <p key={limit}>
+                            {(
+                              {
+                                current_health_unverified: '현재 상태 미검증',
+                                physical_or_synthetic_origin_unverified:
+                                  '실제 장애·시험 주입 여부 미검증',
+                              } as Record<string, string>
+                            )[limit] || limit}
+                          </p>
+                        ))}
                     </td>
                     <td>
                       {evidence(event.evidence_refs)}
@@ -184,14 +184,14 @@ export function RcaObservations({
                           : o.pci_inventory_relation === 'not_in_reported_inventory'
                             ? '오류 PCI와 GPU 목록 불일치'
                             : o.pci_inventory_relation === 'inventory_candidate_only'
-                              ? '오류 PCI 주소가 수집 GPU 인벤토리와 일치 · 장치 신원 독립 검증 없음'
+                              ? '오류에 적힌 주소가 수집된 GPU 목록과 일치'
                               : `현재 정보만으로 오류 장치 확정 불가 · ${str(o.pci_inventory_relation, '연결 상태 미기록')}`}
                         {strings(o.reported_pci_addresses).length > 0 && (
                           <p>보고된 PCI: {strings(o.reported_pci_addresses).join(', ')}</p>
                         )}
                         {rows(o.gpu_candidates).length > 0 && (
                           <details>
-                            <summary>보고된 GPU 재고 · 오류 장치 확정 아님</summary>
+                            <summary>수집된 GPU 목록 · 각 GPU의 장애 여부와 구분</summary>
                             {rows(o.gpu_candidates).map((gpu, j) => (
                               <p key={j}>
                                 <code>{str(gpu.gpu_uuid, 'UUID 미기록')}</code> ·{' '}

@@ -341,7 +341,7 @@ async def test_round_reviews_once_and_withholds_rejected_claims(mode):
         return candidates, [
             {
                 "text": "조건 확인 후 담당자가 검토하세요."
-                * (1000 if mode == "oversized_review" else 1),
+                * (3000 if mode == "oversized_review" else 1),
                 "eligibility": "eligible",
                 "execution": "not_performed",
                 "evidence_refs": ["log"],
@@ -394,8 +394,8 @@ async def test_round_reviews_once_and_withholds_rejected_claims(mode):
         assert reviews[-1]["quality"]["reason"] == "draft_changed_after_review"
     elif mode == "oversized_review":
         assert output["review"]["verdict"] is None
-        assert output["review"]["reason"] == "llm_input_size_exceeded"
-        assert output["stop_reason"] == "analysis_unresolved"
+        assert output["review"]["reason"] == "llm_token_budget_exhausted"
+        assert output["stop_reason"] == "llm_budget_exhausted"
         record = next(e for e in obs.evidence if e["query_id"] == "analysis_review")
         assert (
             record["quality"]["request_checks"] == record["snapshot"]["request_checks"]

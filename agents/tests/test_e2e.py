@@ -2605,7 +2605,7 @@ def test_rca_numeric_rejection_does_not_rewrite_same_evidence_before_publication
 
 
 @pytest.mark.e2e
-def test_rca_review_input_limit_survives_publication_without_followup(
+def test_rca_review_above_legacy_input_limit_is_reviewed_before_publication(
     stack, monkeypatch
 ):
     original_reply, original_worker = analysis_reply, worker_result
@@ -2630,31 +2630,21 @@ def test_rca_review_input_limit_survives_publication_without_followup(
         stack, monkeypatch, False
     )
     evaluation = captured["result"]["quality"]["rca_evaluation"]
-    assert evaluation["review"]["verdict"] is None
-    assert evaluation["review"]["reason"] == "llm_input_size_exceeded"
-    assert evaluation["investigation"]["stop_reason"] == "analysis_unresolved"
+    assert evaluation["review"]["execution_status"] == "complete"
+    assert evaluation["review"]["verdict"] == "undetermined"
     with psycopg.connect(stack["url"]) as conn:
         records = conn.execute(
             "SELECT snapshot,quality FROM evidence WHERE job_id=%s AND query_id='analysis_review'",
             (captured["job_id"],),
         ).fetchall()
-        decisions = conn.execute(
-            "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='investigation_decision' ORDER BY created_at",
-            (captured["job_id"],),
-        ).fetchall()
-    blocked = [r for r in records if r[1].get("reason") == "llm_input_size_exceeded"]
-    assert len(blocked) == 1
-    snapshot, quality = blocked[0]
-    # Collection before the first usable draft is allowed; this failure must end its round.
-    assert captured["result"]["quality"]["analysis"]["followups"] == snapshot["round"]
-    assert decisions[-1][0]["round"] == snapshot["round"]
-    assert decisions[-1][0]["action"] == "finish"
-    assert decisions[-1][0]["reason"] == "analysis_unresolved"
-    assert snapshot["review"] is None and quality["attempts"] == 0
-    assert quality["request_checks"] == snapshot["request_checks"]
-    check = quality["request_checks"][0]
-    assert check["input_size_exceeded"] and not check["token_budget_exhausted"]
-    assert check["input_bytes"] > check["max_input_bytes"] == 24000
+    large = [r for r in records if r[0].get("input_bytes", 0) > 24000]
+    assert large
+    for snapshot, quality in large:
+        assert quality["request_checks"] == snapshot["request_checks"]
+        check = quality["request_checks"][0]
+        assert check["model_called"]
+        assert not check["input_size_exceeded"] and not check["token_budget_exhausted"]
+        assert check["input_bytes"] <= check["max_input_bytes"]
 
 
 @pytest.mark.e2e
@@ -3187,7 +3177,7 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("invalid_interpretation", [False, True, "http"])
+@pytest.mark.parametrize("invalid_interpretation", [False, True, "http", "revision"])
 @pytest.mark.parametrize("component", ["sxid", "disk"])
 def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
     stack, monkeypatch, invalid_interpretation, component
@@ -3195,14 +3185,30 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     from copy import deepcopy
 
     monkeypatch.setattr(Upstream, "fleet_reports", True)
-    monkeypatch.setattr(
-        sys.modules[__name__],
-        "review_reply",
-        lambda data: __import__("evaluation_fixtures").review_reply(data, "acceptable"),
-    )
+    review_calls = []
+
+    def critic(data):
+        review_calls.append(data["draft"]["analysis_id"])
+        revise = invalid_interpretation == "revision" and len(review_calls) == 1
+        return __import__("evaluation_fixtures").review_reply(
+            data,
+            "revision_required" if revise else "acceptable",
+            [
+                {
+                    "claim_id": data["draft"]["claims"][0]["id"],
+                    "reason": "보고된 사실로 결론을 한정하세요.",
+                    "evidence_refs": data["input_evidence_refs"][:1],
+                    "suggested_resolution": "현재 상태 단정을 피하세요.",
+                }
+            ]
+            if revise
+            else None,
+        )
+
+    monkeypatch.setattr(sys.modules[__name__], "review_reply", critic)
     if invalid_interpretation == "http":
         monkeypatch.setattr(Upstream, "author_http_fail", True)
-    elif invalid_interpretation:
+    elif invalid_interpretation is True:
         original_reply = combined_reply
 
         def malformed_reply(data):
@@ -3284,7 +3290,7 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     assert evaluation["schema_version"] == "2"
     assert evaluation["generation_mode"] == "combined"
     assert evaluation["investigation"]["stop_reason"] == (
-        "goal_not_met" if invalid_interpretation else "goal_achieved"
+        "goal_not_met" if invalid_interpretation in (True, "http") else "goal_achieved"
     )
     assert evaluation["review"]["rubric_version"] == "2"
     assert result["quality"]["report"]["status"] == "complete"
@@ -3327,7 +3333,7 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         assert "로그 기록 시각" in problem["text"]
         assert problem["evidence_refs"]
         assert stored["rca_result_frozen"]["material"]["reported_observations"]
-    elif invalid_interpretation:
+    elif invalid_interpretation is True:
         # The malformed caveat is dropped and the rest adopted, but semantic criteria
         # are withheld so the objective above stays unmet.
         assert diagnostics["adoption"] == "validated_response"
@@ -3349,3 +3355,9 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     else:
         assert diagnostics["adoption"] == "validated_response"
         assert diagnostics["validation_failures"] == []
+
+    if invalid_interpretation == "revision":
+        assert len(review_calls) == 2
+        assert review_calls[0] != review_calls[1]
+        assert evaluation["analysis_id"] == review_calls[-1]
+        assert sum(q == "rca_synthesis" for q, _ in evidence) == 2

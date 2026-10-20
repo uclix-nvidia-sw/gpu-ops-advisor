@@ -329,15 +329,23 @@ async def call_stage(
             remaining = getattr(llm, "remaining", 32768)
             reserved = getattr(llm, "reserved_tokens", 0)
             input_bytes = encoded_size(request)
+            # Dynamic callers retain the full supplied material; the conservative
+            # byte/token bound and transport budget still prohibit oversized calls.
+            input_limit = (
+                max_bytes
+                if max_bytes is not None
+                else max(0, remaining - reserved - len(prompt.encode()) - 512)
+            )
             required = input_bytes + len(prompt.encode()) + 512
             check = {
                 "input_bytes": input_bytes,
-                "max_input_bytes": max_bytes,
+                "max_input_bytes": input_limit,
                 "remaining_tokens": remaining,
                 "reserved_tokens": reserved,
                 "available_tokens": remaining - reserved,
                 "required_tokens": required,
-                "input_size_exceeded": input_bytes > max_bytes,
+                "input_size_exceeded": max_bytes is not None
+                and input_bytes > input_limit,
                 "token_budget_exhausted": remaining - reserved <= required,
                 "model_called": False,
             }

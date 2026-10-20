@@ -139,7 +139,7 @@ async def test_report_preflight_keeps_complete_sources_and_never_raises_budget(m
         model.remaining = 1
     finding = source["evaluation"]["evidence"]["interpretation"]["findings"][0]
     if mode == "input":
-        finding["statement"] = "관측" * 10000
+        finding["statement"] = "관측" * 20000
     remaining = model.remaining
     result = {"quality": {}}
     await write_material_report(result, source, model)
@@ -248,7 +248,7 @@ async def test_review_withholds_only_affected_interpretation_and_dependencies():
             "suggested_resolution": "다른 유효한 관측은 보존하세요.",
         }
     ]
-    case["responses"]["analysis_review"] = [reply(verdict)]
+    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
     result = await replay(case)
     assert not result["missing_inputs"]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]

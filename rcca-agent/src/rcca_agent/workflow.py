@@ -27,6 +27,7 @@ from .fleet_events import (
 )
 from .report import write_report
 from .report_observations import summarize_reports
+from .investigation_summary import investigation_summary
 from .operator_guidance import project_guidance
 from .collection_checks import collection_checks, reported_gpu_identity
 from .requirement_diagnostics import (
@@ -1121,6 +1122,26 @@ async def run(tools):
             else None
         )
         next_queries = []
+        if stop_reason in {"alert_match", "goal_achieved"}:
+            # Scope completion is independent of physical-cause confirmation.
+            # Keep the original routing outcome in alert_match and the trace.
+            non_blocking = (
+                set.intersection(
+                    *(set(p["non_blocking_unknowns"]) for p in objective["policies"])
+                )
+                if objective and objective["compatible"] and objective["policies"]
+                else set()
+            )
+            if stop_reason == "alert_match":
+                non_blocking.add("causal_confirmation_evidence")
+            else:
+                # A reviewed explanation of a mismatch completes the investigation;
+                # it does not turn the mismatched address into a verified device.
+                non_blocking.update(MISMATCH_CODES)
+            state["resolved_scope_gaps"] = sorted(set(gaps) & non_blocking)
+            gaps = [gap for gap in gaps if gap not in non_blocking]
+            if gate not in {"degraded", "conflicted"}:
+                gate = "sufficient" if not gaps else "insufficient_blocked"
         selection_diagnostics = {"status": "not_requested"}
         if not stop_reason:
             # An explicit rule cannot be bypassed by a broad unexpected-event policy.
@@ -1221,6 +1242,8 @@ async def run(tools):
             {"deterministic": True},
         )
         return dict(
+            gaps=gaps,
+            gate=gate,
             stop_reason=stop_reason,
             next_queries=next_queries,
             deferred_queries=deferred_queries,
@@ -1263,7 +1286,7 @@ async def run(tools):
         ):
             # Alert and D09 disagree: collect the Runbook's auxiliary queries once,
             # then analyze D09 and the added evidence together in the next round.
-            queries = state["remaining"][:3]
+            queries = list(state["remaining"])
             approved = state["approved"]
             obs._evidence(
                 "investigation_decision",
@@ -1340,12 +1363,6 @@ async def run(tools):
     analysis_missing = []
     if not fast_path and analysis_status not in {"complete", "skipped_alert_match"}:
         analysis_missing.append("synthesis_" + analysis_status)
-    if not any(
-        not b.get("general_investigation")
-        and not b["content"].get("investigation_only")
-        for b in applicable
-    ):
-        analysis_missing.append("causal_confirmation_evidence")
     if not selected:
         analysis_missing.append("approved_runbook")
     if gate in ("degraded", "conflicted"):
@@ -1441,6 +1458,7 @@ async def run(tools):
         ),
         "fast_path": fast_path,
         "alert_match": state["alert_match"],
+        "resolved_scope_gaps": state.get("resolved_scope_gaps", []),
         # Unknowns every selected Runbook declares outside its conclusion scope.
         "out_of_scope": sorted(
             set.intersection(
@@ -1594,6 +1612,9 @@ async def run(tools):
     material["analysis"] = result["quality"]["analysis"]
     material["runbook_guidance"] = result["quality"]["runbook_guidance"]
     material["reported_observations"] = summarize_reports(health, error_events, data)
+    material["investigation_summary"] = investigation_summary(
+        data, obs.evidence, health, error_events
+    )
     material_hash = content_hash(material)
     frozen_id = obs._evidence(
         "rca_result_frozen",
@@ -1619,6 +1640,9 @@ async def run(tools):
                 "analysis": result["quality"]["analysis"],
                 "runbook_guidance": result["quality"]["runbook_guidance"],
                 "reported_observations": summarize_reports(health, error_events, data),
+                "investigation_summary": investigation_summary(
+                    data, obs.evidence, health, error_events
+                ),
             }
         )
         != material_hash

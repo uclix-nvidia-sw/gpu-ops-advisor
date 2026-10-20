@@ -215,6 +215,7 @@ async def evaluate_analysis(
     stop_override = None
     feedback_review = None
     unattributed = False
+    revision = 0
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
         base_candidates, base_recommendations = assemble([])
@@ -352,11 +353,36 @@ async def evaluate_analysis(
                     else "llm_budget_exhausted"
                 )
             break
+        if combined and revision == 0 and status == "complete":
+            # One semantic revision on the same evidence, followed by a fresh
+            # independent review. The feedback is not additional evidence.
+            revision += 1
+            payload["review_feedback"] = {
+                "previous_analysis_id": draft["analysis_id"],
+                "previous_claims": deepcopy(draft["claims"]),
+                "issues": deepcopy(review["issues"]),
+                "criteria": deepcopy(review["criteria"]),
+                "instruction": "Revise only supported claims using the original evidence. "
+                "Do not treat review feedback as evidence or invent missing observations.",
+            }
+            record(
+                "investigation_decision",
+                {
+                    "action": "revise",
+                    "reason": "independent_review_feedback",
+                    "analysis_id": draft["analysis_id"],
+                    "revision": revision,
+                    "evidence_refs": [review_id],
+                },
+            )
+            continue
         record(
             "investigation_decision",
             {
                 "action": "withhold",
-                "reason": "same_evidence_rewrite_blocked",
+                "reason": "revision_limit_reached"
+                if revision
+                else "same_evidence_rewrite_blocked",
                 "analysis_id": draft["analysis_id"],
                 "evidence_refs": [review_id],
             },
