@@ -93,7 +93,13 @@ def bounded_context(payload, max_bytes):
         inventory_key = None
         if section == "device_observations" and row.get("gpu_candidates"):
             inventory = row.pop("gpu_candidates")
-            signature = json.dumps(inventory, sort_keys=True, ensure_ascii=False)
+            signature = json.dumps(
+                sorted(
+                    json.dumps(item, sort_keys=True, ensure_ascii=False)
+                    for item in inventory
+                ),
+                ensure_ascii=False,
+            )
             inventory_key = inventories.get(signature)
             if inventory_key is None:
                 inventory_key = f"inventory-{len(inventories) + 1}"
@@ -101,7 +107,7 @@ def bounded_context(payload, max_bytes):
             row["gpu_inventory_ref"] = inventory_key
             tables = view.setdefault("gpu_inventories", {})
             new_inventory = inventory_key not in tables
-            tables[inventory_key] = inventory
+            tables.setdefault(inventory_key, inventory)
         if section == "metric_observations":
             samples = original.get("samples", [])
             # Sparse original samples are not aggregates or proof of continuity.

@@ -28,9 +28,8 @@ def test_combined_prompt_has_one_unambiguous_complete_response_contract():
         "conflicts",
         "limitations",
     }
-    assert example["hypotheses"][0]["finding_refs"] == [
-        example["interpretation"]["findings"][0]["id"]
-    ]
+    assert example["hypotheses"] == []
+    assert "Hypothesis objects have claim, supporting_refs" in prompt
     _, candidates, _, errors = validate_author(
         example,
         {
@@ -43,7 +42,7 @@ def test_combined_prompt_has_one_unambiguous_complete_response_contract():
         None,
     )
     assert errors == []
-    assert len(candidates) == 1
+    assert candidates == []
 
 
 @pytest.mark.parametrize(

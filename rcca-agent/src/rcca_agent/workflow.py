@@ -671,9 +671,7 @@ async def run(tools):
     final_limits = [BASE_LIMIT]
     planned_queries = list(queries)
 
-    def assemble_rca_draft(
-        model_candidates, health, facts, verified, applicable, matched=False
-    ):
+    def assemble_rca_draft(model_candidates, health, facts, verified, applicable):
         candidates = list(model_candidates)
         recommendations = []
         applicable_ids = {book["id"] for book in applicable}
@@ -715,42 +713,6 @@ async def run(tools):
                         evidence_refs=[eid, bid],
                         value_refs=[],
                         execution="not_performed",
-                    )
-                )
-        if not candidates and health and not matched:
-            usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
-            candidate_health = [
-                h
-                for h in health
-                if h["check_status"] == "valid"
-                and set(h["evidence_refs"]) <= usable_ids
-            ]
-            supporting = list(
-                dict.fromkeys(
-                    r
-                    for h in candidate_health
-                    if h["normalized_health"] in ("degraded", "unhealthy")
-                    for r in h["evidence_refs"]
-                )
-            )
-            contradicting = list(
-                dict.fromkeys(
-                    r
-                    for h in candidate_health
-                    if h["normalized_health"] == "healthy"
-                    for r in h["evidence_refs"]
-                )
-            )
-            if supporting:
-                candidates.append(
-                    dict(
-                        id="observed_device_symptom",
-                        claim="수집 로그에 이상 상태가 보고됐으나 근본 원인과 현재 장비 상태는 추가 확인이 필요합니다.",
-                        causal_status="candidate",
-                        supporting_refs=supporting,
-                        contradicting_refs=contradicting,
-                        value_refs=[],
-                        missing_inputs=["causal_confirmation_evidence"],
                     )
                 )
         return candidates, recommendations
@@ -1060,7 +1022,7 @@ async def run(tools):
             if state["matched"]:
                 analysis_status = "skipped_alert_match"
             candidates, recommendations = assemble_rca_draft(
-                [], health, facts, verified, applicable, matched=state["matched"]
+                [], health, facts, verified, applicable
             )
             draft = analysis_draft(candidates, recommendations, final_limits, {})
             obs._evidence(

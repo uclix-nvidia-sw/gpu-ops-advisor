@@ -53,7 +53,27 @@ def port():
 
 def interpretation_reply(data):
     from test_report_interpretation import reply_for
+    from test_namespace_advice import section
 
+    if "summary_repair" in data or "section_repair" in data:
+        return {
+            **(
+                {
+                    "advice": [
+                        section([item])["advice"][0] for item in data["summary_repair"]
+                    ]
+                }
+                if data.get("summary_repair")
+                else {}
+            ),
+            **(
+                reply_for(
+                    {"topics": [item["topic"] for item in data["section_repair"]]}
+                )
+                if data.get("section_repair")
+                else {}
+            ),
+        }
     return reply_for(data)
 
 
@@ -167,6 +187,8 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
                     }
+                    or "summary_repair" in data
+                    or "section_repair" in data
                     else {"fact_ids": [f["id"] for f in data.get("facts", [])][:2]}
                 ),
             }
@@ -1938,10 +1960,10 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
-    if result["cause_candidates"]:
-        assert "원인 후보(확정 아님)" in text
-    else:
-        assert "근본 원인은 확정되지 않았습니다" in text
+    # Unhealthy observations alone must not create a generic causal candidate.
+    assert result["cause_candidates"] == []
+    cause = next(section for section in result["narrative"] if section["id"] == "cause")
+    assert "별도의 원인 후보는 채택하지 않았습니다" in cause["text"]
     # An alert's proposed action is preserved as input, not promoted by the writer.
     assert "REBOOT_SYSTEM" not in text
     if llm_failed:
@@ -2658,6 +2680,11 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
     assert advice[0]["kind"] == "queue_review"
     assert usage["workloads"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
     assert advice[0]["evidence_refs"]
+    stored_hours = {(h["start"], h["end"]): h for h in usage["workloads"][0]["hours"]}
+    for hour in advice[0]["source_hours"]:
+        source = stored_hours[(hour["start"], hour["end"])]
+        assert hour["unscheduled"] == source["unscheduled_peak"]
+        assert hour["unscheduled_samples"] == source["unscheduled_samples"]
     assert "대기 Pod" in advice[0]["observation"]
     assert usage["rows"][0]["activity_percent"] == activity
     assert usage["rows"][0]["change_percentage_points"] == 0
@@ -2820,6 +2847,11 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert advice[0]["kind"] == "queue_review"
     assert usage["workloads"][0]["completed_jobs"][0]["elapsed_seconds"] == 300
     assert advice[0]["evidence_refs"]
+    stored_hours = {(h["start"], h["end"]): h for h in usage["workloads"][0]["hours"]}
+    for hour in advice[0]["source_hours"]:
+        source = stored_hours[(hour["start"], hour["end"])]
+        assert hour["unscheduled"] == source["unscheduled_peak"]
+        assert hour["unscheduled_samples"] == source["unscheduled_samples"]
     assert "대기 Pod" in advice[0]["observation"]
     assert usage["rows"][0]["activity_percent"] == 60
     assert usage["rows"][0]["change_percentage_points"] == 0
@@ -2981,7 +3013,8 @@ def test_aggregate_report_transition_verification_is_published(
 
 
 @pytest.mark.e2e
-def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch):
+@pytest.mark.parametrize("failure", ["json", "mixed_topics"])
+def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, failure):
     from agent_common.artifacts import render
     from test_aggregate_report import DATA
 
@@ -3012,11 +3045,21 @@ def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch):
             and not corrupted
         ):
             corrupted.append(True)
+            if failure == "json":
+                content = '{"sections":'
+            else:
+                reply = json.loads(body["choices"][0]["message"]["content"])
+                for item in reply["sections"]:
+                    if item["topic_id"] == "namespace_usage":
+                        item["advice"][0]["summary"] = item["advice"][0][
+                            "summary"
+                        ].replace("{{period}}", "")
+                    else:
+                        item["observation"] = "알림은 3건입니다."
+                content = json.dumps(reply)
             body = {
                 **body,
-                "choices": [
-                    {"finish_reason": "stop", "message": {"content": '{"sections":'}}
-                ],
+                "choices": [{"finish_reason": "stop", "message": {"content": content}}],
             }
         return send(self, body, status)
 
@@ -3077,9 +3120,13 @@ def test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch):
     for result in (scheduled, manual):
         assert result["narrative_status"] == "complete"
         assert result["quality"]["report"]["reason"] == "repaired"
-        assert result["quality"]["report"]["failures"] == [
-            {"attempt": 1, "reason": "llm_invalid_output"}
-        ]
+        failures = result["quality"]["report"]["failures"]
+        assert len(failures) == 1 and failures[0]["attempt"] == 1
+        assert failures[0]["reason"] in (
+            {"llm_invalid_output"}
+            if failure == "json"
+            else {"namespace_summary_tokens_required", "unsupported_prose"}
+        )
         assert {n["topic_id"] for n in result["narrative"]} == {
             "namespace_usage",
             "incident_summary",

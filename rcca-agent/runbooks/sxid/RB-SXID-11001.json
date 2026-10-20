@@ -191,11 +191,11 @@
           "text": "오류 원문의 NVSwitch PCI 주소가 조사 대상입니다. GPU 재고와 GPU 지표(D02)로는 스위치나 영향 GPU를 정할 수 없습니다. 영향 GPU·VM·파티션은 Fabric Manager 로그의 같은 시각 source port와 access/trunk 관계로 정합니다."
         },
         {
-          "title": "조치 전에 Fabric Manager 로그와 진단 자료를 수집합니다.",
+          "title": "진단 자료 보존",
           "text": "Fabric Manager 로그의 같은 시각 포트 정보와 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
         },
         {
-          "title": "플랫폼·포트·운영 모드에 맞는 복구 절차를 적용합니다.",
+          "title": "환경별 복구 조건",
           "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 실제 장애는 플랫폼·FM 버전·bare-metal/가상화 모드와 포트 영향 범위를 먼저 대조합니다. 공유 NVSwitch의 access 포트는 해당 guest VM, trunk 포트는 해당 연결을 사용하는 VM 파티션의 종료·재생성 절차를 따릅니다. GPUd의 시스템 재부팅(REBOOT_SYSTEM)은 해당 플랫폼 복구 절차와 영향 범위가 맞을 때 진단 보존·작업 배출·유지보수 승인 후 적용합니다. 재부팅 뒤 같은 대상에서 재발하면 하드웨어 점검·수리를 요청합니다."
         }
       ],

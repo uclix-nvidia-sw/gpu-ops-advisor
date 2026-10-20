@@ -8,10 +8,10 @@ from datetime import datetime, timedelta, timezone
 
 from .namespace_advice import (
     candidates,
-    select_candidates,
+    MAX_ADVICE,
+    writing_candidates,
     validate_advice,
     summary_context,
-    WRITING_FOCUS,
     VALUE_MEANINGS,
     SYSTEM as ADVICE_SYSTEM,
     VERSION as ADVICE_VERSION,
@@ -268,7 +268,7 @@ def payload_for(result):
     if patterns:
         for t in topics:
             if t["topic_id"] == "namespace_usage":
-                selected, selection = select_candidates(patterns)
+                selected, selection = writing_candidates(patterns)
                 if selected:
                     t["findings"], t["selection"] = selected, selection
                     t["omitted_findings"] = selection["omitted_count"]
@@ -612,6 +612,81 @@ def validate_sections(reply, payload, result):
     return output
 
 
+def partial_repair(reply, payload, result):
+    """Find every invalid topic/item without rewriting validated model sentences."""
+    sections = reply.get("sections") if isinstance(reply, dict) else None
+    if (
+        not isinstance(sections, list)
+        or len(sections) != len(payload["topics"])
+        or any(
+            not isinstance(section, dict)
+            or section.get("topic_id") != topic["topic_id"]
+            for section, topic in zip(sections, payload["topics"])
+        )
+    ):
+        return None
+    items, topics = [], []
+    for section, topic in zip(sections, payload["topics"]):
+        try:
+            validate_sections({"sections": [section]}, {"topics": [topic]}, result)
+            continue
+        except (ValueError, TypeError, KeyError) as exc:
+            error = str(exc)
+        if not topic.get("advice_mode"):
+            topics.append(
+                {
+                    "topic": {
+                        **topic,
+                        "findings": [
+                            {k: f[k] for k in ("fact_id", "target", "values", "text")}
+                            for f in topic["findings"]
+                        ],
+                    },
+                    "previous_section": {
+                        k: section[k]
+                        for k in ("topic_id", "fact_ids", *FIELDS)
+                        if k in section
+                    },
+                    "validation_error": error,
+                }
+            )
+            continue
+        facts = {f["fact_id"]: f for f in topic["findings"]}
+        advice = section.get("advice")
+        if (
+            not isinstance(advice, list)
+            or not 1 <= len(advice) <= min(MAX_ADVICE, len(facts))
+            or any(
+                not isinstance(a, dict)
+                or not isinstance(a.get("fact_id"), str)
+                or a["fact_id"] not in facts
+                for a in advice
+            )
+            or len({a["fact_id"] for a in advice}) != len(advice)
+        ):
+            return None
+        invalid = []
+        for item in advice:
+            fact = facts[item["fact_id"]]
+            try:
+                validate_advice({"advice": [item]}, {"findings": [fact]})
+            except (ValueError, TypeError, KeyError) as exc:
+                invalid.append(
+                    {
+                        "fact_id": fact["fact_id"],
+                        "kind": fact["kind"],
+                        **summary_context(fact),
+                        "previous_summary": item.get("summary"),
+                        "validation_error": str(exc),
+                    }
+                )
+        if not invalid:
+            # Selection/shape errors still need the existing full-response repair.
+            return None
+        items.extend(invalid)
+    return (items, topics, reply) if items or topics else None
+
+
 async def interpret_report(result, llm):
     """Change only editorial fields. Invalid or unavailable responses keep facts."""
     statements = [
@@ -642,16 +717,45 @@ async def interpret_report(result, llm):
 
     def request_payload():
         if repair is not None:
-            items, _ = repair
+            items, sections, _ = repair
             return {
-                "summary_repair": items,
+                **({"summary_repair": items} if items else {}),
+                **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "각 previous_summary의 오류를 고치세요. 대상·시간·필수 토큰을 보존하고 writing_focus의 표기와 확인 대상을 지키세요. 다른 후보나 주제는 작성하지 마세요.",
+                "instruction": "각 previous_summary의 오류만 고치세요. 운영 선택·이유와 대상·시간·필수 참조는 보존하되 오류로 지적된 표현은 바꾸세요. 첫 문장은 선택과 이유, 둘째 문장은 관측 근거로 쓰며 summary_start 복사로 되돌리지 마세요. 실제 값으로 풀어 쓰지 마세요. 확인 대상과 확인·대조·검토·점검 동사를 명시하세요. 살펴보라는 표현만으로는 점검 제안을 충족하지 못하므로 알맞은 점검 동사로 바꾸세요. 이전 오류 문장을 그대로 반환하지 마세요. 중복 토큰만 제거하되 운영 선택과 점검 제안은 삭제하지 마세요. writing_focus와 queue_context에 맞게 무엇을 왜 확인할지 쓰세요. section_repair는 지정한 주제만 fact_ids·observation·meaning·next_check로 보완하고 수치·대상·기간은 참조 토큰으로 남기세요. response_shape에 없는 항목·주제는 반환하지 마세요.",
                 "response_shape": {
-                    "advice": [
-                        {"fact_id": item["fact_id"], "summary": "수정된 최종 운영 문장"}
-                        for item in items
-                    ]
+                    **(
+                        {
+                            "advice": [
+                                {
+                                    "fact_id": item["fact_id"],
+                                    "summary": "수정된 최종 운영 문장",
+                                }
+                                for item in items
+                            ]
+                        }
+                        if items
+                        else {}
+                    ),
+                    **(
+                        {
+                            "sections": [
+                                {
+                                    "topic_id": item["topic"]["topic_id"],
+                                    "fact_ids": [
+                                        item["topic"]["findings"][0]["fact_id"]
+                                    ],
+                                    **{
+                                        field: "검증된 참조 토큰을 사용하는 한국어 설명"
+                                        for field in FIELDS
+                                    },
+                                }
+                                for item in sections
+                            ]
+                        }
+                        if sections
+                        else {}
+                    ),
                 },
             }
 
@@ -659,13 +763,20 @@ async def interpret_report(result, llm):
             return payload
         return {
             "interpretation_version": VERSION,
-            "writing_focus": WRITING_FOCUS,
             "value_meanings": VALUE_MEANINGS,
             "response_shape": {
                 "sections": [
                     {
                         "topic_id": t["topic_id"],
                         "advice": [
+                            {
+                                "fact_id": fact["fact_id"],
+                                "summary": "짧은 운영 선택과 이유. 대상·기간·필수 관측 토큰.",
+                            }
+                            for fact in t["findings"]
+                        ]
+                        if len(t["findings"]) <= MAX_ADVICE
+                        else [
                             {
                                 "fact_id": "선택한 후보의 fact_id",
                                 "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
@@ -754,7 +865,7 @@ async def interpret_report(result, llm):
         try:
             system = ADVICE_SYSTEM if advice_mode else SYSTEM
             if repair is not None:
-                system += "\n이번 요청은 summary_repair입니다. sections 전체 대신 response_shape의 advice 배열만 JSON으로 반환하세요."
+                system += "\n이번 요청은 부분 보완입니다. summary_repair 항목은 advice 배열, section_repair 주제는 sections 배열로 반환하세요. response_shape에 지정된 키와 항목만 JSON으로 반환하고 정상 항목은 다시 작성하지 마세요."
             reply = await llm.complete(system, request_payload())
             if reply is None:
                 failure = getattr(llm, "last_failure", None)
@@ -771,11 +882,15 @@ async def interpret_report(result, llm):
                     continue
                 break
             if repair is not None:
-                items, previous_reply = repair
-                patches = reply.get("advice") if isinstance(reply, dict) else None
+                items, sections, previous_reply = repair
+                patches = reply.get("advice", []) if isinstance(reply, dict) else None
+                updates = reply.get("sections", []) if isinstance(reply, dict) else None
+                expected_keys = ({"advice"} if items else set()) | (
+                    {"sections"} if sections else set()
+                )
                 if (
                     not isinstance(reply, dict)
-                    or set(reply) != {"advice"}
+                    or set(reply) != expected_keys
                     or not isinstance(patches, list)
                     or len(patches) != len(items)
                     or any(
@@ -786,12 +901,25 @@ async def interpret_report(result, llm):
                         for p in patches
                     )
                     or {p["fact_id"] for p in patches} != {i["fact_id"] for i in items}
+                    or not isinstance(updates, list)
+                    or len(updates) != len(sections)
+                    or any(
+                        not isinstance(section, dict)
+                        or set(section) != {"topic_id", "fact_ids", *FIELDS}
+                        or not isinstance(section["topic_id"], str)
+                        for section in updates
+                    )
+                    or {section["topic_id"] for section in updates}
+                    != {item["topic"]["topic_id"] for item in sections}
                 ):
                     raise ValueError("invalid_namespace_repair_reference")
                 replacements = {p["fact_id"]: p["summary"] for p in patches}
                 reply = deepcopy(previous_reply)
-                for section in reply["sections"]:
-                    if section.get("topic_id") == "namespace_usage":
+                updated = {section["topic_id"]: section for section in updates}
+                for index, section in enumerate(reply["sections"]):
+                    if section["topic_id"] in updated:
+                        reply["sections"][index] = updated[section["topic_id"]]
+                    elif section.get("topic_id") == "namespace_usage" and items:
                         for item in section["advice"]:
                             if item["fact_id"] in replacements:
                                 item["summary"] = replacements[item["fact_id"]]
@@ -815,62 +943,24 @@ async def interpret_report(result, llm):
                             "batch_elapsed_is_not_execution_time",
                             "batch_samples_do_not_prove_throughput_or_queue_resolution",
                             "observed_zero_is_not_proof_of_nonuse",
+                            "conditional_scheduling_review_required",
+                            "duplicate_summary_unit",
+                            "unsupported_queue_cause",
                         }
                         else "response_shape의 구조와 사건 토큰 형식을 따르세요. namespace advice_mode는 advice 배열의 fact_id와 summary만 반환하세요. summary는 허용된 후보 summary_tokens의 토큰을 써서 대상·시간·관측과 제안을 짧게 결합하고, Namespace 항목에 meaning/next_check는 반환하지 마세요. 허용된 제안 종류의 구체적 확인을 쓰세요. "
                         "다른 주제는 fact_ids와 target에는 findings의 fact_id만 쓰세요. metric_id를 fact_ids에 넣지 마세요. value/period는 metric_id입니다. 한국어로 작성하세요. 숫자·대상·시간은 토큰만 사용하세요. Namespace에 hourly_pair가 있으면 observation에 같은 대상+양쪽 시간+양쪽 값을, next_check에 같은 대상+after 시간을 반드시 참조하세요. 단위는 추가하지 마세요."
                     ),
                 },
             }
-            if (
-                advice_mode
-                and repair is None
-                and isinstance(reply, dict)
-                and error.partition(":")[0]
-                in {
-                    "namespace_summary_tokens_required",
-                    "actionable_namespace_summary_required",
-                    "batch_job_elapsed_required",
-                    "batch_elapsed_is_not_execution_time",
-                    "batch_samples_do_not_prove_throughput_or_queue_resolution",
-                    "observed_zero_is_not_proof_of_nonuse",
-                    "unsupported_capacity_recommendation",
-                    "unsupported_namespace_advice_claim",
-                }
-            ):
-                topic = next(t for t in payload["topics"] if t.get("advice_mode"))
-                facts = {f["fact_id"]: f for f in topic["findings"]}
-                advice = next(
-                    s["advice"]
-                    for s in reply["sections"]
-                    if s.get("topic_id") == "namespace_usage"
-                )
-                items = []
-                if all(
-                    isinstance(a, dict)
-                    and isinstance(a.get("fact_id"), str)
-                    and a["fact_id"] in facts
-                    for a in advice
-                ) and len({a["fact_id"] for a in advice}) == len(advice):
-                    for item in advice:
-                        fact = facts[item["fact_id"]]
-                        try:
-                            validate_advice({"advice": [item]}, {"findings": [fact]})
-                        except (ValueError, TypeError, KeyError) as problem:
-                            items.append(
-                                {
-                                    "fact_id": fact["fact_id"],
-                                    "kind": fact["kind"],
-                                    **summary_context(fact),
-                                    "writing_focus": WRITING_FOCUS[fact["kind"]],
-                                    "previous_summary": item.get("summary"),
-                                    "validation_error": str(problem),
-                                }
-                            )
+            if advice_mode and repair is None:
+                repair = partial_repair(reply, payload, result)
                 if (
-                    items
-                    and len(json.dumps(items, ensure_ascii=False).encode()) < 16_000
+                    repair is not None
+                    and len(json.dumps(request_payload(), ensure_ascii=False).encode())
+                    >= 16_000
                 ):
-                    repair = items, reply
+                    diagnostic["reason"] = "interpretation_input_limit"
+                    break
             continue
         result["narrative"] = narrative
         if advice_mode:

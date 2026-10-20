@@ -31,28 +31,27 @@ COMBINED = (
     + """
 Return JSON with exactly these keys:
 {"interpretation": {
-  "findings": [{"id":"finding-1", "statement":"관측한 증상은 추가 확인이 필요합니다.",
+  "findings": [{"id":"finding-1", "statement":"자료에 기록된 대상·오류·시각과 그 의미",
     "kind":"observed", "evidence_refs":["evidence id"]}],
   "unknowns":[], "conflicts":[], "limitations":[]},
- "hypotheses": [{"claim":"추가 확인이 필요한 원인 후보일 가능성이 있다",
-   "supporting_refs":["evidence id"], "contradicting_refs":[],
-   "missing_inputs":["추가 확인 필요"], "finding_refs":["finding-1"]}],
+ "hypotheses": [],
  "limitations":[]}
-This is the only top-level output contract. Replace example text and refs with
-supported content; never copy placeholders or invent a hypothesis to match the example.
-Interpretation lists contain objects, never strings:
+Replace placeholders with supported Korean analysis, not report prose.
+Interpretation lists contain objects, not strings:
 unknowns: {"statement":"...", "evidence_refs":[], "reason":"..."};
 conflicts/limitations: {"statement":"...", "evidence_refs":["actual id"]}.
-Compare timestamps: Healthy then Unhealthy may be a transition, not a conflict.
+Distinguish producer event time from log record time; record order alone cannot
+establish state transitions or recovery. For error identification, explain the
+observed error and Runbook meaning without inferring physical root cause.
+Hypothesis objects have claim, supporting_refs, contradicting_refs, missing_inputs,
+and finding_refs (findings in this response). Empty hypotheses are valid;
+include only observation-supported causal explanations, never generic symptoms.
+Hypothesis supporting_refs cite observation_refs, never diagnostics or Runbooks.
+Interpretation cites input_evidence_refs; it is not independent evidence.
+Top-level limitations and hypothesis missing_inputs are Korean strings.
+State each limit once in unknowns/limitations. Never invent causes or actions.
+A separate reviewer checks all claims; this request does not self-review.
 alert_match and evidence_gap are code results; explain them, never restate as unknowns.
-Return concise analytical material, not report prose;
-top-level limitations and hypothesis missing_inputs are Korean strings.
-Each hypothesis also requires finding_refs referencing findings in THIS response.
-Hypothesis supporting_refs must cite observation_refs, never diagnostics or Runbook IDs.
-Interpretation may cite input_evidence_refs. Interpretation is not independent evidence.
-Empty hypotheses are valid. Lead with location, error and evidence meaning in Korean.
-State each limitation once in unknowns/limitations. Never invent causes or actions.
-This is one author request, not a self-review. A separate reviewer checks all claims.
 Validation feedback concerns response structure, not new evidence."""
 )
 
