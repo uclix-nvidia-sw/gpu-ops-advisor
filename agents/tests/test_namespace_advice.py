@@ -8,6 +8,7 @@ from ops_agent.namespace_advice import (
     candidates,
     elapsed_range,
     select_candidates,
+    writing_candidates,
     summary_context,
     validate_advice,
     SYSTEM,
@@ -835,7 +836,9 @@ def test_four_cluster_weekly_candidate_selection_preserves_each_cluster_and_kind
         "resident_memory",
         "schedule_candidate",
     }
-    assert audit["eligible_count"] == 100 and audit["omitted_count"] == 88
+    assert audit["eligible_count"] == 800 and audit["omitted_count"] == 788
+    # Seven UTC days span eight KST dates; each valid daily window survives.
+    assert len({f["period"]["start"] for f in candidates(t)}) == 8
     assert t == before
 
 
@@ -875,19 +878,17 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
         system, wire, "synthesis"
     )
     assert budget["output_token_cap"] >= 8192
-    assert len(wire["topics"][0]["findings"]) == 12
+    assert len(wire["topics"][0]["findings"]) == 4
     assert all(
         "source_hours" not in f and "conditions" not in f and "observation" not in f
         for f in wire["topics"][0]["findings"]
     )
-    assert wire["topics"][0]["selection"]["omitted_count"] == 88
+    assert wire["topics"][0]["selection"]["omitted_count"] == 96
     examples = wire["response_shape"]["sections"][0]["advice"]
-    assert examples == [
-        {
-            "fact_id": "선택한 후보의 fact_id",
-            "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
-        }
+    assert [item["fact_id"] for item in examples] == [
+        f["fact_id"] for f in wire["topics"][0]["findings"]
     ]
+    assert "재선택하지 마세요" in system
     assert {
         f["summary_tokens"]["{{target}}"].split(" / ")[0]
         for f in wire["topics"][0]["findings"]
@@ -1131,7 +1132,7 @@ def test_writing_focus_keeps_evidence_requirements_and_historical_semantics():
     fact = candidates(topic(activity=1, memory=98))[0]
     before = deepcopy(fact)
     context = summary_context(fact)
-    assert "상주 서빙" in WRITING_FOCUS[fact["kind"]]
+    assert "상주 작업의 메모리 유지 필요성" in WRITING_FOCUS[fact["kind"]]
     assert set(context["required_summary_tokens"]) == {
         "{{target}}",
         "{{period}}",
@@ -1260,3 +1261,673 @@ async def test_observed_zero_nonuse_claim_repairs_without_changing_metrics(origi
     ]
     assert result["topics"] == before["topics"]
     assert "미사용" not in json.dumps(result["narrative"], ensure_ascii=False)
+
+
+def test_separate_queue_window_survives_capacity_window_without_duplicate_hours():
+    t = topic(activity=90, pending=2)
+    t["rows"][0]["hours"][2]["activity_percent"] = 2
+    before = deepcopy(t)
+    facts = candidates(t)
+    capacity = next(f for f in facts if f["kind"] == "capacity_review")
+    queue = next(f for f in facts if f["kind"] == "queue_review")
+    assert capacity["period"]["end"] == queue["period"]["start"]
+    assert queue["source_hours"][0]["activity"] == [2]
+    assert t == before
+
+
+def test_all_qualified_windows_survive_before_bounded_selection():
+    t = topic(activity=2, pending=0)
+    hours = t["rows"][0]["hours"]
+    hours[1]["sample_count"] = 0
+    # Distinct positive queue windows remain even if one has a larger maximum.
+    work = t["workloads"][0]["hours"]
+    work[0]["pending_peak"], work[2]["pending_peak"] = 30, 3
+    facts = candidates(t)
+    queues = [f for f in facts if f["kind"] == "queue_review"]
+    assert len(queues) == 2
+    assert [f["source_hours"][0]["pending"] for f in queues] == [30, 3]
+    reversed_topic = deepcopy(t)
+    reversed_topic["rows"][0]["hours"].reverse()
+    reversed_topic["workloads"][0]["hours"].reverse()
+    assert candidates(reversed_topic) == facts
+
+
+def test_resident_window_kept_and_separate_two_quiet_hours_recovered():
+    t = topic(memory=20)
+    t["rows"][0]["gpu_memory"]["hours"][0].update(
+        used_gib_per_gpu=85, free_gib_per_gpu=15
+    )
+    facts = candidates(t)
+    resident = next(f for f in facts if f["kind"] == "resident_memory")
+    schedule = next(f for f in facts if f["kind"] == "schedule_candidate")
+    assert len(resident["source_hours"]) == 3
+    assert len(schedule["source_hours"]) == 2
+    assert all(max(h["memory"]) < 80 for h in schedule["source_hours"])
+    t["rows"][0]["hours"][2]["reasons"] = ["identity_uncertain"]
+    assert all(f["kind"] != "schedule_candidate" for f in candidates(t))
+
+
+@pytest.mark.parametrize(
+    "peaks,samples,expected,has_token",
+    [
+        ([1, 0, 0], [240, 240, 240], "placement", True),
+        ([1, None, 0], [20, 0, 240], "placement", False),
+        ([0, 0, 0], [240, 240, 240], "preparation", True),
+        ([0, 0, 0], [240, 20, 240], "unknown", True),
+        ([None, None, None], [0, 0, 0], "unknown", False),
+        ([3, 0, 0], [240, 240, 240], "unknown", False),
+        ([True, 0, 0], [240, 240, 240], "unknown", False),
+        ([0, 0, 0], [241, 240, 240], "unknown", False),
+    ],
+)
+def test_unscheduled_context_is_aligned_and_missing_never_becomes_zero(
+    peaks, samples, expected, has_token
+):
+    t = topic(activity=2, pending=2)
+    for h, peak, count in zip(t["workloads"][0]["hours"], peaks, samples):
+        h.update(unscheduled_peak=peak, unscheduled_samples=count)
+    before = deepcopy(t)
+    fact = candidates(t)[0]
+    context = summary_context(fact)
+    assert context["queue_context"]["check_first"] == expected
+    assert ("{{unscheduled}}" in context["summary_tokens"]) == has_token
+    assert "{{unscheduled}}" not in context["required_summary_tokens"]
+    assert t == before
+    # Existing output without the new optional reference must remain valid.
+    assert validate_advice(section([fact]), {"findings": [fact]})["advice"]
+
+
+def test_preparation_context_does_not_change_capacity_qualification_or_guards():
+    t = topic(activity=90, pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=0, unscheduled_samples=240)
+    fact = candidates(t)[0]
+    assert fact["kind"] == "capacity_review"
+    assert summary_context(fact)["queue_context"]["check_first"] == "preparation"
+    assert validate_advice(section([fact]), {"findings": [fact]})["advice"]
+
+
+def test_preparation_event_check_uses_optional_evidence_with_existing_validator():
+    t = topic(activity=2, pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=0, unscheduled_samples=240)
+    fact = candidates(t)[0]
+    reply = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": "{{target}} · {{period}}: 활동률 {{activity}}, 최대 대기 {{pending}}, 최대 미배치 {{unscheduled}}가 관측됐습니다. 준비 단계 이벤트와 초기화 기록을 먼저 대조하세요.",
+            }
+        ]
+    }
+    out = validate_advice(reply, {"findings": [fact]})
+    assert "최대 미배치 0개" in out["advice"][0]["summary"]
+    assert out["advice"][0]["source_hours"] == fact["source_hours"]
+    duplicate = deepcopy(reply)
+    duplicate["advice"][0]["summary"] = duplicate["advice"][0]["summary"].replace(
+        "{{unscheduled}}", "{{unscheduled}}개"
+    )
+    with pytest.raises(ValueError, match="duplicate_summary_unit"):
+        validate_advice(duplicate, {"findings": [fact]})
+    reply["advice"][0]["summary"] += " GPU 부족이 원인입니다."
+    with pytest.raises(ValueError, match="unsupported_namespace_advice_claim"):
+        validate_advice(reply, {"findings": [fact]})
+
+
+def test_extra_queue_windows_do_not_crowd_out_other_target_questions():
+    t = topic(pending=7)
+    base = candidates(t)[0]
+    facts = []
+    for i in range(16):
+        f = deepcopy(base)
+        f["fact_id"] = f"queue-{i}"
+        f["period"]["start"] = f"2026-10-{i + 1:02}T00:00:00Z"
+        f["period"]["end"] = f"2026-10-{i + 1:02}T03:00:00Z"
+        facts.append(f)
+    other = deepcopy(base)
+    other["fact_id"] = "other-namespace"
+    other["target"]["namespace"] = "other"
+    other["selection_basis"]["pending_peak"] = 1
+    facts.append(other)
+    selected, audit = select_candidates(facts)
+    assert len(selected) == 12 and other in selected
+    assert audit["omitted_count"] == 5
+    assert select_candidates(list(reversed(facts))) == (selected, audit)
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_unscheduled_context_reaches_initial_repair_and_stored_narrative(origin):
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=0, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={}, report_origin=origin)
+    before = deepcopy(result)
+    facts = payload_for(result)["topics"][0]["findings"]
+    valid = section(facts)
+    valid["advice"][0]["summary"] = (
+        "{{target}} · {{period}}: 관측 활동률 {{activity}}, 최대 대기 {{pending}}, 미배치 {{unscheduled}}입니다. 준비 단계 이벤트와 이미지·초기화 기록을 확인하세요."
+    )
+    invalid = deepcopy(valid)
+    invalid["advice"][0]["summary"] = invalid["advice"][0]["summary"].replace(
+        "{{target}}", ""
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": valid["advice"]}]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    assert (
+        first["topics"][0]["findings"][0]["queue_context"]
+        == repair["summary_repair"][0]["queue_context"]
+        == {"check_first": "preparation", "unscheduled_complete": True}
+    )
+    assert (
+        first["topics"][0]["findings"][0]["summary_start"]
+        == repair["summary_repair"][0]["summary_start"]
+    )
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["topics"] == before["topics"] and result["report_origin"] == origin
+    narrative = next(
+        n for n in result["narrative"] if n["topic_id"] == "namespace_usage"
+    )
+    assert narrative["advice"][0]["source_hours"][0]["unscheduled"] == 0
+    assert "미배치 0개" in narrative["advice"][0]["summary"]
+    assert narrative["advice"][0]["evidence_refs"] == facts[0]["evidence_refs"]
+
+
+@pytest.mark.parametrize("unscheduled", [0, 2, None])
+def test_summary_start_preserves_units_and_distinct_equal_value_references(unscheduled):
+    t = topic(activity=2, pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=unscheduled, unscheduled_samples=240)
+    fact = candidates(t)[0]
+    before = deepcopy(fact)
+    start = summary_context(fact)["summary_start"]
+    assert "{{pending}}" in start
+    assert ("{{unscheduled}}" in start) == (unscheduled is not None)
+    reply = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": start + " 준비 단계 이벤트와 초기화 기록을 먼저 대조하세요.",
+            }
+        ]
+    }
+    validated = validate_advice(reply, {"findings": [fact]})["advice"][0]
+    assert "최대 대기 2개" in validated["summary"]
+    if unscheduled is not None:
+        assert f"최대 미배치 {unscheduled}개" in validated["summary"]
+    assert fact == before
+
+
+@pytest.mark.parametrize(
+    "unscheduled,check",
+    [
+        (
+            0,
+            "미배치가 관측되지 않았으므로 노드 배정 이후 준비 단계 이벤트와 이미지·초기화 기록부터 대조하세요.",
+        ),
+        (
+            2,
+            "대기 Pod가 미배치 상태로 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요.",
+        ),
+        (None, "배치·준비 단계 이벤트를 함께 대조해 대기 상태를 확인하세요."),
+    ],
+)
+def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, check):
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=unscheduled, unscheduled_samples=240)
+    fact = candidates(t)[0]
+    summary = summary_context(fact)["summary_start"] + " " + check
+    assert validate_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
+        {"findings": [fact]},
+    )["advice"]
+    assert "시간대별 관측 최대 대기" not in SYSTEM
+    assert "첫 문장은 후보 writing_focus에 맞는 운영 선택과 그 이유" in SYSTEM
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_contiguous_namespace_queue_does_not_split_on_gpu_identity(missing):
+    t = topic(activity=2, pending=2)
+    t["rows"][0]["hours"][1]["gpu_ids"] = ["other-gpu"]
+    if missing:
+        t["rows"][0]["hours"][1]["reasons"] = ["unobserved_hour"]
+    before = deepcopy(t)
+    queue = [f for f in candidates(t) if f["kind"] == "queue_review"]
+    assert len(queue) == 1 and len(queue[0]["source_hours"]) == 3
+    assert all(
+        h["activity"] == [] and h["memory"] == [] for h in queue[0]["source_hours"]
+    )
+    assert "{{activity}}" not in summary_context(queue[0])["summary_tokens"]
+    assert t == before
+
+
+def test_namespace_queue_still_splits_at_gap_and_kst_midnight():
+    t = topic(pending=2)
+    for row in (
+        t["rows"][0]["hours"],
+        t["rows"][0]["gpu_memory"]["hours"],
+        t["workloads"][0]["hours"],
+    ):
+        for h, hour in zip(row, (13, 14, 15)):
+            h.update(
+                start=f"2026-10-14T{hour}:00:00Z", end=f"2026-10-14T{hour + 1}:00:00Z"
+            )
+    assert [len(f["source_hours"]) for f in candidates(t)] == [2, 1]
+    t["workloads"][0]["hours"][1]["pending_peak"] = 0
+    assert [
+        len(f["source_hours"]) for f in candidates(t) if f["kind"] == "queue_review"
+    ] == [1, 1]
+
+
+def test_selection_drops_folded_queue_and_optional_batch_but_keeps_cluster():
+    t = completed_topic()
+    t["workloads"][0]["hours"][0]["pending_samples"] = 240
+    other = deepcopy(t)
+    for row in other["rows"] + other["workloads"]:
+        row["cluster_id"] = "cpc-2"
+    t["rows"] += other["rows"]
+    t["workloads"] += other["workloads"]
+    facts = candidates(t)
+    selected, audit = select_candidates(facts)
+    batches = [f for f in selected if f["kind"] == "batch_progress"]
+    assert (
+        len(batches) == 1 and batches[0]["fact_id"] == audit["required_batch_fact_id"]
+    )
+    assert not any(
+        f["kind"] == "queue_review" and f["target"] == batches[0]["target"]
+        for f in selected
+    )
+    assert any(
+        f["kind"] == "queue_review" and f["target"]["cluster_id"] == "cpc-2"
+        for f in selected
+    )
+    assert select_candidates(list(reversed(facts))) == (selected, audit)
+    only_batches = [f for f in facts if f["kind"] == "batch_progress"]
+    assert len(select_candidates(only_batches)[0]) == 2
+
+
+async def test_duplicate_reference_repair_preserves_check_and_equal_value_tokens():
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=2, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={})
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    start = summary_context(fact)["summary_start"]
+    check = "대기 Pod가 미배치 상태로 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요."
+    good = {"fact_id": fact["fact_id"], "summary": start + " " + check}
+    bad = {
+        **good,
+        "summary": start + " 최대 미배치 {{unscheduled}}를 확인하고 " + check,
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+        {"advice": [good]},
+    ]
+    await interpret_report(result, llm)
+    repair = llm.complete.call_args_list[1].args[1]
+    assert "운영 선택·이유와 대상·시간·필수 참조는 보존" in repair["instruction"]
+    assert repair["summary_repair"][0]["summary_start"] == start
+    assert result["quality"]["report"]["reason"] == "repaired"
+    narrative = result["narrative"][0]["advice"][0]["summary"]
+    assert "최대 대기 2개" in narrative and "최대 미배치 2개" in narrative
+    assert check in narrative
+    # Literal equal values remain ambiguous under the unchanged validator.
+    literal = (
+        start.replace("{{pending}}", "2개").replace("{{unscheduled}}", "2개")
+        + " "
+        + check
+    )
+    with pytest.raises(ValueError, match="namespace_summary_tokens_required"):
+        validate_advice(
+            {"advice": [{**good, "summary": literal}]}, {"findings": [fact]}
+        )
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["capacity_review", "resident_memory", "schedule_candidate", "batch_progress"],
+)
+def test_summary_start_and_kind_check_keep_existing_validation(kind):
+    t = {
+        "capacity_review": lambda: topic(activity=90, pending=2),
+        "resident_memory": lambda: topic(memory=95),
+        "schedule_candidate": topic,
+        "batch_progress": completed_topic,
+    }[kind]()
+    fact = next(f for f in candidates(t) if f["kind"] == kind)
+    check = {
+        "capacity_review": "현재 할당량과 보장량·스케줄러 사유를 확인한 뒤 확대 여부를 검토하세요.",
+        "resident_memory": "낮은 연산 활동에도 메모리가 점유됐으므로 상주 서빙·캐시 목적부터 확인하세요.",
+        "schedule_candidate": "예약과 대기·가용 GPU를 확인한 뒤 이 시간대 배치 작업 실행을 검토하세요.",
+        "batch_progress": "완료 Job별 경과 차이에 배정 대기가 포함됐는지 스케줄러 이벤트와 작업 유형부터 대조하세요.",
+    }[kind]
+    start = summary_context(fact)["summary_start"]
+    item = {"fact_id": fact["fact_id"], "summary": start + " " + check}
+    assert validate_advice({"advice": [item]}, {"findings": [fact]})["advice"]
+    with pytest.raises(ValueError, match="actionable_namespace_summary_required"):
+        validate_advice({"advice": [{**item, "summary": start}]}, {"findings": [fact]})
+
+
+@pytest.mark.parametrize(
+    "kind,error",
+    [
+        ("schedule_candidate", "conditional_scheduling_review_required"),
+        ("queue_review", "duplicate_summary_unit"),
+    ],
+)
+async def test_existing_condition_and_unit_errors_use_one_targeted_repair(kind, error):
+    t = topic(pending=2 if kind == "queue_review" else 0)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=0, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={})
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    start = summary_context(fact)["summary_start"]
+    check = (
+        "예약·대기·가용 GPU를 확인한 뒤 이 시간대 배치 작업 실행을 검토하세요."
+        if kind == "schedule_candidate"
+        else "미배치가 관측되지 않았으므로 준비 단계 이벤트와 이미지·초기화 기록부터 대조하세요."
+    )
+    good = {"fact_id": fact["fact_id"], "summary": start + " " + check}
+    bad = {
+        **good,
+        "summary": good["summary"].replace("확인한 뒤", "확인하고")
+        if kind == "schedule_candidate"
+        else good["summary"].replace("{{unscheduled}}", "{{unscheduled}}개"),
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+        {"advice": [good]},
+    ]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    repair = llm.complete.call_args_list[1].args[1]
+    assert len(repair["summary_repair"]) == 1 and "topics" not in repair
+    assert repair["summary_repair"][0]["validation_error"].startswith(error)
+    if kind == "queue_review":
+        assert (
+            repair["summary_repair"][0]["writing_focus"]
+            == summary_context(fact)["writing_focus"]
+        )
+        assert "노드 배정 이후" in summary_context(fact)["writing_focus"]
+        assert "배치 제약부터" not in summary_context(fact)["writing_focus"]
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["quality"]["report"]["failures"][0]["reason"] == error
+
+
+async def test_actual_unrecognized_check_verb_repairs_intent_not_invalid_wording():
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=2, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={})
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    start = summary_context(fact)["summary_start"]
+    bad = {
+        "fact_id": fact["fact_id"],
+        "summary": start
+        + " 스케줄러 이벤트의 배치 제약을 먼저 살펴보고 GPU 부족 여부는 별도로 판단하지 마세요.",
+    }
+    good = {
+        **bad,
+        "summary": start
+        + " 미배치가 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요.",
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+        {"advice": [good]},
+    ]
+    await interpret_report(result, llm)
+    repair = llm.complete.call_args_list[1].args[1]
+    assert "살펴보라는 표현만으로는" in repair["instruction"]
+    assert "이전 오류 문장을 그대로 반환하지 마세요" in repair["instruction"]
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert (
+        result["quality"]["report"]["failures"][0]["reason"]
+        == "actionable_namespace_summary_required"
+    )
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["capacity_review", "resident_memory", "schedule_candidate", "batch_progress"],
+)
+def test_decision_first_summaries_preserve_original_evidence_and_guards(kind):
+    t = {
+        "capacity_review": lambda: topic(activity=90, pending=2),
+        "resident_memory": lambda: topic(memory=95),
+        "schedule_candidate": topic,
+        "batch_progress": completed_topic,
+    }[kind]()
+    fact = next(f for f in candidates(t) if f["kind"] == kind)
+    before = deepcopy(fact)
+    choice = {
+        "capacity_review": "현재 할당량·스케줄러 사유를 확인한 뒤 높은 활동과 대기를 근거로 할당 확대 여부를 검토하세요.",
+        "resident_memory": "작업 수용 여력을 판단하기 전에 상주 작업의 메모리 유지 필요성을 확인하세요.",
+        "schedule_candidate": "예약·대기·가용 GPU를 확인한 뒤 낮은 활동 구간의 배치 작업 시범 실행을 검토하세요.",
+        "batch_progress": "완료 Job의 경과를 비교하기 전에 작업 유형과 스케줄러 기록을 대조하세요.",
+    }[kind]
+    item = {
+        "fact_id": fact["fact_id"],
+        "summary": choice + " " + summary_context(fact)["summary_start"],
+    }
+    accepted = validate_advice({"advice": [item]}, {"findings": [fact]})
+    assert accepted["advice"][0]["summary"].startswith(choice)
+    assert "선택:" not in summary_context(fact)["writing_focus"]
+    assert "이유:" not in summary_context(fact)["writing_focus"]
+    assert fact == before
+    with pytest.raises(ValueError, match="namespace_summary_tokens_required"):
+        validate_advice(
+            {
+                "advice": [
+                    {**item, "summary": item["summary"].replace("{{period}}", "")}
+                ]
+            },
+            {"findings": [fact]},
+        )
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_decision_first_context_survives_repair_and_report_storage(origin):
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=0, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={}, report_origin=origin)
+    original = deepcopy(result)
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    choice = "정상 기동과 준비 지연을 구분하기 위해 노드 배정 이후 이벤트와 이미지·초기화 기록을 먼저 대조하세요."
+    good = {
+        "fact_id": fact["fact_id"],
+        "summary": choice + " " + summary_context(fact)["summary_start"],
+    }
+    bad = {**good, "summary": good["summary"].replace("{{period}}", "")}
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+        {"advice": [good]},
+    ]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    assert "writing_focus" not in first
+    assert (
+        first["topics"][0]["findings"][0]["writing_focus"]
+        == repair["summary_repair"][0]["writing_focus"]
+    )
+    assert "선택:" not in repair["summary_repair"][0]["writing_focus"]
+    assert result["narrative"][0]["advice"][0]["summary"].startswith(choice)
+    assert result["narrative_status"] == "complete"
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["topics"] == original["topics"] and result["report_origin"] == origin
+
+
+def test_writing_selection_preserves_required_batch_clusters_and_distinct_choices():
+    facts = []
+    for make in [
+        lambda: completed_topic(),
+        lambda: topic(pending=2),
+        lambda: topic(memory=95),
+        topic,
+    ]:
+        facts.extend(candidates(make()))
+    for i, f in enumerate(facts):
+        f["fact_id"] = f"choice-{i}"
+    extra = deepcopy(next(f for f in facts if f["kind"] == "queue_review"))
+    extra["target"]["cluster_id"] = "cpc-2"
+    extra["fact_id"] = "other-cluster"
+    facts.append(extra)
+    before = deepcopy(facts)
+    selected, audit = writing_candidates(facts)
+    assert {f["kind"] for f in selected} == {
+        "batch_progress",
+        "queue_review",
+        "resident_memory",
+        "schedule_candidate",
+    }
+    assert {f["target"]["cluster_id"] for f in selected} == {"cpc-1", "cpc-2"}
+    assert audit["required_batch_fact_id"] in {f["fact_id"] for f in selected}
+    assert len(selected) <= 5 and audit["offered_count"] == len(selected)
+    assert audit["omitted_count"] == len(facts) - len(selected)
+    assert sum(audit["omitted_by_kind"].values()) == audit["omitted_count"]
+    assert writing_candidates(list(reversed(facts))) == (selected, audit)
+    assert facts == before
+
+
+def test_writing_selection_keeps_existing_large_cluster_behavior():
+    facts = []
+    for i in range(6):
+        f = candidates(topic(pending=2))[0]
+        f["target"]["cluster_id"] = f"cluster-{i}"
+        f["fact_id"] = f"fact-{i}"
+        facts.append(f)
+    assert writing_candidates(facts) == select_candidates(facts)
+
+
+@pytest.mark.parametrize("cluster_count", [1, 4, 5])
+def test_writing_selection_never_spends_a_required_cluster_slot_on_extra_questions(
+    cluster_count,
+):
+    facts = candidates(completed_topic())
+    for i in range(1, cluster_count):
+        fact = candidates(topic(pending=2))[0]
+        fact["target"]["cluster_id"] = f"other-{i}"
+        fact["fact_id"] = f"queue-{i}"
+        facts.append(fact)
+    for extra in [topic(memory=95), topic()]:
+        for fact in candidates(extra):
+            fact["fact_id"] = f"extra-{fact['kind']}"
+            facts.append(fact)
+    selected, audit = writing_candidates(facts)
+    assert len(selected) <= 5
+    assert {f["target"]["cluster_id"] for f in selected} == {
+        f["target"]["cluster_id"] for f in facts
+    }
+    assert audit["required_batch_fact_id"] in {f["fact_id"] for f in selected}
+    assert len({(f["target"]["cluster_id"], f["kind"]) for f in selected}) == len(
+        selected
+    )
+
+
+async def test_queue_cause_rejection_repairs_only_invalid_item_without_rewriting_other_choices():
+    t = topic(pending=2)
+    for h in t["workloads"][0]["hours"]:
+        h.update(unscheduled_peak=2, unscheduled_samples=240)
+    result = dict(topics=[t], quality={}, time_range={})
+    original = deepcopy(result)
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    evidence = summary_context(fact)["summary_start"]
+    bad = {
+        "fact_id": fact["fact_id"],
+        "summary": "미배치가 관측됐기 때문에 스케줄러 이벤트의 배치 제약을 대조하세요. "
+        + evidence,
+    }
+    good = {
+        **bad,
+        "summary": "미배치 사유를 구분하기 위해 스케줄러 이벤트의 배치 제약을 먼저 대조하세요. "
+        + evidence,
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+        {"advice": [good]},
+    ]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    repair = llm.complete.call_args.args[1]
+    assert "topics" not in repair and len(repair["summary_repair"]) == 1
+    assert repair["summary_repair"][0]["validation_error"].startswith(
+        "unsupported_queue_cause"
+    )
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["topics"] == original["topics"]
+
+
+def test_batch_writing_focus_links_remaining_queue_to_next_batch_review_only():
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    original = deepcopy(fact)
+    fact["pending_change"] = [8, 5]
+    context = summary_context(fact)
+    assert "다음 배치의 실행 순서" in context["writing_focus"]
+    assert "작업 유형·스케줄러 기록" in context["writing_focus"]
+    fact["pending_change"] = [8, 0]
+    assert summary_context(fact)["writing_focus"] == WRITING_FOCUS["batch_progress"]
+    fact.pop("pending_change")
+    assert summary_context(fact)["writing_focus"] == WRITING_FOCUS["batch_progress"]
+    assert fact["source_hours"] == original["source_hours"]
+
+
+async def test_more_than_five_clusters_keeps_selection_guidance_instead_of_oversized_writing_plan():
+    t = topic(pending=2)
+    t["rows"], t["workloads"] = [], []
+    for i in range(6):
+        item = topic(pending=2)
+        for key in ("rows", "workloads"):
+            item[key][0]["cluster_id"] = f"cluster-{i}"
+            t[key].extend(item[key])
+    result = dict(topics=[t], quality={}, time_range={})
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = None
+    await interpret_report(result, llm)
+    wire = llm.complete.call_args.args[1]
+    assert len(wire["topics"][0]["findings"]) > 5
+    assert wire["response_shape"]["sections"][0]["advice"] == [
+        {
+            "fact_id": "선택한 후보의 fact_id",
+            "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
+        }
+    ]
+
+
+async def test_namespace_writing_list_does_not_replace_incident_section_contract():
+    incident = dict(
+        topic_id="incident_summary",
+        status="ready",
+        missing_inputs=[],
+        metrics=[],
+        findings=[
+            dict(
+                id="incident-empty",
+                text="저장 사건 미확인",
+                target={},
+                value_refs=[],
+                evidence_refs=[],
+            )
+        ],
+    )
+    result = dict(topics=[topic(), incident], quality={}, time_range={})
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = None
+    await interpret_report(result, llm)
+    system, wire = llm.complete.call_args.args
+    ns, inc = wire["response_shape"]["sections"]
+    assert [a["fact_id"] for a in ns["advice"]] == [
+        f["fact_id"] for f in wire["topics"][0]["findings"]
+    ]
+    assert set(inc) == {"topic_id", "fact_ids", "observation", "meaning", "next_check"}
+    assert "namespace_usage에만 적용" in system
+    assert "예약·대기·가용 GPU를 확인한 뒤" in system
+    assert "모든 주제의 관측값·대상·시각은 참조 토큰" in system
