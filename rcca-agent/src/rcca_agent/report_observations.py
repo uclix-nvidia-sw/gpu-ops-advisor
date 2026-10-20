@@ -43,7 +43,10 @@ def summarize_reports(health, events, data):
                 if row.get("time_basis") != "producer_event_time":
                     continue
                 at = row.get("event_time")
-                detail = "오류 이벤트 " + row["error_code"]
+                family, separator, code = row["error_code"].partition(":")
+                detail = (
+                    f"{family.upper()} {code}" if separator else family
+                ) + " 오류 이벤트"
                 if row.get("reported_device"):
                     detail += " · 보고된 장치 " + row["reported_device"]
                 if row.get("device_mapping") == "inventory_match" and row.get(
@@ -77,12 +80,15 @@ def summarize_reports(health, events, data):
             if not at:
                 continue
             target = row["target"]
-            where = "클러스터 " + row["cluster_id"]
-            where += " · 대상 " + (
-                target.get("node")
-                or target.get("machine_id")
-                or target.get("gpu_uuid")
-                or target.get("pod_uid", "")
+            where = (
+                row["cluster_id"]
+                + "의 "
+                + (
+                    target.get("node")
+                    or target.get("machine_id")
+                    or target.get("gpu_uuid")
+                    or target.get("pod_uid", "")
+                )
             )
             key = (kind, where, detail, scope)
             group = groups.setdefault(key, {"times": [], "refs": [], "count": 0})
@@ -108,19 +114,19 @@ def summarize_reports(health, events, data):
             moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
             return moment.astimezone(
                 ZoneInfo(data.get("timezone") or "Asia/Seoul")
-            ).isoformat(timespec="seconds")
+            ).strftime("%Y-%m-%d %H:%M:%S %Z")
 
         span = (
             display(times[0])
             if times[0] == times[-1]
             else f"{display(times[0])} ~ {display(times[-1])}"
         )
-        location = where + ": " if where not in shown_locations else ""
+        location = where + "에서 " if where not in shown_locations else ""
         shown_locations.add(where)
         basis = "생산자 이벤트 시각" if kind == "event" else "로그 기록 시각"
         result.append(
             {
-                "text": f"{location}{detail} {group['count']}건을 수집했습니다. {basis}: {span}.",
+                "text": f"{span}, {location}{detail} {group['count']}건이 기록됐습니다. ({basis})",
                 "evidence_refs": list(dict.fromkeys(group["refs"])),
                 "context_only": group["context_only"],
             }

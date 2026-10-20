@@ -710,42 +710,6 @@ async def run(tools):
                         execution="not_performed",
                     )
                 )
-        if not candidates and health:
-            usable_ids = {e["id"] for e in obs.evidence if usable_observation(e)}
-            candidate_health = [
-                h
-                for h in health
-                if h["check_status"] == "valid"
-                and set(h["evidence_refs"]) <= usable_ids
-            ]
-            supporting = list(
-                dict.fromkeys(
-                    r
-                    for h in candidate_health
-                    if h["normalized_health"] in ("degraded", "unhealthy")
-                    for r in h["evidence_refs"]
-                )
-            )
-            contradicting = list(
-                dict.fromkeys(
-                    r
-                    for h in candidate_health
-                    if h["normalized_health"] == "healthy"
-                    for r in h["evidence_refs"]
-                )
-            )
-            if supporting:
-                candidates.append(
-                    dict(
-                        id="observed_device_symptom",
-                        claim="수집 로그에 이상 상태가 보고됐으나 근본 원인과 현재 장비 상태는 추가 확인이 필요합니다.",
-                        causal_status="candidate",
-                        supporting_refs=supporting,
-                        contradicting_refs=contradicting,
-                        value_refs=[],
-                        missing_inputs=["causal_confirmation_evidence"],
-                    )
-                )
         return candidates, recommendations
 
     def evaluate_requirements(round_no, approved):

@@ -197,7 +197,7 @@
         "checked_at": "2026-10-19",
         "before_content_sha256": "480ee07c4a01a86b85406440e9d99eb3ea5a9c99601d80b70ba6a3e5e8ddaa48",
         "after_content_sha256": "d745218a97f74dfe5429b3b27905abd41a1da484126a20d2913258523e06976c",
-        "change": "Clarify reported facts and platform-specific conditional recovery; preserve query plan, required criteria and investigation-only boundary. NVIDIA document rechecked; pinned GPUd definition retained. No runtime publication.",
+        "change": "Clarify reported facts and platform-specific conditional recovery; preserve query plan, required criteria and investigation-only boundary. NVIDIA document rechecked; pinned GPUd definition retained. No runtime publication. 대상 식별의 자료 범위와 독립 검증 요건을 구분하고 제목 중복을 줄임. 기존 플랫폼·포트·운영 모드 조건 유지.",
         "previous_values": {
           "sources": [
             {
@@ -405,7 +405,7 @@
         "status": "local_review_not_published",
         "checked_at": "2026-10-19",
         "before_content_sha256": "d745218a97f74dfe5429b3b27905abd41a1da484126a20d2913258523e06976c",
-        "after_content_sha256": "376b5e43bbc2d1bc554debc7b158b71ce2372f0f6108aec083ccf45726283772",
+        "after_content_sha256": "37504fa53def4f08d51f06846c5efec2f78053b9a8cb560f0310df784841baf2",
         "change": "Name the reported device directly: XID 79 uses the reported PCI address and its unique same-host inventory GPU and says which collected metric can question access loss; SXID 11001 states that GPU inventory/D02 cannot identify the switch or affected GPUs. Removes the generic \"independent verification\" caveat. Query plan, criteria and investigation-only boundary unchanged. Measured on 2026-10-16 jobs f063d28e/a04c7939/6182aac4. No runtime publication.",
         "previous_values": {
           "operator_guidance": {
@@ -623,7 +623,7 @@
         "checked_at": "2026-10-19",
         "before_content_sha256": "382093af754d0cc4b35b75a71d536fb857c1d725ccc38f36d3c3baf8b888ef96",
         "after_content_sha256": "a9e6308bb8fe346f15b486a1c4484855a3573ed441ccd3b6b2910aef3175923b",
-        "change": "Clarify reported facts and platform-specific conditional recovery; preserve query plan, required criteria and investigation-only boundary. NVIDIA document rechecked; pinned GPUd definition retained. No runtime publication.",
+        "change": "Clarify reported facts and platform-specific conditional recovery; preserve query plan, required criteria and investigation-only boundary. NVIDIA document rechecked; pinned GPUd definition retained. No runtime publication. 대상 식별의 자료 범위와 독립 검증 요건을 구분하고 제목 중복을 줄임. 기존 플랫폼·포트·운영 모드 조건 유지.",
         "previous_values": {
           "sources": [
             {
@@ -801,7 +801,7 @@
         "status": "local_review_not_published",
         "checked_at": "2026-10-19",
         "before_content_sha256": "a9e6308bb8fe346f15b486a1c4484855a3573ed441ccd3b6b2910aef3175923b",
-        "after_content_sha256": "ee6ef6ec5d359172109829602d385e513bd1f66438ff23c3f06c82997b646e9c",
+        "after_content_sha256": "cd07590381de5cacadac3e3d8e3bb34245001a2bc19e044e1ed75ad334d61dd9",
         "change": "Name the reported device directly: XID 79 uses the reported PCI address and its unique same-host inventory GPU and says which collected metric can question access loss; SXID 11001 states that GPU inventory/D02 cannot identify the switch or affected GPUs. Removes the generic \"independent verification\" caveat. Query plan, criteria and investigation-only boundary unchanged. Measured on 2026-10-16 jobs f063d28e/a04c7939/6182aac4. No runtime publication.",
         "previous_values": {
           "operator_guidance": {

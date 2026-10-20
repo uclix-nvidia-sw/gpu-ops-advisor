@@ -1938,10 +1938,10 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])
-    if result["cause_candidates"]:
-        assert "원인 후보(확정 아님)" in text
-    else:
-        assert "근본 원인은 확정되지 않았습니다" in text
+    # Unhealthy observations alone must not create a generic causal candidate.
+    assert result["cause_candidates"] == []
+    cause = next(section for section in result["narrative"] if section["id"] == "cause")
+    assert "별도의 원인 후보는 채택하지 않았습니다" in cause["text"]
     # An alert's proposed action is preserved as input, not promoted by the writer.
     assert "REBOOT_SYSTEM" not in text
     if llm_failed:

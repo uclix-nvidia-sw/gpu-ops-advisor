@@ -207,7 +207,12 @@ def report_sources(material):
             continue
         guidance = entry["guidance"]
         refs = [entry["evidence_id"]]
-        add("cause", "발행 Runbook의 오류 설명: " + guidance["meaning"], refs)
+        add(
+            "cause",
+            "발행 Runbook의 오류 설명: " + guidance["meaning"],
+            refs,
+            fixed=True,
+        )
         for check in guidance["next_checks"]:
             add(
                 "action",
