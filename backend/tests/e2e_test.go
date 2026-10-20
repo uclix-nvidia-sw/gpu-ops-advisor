@@ -405,7 +405,11 @@ func TestBackendE2E(t *testing.T) {
 		}
 		var latest time.Time
 		must(t, db.Pool.QueryRow(ctx, "SELECT max(scheduled_for) FROM schedule_occurrences WHERE schedule_id=$1", id).Scan(&latest))
-		_, e = db.Pool.Exec(ctx, "UPDATE schedules SET next_run_at=$2 WHERE id=$1", id, latest.Add(time.Minute))
+		// Keep the duplicate trigger due even during the first minute after 09:00 UTC.
+		// Move the existing fixture timestamp back so the new trigger remains distinct.
+		_, e = db.Pool.Exec(ctx, "UPDATE schedule_occurrences SET scheduled_for=$3 WHERE schedule_id=$1 AND scheduled_for=$2", id, latest, latest.Add(-time.Minute))
+		must(t, e)
+		_, e = db.Pool.Exec(ctx, "UPDATE schedules SET next_run_at=$2 WHERE id=$1", id, latest)
 		must(t, e)
 		must(t, limited.GenerateOccurrences(ctx))
 		var duplicates int
