@@ -6,6 +6,8 @@ import json
 import pytest
 from ops_agent.namespace_advice import (
     candidates,
+    present_advice,
+    decision_context,
     elapsed_range,
     select_candidates,
     writing_candidates,
@@ -85,6 +87,8 @@ def section(facts):
         "schedule_candidate": "작업 마감·예약 일정과 대기 상태를 확인한 뒤 이 시간대 배치 작업 실행을 검토하세요.",
         "queue_review": "스케줄러 이벤트와 배치 제약을 먼저 대조하세요.",
         "resident_memory": "상주 서빙과 캐시 유지 여부를 확인하세요.",
+        "repeated_activity": "여러 시간의 고활동과 대기가 관측된 이 대상의 GPU 요청·할당과 스케줄러 이벤트를 대조하세요.",
+        "relative_activity": "마감·예약·가용 GPU·메모리 요구를 확인한 뒤 조정 가능한 작업 일부를 후보 시간으로 옮겨 시범 실행할지 검토하세요.",
     }
     facts = list(
         {
@@ -134,7 +138,13 @@ def section(facts):
         advice=[
             dict(
                 fact_id=f["fact_id"],
-                summary="{{target}} · {{period}}: "
+                summary=(
+                    checks[f["kind"]]
+                    + " "
+                    + (f.get("summary_start") or summary_context(f)["summary_start"])
+                )
+                if f["kind"] in ("repeated_activity", "relative_activity")
+                else "{{target}} · {{period}}: "
                 + (
                     "GPU 활동률은 {{activity}}입니다. "
                     if (
@@ -888,6 +898,9 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
     assert [item["fact_id"] for item in examples] == [
         f["fact_id"] for f in wire["topics"][0]["findings"]
     ]
+    for example, fact in zip(examples, wire["topics"][0]["findings"], strict=True):
+        assert example["summary"].endswith(fact["summary_start"])
+        assert "{{target}}" in example["summary"] and "{{period}}" in example["summary"]
     assert "재선택하지 마세요" in system
     assert {
         f["summary_tokens"]["{{target}}"].split(" / ")[0]
@@ -1132,7 +1145,9 @@ def test_writing_focus_keeps_evidence_requirements_and_historical_semantics():
     fact = candidates(topic(activity=1, memory=98))[0]
     before = deepcopy(fact)
     context = summary_context(fact)
-    assert "상주 작업의 메모리 유지 필요성" in WRITING_FOCUS[fact["kind"]]
+    assert "메모리를 어떤 작업이 차지하는지" in WRITING_FOCUS[fact["kind"]]
+    assert "새 GPU 작업을 배치할 수 있을지" in context["writing_focus"]
+    assert "독점 사용량이나 GPU 여유를 확정하지" in context["writing_focus"]
     assert set(context["required_summary_tokens"]) == {
         "{{target}}",
         "{{period}}",
@@ -1468,7 +1483,7 @@ def test_summary_start_preserves_units_and_distinct_equal_value_references(unsch
         ),
         (
             2,
-            "대기 Pod가 미배치 상태로 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요.",
+            "GPU 부족 여부를 판단하려면 관측된 미배치 Pod의 스케줄러 이벤트를 확인하세요.",
         ),
         (None, "배치·준비 단계 이벤트를 함께 대조해 대기 상태를 확인하세요."),
     ],
@@ -1484,7 +1499,27 @@ def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, c
         {"findings": [fact]},
     )["advice"]
     assert "시간대별 관측 최대 대기" not in SYSTEM
-    assert "첫 문장은 후보 writing_focus에 맞는 운영 선택과 그 이유" in SYSTEM
+    assert "첫 문장은 어느 작업의 무엇을 왜 확인하거나 조정할지" in SYSTEM
+    assert '"배치 조건", "메모리 유지 필요성"만으로 끝내지 말고' in SYSTEM
+    if unscheduled == 2:
+        focus = summary_context(fact)["writing_focus"]
+        assert "GPU 요청이 충족되지 않았는지" in focus
+        assert "GPU 부족을 단정" not in focus
+
+
+def test_resident_focus_checks_gpu_memory_owner_before_placing_work():
+    fact = next(
+        f for f in candidates(topic(memory=98)) if f["kind"] == "resident_memory"
+    )
+    focus = summary_context(fact)["writing_focus"]
+    assert "연결된 GPU의 메모리를 어떤 작업이 차지하는지" in focus
+    assert "해당 Namespace의 독점 사용량" in focus
+    choice = "새 GPU 작업의 배치 가능성을 판단하려면 연결된 GPU의 메모리 점유 주체와 상주 목적을 확인하세요."
+    summary = choice + " " + summary_context(fact)["summary_start"]
+    assert validate_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
+        {"findings": [fact]},
+    )["advice"]
 
 
 @pytest.mark.parametrize("missing", [False, True])
@@ -1864,15 +1899,24 @@ async def test_queue_cause_rejection_repairs_only_invalid_item_without_rewriting
     assert result["topics"] == original["topics"]
 
 
-def test_batch_writing_focus_links_remaining_queue_to_next_batch_review_only():
+def test_batch_writing_focus_identifies_observed_pending_pods_and_stage():
     fact = next(
         f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
     )
     original = deepcopy(fact)
     fact["pending_change"] = [8, 5]
     context = summary_context(fact)
-    assert "다음 배치의 실행 순서" in context["writing_focus"]
-    assert "작업 유형·스케줄러 기록" in context["writing_focus"]
+    assert "마지막 시간대에도 대기 Pod" in context["writing_focus"]
+    assert (
+        "이 Namespace에서 관측된 대기 Pod의 상태와 이벤트" in context["writing_focus"]
+    )
+    assert "노드 배정 전인지 기동 준비 중인지" in context["writing_focus"]
+    assert "다음 작업" not in context["writing_focus"]
+    assert "소요시간" not in context["writing_focus"]
+    fact["source_hours"][-1]["unscheduled"] = 5
+    assert "노드가 배정되지 않은 대기 Pod" in summary_context(fact)["writing_focus"]
+    assert "배치되지 않은 사유" in summary_context(fact)["writing_focus"]
+    fact["source_hours"] = original["source_hours"]
     fact["pending_change"] = [8, 0]
     assert summary_context(fact)["writing_focus"] == WRITING_FOCUS["batch_progress"]
     fact.pop("pending_change")
@@ -1931,3 +1975,162 @@ async def test_namespace_writing_list_does_not_replace_incident_section_contract
     assert "namespace_usage에만 적용" in system
     assert "예약·대기·가용 GPU를 확인한 뒤" in system
     assert "모든 주제의 관측값·대상·시각은 참조 토큰" in system
+
+
+def test_queue_preserves_full_span_and_offers_only_valid_contiguous_subwindows():
+    t = topic(activity=50, pending=4, memory=20)
+    t["rows"][0]["hours"][0]["reasons"] = ["identity_uncertain"]
+    before = deepcopy(t)
+    facts = candidates(t)
+    queues = [f for f in facts if f["kind"] == "queue_review"]
+    assert len(queues) == 2
+    broad = next(f for f in queues if len(f["source_hours"]) == 3)
+    joined = next(f for f in queues if len(f["source_hours"]) == 2)
+    assert all(not h["activity"] and not h["memory"] for h in broad["source_hours"])
+    assert all(
+        h["activity"] == [50] and h["memory"] == [20] for h in joined["source_hours"]
+    )
+    assert joined["period"]["start"] == t["rows"][0]["hours"][1]["start"]
+    selected, _ = writing_candidates(facts)
+    assert selected == [joined]
+    assert t == before
+    # A different GPU in the second valid hour must not be joined.
+    t["rows"][0]["hours"][2]["gpu_ids"] = ["another"]
+    assert len(candidates(t)) == 1
+
+
+def test_elapsed_float_seconds_keep_precision_without_integer_decimal_suffix():
+    assert elapsed_range([10810.0, 21618.0]) == "3시간 10초~6시간 18초"
+    assert elapsed_range([0.0]) == "0초"
+    assert elapsed_range([60.25]) == "1분 0.25초"
+
+
+def test_presentation_preserves_entire_accepted_prose_and_safe_boundary():
+    fact = candidates(topic(memory=98))[0]
+    context = summary_context(fact)
+    summary = "다른 작업을 넣기 전에 상주 작업의 메모리 유지 필요성을 확인하세요. {{target}} · {{period}}: 활동률 {{activity}}, 장치 메모리 {{memory}}입니다."
+    narrative = [
+        validate_advice(
+            {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
+            {"findings": [fact]},
+        )
+    ]
+    before = deepcopy(narrative)
+    present_advice(narrative)
+    item = narrative[0]["advice"][0]
+    parts = item.pop("summary_parts")
+    assert parts["decision"] + " " + parts["evidence"] == item["summary"]
+    assert narrative == before
+    assert context["summary_tokens"]["{{target}}"] in parts["evidence"]
+    item["summary"] = item["summary"].replace(
+        ". " + parts["evidence"], "." + parts["evidence"]
+    )
+    present_advice(narrative)
+    assert (
+        item["summary_parts"]["decision"] + item["summary_parts"]["evidence"]
+        == item["summary"]
+    )
+    item["summary"] = "대상부터 쓰는 과거 문장은 임의로 분리하지 않습니다."
+    present_advice(narrative)
+    assert "summary_parts" not in item
+
+
+def test_choice_support_ranks_conditional_trial_before_generic_queue_check():
+    trial = candidates(topic())[0]
+    queue = candidates(topic(pending=100, samples=12))[0]
+    queue["fact_id"] = "queue"
+    queue["target"]["namespace"] = "queue"
+    selected, _ = select_candidates([queue, trial])
+    assert selected[0] == trial
+    assert decision_context(trial)["scope"] == "conditional_option"
+    assert decision_context(queue)["specific_evidence"] is False
+    # Missing queue observations weaken the scheduling choice without removing its evidence.
+    for h in trial["source_hours"]:
+        h["pending_samples"] = 12
+    trial["selection_basis"]["pending_complete"] = False
+    assert decision_context(trial)["scope"] == "targeted_check"
+
+
+def test_partial_positive_placement_evidence_can_narrow_a_complete_unknown_queue():
+    unknown = candidates(topic(pending=3))[0]
+    placed = deepcopy(unknown)
+    placed["fact_id"] = "placement"
+    placed["selection_basis"]["pending_complete"] = False
+    placed["source_hours"][0].update(unscheduled=1, unscheduled_samples=12)
+    before = deepcopy([unknown, placed])
+    selected, _ = select_candidates([unknown, placed])
+    assert selected[0] == placed
+    assert decision_context(placed)["choice"] == "placement_review"
+    assert [unknown, placed] == before
+
+
+def test_cluster_diversity_does_not_replace_specific_evidence_with_generic_check():
+    batch = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    batch["source_hours"][-1].update(unscheduled=2, unscheduled_samples=240)
+    batch["pending_change"] = [2, 2]
+    batch["selection_basis"]["pending_complete"] = True
+    queues = []
+    for i, unscheduled in enumerate((2, None)):
+        q = candidates(topic(pending=2))[0]
+        q["fact_id"] = f"other-{i}"
+        q["target"]["cluster_id"] = "cpc-2"
+        for h in q["source_hours"]:
+            h.update(unscheduled=unscheduled, unscheduled_samples=240)
+        queues.append(q)
+    selected, audit = writing_candidates([batch, *queues])
+    assert queues[0] in selected and queues[1] not in selected
+    assert audit["required_batch_fact_id"] == batch["fact_id"]
+    assert {f["target"]["cluster_id"] for f in selected} == {"cpc-1", "cpc-2"}
+
+
+def test_completion_only_is_not_an_optional_operating_change():
+    batch = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    assert decision_context(batch)["scope"] == "observation_only"
+    assert "기록" in decision_context(batch)["needed"]
+    selected, audit = writing_candidates([batch, candidates(topic())[0]])
+    assert batch in selected  # Existing required-completion contract is preserved.
+    assert next(d for d in audit["decisions"] if d["fact_id"] == batch["fact_id"])[
+        "required_batch"
+    ]
+
+
+async def test_operating_choice_reaches_llm_and_stored_result_without_changing_topics():
+    t = topic()
+    original = deepcopy(t)
+    result = dict(topics=[t], quality={}, time_range={})
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    summary = (
+        "예약·대기·가용 GPU를 확인한 뒤 낮은 활동 구간을 배치 작업 시범 실행 후보로 검토하세요. "
+        + summary_context(fact)["summary_start"]
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = {
+        "sections": [
+            {
+                "topic_id": "namespace_usage",
+                "advice": [{"fact_id": fact["fact_id"], "summary": summary}],
+            }
+        ]
+    }
+    await interpret_report(result, llm)
+    sent = llm.complete.call_args.args[1]["topics"][0]["findings"][0]["decision"]
+    saved = result["narrative"][0]["advice"][0]["decision"]
+    assert sent == saved == decision_context(fact)
+    assert result["topics"] == [original]
+    assert result["narrative_status"] == "complete"
+
+
+def test_required_completion_is_covered_without_forcing_it_to_the_first_bullet():
+    batch = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    trial = candidates(topic())[0]
+    trial["fact_id"] = "trial"
+    selected, audit = writing_candidates([batch, trial])
+    assert selected[0] == trial
+    assert batch in selected
+    assert audit["required_batch_fact_id"] == batch["fact_id"]

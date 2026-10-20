@@ -57,8 +57,9 @@ Memory-supported interpretation fixes the observation target, time window and nu
 - Capacity review requires at least two consecutive hours with stable GPU identities, every model's hourly activity ≥80% and a positive Namespace Pending peak with all 240 workload evaluation points in each interval. Evaluation coverage is not proof of raw scrape completeness or instantaneous concurrence. It proposes checking allocation/guarantees, scheduler reasons and available cluster resources, never an additional GPU quantity. / 높은 활동과 대기가 같은 시간 구간에 집계된 경우의 조건부 확대 검토입니다.
 - Other positive observed Pending peaks lead to placement/preparation record checks using same-window unscheduled evidence, including partial windows with an explicit limitation. Unknown activity cannot be described as low activity. / 활동이 낮거나 미확인인 대기를 GPU 부족이나 할당 확대 근거로 단정하지 않습니다.
 - At least two consecutive eligible hours below 5% in every model, without a known positive Pending peak, can form a scheduling candidate. Unknown Pending is labelled unknown and must be checked before a trial. If any aligned model's memory ratio is ≥80%, retain the resident serving/cache candidate and also preserve any remaining consecutive subwindow that independently satisfies the original scheduling conditions. Missing memory is not zero. / 해당 Namespace의 후보 시간이며 클러스터 가용성 보장이 아닙니다.
+- Distinct `repeated_activity` and `relative_activity` candidates preserve separated observation periods and candidate/reference windows respectively; see [R1/R2 criteria and permitted choices](#반복-고활동상대적-저부하-후보). They do not relax the preceding kinds. / 별도 근거로 자원 배분 점검 또는 조건부 시간 변경 시범 검토를 제안하며 실제 LLM 유용성은 후속 검증합니다.
 - These are editorial selection thresholds, not changes to stored activity, low-activity-hour, memory or workload metrics. Source periods, IDs, observation, conditions, evidence/value references and supporting hours are stored in `narrative[].advice`; existing `text` fields keep HTML readers compatible. CSV and original `topics` remain unchanged.
-- Preserve distinct operational questions per Namespace, reserve cluster/kind representatives and offer at most 12 candidates; the LLM aims for three to five distinct proposals (at most 5), without filling slots when evidence is insufficient and represents offered clusters when possible. It does not fill five slots with duplicate scheduler checks. It writes a concise `summary` combining observation and proposed next step, against allowed fact IDs; it does not also generate duplicate meaning/next-check prose for each candidate. Summary target/period/activity/pending/unscheduled/memory/completed/elapsed/pending_change tokens or exact matching literals (including same-date short period notation) are validated against that candidate; references are replaced with stored values and exact literal prose is kept unchanged; `summary_source=llm` records authorship. Unsupported numbers/names, missing context and invented job absence are rejected. Scheduling stays conditional; unknown Pending remains in stored observations/conditions and the visible pre-execution note instead of becoming zero. Legacy section meaning/next_check fields retain the same stored summaries for readers expecting those fields. The UI displays at most five summary bullets and collapses fixed observations and conditions; code still supplies fixed observations and action labels. Invalid format, invented observations or unsupported allocation claims trigger one repair, then the existing calculated fallback. Input stays ≤32KB with the existing token/deadline/cancellation budget. Candidates absent means the previous interpretation path remains active.
+- Preserve distinct operational questions per Namespace, reserve cluster/kind representatives and offer at most 12 candidates; the LLM aims for three to five distinct proposals (at most 5), without filling slots when evidence is insufficient and represents offered clusters when possible. It does not fill five slots with duplicate scheduler checks. It writes a concise `summary` combining observation and proposed next step, against allowed fact IDs; it does not also generate duplicate meaning/next-check prose for each candidate. Summary target/period/activity/pending/unscheduled/memory/completed/elapsed/pending_change and relative comparison reference_period/reference_activity tokens or exact matching literals (including same-date short period notation) are validated against that candidate; references are replaced with stored values and exact literal prose is kept unchanged; `summary_source=llm` records authorship. Unsupported numbers/names, missing context and invented job absence are rejected. Scheduling stays conditional; unknown Pending remains in stored observations/conditions and the visible pre-execution note instead of becoming zero. Legacy section meaning/next_check fields retain the same stored summaries for readers expecting those fields. The UI displays at most five summary bullets and collapses fixed observations and conditions; code still supplies fixed observations and action labels. Invalid format, invented observations or unsupported allocation claims trigger one repair, then the existing calculated fallback. Input stays ≤32KB with the existing token/deadline/cancellation budget. Candidates absent means the previous interpretation path remains active.
 - Policy integration, allocation execution/quantity, multi-day recurrence and actual waiting/execution duration are not inferred. Fixed wording/claim guards cannot prove all natural-language semantics; real replies still require evidence-based review. / 정책·할당 수량·매일 반복 패턴·별도 대기/실행 시간 측정은 후속 범위입니다.
 
 
@@ -74,9 +75,19 @@ Memory-supported interpretation fixes the observation target, time window and nu
 | 대기 점검 | 양수 Pending과 같은 시간의 미배치 근거로 배치/준비/미확인 단계의 점검 기록을 구분. Namespace 대기는 시간·KST 날짜로 묶고 연결 변경·활동 누락 구간의 활동·메모리는 미확인 |
 | 완료·대기 흐름 | 같은 Namespace의 유효 완료 표본·Job 경과와 후보 기간 Pending을 연결. 대기 변화의 마지막 시간대는 완전 관측이어야 하며 활동 연결 공백은 그대로 유지 |
 
-현재 전달 순위는 할당 검토 → 완료 → 대기 → 상주 메모리 → 실행 시간대입니다. 클러스터·종류 대표와 서로 다른 대상·질문을 추가 구간보다 먼저 담아 최대 12개를 전달하며, 대표 완료 필수·후보 클러스터 포함·같은 클러스터/종류 하나·최대 5개 출력 조건은 유지합니다. 완료 필수 구간에 포함되는 대기와 대안이 있는 비필수 완료의 전달을 줄이되, 기존 강제 포함 조건을 회피하지 않습니다. 80%·5%·80%와 두 시간은 설명 후보의 기준이지 운영정책·부족·효율 판정 기준이 아닙니다.
+`ops-operating-choices-v6`는 기존 종류별 순위를 제거하고 `decision_context()`로 운영 선택을 먼저 구분합니다. `decision`은 `choice`(선택 질문), `scope`(허용 판단), `reason`(직접 근거), `needed`(추가 확인), `option`(조건부 선택)을 포함하며 최초·보완 입력과 채택 narrative에 보존됩니다.
 
-[Ops 전용 운영 제안](../../../ops-agent/README.md#namespace별-조건부-운영-제안)은 실행 흐름의 요약입니다. 지표별 의미·판단 경계·질문별 다음 확인·문장 품질과 미구현 1~4단계 기준은 이 명세의 [운영 해석 기준과 후속 설계](#운영-해석-기준과-후속-설계)에서 관리한다. 문서의 품질 목표를 런타임 검증 통과로 간주하지 않는다. `namespace-pattern-advice-v3`는 기존 `topics`·수치·품질·CSV를 바꾸지 않고 narrative에 후보별 근거와 선별 요약을 저장한다. `selection.criteria`는 설명 후보의 기준 revision이며 실제 부서 정책이 아니다. `source_hours`와 `completed_jobs`는 기존 결과의 해당 대상·기간에 속하는 표본이다. 완료 표본 수·경과시간 범위와 시간대별 처음/마지막 대기 최대값은 이 표본만 참조한다. 대기 건수는 대기 시간이 아니고 경과시간은 순수 연산시간이 아니다. 앞 구간이 일부 표본이면 이를 보존하며 마지막 구간이 불완전하면 대기 변화 참조를 만들지 않는다. 근거 공백은 정상·완료 0으로 해석하지 않는다.
+| 판단 범위 | 현재 의미와 선별 |
+|---|---|
+| `conditional_option` | 기존 자격을 만족한 할당 검토, 완전한 대기 관측이 연결된 실행 시간대 후보. 실제 조치 전 조건은 여전히 미확인 |
+| `targeted_check` | 미배치/준비 단계, 낮은 활동·높은 장치 메모리, 후반 대기가 남은 완료 등 구체적인 점검 선택. 대기 단계가 미확인이거나 시간대 후보의 대기가 불완전하면 `specific_evidence=false`로 구분 |
+| `observation_only` | 별도의 운영 변경을 뒷받침할 연결이 없는 완료 참고. 기존 대표 완료 조건을 충족하면 필수 포함하며 선택 가치가 높은 것처럼 과장하지 않음 |
+
+정렬은 위 판단 범위, 구체적인 점검을 좁히는 근거, 활동 연결 여부, 관측 구간 길이, 대기 최대값, 완료 표본 수, 대상·기간·ID 순입니다. 이는 설명 후보를 정하는 재현 가능한 순서이며 긴 구간·큰 대기 수를 지연 시간이나 운영상 심각도로 해석하지 않습니다. `writing_candidates()`는 대표 완료와 각 클러스터를 확보하고, 같은 판단 범위·근거 구분 안에서 다른 선택을 우선합니다. 미확인 단계가 다른 질문이라는 이유만으로 더 구체적인 점검을 밀어내지 않습니다. 남은 자리는 기존 같은 클러스터/종류 제한 안에서 이미 선택한 것과 다른 선택만 보탭니다. 최대 12개 전달·최대 5개 출력·대표 완료 필수·클러스터 포함·완료 안의 대기 자동 제외를 유지하고 최대 5개 사전 선별의 `selection.decisions`에 전달한 선택과 필수 완료 여부를 남깁니다. 최종 전달 순서는 판단 범위·근거 정렬을 따르며 대표 완료가 반드시 첫 항목은 아닙니다. 5개 초과 클러스터에서는 기존 최대 12개 전달과 LLM 선택 경로를 유지합니다.
+
+기존 80%·5%·80%와 연속 두 시간은 설명 후보 자격이며 운영정책·부족 판정 기준이 아닙니다. 원래 `topics`·산식·품질·CSV는 바뀌지 않습니다.
+
+[Ops 전용 운영 제안](../../../ops-agent/README.md#namespace별-조건부-운영-제안)은 실행 흐름의 요약입니다. 지표별 의미·판단 경계·질문별 다음 확인·문장 품질과 1~4단계 기준은 이 명세의 [운영 해석 기준과 후속 설계](#운영-해석-기준과-후속-설계)에서 관리한다. 문서의 품질 목표를 런타임 검증 통과로 간주하지 않는다. `namespace-pattern-advice-v3`는 기존 `topics`·수치·품질·CSV를 바꾸지 않고 narrative에 후보별 근거와 선별 요약을 저장한다. `selection.criteria`는 설명 후보의 기준 revision이며 실제 부서 정책이 아니다. `source_hours`와 `completed_jobs`는 기존 결과의 해당 대상·기간에 속하는 표본이다. 완료 표본 수·경과시간 범위와 시간대별 처음/마지막 대기 최대값은 이 표본만 참조한다. 대기 건수는 대기 시간이 아니고 경과시간은 순수 연산시간이 아니다. 앞 구간이 일부 표본이면 이를 보존하며 마지막 구간이 불완전하면 대기 변화 참조를 만들지 않는다. 근거 공백은 정상·완료 0으로 해석하지 않는다.
 
 후보를 상한으로 잘라도 각 클러스터와 운영 질문 종류를 보존하는지, 같은 Namespace의 다른 시간대 후보가 남는지, 기간 밖 Job이 섞이지 않는지 검수한다. 모델 출력의 단위 중복·잘림·잘못된 참조는 계산 대체 상태를 유지하며 문장을 손으로 고쳐 AI 결과로 저장하지 않는다. 자동·수동은 같은 Worker 경로의 회귀 검사를 수행하되 운영 신규 발행과 구별한다.
 
@@ -222,7 +233,7 @@ Invalid numeric samples remain in duplicate detection so an invalid duplicate ca
 
 ## 운영 해석 기준과 후속 설계
 
-이 절은 운영 해석의 지표 의미·판단 경계·문장 품질과 **미구현 1~4단계 설계**의 상세 기준입니다. 현재 구현은 [Namespace별 조건부 제안](#namespace별-조건부-제안)과 [Ops README](../../../ops-agent/README.md#namespace별-조건부-운영-제안)에 구분해 설명합니다. 아래 사례는 기대 판단을 검토하는 가상 자료이며 실제 LLM 결과나 운영 검증 기록이 아닙니다.
+이 절은 운영 해석의 지표 의미·판단 경계·문장 품질과 **1~4단계 설계와 남은 목표**의 상세 기준입니다. 현재 구현은 [Namespace별 조건부 제안](#namespace별-조건부-제안)과 [Ops README](../../../ops-agent/README.md#namespace별-조건부-운영-제안)에 구분해 설명합니다. 아래 사례는 기대 판단을 검토하는 가상 자료이며 실제 LLM 결과나 운영 검증 기록이 아닙니다.
 
 - [지표 의미와 판단 경계](#수집-지표에서-운영-판단까지)
 - [1단계 · 운영 질문](#질문별로-어떤-답을-쓰는가-후속-개발-목표)
@@ -282,6 +293,8 @@ Namespace가 같아도 보고서 하루 평균 활동률과 다른 시간대의 
 | **Q3 · 시범 실행 시간대** | 같은 GPU 구성의 연속된 유효 활동 구간과 해당 구간의 Pending 관측 여부. 같은 시간대 메모리가 있으면 상주 점유를 함께 고려 | 그 시간의 예약·작업 마감·가용 GPU, 시범 배치가 가능한 작업인지와 그 요구 조건 | 대기 미확인은 확인 전 조건으로 명시한 약한 후보이며, 완전한 대기 관측이 있는 후보보다 근거가 약합니다. 메모리 미관측을 여유로 해석하지 않습니다. 알려진 양수 대기가 있거나 활동 연결이 부족한 구간을 실행 여유 시간대로 권하지 않습니다 |
 | **Q4 · 활동·메모리 대비** | 같은 GPU 신원·모델·Namespace·시간 구간의 유효 활동률과 장치 메모리 사용/여유. 사용 비율은 같은 시간대의 사용·여유 값으로 설명 | 해당 GPU에 연결된 작업 목적·상주 프로세스·캐시·메모리 요구 조건 | 한쪽 관측이 없으면 두 값의 대비를 만들지 않습니다. 두 값이 있어도 작업 목적이나 연산/메모리 병목은 추정하지 않으며, 높은 활동·낮은 메모리 등의 새 분기는 별도 기준 검증 전까지 현재 지원 분석으로 표시하지 않습니다 |
 | **Q5 · 완료·경과 흐름** | GPU 요청 Pod의 Job owner 연결을 검증한 성공 완료 표본과 생성·시작·완료 시각, 저장된 Job 경과시간. 대기 변화를 언급할 때는 같은 Namespace·후보 구간의 유효 Pending 관측도 필요 | 실제 Pod 실행 시작, 재시도·실행 순서·배치 제약, 작업 유형·GPU 모델·요청량·입력 조건의 동등성 | 완료 표본만 있으면 그 표본의 완료·경과 범위까지만 설명합니다. 대기 연결이 없으면 대기 변화와 엮지 않고, 작업 조건이 다르거나 미확인이면 성능 우열을 비교하지 않습니다. 완료 표본이 없다는 이유로 완료 0건·작업 정체를 단정하지 않습니다 |
+
+Q2의 미배치 제안은 “배치 조건 확인”만 말하지 않고, 관측된 미배치 Pod의 스케줄러 이벤트에서 **GPU 요청 미충족인지 다른 배치 제약인지** 구분할 목적을 밝힙니다. 이벤트가 없거나 보존되지 않았으면 대기 원인은 미확인입니다. Q4의 높은 장치 메모리는 연결 GPU의 관측이지 해당 Namespace 작업의 독점 점유가 아닙니다. **새 작업 배치 가능성을 판단할 때** 메모리 점유 주체와 상주 필요성을 확인하며, 관측만으로 GPU 여유를 확정하지 않습니다.
 
 근거 연결은 다음 원칙으로 검수합니다.
 
@@ -373,6 +386,51 @@ These planned evidence requirements distinguish stored observations, evidence su
 
 추가 검수에서는 S01의 Namespace·클러스터 이름과 조건 안의 수치를 바꿔도 같은 판단 범위가 유지되는지 확인합니다. S02·S03·S06·S09·S13처럼 조건·관측 범위가 바뀌면 결론도 달라져야 합니다. 이는 같은 후보에 대한 해석 일관성 기준이며, 최종 첫 화면 포함 여부는 별도의 선별·대표성 조건에 따라 달라질 수 있습니다. 사례의 기대 판단을 문서로 정한 것과 실제 코드·LLM이 재현한 것은 별도 검증입니다.
 
+### 반복 고활동·상대적 저부하 후보
+
+**상태와 목적.** 아래 R1/R2는 기존 Q1~Q5의 자격을 낮추는 대체 경로가 아니라 별도의 질문과 주장 범위입니다. 기존 Q1의 모든 모델 80% 이상·연속 두 시간·완전 Pending 양수, Q3의 5% 미만·연속 두 시간 및 기존 메모리 분기는 유지합니다. `ops-pattern-comparison-v7`은 R1을 `repeated_activity`, R2를 `relative_activity`로 생성하고 기존 선별·최초/보완 입력·검증·narrative 저장 경로에 연결합니다. 신규 종류의 실제 LLM 문장 품질은 단일 저장 보고서에서 부분 개선으로 평가됐으며 운영 발행은 미검증입니다([Agent QA](../../../agents/QA.md)). 아래 수치는 초기 선별 기준입니다. R1은 **자원 배분 점검의 우선 대상**, R2는 **조건 확인 후 소규모 시간대 변경 실험**을 제안하며 확대 수량·가용 GPU·성능 개선을 판단하지 않습니다.
+
+#### R1 · 반복 고활동과 대기가 관측된 대상
+
+- **질문:** 연속 고활동 기준은 충족하지 않지만, 자원 배분과 배치 제약을 먼저 대조할 Namespace가 있는가?
+- **성립:** 같은 클러스터·Namespace·KST 날짜·관측 모델 집합·GPU 구성에서 기존 활동 유효성 검사를 통과하고, 모든 관측 모델의 시간 평균 활동률이 80% 이상이며 해당 시간의 Pending이 240개 평가·최대 양수인 시간들을 찾습니다. 인접한 해당 시간은 한 묶음으로 세고, 서로 떨어진 묶음이 두 개 이상이면 R1입니다. 한 묶음이 Q1의 연속 두 시간을 만족하면 그 묶음은 Q1에 맡기고 나머지 독립 묶음이 두 개 이상일 때만 별도 R1을 남깁니다. 하루별로 판정하며 보고기간이 길다는 이유로 서로 다른 날짜의 한 시간씩을 합치지 않습니다.
+- **공백 처리:** 묶음 사이에 제외·미관측 시간이 있어도 각 묶음의 유효 근거는 보존합니다. 처음~마지막 시간을 하나의 연속 고활동 구간으로 만들지 않고, 실제 묶음 목록과 중간 제외 사유를 별도로 전달합니다. GPU·모델 구성이 바뀌면 비교 집합을 나누며, 확인된 시간의 구성이 같다고 사이의 구성을 추정하지 않습니다. 미확인 시간을 낮은 활동·대기 해소로 메우지 않습니다.
+- **허용 선택:** 다른 Namespace와 동일한 일반 점검을 나열하기보다 이 대상을 **자원 배분 점검 대상으로 먼저 검토**하도록 제안합니다. 점검 내용은 해당 구간의 GPU 요청·할당·보장/제한과 스케줄러 이벤트의 대조입니다. 이는 부족 원인·장애 심각도 순위가 아니라 반복 관측에 근거한 검토 대상 선정입니다. 미배치 양수/준비/미확인 분기는 기존 근거에 맞춰 별도로 명시합니다.
+- **금지·보류:** GPU 부족, 계속 기다리는 동일 작업, 전체 구간 포화, 할당 확대 실행·수량은 말하지 않습니다. 한 묶음뿐이거나 해당 시간의 활동/대기 근거가 불완전하면 R1은 보류하고 기존 Q2의 유효 관측만 유지합니다. 의도된 테스트 제한·쿼터 원인은 실제 연결 근거 없이 라벨이나 작업 이름으로 추정하지 않습니다. 할당 확대라는 제안은 기존 Q1 또는 별도로 승인된 직접 자원 근거 계약에서만 허용합니다.
+
+#### R2 · 같은 대상의 상대적으로 낮은 활동 시간대
+
+- **질문:** 거의 무활동인 시간이 없어도, 이 Namespace의 작업을 옮겨 시험할 만한 상대적 저활동 구간이 있는가?
+- **비교 단위:** 같은 클러스터·Namespace·KST 날짜·관측 모델 집합·GPU 구성에서 서로 겹치지 않는 연속 두 시간 구간끼리 비교합니다. 양쪽 모든 시간·모델이 기존 활동 유효성 조건을 통과하고 Pending이 240개 평가·최대 0이어야 합니다. 비교는 이 Namespace에 한정하며 다른 Namespace의 작업 이동이나 클러스터 전체 비혼잡을 제안하지 않습니다.
+- **초기 비교 기준:** 모든 모델에서 후보 두 시간의 활동률 **최댓값이 비교 구간 두 시간의 최솟값의 절반 이하**이면 상대적 저부하 후보로 봅니다. 비교 구간 최솟값은 양수여야 합니다. 모델 평균끼리 상쇄하거나 기간 전체 평균을 새로 계산하지 않습니다. 절반이라는 값은 작은 수치 차이만으로 제안을 채우지 않기 위한 **새 후보의 초기 설계값**이며, 운영정책이나 효과가 입증된 경계가 아닙니다. 아래 수용 검수 전에는 제품에 활성화하지 않습니다. 기존 5% 경계는 바꾸지 않습니다.
+- **메모리·반대 근거:** 후보의 모든 시간·모델에 기존 검증을 통과한 메모리 근거가 있고 장치 점유가 80% 미만이어야 R2의 시범 실행 제안을 허용합니다. 이는 추가 작업을 수용한다는 보장이 아닙니다. 높은 메모리, 양수 Pending, 후보/비교 구간의 부분 관측은 R2 제안을 보류합니다. 메모리 미확인도 R2는 보류하되 기존 Q3의 미확인 처리까지 바꾸지 않습니다. 선택한 비교 구간 밖에서 대기나 높은 활동이 있었다는 사실도 삭제하지 않습니다.
+- **비교 선택:** 가능한 모든 두 시간 조합을 검사합니다. 같은 후보에 여러 비교 구간이 있으면 모델별 `비교 최솟값 - 후보 최댓값` 중 가장 작은 차이가 큰 비교 구간을 택하고, 동률이면 이른 시각을 택합니다. 차이는 후보 선별용 메타데이터이며 기존 보고서 metric·품질·CSV를 덮어쓰지 않습니다. 이 비교 구간은 하루 평균·일반적인 업무 시간대를 대표하지 않습니다.
+- **허용 선택:** 해당 날짜의 비교 근거를 제시하고, 작업 마감·예약·가용 GPU·추가 작업의 메모리 요구를 확인한 뒤 **시간 조정이 가능한 같은 Namespace의 작업 일부를 후보 시간대로 옮겨 시범 실행할지 검토**하도록 합니다. 이미 실행 가능한 작업이나 반복되는 일일 저부하 패턴으로 단정하지 않습니다. 제출 시각을 옮기면 대기·완료시간이 좋아진다는 효과 예측은 하지 않습니다.
+- **중복:** 기존 Q3가 같은 구간에 성립하면 Q3를 우선하며 새 종류로 같은 제안을 추가하지 않습니다. 겹치는 R2 구간은 위 비교 차이가 큰 구간 하나, 동률이면 이른 구간을 대표로 고릅니다. 같은 대상의 나머지 유효 구간은 상세에 보존하고 첫 화면에는 같은 운영 선택 하나만 제시합니다. 비겹침 구간도 기존 전체 후보/요약 상한 안에서 선택합니다.
+
+#### 실제 구간에 대입한 허용 범위
+
+다음은 저장된 **2026-10-19 00:00~10/20 00:00 KST 수동 보고서**의 시간 집계로 검토한 사례입니다. 문장은 명세 설명용 예시이며 실제 LLM 출력이나 운영 검증 완료 사례가 아닙니다. 모든 활동 수치는 시간 평균, Pending은 시간별 최대값이고 메모리는 연결된 장치 관측입니다. Namespace는 역할명으로 줄였습니다.
+
+| 대상·실제 근거 | 새 기준에서의 판단 | 허용할 운영 제안과 남은 조건 |
+|---|---|---|
+| CPC-1 수요예측: 18~19시 83.25%·Pending 55개, 21~22시 83.38%·54개. 앞선 17~18시·20~21시는 각각 58.60%. 19~20시·22~23시는 신원 검증 제외 | Q1은 계속 불성립. R1은 떨어진 고활동·양수 대기 묶음 두 개로 성립. 제외 시간을 연결하지 않음 | “고활동과 대기가 여러 구간에서 관측된 이 Namespace부터 자원 배분을 점검하세요. 해당 구간의 GPU 요청·할당과 스케줄러 이벤트를 대조할 대상입니다.” 증설·지속 포화는 제안하지 않음 |
+| CPC-2 수요예측: 13~14시 83.06%·55개, 16~17시 82.98%·54개, 19~20시 82.19%·53개, 22~23시 82.57%·52개. 각 다음 시간은 신원 검증 제외 | Q1은 불성립, R1은 네 묶음. Pending 감소가 같은 작업의 대기 해소나 완료 효과라는 뜻은 아님 | CPC-1과 같은 범위의 자원 배분 점검 대상. 네 묶음·큰 대기 수만으로 더 심각한 GPU 부족으로 순위화하지 않음 |
+| CPC-1 서비스: 후보 21~23시 활동 21.42%·16.98%, Pending 각각 0, 메모리 11.44%·13.56%. 비교 19~21시 활동 82.80%·63.86%, Pending 각각 0 | Q3은 5% 이상이라 불성립. R2는 후보 최대 21.42%가 비교 최소 63.86%의 절반 이하라 성립 | “시간을 조정할 수 있는 이 Namespace의 작업 일부를 21~23시에 옮겨 시험하는 방안을 검토하세요. 관측한 19~21시보다 활동이 낮았습니다.” 실행 전 마감·예약·가용 GPU·작업 메모리 요구 확인. 매일 이 시간에 실행하라는 뜻은 아님 |
+| CPC-2 서비스: 후보 16~18시 36.32%·13.86%, 17~19시 13.86%·28.97%, 22~24시 35.21%·13.88%. 비교 14~16시 78.95%·73.47%. 각 구간 Pending 0, 후보 메모리 12.07~17.07% | 세 R2 구간이 성립. 겹치는 앞 두 구간은 후보 최대가 더 낮은 17~19시를 대표로 남김. 22~24시는 별도 상세 후보 | 같은 Namespace에서 조정 가능한 작업의 소규모 시간 변경 실험을 검토. 해당 시간의 클러스터 여유나 성능 개선을 확정하지 않음 |
+| CPC-1 상주 작업: 02~05시·06~09시 활동 0~0.42%, Pending 0, 메모리 97.97%; 12~14시·22~24시도 저활동·고메모리 | R2 보류, 기존 Q4 유지 | 새 작업을 넣을 시간으로 권하지 않음. 장치 메모리 점유 주체·추가 작업의 요구량이 먼저 필요 |
+| 실행 전 GPU 활동 미관측 시간, 또는 CPC-2 수요예측 10~11시 활동 2.58%·Pending 55개 | 전자는 관측 부족, 후자는 알려진 대기 때문에 R2 불성립 | 전자를 한가한 시간으로 바꾸거나 후자를 추가 배치 시간으로 제안하지 않음 |
+
+#### 구현 계약과 수용 검수
+
+R1/R2는 별도 종류와 허용 선택·필수 참조 검사로 구현합니다. R1을 `capacity_review`, R2를 `schedule_candidate`로 위장하거나 기존 금지어 검사를 끄지 않습니다. 기존 종류의 자격·문장 검증과 원래 집계·RCA는 유지합니다. 후보를 찾는 로컬 검증과 실제 LLM의 유용한 문장 생성·운영 발행 검증은 구분합니다.
+
+- **근거 계약:** `source_hours`·`observed_periods`와 R2의 `reference_period`·`reference_hours`, `criteria_revision`을 저장합니다. 최초/부분 보완 입력에는 `pattern_evidence`로 전달하고 출력의 필수 시간/수치 토큰을 검사합니다. 기존 웹/HTML은 저장된 채택 문장의 시간 목록·비교 구간을 그대로 표시하며 새 계산 metric·CSV·DB 스키마는 추가하지 않습니다. R1은 개별 고활동 묶음, 사이의 미확인 구간, 각 묶음의 활동·Pending·선택적 미배치 참조를 보존합니다. R2는 후보/비교 구간과 모델별 활동 범위, Pending 완전성, 후보 메모리, 비교 기준 revision을 보존합니다. 한 `period`로 두 비교 구간이나 떨어진 묶음을 연속 관측처럼 표현하지 않습니다. 역할이 다른 동일 수치 참조를 합치지 않습니다.
+- **영향 범위:** Ops 후보 생성·선별·LLM 최초/보완 입력·추가 종류 검증·근거 저장, 웹/HTML의 복수 구간 표시와 과거 결과 읽기를 함께 검수해야 합니다. 기존 12개/5개 상한·클러스터/완료 필수·재시도/예산은 유지합니다. R1/R2라는 이유만으로 우선하지 않으며 원인 미확인 R1과 조건부 실험 R2의 판단 범위를 구분합니다.
+- **경계 검수:** 기존 S01~S25의 결과 불변, R1 한 묶음 탈락/두 묶음 성립·구성 변경 분리·날짜 경계·부분 Pending 제외, R2 절반 경계의 안팎·전 모델 충족·영 분모 제외·신원/기간 불일치·메모리 결측/80%·양수 또는 부분 Pending 제외·겹침 대표·Q3 중복을 확인합니다. 제외 시간과 미관측을 0으로 채우지 않는지 검사합니다.
+- **초기 기준의 검수:** 이번 사례뿐 아니라 다른 날짜·작업 구성의 저장 보고서와 반례로 R1의 두 묶음, R2의 절반 기준이 과도한 후보를 만드는지 평가합니다. 테스트의 의도된 제한도 별도 근거가 없으면 원인으로 쓰지 않습니다. 이 사례가 추천에 들어오도록 수치를 역으로 조정하지 않습니다. 검수 전에는 경계의 타당성·운영 효과가 미확인입니다.
+- **LLM 수용:** 같은 자료의 전후 결과에서 대상·운영 선택·관측 이유·실행 전 조건이 읽히는지, R1이 증설 확정으로 변하지 않는지, R2가 여유/매일 반복/시간 단축 보장으로 변하지 않는지 봅니다. 참조·형식 통과와 사람의 유용성 검수를 구분하고 신규 자동·수동 발행은 별도로 검증합니다.
+
 ### 후보 선별과 우선순위 정의 (후속 개발 목표)
 
 **후보 구성도 선별의 일부입니다.** 이전 `candidates()`는 Namespace별 최대 Pending 구간을 고르고 Q1이 있으면 Q2를 만들지 않았습니다. `ops-evidence-windows-v4`는 다른 시간의 대기 구간과 각 날짜의 유효 구간을 보존하고, 같은 대상·질문의 여러 구간보다 다른 대상·질문의 대표를 먼저 전달합니다. 기존 Q4 자격은 유지하되 높은 메모리 시간을 제외한 나머지 연속 구간이 Q3의 기존 두 시간 조건을 독립적으로 만족하면 Q3도 보존합니다. Q4가 긴 구간이면 그 안에서 메모리가 항상 높았다고 설명해서는 안 됩니다. 주간에서도 활동 패턴 구간은 KST 날짜 경계를 넘지 않으며 종류별로 고른 한 구간이 주간 전체 반복성을 뜻하지 않습니다. 완료 후보는 여러 날짜를 포함할 수 있어 이 제한과 구분합니다. 대기 후보는 GPU 신원 대신 인접 시간과 KST 날짜로 묶고 신원 변화·활동 결측이 있으면 구간 전체의 활동·메모리 참조를 보류합니다. 따라서 이미 전달된 후보만 재정렬해서는 누락된 판단을 되살릴 수 없습니다.
@@ -380,7 +438,7 @@ These planned evidence requirements distinguish stored observations, evidence su
 후속 설계는 유효 구간 구성 → 질문별 판단 → 대표 후보 비교 → 제한된 LLM 전달을 함께 검수합니다. 같은 Namespace의 다른 시간·다른 선택은 내부 검토 대상으로 보존하고 기존 시간·신원·표본 조건은 유지합니다. 높은 메모리 시간이 섞인 긴 구간에서는 나머지 구간이 독립적으로 Q3 조건을 충족하는지 검사하며, 신원/표본 기준을 낮추거나 제외를 피하려고 구간을 임의로 자르지 않습니다. GPU 수·Pod 교체가 많은 Namespace에 대한 구간 단절 편향도 함께 확인합니다.
 
 
-**4단계 · Candidate selection and priority.** 첫 화면은 운영자가 우선 검토할 선택을 빠르게 읽는 곳입니다. 서로 다른 판단 3~5개를 목표로 최대 5개까지 제시하되, 유효한 제안이 적으면 더 적게 씁니다. 아래는 **미구현 선별 목표**이며 현재 코드의 종류 순서와 구분합니다. Q1~Q5의 판단 범위는 1~3단계가 결정하고, 4단계는 그중 무엇을 먼저 보여줄지 정합니다. 선택에서 빠진 후보의 원래 수치·표·그래프·근거를 삭제하거나 값을 다시 계산하지 않습니다.
+**4단계 · Candidate selection and priority.** 첫 화면은 운영자가 우선 검토할 선택을 빠르게 읽는 곳입니다. 서로 다른 판단 3~5개를 목표로 최대 5개까지 제시하되, 유효한 제안이 적으면 더 적게 씁니다. 아래는 **선별 목표와 검수 사례**이며 현재 판단 범위 정렬의 세부 동작은 앞의 선별 계약과 구분합니다. Q1~Q5의 판단 범위는 1~3단계가 결정하고, 4단계는 그중 무엇을 먼저 보여줄지 정합니다. 선택에서 빠진 후보의 원래 수치·표·그래프·근거를 삭제하거나 값을 다시 계산하지 않습니다.
 
 | 순서 | 정할 기준 | 기대하는 선택 |
 |---|---|---|
@@ -401,9 +459,9 @@ These planned evidence requirements distinguish stored observations, evidence su
 
 동등한 취급은 질문별 고정 가중치·강제 할당량이 없다는 뜻이며, 매번 두 계열의 출력 개수가 같다는 보장은 아닙니다. 같은 등급에서 대기/할당과 시간대/메모리를 무조건 교대로 채우는 규칙은 채택하지 않습니다. 동률의 시각·이름 순서가 일부 선택을 결정한다는 한계를 명시하고 T14에서 확인합니다.
 
-**선택 주체와 재현성.** `select_candidates()`는 기존 최대 12개 중간 후보를 유지합니다. `writing_candidates()`는 원래 대표 완료를 먼저 확보하고, 미포함 클러스터에는 가능한 다른 종류를 선택한 뒤 기존 순서에서 아직 없는 질문 종류를 추가해 최대 5개를 전달합니다. 새 점수·임계값 없이 필수 완료·클러스터·중복 제외 조건을 보존하고 기존 `selection`의 전달/제외 수·종류별 제외 수와 `writing_selection`에 범위를 남깁니다. 5개 초과 클러스터는 기존 최대 12개 경로로 남깁니다. 내부 적격 구간·원래 표·근거는 지우지 않습니다. 같은 중간 후보의 선별은 결정적입니다. 최대 5개로 좁혀진 작성 후보는 응답 구조에 실제 ID를 모두 나열해 순서대로 작성하도록 요청하며, LLM이 다시 선택해 시간대 후보를 생략하지 않도록 안내합니다. 기존 검증기는 그대로이므로 지시 준수·문장 간결성·운영 유용성은 실제 응답을 별도로 대조합니다. 5개를 넘는 클러스터의 기존 전달 경로에서는 선택 안내를 유지합니다. 고정 종류 순서를 없애 근거 강도로 비교하는 목표와 새 전체 출력 검증은 별도 범위입니다.
+**선택 주체와 재현성.** 현재 정렬·저장 계약은 [조건부 운영 제안의 선별·완료 연결](#조건부-운영-제안의-선별완료-연결)에 정의합니다. 최대 5개 작성 후보는 응답 구조에 실제 ID를 모두 나열하고 LLM에 재선택하지 않도록 안내합니다. 원래 표·구간·근거와 모든 생성 후보는 보존하며, 전달/제외 수와 선택 질문을 narrative의 `selection`에 남깁니다. 기존 검증은 문장 유용성이나 모델의 추천 순서를 보장하지 않으므로 별도 의미 검수가 필요합니다.
 
-**작성 범위.** 첫 문장은 짧은 운영 선택과 이유, 둘째 문장은 대상·기간·필수 관측으로 요청합니다. 참조를 뺀 설명은 약 백 자 이내를 목표로 하되 기존 길이 검사·필수 토큰은 유지합니다. 작성 초점에 선택/이유 표기를 넣어 그대로 복사하게 하지 않습니다. 완료와 마지막 시간별 양수 대기가 연결된 후보는 다음 배치의 실행 순서 점검을 위해 작업 유형·스케줄러 기록을 대조하도록 안내합니다. 마지막 대기가 영이거나 변화 근거가 없으면 남은 대기를 만들지 않고 완료 Job 경과를 다음 배치 계획에 참고할 전제를 확인합니다. 완료에 의한 대기 감소·GPU 부족·처리 성능은 판단하지 않습니다.
+**작성 범위.** `decision.option`의 선택을 먼저 제안하고 `reason`에서 이유 하나를 연결합니다. `needed`는 실행 전 확인할 조건이며 이미 관측한 사실로 쓰지 않습니다. 선택을 뒷받침하지 못하는 필수 완료는 관측 참고 범위로 제한합니다. 첫 문장은 짧은 선택·이유, 둘째 문장은 대상·기간·필수 관측으로 요청하며, 기존 길이 검사·필수 토큰·종류별 허용 어휘는 유지합니다. 응답 예시는 추상적인 설명 대신 작업 대상·행동·관측 이유를 함께 담은 `decision.option`과 실제 `summary_start` 참조로 구성합니다. 첫 문장의 이유를 빼거나 option과 reason을 기계적으로 접합하지 않으며, 실행 전 필수 조건은 짧게 묶고 쉼표 뒤 관측 조각으로 끝내지 않도록 요청합니다. 작성 안내는 이 네임스페이스의 어느 작업·Pod·GPU를 확인하거나 조정하는지 명시하고 내부 분류어를 풀어 쓰도록 합니다. 예시 복사로 이유가 빠지거나 어색한 문장이 채택될 수 있으므로 실제 응답의 유용성 검수는 별도이며 사후 문장 교정은 하지 않습니다. 한계 안내는 별도 표시되므로 첫 문장을 긴 금지문으로 채우지 않습니다. 참조 토큰을 제외한 설명은 약 백 자가 목표이며 새 실패 코드나 추가 재시도를 만들지 않습니다.
 
 **기존 계약 안에서 가능한 범위.** 전달 후보에 클러스터가 5개 이하이면 각 클러스터를 포함하고, 대표 완료가 있으면 포함하며, 같은 클러스터·종류는 하나만 선택하는 기존 조건을 유지합니다. 그래서 첫 화면의 다섯 자리를 모두 새로운 선택으로 채운다는 보장은 없습니다. 예를 들어 두 클러스터에 완료 후보만 있으면 둘 다 포함해야 할 수 있고, 한 클러스터의 같은 종류로 성립하는 여러 시간대도 모두 첫 화면에 놓을 수 없습니다. 가능한 자리에서 중복을 줄이고 제외된 근거는 상세에서 확인하게 합니다. 5개를 넘는 클러스터나 12개를 넘는 후보의 전체 대표성은 보장하지 않습니다. 필수 포함·입력 예산과 유용성 목표가 충돌하면 실제 사례를 남겨 별도 변경 여부를 결정하며, 검증 기준이나 보고서 품질을 조용히 완화하지 않습니다.
 
@@ -456,28 +514,30 @@ Planned stages 1–4 define operator choices, evidence requirements, interpretat
 | 구분 | 범위와 완료 조건 |
 |---|---|
 | 문서에서 확정 | 지표 의미, 질문별 근거 역할, 주장별 완전성, Q3 대상, Q5의 관측/점검 구분. 문서 일치만 검증하며 실제 생성 성공을 뜻하지 않음 |
-| 구현·후속 코드 변경 | 유효 구간 보존·대상/질문 대표 우선·미배치 참조/작성 안내를 구현. 종류별 고정 순서를 없앤 근거 우선 선별은 미구현. 최대 5개 작성 후보 사전 선별은 필수 완료·클러스터 후 서로 다른 질문을 보태는 제한적 방식으로 구현하며, 새 근거 강도 순위는 추가하지 않음. 기존 임계값·필수 포함·검증·입력 상한을 유지하고 후보 기준 변경은 CRITERIA revision과 회귀 범위를 기록 |
-| 저장 형식·소비자 검토 | 미배치 값/표본은 `source_hours`에 추가하며 기존 참조를 유지. 신규 숫자 metric·조회·CSV 변경 없음. 판단 이유와 제외/보류 사유의 추가 저장은 미구현. 후보 `**fact`가 narrative에 보존되므로 단순 프롬프트 수정이 아님. 미배치 추가 필드의 참조·저장 및 기존 결과 읽기는 로컬 회귀 범위로 확인하며, 실제 LLM·운영 신규 발행은 별도 검증 |
+| 구현·후속 코드 변경 | 유효 구간 보존·대상/질문 대표 우선·미배치 참조/작성 안내를 구현. 운영 선택·이유·추가 근거의 `decision`과 판단 범위 정렬을 구현. 최대 5개 작성 후보는 필수 완료·클러스터 이후 다른 선택을 보태며, 아직 관측 참고뿐인 필수 완료를 숨기지 않음. 기존 임계값·필수 포함·검증·입력 상한을 유지하고 후보 기준 변경은 CRITERIA revision과 회귀 범위를 기록 |
+| 저장 형식·소비자 검토 | 미배치 값/표본은 `source_hours`에 추가하며 기존 참조를 유지. 신규 숫자 metric·조회·CSV 변경 없음. 판단 이유는 `decision`에, 선별된 선택과 필수 완료 여부는 `selection.decisions`에 저장. 후보 생성 전 질문별 전체 보류/제외 사유 저장은 미구현. 후보 `**fact`가 narrative에 보존되므로 단순 프롬프트 수정이 아님. 미배치 추가 필드의 참조·저장 및 기존 결과 읽기는 로컬 회귀 범위로 확인하며, 실제 LLM·운영 신규 발행은 별도 검증 |
 | 별도 결정 전 유지 | Q1의 미배치 필수화, 대표 완료 필수 포함, Q2 자동 제외 범위, 종류별 필수 어휘, 최종 목록/순서 강제. 수집·검증 조건 변경을 현재 문서 작업에 포함하지 않음 |
 
 **미배치 연결과 Q1/Q2 분기 — 구현과 남은 결정.** 같은 시간대의 저장된 `unscheduled_peak/samples`를 후보의 `source_hours.unscheduled/unscheduled_samples`로 연결합니다. 유효 개수·평가 수와 Pending 이하 여부를 확인하며, 자료가 없거나 맞지 않으면 미확인입니다. 기존 수집·집계 결과 자체를 바꾸지 않습니다. 최초 작성과 문장 보완 모두 `queue_context.check_first`를 전달합니다. ① 유효 미배치 양수면 `placement`, ② 전 구간 미배치와 Pending의 240개 평가가 확인되고 미배치 최대 0·Pending 양수면 `preparation`, ③ 그 외는 `unknown`입니다. 부분 표본의 양수는 존재 근거로 쓰되 전 구간 부재를 말하지 않습니다. 모든 시간에 유효 미배치 값이 있을 때만 선택적 `{{unscheduled}}` 참조를 제공합니다. 기존 필수 토큰·문장 검증은 유지합니다.
 
 이는 먼저 대조할 기록의 구분이며 원인 확정이 아닙니다. ②도 평가 시점에 `PodScheduled=false`인 Pending이 관측되지 않았다는 뜻일 뿐, 모든 Pod의 배치 완료나 이미지 장애를 증명하지 않습니다. 두 최대값을 빼서 준비 Pod 수를 만들지 않습니다. Q1의 기존 자격과 미배치 필수화 보류는 유지합니다. Q2의 준비 단계 이벤트 점검은 기존 이벤트 필수어 조건으로 검증 가능하며, 스케줄러 문구를 억지로 붙이지 않습니다. 작성 안내는 내부 분기명 대신 미배치 관측과 점검 이유를 쉬운 한국어로 쓰고, 기존 클러스터 포함 조건을 반환 전에 확인하도록 합니다. 작성 안내는 Namespace의 일반 참조(`{{target}}`, `{{period}}`)와 사건의 ID 참조(`{{target:fact_id}}`, `{{period:metric_id}}`)를 구분합니다. 각 후보의 `writing_focus`는 허용된 운영 선택과 관측에서 나온 이유를 제공합니다. `summary_start`는 필수 참조 안내로 유지하되 그대로 복사할 첫 문장이 아닙니다. LLM은 선택·이유를 먼저 쓰고 대상·기간·필수 관측 참조를 다음 문장에 모두 보존합니다. 토큰·단위·미확인 의미와 기존 필수 어휘 검사는 유지하며 두 문장은 실제 모델이 반환합니다. 분기별 초점은 입력에서 한 번만 전달하며, 최종 문장에 내부 작성 지시를 복사하지 않습니다. 보완은 같은 선택·이유와 필수 참조를 보존하면서 지적된 표현만 바꿉니다. 이는 사후 문장 조립이나 새 통과 조건이 아닙니다. 대기와 미배치 값이 같아도 서로 다른 참조를 유지하고, 준비/배치 두 분기를 나열하거나 준비 지연을 단정하지 않습니다. 기존 `conditional_scheduling_review_required`·`duplicate_summary_unit`·`unsupported_queue_cause` 오류도 동일한 문장 보완 경로로 보내며 검사 자체·최대 두 시도·예산·입력 상한은 유지합니다. 구조와 참조를 고정할 수 있는 첫 응답에서는 모든 주제를 독립 검사하고, 잘못된 Namespace 항목(`summary_repair`)과 사건 주제(`section_repair`)를 같은 두 번째 요청에 모읍니다. 정상 주제·항목은 보완 입력에서 제외하고 원문 그대로 보존합니다. 응답의 키·항목/주제 ID·개수가 요청과 일치할 때만 해당 부분을 교체한 뒤 전체 응답을 기존 검사로 재검증합니다. 잘못된 구조·중복 선택·전체 선별 오류는 기존 전체 보완으로 남기며, 부분 보완 요청 전체가 기존 16KB 상한에 닿으면 추가 호출 없이 계산 요약을 유지합니다. 이는 정상 JSON/참조에 한정된 보존 보장이며 부족한 토큰 예산을 늘리지 않습니다. 준비 단계 후보는 다른 질문과 동등하게 비교하며 특별히 우선하지 않습니다. 정상 기동과 지연을 구분할 지속 시간 근거가 없으면 지연을 단정하지 않습니다. 이는 검증 조건 추가나 채택 보장이 아닙니다. 실제 LLM 문장의 유용성·신규 발행은 로컬 코드/fixture 검증과 구분해 [Agent QA](../../../agents/QA.md)에 기록합니다.
 
-**완료와 선택 슬롯.** Q5는 완료·경과 관측, 같은 구간 대기 기록 대조, 비교 보류를 구분합니다. 대기가 0이라는 이유로 작업 조건 쪽에 문제가 있다고 바꾸거나 완료 Job의 보고기간 밖 생애까지 무대기로 확장하지 않습니다. 현행 대표 완료는 전달된 적격 batch 중 기존 순위로 정해지며, 필수 포함은 운영상 중요도와 별개입니다. 더 강한 다른 제안을 밀어내는 사례를 남기고, 필수 포함/자동 제외를 유지할지 또는 대표 선정 자체를 바꿀지는 별도 결정으로 둡니다. '다른 종류가 없는 클러스터의 완료를 대표로 선택'하는 안도 그 결정의 비교안이며 현재 기준이 아닙니다.
+**완료와 선택 슬롯.** Q5는 완료·경과 관측, 같은 구간 대기 기록 대조, 비교 보류를 구분합니다. 완료 표본이 있어도 마지막 구간에 대기가 관측되면 해당 Namespace의 관측 대기 Pod가 노드 배정 전인지 기동 준비 중인지 상태·이벤트로 구분하도록 제안합니다. 마지막 시간대에도 미배치가 관측됐으면 스케줄러 이벤트에서 그 사유를 먼저 확인합니다. 완료가 대기를 줄였다고 추정하거나 Job 경과시간을 순수 실행시간으로 쓰지 않습니다. 대기가 0이라는 이유로 작업 조건 쪽에 문제가 있다고 바꾸거나 완료 Job의 보고기간 밖 생애까지 무대기로 확장하지 않습니다. 현행 대표 완료는 전달된 적격 batch 중 판단 범위·근거 정렬로 정해지며, 필수 포함은 운영상 중요도와 별개입니다. 더 강한 다른 제안을 밀어내는 사례를 남기고, 필수 포함/자동 제외를 유지할지 또는 대표 선정 자체를 바꿀지는 별도 결정으로 둡니다. '다른 종류가 없는 클러스터의 완료를 대표로 선택'하는 안도 그 결정의 비교안이며 현재 기준이 아닙니다.
 
 **판단 보류의 표시 한계.** 현재 `selection`은 만들어진 후보의 전달·제외를 집계하며 후보 생성 전 탈락한 모든 질문·사유를 저장하지 않습니다. 따라서 보고서에 조언이 없다는 사실을 정상 판정으로 읽을 수 없고, 질문별 보류가 화면에 모두 보인다고 주장하지 않습니다. 보류 건수·구간 단절 사유를 추가하려면 집계 단위·중복 방지·narrative 및 화면/HTML 소비 계약을 정해야 합니다. 첫 구현은 검수 자료에 이 공백을 기록하며 제품에 보류 표시가 추가됐다고 하지 않습니다.
 
 **제약 입력과 S15 — 별도 후속 범위.** 최소 입력은 적용 cluster/Namespace와 유효 기간, 제약 내용·의도된 동시 실행 범위, 근거 출처와 revision, 확인 주체·시각, 유지할지 재검토할지의 운영자 의도를 포함해야 합니다. 읽기/검증·저장·LLM 전달 계약은 미정입니다. 테스트 라벨이나 사람의 설명만으로 현재 후보에 이 맥락이 연결됐다고 하지 않습니다. 제약 유지가 목적이면 관측 설명과 확대 보류가 기본이며, 제약 변경 검토가 요청된 경우에만 그 선택을 검토합니다.
 
+**제안과 근거 표시 계약.** 채택된 Namespace `summary`에서 첫 문장과 정확한 `대상 · 기간:` 경계가 확인될 때만 `summary_parts.decision/evidence`에 원문 조각을 추가합니다. 기존 `summary`·필수 참조·검증 결과는 보존하며 분리 실패를 새 탈락 사유로 삼지 않습니다. 프런트엔드는 두 조각을 공백 없이 또는 공백 하나로 연결한 값이 원문과 정확히 같을 때만 제안과 대상부터 보여주고, 수치·기간·적용 조건·근거 링크는 항목별로 펼칩니다. 과거 형식·불일치는 전체 요약 표시로 돌아갑니다. HTML 내보내기는 기존 전체 요약을 유지합니다.
+
 ### 선별과 문장 품질은 별도로 확인
 
-이 절은 **현재 구현과 별도 문장 품질 검수**를 설명합니다. 위 4단계의 새 선별 목표가 이미 적용됐다는 의미는 아닙니다.
+이 절은 **현재 구현과 별도 문장 품질 검수**를 설명합니다. 판단 범위 정렬은 구현됐지만 위 가상 사례 전체나 운영상 유용성이 입증됐다는 의미는 아닙니다.
 
 1. **근거 연결:** `candidates()`·`windows()`가 같은 구간의 유효 관측을 구성합니다. 전송된 지표가 있다는 사실과 제안에 쓸 만큼 연결됐다는 판단은 다릅니다.
-2. **후보 전달:** Namespace 대기는 인접 시간·KST 날짜로 묶고 GPU 신원 변화로 조각내지 않습니다. 신원 변화나 활동 누락이 있는 대기 구간에서는 활동·메모리 참조를 만들지 않습니다. `select_candidates()`가 기존 종류 순서와 대표 완료를 유지하되, 필수 완료 구간에 포함되는 대기 및 해당 클러스터에 다른 종류가 있는 비필수 완료 후보는 전달하지 않습니다. 클러스터·종류 대표와 서로 다른 대상·질문을 추가 구간보다 먼저 담아 최대 12개를 전달합니다. 완료·대기 연결이 부족한 표본은 표에 남기되 해당 AI 후보에서 제외합니다. 노드·Namespace 수만큼 LLM 호출을 늘리지 않습니다.
+2. **후보 전달:** Namespace 대기는 인접 시간·KST 날짜로 묶고 GPU 신원 변화로 조각내지 않습니다. 신원 변화나 활동 누락이 있는 대기 구간 전체에는 활동·메모리 참조를 만들지 않습니다. 대신 그 안에서 같은 GPU 신원·연속 시간·KST 날짜와 기존 활동 유효성 조건을 만족하는 두 시간 이상의 구간은 별도 대기 후보로 보존합니다. 동일한 대기 표본 완전성에서는 활동이 연결된 대기 후보를 먼저 비교합니다(`candidate_revision=ops-operating-choices-v6`). 넓은 대기 후보도 유지하며 짧은 구간의 활동·메모리를 전체 구간으로 확장하지 않습니다. `select_candidates()`는 위의 판단 범위 정렬과 대표 완료 조건을 적용하며, 필수 완료 안의 대기·대안이 있는 비필수 완료를 줄이고 최대 12개를 전달합니다. 완료·대기 연결이 부족한 표본은 표에 남기되 해당 AI 후보에서 제외합니다. 노드·Namespace 수만큼 LLM 호출을 늘리지 않습니다.
 3. **첫 화면 선택:** `writing_candidates()`가 필수 완료·클러스터와 서로 다른 질문을 최대 5개로 먼저 좁히고 LLM이 그 안에서 선택합니다. 기존 검증의 클러스터 포함·대표 완료 필수 조건은 유지합니다. 다른 클러스터에 다른 질문이 있으면 같은 완료 설명을 복제하기보다 그 질문을 선택하도록 작성 지시하지만, 이는 현재 중복을 완전히 차단하는 코드 규칙이 아닙니다.
-4. **짧은 판단:** 한 불릿은 우선 검토할 선택과 관측에서 나온 이유를 앞에, 대상·시간·필수 관측을 뒤에 두 문장으로 연결합니다. 필수 완료는 경과 비교의 전제 확인으로 제한하며 정상 순차 실행도 가능한 관측을 이상으로 격상하지 않습니다. “확인하도록 검토하세요” 대신 확인할 일은 “확인하세요”, 조건부 자원 변경·시간대 이동은 “확인한 뒤 검토하세요”로 구분하는 것을 문장 품질 목표로 둡니다. 필수 수치를 빼서 짧게 만들거나 근거 없는 이유를 덧붙이지 않습니다.
+4. **짧은 판단:** 한 불릿은 우선 검토할 선택과 관측에서 나온 이유를 앞에, 대상·시간·필수 관측을 뒤에 두 문장으로 연결합니다. 필수 완료는 다음 배치 계획에 경과시간을 적용하기 전 완료·대기 작업 유형 비교로 제한하며, 정상 순차 실행도 가능한 관측을 이상으로 격상하거나 제출 순서를 바꾸라고 하지 않습니다. “확인하도록 검토하세요” 대신 확인할 일은 “확인하세요”, 조건부 자원 변경·시간대 이동은 “확인한 뒤 검토하세요”로 구분하는 것을 문장 품질 목표로 둡니다. 필수 수치를 빼서 짧게 만들거나 근거 없는 이유를 덧붙이지 않습니다.
 5. **의미 검수:** 근거·참조 검사 통과와 별도로 최대값/범위 표시, 완료와 대기의 다른 질문, 조언 반복, 쉬운 표현을 원문과 대조합니다. 실패한 항목은 [Agent QA](../../../agents/QA.md)에 남기며 통과율만으로 유용성을 주장하지 않습니다. 이 의미 검수 항목은 기존 런타임 검증을 추가·완화한 것이 아닙니다.
 
 ### 현재 기준에서 추가로 발전시킬 항목
