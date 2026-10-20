@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { obj, rows, str, strings, type Row } from '../lib/live';
+import { rows, str, type Row } from '../lib/live';
 import { formatDate } from '../lib/domain';
 import { AlarmIdentity, DataView } from './live';
 import { IncidentStates } from './RcaDebug';
@@ -69,44 +69,5 @@ export function OperationsIncident({ incident }: { incident: Row }) {
         <DataView value={incident} explain />
       </details>
     </div>
-  );
-}
-export function OperationsRca({ job }: { job: Row }) {
-  const result = job.result_ref != null ? obj(job.result) : {};
-  return (
-    <section className="ops-rca-overview">
-      <span className="ops-overline">조사 결과 읽기</span>
-      <h2>{str(result.summary, '공개된 분석 요약이 없습니다.')}</h2>
-      <div className="head-actions">
-        <span>실행</span>
-        <Badge status={str(job.status, 'unknown')} />
-        <span>결과 품질</span>
-        <Badge status={str(result.result_status, 'unpublished')} />
-      </div>
-      <div className="ops-incident-grid">
-        <section>
-          <h3>판단할 수 있는 것</h3>
-          {rows(result.assessments).length ? (
-            rows(result.assessments).map((a, i) => (
-              <article className="report-statement" key={str(a.id, String(i))}>
-                <Badge status={str(a.status, 'unknown')} />
-                <DataView value={a} />
-              </article>
-            ))
-          ) : (
-            <p>공개된 목적별 판단이 없습니다.</p>
-          )}
-        </section>
-        <section>
-          <h3>판단을 보류할 것</h3>
-          {strings(result.missing_inputs).length ? (
-            <DataView value={result.missing_inputs} />
-          ) : (
-            <p>보고된 부족 항목이 없습니다. 원인 확정을 의미하지 않습니다.</p>
-          )}
-          <DataView value={result.limitations} />
-        </section>
-      </div>
-    </section>
   );
 }

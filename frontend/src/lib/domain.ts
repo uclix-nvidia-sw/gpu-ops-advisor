@@ -80,9 +80,3 @@ export function preciseRange(start: string, end: string): TimeRange {
     throw new Error('종료 시각은 시작 시각보다 늦어야 합니다.');
   return { start: a.toISOString(), end: b.toISOString() };
 }
-export const incidentTransitions: Record<string, string[]> = {
-  open: ['investigating'],
-  investigating: ['resolved', 'open'],
-  resolved: ['closed', 'investigating'],
-  closed: ['investigating'],
-};

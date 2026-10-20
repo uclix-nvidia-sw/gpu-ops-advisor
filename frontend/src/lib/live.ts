@@ -168,5 +168,4 @@ export const topics = [
   '조치 전후 비교',
   '관측 품질',
 ];
-export const purposeId = (i: number) => `R${String(i + 1).padStart(2, '0')}`;
 export const topicId = (i: number) => `O${String(i + 1).padStart(2, '0')}`;
