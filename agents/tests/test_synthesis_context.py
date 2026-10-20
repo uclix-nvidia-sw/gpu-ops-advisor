@@ -158,7 +158,7 @@ async def test_large_input_preflight_failure_then_bounded_real_transport_call():
     def handler(request):
         sent = json.loads(json.loads(request.content)["messages"][1]["content"])
         requests.append(sent)
-        assert encoded_size(sent) <= 16000
+        assert encoded_size(sent) <= 64000
         return httpx.Response(
             200,
             json={

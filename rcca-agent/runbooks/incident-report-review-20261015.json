@@ -461,6 +461,75 @@
             ]
           }
         }
+      },
+      "reader_guidance_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "37504fa53def4f08d51f06846c5efec2f78053b9a8cb560f0310df784841baf2",
+        "after_content_sha256": "b68b44a7e5d4645bac6054128d5fa89eb9bf3cc7ed7fb15789932baa52d5639d",
+        "previous_values": {
+          "analysis_guidance": [
+            "D09에서 수집된 Fleet Xid 관측의 대상·시각을 확인한다. D09가 시스템·커널 PCI/PCIe 원문 전체를 수집한다고 가정하지 않는다. AER 등 추가 원문은 수집 경로·장치·시각을 별도로 검증한 경우에만 연관 근거로 사용하고, 미수집은 오류 부재로 해석하지 않는다.",
+            "GPU의 현재 접근 상태와 사건 당시 장치 매핑이 없으면 접근 회복을 판정하지 않는다. D02 사용률은 접근 가능성의 대체 증거가 아니다.",
+            "Xid 154 연계가 지원되는 드라이버에서는 같은 장치·시간의 복구 action 이벤트를 추가 확인한다. 동반 이벤트 부재는 지원 버전·수집 완전성 확인 전에는 부정 근거가 아니다.",
+            "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+            "NVIDIA 적용: A100, H100, B100, GB200.",
+            "NVIDIA 조치 분류: immediate=RESTART_BM; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+            "조건부 복구 권고: 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면, 원본 로그 보존·작업 배출·유지보수 승인 후 해당 호스트를 재시작한다. 로그만 시험 주입했고 접근 장애가 없는 경우에는 시험 로그만으로 재시작하지 않는다."
+          ],
+          "operator_guidance": {
+            "schema": "gpu-rca-guidance/1.0",
+            "meaning": "XID 79는 드라이버가 PCIe 연결을 통해 GPU에 접근하지 못했음을 나타내는 오류 코드입니다.",
+            "cause_note": "PCIe 링크·슬롯·라이저 불량, 전원 공급 이상, GPU 하드웨어 결함, 드라이버 오류가 주요 원인 후보입니다.",
+            "next_checks": [
+              {
+                "title": "보고된 PCI 주소의 GPU를 조사 대상으로 사용합니다.",
+                "text": "발생 내용에 표시된 PCI 주소와, 같은 호스트 GPU 재고에서 하나로 대응된 GPU UUID를 조사 대상으로 사용합니다. 이 UUID는 장치 추적을 위한 재고 대응이며, 독립적인 신원 검증에는 별도 호스트 GPU 목록의 일치 결과가 필요합니다. 사건 이후에도 같은 GPU의 DCGM 사용률(D02) 새 표본이 이어지면 실제 접근 상실인지 호스트의 nvidia-smi로 먼저 확인합니다. Fleet 전력·PCIe replay 값(D11·D44)은 실패한 점검 뒤에도 이전 값이 남을 수 있어 접근 여부 판단에 쓰지 않습니다."
+              },
+              {
+                "title": "진단 자료 보존",
+                "text": "재시작 전에 nvidia-bug-report.sh 결과와 사건 전후 커널·PCIe/AER 로그를 보존합니다. 재시작은 휘발성 진단 정보와 수집 가능한 상태를 바꿀 수 있습니다."
+              },
+              {
+                "title": "환경별 복구 조건",
+                "text": "로그 주입 시험에는 재시작을 적용하지 않습니다. 실제 XID 79 장애이며 NVIDIA 카탈로그 적용 모델의 bare-metal 환경이면, 진단 자료 보존·작업 배출·유지보수 승인 후 호스트를 재시작합니다(RESTART_BM). 가상화 환경은 GPU 할당 방식과 해당 플랫폼의 복구 절차에 따라 대상과 방법을 정합니다. 조치 후 같은 GPU의 인식·접근과 유효한 후속 상태를 확인하고, 재발·미복구 시 공급사 지원을 요청합니다(CONTACT_SUPPORT)."
+              }
+            ],
+            "references": [
+              {
+                "title": "Fleet 분류",
+                "text": "Fleet은 XID 79를 Fatal로 분류하고 시스템 재부팅과 하드웨어 점검을 기본 조치로 제시합니다.",
+                "source_indices": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "title": "NVIDIA 조치 분류",
+                "text": "NVIDIA 카탈로그는 적용 모델의 XID 79에 RESTART_BM과 CONTACT_SUPPORT를 제시합니다. 실제 수행은 위 플랫폼·시험 여부·진단 보존·운영 승인 조건을 따릅니다.",
+                "source_indices": [
+                  3,
+                  4
+                ]
+              },
+              {
+                "title": "적용 대상",
+                "text": "A100·H100·B100·GB200이 NVIDIA 카탈로그 적용 대상입니다. 그 밖의 제품은 해당 세대 문헌을 따릅니다.",
+                "source_indices": [
+                  3,
+                  4
+                ]
+              },
+              {
+                "title": "XID 154 연계",
+                "text": "CUDA 12.7·드라이버 R565 이상에서는 같은 장치의 복구 조치 안내(XID 154)가 함께 보고될 수 있습니다.",
+                "source_indices": [
+                  4
+                ]
+              }
+            ]
+          }
+        },
+        "reason": "Explain investigation, device comparison and purpose-scoped completion before conditional operator actions; source review only, no published revision changed."
       }
     },
     {
@@ -842,6 +911,62 @@
             ]
           }
         }
+      },
+      "reader_guidance_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "cd07590381de5cacadac3e3d8e3bb34245001a2bc19e044e1ed75ad334d61dd9",
+        "after_content_sha256": "2cb264647db1fc133a9333fae13049819582619bf263f79e92f449f85dd9050a",
+        "previous_values": {
+          "analysis_guidance": [
+            "FM 문헌의 공통 Recovery에는 guest VM 복구가 포함된다. GPUd 시스템 재부팅 권고와 구분하고 bare metal/VM 모드·플랫폼·FM 버전을 확인한 뒤 적용한다.",
+            "D09에서 원본 NVSwitch/FM 이벤트의 switch PCI·source port·시각을 보존한다. access/trunk와 연결 GPU·partition 정보가 확인될 때만 영향 범위를 설명한다.",
+            "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+            "동반 Xid 74 및 다른 SXid는 대상·시간·연결 관계가 확인된 경우에만 연관 증거로 사용한다. 코드 동시 발생만으로 전파 방향이나 근본 원인을 확정하지 않는다.",
+            "Fleet 고정 카탈로그: ingress invalid command; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+            "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
+            "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
+            "Potential Fatal 분류다. access port이면 연결 guest VM 범위, trunk port이면 그 연결을 사용하는 partition 범위를 확인한다. 관련 VM/partition의 종료·재시작 전제와 영향을 운영자가 검토한다.",
+            "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다."
+          ],
+          "operator_guidance": {
+            "schema": "gpu-rca-guidance/1.0",
+            "meaning": "SXID 11001은 NVSwitch 수신(ingress) 측의 잘못된 명령 보고입니다. GPUd는 잠재적 Fatal로 분류합니다. 실제 영향 범위는 오류 포트와 연결된 GPU·VM·파티션에 따라 판단합니다.",
+            "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
+            "next_checks": [
+              {
+                "title": "오류 원문의 NVSwitch를 조사 대상으로 사용합니다.",
+                "text": "오류 원문의 NVSwitch PCI 주소가 조사 대상입니다. GPU 재고와 GPU 지표(D02)로는 스위치나 영향 GPU를 정할 수 없습니다. 영향 GPU·VM·파티션은 Fabric Manager 로그의 같은 시각 source port와 access/trunk 관계로 정합니다."
+              },
+              {
+                "title": "진단 자료 보존",
+                "text": "Fabric Manager 로그의 같은 시각 포트 정보와 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
+              },
+              {
+                "title": "환경별 복구 조건",
+                "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 실제 장애는 플랫폼·FM 버전·bare-metal/가상화 모드와 포트 영향 범위를 먼저 대조합니다. 공유 NVSwitch의 access 포트는 해당 guest VM, trunk 포트는 해당 연결을 사용하는 VM 파티션의 종료·재생성 절차를 따릅니다. GPUd의 시스템 재부팅(REBOOT_SYSTEM)은 해당 플랫폼 복구 절차와 영향 범위가 맞을 때 진단 보존·작업 배출·유지보수 승인 후 적용합니다. 재부팅 뒤 같은 대상에서 재발하면 하드웨어 점검·수리를 요청합니다."
+              }
+            ],
+            "references": [
+              {
+                "title": "Fleet·GPUd 분류",
+                "text": "Fleet/GPUd의 정적 분류·기본 action은 사건별 영향 판정이나 동시 실행 지시가 아닙니다. GPUd의 재부팅 후 재발 조건을 하드웨어 점검에 연결합니다.",
+                "source_indices": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "title": "영향 범위",
+                "text": "access 포트이면 연결된 GPU·VM, trunk 포트이면 그 연결을 쓰는 파티션이 영향 범위입니다. B200·B300에는 이 지침을 적용하지 않습니다.",
+                "source_indices": [
+                  0,
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        "reason": "Explain investigation, device comparison and purpose-scoped completion before conditional operator actions; source review only, no published revision changed."
       }
     }
   ]

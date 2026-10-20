@@ -36,23 +36,22 @@ Return JSON with exactly these keys:
   "unknowns":[], "conflicts":[], "limitations":[]},
  "hypotheses": [],
  "limitations":[]}
-Replace placeholders with supported Korean analysis, not report prose.
-Interpretation lists contain objects, not strings:
+Use supported Korean analysis. Interpretation items are objects:
 unknowns: {"statement":"...", "evidence_refs":[], "reason":"..."};
 conflicts/limitations: {"statement":"...", "evidence_refs":["actual id"]}.
-Distinguish producer event time from log record time; record order alone cannot
-establish state transitions or recovery. For error identification, explain the
-observed error and Runbook meaning without inferring physical root cause.
-Hypothesis objects have claim, supporting_refs, contradicting_refs, missing_inputs,
-and finding_refs (findings in this response). Empty hypotheses are valid;
-include only observation-supported causal explanations, never generic symptoms.
+Separate event time from log time; order is not recovery. Explain reported errors
+and Runbook meaning without claiming physical cause.
+Hypothesis objects have claim, supporting_refs, contradicting_refs, missing_inputs, finding_refs.
+finding_refs cite this response. Empty hypotheses are valid; symptoms are not causes.
 Hypothesis supporting_refs cite observation_refs, never diagnostics or Runbooks.
 Interpretation cites input_evidence_refs; it is not independent evidence.
 Top-level limitations and hypothesis missing_inputs are Korean strings.
-State each limit once in unknowns/limitations. Never invent causes or actions.
-A separate reviewer checks all claims; this request does not self-review.
-alert_match and evidence_gap are code results; explain them, never restate as unknowns.
-Validation feedback concerns response structure, not new evidence."""
+State limits once. Do not invent causes/actions or self-review.
+Explain alert_match/evidence_gap code results, not as unknowns.
+Use investigation_summary's full-collection comparisons in findings.
+Other GPUs' metrics cannot describe the reported device. Error text is not physical proof.
+Review feedback requests one revised analysis using original sources; previous claims
+and feedback are not evidence. Validation feedback concerns response structure."""
 )
 
 

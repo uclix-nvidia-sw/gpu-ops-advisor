@@ -3,6 +3,16 @@ import { rcaReasons } from './rcaLabels';
 
 // Explain stored gaps without promoting a report to a verified device state.
 export function gapMeaning(code: string, result: Row): string | undefined {
+  const analysis = obj(obj(result.quality).analysis);
+  if (
+    code === 'causal_confirmation_evidence' &&
+    ['alert_match', 'goal_achieved'].includes(str(analysis.collection_stop_reason)) &&
+    (str(analysis.collection_stop_reason) === 'alert_match' ||
+      (Array.isArray(analysis.out_of_scope) &&
+        analysis.out_of_scope.includes('causal_confirmation_evidence')))
+  ) {
+    return '이번 조사는 알림에 해당하는 오류 보고를 확인하는 범위에서 완료됐습니다. 물리적인 고장 원인을 찾는 조사는 포함하지 않았습니다. 이 항목이 남아 있는 과거 결과의 부분 산출 표시는 당시 저장된 판정입니다.';
+  }
   if (code === 'synthesis_failed') {
     const reason = str(obj(obj(obj(result.quality).analysis).synthesis).error_code);
     if (reason) return `${rcaReasons[reason] || '분석 실패 사유'} (${reason})`;

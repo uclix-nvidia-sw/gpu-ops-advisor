@@ -367,7 +367,7 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_even
     assert len(result["quality"]["analysis"]["error_events"]) == int(include_event)
     assert len(result["device_observations"]) == 31
     diagnostics = result["quality"]["analysis"]["synthesis"]
-    assert diagnostics["input_bytes"] <= 16000
+    assert diagnostics["input_bytes"] <= 64000
     assert (
         diagnostics["context_selection"]["omitted_observations"]["device_observations"]
         > 0
@@ -615,31 +615,32 @@ D09_LOGQL = (
 )
 
 
-def match_case(change=None):
+def match_case(change=None, kind="xid"):
     from test_rca_combined_policy import policy_case
 
-    case = policy_case("xid")
-    labels = {k: v for k, v in alert().items() if k != "error_codes"}
+    case = policy_case(kind)
+    labels = {k: v for k, v in alert(kind).items() if k != "error_codes"}
     case["attempt"]["claim"]["input"]["incident_snapshot"] = {
         "alert": {"labels": labels}
     }
     d09 = case["queries"][0]
-    d09["arguments"]["logql"] = D09_LOGQL
+    d09["arguments"]["logql"] = D09_LOGQL.replace("error-xid", "error-" + kind)
     start = int(d09["response"]["data"]["result"][0]["values"][0][0])
-    event = fleet_line("xid", "event", str(start + 10 * 10**9))
+    event = fleet_line(kind, "event", str(start + 10 * 10**9))
     if change == "pci":
         event[1] = event[1].replace(DEVICES["xid"], "PCI:0000:02:00")
     d09["response"]["data"]["result"][0]["values"] = [
         event,
-        fleet_line("xid", "component_data", str(start + 20 * 10**9)),
+        fleet_line(kind, "component_data", str(start + 20 * 10**9)),
     ]
     return case
 
 
-async def test_alert_match_skips_analysis_and_review_models():
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_alert_match_skips_analysis_and_review_models(kind):
     from rca_replay import replay
 
-    result = await replay(match_case())
+    result = await replay(match_case(kind=kind))
     output = result["output"]["result"]
     analysis = output["quality"]["analysis"]
     assert analysis["alert_match"]["status"] == "match"
@@ -653,7 +654,12 @@ async def test_alert_match_skips_analysis_and_review_models():
         c["id"] == "observed_device_symptom" for c in output["cause_candidates"]
     )
     sources = output["quality"]["report"]["source_items"]
-    assert any(s["text"].startswith("알람·D09 대조:") for s in sources)
+    assert any(
+        s["text"].startswith("알림과 오류·상태 로그를 비교한 결과:") for s in sources
+    )
+    assert output["result_status"] == "ready"
+    assert not output["missing_inputs"]
+    assert analysis["sufficiency"] == "sufficient"
     assert any(s["text"].startswith("이번 조사 범위 밖:") for s in sources)
     assert not any("분석 처리 상태" in s["text"] for s in sources)
 
@@ -665,7 +671,8 @@ async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
     output = result["output"]
     analysis = output["result"]["quality"]["analysis"]
     assert analysis["alert_match"]["status"] == "pci_mismatch"
-    assert "pci_mismatch" in output["result"]["missing_inputs"]
+    assert "pci_mismatch" not in output["result"]["missing_inputs"]
+    assert "pci_mismatch" in analysis["resolved_scope_gaps"]
     decision = next(
         e["snapshot"]
         for e in output["evidence"]

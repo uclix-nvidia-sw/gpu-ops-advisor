@@ -47,13 +47,14 @@ issues: [{"claim_id":"supplied claim ID or null for the entire draft",
 "suggested_resolution":"..."}].
 followup_questions: [{"question":"...", "expected_effect":"...",
 "query_ids":["supplied allowed query ID"]}]. At most 16 issues and 3 questions.
-Check unsupported certainty, contradictory observations, identity/time uncertainty,
-important alternatives, omitted evidence, underuse of evidence and missing limitations.
-Partial collection can support a valid limited conclusion. Successful requests alone
-cannot justify a conclusion. No observations does not mean healthy hardware.
+Check certainty, contradictions, identity/time, alternatives, evidence use and limits.
+Partial data can support bounded conclusions. Request success or absent observations
+does not prove healthy hardware.
 Review ALL claims, including rule-derived candidates and recommendations.
 unresolved_assessments are unanswered criteria, not claims or achieved objectives.
 Interpretation is fallible; compare it to the source material. Do not upgrade causality.
+Check investigation_summary: preserve device mismatches; error text is not physical proof.
+Valid log time orders reports despite missing producer time; earlier Healthy is not recovery.
 If essential context is omitted or missing, use undetermined or request clarification.
 revision_required requires an issue; acceptable requires no issues.
 Propose collection only when it could materially change a conclusion and an allowed
@@ -261,7 +262,7 @@ async def review_analysis(llm, draft, view, allowed_queries):
         lambda value: validate_review(
             value, draft, set(payload["input_evidence_refs"]), set(allowed_queries)
         ),
-        max_bytes=24000,
+        max_bytes=None,
     )
 
 

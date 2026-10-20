@@ -119,7 +119,8 @@ async def test_goal_defers_optional_queries_and_keeps_cause_unknown(
     assert all(
         c["causal_status"] != "confirmed" for c in output["result"]["cause_candidates"]
     )
-    assert "causal_confirmation_evidence" in output["result"]["missing_inputs"]
+    assert "causal_confirmation_evidence" not in output["result"]["missing_inputs"]
+    assert output["result"]["result_status"] == "ready"
     assert source_evaluation(output["result"])["objective_status"] == "achieved"
     reviewer = result["model_calls"][1]["input"]
     assert any(c["source"] == "interpretation" for c in reviewer["draft"]["claims"])
@@ -319,7 +320,9 @@ def test_runbook_policy_rejects_unsafe_contract(mutation):
 
 @pytest.mark.parametrize("failure", ["invalid_json", "truncated", "review_rejected"])
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_same_evidence_never_reauthors_and_report_is_retained(failure, kind):
+async def test_only_review_rejection_allows_one_reauthor_and_report_is_retained(
+    failure, kind
+):
     from rca_replay_cases import review
 
     case = policy_case(kind)
@@ -343,13 +346,16 @@ async def test_same_evidence_never_reauthors_and_report_is_retained(failure, kin
     result = await replay(case)
     assert not result["missing_inputs"]
     calls = [row for row in result["model_calls"] if row["stage"] == "synthesis"]
-    assert len(calls) == 1
-    assert len(calls[0]["requests"]) == 1
+    assert len(calls) == (2 if failure == "review_rejected" else 1)
+    assert all(len(call["requests"]) == 1 for call in calls)
     output = result["output"]["result"]
     assert (
         output["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-        != "goal_achieved"
-    )
+        == "goal_achieved"
+    ) == (failure == "review_rejected")
+    if failure == "review_rejected":
+        assert calls[1]["input"]["review_feedback"]["issues"]
+        assert output["quality"]["rca_evaluation"]["review"]["verdict"] == "acceptable"
     assert output["quality"]["report"]["status"] == "complete"
     assert output["narrative"]
     assert result["output"]["evidence"][-1]["query_id"] == "report_assembly"

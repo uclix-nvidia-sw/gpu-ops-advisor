@@ -93,9 +93,9 @@ it('shows a matched address and event identity without declaring current health'
   const html = renderToStaticMarkup(<RcaObservations result={result} />);
   expect(html).toContain('GPU-matched');
   expect(html).toContain('13:17:48 KST');
-  expect(html).toContain('오류 PCI 주소가 수집 GPU 인벤토리와 일치');
+  expect(html).toContain('오류에 적힌 주소가 수집된 GPU 목록과 일치');
   expect(html).not.toContain('현재 정보만으로 오류 장치 확정 불가');
-  expect(html).toContain('현재 접근 상태와 업무 영향은 별도 관측');
+  expect(html).toContain('장비를 직접 점검하거나 복구 작업을 수행한 결과는 아닙니다.');
   expect(JSON.stringify(result)).toBe(before);
 });
 

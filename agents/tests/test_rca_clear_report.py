@@ -42,7 +42,11 @@ async def test_healthy_baseline_does_not_mark_error_values_unknown():
 async def test_non_blocking_unknown_stays_in_diagnostics_not_report():
     result = await replay(policy_case())
     output = result["output"]["result"]
-    assert "causal_confirmation_evidence" in output["missing_inputs"]
+    assert "causal_confirmation_evidence" not in output["missing_inputs"]
+    assert (
+        "causal_confirmation_evidence"
+        in output["quality"]["analysis"]["resolved_scope_gaps"]
+    )
     assert "원인을 뒷받침할 추가 근거가 필요합니다" not in narrative(result)
 
 
@@ -61,7 +65,7 @@ async def test_unattributed_review_feedback_keeps_grounded_interpretation():
             "suggested_resolution": "현재 증거가 대안을 판별하지 못함을 밝히세요.",
         }
     ]
-    case["responses"]["analysis_review"] = [reply(verdict)]
+    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
     result = await replay(case)
     assert not result["missing_inputs"]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
@@ -85,7 +89,7 @@ async def test_unattributed_limitations_critique_keeps_goal_open():
             "suggested_resolution": "해당 결론 옆에 한계를 밝히세요.",
         }
     ]
-    case["responses"]["analysis_review"] = [reply(verdict)]
+    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
     result = await replay(case)
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
     assert evaluation["evidence"]["interpretation"]["findings"]
@@ -104,7 +108,7 @@ async def test_unattributed_issue_with_failed_grounding_still_rejects():
             "suggested_resolution": "주장을 제거하세요.",
         }
     ]
-    case["responses"]["analysis_review"] = [reply(verdict)]
+    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
     result = await replay(case)
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
     assert evaluation["evidence"]["reason"] == "review_rejected_interpretation"
