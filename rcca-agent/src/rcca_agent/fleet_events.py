@@ -11,6 +11,16 @@ from agent_common.parsers import ERROR_CODE, log_entries
 
 PCI_TEXT = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 STATUS_UUID = re.compile(r"UUID:(GPU-[0-9a-f-]{36})", re.I)
+# Fleet XID/SXID health_state.go: the component state an event type leaves behind.
+# The single source for expected state; later alert stages extend only this table.
+EXPECTED_HEALTH = {
+    "Fatal": "Unhealthy",
+    "Critical": "Degraded",
+    "Warning": "Healthy",
+    "Info": "Healthy",
+}
+# GPUAlert currently fires on Fleet Unhealthy reports, i.e. Fatal XID/SXID events.
+ALERT_EVENT_TYPE = "Fatal"
 # Alert-to-D09 comparison outcomes besides "match". error_code_unparsed and
 # collection_failed keep the existing Runbook path; the rest are comparison gaps
 # that trigger one auxiliary collection. Codes route only; they are never facts.
@@ -207,8 +217,10 @@ def parse_events(evidence, profile, target):
 def match_alert(clues, health, events):
     """Compare the alert's Fleet state report with D09 reports and kmsg events.
 
-    GPUAlert fires on a Fleet Unhealthy component report, whose reason names the
-    most severe retained XID/SXID. A match means the alert, that report and one
+    Anchor: the alert's evidence record is the Fleet state report S (state =
+    EXPECTED_HEALTH[ALERT_EVENT_TYPE]); kmsg events E corroborate it. An event-based
+    alert stage would anchor on E instead. The report reason names the most severe
+    retained XID/SXID. A match means the alert, that report and one
     kmsg event agree on code and device. It routes the investigation only; it is
     not verified current health, physical origin or independent device identity.
     """
@@ -251,7 +263,7 @@ def match_alert(clues, health, events):
     reports = [
         h
         for h in health
-        if h.get("raw_health") == "Unhealthy"
+        if h.get("raw_health") == EXPECTED_HEALTH[ALERT_EVENT_TYPE]
         and h.get("component") == component
         and all(h.get("target", {}).get(k) == v for k, v in scope.items())
     ]
