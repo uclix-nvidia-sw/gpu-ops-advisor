@@ -484,8 +484,11 @@ def synthesis_view(payload, remaining, reserved, prompt=SYNTHESIS):
         if reserved
         else 8192
     )
+    # The deployed route can cap input + output at 32K tokens. Keep planned
+    # incident inputs compact; full evidence remains stored and source-balanced.
+    input_cap = 24000 if "incident_comparison" in payload else 64000
     max_bytes = min(
-        64000, max(0, remaining - len(prompt.encode()) - 256 - 2 - output_room)
+        input_cap, max(0, remaining - len(prompt.encode()) - 256 - 2 - output_room)
     )
     view = bounded_context(payload, max_bytes)
     return view, max_bytes

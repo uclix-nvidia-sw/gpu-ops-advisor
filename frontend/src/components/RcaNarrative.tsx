@@ -1,3 +1,4 @@
+import { RcaOperatorReport } from './RcaOperatorReport';
 import { RcaEvaluation, evaluationLabels } from './RcaEvaluation';
 import { structuredGuidance } from './StructuredGuidance';
 import { RcaGuidance } from './RcaGuidance';
@@ -92,6 +93,9 @@ export function RcaNarrative({
   evaluationExpanded?: boolean;
   onEvidence?: (id: string) => void;
 }) {
+  if (obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1') {
+    return <RcaOperatorReport result={result} onEvidence={onEvidence} />;
+  }
   const evaluation = obj(obj(result.quality).rca_evaluation);
   const stopReason = str(obj(evaluation.investigation).stop_reason);
   const review = obj(evaluation.review);

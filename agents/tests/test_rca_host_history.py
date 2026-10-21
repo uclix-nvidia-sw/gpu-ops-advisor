@@ -110,3 +110,20 @@ def test_history_marks_query_boundary_instead_of_claiming_last_observation():
     result = host_history(case["attempt"]["context"], case["attempt"]["claim"]["input"])
     assert result["rows"][0]["last_report_capped"] is True
     assert result["rows"][0]["last_report"] == "2026-09-15T00:01:00Z"
+
+
+def test_host_totals_include_both_identified_and_unidentified_devices():
+    case, item = history_case()
+    rows = case["attempt"]["context"]["host_incidents"]["rows"]
+    for i, gpu in enumerate(["GPU-1", None, None]):
+        other = deepcopy(item)
+        other["body"]["id"] = f"other-{i}"
+        other["body"]["target"]["gpu_uuid"] = gpu
+        rows.append(other)
+    result = host_history(case["attempt"]["context"], case["attempt"]["claim"]["input"])
+    assert {
+        (r["gpu_uuid"], r["code"]): r["incident_count"] for r in result["repeats"]
+    } == {
+        (None, "xid:48"): 4,
+        ("GPU-1", "xid:48"): 2,
+    }

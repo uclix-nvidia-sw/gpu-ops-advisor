@@ -485,7 +485,9 @@ export function RcaResult({
             evaluationExpanded={evaluationExpanded}
             onEvidence={onEvidence}
           />
-          <RcaObservations result={result} onEvidence={onEvidence} />
+          {obj(obj(result.quality).triage_observations).schema !== 'rca-triage-observations/1' && (
+            <RcaObservations result={result} onEvidence={onEvidence} />
+          )}
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}

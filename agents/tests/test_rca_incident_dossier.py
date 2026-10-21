@@ -58,6 +58,7 @@ async def test_workflow_collects_metrics_despite_matching_alert_and_no_model_bud
     case["token_budget"] = 0
     result = await replay(case)
     assert not result["missing_inputs"]
+    assert "decision_policy" not in case["attempt"]["context"]["runbooks"][0]["content"]
     calls = result["query_calls"]
     logs = [c for c in calls if c["tool"] == "query_loki_logs"]
     assert len(logs) == 1

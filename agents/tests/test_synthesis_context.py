@@ -635,3 +635,18 @@ def test_bounded_context_prioritizes_event_device_without_mutating_history():
         "PCI:0000:bd:00"
     ]
     assert encoded_size(view) <= 1100
+
+
+def test_planned_incident_context_leaves_room_for_32k_route_output():
+    from rcca_agent.synthesis import synthesis_view
+
+    raw = payload()
+    raw["incident_comparison"] = [{"text": "오류 보고 비교", "evidence_refs": ["log"]}]
+    view, limit = synthesis_view(raw, 131072, 21000)
+    assert limit == 24000
+    assert encoded_size(view) <= limit
+    assert "log" in view["observation_refs"]
+    assert view["metric_observations"]
+    assert len(raw["metric_observations"]) == 138
+    del raw["incident_comparison"]
+    assert synthesis_view(raw, 131072, 21000)[1] == 64000

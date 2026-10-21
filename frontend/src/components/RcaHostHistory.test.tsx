@@ -65,7 +65,7 @@ test('metric table preserves zero, units and node context', () => {
     />,
   );
   expect(html).toContain('같은 노드 GPU별 관측');
-  expect(html).toContain('bytes_per_second');
+  expect(html).toContain('B/s');
   expect(html).toContain('0 ~ 4');
 });
 
@@ -91,7 +91,9 @@ test('repeat intervals group the same code and device and mark the query boundar
       }}
     />,
   );
-  expect(html).toContain('XID:79 · GPU-A · 2건');
+  expect(html).toContain('XID:79 · 호스트 전체 · 3건');
+  expect(html).toContain('XID:79 · 같은 GPU · 2건');
+  expect(html).toContain('XID:79 · GPU-A');
   expect(html).toContain('최근 등록 간격 2.0일');
   expect(html).not.toContain('GPU-B · 2건');
   expect(html).toContain('(조회 종료)');

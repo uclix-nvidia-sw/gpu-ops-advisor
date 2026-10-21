@@ -29,13 +29,17 @@ export function RcaHostHistory({ result }: { result: Row }) {
     strings(r.codes)
       .filter((c) => !code || c === code)
       .forEach((c) => {
-        const key = `${c.toUpperCase()} · ${str(r.gpu_uuid) || '호스트 단위'}`;
-        groups.set(key, [...(groups.get(key) || []), r]);
+        const hostKey = `${c.toUpperCase()} · 호스트 전체`;
+        groups.set(hostKey, [...(groups.get(hostKey) || []), r]);
+        if (str(r.gpu_uuid)) {
+          const key = `${c.toUpperCase()} · ${str(r.gpu_uuid)}`;
+          groups.set(key, [...(groups.get(key) || []), r]);
+        }
       }),
   );
   return (
     <section className="rca-host-history" aria-label="호스트 사건 이력">
-      <h4>이 호스트에서 반복된 사건</h4>
+      <h4>4. 호스트 이력 · 반복된 사건</h4>
       <p>
         {formatDate(new Date(cutoff).toISOString())} ~ {formatDate(str(period.end))} · 등록 사건{' '}
         {incidents.length}건{code && ` · 선택 코드 ${visible.length}건`}
@@ -72,14 +76,17 @@ export function RcaHostHistory({ result }: { result: Row }) {
           const times = items.map((r) => Date.parse(str(r.occurred_at))).sort((a, b) => a - b);
           const gaps = times.slice(1).map((t, i) => t - times[i]);
           return (
-            <p key={key}>
-              <strong>
-                {key} · {items.length}건
-              </strong>
-              <br />
+            <details key={key} open={key.endsWith('호스트 전체')}>
+              <summary>
+                <strong>
+                  {key.endsWith('호스트 전체') ? key : `${key.split(' · ')[0]} · 같은 GPU`} ·{' '}
+                  {items.length}건
+                </strong>
+              </summary>
+              {!key.endsWith('호스트 전체') && <p>{key}</p>}
               최근 등록 간격 {intervalLabel(gaps[gaps.length - 1])} · 간격 범위{' '}
               {intervalLabel(Math.min(...gaps))} ~ {intervalLabel(Math.max(...gaps))}
-            </p>
+            </details>
           );
         })}
       <div className="rca-history-table">
@@ -107,7 +114,12 @@ export function RcaHostHistory({ result }: { result: Row }) {
                 <td>
                   {strings(r.codes).join(', ').toUpperCase() || '기타 오류'}
                   <br />
-                  {str(r.gpu_uuid)}
+                  {str(r.gpu_uuid) && (
+                    <details>
+                      <summary>GPU 식별자</summary>
+                      {str(r.gpu_uuid)}
+                    </details>
+                  )}
                 </td>
                 <td>
                   {formatDate(str(r.first_report))}
@@ -118,7 +130,16 @@ export function RcaHostHistory({ result }: { result: Row }) {
                     ? `${Math.round(num(r.reported_span_seconds) / 60)}분 관측`
                     : ''}
                 </td>
-                <td>{str(r.reason)}</td>
+                <td>
+                  <details>
+                    <summary>
+                      {str(r.reason)
+                        .replace(/GPU-[a-f\d-]{36}/gi, '')
+                        .slice(0, 110)}
+                    </summary>
+                    {str(r.reason)}
+                  </details>
+                </td>
                 <td>
                   <a href={`/incidents/${encodeURIComponent(str(r.incident_id))}`}>사건 열기</a>
                 </td>

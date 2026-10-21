@@ -20,6 +20,13 @@ def validate_policy(content):
     from .runbook_contract import _require, _strings, _text, CODE
 
     policy = content.get("decision_policy")
+    # Single-phase incident plans do not need an iterative goal policy.
+    if (
+        "decision_policy" not in content
+        and content.get("schema") in {"gpu-rca-runbook/1.1", "gpu-rca-runbook/1.2"}
+        and content.get("observation_plan")
+    ):
+        return
     if content.get("schema") not in {"gpu-rca-runbook/1.1", "gpu-rca-runbook/1.2"}:
         _require(policy is None, "decision_policy requires Runbook 1.1")
         return

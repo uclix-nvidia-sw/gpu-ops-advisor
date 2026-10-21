@@ -738,6 +738,91 @@
         },
         "reason": "Explain investigation, device comparison and purpose-scoped completion before conditional operator actions; source review only, no published revision changed.",
         "change": "One observation-plan batch, stored host Incident history and operator-oriented triage evidence; legacy required fields retained only for published-contract compatibility."
+      },
+      "single_phase_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "79fa5c2defebb8f52a4c773824741c89def72ded8617488738e6f74c7b805a48",
+        "after_content_sha256": "5868fb832a88c6f04ecae25480475d780d099f469c4ed21daf6003a2b16e685e",
+        "change": "Remove iterative goal policy from single-phase incident reports; retain observation plan and conditional guidance.",
+        "previous_values": {
+          "decision_policy": {
+            "goal": {
+              "id": "identify_error_report",
+              "question": "해당 오류의 보고와 관련 관측을 수집하고 반복 보고·이전 구간의 차이를 근거에 맞게 설명했는가?",
+              "conclusion_scope": "관측 기반 장애 조사 자료·구간 비교·공식 조건부 대응. 원인 확정이나 복구 성공을 요구하지 않는다."
+            },
+            "applies_when": {
+              "reported_error_code": "xid:79",
+              "reported_producer_contract": "fleet-component-log-v1"
+            },
+            "completion_criteria": [
+              {
+                "id": "reported_error",
+                "question": "등록된 생산자의 해당 오류 코드 보고가 확인되는가?",
+                "method": "code",
+                "required": true
+              },
+              {
+                "id": "scoped_source",
+                "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+                "method": "code",
+                "required": true
+              },
+              {
+                "id": "bounded_conclusion",
+                "question": "수집한 오류 보고·대상·시각을 근거에 맞게 설명하고, 원인·현재 상태·시험 여부는 해당 관측 범위 안에서 판단했는가?",
+                "method": "llm",
+                "required": true
+              }
+            ],
+            "blocking_conditions": [
+              "scope_unverified",
+              "identity_conflict",
+              "required_query_incomplete",
+              "conflicting_reports"
+            ],
+            "non_blocking_unknowns": [
+              "causal_confirmation_evidence",
+              "current_health",
+              "physical_or_synthetic_origin"
+            ],
+            "followup_links": [
+              {
+                "query_id": "D09",
+                "criterion_ids": [
+                  "reported_error",
+                  "scoped_source"
+                ],
+                "required": true,
+                "expected_effect": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+              },
+              {
+                "query_id": "D44",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "같은 GPU의 PCIe replay 누적값을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              },
+              {
+                "query_id": "D02",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "GPU 사용률과 UUID·PCI 라벨을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              },
+              {
+                "query_id": "D11",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "GPU 전력을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -1345,6 +1430,91 @@
         },
         "reason": "Explain investigation, device comparison and purpose-scoped completion before conditional operator actions; source review only, no published revision changed.",
         "change": "One observation-plan batch, stored host Incident history and operator-oriented triage evidence; legacy required fields retained only for published-contract compatibility."
+      },
+      "single_phase_update": {
+        "status": "local_review_not_published",
+        "before_content_sha256": "7021e4c017a9f67a6dbf9700b9ce9981ede6f4881e3b57abc5409615bce241af",
+        "after_content_sha256": "9ff910b7278ea3db8b6417f1016c229c13ed2feb15087cf9a207981bce098098",
+        "change": "Remove iterative goal policy from single-phase incident reports; retain observation plan and conditional guidance.",
+        "previous_values": {
+          "decision_policy": {
+            "goal": {
+              "id": "identify_error_report",
+              "question": "해당 오류의 보고와 관련 관측을 수집하고 반복 보고·이전 구간의 차이를 근거에 맞게 설명했는가?",
+              "conclusion_scope": "관측 기반 장애 조사 자료·구간 비교·공식 조건부 대응. 원인 확정이나 복구 성공을 요구하지 않는다."
+            },
+            "applies_when": {
+              "reported_error_code": "sxid:11001",
+              "reported_producer_contract": "fleet-component-log-v1"
+            },
+            "completion_criteria": [
+              {
+                "id": "reported_error",
+                "question": "등록된 생산자의 해당 오류 코드 보고가 확인되는가?",
+                "method": "code",
+                "required": true
+              },
+              {
+                "id": "scoped_source",
+                "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+                "method": "code",
+                "required": true
+              },
+              {
+                "id": "bounded_conclusion",
+                "question": "수집한 오류 보고·대상·시각을 근거에 맞게 설명하고, 원인·현재 상태·시험 여부는 해당 관측 범위 안에서 판단했는가?",
+                "method": "llm",
+                "required": true
+              }
+            ],
+            "blocking_conditions": [
+              "scope_unverified",
+              "identity_conflict",
+              "required_query_incomplete",
+              "conflicting_reports"
+            ],
+            "non_blocking_unknowns": [
+              "causal_confirmation_evidence",
+              "current_health",
+              "physical_or_synthetic_origin"
+            ],
+            "followup_links": [
+              {
+                "query_id": "D09",
+                "criterion_ids": [
+                  "reported_error",
+                  "scoped_source"
+                ],
+                "required": true,
+                "expected_effect": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+              },
+              {
+                "query_id": "D47",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "같은 노드 GPU별 Fabric Manager 원시 상태 코드을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              },
+              {
+                "query_id": "D33",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "같은 노드 GPU별 NVLink 수신량을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              },
+              {
+                "query_id": "D34",
+                "criterion_ids": [
+                  "bounded_conclusion"
+                ],
+                "required": true,
+                "expected_effect": "같은 노드 GPU별 NVLink 송신량을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+              }
+            ]
+          }
+        }
       }
     }
   ]

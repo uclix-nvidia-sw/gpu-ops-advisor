@@ -27,6 +27,7 @@ import { OperationsIncident } from '../components/OperationsResult';
 import { returnPath } from '../lib/debug';
 import { ReportDeleteButton, ReportDeletionNotice } from '../components/ReportDeletion';
 import { RcaWorkflowButton } from '../components/RcaWorkflow';
+import { RcaEvidenceDialog } from '../components/RcaEvidenceDialog';
 export function ResultPage({ kind }: { kind: string }) {
   const { hash, state } = useLocation();
   const { id } = useParams(),
@@ -244,7 +245,12 @@ export function ResultPage({ kind }: { kind: string }) {
           />
         )}
       </QueryState>
-      {evidence && <EvidenceDialog id={evidence} onClose={() => setEvidence('')} />}
+      {evidence &&
+        (kind === 'analysis' ? (
+          <RcaEvidenceDialog id={evidence} onClose={() => setEvidence('')} />
+        ) : (
+          <EvidenceDialog id={evidence} onClose={() => setEvidence('')} />
+        ))}
     </div>
   );
 }

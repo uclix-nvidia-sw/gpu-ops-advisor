@@ -89,8 +89,12 @@ def host_history(context, data):
     result["rows"].sort(
         key=lambda r: (timestamp(r["occurred_at"]), r["incident_id"]), reverse=True
     )
-    counts = Counter(
-        (r["gpu_uuid"], code) for r in result["rows"] for code in r["codes"]
+    counts = Counter((None, code) for r in result["rows"] for code in r["codes"])
+    counts.update(
+        (r["gpu_uuid"], code)
+        for r in result["rows"]
+        if r["gpu_uuid"]
+        for code in r["codes"]
     )
     result["repeats"] = [
         {"gpu_uuid": gpu, "code": code, "incident_count": n}
