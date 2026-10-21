@@ -16,7 +16,7 @@ from agent_common.llm import LLM
 from agent_common.runtime import attempt_context
 from agent_common.settings import Settings
 from rcca_agent import workflow
-from rcca_agent.analysis_review import review_analysis
+from legacy_review_fixtures import review_analysis
 from rcca_agent.report_labels import label, query_label
 
 

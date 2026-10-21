@@ -398,144 +398,26 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         assert result["narrative_status"] == "complete"
     else:
         assert result["narrative_status"] == "omitted"
-    if mode == "fast":
-        assert events == []
-        assert result["result_status"] == "ready"
-        assert result["quality"]["analysis"]["fast_path"]
-    else:
-        if mode != "review_followup":
-            assert result["result_status"] != "ready"
-        assert mode == "review_followup" or all(
-            c["causal_status"] == "candidate" for c in result["cause_candidates"]
+    assert result["quality"]["analysis"]["workflow"] == "single_collection"
+    assert result["quality"]["analysis"]["followups"] == 0
+    assert not result["quality"]["analysis"]["fast_path"]
+    assert not {
+        "analysis_review",
+        "evidence_evaluation",
+        "investigation_plan_extension",
+    } & {e["query_id"] for e in output["evidence"]}
+    assert "review" not in events and "plan" not in events and "interpret" not in events
+    assert events.count("synthesize") <= 1
+    assert result["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
+    if mode == "unconfigured":
+        assert "synthesis_failed" in result["missing_inputs"]
+        assert (
+            result["quality"]["analysis"]["synthesis"]["error_code"]
+            == "model_not_configured"
         )
-        assert any(e["query_id"] == "rca_synthesis" for e in output["evidence"])
-        assert not {"unexpected_evidence", "sufficiency"} & {
-            e["query_id"] for e in output["evidence"]
-        }
-        rounds = [
-            e["snapshot"]["round"]
-            for e in output["evidence"]
-            if e["query_id"] == "evidence_evaluation"
-        ]
-        assert rounds == list(range(len(rounds)))
-        assert rounds
-
-        if mode == "xid":
-            assert events == [
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-                "plan",
-                "collect",
-                "collect",
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-            ]
-            analysis = result["quality"]["analysis"]
-            assert analysis["followups"] == 1
-            evaluations = [
-                e for e in output["evidence"] if e["query_id"] == "evidence_evaluation"
-            ]
-            assert len(evaluations) == 2
-            assert set(evaluations[0]["snapshot"]["next_queries"]) == {
-                "D44",
-                "D02",
-                "D11",
-            }
-            assert evaluations[1]["snapshot"]["stop_reason"] == "no_remaining_queries"
-            assert analysis["remaining_queries"] == []
-            assert analysis["collection_stop_reason"] == "no_remaining_queries"
-            assert {"D09", "D44", "D02"} <= {e["query_id"] for e in output["evidence"]}
-        elif mode in ("followup", "sxid", "review_followup"):
-            if mode == "review_followup":
-                decisions = [
-                    e["snapshot"]
-                    for e in output["evidence"]
-                    if e["query_id"] == "evidence_evaluation"
-                ]
-                assert decisions[0]["decision"] == "sufficient", decisions[0]
-                assert decisions[0]["next_queries"] == ["D02"]
-            assert events == [
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-                "plan",
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-            ]
-            assert result["quality"]["analysis"]["followups"] == 1
-        elif mode == "unconfigured":
-            assert "synthesize" not in events
-            assert "synthesis_unconfigured" in result["missing_inputs"]
-        elif mode in (
-            "missing_runbook",
-            "unsafe_general",
-            "budget_followup",
-            "accepted_rule_followup",
-        ):
-            assert events == [
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-            ]
-            if mode == "budget_followup":
-                assert result["quality"]["analysis"]["followups"] == 1
-                assert (
-                    result["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-                    == "llm_budget_exhausted"
-                )
-                assert "plan" not in events
-                decisions = [
-                    e["snapshot"]
-                    for e in output["evidence"]
-                    if e["query_id"] == "evidence_evaluation"
-                ]
-                assert decisions[0]["analysis_stop_reason"] == "llm_budget_exhausted"
-                assert decisions[0]["next_queries"] == ["D02"]
-            elif mode == "accepted_rule_followup":
-                assert result["quality"]["analysis"]["followups"] == 1
-                assert "plan" not in events
-            else:
-                assert result["runbook_revisions"][0]["id"] == "builtin-general"
-            assert "causal_confirmation_evidence" in result["missing_inputs"]
-        elif mode == "query_failed":
-            # A transient required D09 failure is retried once in the same round.
-            assert events == [
-                "collect",
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-                "collect",
-                "interpret",
-                "synthesize",
-                "review",
-            ]
-            failed = [
-                e
-                for e in output["evidence"]
-                if e["query_id"] == "D09" and e["tool_status"] == "unavailable"
-            ]
-            assert failed and all(e["quality"]["superseded_by_retry"] for e in failed)
-            assert result["termination_reason"] != "query_failed"
-            assert result["quality"]["analysis"]["followups"] == 1
-        elif mode == "invalid_plan":
-            assert events == ["collect", "interpret", "synthesize", "review", "plan"]
-            assert result["quality"]["analysis"]["followups"] == 0
-            assert result["quality"]["analysis"]["status"] == "complete"
-        else:
-            assert "synthesis_failed" in result["missing_inputs"]
+    if mode == "query_failed":
+        assert any(e["tool_status"] == "unavailable" for e in output["evidence"])
+    assert all(c["causal_status"] != "confirmed" for c in result["cause_candidates"])
 
 
 def test_alert_clues_preserve_namespace_actions_and_conflicts():

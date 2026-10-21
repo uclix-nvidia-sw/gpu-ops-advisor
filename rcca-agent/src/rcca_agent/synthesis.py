@@ -494,54 +494,6 @@ def synthesis_view(payload, remaining, reserved, prompt=SYNTHESIS):
     return view, max_bytes
 
 
-def reserve_review_budget(llm, payload, requested, floor=None, prompt=SYNTHESIS):
-    """Release only excess reservation, retaining the caller and review floor."""
-    remaining = getattr(llm, "remaining", 32768)
-    previous = getattr(llm, "reserved_tokens", 0)
-    requested = max(previous, requested)
-    protected = floor is not None
-    floor = max(previous, floor or 0)
-    view, limit = synthesis_view(payload, remaining, requested, prompt)
-
-    def usable(value, bound):
-        return bool(value["observation_refs"]) and encoded_size(value) <= bound
-
-    selected, reason = requested, "reservation_unchanged"
-    if not usable(view, limit):
-        candidate, bound = synthesis_view(payload, remaining, max(1, floor), prompt)
-        if floor < requested and usable(candidate, bound):
-            # Keep the largest reservation that admits an original observation.
-            low, high = max(1, floor), requested
-            while low < high:
-                mid = (low + high + 1) // 2
-                candidate, bound = synthesis_view(payload, remaining, mid, prompt)
-                if usable(candidate, bound):
-                    low = mid
-                else:
-                    high = mid - 1
-            selected, reason = low, "analysis_input_preserved"
-            view, limit = synthesis_view(payload, remaining, selected, prompt)
-        else:
-            reason = "analysis_review_budget_insufficient"
-            if not protected:
-                selected = floor
-                view, limit = synthesis_view(payload, remaining, selected, prompt)
-    return selected, {
-        "remaining_tokens": remaining,
-        "previous_reserved_tokens": previous,
-        "requested_review_reserve": requested,
-        "review_floor_tokens": floor,
-        "applied_review_reserve": selected,
-        "synthesis_sources_fit": usable(view, limit),
-        "review_reserve_reduced": selected < requested,
-        "reason": reason,
-        "max_input_bytes": limit,
-        "input_bytes": encoded_size(view),
-        "input_evidence_refs": view["observation_refs"],
-        "context_selection": view["context_selection"],
-    }
-
-
 async def synthesize(llm, payload, diagnostics=None):
     diagnostics = diagnostics if diagnostics is not None else {}
     diagnostics.update(request_attempts=0, response_calls=0, error_code=None)

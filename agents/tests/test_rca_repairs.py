@@ -12,8 +12,6 @@ from rcca_agent.synthesis import (
     validate_synthesis,
     synthesize,
     SynthesisValidationError,
-    reserve_review_budget,
-    synthesis_view,
 )
 from test_fleet_rca import evidence, profile, fleet, NS
 from test_rca_korean import reply
@@ -33,50 +31,6 @@ def payload():
         "observation_refs": ["log"],
         "query_quality": [{"query_id": "D08"}],
     }
-
-
-@pytest.mark.asyncio
-async def test_review_reservation_keeps_a_usable_source_for_synthesis():
-    class Model:
-        configured = True
-        remaining = 28237
-        reserved_tokens = 0
-        calls = 0
-
-        async def complete(self, system, data, **kwargs):
-            self.calls += 1
-            assert data["observation_refs"] == ["log"]
-            return reply()
-
-    data = payload()
-    data["device_observations"][0]["source_detail"] = "original evidence " * 100
-    original = copy.deepcopy(data)
-    model = Model()
-    requested = 20000
-    before, limit = synthesis_view(data, model.remaining, requested)
-    assert not before["observation_refs"] or len(str(before).encode()) > limit
-    selected, allocation = reserve_review_budget(model, data, requested)
-    assert 0 < selected < requested
-    assert allocation["synthesis_sources_fit"] is True
-    assert allocation["review_reserve_reduced"] is True
-    assert model.reserved_tokens == 0
-    model.reserved_tokens = selected
-    diagnostics = {}
-    status, _, _ = await synthesize(model, data, diagnostics)
-    assert status == "complete"
-    assert model.calls == 1
-    assert diagnostics["input_evidence_refs"] == ["log"]
-    assert data == original
-
-
-def test_reservation_preserves_external_floor_and_real_budget_failure():
-    class Model:
-        remaining = 1000
-        reserved_tokens = 500
-
-    selected, allocation = reserve_review_budget(Model(), payload(), 20000)
-    assert selected == 500
-    assert allocation["synthesis_sources_fit"] is False
 
 
 @pytest.mark.parametrize(

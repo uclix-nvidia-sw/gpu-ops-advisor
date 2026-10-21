@@ -33,7 +33,7 @@ Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모�
 
 Job Controller는 큐 관리와 **기존 자원 한도 안에서 잡 배분**을 맡습니다. 처리 여유가 없으면 큐에서 대기합니다. Backend·Incident·Job Controller·RCA·보고서는 각각 독립 실행·배포합니다. 두 Agent는 **NVIDIA NeMo Agent Toolkit(NAT)** 워크플로를 내부에서 실행하며, 공통 정규화·계산 함수만 라이브러리로 재사용합니다.
 
-- RCA: 발행 Runbook 선택 → 필수 증거 수집 → 증거 해석·원인 분석 통합 작성 → 독립 품질 검토 → 조사 목적 달성·보완·종료 판단 → 근거 자료 확정 → 보고서 구성·공개.
+- RCA: 발행 Runbook 선택 → 계획된 로그·메트릭·host 이력 수집 → 분석·권고 통합 작성 → 자료 고정 → 보고서 구성·공개.
 - 운영보고서: 사건·공개 RCA 결과 + Grafana MCP 기간 관측 → 코드 집계·계산 → 주제별 AI 운영 해석 → 보고서·HTML/CSV 저장. 신규 보고서는 Namespace 사용과 사건 현황을 직전 기간과 비교하며 기존 O계열 보고서·일정도 유지합니다.
 
 Grafana MCP는 관측 조회 연결을 맡으며 최종 결과 공개는 Job Controller 완료 검증을 거칩니다. 실제 Incident·JC·Worker·공식 MCP 프로세스를 연결한 시험 기록이 있습니다. 해당 시험의 Grafana 데이터와 LLM 응답은 fixture이며 운영 환경의 데이터·모델 품질 검수와 구분합니다.
@@ -47,7 +47,7 @@ Chatbot/Assistant, GUI 직접 RCA 실행, 독립 Scheduler, HPA/자동 확장, �
 | 범위 | 현재 동작 | 담당 문서 |
 |---|---|---|
 | 사건·작업 | Incident 접수, JC claim·lease·결과 공개 | [Incident](incident/README.md) · [JC](job-controller/README.md) |
-| RCA | 해석·분석 통합 작성, 독립 품질 검토, Runbook 조사 목적 판단, 근거 자료 확정과 보고서 구성 | [RCA](rcca-agent/README.md) |
+| RCA | 단일 계획 수집, 해석·분석 통합 작성, 근거 자료 확정과 보고서 구성 | [RCA](rcca-agent/README.md) |
 | 신규 기본 보고서 | Ops 전용 시간 집계, 활동·메모리·작업 관측, 사건 비교, 근거를 연결한 AI 해석·운영 제안 | [Ops](ops-agent/README.md) · [집계 계약](docs/specs/ops-agent/aggregate-report-v1.md) |
 | 기존 보고서 | O계열 요청·일정·저장 결과 호환, 공통 D binding 사용 | [Ops](ops-agent/README.md) |
 | 조회·일정·화면 | 기존·운영·개발자·신규 관점, RCA 조사 목록과 단계별 디버깅, 보고서·일정·다운로드 | [Backend](backend/README.md) · [Frontend](frontend/README.md) |
@@ -56,16 +56,7 @@ Chatbot/Assistant, GUI 직접 RCA 실행, 독립 Scheduler, HPA/자동 확장, �
 
 ## RCA 결과와 디버깅 읽는 법
 
-RCA의 기본 분석은 **작성 LLM → 독립 검토 LLM** 두 단계입니다. 작성 모델이 증거 해석과 원인 후보를 함께 만들고, 검토 모델은 그 주장과 원본 근거를 대조합니다. 별도 보고서 LLM이 고정된 분석 자료를 완성된 문장으로 작성합니다. 문장 정렬 전용 호출은 새 흐름에서 실행하지 않습니다. 조회 선택·검토 형식 복구가 있을 수 있으므로 전체 호출이 항상 세 번이라는 뜻은 아닙니다. 비교용 `separate` 설정과 과거 결과 읽기는 유지합니다.
-
-| 구분 | 확인하는 내용 |
-|---|---|
-| 수집 상태 | 요청 성공, 빈 결과, 일부 수집, 시간 초과 등 조회 과정 |
-| 증거 상태 | 확인된 보고·추론·미확인 내용과 각 근거 |
-| 분석 품질 | 근거와 결론의 연결, 대안·모순·대상·시각·한계 설명 |
-| 조사 종료 | Runbook 목적의 필수 기준과 차단 조건, 추가 자료의 필요·확보 가능성 |
-
-Runbook 1.1의 `decision_policy`가 있으면 코드 검사와 LLM의 의미 판단, 같은 초안의 품질 검토를 함께 사용합니다. 목적을 달성하면 선택 조회가 남아 있어도 종료할 수 있습니다. 예를 들어 오류 보고 식별이 목적이라면 이를 달성해도 물리적 고장 원인과 현재 복구 여부는 미확정으로 남을 수 있습니다. 검토 실패만으로 같은 증거를 계속 다시 작성하지 않으며, 추가 관측이 생겼을 때 다음 분석을 진행합니다. 상세 조건은 [RCA 현재 흐름](rcca-agent/README.md#현재-실행-흐름)을 따릅니다.
+RCA는 **통합 작성 LLM → 보고서 작성 LLM** 순서다. 모든 발행 Runbook에서 독립 평가·goal 판정·평가 예산 예약·보완 조회 선택을 제거했다. 원문·수집 실패·출력 참조 검증은 유지한다. 현재 실행과 구 결과 호환의 구분은 [RCA 현재 흐름](rcca-agent/README.md#현재-실행-흐름)을 따른다.
 
 개발자가 실패 원인을 확인하는 경로는 다음과 같습니다.
 

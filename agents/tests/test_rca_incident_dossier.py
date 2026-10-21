@@ -211,9 +211,9 @@ async def test_single_collection_has_author_and_writer_without_critic(
         "rule_followup",
         "choose_followup",
     ):
-        monkeypatch.setattr(workflow, name, obsolete)
+        monkeypatch.setattr(workflow, name, obsolete, raising=False)
     for name in ("review_analysis", "reserve_review_budget", "interpret_evidence"):
-        monkeypatch.setattr(evaluation, name, obsolete)
+        monkeypatch.setattr(evaluation, name, obsolete, raising=False)
 
     case = dossier_case(kind)
     case["token_budget"] = 131072

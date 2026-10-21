@@ -114,6 +114,26 @@ def combined_reply(data):
     }
 
 
+def combined_candidate_reply(data):
+    response = analysis_reply(data["observation_refs"])
+    response["interpretation"] = {
+        "findings": [
+            {
+                "id": "observed",
+                "statement": "대상 노드의 오류 보고가 기록됐습니다.",
+                "kind": "observed",
+                "evidence_refs": data["observation_refs"],
+            }
+        ],
+        "unknowns": [],
+        "conflicts": [],
+        "limitations": [],
+    }
+    for hypothesis in response["hypotheses"]:
+        hypothesis["finding_refs"] = ["observed"]
+    return response
+
+
 class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
@@ -1598,12 +1618,12 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
     assert any(q == "D02" and s == "ok" for q, s in evidence), evidence
     assert rca["incident_id"] == iid
     evaluation = rca["quality"]["rca_evaluation"]
-    assert evaluation["schema_version"] == "1"
+    assert evaluation["schema_version"] == "2"
     assert evaluation["evidence"]["execution_status"] == "complete"
-    assert evaluation["review"]["execution_status"] == "complete"
-    assert evaluation["review"]["verdict"] == "undetermined"
+    assert evaluation["review"]["execution_status"] == "skipped"
+    assert evaluation["review"]["verdict"] is None
     assert evaluation["review"]["analysis_id"] == evaluation["analysis_id"]
-    assert len(evaluation["review"]["criteria"]) == 6
+    assert evaluation["review"]["criteria"] == {}
     assert rca["narrative_status"] == "complete"
     assert {s["id"] for s in rca["narrative"]} >= {
         "problem",
@@ -1611,9 +1631,9 @@ def test_real_workers_nat_grafana_mcp_and_publication(stack, monkeypatch):
         "action",
         "limits",
     }
-    assert rca["device_observations"] and rca["cause_candidates"]
+    assert rca["device_observations"]
     assert rca["quality"]["analysis"]["status"] == "complete"
-    assert rca["quality"]["analysis"]["followups"] == 1
+    assert rca["quality"]["analysis"]["followups"] == 0
     assert any(q == "rca_synthesis" for q, s in evidence)
     synthesis_requests = [
         json.loads(body["messages"][1]["content"])
@@ -1967,8 +1987,8 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
     start = len(Upstream.requests)
     jid = submit(stack, "rca", data)
     result, evidence = worker_result(isolated, "rca", jid, "-final-report")
-    assert result["result_status"] == "partial"
-    assert "causal_confirmation_evidence" in result["missing_inputs"]
+    assert result["result_status"] == ("partial" if llm_failed else "ready")
+    assert "causal_confirmation_evidence" not in result["missing_inputs"]
     assert any(r["origin"] == "builtin" for r in result["runbook_revisions"])
     assert result["narrative_status"] == ("failed" if llm_failed else "complete")
     assert [section["id"] for section in result["narrative"]] == [
@@ -2120,16 +2140,15 @@ def test_all_report_topics_and_runbook_sufficient_skips_mcp(stack):
     rid = submit(stack, "rca", data)
     request_start = len(Upstream.requests)
     result, evidence = worker_result(stack, "rca", rid, "-runbook")
-    assert result["termination_reason"] == "evidence_sufficient"
     assert result["cause_candidates"][0]["causal_status"] == "supported"
-    assert not any(q.startswith("D") for q, s in evidence)
+    assert not any(q == "analysis_review" for q, s in evidence)
     model_requests = [
         json.loads(body["messages"][1]["content"])
         for path, body in Upstream.requests[request_start:]
         if path == "/v1/chat/completions"
     ]
-    assert len(model_requests) == 1
-    request = model_requests[0]
+    assert 1 <= len(model_requests) <= 2
+    request = model_requests[-1]
     assert request["material_hash"] == result["quality"]["report"]["material_hash"]
     assert "facts" not in request and "raw_excerpts" not in request
     assert any(
@@ -2621,6 +2640,9 @@ def test_rca_numeric_rejection_does_not_rewrite_same_evidence_before_publication
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", rejection_then_repair)
+    monkeypatch.setattr(
+        sys.modules[__name__], "combined_reply", combined_candidate_reply
+    )
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
     # A second analysis needs a second round. The alert/D09 mismatch batch
     # analyzes once after collecting; the uncoded alert keeps two rounds.
@@ -2641,22 +2663,16 @@ def test_rca_numeric_rejection_does_not_rewrite_same_evidence_before_publication
                 (captured["job_id"],),
             ).fetchall()
         ]
-    assert [row["round"] for row in rounds] == [0, 1]
-    assert calls == 2  # Initial analysis and one analysis after new source evidence.
+    assert [row["round"] for row in rounds] == [0]
+    assert calls == 1
     diagnostic = rounds[0]["diagnostics"]
-    assert rounds[1]["diagnostics"]["repair_status"] == "not_needed"
-    assert rounds[1]["diagnostics"]["repair_attempts"] == 0
-    assert (
-        captured["result"]["quality"]["analysis"]["synthesis"]
-        == rounds[1]["diagnostics"]
+    assert captured["result"]["quality"]["analysis"]["synthesis"] == diagnostic
+    assert diagnostic["request_attempts"] == 1
+    assert any(
+        row["code"] == "unregistered_numeric_claim"
+        for row in diagnostic["dropped_items"]
     )
-    assert diagnostic["repair_status"] == "same_evidence_rewrite_blocked"
-    assert diagnostic["repair_attempts"] == 0
-    assert "repair_gate" not in diagnostic
-    violation = diagnostic["validation_failures"][0]["violations"][0]
-    assert violation["code"] == "unregistered_numeric_claim"
-    assert len(violation["numeric_diagnostic"]["text_sha256"]) == 64
-    assert "999" not in json.dumps(violation)
+    assert not captured["result"]["cause_candidates"]
     assert ("rca_synthesis", "ok") in captured["evidence"]
 
 
@@ -2681,26 +2697,22 @@ def test_rca_review_above_legacy_input_limit_is_reviewed_before_publication(
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", large_draft)
+    monkeypatch.setattr(
+        sys.modules[__name__], "combined_reply", combined_candidate_reply
+    )
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
     test_grafana_webhook_through_incident_jc_and_real_rca_worker(
         stack, monkeypatch, False
     )
     evaluation = captured["result"]["quality"]["rca_evaluation"]
-    assert evaluation["review"]["execution_status"] == "complete"
-    assert evaluation["review"]["verdict"] == "undetermined"
+    assert evaluation["review"]["execution_status"] == "skipped"
+    assert evaluation["review"]["verdict"] is None
     with psycopg.connect(stack["url"]) as conn:
         records = conn.execute(
             "SELECT snapshot,quality FROM evidence WHERE job_id=%s AND query_id='analysis_review'",
             (captured["job_id"],),
         ).fetchall()
-    large = [r for r in records if r[0].get("input_bytes", 0) > 24000]
-    assert large
-    for snapshot, quality in large:
-        assert quality["request_checks"] == snapshot["request_checks"]
-        check = quality["request_checks"][0]
-        assert check["model_called"]
-        assert not check["input_size_exceeded"] and not check["token_budget_exhausted"]
-        assert check["input_bytes"] <= check["max_input_bytes"]
+    assert not records
 
 
 @pytest.mark.e2e
@@ -2962,6 +2974,9 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
 
     monkeypatch.setattr(Upstream, "reject_tool_requests", True)
     monkeypatch.setattr(sys.modules[__name__], "analysis_reply", unsafe_reply)
+    monkeypatch.setattr(
+        sys.modules[__name__], "combined_reply", combined_candidate_reply
+    )
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture_result)
     # Rule/model follow-up selection runs only outside the alert/D09 mismatch
     # batch; an uncoded alert reason keeps that path.
@@ -3006,10 +3021,8 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
             )
     result = captured["result"]
     diagnostic = result["quality"]["analysis"]["synthesis"]
-    assert diagnostic["completion_mode"] == "validated_subset"
-    assert diagnostic["rejected_hypotheses"] == 1
-    assert diagnostic["repair_status"] == "same_evidence_rewrite_blocked"
-    assert diagnostic["repair_attempts"] == 0
+    assert diagnostic["adoption"] == "validated_response"
+    assert diagnostic["dropped_items"]
     assert diagnostic["request_attempts"] == 1
     assert "인벤토리에 없는 GPU와 관련되어" not in json.dumps(
         result, ensure_ascii=False
@@ -3020,26 +3033,8 @@ def test_rca_json_selection_and_safe_subset_survive_publication(
             "SELECT snapshot FROM evidence WHERE job_id=%s AND query_id='evidence_evaluation'",
             (result["job_id"],),
         ).fetchall()
-    assert len(evaluations) == 2
-    assert sorted(row[0]["round"] for row in evaluations) == [0, 1]
-    with psycopg.connect(stack["url"]) as conn:
-        assert (
-            conn.execute(
-                "SELECT count(*) FROM evidence WHERE job_id=%s "
-                "AND query_id IN ('unexpected_evidence', 'sufficiency')",
-                (result["job_id"],),
-            ).fetchone()[0]
-            == 0
-        )
-    selection = next(
-        row[0]["followup_selection"] for row in evaluations if row[0]["next_queries"]
-    )
-    assert selection["attempts"] == (0 if rule_selection else 1)
-    assert "initial_failure" not in selection
-    assert selection["status"] == ("policy_selected" if rule_selection else "selected")
-    if rule_selection:
-        assert selection["method"] == "runbook_rules"
-        assert selection["rule_findings"][0]["eligible"]
+    assert evaluations == []
+    assert not any(q == "analysis_review" for q, _ in captured["evidence"])
 
 
 @pytest.mark.e2e
@@ -3412,14 +3407,13 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     evaluation = result["quality"]["rca_evaluation"]
     assert evaluation["schema_version"] == "2"
     assert evaluation["generation_mode"] == "combined"
-    assert evaluation["investigation"]["stop_reason"] == (
-        "goal_not_met" if invalid_interpretation in (True, "http") else "goal_achieved"
-    )
-    assert evaluation["review"]["rubric_version"] == "2"
+    assert evaluation["investigation"]["stop_reason"] == "no_available_followup"
+    assert evaluation["review"]["reason"] == "not_requested"
+    assert not any(q == "analysis_review" for q, _ in evidence)
     assert result["quality"]["report"]["status"] == "complete"
     assert result["narrative"]
     assert not any(q == "evidence_interpretation" for q, _ in evidence)
-    assert all(q == "D09" for q, _ in evidence if q.startswith("D"))
+    assert any(q == "D09" for q, _ in evidence)
     with psycopg.connect(stack["url"]) as conn:
         stored = dict(
             conn.execute(
@@ -3468,19 +3462,10 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
                 "rule": "missing_support",
                 "action": "dropped",
             },
-            {
-                "code": "criterion_withheld",
-                "path": "$.interpretation.criterion_assessments",
-                "rule": "caveat_dropped",
-                "action": "withheld",
-            },
         ]
     else:
         assert diagnostics["adoption"] == "validated_response"
         assert diagnostics["validation_failures"] == []
 
-    if invalid_interpretation == "revision":
-        assert len(review_calls) == 2
-        assert review_calls[0] != review_calls[1]
-        assert evaluation["analysis_id"] == review_calls[-1]
-        assert sum(q == "rca_synthesis" for q, _ in evidence) == 2
+    assert review_calls == []
+    assert sum(q == "rca_synthesis" for q, _ in evidence) == 1

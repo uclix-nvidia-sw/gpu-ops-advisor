@@ -1,6 +1,6 @@
 """Fixed outputs test orchestration and validation, not model accuracy."""
 
-from rcca_agent.analysis_review import RUBRIC
+from legacy_review_fixtures import RUBRIC
 
 
 def review_reply(payload, verdict="undetermined", issues=None):

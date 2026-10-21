@@ -215,39 +215,21 @@ async def test_power_followup_never_establishes_health_or_recovery(
     result = output["result"]
     validate_result(result, output["evidence"])
     followup = [e for e in output["evidence"] if e["query_id"] == query]
-    if code == 79:
-        # Empty D09 cannot satisfy the authored reported-fact prerequisites.
-        assert not followup
-        evaluations = [
-            e["snapshot"]
-            for e in output["evidence"]
-            if e["query_id"] == "evidence_evaluation"
-        ]
-        assert evaluations[0]["followup_selection"]["status"] == "conditions_not_met"
-    elif not exploration_allowed:
-        assert not followup
-        evaluation = next(
-            e["snapshot"]
-            for e in output["evidence"]
-            if e["query_id"] == "evidence_evaluation"
-        )
-        assert evaluation["stop_reason"] == "selection_conditions_missing"
-        assert evaluation["followup_selection"]["attempts"] == 0
+    assert followup
+    assert not any(e["query_id"] == "evidence_evaluation" for e in output["evidence"])
+    if profile_kind == "current":
+        assert all(e["quality"].get("binding_id") for e in followup)
+    if mode == "empty":
+        assert all(e["tool_status"] == "empty" for e in followup)
+    elif mode == "failed":
+        assert all(e["tool_status"] not in ("ok", "empty") for e in followup)
     else:
-        assert followup
-        if profile_kind == "current":
-            assert all(e["quality"].get("binding_id") for e in followup)
-        if mode == "empty":
-            assert all(e["tool_status"] == "empty" for e in followup)
-        elif mode == "failed":
-            assert all(e["tool_status"] not in ("ok", "empty") for e in followup)
-        else:
-            assert any(e["tool_status"] == "ok" for e in followup)
+        assert any(e["tool_status"] == "ok" for e in followup)
     assert result["result_status"] != "ready"
     # General collection no longer requires a current-state assertion. Empty
     # health evidence still blocks cause and action confirmation independently.
     assert "unknown_value" in result["missing_inputs"]
-    assert "causal_confirmation_evidence" in result["missing_inputs"]
+    assert "causal_confirmation_evidence" not in result["missing_inputs"]
     assert not any(
         c["causal_status"] == "confirmed" for c in result["cause_candidates"]
     )

@@ -6,10 +6,9 @@ import pytest
 
 from agent_common.llm import LLM, RemoteUncertain
 from agent_common.settings import Settings
-from agent_common.observation import Observation
 from agent_common.rca_evaluation import source_evaluation, validate_evaluation
-from rcca_agent.analysis_review import analysis_draft, validate_review
-from rcca_agent.evaluation import collection_status, evaluate_analysis
+from legacy_review_fixtures import analysis_draft, validate_review
+from rcca_agent.evaluation import collection_status
 from rcca_agent.evidence_interpretation import (
     call_stage,
     inspection_context,
@@ -17,7 +16,6 @@ from rcca_agent.evidence_interpretation import (
 )
 from rcca_agent.synthesis_context import bounded_context, encoded_size
 from evaluation_fixtures import interpretation_reply, review_reply
-from test_rca_analysis import analysis_reply
 
 
 PERIOD = {"start": "2026-09-15T00:00:00Z", "end": "2026-09-15T01:00:00Z"}
@@ -296,141 +294,6 @@ async def test_transport_failure_is_not_reclassified_as_input_or_token_limit(fai
         )
         assert value is None and diagnostic["reason"] == failure
         assert diagnostic["attempts"] == 1
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "mode", ["limited_valid", "review_rejected", "model_failure", "oversized_review"]
-)
-async def test_round_reviews_once_and_withholds_rejected_claims(mode):
-    obs = Observation({}, {"queries": {}}, DATA, time.monotonic() + 60)
-    obs.evidence.append(observation("partial", False))
-    state = {"revisions": 0}
-    stages = []
-    seen_drafts = []
-
-    class Model:
-        configured = True
-        remaining = 100000
-        usage = {}
-
-        async def complete(self, system, payload, *, stage):
-            stages.append(stage)
-            if stage == "evidence_interpretation":
-                return interpretation_reply()
-            if stage == "synthesis":
-                return analysis_reply(payload["observation_refs"])
-            assert stage == "analysis_review"
-            seen_drafts.append(deepcopy(payload["draft"]))
-            assert any(
-                c["id"] == "recommendation:0" for c in payload["draft"]["claims"]
-            )
-            if mode == "model_failure":
-                return None
-            if mode == "limited_valid":
-                return review_reply(payload, "acceptable")
-            issue = {
-                "claim_id": None,
-                "reason": "관측 공백으로 원인을 배제할 수 없습니다.",
-                "evidence_refs": ["log"],
-                "suggested_resolution": "한계를 밝히고 단정을 제거하세요.",
-            }
-            return review_reply(payload, "revision_required", [issue])
-
-    def assemble(candidates):
-        return candidates, [
-            {
-                "text": "조건 확인 후 담당자가 검토하세요."
-                * (3000 if mode == "oversized_review" else 1),
-                "eligibility": "eligible",
-                "execution": "not_performed",
-                "evidence_refs": ["log"],
-                "value_refs": [],
-            }
-        ]
-
-    output = await evaluate_analysis(
-        obs,
-        DATA,
-        {},
-        [],
-        {
-            "observation_refs": [],
-            "device_observations": [],
-            "pod_relations": [],
-            "metric_observations": [],
-        },
-        assemble,
-        Model(),
-        state,
-        0,
-        [],
-    )
-    assert stages[0:3] == (
-        ["evidence_interpretation", "synthesis"]
-        if mode == "oversized_review"
-        else ["evidence_interpretation", "synthesis", "analysis_review"]
-    )
-    assert output["review"]["analysis_id"] == output["draft"]["analysis_id"]
-    assert all(
-        c["causal_status"] == "candidate" for c in output["draft"]["cause_candidates"]
-    )
-    assert stages.count("synthesis") == 1
-    if mode == "review_rejected":
-        assert stages.count("analysis_review") == 1
-        assert not output["draft"]["cause_candidates"]
-        assert output["draft"]["recommendations"][0]["eligibility"] == "withheld"
-        assert seen_drafts[0]["analysis_id"] != output["draft"]["analysis_id"]
-        assert output["review"]["execution_status"] == "skipped"
-        assert output["review"]["verdict"] is None
-        assert output["review"]["reason"] == "draft_changed_after_review"
-        assert output["review_output"]["issues"]
-        drafts = [e for e in obs.evidence if e["query_id"] == "rca_analysis_draft"]
-        reviews = [e for e in obs.evidence if e["query_id"] == "analysis_review"]
-        assert len(drafts) == len(reviews) == 2
-        assert drafts[-1]["quality"]["reason"] == "review_claims_withheld"
-        assert drafts[-1]["snapshot"]["previous_review_evidence_id"] == reviews[0]["id"]
-        assert reviews[-1]["quality"]["attempts"] == 0
-        assert reviews[-1]["quality"]["reason"] == "draft_changed_after_review"
-    elif mode == "oversized_review":
-        assert output["review"]["verdict"] is None
-        assert output["review"]["reason"] == "llm_token_budget_exhausted"
-        assert output["stop_reason"] == "llm_budget_exhausted"
-        record = next(e for e in obs.evidence if e["query_id"] == "analysis_review")
-        assert (
-            record["quality"]["request_checks"] == record["snapshot"]["request_checks"]
-        )
-        assert record["quality"]["attempts"] == 0
-    elif mode == "model_failure":
-        assert output["review"]["verdict"] is None
-    else:
-        assert output["review"]["verdict"] == "acceptable"
-    assert state["revisions"] == 0
-    body = {
-        key: output["draft"][key]
-        for key in ("cause_candidates", "recommendations", "limitations")
-    }
-    body["quality"] = {
-        "rca_evaluation": {
-            "schema_version": "1",
-            "analysis_id": output["draft"]["analysis_id"],
-            "collection": collection_status(["D09"], {"D09": [obs.evidence[0]]}),
-            "evidence": output["evidence"],
-            "review": output["review"],
-            "investigation": {
-                "status": "finished",
-                "stop_reason": "no_available_followup",
-                "evidence_refs": [],
-            },
-        }
-    }
-    validate_evaluation(body, obs.evidence)
-    body["limitations"] = ["different final text"]
-    with pytest.raises(ValueError, match="changed after review"):
-        validate_evaluation(body, obs.evidence)
-    source = source_evaluation(body)
-    assert "evidence_refs" not in str(source)
-    assert source["review_verdict"] == output["review"]["verdict"]
 
 
 def test_legacy_and_unknown_extension_are_not_reviewed():

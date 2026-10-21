@@ -9,7 +9,6 @@ import pytest
 from agent_common.contracts import content_hash
 from rcca_agent.runbook_admin import check
 from rcca_agent.runbook_transition import propose_transition
-from rcca_agent.workflow import rule_followup
 
 ROOT = Path(__file__).resolve().parents[2]
 BOOKS = ROOT / "rcca-agent/runbooks"
@@ -36,17 +35,8 @@ def test_catalog_proposal_preserves_source_and_requires_scoped_facts(path):
         assert candidate["content"][field] == row["content"][field]
     plan = candidate["content"]["observation_plan"]
     optional = [s for s in plan if not s["required"]]
-    queries = [s["query_id"] for s in optional]
-    prerequisites = set(optional[0]["selection"]["requires_all"])
-
-    def select(facts, gaps):
-        return rule_followup(
-            [{"id": "review"}], {"review": plan}, queries, gaps, facts
-        )[0]
-
-    assert select(prerequisites, ["causal_confirmation_evidence"])
-    assert not select(set(), ["causal_confirmation_evidence"])
-    assert not select(prerequisites, ["unknown_value"])
+    assert optional
+    assert all(step["selection"]["requires_all"] for step in optional)
     assert "state" not in candidate and "reviewed_content_hash" not in candidate
 
 

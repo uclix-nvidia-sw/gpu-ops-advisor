@@ -161,4 +161,4 @@ def test_planned_author_explains_collected_data_without_review_or_followup():
     assert "If review_feedback is supplied" not in prompt
     assert "controls bounded follow-up" not in prompt
     assert "Explain alert_match/evidence_gap" not in prompt
-    assert "Review feedback requests" in author_prompt({})
+    assert "Review feedback requests" not in author_prompt({})

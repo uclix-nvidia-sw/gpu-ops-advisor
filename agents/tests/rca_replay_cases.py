@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from agent_common.contracts import content_hash
-from rcca_agent.analysis_review import RUBRIC, analysis_draft
+from legacy_review_fixtures import RUBRIC, analysis_draft
 
 
 ROOT = Path(__file__).resolve().parents[2]

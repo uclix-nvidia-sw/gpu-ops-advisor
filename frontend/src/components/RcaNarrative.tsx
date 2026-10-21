@@ -1,5 +1,4 @@
 import { RcaOperatorReport } from './RcaOperatorReport';
-import { RcaEvaluation, evaluationLabels } from './RcaEvaluation';
 import { structuredGuidance } from './StructuredGuidance';
 import { RcaGuidance } from './RcaGuidance';
 import { RcaHostHistory } from './RcaHostHistory';
@@ -84,7 +83,6 @@ export function RcaNarrative({
   result,
   consolidateChecks = false,
   reader = false,
-  evaluationExpanded = false,
   onEvidence,
 }: {
   result: Row;
@@ -99,20 +97,6 @@ export function RcaNarrative({
   ) {
     return <RcaOperatorReport result={result} onEvidence={onEvidence} />;
   }
-  const evaluation = obj(obj(result.quality).rca_evaluation);
-  const stopReason = str(obj(evaluation.investigation).stop_reason);
-  const review = obj(evaluation.review);
-  const objective = obj(obj(evaluation.investigation).objective);
-  const achievementReviewed =
-    review.execution_status === 'complete' &&
-    review.analysis_id === evaluation.analysis_id &&
-    review.verdict === 'acceptable' &&
-    objective.status === 'achieved' &&
-    objective.analysis_id === evaluation.analysis_id;
-  const statusLabel =
-    stopReason === 'goal_achieved' && !achievementReviewed
-      ? '종료 · 최종 분석 검토 기록 확인'
-      : evaluationLabels[stopReason] || '처리 기록 확인';
   const presentation = str(obj(obj(result.quality).report).presentation);
   const materialReport = presentation === 'rca-material/1';
   const incidentFirst = presentation.startsWith('incident-first/');
@@ -133,12 +117,6 @@ export function RcaNarrative({
   if (!sections.length) return null;
   return (
     <section id="final-report" className="rca-narrative" aria-label="RCA 최종 보고서">
-      {!reader && (
-        <details key={String(evaluationExpanded)} open={evaluationExpanded}>
-          <summary>분석 처리: {statusLabel} · 수집·검토 상세</summary>
-          <RcaEvaluation result={result} />
-        </details>
-      )}
       <header className="rca-narrative-header">
         <h3>RCA 최종 보고서</h3>
         <p>어디서 무엇이 보고됐고, 무엇을 알며, 다음에 무엇을 해야 하는지 확인하세요.</p>

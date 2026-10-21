@@ -159,7 +159,8 @@ async def test_mismatch_collects_all_four_optional_queries_within_existing_budge
         for e in outcome["output"]["evidence"]
         if e["query_id"] == "investigation_decision"
     )
-    assert set(decision["selected_queries"]) == {"D02", "D03", "D11", "D44"}
+    assert decision["selected_queries"] == []
+    assert {"D02", "D03", "D11", "D44"} <= set(decision["collected_queries"])
     collected = {e["query_id"] for e in outcome["output"]["evidence"]}
     assert set(decision["selected_queries"]) <= collected
 
