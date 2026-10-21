@@ -13,7 +13,7 @@ from .evidence_interpretation import (
     validate_interpretation,
     ResponseValidationError,
 )
-from .prompts import SYNTHESIS_CONTEXT, SYNTHESIS_RULES
+from .prompts import SYNTHESIS_CONTEXT, SYNTHESIS_RULES, TRIAGE_CONTEXT
 from .synthesis import (
     synthesis_view,
     validate_synthesis,
@@ -56,12 +56,16 @@ and feedback are not evidence. Validation feedback concerns response structure."
 
 
 def author_prompt(payload):
-    return COMBINED + (
-        CRITERIA_PROMPT
-        + "\nIn this combined response, criterion_assessments belongs only inside "
-        "interpretation, never at the top level."
-        if semantic_criteria(payload) is not None
-        else ""
+    return (
+        (TRIAGE_CONTEXT if "incident_comparison" in payload else "")
+        + COMBINED
+        + (
+            CRITERIA_PROMPT
+            + "\nIn this combined response, criterion_assessments belongs only inside "
+            "interpretation, never at the top level."
+            if semantic_criteria(payload) is not None
+            else ""
+        )
     )
 
 

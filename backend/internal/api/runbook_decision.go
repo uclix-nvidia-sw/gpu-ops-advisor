@@ -8,6 +8,11 @@ func validDecisionPolicy(c Object) bool {
 	if c["schema"] != "gpu-rca-runbook/1.1" && c["schema"] != "gpu-rca-runbook/1.2" {
 		return !exists
 	}
+	// Single-phase plans may omit the iterative objective, but explicit null is invalid.
+	if !exists {
+		plan, ok := c["observation_plan"].([]any)
+		return ok && len(plan) > 0
+	}
 	p, ok := raw.(map[string]any)
 	if !ok || c["investigation_only"] != true || len(p) != 6 || only(p, "goal", "applies_when", "completion_criteria", "blocking_conditions", "non_blocking_unknowns", "followup_links") != nil {
 		return false

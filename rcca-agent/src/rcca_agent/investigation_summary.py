@@ -13,7 +13,10 @@ QUERY_NAMES = {
     "D02": "GPU 목록과 사용률",
     "D11": "GPU 전력",
     "D44": "PCIe 재전송 횟수",
-    "D13": "장치 연결 정보",
+    "D47": "GPU별 Fabric Manager 상태 코드",
+    "D33": "NVLink 수신량",
+    "D34": "NVLink 송신량",
+    "D13": "보조 원본 로그",
 }
 
 

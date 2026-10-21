@@ -7,6 +7,7 @@ from itertools import zip_longest
 from .report_observations import event_devices_by_scope, report_scope
 
 SECTIONS = (
+    "incident_comparison",
     "error_events",
     "device_observations",
     "pod_relations",
@@ -24,6 +25,7 @@ SECTIONS = (
 
 OBSERVATION_SECTIONS = frozenset(
     {
+        "incident_comparison",
         "error_events",
         "device_observations",
         "pod_relations",
@@ -38,13 +40,14 @@ def encoded_size(value):
 
 
 def bounded_context(payload, max_bytes):
+    sections = tuple(k for k in SECTIONS if k != "incident_comparison" or k in payload)
     # The limit applies to the serialized model view, not the source snapshots.
     view = {
         k: v
         for k, v in payload.items()
-        if k not in (*SECTIONS, "observation_refs", "input_evidence_refs")
+        if k not in (*sections, "observation_refs", "input_evidence_refs")
     }
-    view.update({k: [] for k in SECTIONS})
+    view.update({k: [] for k in sections})
     view["observation_refs"] = []
     view["input_evidence_refs"] = sorted(
         {
@@ -56,7 +59,7 @@ def bounded_context(payload, max_bytes):
     coverage = {
         "method": "bounded_original_observations",
         "complete": False,
-        "omitted_observations": {k: len(payload.get(k, [])) for k in SECTIONS},
+        "omitted_observations": {k: len(payload.get(k, [])) for k in sections},
         "omitted_metric_samples": sum(
             len(row.get("samples", []))
             for row in payload.get("metric_observations", [])
@@ -67,7 +70,7 @@ def bounded_context(payload, max_bytes):
     # Reserve room for the coverage counters and evidence IDs before admitting rows.
     # Admit one row per evidence source before more rows from that source.
     groups = defaultdict(list)
-    for section in SECTIONS:
+    for section in sections:
         for original in payload.get(section, []):
             groups[(section, tuple(original.get("evidence_refs", [])))].append(original)
     # Prefer the reported incident device over earlier sibling-device reports.

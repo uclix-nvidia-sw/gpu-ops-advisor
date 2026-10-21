@@ -52,7 +52,7 @@ def policy_case(kind="xid"):
     book.update(
         knowledge_key=key,
         content=json.loads(
-            (ROOT / f"rcca-agent/runbooks/{kind}/{key}.json").read_text(
+            (ROOT / f"agents/tests/fixtures/{key}-published-legacy.json").read_text(
                 encoding="utf-8"
             )
         )["content"],

@@ -479,8 +479,15 @@ export function RcaResult({
       <RcaJobSummary job={job} />
       {job.result_ref != null && (
         <>
-          <RcaNarrative result={result} consolidateChecks evaluationExpanded={evaluationExpanded} />
-          <RcaObservations result={result} onEvidence={onEvidence} />
+          <RcaNarrative
+            result={result}
+            consolidateChecks
+            evaluationExpanded={evaluationExpanded}
+            onEvidence={onEvidence}
+          />
+          {obj(obj(result.quality).triage_observations).schema !== 'rca-triage-observations/1' && (
+            <RcaObservations result={result} onEvidence={onEvidence} />
+          )}
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}

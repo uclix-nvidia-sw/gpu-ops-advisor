@@ -1,0 +1,106 @@
+"""Isolated DB/JC/Worker/MCP publication; upstream and model are fixtures."""
+
+from copy import deepcopy
+import json
+from uuid import uuid4
+
+import psycopg
+from psycopg.types.json import Jsonb
+import pytest
+import test_e2e as e2e
+from agent_common.contracts import content_hash
+from test_e2e import Upstream, ROOT, LOCAL, SCOPE, PERIOD, submit, worker_result
+
+
+dossier_stack = e2e.stack
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("kind,code", [("xid", "79"), ("sxid", "11001")])
+def test_dossier_host_history_survives_real_publication(
+    dossier_stack, monkeypatch, kind, code
+):
+    stack = dossier_stack
+    monkeypatch.setattr(Upstream, "fleet_reports", True)
+    monkeypatch.setattr(Upstream, "fleet_component", "accelerator-nvidia-error-" + kind)
+    monkeypatch.setattr(Upstream, "fleet_reason", kind.upper() + " " + code)
+    profile = deepcopy(stack["profile"])
+    profile["health_contracts"] = json.loads(
+        (ROOT / "agents/tests/fixtures/config-v7.json").read_text(encoding="utf-8")
+    )["health_contracts"]
+    profile["queries"]["D47"] = dict(
+        source="mimir",
+        metric="fixture_d47",
+        unit="state",
+        max_hold_seconds=30,
+        revision="fixture-v1",
+        validated=True,
+    )
+    config = LOCAL / ("dossier-" + kind + ".json")
+    config.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
+    book = json.loads(
+        (ROOT / f"rcca-agent/runbooks/{kind}/RB-{kind.upper()}-{code}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    iid = str(uuid4())
+    target = {"node": "node-1"}
+    data = dict(
+        scope=SCOPE,
+        incident_id=iid,
+        evidence_version=1,
+        analysis_profile_revision="fixture-v1",
+        incident_time=PERIOD["start"],
+        time_range=PERIOD,
+        purpose_ids=["R01"],
+        target=target,
+    )
+    snapshot = {
+        "input": data,
+        "alert": {"labels": {"reason": kind.upper() + " " + code}},
+    }
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "UPDATE knowledge_revisions SET state='retired' WHERE state='published'"
+        )
+        conn.execute(
+            "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,1,'runbook','published','common',%s,%s,%s,%s)",
+            (
+                str(uuid4()),
+                str(uuid4()),
+                book["knowledge_key"],
+                Jsonb(book["content"]),
+                content_hash(book["content"]),
+                content_hash(book["content"]),
+                Jsonb({"cluster_id": "cpc-2"}),
+            ),
+        )
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,target,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,%s,'open',1)",
+            (iid, Jsonb(SCOPE), Jsonb(target), data["incident_time"]),
+        )
+        conn.execute(
+            "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+            (iid, Jsonb(snapshot), content_hash(snapshot)),
+        )
+    jid = submit(stack, "rca", data)
+    result, evidence = worker_result(stack, "rca", jid, "-dossier-" + kind)
+    assert result["quality"]["analysis"]["collection_max_rounds"] == 1
+    history = result["quality"]["host_incident_history"]
+    assert any(row["incident_id"] == iid and row["current"] for row in history["rows"])
+    assert history["evidence_refs"]
+    assert (
+        result["quality"]["triage_observations"]["schema"]
+        == "rca-triage-observations/1"
+    )
+    assert set(book["content"]["required_queries"]) <= {q for q, status in evidence}
+    assert all(
+        status in {"ok", "empty"}
+        for q, status in evidence
+        if q in book["content"]["required_queries"]
+    ), evidence
+    assert result["narrative"]
+    (LOCAL / ("published-dossier-" + kind + ".json")).write_text(
+        json.dumps(result, ensure_ascii=False), encoding="utf-8"
+    )

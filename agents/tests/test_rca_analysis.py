@@ -317,7 +317,7 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         row = json.loads(
             (
                 Path(__file__).resolve().parents[2]
-                / f"rcca-agent/runbooks/{mode}/{key}.json"
+                / f"agents/tests/fixtures/{key}-published-legacy.json"
             ).read_text(encoding="utf-8")
         )
         # This fixture explicitly tests the permitted exploratory path.

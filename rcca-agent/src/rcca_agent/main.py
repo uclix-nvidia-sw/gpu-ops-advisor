@@ -4,6 +4,7 @@ import logging
 import sys
 from agent_common.settings import Settings
 from agent_common.worker import serve_nat
+from .store import RcaStore
 
 
 def main():
@@ -17,7 +18,7 @@ def main():
     settings.nat_config_file = (
         settings.nat_config_file or "rcca-agent/configs/workflow.yml"
     )
-    asyncio.run(serve_nat(settings, args.once))
+    asyncio.run(serve_nat(settings, args.once, store=RcaStore(settings.database_url)))
 
 
 if __name__ == "__main__":
