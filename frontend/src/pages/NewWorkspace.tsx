@@ -8,6 +8,7 @@ import { CommandError, More, QueryState } from '../components/live';
 import { AggregateReport } from '../components/AggregateReport';
 import { ReportStatements } from '../components/ReportContent';
 import { BasicReport, ReportChecks } from '../components/BasicReport';
+import { RcaEvidenceDialog } from '../components/RcaEvidenceDialog';
 import { RcaNarrative } from '../components/RcaNarrative';
 import { ReportOrigin, ReportPeriod, ReportScope } from '../components/ReportMeta';
 import { ReportDeleteButton, ReportDeletionNotice } from '../components/ReportDeletion';
@@ -579,6 +580,7 @@ function Incident({ id }: { id: string }) {
   );
 }
 function AnalysisContent({ id }: { id: string }) {
+  const [evidence, setEvidence] = useState<string | null>(null);
   const q = useResource(`/analyses/${id}`, undefined, true),
     job = obj(q.data),
     result = obj(job.result);
@@ -593,7 +595,8 @@ function AnalysisContent({ id }: { id: string }) {
         <Status job={{ ...job, result_status: result.result_status }} />
         {job.result_ref && Object.keys(result).length ? (
           <>
-            <RcaNarrative result={result} reader />
+            <RcaNarrative result={result} reader onEvidence={setEvidence} />
+            {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
             {!rows(result.narrative).length && (
               <>
                 <Notice>
@@ -620,7 +623,8 @@ function AnalysisContent({ id }: { id: string }) {
               </>
             )}
             {strings(result.missing_inputs).length > 0 && (
-              <Notice tone="warning">
+              <details>
+                <summary>수집·판정 상세</summary>
                 <strong>충족되지 않은 판단 조건</strong>
                 <ul>
                   {strings(result.missing_inputs).map((code) => (
@@ -631,10 +635,10 @@ function AnalysisContent({ id }: { id: string }) {
                     </li>
                   ))}
                 </ul>
-              </Notice>
+              </details>
             )}
-            <section className="new-observations">
-              <h3>관측에서 확인한 내용</h3>
+            <details className="new-observations">
+              <summary>관측 원문·처리 상세</summary>
               {events.length ? (
                 events.map((event, i) => (
                   <article key={i}>
@@ -697,7 +701,7 @@ function AnalysisContent({ id }: { id: string }) {
               {strings(result.limitations).map((v, i) => (
                 <p key={i}>{reportReason(v)}</p>
               ))}
-            </section>
+            </details>
           </>
         ) : (
           <Empty

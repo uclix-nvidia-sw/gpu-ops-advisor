@@ -479,7 +479,12 @@ export function RcaResult({
       <RcaJobSummary job={job} />
       {job.result_ref != null && (
         <>
-          <RcaNarrative result={result} consolidateChecks evaluationExpanded={evaluationExpanded} />
+          <RcaNarrative
+            result={result}
+            consolidateChecks
+            evaluationExpanded={evaluationExpanded}
+            onEvidence={onEvidence}
+          />
           <RcaObservations result={result} onEvidence={onEvidence} />
           {showEvidence && (
             <RcaEvidence

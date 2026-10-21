@@ -13,7 +13,10 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D47",
+      "D33",
+      "D34"
     ],
     "observation_plan": [
       {
@@ -33,58 +36,48 @@
         "freshness": "query_contract"
       },
       {
-        "query_id": "D02",
-        "priority": 3,
-        "required": false,
+        "query_id": "D47",
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract",
-        "selection": {
-          "missing_any": [
-            "causal_confirmation_evidence",
-            "normalized_health"
-          ],
-          "requires_all": [
-            "reported_error_code",
-            "reported_producer_contract"
-          ],
-          "independent": true
-        }
+        "priority": 2,
+        "required": true,
+        "purpose": "같은 노드 GPU별 Fabric Manager 원시 상태 코드을 분석 전에 수집하여 같은 구간 로그와 함께 대조한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
       },
       {
-        "query_id": "D13",
-        "priority": 5,
-        "required": false,
+        "query_id": "D33",
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 서버·기간의 보조 원본 로그를 수집한다. FM 원천이 연결되지 않았다면 일반 로그를 FM 로그·포트 토폴로지로 대체하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract",
-        "selection": {
-          "missing_any": [
-            "causal_confirmation_evidence",
-            "normalized_health"
-          ],
-          "requires_all": [
-            "reported_error_code",
-            "reported_producer_contract"
-          ],
-          "independent": true
-        }
+        "priority": 3,
+        "required": true,
+        "purpose": "같은 노드 GPU별 NVLink 수신량을 분석 전에 수집하여 같은 구간 로그와 함께 대조한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+      },
+      {
+        "query_id": "D34",
+        "fact_names": [
+          "observations"
+        ],
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "priority": 4,
+        "required": true,
+        "purpose": "같은 노드 GPU별 NVLink 송신량을 분석 전에 수집하여 같은 구간 로그와 함께 대조한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
       }
     ],
     "sources": [
       {
         "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
-        "revision": "Retrieved 2026-10-19; mutable upstream document",
+        "revision": "Retrieved 2026-10-21; mutable upstream document",
         "section": "Runtime NVSwitch Errors; Fatal NVSwitch SXid Errors; Table 23 Potential Fatal NVSwitch SXid Errors; B200/B300 exclusion",
-        "checked_at": "2026-10-19"
+        "checked_at": "2026-10-21"
       },
       {
         "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/sxid/sxid.go#L615",
@@ -100,19 +93,24 @@
       },
       {
         "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
-        "revision": "Retrieved 2026-10-19; mutable upstream document",
+        "revision": "Retrieved 2026-10-21; mutable upstream document",
         "section": "Runtime NVSwitch Errors; Fatal NVSwitch SXid Errors; Table 23 Potential Fatal NVSwitch SXid Errors; B200/B300 exclusion",
-        "checked_at": "2026-10-19"
+        "checked_at": "2026-10-21"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-21; mutable upstream document",
+        "section": "Common XID Messages and Recommended Steps; Reporting a GPU Issue; DCGM Diagnostics",
+        "checked_at": "2026-10-21"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "현재 D09/D02 계획만으로 switch source port와 access/trunk·VM/partition 토폴로지가 확보되지는 않는다. Fleet 노드 inventory를 switch-port 연결 근거로 사용하지 않으며 관계 미확인 시 영향 범위를 보류한다.",
       "오류 보고 식별 결과와 조건부 대응을 제시한다. 장치 신원·현재 상태·원인·회복 판단은 각각의 관측 근거로 구분한다."
     ],
     "title": "SXid 11001 NVSwitch 이벤트 조사",
-    "description": "SXid 11001 단서에서 NVSwitch 원본 이벤트와 포트·장비·Fabric Manager 맥락을 확인하는 초기 조사.",
-    "claim": "SXID 11001 오류 보고를 식별하고 적용 조건별 대응을 안내한다.",
+    "description": "30분 오류 보고·관련 관측과 최대 14일 과거 이벤트를 비교하는 장애 조사 자료를 작성한다.",
+    "claim": "오류 보고와 관련 관측을 비교하고 적용 가능한 공식 대응 지침을 제시한다.",
     "classification": {
       "domain": "GPU_INTERCONNECT",
       "category": "nvswitch_sxid"
@@ -132,7 +130,6 @@
       ]
     },
     "analysis_guidance": [
-      "보고서는 무엇을 조사했는지, 알림·로그·장치 정보를 비교한 결과, 다음에 할 일을 순서대로 설명한다. 알림과 로그가 일치하면 추가 지표 없이 오류 보고 확인을 마친다. 불일치하면 선택 조회 전체를 기존 예산 안에서 수집하고, 각 자료가 알림 대상과 연결되는지 설명한다. 자료 부족과 조사 범위 밖의 원인 확정을 구분한다.",
       "FM 문헌의 공통 Recovery에는 guest VM 복구가 포함된다. GPUd 시스템 재부팅 권고와 구분하고 bare metal/VM 모드·플랫폼·FM 버전을 확인한 뒤 적용한다.",
       "D09에서 원본 NVSwitch/FM 이벤트의 switch PCI·source port·시각을 보존한다. access/trunk와 연결 GPU·partition 정보가 확인될 때만 영향 범위를 설명한다.",
       "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
@@ -141,7 +138,11 @@
       "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
       "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
       "Potential Fatal 분류다. access port이면 연결 guest VM 범위, trunk port이면 그 연결을 사용하는 partition 범위를 확인한다. 관련 VM/partition의 종료·재시작 전제와 영향을 운영자가 검토한다.",
-      "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다."
+      "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다.",
+      "같은 대상·코드·내용의 반복 보고를 묶고 이벤트 식별자·발생 시각이 있는 경우 재전달을 구분한다. 수신 건수를 장애 횟수로 바꾸지 않는다.",
+      "현재 30분과 과거 동일 대상의 최근 보고를 포함한 30분 구간의 코드·메시지·지표를 비교한다. 새 코드나 기록 순서를 원인으로 단정하지 않는다.",
+      "과거 조회 기간·수집 상태와 원문 근거를 보존한다. 모델이 통찰을 내지 못해도 보고 대상·시각·반복 구간·비교 값·공식 지침을 표시한다.",
+      "Observation plan 전체를 한 수집 단계에서 실행하고 호스트 Incident 이력을 함께 사용한다. 모델은 추가 조회를 선택하지 않는다. 대상·기록 구간 → 관련 로그·지표 → 반복 사건 → 다음 점검 순서로 짧게 설명한다. 수치와 이력 표는 코드 산출물을 사용한다."
     ],
     "recommendations": [
       {
@@ -216,14 +217,21 @@
             0,
             3
           ]
+        },
+        {
+          "title": "GPU Node Triage 점검 순서",
+          "text": "SXID는 Fabric Manager 문헌의 오류·포트·플랫폼별 절차를 적용한다. 이 보고서의 스위치 PCI·동반 XID·같은 노드의 Fabric Manager 및 NVLink 지표·사건 이력을 먼저 대조하고, 실제 작업 전에 FM 로그와 연결 포트를 확인한다.",
+          "source_indices": [
+            4
+          ]
         }
       ]
     },
     "decision_policy": {
       "goal": {
         "id": "identify_error_report",
-        "question": "사건 대상·기간에서 SXID:11001 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
-        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+        "question": "해당 오류의 보고와 관련 관측을 수집하고 반복 보고·이전 구간의 차이를 근거에 맞게 설명했는가?",
+        "conclusion_scope": "관측 기반 장애 조사 자료·구간 비교·공식 조건부 대응. 원인 확정이나 복구 성공을 요구하지 않는다."
       },
       "applies_when": {
         "reported_error_code": "sxid:11001",
@@ -271,20 +279,28 @@
           "expected_effect": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다."
         },
         {
-          "query_id": "D02",
+          "query_id": "D47",
           "criterion_ids": [
             "bounded_conclusion"
           ],
-          "required": false,
-          "expected_effect": "사건 전후 GPU 사용률 비교."
+          "required": true,
+          "expected_effect": "같은 노드 GPU별 Fabric Manager 원시 상태 코드을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
         },
         {
-          "query_id": "D13",
+          "query_id": "D33",
           "criterion_ids": [
             "bounded_conclusion"
           ],
-          "required": false,
-          "expected_effect": "사건 서버·기간의 보조 원본 로그를 수집한다. FM 원천이 연결되지 않았다면 일반 로그를 FM 로그·포트 토폴로지로 대체하지 않는다."
+          "required": true,
+          "expected_effect": "같은 노드 GPU별 NVLink 수신량을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
+        },
+        {
+          "query_id": "D34",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드 GPU별 NVLink 송신량을 분석 전에 수집하여 이전 조회 구간과 비교한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다."
         }
       ]
     }

@@ -41,7 +41,7 @@ class RunbookContractTests(unittest.TestCase):
                     if row["knowledge_key"] == "RB-XID-79":
                         expected.append("D11")
                 elif row["knowledge_key"] == "RB-SXID-11001":
-                    expected = ["D09", "D02", "D13"]
+                    expected = ["D09", "D47", "D33", "D34"]
                 elif row["knowledge_key"] == "RB-XID-74":
                     expected = ["D09", "D33", "D34", "D02"]
                 if row["knowledge_key"] == "RB-XID-48-63-64":
@@ -52,7 +52,10 @@ class RunbookContractTests(unittest.TestCase):
                     )
                     self.assertTrue(row["content"]["investigation_only"])
                 self.assertEqual([step["query_id"] for step in plan], expected)
-                self.assertFalse(plan[-1]["required"])
+                self.assertEqual(
+                    plan[-1]["required"],
+                    row["knowledge_key"] in {"RB-XID-79", "RB-SXID-11001"},
+                )
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(row["content"]["applicability_conditions"], [])
                     with self.assertRaisesRegex(ValueError, "unbound draft"):
@@ -132,7 +135,9 @@ class RunbookContractTests(unittest.TestCase):
             validate_runbook(row, QUERIES, ALLOWED, authoring=True)
         del row["content"]["observation_plan"]
         plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-        self.assertEqual([step["query_id"] for step in plan], ["D09"])
+        self.assertEqual(
+            [step["query_id"] for step in plan], ["D09", "D44", "D02", "D11"]
+        )
         self.assertEqual(plan[0]["fact_names"], [])
 
     def test_compatibility_unknown_and_mismatch(self):

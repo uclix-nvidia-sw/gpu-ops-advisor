@@ -28,6 +28,15 @@ from .fleet_events import (
 from .report import write_report
 from .report_observations import summarize_reports
 from .investigation_summary import investigation_summary
+from .host_history import host_history, history_summary
+from .incident_dossier import (
+    enabled as dossier_enabled,
+    current_data,
+    comparison_targets,
+    dossier_summary,
+    error_tools,
+    operator_view,
+)
 from .operator_guidance import project_guidance
 from .collection_checks import collection_checks, reported_gpu_identity
 from .requirement_diagnostics import (
@@ -597,8 +606,37 @@ async def run(tools):
 
     for book in selected:
         preserve_runbook(book)
-    fast_path = bool(selected) and all(
-        b in applicable and not b["content"].get("investigation_only") for b in selected
+    dossier = (
+        dossier_enabled(selected)
+        and not data.get("identity_conflicts")
+        and bool(target.get("node") or target.get("machine_id"))
+    )
+    comparison = {}
+    if dossier:
+        data = current_data(data, ctx["context"]["data_cutoff_at"])
+        obs.data = data
+        obs.tools = error_tools(obs.tools)
+        history = host_history(ctx["context"], data)
+        if history is not None:
+            history_id = obs._evidence(
+                "host_incident_history",
+                None,
+                history["period"],
+                history,
+                "ok",
+                {"complete": history["complete"], "source": "incident_store"},
+            )
+            result["quality"]["host_incident_history"] = {
+                **history,
+                "evidence_refs": [history_id["id"]],
+            }
+    fast_path = (
+        bool(selected)
+        and all(
+            b in applicable and not b["content"].get("investigation_only")
+            for b in selected
+        )
+        and not dossier
     )
 
     def steps(book):
@@ -627,6 +665,8 @@ async def run(tools):
 
     approved = plan_queries(selected)
     queries = plan_queries(selected, required=True)
+    if dossier:
+        queries = list(approved)
     plan_id = obs._evidence(
         "investigation_plan",
         None,
@@ -662,7 +702,9 @@ async def run(tools):
     analysis_status = "skipped_runbook"
     followups, gaps, gate = 0, [], "sufficient"
     stop_reason = None
-    max_rounds = 2  # Required collection plus one bounded auxiliary batch.
+    max_rounds = (
+        1 if dossier else 2
+    )  # One planned collection phase for new RCA reports.
 
     evaluation_state = {"revisions": 0, "authored_sources": set()}
     evaluation = None
@@ -730,7 +772,7 @@ async def run(tools):
             k for b in selected for k in b["content"].get("required_evidence", [])
         }
         gaps = sorted(required_facts - available)
-        for q in plan_queries(selected, required=True):
+        for q in [] if dossier else plan_queries(selected, required=True):
             if not fast_path and (
                 q not in collected
                 or not collected[q]
@@ -918,6 +960,7 @@ async def run(tools):
             alert_match=alert_match,
             # Skipping analysis needs the code's own published Runbook guidance.
             matched=bool(alert_match)
+            and not dossier
             and alert_match["status"] == "match"
             and any(not b.get("general_investigation") for b in applicable),
         )
@@ -948,6 +991,17 @@ async def run(tools):
                 selected,
                 error_events,
             )
+            if dossier:
+                payload.setdefault("incident_comparison", []).extend(
+                    dossier_summary(
+                        data,
+                        [e for values in collected.values() for e in values],
+                        comparison,
+                    )
+                )
+                payload["incident_comparison"].extend(
+                    history_summary(result["quality"].get("host_incident_history"))
+                )
             source_hashes = observation_hashes(collected)
             objective = assess_policies(
                 objective_books, data, health, error_events, gaps
@@ -1258,6 +1312,7 @@ async def run(tools):
             )
             if (
                 round_no == 0
+                and not dossier
                 and "D09" in queries
                 and not all(usable_observation(e) for e in collected.get("D09", []))
                 and budget["queries"] > 0
@@ -1277,8 +1332,16 @@ async def run(tools):
                     )
                 )
         state = evaluate_requirements(round_no, approved)
+        if dossier and round_no == 0:
+            comparison = comparison_targets(
+                data, clues, [e for values in collected.values() for e in values]
+            )
+            result["quality"]["triage_observations"] = operator_view(
+                data, [e for values in collected.values() for e in values], comparison
+            )
         if (
             round_no == 0
+            and not dossier
             and state["alert_match"]
             and state["alert_match"]["status"] in MISMATCH_CODES
             and state["remaining"]
@@ -1615,6 +1678,16 @@ async def run(tools):
     material["investigation_summary"] = investigation_summary(
         data, obs.evidence, health, error_events
     )
+    dossier_rows = (
+        dossier_summary(
+            data, [e for values in collected.values() for e in values], comparison
+        )
+        if dossier
+        else []
+    )
+    material["investigation_summary"].extend(dossier_rows)
+    history_rows = history_summary(result["quality"].get("host_incident_history"))
+    material["investigation_summary"].extend(history_rows)
     material_hash = content_hash(material)
     frozen_id = obs._evidence(
         "rca_result_frozen",
@@ -1642,7 +1715,9 @@ async def run(tools):
                 "reported_observations": summarize_reports(health, error_events, data),
                 "investigation_summary": investigation_summary(
                     data, obs.evidence, health, error_events
-                ),
+                )
+                + dossier_rows
+                + history_rows,
             }
         )
         != material_hash

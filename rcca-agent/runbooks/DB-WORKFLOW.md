@@ -32,7 +32,9 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 - 실제 검증: 격리 PostgreSQL에서 Backend 등록·검토·발행, JC revision 고정, 실제 RCA Worker/NAT/MCP 수집·Synthesis·결과 공개를 확인했다. 그래프 데이터와 모델 응답은 fixture다. 테스트 DB는 실행 후 정리하며 운영 DB에는 등록하지 않았다.
 - 저장소 JSON의 compatibility는 여전히 비어 있다. 실제 배포 조건을 만들거나 검증했다고 주장하지 않으며 초안 저장은 가능하지만 승인·발행은 차단한다.
 
-XID 79·SXID 11001 작성 원본은 조사한 자료·장치 대조 결과·다음 행동을 먼저 설명한다. 주소 불일치를 독립 신원 검증의 누락으로만 표현하지 않으며, GPU 목록과 NVSwitch 주소를 혼동하지 않는다. 공통 코드 경로는 다른 XID·SXID에도 같은 조사 설명을 적용한다. 기존 선택 조회의 `selection`은 구 경로의 보완 규칙이며, 코드가 판단한 알림 불일치 경로는 선택 조회 전체를 기존 예산 안에서 요청한다. 보고 사실 중심 설명과 플랫폼별 대응 조건을 보존했다. XID는 진단 자료 보존·실제 장애/시험 주입 구분·bare metal/가상화 적용 조건, SXID는 NVSwitch 신원·FM access/trunk 포트 영향·B200/B300 제외·운영 모드별 복구와 조치 후 확인을 명시한다. 기존 종료 기준·필수 조회·schema는 유지한다. **코드 배포만으로 이 문구가 운영 Runbook에 반영되지 않는다.** 기존 환경에서 검수한 compatibility를 유지해 각 지식의 새 revision을 등록·검토·발행해야 하며, 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. 기존 발행 revision 및 과거 RCA는 변경하지 않는다. LLM 실패 시 수집 사실 표시 자체는 코드 변경으로 적용되며 이 새 문구 발행과 별개다.
+XID 79·SXID 11001 작성 원본은 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용한다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본은 기존 실행 경로를 유지한다.
+
+**Worker/UI 배포만으로 새 런북이 적용되지는 않는다.** 기존 knowledge ID와 검수된 compatibility를 유지하여 두 런북만 새 revision으로 등록·검토·발행한다. 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. Worker/UI 배포를 먼저 완료하고 실제 실행 프로필에 각 D 조회가 허용되는지 확인한 뒤 발행한다. 신규 사건 또는 승인된 재실행에서 JC가 새 revision/hash를 고정하는지 확인한다. 기존 결과와 발행 revision은 수정하지 않는다. 문제 발생 시 새 revision을 retire하고 이전 발행 revision 선택과 이전 RCA 이미지로 복귀하는 절차를 확인한다. Ops 런북·설정·이미지는 변경하지 않는다.
 
 XID 79·SXID 11001의 1.1 변경 hash와 이전 1.0 복원 정보는 [기존 검토 기록](incident-report-review-20261015.json)의 `decision_policy_update`에 연결했다. 이는 로컬 구조 검토이며 운영 발행 승인 기록이 아니다.
 

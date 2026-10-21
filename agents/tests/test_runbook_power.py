@@ -118,7 +118,14 @@ async def test_power_followup_never_establishes_health_or_recovery(
     if profile_kind == "current":
         profile = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))
     book = json.loads(
-        (ROOT / f"rcca-agent/runbooks/xid/RB-XID-{code}.json").read_text("utf-8")
+        (
+            ROOT
+            / (
+                "agents/tests/fixtures/RB-XID-79-published-legacy.json"
+                if code == 79
+                else f"rcca-agent/runbooks/xid/RB-XID-{code}.json"
+            )
+        ).read_text("utf-8")
     )
     # Preserve the legacy exploration contract; goal completion has its own tests.
     profile.setdefault("rca", {})["generation_mode"] = "separate"
