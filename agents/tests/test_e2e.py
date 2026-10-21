@@ -251,6 +251,21 @@ class Upstream(BaseHTTPRequestHandler):
             expr = query["query"][0]
             assert float(query["step"][0]) == 3600
             assert "offset 1ms" in expr
+            if "kube_pod_labels" in expr:
+                from test_workload_context import source
+
+                rows = source(cluster_id="cpc-2", namespace="dev")["snapshot"]["series"]
+                for row in rows:
+                    value = row["values"][0][1]
+                    row["values"] = [
+                        [at, value] for at in range(int(start), int(end) + 1, 3600)
+                    ]
+                return self.send(
+                    {
+                        "status": "success",
+                        "data": {"resultType": "matrix", "result": rows},
+                    }
+                )
             if '"pending_peak"' in expr or '"created_min"' in expr:
                 from test_workload_summary import states, jobs
 
@@ -2724,6 +2739,8 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
     assert ("hourly_gpu_memory", "ok") in evidence
     assert ("hourly_gpu_workload", "ok") in evidence
     assert ("hourly_gpu_jobs", "ok") in evidence
+    assert ("hourly_gpu_workload_context", "ok") in evidence
+    assert usage["workload_context"]["records"][0]["type_status"] == "declared_test"
     advice = next(n for n in body["narrative"] if n["topic_id"] == "namespace_usage")[
         "advice"
     ]
@@ -2739,7 +2756,7 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
     assert usage["rows"][0]["activity_percent"] == activity
     assert usage["rows"][0]["change_percentage_points"] == 0
     assert incident["summary"]["count"] == 0
-    assert len(evidence) == 10
+    assert len(evidence) == 11
     assert usage["workloads"][0]["pending_peak"] == 2
     assert usage["workloads"][0]["completed_observed"] == 1
     assert not any(query.startswith("D") for query, _ in evidence)
@@ -2748,7 +2765,7 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
         for path, args in Upstream.requests[before:]
         if path.endswith("/api/v1/query_range")
     ]
-    assert len(queries) == 9
+    assert len(queries) == 10
     assert not any("/loki/" in path for path, _ in Upstream.requests[before:])
 
 
@@ -3279,7 +3296,7 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
         ]["activity_percent"]
         == 60
     )
-    assert len(evidence) == 10
+    assert len(evidence) == 11
 
 
 @pytest.mark.e2e

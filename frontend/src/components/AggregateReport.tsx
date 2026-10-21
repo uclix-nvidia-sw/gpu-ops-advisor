@@ -6,6 +6,7 @@ import { reportRequestTime } from '../lib/reportPeriod';
 import './aggregate-report.css';
 import { memoryPercent, NamespaceCharts } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
+import { WorkloadContext } from './WorkloadContext';
 
 export const aggregateReasons: Record<string, string> = {
   unobserved_hour: '이 시간대 관측 없음',
@@ -485,6 +486,7 @@ export function AggregateReport({
               onEvidence={onEvidence}
             />
           )}
+          <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />
           <h3 className="aggregate-subheading">1.1. Namespace별 비교</h3>
           {str(usage.workload_unavailable_reason) && (
             <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>

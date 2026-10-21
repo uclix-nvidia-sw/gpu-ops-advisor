@@ -18,6 +18,11 @@ from .incident_findings import add_node_findings
 from .gpu_memory import enrich_memory
 from .workload_queries import QUERY_IDS, workload_queries
 from .workload_summary import enrich_workloads
+from .workload_context import (
+    QUERY_ID as CONTEXT_QUERY_ID,
+    context_queries,
+    enrich_context,
+)
 
 
 def topic(name, refs):
@@ -48,7 +53,7 @@ def build_result(claim, context, evidence):
         refs = [
             e["id"]
             for e in inputs
-            if e["query_id"] not in QUERY_IDS | {"hourly_gpu_memory"}
+            if e["query_id"] not in QUERY_IDS | {"hourly_gpu_memory", CONTEXT_QUERY_ID}
         ]
         t = topic(name, refs)
 
@@ -73,7 +78,8 @@ def build_result(claim, context, evidence):
             activity_inputs = [
                 e
                 for e in inputs
-                if e["query_id"] not in QUERY_IDS | {"hourly_gpu_memory"}
+                if e["query_id"]
+                not in QUERY_IDS | {"hourly_gpu_memory", CONTEXT_QUERY_ID}
             ]
             current, errors = namespace_summary.summarize(
                 [e for e in activity_inputs if e["time_range"] == data["time_range"]],
@@ -175,6 +181,7 @@ def build_result(claim, context, evidence):
                 t["missing_inputs"].append("namespace_observations_missing")
             enrich_memory(t, inputs, data)
             enrich_workloads(t, inputs, data)
+            enrich_context(t, inputs, data)
         else:
             summary = incident_summary.summarize(context)
             t["summary"] = summary
@@ -299,6 +306,21 @@ async def run(tools):
                             cluster,
                             period,
                             queries=workload_queries(cluster),
+                            uid=collected[0]["input"]["datasourceUid"],
+                        )
+                    )
+                finally:
+                    collector.deadline = ctx["deadline"]
+        # Optional Pod context follows every pre-existing collection phase.
+        for cluster, period, collected in pending:
+            if period == data["time_range"]:
+                collector.deadline = min(ctx["deadline"] - 30, time.monotonic() + 20)
+                try:
+                    evidence.extend(
+                        await collector.collect(
+                            cluster,
+                            period,
+                            queries=context_queries(cluster),
                             uid=collected[0]["input"]["datasourceUid"],
                         )
                     )
