@@ -606,8 +606,9 @@ async def run(tools):
 
     for book in selected:
         preserve_runbook(book)
+    single_phase = dossier_enabled(selected)
     dossier = (
-        dossier_enabled(selected)
+        single_phase
         and not data.get("identity_conflicts")
         and bool(target.get("node") or target.get("machine_id"))
     )
@@ -636,7 +637,7 @@ async def run(tools):
             b in applicable and not b["content"].get("investigation_only")
             for b in selected
         )
-        and not dossier
+        and not single_phase
     )
 
     def steps(book):
@@ -665,8 +666,10 @@ async def run(tools):
 
     approved = plan_queries(selected)
     queries = plan_queries(selected, required=True)
-    if dossier:
-        queries = list(approved)
+    if single_phase:
+        # Invalid target identity must not fall back to the legacy critic/loop,
+        # nor expand an incident query to the entire cluster.
+        queries = list(approved) if dossier else []
     plan_id = obs._evidence(
         "investigation_plan",
         None,
@@ -685,7 +688,11 @@ async def run(tools):
                 )
                 for b in selected
             ],
-            "required_queries": queries,
+            **(
+                {"planned_queries": queries}
+                if single_phase
+                else {"required_queries": queries}
+            ),
             "allowed_queries": approved,
             "selection_evidence_id": selection_id,
             "evidence_refs": [rule_refs[book["id"]] for book in selected],
@@ -703,7 +710,7 @@ async def run(tools):
     followups, gaps, gate = 0, [], "sufficient"
     stop_reason = None
     max_rounds = (
-        1 if dossier else 2
+        1 if single_phase else 2
     )  # One planned collection phase for new RCA reports.
 
     evaluation_state = {"revisions": 0, "authored_sources": set()}
@@ -772,7 +779,7 @@ async def run(tools):
             k for b in selected for k in b["content"].get("required_evidence", [])
         }
         gaps = sorted(required_facts - available)
-        for q in [] if dossier else plan_queries(selected, required=True):
+        for q in [] if single_phase else plan_queries(selected, required=True):
             if not fast_path and (
                 q not in collected
                 or not collected[q]
@@ -782,7 +789,7 @@ async def run(tools):
                 )
             ):
                 gaps.append("required_query:" + q)
-        if not dossier and not any(
+        if not single_phase and not any(
             not b.get("general_investigation")
             and not b["content"].get("investigation_only")
             for b in applicable
@@ -849,7 +856,7 @@ async def run(tools):
         fallback_books = []
         stopped_queries = set()
         policy_findings = []
-        for book in list(selected):
+        for book in [] if single_phase else list(selected):
             policy = unexpected_policy(book["content"])
             triggered = sorted(set(events) & set(policy["on"]))
             if not triggered:
@@ -960,7 +967,7 @@ async def run(tools):
             alert_match=alert_match,
             # Skipping analysis needs the code's own published Runbook guidance.
             matched=bool(alert_match)
-            and not dossier
+            and not single_phase
             and alert_match["status"] == "match"
             and any(not b.get("general_investigation") for b in applicable),
         )
@@ -1005,7 +1012,7 @@ async def run(tools):
             source_hashes = observation_hashes(collected)
             objective = (
                 None
-                if dossier
+                if single_phase
                 else assess_policies(objective_books, data, health, error_events, gaps)
             )
             if objective and {b["id"] for b in selected} != {
@@ -1038,10 +1045,16 @@ async def run(tools):
                 return
             evaluation_state["authored_sources"].update(source_hashes)
             payload["source_version"] = content_hash(sorted(source_hashes))
-            mode = profile.get("rca", {}).get("generation_mode", "combined")
+            mode = (
+                "combined"
+                if single_phase
+                else profile.get("rca", {}).get("generation_mode", "combined")
+            )
             if mode not in {"combined", "separate"}:
                 raise ValueError("unsupported RCA generation mode")
-            payload.update(evidence_gap=gaps, sufficiency=gate, generation_mode=mode)
+            payload.update(generation_mode=mode)
+            if not single_phase:
+                payload.update(evidence_gap=gaps, sufficiency=gate)
             if (state["alert_match"] or {}).get("status") in MISMATCH_CODES:
                 payload["alert_match"] = state["alert_match"]
             if objective:
@@ -1059,13 +1072,18 @@ async def run(tools):
                 evaluation_state,
                 round_no,
                 remaining,
+                review_enabled=not single_phase,
             )
-            state["decision_assessment"] = finish_assessment(
-                objective,
-                evaluation.get("interpretation"),
-                evaluation["review"],
-                evaluation["draft"]["analysis_id"],
-                caveat_withheld=caveat_withheld(evaluation),
+            state["decision_assessment"] = (
+                None
+                if single_phase
+                else finish_assessment(
+                    objective,
+                    evaluation.get("interpretation"),
+                    evaluation["review"],
+                    evaluation["draft"]["analysis_id"],
+                    caveat_withheld=caveat_withheld(evaluation),
+                )
             )
             synthesis_diagnostics = evaluation["synthesis"]
             analysis_status = evaluation["synthesis_status"]
@@ -1314,7 +1332,7 @@ async def run(tools):
             )
             if (
                 round_no == 0
-                and not dossier
+                and not single_phase
                 and "D09" in queries
                 and not all(usable_observation(e) for e in collected.get("D09", []))
                 and budget["queries"] > 0
@@ -1343,7 +1361,7 @@ async def run(tools):
             )
         if (
             round_no == 0
-            and not dossier
+            and not single_phase
             and state["alert_match"]
             and state["alert_match"]["status"] in MISMATCH_CODES
             and state["remaining"]
@@ -1374,7 +1392,16 @@ async def run(tools):
             followups += 1
             continue
         await analyze_round(state, round_no)
-        state.update(await select_followup(state, round_no))
+        if single_phase:
+            # Collection is complete as a phase, including recorded query failures.
+            # Do not grade evidence or invoke legacy goal/follow-up selection.
+            state.update(
+                stop_reason="no_remaining_queries",
+                next_queries=[],
+                deferred_queries=[],
+            )
+        else:
+            state.update(await select_followup(state, round_no))
         health = state["health"]
         relations, available = state["relations"], state["available"]
         applicable, pending = state["applicable"], state["pending"]
@@ -1410,7 +1437,9 @@ async def run(tools):
                     else {}
                 ),
                 "remaining_budget": dict(budget),
-                "evidence_refs": evaluation["review"]["evidence_refs"],
+                "evidence_refs": evaluation["evidence"]["evidence_refs"]
+                if single_phase
+                else evaluation["review"]["evidence_refs"],
             },
             "ok",
             {
@@ -1587,6 +1616,12 @@ async def run(tools):
             for candidate in h.get("gpu_candidates", [])
         ],
     }
+    if single_phase:
+        analysis = result["quality"]["analysis"]
+        analysis["workflow"] = "single_collection"
+        # Keep transport failures and author diagnostics, not sufficiency grades.
+        for key in ("evidence_evaluation", "sufficiency", "out_of_scope"):
+            analysis.pop(key, None)
     result["quality"]["evidence_catalog"] = [
         {
             "id": e["id"],

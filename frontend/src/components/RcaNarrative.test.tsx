@@ -296,3 +296,25 @@ it('does not present stale objective achievement as reviewed success in the summ
     '<summary>분석 처리: 종료 · 최종 분석 검토 기록 확인 · 수집·검토 상세</summary>',
   );
 });
+
+it('omits historical critic prose from the operator report without mutating evidence', () => {
+  const result = {
+    quality: { triage_observations: { schema: 'rca-triage-observations/1' } },
+    narrative: [
+      { id: 'cause', text: 'SXID 11001 보고' },
+      { id: 'action', text: '런북 대응 지침' },
+      {
+        id: 'limits',
+        title: '상세',
+        text: '분석 품질 검토: 실패\n조사 종료 이유: goal_not_met\n분석 처리 상태: 독립 품질 검토가 완료되지 않았습니다.\n실제 수집 실패: timeout',
+      },
+    ],
+  };
+  const before = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaNarrative result={result} />);
+  expect(html).not.toContain('품질 검토');
+  expect(html).not.toContain('goal_not_met');
+  expect(html).toContain('실제 수집 실패: timeout');
+  expect(html).toContain('런북 대응 지침');
+  expect(JSON.stringify(result)).toBe(before);
+});

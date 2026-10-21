@@ -71,12 +71,25 @@ def collection_status(planned, collected, fast_path=False):
 
 
 async def evaluate_analysis(
-    obs, data, profile, health, payload, assemble, llm, state, round_no, allowed
+    obs,
+    data,
+    profile,
+    health,
+    payload,
+    assemble,
+    llm,
+    state,
+    round_no,
+    allowed,
+    *,
+    review_enabled=True,
 ):
     """Keep model judgments out of verified facts and review the final assembled draft."""
 
     def record(kind, body, status="ok"):
         metadata = {"round": round_no, "stage": kind}
+        if not review_enabled:
+            metadata["workflow"] = body["workflow"] = "single_collection"
         if combined:
             metadata["generation_mode"] = body["generation_mode"] = "combined"
         metadata.update(
@@ -218,38 +231,46 @@ async def evaluate_analysis(
     revision = 0
     while True:
         old_reserve = getattr(llm, "reserved_tokens", 0)
-        base_candidates, base_recommendations = assemble([])
-        base_limits = [BASE_LIMIT, REVIEW_LIMIT]
-        if interpretation is None:
-            base_limits.append(INTERPRETATION_LIMIT)
-        baseline = review_payload(
-            analysis_draft(base_candidates, base_recommendations, base_limits, view),
-            view,
-            allowed,
-        )
-        output = getattr(getattr(llm, "settings", None), "llm_default_max_tokens", 4096)
-        # Preserve the actual rule draft, full review output and existing 512 margin.
-        floor = (
-            old_reserve
-            + encoded_size(baseline)
-            + len(review_prompt(view).encode())
-            + output
-            + 512
-        )
-        reserved, allocation = reserve_review_budget(
-            llm,
-            payload,
-            review_reserve(view, llm),
-            floor,
-            **({"prompt": author_prompt(payload)} if combined else {}),
-        )
-        allocation.update(
-            review_floor_basis="rule_draft_full_output",
-            review_baseline_input_bytes=encoded_size(baseline),
-            review_output_tokens=output,
-        )
-        synthesis_diag = {"budget_allocation": allocation}
-        llm.reserved_tokens = reserved
+        if review_enabled:
+            base_candidates, base_recommendations = assemble([])
+            base_limits = [BASE_LIMIT, REVIEW_LIMIT]
+            if interpretation is None:
+                base_limits.append(INTERPRETATION_LIMIT)
+            baseline = review_payload(
+                analysis_draft(
+                    base_candidates, base_recommendations, base_limits, view
+                ),
+                view,
+                allowed,
+            )
+            output = getattr(
+                getattr(llm, "settings", None), "llm_default_max_tokens", 4096
+            )
+            # Preserve the actual rule draft, full review output and existing 512 margin.
+            floor = (
+                old_reserve
+                + encoded_size(baseline)
+                + len(review_prompt(view).encode())
+                + output
+                + 512
+            )
+            reserved, allocation = reserve_review_budget(
+                llm,
+                payload,
+                review_reserve(view, llm),
+                floor,
+                **({"prompt": author_prompt(payload)} if combined else {}),
+            )
+            allocation.update(
+                review_floor_basis="rule_draft_full_output",
+                review_baseline_input_bytes=encoded_size(baseline),
+                review_output_tokens=output,
+            )
+            synthesis_diag = {"budget_allocation": allocation}
+            llm.reserved_tokens = reserved
+        else:
+            # The single-collection report has no critic or critic token reserve.
+            synthesis_diag = {}
         started_at, started = now(), time.monotonic()
         before = dict(getattr(llm, "usage", {}))
         request_limit = getattr(llm, "request_attempt_limit", 3)
@@ -324,8 +345,12 @@ async def evaluate_analysis(
         if combined:
             interpretation_id = synthesis_id
         candidates, recommendations = assemble(model_candidates)
-        limits = list(dict.fromkeys([BASE_LIMIT, REVIEW_LIMIT, *limits]))
-        if interpretation is None:
+        limits = list(
+            dict.fromkeys(
+                [BASE_LIMIT, *([REVIEW_LIMIT] if review_enabled else []), *limits]
+            )
+        )
+        if review_enabled and interpretation is None:
             limits.append(INTERPRETATION_LIMIT)
         draft = analysis_draft(
             candidates,
@@ -335,6 +360,10 @@ async def evaluate_analysis(
             interpretation if combined or rubric == "2" else None,
         )
         record("rca_analysis_draft", {**draft, "input_view": view})
+        if not review_enabled:
+            # Retain the historical result envelope without inventing a verdict.
+            review_diag = {"execution_status": "skipped", "reason": "not_requested"}
+            break
         review, review_diag = await review_analysis(llm, draft, view, allowed)
         review_id = record(
             "analysis_review",
@@ -516,7 +545,7 @@ async def evaluate_analysis(
             verdict=review["verdict"] if review else None,
             reason=review_diag.get("reason"),
             analysis_id=draft["analysis_id"],
-            evidence_refs=[review_ids[-1]],
+            evidence_refs=[review_ids[-1]] if review_ids else [],
             rubric_version=rubric,
             criteria=review["criteria"] if review else {},
             unattributed_issues=unattributed,

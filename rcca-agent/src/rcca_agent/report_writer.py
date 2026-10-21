@@ -51,8 +51,8 @@ Write 1-3 concise sentences per section (at most 1200 characters). Cite every su
 source ID in its own section. Do not repeat source IDs in prose. Preserve every qualification,
 uncertainty, counter-evidence and recommendation condition. An observed report is not proof
 of current device state, physical failure, recovery, or an action having been performed.
-Never invent a cause, identity, number, action, diagnosis or completion. Unreviewed material
-is not accepted analysis. Source order is not chronology. Do not infer a transition unless
+Never invent a cause, identity, number, action, diagnosis or completion.
+Use only the retained claims supplied in source_items. Source order is not chronology. Do not infer a transition unless
 explicitly supplied. Do not restate fixed limitations; they are displayed verbatim separately.
 Do not add generic uncertainty sentences when a source supplies only an error definition.
 Compose readable complete prose, not an ID ordering response. No Markdown headings or HTML.
@@ -110,6 +110,7 @@ def report_sources(material):
     """Project retained analysis once; do not reopen raw logs or reapply Runbooks."""
     evaluation = material["evaluation"]
     interpretation = evaluation.get("evidence", {}).get("interpretation") or {}
+    review_requested = evaluation.get("review", {}).get("reason") != "not_requested"
     items = []
 
     def add(section, text, refs=(), *, fixed=False):
@@ -220,7 +221,11 @@ def report_sources(material):
             + label(evidence.get("reason") or evidence["execution_status"]),
             fixed=True,
         )
-    elif not by_design and review.get("execution_status") in {"failed", "skipped"}:
+    elif (
+        review_requested
+        and not by_design
+        and review.get("execution_status") in {"failed", "skipped"}
+    ):
         add(
             "limits",
             "분석 처리 상태: 독립 품질 검토가 완료되지 않았습니다. "
@@ -363,7 +368,9 @@ def report_sources(material):
             "LLM 작성 결과 미채택 또는 해석 미완료. 남은 자료의 검토 결과를 분석 성공으로 읽지 마세요.",
         )
     review = evaluation.get("review", {})
-    if review.get("reason") != "alert_match":  # the stop reason already says so
+    if (
+        review_requested and review.get("reason") != "alert_match"
+    ):  # the stop reason already says so
         add(
             "limits",
             "분석 품질 검토: "
@@ -373,11 +380,12 @@ def report_sources(material):
                 or review.get("execution_status")
             ),
         )
-    add(
-        "limits",
-        "조사 종료 이유: "
-        + label(evaluation.get("investigation", {}).get("stop_reason")),
-    )
+    if review_requested:
+        add(
+            "limits",
+            "조사 종료 이유: "
+            + label(evaluation.get("investigation", {}).get("stop_reason")),
+        )
     return items
 
 
@@ -444,6 +452,8 @@ async def write_material_report(result, material, llm):
             {ref for row in sources for ref in row["evidence_refs"]}
         ),
     }
+    if material["evaluation"].get("review", {}).get("reason") == "not_requested":
+        payload.pop("review")
     # Fixed sources are rendered verbatim below, so do not spend model input on
     # them again. Retain every source the model actually rewrites.
     previous = getattr(llm, "request_attempt_limit", 3)
@@ -479,7 +489,11 @@ async def write_material_report(result, material, llm):
         narrative.append(
             {
                 "id": section,
-                "title": title,
+                "title": "수집·작성 상세"
+                if section == "limits"
+                and material["evaluation"].get("review", {}).get("reason")
+                == "not_requested"
+                else title,
                 "text": text,
                 "evidence_refs": list(
                     dict.fromkeys(
@@ -504,6 +518,10 @@ async def write_material_report(result, material, llm):
         "writer": diagnostic,
         "material_hash": payload["material_hash"],
         "source_items": deepcopy(sources),
-        "semantic_fidelity": "not_independently_verified",
+        **(
+            {"semantic_fidelity": "not_independently_verified"}
+            if material["evaluation"].get("review", {}).get("reason") != "not_requested"
+            else {}
+        ),
         **({"fallback_reason": diagnostic["reason"]} if written is None else {}),
     }

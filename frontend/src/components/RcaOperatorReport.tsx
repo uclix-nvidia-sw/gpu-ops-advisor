@@ -10,7 +10,24 @@ export function RcaOperatorReport({
   result: Row;
   onEvidence?: (id: string) => void;
 }) {
-  const narrative = rows(result.narrative);
+  // Historical prose can contain generated critic status. Keep stored originals intact.
+  const narrative = rows(result.narrative).map((section) =>
+    section.id === 'limits'
+      ? {
+          ...section,
+          title: '수집·작성 상세',
+          text: str(section.text)
+            .split('\n')
+            .filter(
+              (line) =>
+                !/^(분석 품질 검토:|조사 종료 이유:|분석 처리 상태: 독립 품질 검토|LLM 검토는 정답을|증거 의미 해석을 완료하지 못해 해석 결과는 미검토)/.test(
+                  line.trim(),
+                ),
+            )
+            .join('\n'),
+        }
+      : section,
+  );
   const paragraphs = (id: string) =>
     narrative
       .filter((s) => s.id === id)
@@ -78,7 +95,7 @@ export function RcaOperatorReport({
       <details className="rca-narrative-section">
         <summary>5. 조사·비교 원문과 처리 상세</summary>
         {narrative
-          .filter((s) => !['cause', 'action'].includes(str(s.id)))
+          .filter((s) => !['cause', 'action'].includes(str(s.id)) && str(s.text).trim())
           .map((s, i) => (
             <details key={i}>
               <summary>{str(s.title)}</summary>

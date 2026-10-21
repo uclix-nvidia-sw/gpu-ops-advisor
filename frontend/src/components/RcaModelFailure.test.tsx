@@ -310,3 +310,17 @@ it('keeps validation repair history visible after review succeeds', () => {
   expect(html).not.toContain('응답 수신 · 단계 검증 실패');
   expect(html).not.toContain('세부 검증 위치·사유가 저장되지 않았습니다');
 });
+
+it('describes single-collection authoring without a critic or review draft', () => {
+  const synthesis = stageForRecord({
+    query_id: 'rca_synthesis',
+    quality: { workflow: 'single_collection', generation_mode: 'combined' },
+  });
+  const draft = stageForRecord({
+    query_id: 'rca_analysis_draft',
+    quality: { workflow: 'single_collection' },
+  });
+  expect(synthesis?.title).toBe('관측 자료 분석');
+  expect(synthesis?.purpose).not.toContain('검토');
+  expect(draft?.title).toBe('분석·권고 자료 저장');
+});
