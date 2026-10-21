@@ -162,11 +162,125 @@ python -m rcca_agent.runbook_admin publish .local/xid79-reviewed.json --profile 
 
 다음 입력: 실제 Fleet image와 source revision, 비밀을 제거한 원본 로그, 노드/GPU/NVSwitch 식별 연결, Grafana 수집 라벨·기간·완전성, 설치 플랫폼/드라이버/FM 버전. 이를 확보하면 query/parser와 세부 판정을 연결하고 운영 compatibility를 검토한다.
 
+## 7. Xid 79·SXid 11001 단일 수집 보고서 배포·발행
+
+PR #170의 새 경로는 두 런북의 **전체 본문**과 RCA Worker/UI를 함께 적용한다. 아래 절차는 사용자가 실행하는 운영 인수 절차이며, 문서 작성이나 PR CI는 발행을 수행하지 않는다. Ops 이미지·설정·런북·보고서, DB schema와 PVC는 바꾸지 않는다.
+
+### 7.1 적용 순서와 준비물
+
+1. PR의 `CI required` 통과 후 병합하고, 해당 main 커밋의 CI 성공과 발행 이미지 digest를 확인한다. PR 빌드 이미지 자체는 레지스트리에 발행되지 않는다.
+2. 기존 배포의 RCA Worker/frontend 이미지 digest와 두 런북의 발행 revision·hash를 보존한다. 공유 frontend 배포에는 RCA UI 변경을 포함하되 Ops 이미지·설정은 유지한다. 설치 전체를 기본 values로 덮어쓰지 않는다.
+3. RCA Worker와 frontend를 배포한다. 기존 런북은 구 경로를 유지하므로 새 revision 발행 전에 Worker 교체와 준비 상태를 확인한다.
+4. 실제 RCA Worker가 사용하는 query profile을 비밀 없는 로컬 JSON으로 확보한다. 아래 `$RcaProfile`은 `queries`가 있는 실제 프로필 파일이다. 예제 프로필을 운영 검증의 대용으로 쓰지 않는다. Xid는 D09/D44/D02/D11, SXid는 D09/D47/D33/D34가 등록되고 해당 procedure에서 허용되어야 한다. Loki/Mimir binding·대상 라벨·30분 범위도 확인한다. CLI check는 query 등록을 검사하지만 각 procedure 허용 집합까지 증명하지 않는다.
+5. 두 런북의 기존 knowledge ID와 검수된 compatibility를 확인한다. 런북별로 아래 단계를 수행하며 새 revision 번호를 임의로 정하지 않는다.
+
+### 7.2 기존 발행본 조회와 새 본문 준비 (PowerShell)
+
+저장소 루트의 Python 3.12 환경에서 실행한다. `$RcaBackend`는 이번 배포 대상 UI의 Backend 주소다. `REPLACE_...` 값은 해당 환경에서 확인한 값으로 바꾼다. 이 단계는 GET과 로컬 파일 작성만 한다.
+
+```powershell
+$RcaBackend = 'http://192.168.20.186:30006/api/v1'
+$RcaProfile = '.local/rca-runtime-profile.json'
+$RcaCode = 'xid:79'
+$RcaKey = 'RB-XID-79'
+$RcaSource = 'rcca-agent/runbooks/xid/RB-XID-79.json'
+$RcaPrefix = '.local/xid79-dossier'
+New-Item -ItemType Directory -Force .local | Out-Null
+$RcaPublished = Invoke-RestMethod "$RcaBackend/knowledge?kind=runbook&state=published&code=$([uri]::EscapeDataString($RcaCode))"
+$RcaPublished.items | Select-Object knowledge_id, knowledge_key, revision, state, content_hash
+# 응답의 대상 knowledge_key·scope·compatibility를 대조해 선택한 ID/revision을 입력한다.
+$RcaKnowledgeId = 'REPLACE_WITH_EXISTING_KNOWLEDGE_UUID'
+$RcaPreviousRevision = 'REPLACE_WITH_PUBLISHED_REVISION'
+$RcaPrevious = Invoke-RestMethod "$RcaBackend/knowledge/$RcaKnowledgeId/revisions/$RcaPreviousRevision"
+if ($RcaPrevious.knowledge_key -ne $RcaKey -or $RcaPrevious.state -ne 'published') { throw 'Wrong published Runbook' }
+$RcaPrevious | ConvertTo-Json -Depth 100 | Set-Content "$RcaPrefix-previous.json" -Encoding utf8
+$RcaNext = Get-Content $RcaSource -Raw | ConvertFrom-Json
+$RcaNext.compatibility = $RcaPrevious.compatibility
+$RcaNext.visibility = $RcaPrevious.visibility
+$RcaNext.scope = $RcaPrevious.scope
+$RcaNext | ConvertTo-Json -Depth 100 | Set-Content "$RcaPrefix-next.json" -Encoding utf8
+python -m rcca_agent.runbook_admin check "$RcaPrefix-next.json" --profile $RcaProfile --runtime
+if ($LASTEXITCODE -ne 0) { throw 'Runtime validation failed' }
+```
+
+기존 compatibility를 보존하는 것은 적용 조건 확대를 방지하기 위한 것이다. 새 조회에도 조건이 유효한지 검토한다. 기존 본문에 `decision_policy`만 추가하면 새 전체 조회 계획이 적용되지 않는다. 반드시 새 작성 원본의 전체 content와 기존 환경 적용 조건을 대조한다. 이전 응답과 이후 receipt는 로컬 보관하며 커밋하지 않는다.
+
+SXid 11001은 다음 다섯 값을 바꾸고 **별도의 기존 ID/revision**으로 동일 절차를 반복한다.
+
+```powershell
+$RcaCode = 'sxid:11001'
+$RcaKey = 'RB-SXID-11001'
+$RcaSource = 'rcca-agent/runbooks/sxid/RB-SXID-11001.json'
+$RcaPrefix = '.local/sxid11001-dossier'
+# $RcaKnowledgeId와 $RcaPreviousRevision은 SXid 조회 결과에서 다시 지정한다.
+```
+
+### 7.3 새 revision 등록 → 검토 요청 → 승인 → 발행
+
+아래는 현재 선택한 **한 런북**의 순서다. 각 명령을 따로 실행하고 종료 코드 0과 저장 receipt의 state/content_hash/revision을 확인한 후 다음 명령을 실행한다. `$RcaBatch`는 이번 본문에 고유한 이름이며 네트워크 응답 유실 시에는 같은 입력·같은 키로 재실행한다. 본문을 변경하면 새 batch를 사용한다.
+
+```powershell
+$RcaBatch = "$RcaKey-dossier-REPLACE_WITH_UNIQUE_BATCH"
+python -m rcca_agent.runbook_admin draft "$RcaPrefix-next.json" --profile $RcaProfile --backend $RcaBackend --knowledge-id $RcaKnowledgeId --request-key "$RcaBatch-draft" --output "$RcaPrefix-draft.json"
+```
+
+receipt의 state가 `draft`이고 기존 knowledge ID에 새 revision이 생성됐는지 확인한다. 이후 검토 comment에는 실제 확인한 플랫폼/프로필 revision·조회 대상/지표·출처를 적는다.
+
+```powershell
+python -m rcca_agent.runbook_admin request "$RcaPrefix-draft.json" --profile $RcaProfile --backend $RcaBackend --request-key "$RcaBatch-request" --comment 'REPLACE_WITH_REVIEW_SCOPE' --output "$RcaPrefix-requested.json"
+```
+
+`in_review`와 검토 대상 hash를 확인하고, 운영 적용 조건과 조회 계획 검토를 마친 뒤 승인한다.
+
+```powershell
+python -m rcca_agent.runbook_admin approve "$RcaPrefix-requested.json" --profile $RcaProfile --backend $RcaBackend --request-key "$RcaBatch-approve" --comment 'REPLACE_WITH_VERIFIED_PROFILE_AND_EVIDENCE' --output "$RcaPrefix-reviewed.json"
+```
+
+`reviewed` 확인 후 발행한다.
+
+```powershell
+python -m rcca_agent.runbook_admin publish "$RcaPrefix-reviewed.json" --profile $RcaProfile --backend $RcaBackend --request-key "$RcaBatch-publish" --output "$RcaPrefix-published.json"
+$RcaReceipt = Get-Content "$RcaPrefix-published.json" -Raw | ConvertFrom-Json
+$RcaSaved = Invoke-RestMethod "$RcaBackend/knowledge/$RcaKnowledgeId/revisions/$($RcaReceipt.revision)"
+if ($RcaSaved.state -ne 'published' -or $RcaSaved.content_hash -ne $RcaReceipt.content_hash -or $RcaSaved.reviewed_content_hash -ne $RcaReceipt.content_hash) { throw 'Publication mismatch' }
+$RcaSaved | Select-Object knowledge_id, revision, state, content_hash, reviewed_content_hash
+```
+
+두 런북이 각각 이 검사를 통과해야 발행 완료다. 기존 발행 revision은 검수 완료 전 retire하지 않는다. API의 인증·접근 제어가 추가된 환경은 조직의 승인된 접속 방법을 사용하며 인증정보를 명령 기록이나 PR에 넣지 않는다.
+
+### 7.4 배포 후 실제 보고서 검수 순서
+
+시험을 위해 장비 장애를 만들지 않는다. 실제 신규 알림 또는 UI의 승인된 RCA 재실행으로 Xid79/SXid11001을 각각 확인한다. 기존 완료 보고서는 자동 갱신되지 않는다.
+
+| 순서 | 확인할 실제 결과 | 합격 기준 |
+|---|---|---|
+| 1. 접수·선택 | Incident ID, 노드/장비, job/attempt, 고정 Runbook revision/hash | 새 발행 receipt와 일치하고 다른 장비/코드가 섞이지 않음 |
+| 2. 수집 | 실행 기록의 observation plan과 각 D의 근거 | 해당 코드의 전체 계획이 한 수집 단계에서 실행됨. D09 일치만으로 조기 종료하거나 모델이 추가 조회를 선택하지 않음. 한 단계는 HTTP 호출 한 번이라는 뜻이 아님 |
+| 3. 관련 자료 | 동일 조회 구간의 Loki 원문·Mimir 관측과 보고서 표 | 코드·시각·보고 구간·단위·수치 일치. Xid GPU는 gpuInfo/PCI/UUID 대조 대상, SXid GPU 지표는 같은 노드의 보조 관측으로 표시 |
+| 4. 이력 | 해당 host의 14일 Incident 목록·최초 snapshot과 이력 표 | Incident ID 중복 없이 건수/날짜/장치 일치. 7일·코드 필터 및 동일 코드/GPU의 최근 등록 간격·범위 일치. 로그 수신 건수를 장애 횟수로 바꾸지 않음 |
+| 5. 모델·공개 | 작성/검토/보고서 단계 기록, 최종 job 상태, 공개 result 참조와 다시 읽기 | 실제 모델 호출 결과와 실패 시 코드가 보존하는 사실을 구분해 검사. JC가 결과를 공개하고 새로고침/직접 링크에서도 동일 보고서를 읽음. auto-router 기록만으로 Super/Ultra 실행을 단정하지 않음 |
+| 6. 운영자 읽기 | 보고서 첫 화면 → 관련 관측 → 이력 → 권고 → 원문 | 언제·어느 노드/장비·무슨 오류·어떤 보고 구간인지 찾기 쉬움. 관련 지표와 동반 로그, 반복 빈도와 간격이 바로 보이고 오류별 NVIDIA 지침에 연결됨. 일반적인 한계 문구가 핵심 정보를 밀어내지 않음 |
+| 7. UI 동작 | 기간/코드 전환·원문 팝업·사건 링크·닫기 | 필터 건수와 행이 맞고 기간 변경 시 코드 선택 초기화. 원문은 해당 evidence를 열며 새 사건 링크가 맞는 장비로 연결됨 |
+
+검수 기록은 Incident/job/result ID, Runbook revision/hash, 이미지 digest, 모델 기록, 조회 기간과 비교한 원문 참조를 보존한다. 보고서 생성 성공과 정보 전달 품질을 각각 판정하고 수정 후 같은 사건을 다시 대조한다. 실제 원문·노드 정보는 공개 PR에 붙이지 않는다.
+
+### 7.5 실패 시 복귀
+
+새 revision의 선택/수집에 문제가 있으면 해당 런북의 최신 발행 receipt를 사용해 `retire`한다. 다른 런북이나 Ops 상태는 변경하지 않는다.
+
+```powershell
+python -m rcca_agent.runbook_admin retire "$RcaPrefix-published.json" --profile $RcaProfile --backend $RcaBackend --request-key "$RcaBatch-retire" --comment 'REPLACE_WITH_FAILURE_REASON' --output "$RcaPrefix-retired.json"
+```
+
+구 발행본이 여전히 published인지, 다음 새 claim이 그 revision/hash를 선택하는지 확인한다. retire는 이미 실행 중인 claim의 참조나 과거 보고서를 되돌리지 않는다. 필요하면 보존한 RCA/frontend 이미지 digest로 복귀한다. DB 삭제·과거 결과 수정·PVC 재생성은 수행하지 않는다.
+
 ## 조사 완료 기준 1.1
 
 XID 79·SXID 11001 작성 원본은 `decision_policy`를 포함한다. 목적은 대상·기간의 오류 **보고 식별**이다. 원인 확정·현재 건강·복구·장비 조치 승인 조건을 완화하지 않는다. 기존 발행본을 덮어쓰지 않고 이 문서의 새 draft → request → approve → publish 절차를 사용한다. 코드 배포만으로 DB 지침이 바뀌지 않는다.
 
-### 기존 발행본에 종료 기준 적용
+### 구 발행본의 D09 목적 종료 경로 (호환성 참고)
+
+아래는 기존 발행본의 동작이다. PR #170의 새 전체 수집 보고서 적용에는 §7을 사용하며, D09만으로 종료하는 아래 검수 기준을 적용하지 않는다.
 
 1. `GET /knowledge?kind=runbook&state=published&code=xid%3A79`와 `code=sxid%3A11001`로 실제 발행본의 knowledge ID·revision·hash·compatibility를 확인한다. 저장소 JSON이 1.1이라는 사실로 운영 적용을 판단하지 않는다.
 2. 발행 본문을 기준으로 `schema`를 `gpu-rca-runbook/1.1`로 바꾸고 해당 작성 원본의 `decision_policy`를 추가한 새 초안을 준비한다. 기존 compatibility·수집 계획·조건부 권고는 보존한다. 정책의 query와 기존 계획이 다르면 자동 병합하지 않고 조건을 먼저 맞춘다. `runbook_admin check --runtime`으로 실제 실행 프로필에서 검증한다.

@@ -199,7 +199,8 @@ func TestOperatorGuidanceContract(t *testing.T) {
 }
 
 func TestAuxiliarySelectionConditions(t *testing.T) {
-	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	// Published legacy plans retain conditional selection; new dossier plans collect all steps.
+	b, err := os.ReadFile("../../../agents/tests/fixtures/RB-XID-79-published-legacy.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +234,8 @@ func TestAuxiliarySelectionConditions(t *testing.T) {
 }
 
 func TestExploratorySelectionRequiresExplicitPermission(t *testing.T) {
-	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	// Exercise optional exploration on the frozen legacy plan, not the all-required dossier.
+	b, err := os.ReadFile("../../../agents/tests/fixtures/RB-XID-79-published-legacy.json")
 	if err != nil {
 		t.Fatal(err)
 	}
