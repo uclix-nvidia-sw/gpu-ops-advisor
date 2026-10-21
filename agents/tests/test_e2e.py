@@ -2294,7 +2294,21 @@ def runbook_limits(stack):
 
 
 @pytest.mark.e2e
-def test_runbook_api_lifecycle_and_real_rca_consumption(stack):
+def test_runbook_api_lifecycle_and_real_rca_consumption(stack, monkeypatch):
+    # This lifecycle test publishes the current catalog, including the SXid plan.
+    profile = json.loads(json.dumps(stack["profile"]))
+    profile["queries"]["D47"] = dict(
+        source="mimir",
+        metric="fixture_d47",
+        unit="state",
+        max_hold_seconds=30,
+        revision="fixture-v1",
+        validated=True,
+    )
+    config = LOCAL / "runbook-lifecycle-profile.json"
+    config.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setitem(stack, "profile", profile)
+    monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
     extension = ".exe" if sys.platform == "win32" else ""
     binary = Path(
         os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
@@ -3301,7 +3315,7 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     config.write_text(json.dumps(profile), encoding="utf-8")
     monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
     book = json.loads(
-        (ROOT / "rcca-agent/runbooks/sxid/RB-SXID-11001.json").read_text(
+        (ROOT / "agents/tests/fixtures/RB-SXID-11001-published-legacy.json").read_text(
             encoding="utf-8"
         )
     )
