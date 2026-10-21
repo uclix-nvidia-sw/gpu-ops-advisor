@@ -8,6 +8,8 @@
 
 ## Runbook contract validation / Runbook 계약 검증
 
+PR #172 후속(2026-10-21): 단일 수집 Runbook의 goal 정책 생략을 Python/Backend에서 동일하게 허용한다. 명시 null·빈 계획·계획 누락은 거절하며, 기존 정책 검사는 고정 legacy fixture로 유지한다. Windows Go 1.26.2·CGO에서 Backend 전체 vet·race·build 통과. 수정 소스로 다시 빌드한 Backend와 격리 PostgreSQL/JC/RCA/MCP의 런북 생성→검토→발행→RCA 소비 E2E 1건 통과(48개 별도 제외, upstream/model fixture). 운영 배포·DB·Ops 변경 없음.
+
 PR #170 후속 검증(2026-10-21): 전체 수집 계획으로 바뀐 Xid79 원본을 선택 조회 테스트가 참조하면서 발생한 CI panic을 수정했다. 조건부/탐색 조회 두 검사는 고정된 구 발행본 fixture를 사용하고, 전체 작성 원본 267개의 검증은 유지한다. Windows Go 1.26.2·CGO/w64devkit에서 Backend 전체 vet·race 테스트·build 통과. 제품 API·Ops 코드 변경 없음. 배포 검증은 포함하지 않는다.
 
 2026-10-15, main `bf85dfd` 기반 로컬 변경: Runbook 1.0/1.1과 명시적인 목적·필수 기준·차단 조건·조회 연결을 검증한다. 현재 Backend 소스의 `go vet ./...`, `go test -race ./...`, `go build ./...` 통과. Windows 경로의 대괄호로 인한 embed 제약을 피하려고 ASCII 임시 경로에 현재 소스를 복사했으며 Go 1.26.2와 CGO/w64devkit을 사용했다. 새 PostgreSQL에서 Backend 생성→검토→발행과 실제 RCA Worker 소비·schema 2 결과 공개도 통과했다([Agent QA](../agents/QA.md)). 모델/Grafana는 fixture이며 운영 발행·배포·실제 모델 품질은 미검증이다. DB migration 변경은 없다.

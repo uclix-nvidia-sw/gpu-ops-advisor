@@ -69,7 +69,7 @@ func TestRunbookAuthoringAndPublication(t *testing.T) {
 }
 
 func TestDecisionPolicyCannotRelaxCompletion(t *testing.T) {
-	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	b, err := os.ReadFile("../../../agents/tests/fixtures/RB-XID-79-published-legacy.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestDecisionPolicyCannotRelaxCompletion(t *testing.T) {
 }
 
 func TestComponentReportGoalRequiresVersionAndUnhealthyReport(t *testing.T) {
-	b, err := os.ReadFile("../../../rcca-agent/runbooks/xid/RB-XID-79.json")
+	b, err := os.ReadFile("../../../agents/tests/fixtures/RB-XID-79-published-legacy.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,6 +254,39 @@ func TestExploratorySelectionRequiresExplicitPermission(t *testing.T) {
 		step["required"] = true
 		if validateRunbook(c, Object{}, false) == nil {
 			t.Fatal("required exploration accepted")
+		}
+	}
+}
+
+func TestSinglePhaseRunbookPolicyOmission(t *testing.T) {
+	for _, path := range []string{"../../../rcca-agent/runbooks/xid/RB-XID-79.json", "../../../rcca-agent/runbooks/sxid/RB-SXID-11001.json"} {
+		for _, variant := range []string{"omitted", "null", "empty_plan", "missing_plan"} {
+			t.Run(filepath.Base(path)+"/"+variant, func(t *testing.T) {
+				b, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var row Object
+				if err := json.Unmarshal(b, &row); err != nil {
+					t.Fatal(err)
+				}
+				c := row["content"].(map[string]any)
+				if _, exists := c["decision_policy"]; exists {
+					t.Fatal("single-phase source unexpectedly has a policy")
+				}
+				switch variant {
+				case "null":
+					c["decision_policy"] = nil
+				case "empty_plan":
+					c["observation_plan"] = []any{}
+				case "missing_plan":
+					delete(c, "observation_plan")
+				}
+				err = validateRunbook(c, Object{"cluster_id": "isolated-fixture"}, true)
+				if (err == nil) != (variant == "omitted") {
+					t.Fatalf("unexpected validation: %v", err)
+				}
+			})
 		}
 	}
 }
