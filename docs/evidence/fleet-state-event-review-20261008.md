@@ -7,7 +7,7 @@ Base: merged PR #87 (`c54080c`). This is source/observation validation, not perm
 - Saved XID D09 sample: 30 component_data records (28 Healthy, 2 Unhealthy); all attributes.time values are the Go zero timestamp. A separate saved sample contains eight XID/SXID component records with the same zero timestamp. These are bounded samples, not an all-cluster inventory.
 - Live read-only Grafana Explore query, 2026-10-08 09:10–09:25 KST: one XID event record was returned by the query below. Loki displayed 09:14:18 KST and extra_info.data.time was 00:14:18Z. This establishes agreement in one stored sample, not a general transport guarantee or comparison with host clock accuracy.
 - The event contains event_name=error_xid, event_type=Fatal, data_source=kmsg, xid=79 and a PCI device identifier. Its PCI address was absent from the GPU inventory in the same record. Do not select an arbitrary GPU from the node inventory.
-- GPU inventory is a JSON-encoded string in the inspected payloads. The current component parser accepts list-valued inventory only; merely decoding the string would still not prove that an event belongs to an inventory GPU.
+- GPU inventory is a JSON-encoded string in the inspected payloads. The current RCA adapter decodes string-valued inventory; a unique PCI/UUID correspondence still establishes only a reported inventory candidate, not independently verified hardware identity.
 - The user identified this run as fault injection. The inspected event itself does not establish synthetic versus physical origin, so production classification cannot rely on this operator context alone.
 
 ```logql
@@ -19,6 +19,12 @@ Base: merged PR #87 (`c54080c`). This is source/observation validation, not perm
 ```
 
 This cross-cluster query is a bounded source investigation only. Runtime observations must keep the job's requested cluster_id filter. No CPC-specific branch or configuration is introduced.
+
+## Read-only source availability for RCA comparisons
+
+On 2026-10-21, the existing Grafana browser session returned Fleet SXID 11001 events and repeated component state reports from Loki, and GPU-labeled Mimir samples for PCIe replay, utilization, power, Fabric Manager status and NVLink RX/TX. The event carried event ID, producer event time and switch PCI, with JSON-string GPU inventory; the inspected SXID event did not carry `raw_kmsg`. Neither the event nor a later healthy state establishes a reboot or physical versus injected origin.
+
+A 14-day query filtered by `attributes.event_name=error_(xid|sxid)` returned events using the same JSON extraction syntax as the RCA collector. The bounded browser response reached its line limit; it is not a complete 14-day event count. A 30-minute `count_over_time` query for PCIe replay on the inspected node returned 10 samples per GPU, so existence of a series must not be represented as continuous coverage. No independent PCIe AER stream, FM service log, switch-port topology or reboot ledger was verified in this inspection. Runtime queries retain authorized cluster/node selectors and validated profile bindings. This browser check is not a live Worker-to-MCP or publication test.
 
 ## Source trace and limits
 

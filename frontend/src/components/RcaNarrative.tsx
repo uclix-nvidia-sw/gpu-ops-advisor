@@ -1,6 +1,8 @@
 import { RcaEvaluation, evaluationLabels } from './RcaEvaluation';
 import { structuredGuidance } from './StructuredGuidance';
 import { RcaGuidance } from './RcaGuidance';
+import { RcaHostHistory } from './RcaHostHistory';
+import { RcaTriageObservations } from './RcaTriageObservations';
 import { obj, rows, str, type Row } from '../lib/live';
 import './RcaNarrative.css';
 
@@ -82,11 +84,13 @@ export function RcaNarrative({
   consolidateChecks = false,
   reader = false,
   evaluationExpanded = false,
+  onEvidence,
 }: {
   result: Row;
   consolidateChecks?: boolean;
   reader?: boolean;
   evaluationExpanded?: boolean;
+  onEvidence?: (id: string) => void;
 }) {
   const evaluation = obj(obj(result.quality).rca_evaluation);
   const stopReason = str(obj(evaluation.investigation).stop_reason);
@@ -108,7 +112,8 @@ export function RcaNarrative({
   // /2: deterministic incident findings lead and the reference guidance is a primary section.
   const findingsLed = presentation === 'incident-first/2';
   const collapsed = (id: string) =>
-    !reader &&
+    (!reader ||
+      obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1') &&
     ((materialReport && id === 'limits') ||
       (incidentFirst && (id === 'limits' || (id === 'guidance' && !findingsLed))));
   const sections = rows(result.narrative).filter(
@@ -154,6 +159,8 @@ export function RcaNarrative({
           </details>
         )}
       </header>
+      <RcaTriageObservations result={result} onEvidence={onEvidence} />
+      <RcaHostHistory result={result} />
       {materialReport && rows(obj(result.quality).runbook_guidance).length > 0 && (
         <details className="rca-narrative-more">
           <summary>발행 Runbook 참고 안내 · 사건 분석과 구분</summary>

@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 )
 def test_authored_rules_require_scoped_reports(kind, key, expected):
     row = json.loads(
-        (ROOT / f"rcca-agent/runbooks/{kind}/{key}.json").read_text("utf-8")
+        (ROOT / f"agents/tests/fixtures/{key}-published-legacy.json").read_text("utf-8")
     )
     plan = row["content"]["observation_plan"]
     books = [{"id": "revision-1"}]
@@ -65,7 +65,9 @@ def test_authored_rules_require_scoped_reports(kind, key, expected):
 )
 def test_rule_contract_rejects_invalid_conditions(edit):
     row = json.loads(
-        (ROOT / "rcca-agent/runbooks/xid/RB-XID-79.json").read_text("utf-8")
+        (ROOT / "agents/tests/fixtures/RB-XID-79-published-legacy.json").read_text(
+            "utf-8"
+        )
     )
     queries = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
         "queries"
@@ -104,7 +106,9 @@ def test_rule_priority_and_revision_provenance():
 @pytest.mark.parametrize("value", [False, "true", 1, None])
 def test_exploration_requires_boolean_opt_in(value):
     row = json.loads(
-        (ROOT / "rcca-agent/runbooks/xid/RB-XID-79.json").read_text("utf-8")
+        (ROOT / "agents/tests/fixtures/RB-XID-79-published-legacy.json").read_text(
+            "utf-8"
+        )
     )
     step = row["content"]["observation_plan"][1]
     step.pop("selection")
@@ -118,7 +122,9 @@ def test_exploration_requires_boolean_opt_in(value):
 
 def test_explicit_exploration_contract_and_conflicts():
     row = json.loads(
-        (ROOT / "rcca-agent/runbooks/xid/RB-XID-79.json").read_text("utf-8")
+        (ROOT / "agents/tests/fixtures/RB-XID-79-published-legacy.json").read_text(
+            "utf-8"
+        )
     )
     queries = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))[
         "queries"

@@ -1,0 +1,344 @@
+{
+  "knowledge_key": "RB-XID-79",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.1",
+    "required_evidence": [
+      "reported_producer_contract",
+      "reported_error_code"
+    ],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_producer_contract",
+          "reported_error_code",
+          "producer_contract",
+          "error_code",
+          "normalized_health"
+        ],
+        "purpose": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D44",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
+      },
+      {
+        "query_id": "D02",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 GPU 사용률과 DCGM 장치 라벨(PCI·UUID·모델·드라이버)을 확인한다. 사용률은 접근 가능성의 대체 근거가 아니다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
+      },
+      {
+        "query_id": "D11",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "동일 GPU·기간의 전력 표본으로 사건 전후 전원 이상 징후를 보조 관측한다. 전력값만으로 전원 고장을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "selection": {
+          "missing_any": [
+            "causal_confirmation_evidence",
+            "normalized_health"
+          ],
+          "requires_all": [
+            "reported_error_code",
+            "reported_producer_contract"
+          ],
+          "independent": true
+        }
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Page last updated 2026-09-09; mutable upstream document",
+        "section": "GPU Node Triage",
+        "checked_at": "2026-10-15"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L1671",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "XID 79 static definition",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+        "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+        "section": "XID 79 details and conditional action comments",
+        "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Retrieved 2026-10-19; mutable upstream document",
+        "section": "Xids; Resolution Buckets; Steps 1-4",
+        "checked_at": "2026-10-19"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+        "revision": "Retrieved 2026-10-19; mutable upstream document",
+        "section": "Table 1 Xids: 79; Table 3 Resolution Buckets",
+        "checked_at": "2026-10-19"
+      }
+    ],
+    "limitations": [
+      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
+      "추가 조회는 보조 원본 관측이며 실행 예산에 따라 일부만 선택된다. 노드 inventory를 장애 GPU·PCIe root port·NVLink 상대 장치의 연결 증거로 사용하지 않는다. 같은 장치 매핑이 없으면 비교·영향 범위 판정을 보류한다.",
+      "오류 보고 식별 결과와 조건부 대응을 제시한다. 장치 신원·현재 상태·원인·회복 판단은 각각의 관측 근거로 구분한다."
+    ],
+    "title": "Xid 79 GPU 접근 상실 조사",
+    "description": "Xid 79 단서에서 원본 이벤트, 장치 식별 및 동시 발생 오류를 확인하는 초기 조사 Runbook.",
+    "claim": "XID 79 오류 보고를 식별하고 적용 조건별 대응을 안내한다.",
+    "classification": {
+      "domain": "GPU_DEVICE",
+      "category": "gpu_access_loss"
+    },
+    "search": {
+      "codes": [
+        "xid:79"
+      ],
+      "aliases": [
+        "GPU has fallen off the bus"
+      ],
+      "symptoms": [
+        "GPU 접근 상실",
+        "GPU 장치 응답 없음"
+      ],
+      "producer_events": [
+        "accelerator-nvidia-error-xid"
+      ]
+    },
+    "analysis_guidance": [
+      "보고서는 무엇을 조사했는지, 알림·로그·장치 정보를 비교한 결과, 다음에 할 일을 순서대로 설명한다. 알림과 로그가 일치하면 추가 지표 없이 오류 보고 확인을 마친다. 불일치하면 선택 조회 전체를 기존 예산 안에서 수집하고, 각 자료가 알림 대상과 연결되는지 설명한다. 자료 부족과 조사 범위 밖의 원인 확정을 구분한다.",
+      "D09에서 수집된 Fleet Xid 관측의 대상·시각을 확인한다. D09가 시스템·커널 PCI/PCIe 원문 전체를 수집한다고 가정하지 않는다. AER 등 추가 원문은 수집 경로·장치·시각을 별도로 검증한 경우에만 연관 근거로 사용하고, 미수집은 오류 부재로 해석하지 않는다.",
+      "GPU의 현재 접근 상태와 사건 당시 장치 매핑이 없으면 접근 회복을 판정하지 않는다. D02 사용률은 접근 가능성의 대체 증거가 아니다.",
+      "Xid 154 연계가 지원되는 드라이버에서는 같은 장치·시간의 복구 action 이벤트를 추가 확인한다. 동반 이벤트 부재는 지원 버전·수집 완전성 확인 전에는 부정 근거가 아니다.",
+      "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+      "NVIDIA 적용: A100, H100, B100, GB200.",
+      "NVIDIA 조치 분류: immediate=RESTART_BM; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+      "조건부 복구 권고: 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면, 원본 로그 보존·작업 배출·유지보수 승인 후 해당 호스트를 재시작한다. 로그만 시험 주입했고 접근 장애가 없는 경우에는 시험 로그만으로 재시작하지 않는다."
+    ],
+    "recommendations": [
+      {
+        "text": "조치 전에 오류 원문·대상 식별 정보·nvidia-bug-report.sh 결과와 사건 구간의 호스트 진단 자료를 보존한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:79"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "실제 XID 79 장애·적용 모델·bare-metal이면 진단 보존·작업 배출·유지보수 승인 후 RESTART_BM을 적용한다. 가상화는 해당 플랫폼 절차를 따르고 로그 주입 시험에는 재시작하지 않는다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:79"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "조치 후 확인: 같은 GPU의 인식·접근·후속 상태를 확인한다. 재발·미복구 시 진단 자료와 조치 이력으로 CONTACT_SUPPORT를 요청한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:79"
+          }
+        ],
+        "execution": "not_performed"
+      }
+    ],
+    "applicability_conditions": [
+      {
+        "field": "error_code",
+        "equals": "xid:79"
+      }
+    ],
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 79는 드라이버가 PCIe 연결을 통해 GPU에 접근하지 못했음을 나타내는 오류 코드입니다.",
+      "cause_note": "PCIe 링크·슬롯·라이저 불량, 전원 공급 이상, GPU 하드웨어 결함, 드라이버 오류가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "알림이 가리키는 GPU를 먼저 확인하세요.",
+          "text": "보고서의 장치 대조 결과를 먼저 확인합니다. 알림 주소가 수집된 GPU 목록과 일치하면 그 GPU를 후속 점검 대상으로 사용합니다. 주소가 목록에 없거나 여러 장치와 연결되면 알림·로그에 주소가 올바르게 기록됐는지 먼저 확인합니다. 추가로 조회한 사용률·전력·PCIe 재전송 기록은 같은 GPU인지 확인한 뒤 비교합니다. 다른 GPU의 값으로 알림 대상의 상태를 판단하지 않습니다. Fleet의 전력·재전송 값은 점검 실패 뒤 이전 값이 남을 수 있어, 값이 있다는 이유만으로 GPU에 접근할 수 있다고 판단하지 않습니다."
+        },
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작 전에 nvidia-bug-report.sh 결과와 사건 전후 커널·PCIe/AER 로그를 보존합니다. 재시작은 휘발성 진단 정보와 수집 가능한 상태를 바꿀 수 있습니다."
+        },
+        {
+          "title": "환경별 복구 조건",
+          "text": "로그 주입 시험에는 재시작을 적용하지 않습니다. 실제 XID 79 장애이며 NVIDIA 카탈로그 적용 모델의 bare-metal 환경이면, 진단 자료 보존·작업 배출·유지보수 승인 후 호스트를 재시작합니다(RESTART_BM). 가상화 환경은 GPU 할당 방식과 해당 플랫폼의 복구 절차에 따라 대상과 방법을 정합니다. 조치 후 같은 GPU의 인식·접근과 유효한 후속 상태를 확인하고, 재발·미복구 시 공급사 지원을 요청합니다(CONTACT_SUPPORT)."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 분류",
+          "text": "Fleet은 XID 79를 Fatal로 분류하고 시스템 재부팅과 하드웨어 점검을 기본 조치로 제시합니다.",
+          "source_indices": [
+            1,
+            2
+          ]
+        },
+        {
+          "title": "NVIDIA 조치 분류",
+          "text": "NVIDIA 카탈로그는 적용 모델의 XID 79에 RESTART_BM과 CONTACT_SUPPORT를 제시합니다. 실제 수행은 위 플랫폼·시험 여부·진단 보존·운영 승인 조건을 따릅니다.",
+          "source_indices": [
+            3,
+            4
+          ]
+        },
+        {
+          "title": "적용 대상",
+          "text": "A100·H100·B100·GB200이 NVIDIA 카탈로그 적용 대상입니다. 그 밖의 제품은 해당 세대 문헌을 따릅니다.",
+          "source_indices": [
+            3,
+            4
+          ]
+        },
+        {
+          "title": "XID 154 연계",
+          "text": "CUDA 12.7·드라이버 R565 이상에서는 같은 장치의 복구 조치 안내(XID 154)가 함께 보고될 수 있습니다.",
+          "source_indices": [
+            4
+          ]
+        }
+      ]
+    },
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 XID:79 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_error_code": "xid:79",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 오류 코드 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "수집한 오류 보고·대상·시각을 근거에 맞게 설명하고, 원인·현재 상태·시험 여부는 해당 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "동일 대상·기간의 보고된 오류 코드와 생산자를 확인한다. 보고 사실을 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D44",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "동일 GPU·기간의 PCIe replay 누적 원본을 보조 관측한다. 절대값을 사건 증가량으로 해석하지 않고 reset·대상·시간 검증 없이 원인이나 AER 발생을 판정하지 않는다."
+        },
+        {
+          "query_id": "D02",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 GPU 사용률과 DCGM 장치 라벨(PCI·UUID·모델·드라이버)을 확인한다. 사용률은 접근 가능성의 대체 근거가 아니다."
+        },
+        {
+          "query_id": "D11",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "동일 GPU·기간의 전력 표본으로 사건 전후 전원 이상 징후를 보조 관측한다. 전력값만으로 전원 고장을 판정하지 않는다."
+        }
+      ]
+    }
+  }
+}

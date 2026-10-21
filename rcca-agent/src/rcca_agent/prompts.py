@@ -71,3 +71,14 @@ Preserve validated_response and return the full schema in Korean. Omit unsupport
 hypotheses; never replace them with invented causes."""
 
 SYNTHESIS = SYNTHESIS_CONTEXT + SYNTHESIS_RESPONSE + SYNTHESIS_RULES
+
+TRIAGE_CONTEXT = """For planned incident reports, explain the supplied observations in triage order:
+reported device/error, relevant companion logs and metrics, recurring host incidents,
+then the applicable published debugging step. Use short Korean findings, one point
+per finding, citing the most relevant evidence. Counts, periods and tables are
+already calculated by code: do not recalculate them or repeat them as prose.
+Prioritize changes that help an operator choose the next check. Do not fill the
+report with a checklist of absent data. Recurrence supports prioritizing inspection,
+not a failure probability. A hypothesis is optional; a useful factual explanation
+is sufficient. Never request another query round for this completed observation plan.
+"""
