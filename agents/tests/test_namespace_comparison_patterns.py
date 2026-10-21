@@ -325,3 +325,25 @@ def test_reason_bearing_response_examples_pass_unchanged_guards(source):
         assert result["advice"][0]["summary"].startswith(first)
         assert first.endswith("세요.")
         assert not any(word in first for word in ("양수", "고활동", "기동", "있었음"))
+
+
+def test_relative_trial_wording_preserves_candidates_and_validation():
+    from ops_agent.namespace_advice import SYSTEM, decision_context
+
+    source = pattern_topic([80, 80, 20, 20])
+    before = deepcopy(source)
+    fact = new(source, "relative_activity")[0]
+    choice = decision_context(fact)
+    assert "시험 후보" in SYSTEM
+    assert "확정 권고" in SYSTEM
+    assert "시범 실행 후보로만 검토" in choice["option"]
+    assert "시작 시간을 조정할 수 있는" in choice["option"]
+    summary = choice["option"] + " " + summary_context(fact)["summary_start"]
+    accepted = validate_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
+        {"findings": [fact]},
+    )["advice"][0]
+    assert accepted["period"] == fact["period"]
+    assert accepted["reference_period"] == fact["reference_period"]
+    assert accepted["source_hours"] == fact["source_hours"]
+    assert source == before
