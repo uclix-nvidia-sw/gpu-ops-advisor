@@ -151,3 +151,14 @@ async def test_valid_author_remains_adopted_without_failure_diagnostics():
     )
     assert record["diagnostics"]["adoption"] == "validated_response"
     assert record["diagnostics"]["validation_failures"] == []
+
+
+def test_planned_author_explains_collected_data_without_review_or_followup():
+    prompt = author_prompt({"incident_comparison": {}})
+    assert "Fleet Intelligence has already raised the incident" in prompt
+    assert "Grafana MCP metrics and stored host history" in prompt
+    assert "Review feedback requests" not in prompt
+    assert "If review_feedback is supplied" not in prompt
+    assert "controls bounded follow-up" not in prompt
+    assert "Explain alert_match/evidence_gap" not in prompt
+    assert "Review feedback requests" in author_prompt({})

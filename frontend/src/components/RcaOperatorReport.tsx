@@ -58,19 +58,6 @@ export function RcaOperatorReport({
       <RcaIncidentSummary result={result} />
       <section className="rca-narrative-section">
         <h4>2. 분석 결과와 권고 조치</h4>
-        {paragraphs('cause').map((text, i) => (
-          <p key={i}>{readable(text)}</p>
-        ))}
-        {ids.length > 0 && (
-          <details>
-            <summary>보고서 GPU 표기와 실제 식별자</summary>
-            {ids.map((id, i) => (
-              <p key={id}>
-                GPU {i + 1}: {id}
-              </p>
-            ))}
-          </details>
-        )}
         <h5>런북 권고 조치</h5>
         <ol className="rca-action-list">
           {paragraphs('action')
@@ -87,6 +74,19 @@ export function RcaOperatorReport({
               .map((text, i) => (
                 <p key={i}>{readable(text)}</p>
               ))}
+          </details>
+        )}
+        {paragraphs('cause').map((text, i) => (
+          <p key={i}>{readable(text)}</p>
+        ))}
+        {ids.length > 0 && (
+          <details>
+            <summary>보고서 GPU 표기와 실제 식별자</summary>
+            {ids.map((id, i) => (
+              <p key={id}>
+                GPU {i + 1}: {id}
+              </p>
+            ))}
           </details>
         )}
       </section>

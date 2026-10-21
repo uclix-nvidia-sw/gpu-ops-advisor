@@ -70,25 +70,50 @@ export function RcaHostHistory({ result }: { result: Row }) {
           </select>
         </label>
       </div>
-      {[...groups]
-        .filter(([, items]) => items.length > 1)
-        .map(([key, items]) => {
-          const times = items.map((r) => Date.parse(str(r.occurred_at))).sort((a, b) => a - b);
-          const gaps = times.slice(1).map((t, i) => t - times[i]);
-          return (
-            <details key={key} open={key.endsWith('호스트 전체')}>
-              <summary>
-                <strong>
-                  {key.endsWith('호스트 전체') ? key : `${key.split(' · ')[0]} · 같은 GPU`} ·{' '}
-                  {items.length}건
-                </strong>
-              </summary>
-              {!key.endsWith('호스트 전체') && <p>{key}</p>}
-              최근 등록 간격 {intervalLabel(gaps[gaps.length - 1])} · 간격 범위{' '}
-              {intervalLabel(Math.min(...gaps))} ~ {intervalLabel(Math.max(...gaps))}
-            </details>
-          );
-        })}
+      {groups.size > 0 && (
+        <div className="rca-history-table">
+          <table>
+            <caption>코드·대상별 등록 건수와 최근 간격</caption>
+            <thead>
+              <tr>
+                <th>코드·대상</th>
+                <th>등록 사건</th>
+                <th>최근 등록 간격</th>
+                <th>간격 범위</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...groups].map(([key, items]) => {
+                const times = items
+                  .map((r) => Date.parse(str(r.occurred_at)))
+                  .sort((a, b) => a - b);
+                const gaps = times.slice(1).map((t, i) => t - times[i]);
+                return (
+                  <tr key={key}>
+                    <td>
+                      {key.endsWith('호스트 전체') ? (
+                        key
+                      ) : (
+                        <details>
+                          <summary>{key.split(' · ')[0]} · 같은 GPU</summary>
+                          {key}
+                        </details>
+                      )}
+                    </td>
+                    <td>{items.length}건</td>
+                    <td>{gaps.length ? intervalLabel(gaps[gaps.length - 1]) : '—'}</td>
+                    <td>
+                      {gaps.length
+                        ? `${intervalLabel(Math.min(...gaps))} ~ ${intervalLabel(Math.max(...gaps))}`
+                        : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="rca-history-table">
         <table className="rca-incident-table">
           <caption>
