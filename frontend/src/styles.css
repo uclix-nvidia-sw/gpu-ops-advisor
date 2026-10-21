@@ -5697,6 +5697,27 @@ body:has(dialog[open]) {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+.report-workspace .aggregate-interpretation .aggregate-advice-trial {
+  display: block;
+  margin-top: 0.875rem;
+  font-size: 0.875rem;
+  color: var(--accent, #176b55);
+}
+.report-workspace .aggregate-interpretation .aggregate-advice-windows {
+  margin: 0.75rem 0;
+}
+.report-workspace .aggregate-interpretation .aggregate-advice-windows > div {
+  grid-template-columns: 7rem minmax(0, 1fr);
+}
+.report-workspace .aggregate-interpretation .aggregate-advice-windows dd {
+  font-weight: 500;
+}
+@media (max-width: 480px) {
+  .report-workspace .aggregate-interpretation .aggregate-advice-windows > div {
+    grid-template-columns: 1fr;
+    gap: 0.125rem;
+  }
+}
 .report-workspace .aggregate-interpretation .aggregate-advice-scope {
   margin: 0.5rem 0;
   max-width: 70ch;

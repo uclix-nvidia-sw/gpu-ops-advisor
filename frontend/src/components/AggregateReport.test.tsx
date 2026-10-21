@@ -718,6 +718,8 @@ it.each([
                 {
                   fact_id: kind,
                   kind,
+                  period: { start: '2026-10-19T12:00:00Z', end: '2026-10-19T14:00:00Z' },
+                  reference_period: { start: '2026-10-19T10:00:00Z', end: '2026-10-19T12:00:00Z' },
                   target: { cluster_id: 'cpc-1', namespace: 'example' },
                   summary: `${decision} ${evidence}`,
                   summary_parts: { decision, evidence },
@@ -738,10 +740,97 @@ it.each([
   expect(visible.indexOf(decision)).toBeLessThan(visible.indexOf('<details'));
   expect(visible.indexOf(periods)).toBeGreaterThan(visible.indexOf('<details'));
   expect(html).toContain('구간 사이의 관측을 추정하지 않습니다.');
-  expect(html.includes('네임스페이스를 유지하고')).toBe(kind === 'relative_activity');
+  expect(html.includes('이미 지난 구간입니다.')).toBe(kind === 'relative_activity');
   if (kind === 'relative_activity') {
     expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-scope'));
     expect(html.indexOf('aggregate-advice-scope')).toBeLessThan(html.indexOf('<details'));
+    const firstView = html.slice(0, html.indexOf('<details'));
+    expect(firstView).toContain('시간대 비교 · 과거 관측');
+    expect(firstView).toContain('낮은 활동 구간');
+    expect(firstView).toContain('비교 구간');
+    expect(firstView.indexOf('<dt>비교 구간</dt>')).toBeLessThan(
+      firstView.indexOf('<dt>낮은 활동 구간</dt>'),
+    );
+    expect(firstView).toContain(
+      '제안 기준: 같은 날, 이 네임스페이스의 GPU 활동률이 비교 구간보다 낮았던 시간대입니다.',
+    );
+    expect(firstView).toContain('2026. 10. 19. 21:00:00');
+    expect(firstView).toContain('2026. 10. 19. 19:00:00');
+    expect(firstView).toContain('이미 지난 구간입니다.');
+    expect(firstView).toContain('가용 GPU를 추가로 확인해야 작업 시간 변경을 검토할 수 있습니다.');
+    expect(firstView).toContain('종료 시각 제외');
   }
   expect(html.indexOf('<code>example</code>')).toBeLessThan(html.indexOf(decision));
+});
+
+it.each([
+  ['relative_activity', undefined, undefined, 2],
+  ['relative_activity', { start: 'bad', end: 'bad' }, undefined, 2],
+  [
+    'relative_activity',
+    { start: '2026-10-20T01:00:00Z', end: '2026-10-20T00:00:00Z' },
+    undefined,
+    2,
+  ],
+  [
+    'schedule_candidate',
+    { start: '2026-10-20T00:00:00Z', end: '2026-10-20T02:00:00Z' },
+    undefined,
+    0,
+  ],
+  [
+    'schedule_candidate',
+    { start: '2026-10-19T20:00:00Z', end: '2026-10-19T22:00:00Z' },
+    undefined,
+    0,
+  ],
+  [
+    'schedule_candidate',
+    { start: '2026-10-19T14:00:09Z', end: '2026-10-19T16:00:17Z' },
+    undefined,
+    0,
+  ],
+])('keeps trial windows accurate (%s)', (kind, period, reference_period, unknownCount) => {
+  const value = {
+    quality: { report: { method: 'llm_interpreted' } },
+    narrative_status: 'complete',
+    topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+    narrative: [
+      {
+        topic_id: 'namespace_usage',
+        observation: '저장된 관측',
+        meaning: '원문을 바꾸지 않습니다.',
+        next_check: '조건 확인',
+        advice: [
+          {
+            fact_id: 'trial',
+            kind,
+            period,
+            reference_period,
+            target: { cluster_id: 'cpc-2', namespace: 'service' },
+            summary: '원문을 바꾸지 않습니다.',
+          },
+        ],
+      },
+    ],
+  };
+  const before = JSON.stringify(value);
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} />
+    </MemoryRouter>,
+  );
+  expect((html.match(/시간 범위 미확인/g) || []).length).toBe(unknownCount);
+  expect(html).toContain('원문을 바꾸지 않습니다.');
+  expect(html).toContain('시간대 비교 · 과거 관측');
+  expect(html.includes('<dt>비교 구간</dt>')).toBe(kind === 'relative_activity');
+  if (period?.start === '2026-10-19T20:00:00Z') {
+    expect(html).toContain('(2026. 10. 20. 05:00 ~ 07:00)');
+  }
+  if (period?.start === '2026-10-19T14:00:09Z') {
+    const text = html.replace(/<[^>]*>/g, '');
+    expect(text).toContain('2026. 10. 19. 23:00:09');
+    expect(text).toContain('2026. 10. 20. 01:00:17');
+  }
+  expect(JSON.stringify(value)).toBe(before);
 });

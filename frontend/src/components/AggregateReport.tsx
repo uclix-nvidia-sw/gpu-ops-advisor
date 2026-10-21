@@ -148,6 +148,13 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
     (`${decision} ${evidence}` === str(item.summary) ||
       `${decision}${evidence}` === str(item.summary));
   const target = obj(item.target);
+  const trial = ['relative_activity', 'schedule_candidate'].includes(str(item.kind));
+  const windows = trial
+    ? [
+        ...(item.kind === 'relative_activity' ? [['비교 구간', obj(item.reference_period)]] : []),
+        ['낮은 활동 구간', obj(item.period)],
+      ].map(([label, value]) => ({ label: str(label), period: obj(value) }))
+    : [];
   return (
     <li>
       {str(target.cluster_id) && str(target.namespace) ? (
@@ -166,13 +173,55 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
           </div>
         </dl>
       ) : null}
+      {trial ? <strong className="aggregate-advice-trial">시간대 비교 · 과거 관측</strong> : null}
       <p className="aggregate-advice-decision">
         <InterpretationText text={separated ? decision : str(item.summary)} />
       </p>
-      {['relative_activity', 'schedule_candidate'].includes(str(item.kind)) ? (
-        <p className="aggregate-advice-scope">
-          네임스페이스를 유지하고 작업 시작 시간대만 조정하는 제안입니다.
-        </p>
+      {trial ? (
+        <>
+          <p className="aggregate-advice-scope">
+            {item.kind === 'relative_activity'
+              ? '제안 기준: 같은 날, 이 네임스페이스의 GPU 활동률이 비교 구간보다 낮았던 시간대입니다.'
+              : '제안 기준: 이 네임스페이스의 GPU 활동률이 낮게 관측된 시간대입니다.'}
+          </p>
+          <dl className="aggregate-advice-target aggregate-advice-windows">
+            {windows.map(({ label, period }) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>
+                  {Number.isFinite(Date.parse(str(period.start))) &&
+                  Date.parse(str(period.end)) > Date.parse(str(period.start)) ? (
+                    <span
+                      title={`${reportRequestTime(str(period.start))} ～ ${reportRequestTime(str(period.end))} KST`}
+                    >
+                      (
+                      {new Intl.DateTimeFormat('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        ...(Date.parse(str(period.start)) % 60000 ||
+                        Date.parse(str(period.end)) % 60000
+                          ? { second: '2-digit' as const }
+                          : {}),
+                        hour12: false,
+                      }).formatRange(new Date(str(period.start)), new Date(str(period.end)))}
+                      )
+                    </span>
+                  ) : (
+                    '시간 범위 미확인'
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="aggregate-advice-scope">
+            관측일 기준 · KST · 종료 시각 제외. 이미 지난 구간입니다. 이후 같은 시간대의 반복성과
+            가용 GPU를 추가로 확인해야 작업 시간 변경을 검토할 수 있습니다.
+          </p>
+        </>
       ) : null}
       <details className="aggregate-advice-evidence">
         <summary>
