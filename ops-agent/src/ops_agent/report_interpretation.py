@@ -6,6 +6,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
+from .workload_context import context_for
 from .namespace_advice import (
     candidates,
     present_advice,
@@ -273,7 +274,16 @@ def payload_for(result):
                 selected, selection = writing_candidates(patterns)
                 if selected:
                     t["findings"] = [
-                        {**f, "decision": decision_context(f)} for f in selected
+                        {
+                            **f,
+                            "decision": decision_context(f),
+                            **(
+                                {"workload_context": context_for(f, namespace)}
+                                if namespace.get("workload_context")
+                                else {}
+                            ),
+                        }
+                        for f in selected
                     ]
                     t["selection"] = selection
                     t["omitted_findings"] = selection["omitted_count"]
@@ -727,14 +737,20 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "각 previous_summary의 오류만 고치세요. 운영 선택·이유와 대상·시간·필수 참조는 보존하되 오류로 지적된 표현은 바꾸세요. 첫 문장은 선택과 이유, 둘째 문장은 관측 근거로 쓰며 summary_start 복사로 되돌리지 마세요. 실제 값으로 풀어 쓰지 마세요. 확인 대상과 확인·대조·검토·점검 동사를 명시하세요. 살펴보라는 표현만으로는 점검 제안을 충족하지 못하므로 알맞은 점검 동사로 바꾸세요. 이전 오류 문장을 그대로 반환하지 마세요. 중복 토큰만 제거하되 운영 선택과 점검 제안은 삭제하지 마세요. writing_focus와 queue_context에 맞게 무엇을 왜 확인할지 쓰세요. section_repair는 지정한 주제만 fact_ids·observation·meaning·next_check로 보완하고 수치·대상·기간은 참조 토큰으로 남기세요. response_shape에 없는 항목·주제는 반환하지 마세요.",
+                "instruction": "각 previous_summary의 오류만 고치세요. 운영 선택·이유와 대상·시간·필수 참조는 보존하되 오류로 지적된 표현은 바꾸세요. 현상·확인할 대상·관측 근거 순서로 쓰세요. 관측만 남기지 마세요. 실제 값으로 풀어 쓰지 마세요. 확인 대상과 확인·대조·검토·점검 동사를 명시하세요. 살펴보라는 표현만으로는 점검 제안을 충족하지 못하므로 알맞은 점검 동사로 바꾸세요. 이전 오류 문장을 그대로 반환하지 마세요. 중복 토큰만 제거하되 운영 선택과 점검 제안은 삭제하지 마세요. writing_focus와 queue_context에 맞게 무엇을 왜 확인할지 쓰세요. section_repair는 지정한 주제만 fact_ids·observation·meaning·next_check로 보완하고 수치·대상·기간은 참조 토큰으로 남기세요. response_shape에 없는 항목·주제는 반환하지 마세요.",
                 "response_shape": {
                     **(
                         {
                             "advice": [
                                 {
                                     "fact_id": item["fact_id"],
-                                    "summary": "수정된 최종 운영 문장",
+                                    "summary": (
+                                        item["decision"]["option"]
+                                        + " "
+                                        + item["summary_start"]
+                                        if item.get("workload_context")
+                                        else "수정된 최종 운영 문장"
+                                    ),
                                 }
                                 for item in items
                             ]

@@ -1499,7 +1499,7 @@ def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, c
         {"findings": [fact]},
     )["advice"]
     assert "시간대별 관측 최대 대기" not in SYSTEM
-    assert "첫 문장은 어느 작업의 무엇을 왜 확인하거나 조정할지" in SYSTEM
+    assert "첫 문장은 관측 구간에 어떤 현상이 있었는지" in SYSTEM
     assert '"배치 조건", "메모리 유지 필요성"만으로 끝내지 말고' in SYSTEM
     if unscheduled == 2:
         focus = summary_context(fact)["writing_focus"]
