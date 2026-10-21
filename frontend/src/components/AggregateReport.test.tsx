@@ -745,20 +745,22 @@ it.each([
     expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-scope'));
     expect(html.indexOf('aggregate-advice-scope')).toBeLessThan(html.indexOf('<details'));
     const firstView = html.slice(0, html.indexOf('<details'));
-    expect(firstView).toContain('시간대 비교 · 과거 관측');
+    expect(firstView).toContain('작업 시작 시간 검토 · 과거 관측');
     expect(firstView).toContain('낮은 활동 구간');
     expect(firstView).toContain('비교 구간');
     expect(firstView.indexOf('<dt>비교 구간</dt>')).toBeLessThan(
       firstView.indexOf('<dt>낮은 활동 구간</dt>'),
     );
     expect(firstView).toContain(
-      '제안 기준: 같은 날, 이 네임스페이스의 GPU 활동률이 비교 구간보다 낮았던 시간대입니다.',
+      '앞으로 작업 일부를 시험할 시간대를 찾기 위한 비교입니다. 같은 날, 이 네임스페이스에서 GPU 활동률이 더 낮았던 구간을 보여줍니다.',
     );
     expect(firstView).toContain('2026. 10. 19. 21:00:00');
     expect(firstView).toContain('2026. 10. 19. 19:00:00');
     expect(firstView).toContain('이미 지난 구간입니다.');
-    expect(firstView).toContain('가용 GPU를 추가로 확인해야 작업 시간 변경을 검토할 수 있습니다.');
-    expect(firstView).toContain('종료 시각 제외');
+    expect(firstView).toContain(
+      '활동률이 낮은지와 사용 가능한 GPU를 확인한 뒤, 시작 시간을 바꿀 수 있는 작업 일부만',
+    );
+    expect(firstView).toContain('끝 시각은 포함하지 않습니다.');
   }
   expect(html.indexOf('<code>example</code>')).toBeLessThan(html.indexOf(decision));
 });
@@ -822,7 +824,7 @@ it.each([
   );
   expect((html.match(/시간 범위 미확인/g) || []).length).toBe(unknownCount);
   expect(html).toContain('원문을 바꾸지 않습니다.');
-  expect(html).toContain('시간대 비교 · 과거 관측');
+  expect(html).toContain('작업 시작 시간 검토 · 과거 관측');
   expect(html.includes('<dt>비교 구간</dt>')).toBe(kind === 'relative_activity');
   if (period?.start === '2026-10-19T20:00:00Z') {
     expect(html).toContain('(2026. 10. 20. 05:00 ~ 07:00)');

@@ -750,10 +750,30 @@ async def interpret_report(result, llm):
                                     "fact_ids": [
                                         item["topic"]["findings"][0]["fact_id"]
                                     ],
-                                    **{
-                                        field: "검증된 참조 토큰을 사용하는 한국어 설명"
-                                        for field in FIELDS
-                                    },
+                                    **(
+                                        {
+                                            "observation": "{{target:"
+                                            + item["topic"]["findings"][0]["fact_id"]
+                                            + "}} · {{period:"
+                                            + item["topic"]["findings"][0]["values"][0][
+                                                "metric_id"
+                                            ]
+                                            + "}}: {{value:"
+                                            + item["topic"]["findings"][0]["values"][0][
+                                                "metric_id"
+                                            ]
+                                            + "}}의 저장 관측입니다.",
+                                            "meaning": "저장된 관측만으로 현재 상태나 원인을 확정하지 않습니다.",
+                                            "next_check": "{{target:"
+                                            + item["topic"]["findings"][0]["fact_id"]
+                                            + "}}의 관측 기록과 기존 점검 기록을 대조하세요.",
+                                        }
+                                        if item["topic"]["findings"][0]["values"]
+                                        else {
+                                            field: "검증된 참조 토큰을 사용하는 한국어 설명"
+                                            for field in FIELDS
+                                        }
+                                    ),
                                 }
                                 for item in sections
                             ]
@@ -966,7 +986,7 @@ async def interpret_report(result, llm):
                 if (
                     repair is not None
                     and len(json.dumps(request_payload(), ensure_ascii=False).encode())
-                    >= 16_000
+                    >= 32_000
                 ):
                     diagnostic["reason"] = "interpretation_input_limit"
                     break

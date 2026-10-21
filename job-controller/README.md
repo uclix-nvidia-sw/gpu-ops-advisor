@@ -75,6 +75,12 @@ Agent의 evidence/candidate INSERT는 외래 키 검사 때문에 jobs 행에 KE
 
 공통 Worker Store는 대량 쓰기 뒤 커밋 직전의 짧은 최종 검증에만 공유 잠금을 사용한다. 이 변경은 JC와 두 Worker를 함께 반영해야 하며 JC → Worker 순서로 교체한다. DB migration·접수/결과 스키마·30초 lease·5초 heartbeat·격리 해제 기준은 변경하지 않는다. JC만 되돌리면 장시간 저장의 FK 잠금 대기가 다시 생길 수 있으므로 함께 검증한 버전 조합으로 복구한다.
 
+## Aggregate report token allowance
+
+The `report-aggregate-v1` default uses `attempt_budget: 65536` and `token_budget: 196608` across at most three attempts. The source example, embedded chart configuration and independent-worker preset match. Legacy report profiles and RCA retain their previous budgets. This is an upper allowance, not a request to generate that many tokens: the Worker still caps each synthesis output at its configured limit (default 16,384), charges observed usage and preserves deadlines and validation. The larger allowance leaves room for conservative UTF-8 input accounting and one interpretation repair; it does not guarantee model context capacity, latency or report acceptance.
+
+한국어: 종합 운영보고서 전용 1회 예산은 65,536토큰, 최대 3회 누적 예산은 196,608토큰입니다. 실제 출력 상한·시간 제한·검증 조건은 그대로이며 RCA와 기존 보고서 프로필은 바뀌지 않습니다. 운영의 `configuration.jobController` 전체 객체를 별도로 지정했다면 기존 설정에서 **이 프로필의 두 예산 값만** 함께 변경해야 합니다. 로컬 기본값 변경만으로 실행 중인 설정이나 저장된 Job의 예산이 바뀌지는 않습니다. 배포 시 실제 JC 설정과 새 Job의 예산을 확인해야 합니다.
+
 ## 추론 격리와 취소
 
 **2026-10-07 정책 변경:** 실패·취소·lease 만료·boot 교체로 attempt를 종료하면 원격 추론 종료 여부와 관계없이 실행 reservation을 `released`로 반환합니다. 원격 종료가 불명확하면 `job_attempts.remote_call_state=unknown`, `release_evidence`의 정책 사유와 `release_unconfirmed_slot` 감사 기록을 남깁니다. 감사 기록에는 이전 원격 상태를 보존합니다. 마지막 heartbeat의 `not_started` 또는 `terminated`도 만료 시점의 종료 증명이 아니므로 Sweep에서는 `unknown`으로 기록합니다.

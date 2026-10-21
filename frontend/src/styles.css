@@ -5662,7 +5662,8 @@ body:has(dialog[open]) {
 .report-workspace .aggregate-interpretation .aggregate-advice-decision {
   font-weight: 500;
   line-height: 1.75;
-  max-width: 70ch;
+  max-width: none;
+  text-wrap: wrap;
   margin: 0.875rem 0 0.5rem;
 }
 .report-workspace .aggregate-interpretation .aggregate-advice-target {
@@ -5711,6 +5712,12 @@ body:has(dialog[open]) {
 }
 .report-workspace .aggregate-interpretation .aggregate-advice-windows dd {
   font-weight: 500;
+  white-space: normal;
+  text-wrap: wrap;
+}
+.aggregate-advice-window-time {
+  display: inline-block;
+  max-width: 100%;
 }
 @media (max-width: 480px) {
   .report-workspace .aggregate-interpretation .aggregate-advice-windows > div {
@@ -5720,7 +5727,8 @@ body:has(dialog[open]) {
 }
 .report-workspace .aggregate-interpretation .aggregate-advice-scope {
   margin: 0.5rem 0;
-  max-width: 70ch;
+  max-width: none;
+  text-wrap: wrap;
   font-size: 12px;
   line-height: 1.65;
 }

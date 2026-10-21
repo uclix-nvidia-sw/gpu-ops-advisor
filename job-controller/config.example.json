@@ -48,8 +48,8 @@
     },
     "report-aggregate-v1": {
       "max_attempts": 3,
-      "token_budget": 98304,
-      "attempt_budget": 32768,
+      "token_budget": 196608,
+      "attempt_budget": 65536,
       "lease_seconds": 30,
       "heartbeat_seconds": 5,
       "retry_seconds": 5,

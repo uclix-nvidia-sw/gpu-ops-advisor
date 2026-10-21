@@ -1,4 +1,5 @@
 from copy import deepcopy
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -152,7 +153,7 @@ async def test_oversized_topic_repair_keeps_original_input_limit_and_fallback(
     repair_case,
 ):
     result, invalid = repair_case
-    invalid["sections"][1]["observation"] = "x" * 17_000
+    invalid["sections"][1]["observation"] = "x" * 33_000
     original = deepcopy(result["topics"])
     llm = AsyncMock(configured=True)
     llm.complete.return_value = invalid
@@ -160,3 +161,26 @@ async def test_oversized_topic_repair_keeps_original_input_limit_and_fallback(
     assert result["narrative_status"] == "failed"
     assert result["quality"]["report"]["reason"] == "interpretation_input_limit"
     assert result["topics"] == original and llm.complete.call_count == 1
+
+
+async def test_mixed_repair_above_legacy_limit_preserves_all_context(repair_case):
+    result, valid = repair_case
+    invalid = deepcopy(valid)
+    invalid["sections"][1]["observation"] = "x" * 17_000
+    original = deepcopy(result["topics"])
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"sections": [valid["sections"][1]]}]
+    await interpret_report(result, llm)
+    request = llm.complete.call_args.args[1]
+    assert 16_000 < len(json.dumps(request, ensure_ascii=False).encode()) < 32_000
+    offered = payload_for(result)["topics"][1]["findings"]
+    assert request["section_repair"][0]["topic"]["findings"] == [
+        {k: f[k] for k in ("fact_id", "target", "values", "text")} for f in offered
+    ]
+    example = request["response_shape"]["sections"][0]
+    assert "{{target:" in example["observation"]
+    assert (
+        "{{period:" in example["observation"] and "{{value:" in example["observation"]
+    )
+    assert result["quality"]["report"]["reason"] == "repaired"
+    assert result["topics"] == original and llm.complete.call_count == 2

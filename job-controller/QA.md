@@ -117,3 +117,5 @@ Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops
 - 사건·알림(Incident)은 아직 미연결이며 Report/RCA Agent도 실행하지 않음. 테스트 작업은 취소 상태로 보존하고 기존 정기 일정의 일시 정지를 유지함.
 
 브라우저는 `/settings/backend` 연결 확인 화면으로 남겨 두었습니다.
+
+Local aggregate-budget check (2026-10-21, `4da30ae` + working tree): report-aggregate-v1 defaults/examples/preset use 65,536 per attempt and 196,608 total. Other profiles and three-attempt limit are unchanged. JC, Backend and Incident vet/race/build passed; chart contracts and 23 CI tooling tests passed. Backend HTTP tests required local listener permission. No production configuration was applied; Eight isolated PostgreSQL + Backend/JC/Ops/MCP process E2E cases passed for scheduled/manual intake, repair, publication and fallback; upstream Grafana/LLM were fixtures. Existing custom-values migration and production publication were not exercised.
