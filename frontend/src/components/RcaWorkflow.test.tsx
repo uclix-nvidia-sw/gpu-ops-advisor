@@ -382,3 +382,19 @@ it.each(['complete', 'failed', 'skipped'])(
     expect(html).not.toContain('선택적 문장 정렬 LLM');
   },
 );
+
+it('shows one collection plan without required-versus-optional query grading', () => {
+  const html = renderToStaticMarkup(
+    <RcaWorkflowRecord
+      record={{
+        query_id: 'investigation_plan',
+        snapshot: { planned_queries: ['D09', 'D47'], allowed_queries: ['D09', 'D47'] },
+      }}
+      onEvidence={() => {}}
+    />,
+  );
+  expect(html).toContain('이번 수집 계획');
+  expect(html).toContain('D47');
+  expect(html).not.toContain('반드시 확인할 조회');
+  expect(html).not.toContain('허용됐다고 모두 실행하는 것은 아닙니다');
+});

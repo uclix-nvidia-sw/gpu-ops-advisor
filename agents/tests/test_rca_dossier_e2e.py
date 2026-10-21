@@ -100,6 +100,8 @@ def test_dossier_host_history_survives_real_publication(
         for q, status in evidence
         if q in book["content"]["required_queries"]
     ), evidence
+    assert "analysis_review" not in {q for q, status in evidence}
+    assert result["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
     assert result["narrative"]
     (LOCAL / ("published-dossier-" + kind + ".json")).write_text(
         json.dumps(result, ensure_ascii=False), encoding="utf-8"

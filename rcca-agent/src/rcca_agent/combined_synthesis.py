@@ -56,9 +56,22 @@ and feedback are not evidence. Validation feedback concerns response structure."
 
 
 def author_prompt(payload):
+    planned = "incident_comparison" in payload
+    combined = COMBINED
+    if planned:
+        # A completed collection is report input, not a request for another verdict.
+        for obsolete in (
+            "State needed confirmation in limitations; the orchestrator controls bounded follow-up.",
+            "If review_feedback is supplied, revise unsupported claims against original evidence;\n"
+            "feedback is not evidence. An empty hypotheses list with accurate limitations is valid.",
+            "Explain alert_match/evidence_gap code results, not as unknowns.",
+            "Review feedback requests one revised analysis using original sources; previous claims\n"
+            "and feedback are not evidence. Validation feedback concerns response structure.",
+        ):
+            combined = combined.replace(obsolete, "")
     return (
-        (TRIAGE_CONTEXT if "incident_comparison" in payload else "")
-        + COMBINED
+        (TRIAGE_CONTEXT if planned else "")
+        + combined
         + (
             CRITERIA_PROMPT
             + "\nIn this combined response, criterion_assessments belongs only inside "

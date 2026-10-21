@@ -6,8 +6,7 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
   rca_result_frozen: {
     title: '보고서용 RCA 근거 자료 고정',
     actor: '코드',
-    purpose:
-      '확인 사실·채택 및 보류·평가·종료 이유를 구조화해 고정합니다. RCA 자체를 보고서 문장으로 다시 쓰지 않습니다.',
+    purpose: '관측·분석·권고 자료와 근거 참조를 고정하여 보고서 작성 전후의 변경을 검사합니다.',
   },
   report_assembly: {
     title: '최종 보고서 작성',
@@ -49,6 +48,21 @@ export const rcaStages: Record<string, { title: string; actor: string; purpose: 
 export function stageForRecord(record: Row, related: Row[] = []) {
   const kind = str(record.query_id);
   const body = { ...obj(record.quality), ...obj(record.snapshot) };
+  if (body.workflow === 'single_collection') {
+    const current: Record<string, { title: string; actor: string; purpose: string }> = {
+      rca_synthesis: {
+        title: '관측 자료 분석',
+        actor: '작성 LLM',
+        purpose: '수집된 로그·메트릭·host 이력을 함께 읽고 근거에 연결된 분석을 작성합니다.',
+      },
+      rca_analysis_draft: {
+        title: '분석·권고 자료 저장',
+        actor: '코드',
+        purpose: '형식과 근거 참조를 검사한 분석에 런북 권고를 연결하고 입력과 결과를 보존합니다.',
+      },
+    };
+    if (current[kind]) return current[kind];
+  }
   const combined = body.generation_mode === 'combined';
   const sent = Number(obj(body.usage).request_attempts) > 0 || Number(obj(body.usage).calls) > 0;
   if (kind === 'report_assembly' && obj(body.report).presentation === 'rca-material/1')
@@ -440,8 +454,8 @@ export function RcaEvaluationTrace({
   const stages = items.filter((r) => rcaStages[str(r.query_id)]);
   if (!stages.length) return null;
   return (
-    <section aria-label="RCA 평가 실행 흐름">
-      <h3>평가 실행 흐름</h3>
+    <section aria-label="RCA 처리 흐름">
+      <h3>RCA 처리 흐름</h3>
       <p>
         현재 불러온 기록 순서입니다. LLM 표시는 단계의 담당이며 실제 호출 여부는 호출 횟수·실행
         상태로 확인하세요. D 번호는 조회 식별자이며 실행 순번이 아닙니다.

@@ -93,7 +93,10 @@ export function RcaNarrative({
   evaluationExpanded?: boolean;
   onEvidence?: (id: string) => void;
 }) {
-  if (obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1') {
+  if (
+    obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1' ||
+    obj(obj(result.quality).analysis).workflow === 'single_collection'
+  ) {
     return <RcaOperatorReport result={result} onEvidence={onEvidence} />;
   }
   const evaluation = obj(obj(result.quality).rca_evaluation);

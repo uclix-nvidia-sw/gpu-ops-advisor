@@ -711,6 +711,17 @@ function StoredOutcome({ record }: { record: Row }) {
         </>
       );
     case 'investigation_plan':
+      if (Array.isArray(body.planned_queries)) {
+        return (
+          <p>
+            이번 수집 계획:{' '}
+            {strings(body.planned_queries)
+              .map((q) => `${queryName(q)} (${q})`)
+              .join(' · ') || '조회 대상 없음'}
+            . 각 조회의 실행 결과는 수집 기록에서 확인합니다.
+          </p>
+        );
+      }
       return (
         <>
           <p>

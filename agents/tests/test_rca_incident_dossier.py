@@ -189,3 +189,105 @@ def test_metric_comparison_keeps_scope_gaps_and_counter_semantics():
     text = str(dossier_summary(data, [logs, metric], comparison))
     assert "최소 2" not in text
     assert "측정 기록을 확보하지 못했습니다" in text
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+@pytest.mark.parametrize("failure", [None, "length"])
+async def test_single_collection_has_author_and_writer_without_critic(
+    kind, failure, monkeypatch
+):
+    from rca_replay_cases import reply
+    from rcca_agent import evaluation, workflow
+
+    def obsolete(*args, **kwargs):
+        raise AssertionError(
+            "single-collection RCA invoked an obsolete evaluation stage"
+        )
+
+    for name in (
+        "assess_policies",
+        "finish_assessment",
+        "model_assessment",
+        "rule_followup",
+        "choose_followup",
+    ):
+        monkeypatch.setattr(workflow, name, obsolete)
+    for name in ("review_analysis", "reserve_review_budget", "interpret_evidence"):
+        monkeypatch.setattr(evaluation, name, obsolete)
+
+    case = dossier_case(kind)
+    case["token_budget"] = 131072
+    case["empty_unscripted_queries"] = True
+    case["attempt"]["profile"].setdefault("rca", {})["generation_mode"] = "separate"
+    author = {
+        "interpretation": {
+            "findings": [
+                {
+                    "id": "observed-report",
+                    "statement": "The node reported an error.",
+                    "kind": "observed",
+                    "evidence_refs": {"$input": "/observation_refs"},
+                }
+            ],
+            "unknowns": [],
+            "conflicts": [],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "limitations": [],
+    }
+    response = reply(author)
+    if failure:
+        response["finish_reason"] = failure
+    case["responses"]["synthesis"] = [response]
+    case["responses"].pop("analysis_review", None)
+    result = await replay(case)
+    output = result["output"]
+    assert not result["missing_inputs"]
+    stages = [call["stage"] for call in result["model_calls"]]
+    assert stages == ["synthesis", "report_writing"]
+    assert not any(
+        e["query_id"]
+        in {"analysis_review", "evidence_evaluation", "investigation_plan_extension"}
+        for e in output["evidence"]
+    )
+    analysis = output["result"]["quality"]["analysis"]
+    assert analysis["workflow"] == "single_collection"
+    assert "sufficiency" not in analysis and "evidence_evaluation" not in analysis
+    assert analysis["followups"] == 0
+    assert "review_feedback" not in result["model_calls"][0]["input"]
+    assert "decision_assessment" not in result["model_calls"][0]["input"]
+    review = output["result"]["quality"]["rca_evaluation"]["review"]
+    assert review["reason"] == "not_requested"
+    assert review["verdict"] is None and review["evidence_refs"] == []
+    author_record = next(
+        e for e in output["evidence"] if e["query_id"] == "rca_synthesis"
+    )
+    assert "budget_allocation" not in author_record["snapshot"]["diagnostics"]
+    assert author_record["snapshot"]["status"] == ("failed" if failure else "complete")
+    assert "review" not in result["model_calls"][-1]["input"]
+    narrative = str(output["result"]["narrative"])
+    assert "분석 품질 검토" not in narrative
+    assert "조사 종료 이유" not in narrative
+    assert "독립 품질 검토" not in narrative
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_single_collection_conflicting_target_does_not_reenter_legacy_review(
+    kind,
+):
+    case = dossier_case(kind)
+    case["token_budget"] = 0
+    case["attempt"]["claim"]["input"]["target"].update(
+        node="node-1", k8s_node_name="different-node"
+    )
+    result = await replay(case)
+    assert result["query_calls"] == []
+    evidence = result["output"]["evidence"]
+    assert not any(
+        e["query_id"] in {"analysis_review", "evidence_evaluation"} for e in evidence
+    )
+    output = result["output"]["result"]
+    assert output["quality"]["analysis"]["workflow"] == "single_collection"
+    assert "target_identity_conflict" in output["missing_inputs"]
+    assert output["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"

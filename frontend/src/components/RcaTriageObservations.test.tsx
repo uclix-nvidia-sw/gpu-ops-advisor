@@ -44,6 +44,7 @@ it('leads with the incident and recommendations, keeps comparisons and evaluatio
   const html = renderToStaticMarkup(<RcaNarrative result={result} />);
   expect(html.indexOf('1. 사건 요약')).toBeLessThan(html.indexOf('2. 분석 결과'));
   expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('사건 로그와 관련 지표'));
+  expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('기록에 근거한 결론'));
   expect(html).not.toContain('분석 처리:');
   expect(html.indexOf('사건 로그와 관련 지표')).toBeLessThan(html.indexOf('5. 조사'));
   expect(html).toContain('<summary>비교 상세</summary>');

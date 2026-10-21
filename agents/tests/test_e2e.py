@@ -2293,6 +2293,27 @@ def runbook_limits(stack):
             )
 
 
+@contextlib.contextmanager
+def runbook_publications(stack):
+    """Do not let a failed RCA catalog test alter subsequent fixture routing."""
+    with psycopg.connect(stack["url"]) as conn:
+        original = [
+            str(row[0])
+            for row in conn.execute(
+                "SELECT id FROM knowledge_revisions WHERE state='published'"
+            ).fetchall()
+        ]
+    try:
+        yield
+    finally:
+        with psycopg.connect(stack["url"]) as conn:
+            conn.execute(
+                "UPDATE knowledge_revisions SET state='retired' "
+                "WHERE state='published' AND id <> ALL(%s::uuid[])",
+                (original,),
+            )
+
+
 @pytest.mark.e2e
 def test_runbook_api_lifecycle_and_real_rca_consumption(stack, monkeypatch):
     # This lifecycle test publishes the current catalog, including the SXid plan.
@@ -2329,7 +2350,11 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack, monkeypatch):
         "runbook-backend",
     )
     wait_http(backend + "/health/ready", process)
-    with runbook_limits(stack), httpx.Client(base_url=backend, timeout=30) as client:
+    with (
+        runbook_limits(stack),
+        runbook_publications(stack),
+        httpx.Client(base_url=backend, timeout=30) as client,
+    ):
         # The complete corpus must fit the existing API and schema without publication.
         pilots = {"RB-XID-79", "RB-XID-48-63-64", "RB-SXID-11001"}
         bulk = LOCAL / ("catalog-" + uuid4().hex)
@@ -2483,7 +2508,7 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack, monkeypatch):
                 incident_time="2026-09-15T00:15:00Z",
                 time_range=PERIOD,
                 purpose_ids=["R01"],
-                target={"gpu_uuid": "GPU-1"},
+                target={"node": "node-1", "gpu_uuid": "GPU-1"},
             )
             snapshot = {
                 "input": data,

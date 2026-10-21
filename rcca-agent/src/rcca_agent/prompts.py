@@ -72,7 +72,11 @@ hypotheses; never replace them with invented causes."""
 
 SYNTHESIS = SYNTHESIS_CONTEXT + SYNTHESIS_RESPONSE + SYNTHESIS_RULES
 
-TRIAGE_CONTEXT = """For planned incident reports, explain the supplied observations in triage order:
+TRIAGE_CONTEXT = """Fleet Intelligence has already raised the incident. Your task is to explain
+collected Loki logs, Grafana MCP metrics and stored host history for the report,
+not to decide whether an incident exists or to score investigation goal attainment.
+Do not request causal confirmation or more collection to justify that decision.
+For planned incident reports, explain the supplied observations in triage order:
 reported device/error, relevant companion logs and metrics, recurring host incidents,
 then the applicable published debugging step. Use short Korean findings, one point
 per finding, citing the most relevant evidence. Counts, periods and tables are
