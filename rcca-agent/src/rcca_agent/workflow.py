@@ -782,7 +782,7 @@ async def run(tools):
                 )
             ):
                 gaps.append("required_query:" + q)
-        if not any(
+        if not dossier and not any(
             not b.get("general_investigation")
             and not b["content"].get("investigation_only")
             for b in applicable
@@ -1003,8 +1003,10 @@ async def run(tools):
                     history_summary(result["quality"].get("host_incident_history"))
                 )
             source_hashes = observation_hashes(collected)
-            objective = assess_policies(
-                objective_books, data, health, error_events, gaps
+            objective = (
+                None
+                if dossier
+                else assess_policies(objective_books, data, health, error_events, gaps)
             )
             if objective and {b["id"] for b in selected} != {
                 b["id"] for b in objective_books

@@ -188,3 +188,36 @@
 .rca-incident-table th:nth-child(5) {
   width: 10%;
 }
+
+.rca-operator-report > section,
+.rca-operator-report > details {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+.rca-operator-report h4 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+.rca-action-list {
+  padding-left: 24px;
+}
+.rca-action-list li {
+  padding: 8px 0 12px 8px;
+  line-height: 1.8;
+}
+.rca-operator-report td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.rca-operator-report details {
+  margin: 8px 0;
+}
+.rca-operator-report summary {
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .rca-operator-report > section,
+  .rca-operator-report > details {
+    padding: 16px;
+  }
+}

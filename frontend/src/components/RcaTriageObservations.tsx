@@ -10,6 +10,16 @@ export function RcaTriageObservations({
 }) {
   const view = obj(obj(result.quality).triage_observations);
   if (view.schema !== 'rca-triage-observations/1') return null;
+  // Collapse only identical summaries; retain each GPU and its original evidence.
+  const groups = new Map<string, Row[]>();
+  for (const metric of rows(view.metrics)) {
+    const key = JSON.stringify(
+      ['name', 'unit', 'min', 'max', 'last_value', 'first', 'last', 'samples'].map(
+        (field) => metric[field],
+      ),
+    );
+    groups.set(key, [...(groups.get(key) || []), metric]);
+  }
   const period = obj(view.period);
   const target = obj(view.target);
   const links = (value: unknown) =>
@@ -22,7 +32,7 @@ export function RcaTriageObservations({
       : null;
   return (
     <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
-      <h4>{str(target.node) || str(target.machine_id)} · 사건 로그와 관련 지표</h4>
+      <h4>3. 관련 로그·메트릭 · {str(target.node) || str(target.machine_id)}</h4>
       <p>
         {formatDate(str(period.start))} ~ {formatDate(str(period.end))}
       </p>
@@ -75,31 +85,71 @@ export function RcaTriageObservations({
               <tr>
                 <th>지표·단위</th>
                 <th>GPU</th>
-                <th>최소 ~ 최대</th>
-                <th>마지막 값</th>
+                <th>조회 구간의 관측 결과</th>
                 <th>관측 시각·표본</th>
               </tr>
             </thead>
             <tbody>
-              {rows(view.metrics).map((m, i) => (
-                <tr key={i}>
-                  <td>
-                    {str(m.name)}
-                    <br />
-                    {str(m.unit)}
-                  </td>
-                  <td>{str(m.gpu_uuid)}</td>
-                  <td>
-                    {num(m.min)} ~ {num(m.max)}
-                  </td>
-                  <td>{num(m.last_value)}</td>
-                  <td>
-                    {formatDate(str(m.first))} ~ {formatDate(str(m.last))}
-                    <br />
-                    {num(m.samples)}개 {links(m.evidence_refs)}
-                  </td>
-                </tr>
-              ))}
+              {[...groups.values()].map((group, i) => {
+                const m = group[0];
+                return (
+                  <tr key={i}>
+                    <td>
+                      {str(m.name)}
+                      <br />
+                      {m.unit === 'bytes_per_second'
+                        ? 'B/s'
+                        : m.unit === 'enum'
+                          ? '상태 코드'
+                          : str(m.unit)}
+                    </td>
+                    <td>
+                      {group.length === 1 ? (
+                        <details>
+                          <summary>대상 GPU</summary>
+                          {str(m.gpu_uuid)}
+                        </details>
+                      ) : (
+                        <details>
+                          <summary>GPU {group.length}개 · 동일 관측값</summary>
+                          {group.map((item, index) => (
+                            <p key={index}>
+                              {str(item.gpu_uuid)} {links(item.evidence_refs)}
+                            </p>
+                          ))}
+                        </details>
+                      )}
+                    </td>
+                    <td>
+                      {typeof m.min !== 'number' || typeof m.max !== 'number' ? (
+                        '수치 표본 없음'
+                      ) : m.unit === 'enum' || m.unit === 'state' ? (
+                        m.min === m.max ? (
+                          `상태 코드 ${m.min} · 관측 내 변화 없음`
+                        ) : (
+                          '여러 상태 코드 관측 · 원문에서 전환 확인'
+                        )
+                      ) : typeof m.min !== 'number' || typeof m.max !== 'number' ? (
+                        '수치 표본 없음'
+                      ) : m.min === m.max ? (
+                        `수집된 표본 모두 ${m.min} ${str(m.unit) === 'bytes_per_second' ? 'B/s' : str(m.unit)}`
+                      ) : (
+                        <>
+                          관측 범위 {m.min} ~ {m.max}{' '}
+                          {str(m.unit) === 'bytes_per_second' ? 'B/s' : str(m.unit)}
+                          <br />
+                          마지막 표본 {String(m.last_value ?? '—')}
+                        </>
+                      )}
+                    </td>
+                    <td>
+                      {formatDate(str(m.first))} ~ {formatDate(str(m.last))}
+                      <br />
+                      {num(m.samples)}개 {links(m.evidence_refs)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

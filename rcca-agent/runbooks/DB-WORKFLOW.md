@@ -276,7 +276,7 @@ python -m rcca_agent.runbook_admin retire "$RcaPrefix-published.json" --profile 
 
 ## 조사 완료 기준 1.1
 
-XID 79·SXID 11001 작성 원본은 `decision_policy`를 포함한다. 목적은 대상·기간의 오류 **보고 식별**이다. 원인 확정·현재 건강·복구·장비 조치 승인 조건을 완화하지 않는다. 기존 발행본을 덮어쓰지 않고 이 문서의 새 draft → request → approve → publish 절차를 사용한다. 코드 배포만으로 DB 지침이 바뀌지 않는다.
+XID 79·SXID 11001의 현재 작성 원본은 단일 observation plan을 사용하므로 `decision_policy`와 goal을 포함하지 않는다. Worker는 이 경로에서 과거 발행본의 goal 정책도 반복 조회·종료 평가에 사용하지 않으며 `causal_confirmation_evidence`를 자동 누락 항목으로 추가하지 않는다. 아래 1.1 정책 절차는 과거 발행본 호환 설명이다. 새 발행은 위의 전체 content 교체 절차를 사용하고, Worker 배포 후 새 draft → request → approve → publish 순서로 진행한다.
 
 ### 구 발행본의 D09 목적 종료 경로 (호환성 참고)
 
