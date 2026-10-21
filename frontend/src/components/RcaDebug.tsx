@@ -485,9 +485,10 @@ export function RcaResult({
             evaluationExpanded={evaluationExpanded}
             onEvidence={onEvidence}
           />
-          {obj(obj(result.quality).triage_observations).schema !== 'rca-triage-observations/1' && (
-            <RcaObservations result={result} onEvidence={onEvidence} />
-          )}
+          {obj(obj(result.quality).triage_observations).schema !== 'rca-triage-observations/1' &&
+            obj(obj(result.quality).analysis).workflow !== 'single_collection' && (
+              <RcaObservations result={result} onEvidence={onEvidence} />
+            )}
           {showEvidence && (
             <RcaEvidence
               key={str(job.result_ref)}
@@ -501,20 +502,21 @@ export function RcaResult({
             <h3>분석 요약</h3>
             <dl className="details">
               {obj(obj(result.quality).triage_observations).schema !==
-                'rca-triage-observations/1' && (
-                <>
-                  <dt>기존 요건 충족 상태</dt>
-                  <dd>
-                    <Badge status={str(result.result_status) || null} />
-                  </dd>
-                  <dt>근거 평가 판단</dt>
-                  <dd>
-                    <RcaReason
-                      value={obj(analysis.evidence_evaluation).decision ?? analysis.sufficiency}
-                    />
-                  </dd>
-                </>
-              )}
+                'rca-triage-observations/1' &&
+                obj(obj(result.quality).analysis).workflow !== 'single_collection' && (
+                  <>
+                    <dt>기존 요건 충족 상태</dt>
+                    <dd>
+                      <Badge status={str(result.result_status) || null} />
+                    </dd>
+                    <dt>근거 평가 판단</dt>
+                    <dd>
+                      <RcaReason
+                        value={obj(analysis.evidence_evaluation).decision ?? analysis.sufficiency}
+                      />
+                    </dd>
+                  </>
+                )}
               <dt>수집 종료 사유</dt>
               <dd>
                 {(

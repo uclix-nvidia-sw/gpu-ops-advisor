@@ -318,3 +318,24 @@ it('omits historical critic prose from the operator report without mutating evid
   expect(html).toContain('런북 대응 지침');
   expect(JSON.stringify(result)).toBe(before);
 });
+
+it('keeps a single-collection report free of evaluation even when no observations were collected', () => {
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        quality: {
+          analysis: { workflow: 'single_collection' },
+          rca_evaluation: { review: { execution_status: 'skipped', reason: 'not_requested' } },
+        },
+        narrative: [
+          { id: 'problem', title: '발생 내용', text: '대상 정보 충돌' },
+          { id: 'action', text: '런북 권고' },
+        ],
+      }}
+    />,
+  );
+  expect(html).toContain('RCA 장애 보고서');
+  expect(html).not.toContain('분석 처리:');
+  expect(html).not.toContain('수집·증거 해석·분석 품질');
+  expect(html).toContain('런북 권고');
+});
