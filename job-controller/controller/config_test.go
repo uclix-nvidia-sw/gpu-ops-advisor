@@ -23,3 +23,20 @@ func TestReportCriteriaProfile(t *testing.T) {
 		t.Fatal("report criteria must not apply to RCA")
 	}
 }
+
+// Only aggregate reports need the larger interpretation/repair allowance.
+func TestAggregateBudgetPreservesOtherProfiles(t *testing.T) {
+	c := DefaultConfig()
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for name, p := range c.Execution {
+		attempt, total := 32768, 98304
+		if name == "report-aggregate-v1" {
+			attempt, total = 65536, 196608
+		}
+		if p.AttemptBudget != attempt || p.TokenBudget != total || p.MaxAttempts != 3 {
+			t.Fatalf("%s: unexpected budget/attempts: %+v", name, p)
+		}
+	}
+}

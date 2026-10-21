@@ -7,7 +7,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 from test_namespace_advice import completed_topic, topic
-from ops_agent.namespace_advice import candidates, summary_context, validate_advice
+from ops_agent.namespace_advice import (
+    candidates,
+    summary_context,
+    validate_advice,
+)
 from ops_agent.report_interpretation import interpret_report, payload_for
 
 NEW = {"repeated_activity", "relative_activity"}
@@ -336,8 +340,9 @@ def test_relative_trial_wording_preserves_candidates_and_validation():
     choice = decision_context(fact)
     assert "시험 후보" in SYSTEM
     assert "확정 권고" in SYSTEM
-    assert "시범 실행 후보로만 검토" in choice["option"]
-    assert "시작 시간을 조정할 수 있는" in choice["option"]
+    assert "시범 실행을 검토" in choice["option"]
+    assert "앞으로" in choice["option"]
+    assert "시작 시간 조정" in choice["option"]
     summary = choice["option"] + " " + summary_context(fact)["summary_start"]
     accepted = validate_advice(
         {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},

@@ -173,7 +173,9 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
           </div>
         </dl>
       ) : null}
-      {trial ? <strong className="aggregate-advice-trial">시간대 비교 · 과거 관측</strong> : null}
+      {trial ? (
+        <strong className="aggregate-advice-trial">작업 시작 시간 검토 · 과거 관측</strong>
+      ) : null}
       <p className="aggregate-advice-decision">
         <InterpretationText text={separated ? decision : str(item.summary)} />
       </p>
@@ -181,8 +183,8 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
         <>
           <p className="aggregate-advice-scope">
             {item.kind === 'relative_activity'
-              ? '제안 기준: 같은 날, 이 네임스페이스의 GPU 활동률이 비교 구간보다 낮았던 시간대입니다.'
-              : '제안 기준: 이 네임스페이스의 GPU 활동률이 낮게 관측된 시간대입니다.'}
+              ? '앞으로 작업 일부를 시험할 시간대를 찾기 위한 비교입니다. 같은 날, 이 네임스페이스에서 GPU 활동률이 더 낮았던 구간을 보여줍니다.'
+              : '앞으로 작업 일부를 시험할 시간대를 찾기 위한 참고 자료입니다. 이 네임스페이스에서 GPU 활동률이 낮았던 구간을 보여줍니다.'}
           </p>
           <dl className="aggregate-advice-target aggregate-advice-windows">
             {windows.map(({ label, period }) => (
@@ -192,6 +194,7 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
                   {Number.isFinite(Date.parse(str(period.start))) &&
                   Date.parse(str(period.end)) > Date.parse(str(period.start)) ? (
                     <span
+                      className="aggregate-advice-window-time"
                       title={`${reportRequestTime(str(period.start))} ～ ${reportRequestTime(str(period.end))} KST`}
                     >
                       (
@@ -218,8 +221,9 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
             ))}
           </dl>
           <p className="aggregate-advice-scope">
-            관측일 기준 · KST · 종료 시각 제외. 이미 지난 구간입니다. 이후 같은 시간대의 반복성과
-            가용 GPU를 추가로 확인해야 작업 시간 변경을 검토할 수 있습니다.
+            과거 관측 · KST · 끝 시각은 포함하지 않습니다. 이미 지난 구간입니다. 이후 같은
+            시간대에도 활동률이 낮은지와 사용 가능한 GPU를 확인한 뒤, 시작 시간을 바꿀 수 있는 작업
+            일부만 시험할지 판단하세요.
           </p>
         </>
       ) : null}

@@ -2134,3 +2134,41 @@ def test_required_completion_is_covered_without_forcing_it_to_the_first_bullet()
     assert selected[0] == trial
     assert batch in selected
     assert audit["required_batch_fact_id"] == batch["fact_id"]
+
+
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_completed_job_writing_example_remains_valid_with_each_pending_stage(phase):
+    t = completed_topic()
+    for hour in t["workloads"][0]["hours"]:
+        hour.update(pending_peak=2, pending_samples=240)
+        if phase != "unknown":
+            hour.update(
+                unscheduled_peak=2 if phase == "placement" else 0,
+                unscheduled_samples=240,
+            )
+    before = deepcopy(t)
+    fact = next(f for f in candidates(t) if f["kind"] == "batch_progress")
+    item = {
+        "fact_id": fact["fact_id"],
+        "summary": decision_context(fact)["option"]
+        + " "
+        + summary_context(fact)["summary_start"],
+    }
+    assert "작업 유형" in item["summary"]
+    assert validate_advice({"advice": [item]}, {"findings": [fact]})["advice"]
+    assert t == before
+
+
+def test_partial_queue_writing_example_starts_with_the_missing_evidence():
+    fact = next(
+        f for f in candidates(topic(samples=200)) if f["kind"] == "schedule_candidate"
+    )
+    context = decision_context(fact)
+    assert context["scope"] == "targeted_check"
+    assert "대기 상태는 미확인" in context["option"]
+    assert "확인한 뒤" in context["option"]
+    summary = context["option"] + " " + summary_context(fact)["summary_start"]
+    assert validate_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
+        {"findings": [fact]},
+    )["advice"]
