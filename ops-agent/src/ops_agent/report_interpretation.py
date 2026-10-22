@@ -14,6 +14,7 @@ from .namespace_advice import (
     MAX_ADVICE,
     writing_candidates,
     validate_advice,
+    SummaryTokenError,
     summary_context,
     VALUE_MEANINGS,
     SYSTEM as ADVICE_SYSTEM,
@@ -748,8 +749,6 @@ async def interpret_report(result, llm):
                                         item["decision"]["option"]
                                         + " "
                                         + item["summary_start"]
-                                        if item.get("workload_context")
-                                        else "수정된 최종 운영 문장"
                                     ),
                                 }
                                 for item in items
@@ -890,12 +889,12 @@ async def interpret_report(result, llm):
         diagnostic["reason"] = "interpretation_input_limit"
         return
 
-    def record_failure(attempt, reason):
+    def record_failure(attempt, reason, **details):
         # Persist only bounded codes; upstream text can contain credentials or evidence.
         if not isinstance(reason, str) or not re.fullmatch(r"[a-z_]{1,80}", reason):
             reason = "model_response_unavailable"
         diagnostic.setdefault("failures", []).append(
-            {"attempt": attempt + 1, "reason": reason}
+            {"attempt": attempt + 1, "reason": reason, **details}
         )
         log.warning(
             "Ops interpretation rejected job=%s attempt=%d reason=%s",
@@ -914,7 +913,18 @@ async def interpret_report(result, llm):
             reply = await llm.complete(system, request_payload())
             if reply is None:
                 failure = getattr(llm, "last_failure", None)
-                record_failure(attempt, failure)
+                status = getattr(llm, "last_http_status", None)
+                record_failure(
+                    attempt,
+                    failure,
+                    **(
+                        {"http_status": status}
+                        if failure == "llm_http_error"
+                        and type(status) is int
+                        and 400 <= status <= 599
+                        else {}
+                    ),
+                )
                 diagnostic["reason"] = "model_response_unavailable"
                 if failure == "llm_invalid_output" and attempt == 0:
                     payload = {
@@ -972,7 +982,15 @@ async def interpret_report(result, llm):
         except (ValueError, TypeError, KeyError) as exc:
             diagnostic["reason"] = "invalid_interpretation"
             error = str(exc)
-            record_failure(attempt, error.partition(":")[0])
+            record_failure(
+                attempt,
+                error.partition(":")[0],
+                **(
+                    {"reference_errors": exc.reference_errors}
+                    if isinstance(exc, SummaryTokenError)
+                    else {}
+                ),
+            )
             payload = {
                 **payload,
                 "validation_feedback": {

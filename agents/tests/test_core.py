@@ -239,11 +239,36 @@ async def test_llm_http_error_logs_status_without_body_or_quarantine(caplog):
         llm = LLM(settings, time.monotonic() + 10, 10000, states.append, http)
         assert await llm.complete("private-prompt", {}) is None
     assert states == ["running", "terminated"]
+    assert llm.last_http_status == 401
     assert "LLM HTTP failed" in caplog.text and "status=401" in caplog.text
     assert all(
         secret not in caplog.text
         for secret in ("secret-token", "private-prompt", "private-response")
     )
+
+
+async def test_http_status_is_reset_before_a_later_call():
+    responses = iter(
+        [
+            httpx.Response(503),
+            httpx.Response(
+                200, json={"choices": [{"message": {"content": "invalid"}}]}
+            ),
+        ]
+    )
+    settings = Settings(
+        "report", llm_base_url="http://test/v1", llm_model="test", llm_api_key="fixture"
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: next(responses))
+    ) as http:
+        llm = LLM(settings, time.monotonic() + 10, 65536, lambda _: None, http)
+        llm.request_attempt_limit = 1
+        assert await llm.complete("fixture", {}) is None
+        assert llm.last_http_status == 503
+        assert await llm.complete("fixture", {}) is None
+        assert llm.last_failure == "llm_invalid_output"
+        assert llm.last_http_status is None
 
 
 @pytest.mark.asyncio

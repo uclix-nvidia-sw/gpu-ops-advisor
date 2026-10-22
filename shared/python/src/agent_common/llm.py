@@ -33,6 +33,7 @@ class LLM:
         )
         self.http = http
         self.last_failure = None
+        self.last_http_status = None
         self.reserved_tokens = 0
         self.request_attempt_limit = 3
         self.usage = {
@@ -75,6 +76,7 @@ class LLM:
 
     async def complete(self, system, data, stage="synthesis"):
         self.last_failure = None
+        self.last_http_status = None
         if not self.configured:
             self.last_failure = "model_not_configured"
             return None
@@ -165,6 +167,7 @@ class LLM:
                     continue
                 if response.is_error:
                     self.last_failure = "llm_http_error"
+                    self.last_http_status = response.status_code
                     return None
                 body = response.json()
                 usage = body.get("usage", {})

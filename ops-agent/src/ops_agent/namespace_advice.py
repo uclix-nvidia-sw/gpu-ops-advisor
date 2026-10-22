@@ -1257,6 +1257,18 @@ def summary_template(text, values):
     return text
 
 
+class SummaryTokenError(ValueError):
+    """Keep safe reference diagnostics without storing the model's prose."""
+
+    def __init__(self, message, required, available, tokens):
+        super().__init__(message)
+        self.reference_errors = {
+            "missing": sorted(required - set(tokens)),
+            "duplicate": sorted(t for t in available if tokens.count(t) > 1),
+            "unavailable_count": sum(t not in available for t in tokens),
+        }
+
+
 def validate_advice(section, topic):
     advice = section.get("advice")
     facts = {f["fact_id"]: f for f in topic["findings"]}
@@ -1311,8 +1323,11 @@ def validate_advice(section, topic):
             or any(t not in values for t in tokens)
             or len(tokens) != len(set(tokens))
         ):
-            raise ValueError(
-                f"namespace_summary_tokens_required: {item['fact_id']} required={sorted(required_tokens)}, available={sorted(values)}, received={tokens}, missing={sorted(required_tokens - set(tokens))}. 누락된 토큰을 해당 summary에 복원하고 사용 불가·중복 토큰은 빼세요. 단위는 덧붙이지 마세요"
+            raise SummaryTokenError(
+                f"namespace_summary_tokens_required: {item['fact_id']} required={sorted(required_tokens)}, available={sorted(values)}, received={tokens}, missing={sorted(required_tokens - set(tokens))}. 누락된 토큰을 해당 summary에 복원하고 사용 불가·중복 토큰은 빼세요. 단위는 덧붙이지 마세요",
+                required_tokens,
+                values,
+                tokens,
             )
         if re.search(r"\{\{[a-z_]+\}\}\s*(?:%|개|건|초)", summary):
             raise ValueError(

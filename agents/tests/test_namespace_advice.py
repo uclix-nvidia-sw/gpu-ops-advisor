@@ -22,6 +22,46 @@ from agent_common.llm import LLM
 from agent_common.settings import Settings
 
 
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+@pytest.mark.parametrize("problem", ["missing", "duplicate", "unavailable"])
+async def test_reference_failure_details_do_not_store_model_text(origin, problem):
+    result = dict(
+        topics=[topic(pending=2)], quality={}, time_range={}, report_origin=origin
+    )
+    before = deepcopy(result["topics"])
+    reply = {"sections": [section(payload_for(result)["topics"][0]["findings"])]}
+    item = reply["sections"][0]["advice"][0]
+    expected = {"missing": [], "duplicate": [], "unavailable_count": 0}
+    if problem == "missing":
+        item["summary"] = item["summary"].replace("{{period}}", "")
+        expected["missing"] = ["period"]
+    elif problem == "duplicate":
+        item["summary"] += " {{pending}}"
+        expected["duplicate"] = ["pending"]
+    else:
+        item["summary"] += " {{private_response}}"
+        expected["unavailable_count"] = 1
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [reply, {"advice": [item]}]
+    await interpret_report(result, llm)
+    repair = llm.complete.call_args.args[1]
+    example = repair["response_shape"]["advice"][0]["summary"]
+    context = repair["summary_repair"][0]
+    assert all(example.count(t) == 1 for t in context["required_summary_tokens"])
+    assert context["summary_start"] in example
+    assert result["quality"]["report"]["failures"] == [
+        {
+            "attempt": attempt,
+            "reason": "namespace_summary_tokens_required",
+            "reference_errors": expected,
+        }
+        for attempt in (1, 2)
+    ]
+    assert result["narrative_status"] == "failed"
+    assert result["topics"] == before
+    assert "private_response" not in json.dumps(result)
+
+
 def topic(activity=1, pending=0, memory=10, samples=240):
     hours = []
     work = []
@@ -1133,7 +1173,8 @@ async def test_summary_repair_preserves_previous_answer_within_input_limit(
     assert second["summary_repair"][0]["previous_summary"] == item["summary"]
     assert second["summary_repair"][0]["fact_id"] == item["fact_id"]
     assert "previous_response" not in feedback
-    assert len(json.dumps(second, ensure_ascii=False).encode()) < 4000
+    # Includes the same candidate-specific reference example as the first request.
+    assert len(json.dumps(second, ensure_ascii=False).encode()) < 4500
     assert first["topics"][0]["topic_id"] == "namespace_usage"
     assert result["narrative_status"] == "complete"
     assert result["topics"] == before["topics"]

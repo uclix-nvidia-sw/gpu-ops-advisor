@@ -674,3 +674,22 @@ async def test_repeated_malformed_json_remains_honest_fallback(result):
         {"attempt": 1, "reason": "llm_invalid_output"},
         {"attempt": 2, "reason": "llm_invalid_output"},
     ]
+
+
+@pytest.mark.parametrize(
+    "status", [401, 429, 500, 502, 503, 504, None, "private-response"]
+)
+async def test_http_failure_keeps_only_numeric_status(result, status):
+    before = deepcopy(result["topics"])
+    llm = AsyncMock(
+        configured=True, last_failure="llm_http_error", last_http_status=status
+    )
+    llm.complete.return_value = None
+    await interpret_report(result, llm)
+    failure = {"attempt": 1, "reason": "llm_http_error"}
+    if type(status) is int:
+        failure["http_status"] = status
+    assert result["quality"]["report"]["failures"] == [failure]
+    assert result["topics"] == before
+    assert result["narrative_status"] == "failed"
+    assert llm.complete.await_count == 1
