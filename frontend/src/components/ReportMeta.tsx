@@ -1,5 +1,6 @@
-import { reportScopeClusters } from '../lib/workflow';
-import { num, obj, rows, str, type Row } from '../lib/live';
+import { reportScopeClusters, reportTitle } from '../lib/workflow';
+import { topicName } from '../lib/report';
+import { num, obj, rows, str, strings, type Row } from '../lib/live';
 import { reportPeriodLabel, reportRequestTime } from '../lib/reportPeriod';
 import { CalendarClock, MousePointer2, CircleHelp } from 'lucide-react';
 
@@ -120,5 +121,35 @@ export function ReportExecution({ job }: { job: Row }) {
         접수부터 완료까지 {total === null ? '미확인' : duration(total)} · 대기 포함
       </div>
     </div>
+  );
+}
+
+/** Report counterpart of AlarmIdentity: title, cluster scope, period and topics in one block. */
+export function ReportIdentity({ job, detail = false }: { job: Row; detail?: boolean }) {
+  const clusters = reportScopeClusters(job);
+  const range = obj(job.time_range);
+  return (
+    <span className="alarm-identity">
+      <strong>{reportTitle(job)}</strong>
+      <span className="cell-sub">
+        {clusters.length
+          ? clusters.map(({ cluster, namespaces }, index) => (
+              <span key={index}>
+                {index > 0 && ' · '}
+                클러스터: <strong>{cluster}</strong> / {namespaces}
+              </span>
+            ))
+          : '분석 대상 미확인'}
+      </span>
+      <span className="cell-sub">
+        분석 대상 기간: {reportPeriodLabel(str(range.start), str(range.end))} · 분석 주제:{' '}
+        {strings(job.topic_ids).map(topicName).join(' · ') || '분석 주제 미확인'}
+      </span>
+      {detail && (
+        <span className="cell-sub">
+          요청 접수: {reportRequestTime(str(job.created_at))} · 작업 ID: {str(job.id) || '미확인'}
+        </span>
+      )}
+    </span>
   );
 }

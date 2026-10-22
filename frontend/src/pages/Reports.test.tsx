@@ -100,17 +100,18 @@ describe('Ops report landing', () => {
       if (Page === Reports) expect(html).toContain('href="/jobs/published"');
       expect(html).toContain('Namespace·프로젝트 배분 · GPU 에너지');
       if (Page === Reports) {
-        expect(html).toContain('<dt>분석 대상</dt>');
-        expect(html).toContain('<strong>cpc-2</strong>');
-        expect(html).toContain('Namespace 범위</span><span>training</span>');
-        expect(html).toContain('<dt>집계 기준</dt><dd>Namespace</dd>');
-        expect(html).not.toContain('ID publishe');
+        // Same table as the RCA investigation list, with the report identity in the first column.
+        expect(html).toContain('보고서 목록');
+        expect(html).toContain('<table');
+        expect(html).toContain('<th>보고서 · 대상</th>');
+        expect(html).toContain('<th>실행 기록</th>');
         expect(html).toContain(
-          '<details class="report-history-details"><summary>기간·대상·요청 상세</summary>',
+          'class="text-link report-history-title" href="/reports/published#final-report"',
         );
-        expect(html).toContain('<article class="report-history-card report-history-featured"');
-        expect(html).not.toContain('<table');
-        expect(html).toContain('<code>published</code>');
+        expect(html).toContain('클러스터: <strong>cpc-2</strong> / training');
+        expect(html).not.toContain('ID publishe');
+        expect(html).not.toContain('report-history-card');
+        expect(html).not.toContain('<code>published</code>');
       } else {
         expect(html).toContain('<strong>cpc-2</strong>');
         expect(html).toContain('Namespace 범위</span><span>training</span>');
