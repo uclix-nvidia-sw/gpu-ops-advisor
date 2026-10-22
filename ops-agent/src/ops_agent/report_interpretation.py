@@ -723,7 +723,7 @@ def writing_context(fact):
         ],
         "repeated_activity": [
             "대기 작업 실행을 위한 요청·실제 할당·스케줄러 기록 대조",
-            "각 관측 구간의 노드 배정 조건 점검만 허용",
+            "관측 시점별 노드 배정 조건과 대기 작업의 실행 제약 확인",
         ],
         "capacity_review": [
             "GPU 부족 여부·실제 할당·보장량·가용 자원·운영정책 확인 뒤 추가 할당 검토"
@@ -790,7 +790,7 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "운영 선택·이유와 대상·시간·필수 참조는 보존하고 정상 항목은 바꾸지 마세요. decision의 판단 범위·필요한 확인 조건과 summary_start를 유지하세요. 살펴보라는 표현만으로는 점검이 되지 않습니다. 이전 오류 문장을 그대로 반환하지 마세요. 실제 값으로 풀지 마세요. section_repair는 지정 주제와 참조를 보존하세요. response_shape만 JSON으로 반환하세요.",
+                "instruction": "운영 선택·이유와 대상·시간·필수 참조는 보존하고 정상 항목은 바꾸지 마세요. 살펴보라는 표현만으로는 점검이 되지 않습니다. 이전 오류 문장을 그대로 반환하지 마세요. 길이 오류는 현상과 확인할 대상·행동을 짧게 고치고, 설명을 전부 삭제하거나 summary_start만 반환하지 마세요. 설명은 prose_max_chars 이내이며 필요한 조건을 보존해 팔십 자 안팎을 목표로 쓰세요. 각 항목의 writing_checks와 decision에 해당하는 기록·확인/대조/검토/점검을 명시하고, 시간 조정 조건은 해당 후보에만 쓰세요. 빈 summary는 최종 문장을 채울 자리입니다. 마지막에 summary_start를 붙여 필수 참조를 보존하고 실제 값으로 풀지 마세요. section_repair는 지정 주제와 참조를 보존하세요. response_shape만 JSON으로 반환하세요.",
                 "response_shape": {
                     **(
                         {
