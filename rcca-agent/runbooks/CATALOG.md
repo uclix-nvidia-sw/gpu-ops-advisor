@@ -1,6 +1,6 @@
-# XID·SXID Runbook 전체 작성 목록
+# RCA Runbook 전체 작성 목록 (XID·SXID·Fleet 컴포넌트)
 
-기준일: 2026-09-28. 이전 PR #15의 대표 오류 3건을 전체 코드 자료 범위로 확장했다. **XID 173건 + SXID 93건 = 오류별 266건**, 일반 GPU 노드 조사까지 **267건**이다. 기존 3건을 유지·보강하고 263건을 추가했다. 모든 파일은 기존 Knowledge API의 v1 JSON 봉투이며 새 DB 테이블이나 migration은 없다.
+기준일: 2026-09-28. 이전 PR #15의 대표 오류 3건을 전체 코드 자료 범위로 확장했다. **XID 173건 + SXID 93건 = 오류별 266건**, 일반 GPU 노드 조사까지 **267건**이다. 기존 3건을 유지·보강하고 263건을 추가했다. 2026-10-22에 코드 없는 Fleet 컴포넌트 알림용 **17건**을 더해 전체 **284건**이다. 모든 파일은 기존 Knowledge API의 v1 JSON 봉투이며 새 DB 테이블이나 migration은 없다.
 
 ## 파일 구성
 
@@ -9,6 +9,7 @@ runbooks/
   RB-GENERAL-GPU-NODE.json
   xid/RB-XID-*.json
   sxid/RB-SXID-*.json
+  component/RB-COMPONENT-*.json
   catalog-manifest.json
 ```
 
@@ -19,7 +20,7 @@ JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등�
 - 기존 [Fleet·GPUd 카탈로그](../../docs/specs/rca-agent/references/fleet-gpud-error-catalog.md): XID 172개·SXID 92개를 모두 포함했다. 저장소별 중복 정의를 별도 Runbook으로 늘리지 않았다.
 - NVIDIA 최신 Xid 표의 **133**과 고정 GPUd 소스의 **SXID 22012**를 추가했다. 따라서 이번 합집합은 기존 264개보다 2개 많다.
 - 기존 `RB-XID-48-63-64`의 검색 진입은 계속 **XID 48만**이다. XID 63과 64에는 각각 독립 콘텐츠를 작성했다. 동반 코드 관계는 조사 지침이며 equality 조건식의 자동 시간 판정 기능을 추가한 것은 아니다.
-- 범위는 제공된 자료의 XID/SXID 코드다. NCCL·InfiniBand·OS·디스크의 비코드 조건형 Runbook이나 아직 자료에 없는 오류를 모두 작성했다는 의미는 아니다.
+- 코드 Runbook의 범위는 제공된 자료의 XID/SXID 코드다. 코드 없는 Fleet 컴포넌트 알림은 아래 [Fleet 컴포넌트 Runbook](#fleet-컴포넌트-runbook) 17건이 다룬다. 수치 시계열로 판정하는 NCCL·IB 성능 Runbook이나 아직 자료에 없는 오류를 작성했다는 의미는 아니다.
 
 각 파일은 코드 의미·출처별 event/action·적용 제품·필요 로그/메트릭·대상/시각·판별 절차·조건부 권고·부족 시 처리·조치 후 확인을 담는다. Reserved/Unused처럼 원문에 절차가 없는 항목은 원문·버전을 확인하는 절차까지 작성하고 진단 규칙을 만들지 않았다.
 
@@ -45,6 +46,24 @@ JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등�
 - 정정: SXID 22012는 FM 가이드 표 23(Potential Fatal)과 고정 Fleet 소스에 모두 정의돼 있어 `documented`로 바꾸고, "Fleet 카탈로그에 없음" 서술을 지웠다.
 - 저장소 원본 개정이며 발행 revision은 바꾸지 않는다. 새 revision 발행 전에는 기존 발행본(D09만 필수)이 그대로 쓰이고, 보고서 6단 형식의 전체 화면은 새 revision이 메트릭 조회를 필수로 갖는 경우에만 만들어진다.
 
+### 운영자 대응 재검토 (2026-10-22)
+
+GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈로그(Sep 09, 2026), Fabric Manager User Guide v2.6(Sep 21, 2026)의 bare metal 절차, nvidia-smi 문서, DCGM `dcgm_errors.h`와 다시 대조했다. 운영자가 그대로 따르면 틀리는 단계만 고쳤고, 파서가 읽는 `NVIDIA 적용:`·`NVIDIA 조치 분류:`·`Fleet 고정 카탈로그:` 줄은 바꾸지 않았다. 코드별 이전 값과 해시는 [검토 기록](triage-guidance-review-20261022.json)에 있다.
+
+| 대상 | 고친 내용 |
+|---|---|
+| XID 79 | 운영자 순서로 재작성: 즉시 확인·격리(cordon, 실제 이탈·주입 시험 구분) → 자료 보존(`nvidia-bug-report.sh`의 `--safe-mode --extra-system-data`, SEL, FM 로그) → XID 154 복구 수준 → 반복·확산 판단 → RESTART_BM → 복구 확인 → 공급사 전달 |
+| XID 64 | A100은 기록 실패 시 노드 즉시 재부팅(Triage A100 행). 기존 "노드 재시작까지는 필요하지 않습니다"는 A100에서 틀린 안내였다 |
+| XID 95 | A100에서 MIG가 꺼져 있으면 노드 즉시 재부팅, 켜져 있으면 다른 인스턴스 배출 뒤 GPU 리셋(Triage). XID 94·95의 "2차 오류" 문장을 원인 조사 방향(동반 메모리 오류 우선)으로 정정 |
+| XID 61·123 | 카탈로그상 Unused이지만 Triage 표 1이 보고와 GPU 리셋을 안내하므로 "복구 조치를 정하지 않습니다"를 CONTACT_SUPPORT·GPU 리셋 단계로 교체 |
+| XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |
+| SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가 |
+| SXID 잠재적 치명 41건·11001 | 영향·복구를 bare metal 절차(access 포트: 해당 GPU와 같은 작업 GPU 리셋, trunk 포트: FM 정지 후 전체 리셋) 먼저, 공유 NVSwitch 가상화(guest VM) 절차를 다음에 적음 |
+| SXID 11004·12028 | 비치명 SXID는 bare metal에서 정보성이고 FM이 작업을 중단하지 않음을 명시, guest VM 재시작은 가상화 절차로 분리 |
+| SXID 19084·10003 | 전체 GPU·NVSwitch 리셋에 bare metal 절차(FM 정지 → `-i` 없는 `nvidia-smi -r` → FM 재시작) 추가 |
+| SXID 항상 치명 20건·10003 | LLM 지침의 guest partition 전제를 bare metal(작업 배출 후 호스트 재시작) 우선으로 정정 |
+| SXID 20034 | 의미 문장에 섞여 있던 FM 표 영어 원문을 정리 |
+
 ## 출처 간 차이와 판정 제한
 
 | 자료 상태 | 건수 | 의미 |
@@ -56,15 +75,15 @@ JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등�
 
 특히 XID 142는 고정 Fleet/GPUd의 ECC 설명과 최신 NVIDIA의 NVENC3 설명이 다르다. XID 126–132·134–136·139·141은 고정 Fleet의 Reserved와 최신 표의 정의가 다르다. XID 173, SXID 20009는 코드 소스 근거와 공식 표의 범위를 분리했다. SXID 22012는 FM 가이드 표 23에 있어 문헌 정의로 분류한다. 미기재 action을 IGNORE로 변환하지 않는다.
 
-SXID 10003은 GPUd EventType=Warning이어도 PotentialFatal/AlwaysFatal=true다. 이벤트 등급만으로 영향 범위를 결정하지 않는다. SXID 11001 등의 PotentialFatal은 source port의 access/trunk·VM/partition에 따라 판단하고, AlwaysFatal 그룹은 해당 FM 운영 모드의 전체 fabric 영향과 복구 전제를 설명한다. Single-bit ECC, TX replay, 열 시작/종료, 계획되지 않은 shutdown, 무시 가능한 interrupt는 별도 절차를 사용한다.
+SXID 10003은 GPUd EventType=Warning이어도 PotentialFatal/AlwaysFatal=true다. 이벤트 등급만으로 영향 범위를 결정하지 않는다. SXID 11001 등의 PotentialFatal은 source port의 access/trunk와 운영 모드(bare metal 또는 공유 NVSwitch 가상화)에 따라 판단하고, AlwaysFatal 그룹은 해당 FM 운영 모드의 전체 fabric 영향과 복구 전제를 설명한다. FM 가이드 표 22의 Guest VM 열은 가상화 모드의 영향·복구이며 bare metal 절차가 아니다. Single-bit ECC, TX replay, 열 시작/종료, 계획되지 않은 shutdown, 무시 가능한 interrupt는 별도 절차를 사용한다.
 
 XID 144–150에는 NVIDIA Table 2의 버전별 decoder 행을 보존했다. R575 이전 V1과 이후 V2, intrInfo/errorStatus·action2·Xid154/동반 link-down 조건을 구분한다. 이것은 검토 가능한 문헌 지침이며 실행 중인 비트/시간 predicate 구현이 아니다. XID 74의 Hopper 레지스터 분기도 해당 문헌/장비 범위에 한정한다.
 
 ## DB 등록 및 실행 범위
 
-비코드 Fleet 오류는 Runbook 1.2의 생산자·컴포넌트·비정상 보고 목표로 확장한다. 이 목록의 267건은 그대로 유지하며, disk·CPU·네트워크 등 신규 오류 지침이 이미 작성·발행됐다는 의미가 아니다. 원천 컴포넌트의 등록, 오류 사유별 적용 범위, 출처 revision, GPUd repair suggestions의 조건, 조치 후 확인을 검토한 새 revision을 발행한다. 상세 계약과 workflow/평가 재사용은 [RCA README](../README.md#비코드-fleet-오류와-평가)를 따른다.
+비코드 Fleet 오류는 Runbook 1.2의 생산자·컴포넌트·비정상 보고 목표로 확장한다. 아래 17건은 작성 초안이며 아직 발행하지 않았다. 원천 컴포넌트 등록(기본 프로필 `health_contracts`), 출처 revision, Fleet 권고의 조건, 조치 후 확인을 검토한 뒤 새 revision을 발행한다. 상세 계약과 workflow 재사용은 [RCA README](../README.md#비코드-fleet-오류와-평가)를 따른다.
 
-**267건 모두 `investigation_only: true`, `compatibility: {}`인 작성 초안**이다. 파일과 문헌 검토 범위의 콘텐츠 작성은 끝냈으며 실제 환경 연결은 별도 작업이다. Backend에 draft로 등록할 수 있고 적용 조건을 검수하기 전 승인·발행·RCA 런타임 적용은 차단한다. 환경 조건을 채워 발행한 뒤에도 조사용 콘텐츠 자체를 supported 원인·조기 완료·최종 eligible 조치의 근거로 쓰지 않는다.
+**284건 모두 `investigation_only: true`, `compatibility: {}`인 작성 초안**이다. 파일과 문헌 검토 범위의 콘텐츠 작성은 끝냈으며 실제 환경 연결은 별도 작업이다. Backend에 draft로 등록할 수 있고 적용 조건을 검수하기 전 승인·발행·RCA 런타임 적용은 차단한다. 환경 조건을 채워 발행한 뒤에도 조사용 콘텐츠 자체를 supported 원인·조기 완료·최종 eligible 조치의 근거로 쓰지 않는다.
 
 현재 실행 가능한 공통 계획은 D09 원본 로그, D05 상태, D02 선택 사용률이다. Runbook이 추가로 요구하는 PCIe AER/ECC 카운터/FM 토폴로지/전력·열/앱 재현 자료는 운영 query와 parser가 실제 제공하는지 확인해야 한다. 임의의 D코드나 metric 이름을 만들지 않았으며 미연결 증거는 missing_inputs로 남긴다. 실제 조치 자동 실행은 없다.
 
@@ -81,7 +100,34 @@ python -m pytest -c agents/pytest.ini agents/tests/test_runbook_catalog.py agent
 python tools/check_links.py
 ```
 
-Backend 검증기도 전체 267개 JSON을 검사한다. 실제 DB E2E는 기존 migration의 격리 DB에서 신규 263건을 실제 일괄 등록 CLI로 draft 적재하고 재실행 시 중복 쓰기를 건너뛰는지 및 코드별 조회/hash를 확인하며, 기존 3건의 검토·발행·RCA 소비 검사를 계속 수행한다. 테스트 DB는 종료 후 재사용하지 않는다. 운영 DB 등록은 수행하지 않았고 모든 266건을 실제 장비에서 조사·회복 검증한 것은 아니다. 실제 실행 결과는 [Agent QA](../../agents/QA.md), [Backend QA](../../backend/QA.md)를 따른다.
+Backend 검증기도 전체 284개 JSON(컴포넌트 17개 포함)을 검사한다. 실제 DB E2E는 기존 migration의 격리 DB에서 신규 263건을 실제 일괄 등록 CLI로 draft 적재하고 재실행 시 중복 쓰기를 건너뛰는지 및 코드별 조회/hash를 확인하며, 기존 3건의 검토·발행·RCA 소비 검사를 계속 수행한다. 테스트 DB는 종료 후 재사용하지 않는다. 운영 DB 등록은 수행하지 않았고 모든 266건을 실제 장비에서 조사·회복 검증한 것은 아니다. 실제 실행 결과는 [Agent QA](../../agents/QA.md), [Backend QA](../../backend/QA.md)를 따른다.
+
+## Fleet 컴포넌트 Runbook
+
+코드 없는 Fleet 알림은 컴포넌트 이름으로만 선택된다(`decision_policy.applies_when.reported_component`). 보고 사유는 쉼표로 묶이거나 Healthy `ok` 보고와 섞이므로 게이트로 쓰지 않고, 사유별 분기는 운영자 지침 안에 둔다. "무엇이 알림을 냈는가"는 고정 Fleet SDK 소스(`84f99bee`)를, 의미와 다음 단계는 NVIDIA 문서·DCGM `dcgm_errors.h`(`9fae2867`)·커널 문서를 근거로 했다. 화면은 XID/SXID 6단 형식이 아니라 보고서의 다음에 할 일 문단으로 나온다.
+
+| 컴포넌트 | Runbook | Unhealthy 보고 사유 | 조회 계획(D09 외) |
+|---|---|---|---|
+| `accelerator-nvidia-persistence-mode` | [RB-COMPONENT-PERSISTENCE-MODE](component/RB-COMPONENT-PERSISTENCE-MODE.json) | GPU lost, GPU requires reset, DCGM 조회 실패 | D02, D11 |
+| `disk` | [RB-COMPONENT-DISK](component/RB-COMPONENT-DISK.json) | 읽기 전용 재마운트, RAID 실패, NVMe 경로·타임아웃·비활성화, 범위 밖 접근, 버퍼 I/O·superblock 오류 | 없음 |
+| `accelerator-nvidia-dcgm-mem` | [RB-COMPONENT-DCGM-MEM](component/RB-COMPONENT-DCGM-MEM.json) | DCGM 메모리 건강 점검 FAIL(DBE, row remap 대기·실패, 격리 여부, SRAM) | D40, D36, D23 |
+| `accelerator-nvidia-dcgm-pcie` | [RB-COMPONENT-DCGM-PCIE](component/RB-COMPONENT-DCGM-PCIE.json) | DCGM PCIe 건강 점검 FAIL(replay 비율 등) | D44 |
+| `accelerator-nvidia-dcgm-nvlink` | [RB-COMPONENT-DCGM-NVLINK](component/RB-COMPONENT-DCGM-NVLINK.json) | DCGM NVLink 건강 점검 FAIL(링크 다운, 오류율, BER) | D33, D34 |
+| `accelerator-nvidia-dcgm-nvswitch` | [RB-COMPONENT-DCGM-NVSWITCH](component/RB-COMPONENT-DCGM-NVSWITCH.json) | DCGM NVSwitch 치명·비치명 점검 FAIL | D33, D34 |
+| `accelerator-nvidia-dcgm-thermal` | [RB-COMPONENT-DCGM-THERMAL](component/RB-COMPONENT-DCGM-THERMAL.json) | DCGM 열 점검 FAIL(열 클록 제한, 온도 위반) | D04, D23, D45 |
+| `accelerator-nvidia-dcgm-power` | [RB-COMPONENT-DCGM-POWER](component/RB-COMPONENT-DCGM-POWER.json) | DCGM 전력 점검 FAIL(전력 클록 제한, 전력 값 읽기 실패) | D11, D48, D45 |
+| `accelerator-nvidia-dcgm-inforom` | [RB-COMPONENT-DCGM-INFOROM](component/RB-COMPONENT-DCGM-INFOROM.json) | DCGM InfoROM 점검 FAIL(InfoROM 손상) | 없음 |
+| `accelerator-nvidia-infiniband` | [RB-COMPONENT-INFINIBAND](component/RB-COMPONENT-INFINIBAND.json) | 활성 포트·속도 부족, 장시간 다운, flapping | 없음 |
+| `accelerator-nvidia-nccl` | [RB-COMPONENT-NCCL](component/RB-COMPONENT-NCCL.json) | libnccl.so segfault | 없음 |
+| `accelerator-nvidia-peermem` | [RB-COMPONENT-PEERMEM](component/RB-COMPONENT-PEERMEM.json) | nvidia-peermem invalid context | 없음 |
+| `network-ethernet` | [RB-COMPONENT-NETWORK-ETHERNET](component/RB-COMPONENT-NETWORK-ETHERNET.json) | 모든 물리 이더넷 링크 다운 | 없음 |
+| `library` | [RB-COMPONENT-LIBRARY](component/RB-COMPONENT-LIBRARY.json) | libnvidia-ml.so·libcuda.so 없음 | 없음 |
+| `os` | [RB-COMPONENT-OS](component/RB-COMPONENT-OS.json) | 좀비·PID·파일 핸들 임계 초과, OS 정보 조회 실패 | 없음 |
+| `cpu` | [RB-COMPONENT-CPU](component/RB-COMPONENT-CPU.json) | CPU 사용률·load 계산 실패(에이전트 수집 오류·장애 주입) | 없음 |
+| `memory` | [RB-COMPONENT-MEMORY](component/RB-COMPONENT-MEMORY.json) | 가상 메모리·BPF JIT 정보 조회 실패(에이전트 수집 오류·장애 주입) | 없음 |
+
+- Fleet 등록 컴포넌트 중 `accelerator-nvidia-dcgm-clock`·`-cpu`·`-prof`·`-utilization`은 수집 실패 외의 Unhealthy 판정이 없어 제외했다. 이 컴포넌트와 새 컴포넌트는 기존 일반 조사로 처리된다.
+- 검사: `test_component_runbooks_are_registered_and_select_only_their_component`(등록·선택 범위), `test_shipped_component_guidance_survives_healthy_reports_before_failure`(Healthy 보고가 앞서는 실제 disk 구간에서 지침 표시).
 
 ## 코드별 파일
 

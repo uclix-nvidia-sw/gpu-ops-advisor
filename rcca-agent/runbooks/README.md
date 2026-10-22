@@ -74,6 +74,19 @@ JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성
 
 최상위 source_refs는 **DB evidence ID**다. 문헌 URL을 넣지 않는다. 현재 common Knowledge는 사건 evidence를 연결할 수 없으므로 초안은 빈 배열이며 문헌 메타데이터는 content.sources에 둔다. 문헌 출처는 사건의 관측·실행 증거를 대신하지 않는다.
 
+## 운영자 지침 작성 기준
+
+보고서의 한눈에 보기·대응 순서·다음에 할 일은 `operator_guidance`를 그대로 보여 준다. 시간에 쫓기는 운영자가 위에서부터 그대로 따라 할 수 있게 다음을 지킨다.
+
+- `next_checks`의 첫 항목이 한눈에 보기의 우선 대응이 된다. 순서는 즉시 확인·격리(실제 장애와 주입 시험 구분) → 진단 자료 보존 → 판단(사유·코드별 분기) → 복구 → 복구 확인(통과 기준) → 공급사 전달이다.
+- 화면은 "다." 또는 "요." 뒤에서만 문장을 나눠 항목으로 보여 준다. 한 문장에 한 동작을 쓰고 "…합니다(…)."처럼 괄호로 끝내지 않는다. 앞 24자 안의 "라벨: "은 굵게 표시된다.
+- 명령은 NVIDIA 문서에서 확인한 형태로 적는다. 예: `nvidia-bug-report.sh --safe-mode --extra-system-data`, `nvidia-smi --query-gpu=gpu_recovery_action --format=csv`. 문서가 폐기를 밝힌 필드는 쓰지 않는다.
+- 장비 세대(A100·Hopper)나 운영 모드(bare metal·공유 NVSwitch 가상화)에 따라 조치가 다르면 bare metal과 세대별 분기를 먼저 적는다. 출처가 서로 다르면 [출처 적용 순서](../../docs/specs/rca-agent/references/runbook-source-catalog.md#21-출처가-서로-다를-때의-적용-순서)를 따른다.
+- XID/SXID 6단 화면이 이미 그리는 대상 확정·공급사 전달 체크리스트·리셋 방식 표는 다시 쓰지 않고 가리킨다. 컴포넌트 Runbook은 6단 화면이 없으므로 리셋 범위 같은 필수 조건을 참고 항목에 직접 적는다.
+- 내용을 바꾸면 파일별 이전 값과 해시를 검토 기록에 남긴다. 최신 기록은 [triage-guidance-review-20261022.json](triage-guidance-review-20261022.json)이고 해시 사슬은 `test_catalog_requirement_separation.py`가 검사한다.
+
+컴포넌트 Runbook(`component/`)은 schema 1.2의 `decision_policy.applies_when`에 컴포넌트·Unhealthy·생산자만 두고 사유는 넣지 않는다. 기본 프로필의 `health_contracts`에 같은 컴포넌트를 등록해야 지침이 보고서에 표시된다. 선택·표시 계약은 [RCA README](../README.md#비코드-fleet-오류와-평가), 목록은 [CATALOG](CATALOG.md#fleet-컴포넌트-runbook)에 있다.
+
 ## RCA가 사용하는 계약
 
 [runbook_contract.py](../src/rcca_agent/runbook_contract.py)의 공개 함수:
