@@ -1,4 +1,3 @@
-import { RcaDecisionSummary, RcaObjective } from './RcaEvaluation';
 import { useState } from 'react';
 import { obj, rows, str, strings, useList, useResource, type Row } from '../lib/live';
 import { relationMismatch } from '../lib/debug';
@@ -303,6 +302,9 @@ export function RcaWorkflowRecord({
     body = obj(record.snapshot),
     meta = obj(record.quality),
     diagnostics = obj(body.diagnostics);
+  const plannedCollection =
+    Array.isArray(body.planned_queries) ||
+    Array.isArray(obj(investigationPlan?.snapshot).planned_queries);
   const reason =
     body.failure_reason ||
     diagnostics.error_code ||
@@ -376,11 +378,13 @@ export function RcaWorkflowRecord({
         {queryPlans.map((s, i) => (
           <p key={i}>
             저장된 조사 계획:{' '}
-            {s.required === true
-              ? '필수 조회'
-              : s.required === false
-                ? '선택 조회'
-                : '필수 여부 미기록'}{' '}
+            {plannedCollection
+              ? '계획 조회'
+              : s.required === true
+                ? '필수 조회'
+                : s.required === false
+                  ? '선택 조회'
+                  : '필수 여부 미기록'}{' '}
             · {str(s.purpose, '목적 기록 없음')}.{' '}
             <button className="text-link" onClick={() => onEvidence(str(investigationPlan?.id))}>
               계획 근거 열기
@@ -399,8 +403,8 @@ export function RcaWorkflowRecord({
           </details>
         ) : (
           <p>
-            계획의 목적이며 실제 호출 시작 순서를 증명하지 않습니다. 선택 조회의 실행 조건은 해당
-            회차의 수집 평가에서 확인하세요.
+            계획의 목적이며 실제 호출 시작 순서를 증명하지 않습니다. 실제 조회 결과는 연결된
+            원문에서 확인하세요.
           </p>
         )}
         {body.action != null && (
@@ -425,29 +429,37 @@ export function RcaWorkflowRecord({
             <table>
               <thead>
                 <tr>
-                  <th>조회·필수 여부</th>
+                  <th>{plannedCollection ? '조회' : '조회·필수 여부'}</th>
                   <th>저장된 목적</th>
-                  <th>선택 조건</th>
+                  {!plannedCollection && <th>선택 조건</th>}
                 </tr>
               </thead>
               <tbody>
                 {plan.map((s, i) => (
                   <tr key={i}>
                     <td>
-                      {str(s.query_id)} ·{' '}
-                      {s.required === true ? '필수' : s.required === false ? '선택' : '미기록'}
+                      {str(s.query_id)}
+                      {!plannedCollection && (
+                        <>
+                          {' '}
+                          ·{' '}
+                          {s.required === true ? '필수' : s.required === false ? '선택' : '미기록'}
+                        </>
+                      )}
                     </td>
                     <td>{str(s.purpose, '목적 기록 없음')}</td>
-                    <td>
-                      <DataView
-                        value={
-                          s.selection ?? {
-                            priority: s.priority,
-                            exploratory_llm: s.exploratory_llm,
+                    {!plannedCollection && (
+                      <td>
+                        <DataView
+                          value={
+                            s.selection ?? {
+                              priority: s.priority,
+                              exploratory_llm: s.exploratory_llm,
+                            }
                           }
-                        }
-                      />
-                    </td>
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -492,10 +504,6 @@ export function RcaWorkflowRecord({
       </section>
       <section>
         <h4>결과·남은 한계</h4>
-        {['investigation_decision', 'evidence_evaluation'].includes(kind) && (
-          <RcaDecisionSummary value={body} />
-        )}
-        <RcaObjective value={body.decision_assessment} />
         {kind === 'rca_synthesis' && body.generation_mode === 'combined' && (
           <section aria-label="통합 작성 결과">
             <h4>증거 해석·RCA 분석 · 작성 LLM</h4>

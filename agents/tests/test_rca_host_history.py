@@ -127,3 +127,25 @@ def test_host_totals_include_both_identified_and_unidentified_devices():
         (None, "xid:48"): 4,
         ("GPU-1", "xid:48"): 2,
     }
+
+
+async def test_legacy_plan_passes_host_history_to_analysis_not_only_the_report():
+    from test_fleet_rca import match_case
+    from rcca_agent.incident_dossier import enabled
+
+    source, _ = history_case()
+    case = match_case(kind="xid")
+    assert not enabled(case["attempt"]["context"]["runbooks"])
+    case["attempt"]["context"]["host_incidents"] = source["attempt"]["context"][
+        "host_incidents"
+    ]
+    case["attempt"]["claim"]["input"]["target"].update(
+        node="node-1", machine_id="machine-1"
+    )
+    case["token_budget"] = 131072
+    outcome = await replay(case)
+    call = next(c for c in outcome["model_calls"] if c["stage"] == "synthesis")
+    rows = call["input"]["incident_comparison"]
+    assert any("등록 사건 1건" in row["text"] for row in rows)
+    history = outcome["output"]["result"]["quality"]["host_incident_history"]
+    assert all(row["evidence_refs"] == history["evidence_refs"] for row in rows)

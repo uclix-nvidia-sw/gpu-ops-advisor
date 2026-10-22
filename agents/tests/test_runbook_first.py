@@ -160,7 +160,7 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
     assert all("purpose_id" not in a for a in output["result"]["assessments"])
     assert output["result"]["result_status"] != "ready"
     if mode in ("missing", "incompatible"):
-        assert {"D09", "D02", "evidence_evaluation"} <= ids
+        assert {"D09", "D02"} <= ids
         assert output["result"]["runbook_revisions"][0]["id"] == "builtin-general"
     else:
         assert "D04" in ids  # Former procedure allowlists excluded temperature.
@@ -172,7 +172,9 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
             for q in temperature_queries
         )
         assert "D08" not in ids and "D06" not in ids
-        assert ("D03" in ids) == (mode != "stop")
+        assert (
+            "D03" not in ids
+        )  # Retired unexpected-evidence extension is not a collection plan.
         if mode == "specific":
             temperature = next(e for e in output["evidence"] if e["query_id"] == "D04")
             assert temperature["snapshot"]["data"]["result"][0]["metric"] == {
@@ -180,7 +182,11 @@ async def test_runbook_controls_queries_and_unknown_policy(mode):
                 "node": "node-1",
             }
     if mode in ("unexpected", "failed", "stop"):
-        assert "required_query:D04" in output["result"]["missing_inputs"]
+        assert "required_query:D04" not in output["result"]["missing_inputs"]
+        assert any(
+            e["query_id"] == "D04" and e["tool_status"] != "ok"
+            for e in output["evidence"]
+        )
 
 
 def test_unregistered_fallback_queries_are_rejected():

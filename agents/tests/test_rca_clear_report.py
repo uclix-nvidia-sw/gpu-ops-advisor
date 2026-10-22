@@ -8,7 +8,6 @@ import pytest
 from agent_common.rca_evaluation import review_scope_status
 
 from rca_replay import replay
-from rca_replay_cases import reply, review
 from test_rca_combined_policy import policy_case
 
 
@@ -37,83 +36,6 @@ async def test_healthy_baseline_does_not_mark_error_values_unknown():
     )
     assert "unknown_value" not in output["missing_inputs"]
     assert "의미 또는 유효성이 미확인" not in narrative(result)
-
-
-async def test_non_blocking_unknown_stays_in_diagnostics_not_report():
-    result = await replay(policy_case())
-    output = result["output"]["result"]
-    assert "causal_confirmation_evidence" not in output["missing_inputs"]
-    assert (
-        "causal_confirmation_evidence"
-        in output["quality"]["analysis"]["resolved_scope_gaps"]
-    )
-    assert "원인을 뒷받침할 추가 근거가 필요합니다" not in narrative(result)
-
-
-async def test_unattributed_review_feedback_keeps_grounded_interpretation():
-    # 2026-10-19 14:50 XID 79 (8d1246e8): four whole-draft critiques (alternatives,
-    # omitted context) discarded an interpretation that passed grounding/identity.
-    case = policy_case()
-    verdict = review("revision_required")
-    for key in ("grounding", "identity_time", "limitations"):
-        verdict["criteria"][key]["status"] = "pass"
-    verdict["issues"] = [
-        {
-            "claim_id": None,
-            "reason": "대안 원인을 함께 검토하세요.",
-            "evidence_refs": {"$input": "/input_evidence_refs"},
-            "suggested_resolution": "현재 증거가 대안을 판별하지 못함을 밝히세요.",
-        }
-    ]
-    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
-    result = await replay(case)
-    assert not result["missing_inputs"]
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["evidence"]["execution_status"] == "complete"
-    assert evaluation["evidence"]["interpretation"]["findings"]
-    assert evaluation["review"]["verdict"] == "acceptable_after_feedback"
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
-    assert "변경 초안 미검토" not in narrative(result)
-
-
-async def test_unattributed_limitations_critique_keeps_goal_open():
-    case = policy_case()
-    verdict = review("revision_required")
-    for key in ("grounding", "identity_time"):
-        verdict["criteria"][key]["status"] = "pass"
-    verdict["issues"] = [
-        {
-            "claim_id": None,
-            "reason": "결론을 바꿀 수 있는 누락 근거를 한계로 밝히지 않았습니다.",
-            "evidence_refs": {"$input": "/input_evidence_refs"},
-            "suggested_resolution": "해당 결론 옆에 한계를 밝히세요.",
-        }
-    ]
-    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
-    result = await replay(case)
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["evidence"]["interpretation"]["findings"]
-    assert evaluation["review"]["unattributed_issues"] is True
-    assert evaluation["investigation"]["stop_reason"] == "goal_not_met"
-
-
-async def test_unattributed_issue_with_failed_grounding_still_rejects():
-    case = policy_case()
-    verdict = review("revision_required")
-    verdict["issues"] = [
-        {
-            "claim_id": None,
-            "reason": "근거와 맞지 않는 주장입니다.",
-            "evidence_refs": {"$input": "/input_evidence_refs"},
-            "suggested_resolution": "주장을 제거하세요.",
-        }
-    ]
-    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
-    result = await replay(case)
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["evidence"]["reason"] == "review_rejected_interpretation"
-    assert evaluation["review"]["execution_status"] == "skipped"
-    assert evaluation["investigation"]["stop_reason"] != "goal_achieved"
 
 
 def test_problem_names_unique_inventory_gpu():
@@ -185,19 +107,3 @@ def _review(verdict, unattributed, **statuses):
 )
 def test_review_scope_status(review, expected):
     assert review_scope_status(review) == expected
-
-
-async def test_validator_rejects_completion_not_backed_by_review():
-    from agent_common.rca_evaluation import validate_evaluation
-
-    result = await replay(policy_case())
-    output = deepcopy(result["output"])
-    evaluation = output["result"]["quality"]["rca_evaluation"]
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
-    validate_evaluation(output["result"], output["evidence"])
-    for policy in evaluation["investigation"]["objective"]["policies"]:
-        for row in policy["criteria"]:
-            if row["method"] == "llm":
-                row["evidence_refs"] = ["not-the-review"]
-    with pytest.raises(ValueError):
-        validate_evaluation(output["result"], output["evidence"])

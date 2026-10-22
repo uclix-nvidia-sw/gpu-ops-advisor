@@ -94,7 +94,7 @@ observation_plan은 다음 필드를 갖는다:
 |---|---|
 | query_id | 등록 D코드. procedure 허용 목록에도 포함되어야 함 |
 | priority | 양의 정수. 오름차순 실행 계획, 동률은 query_id 순 |
-| required | 필수 관측 여부. false는 조건에 따라 선택할 보조 조회 |
+| required | 구 발행본 구조 호환 필드. 현재는 true/false와 관계없이 선택된 전체 계획을 한 단계에서 수집 |
 | fact_names | 확보하려는 fact 이름. parser나 충족을 보장하지 않음 |
 | purpose | 해당 관측의 조사 목적 |
 | binding | execution_profile만 지원. 콘텐츠에 datasource나 임의 쿼리를 삽입하지 않음 |
@@ -159,8 +159,10 @@ verified error occurrence, compatibility, current device health or causality.
 `missing_data` can mean that retrieved observations cannot satisfy the required
 identity/time/health/causal semantics. Source advice such as `REBOOT_SYSTEM` is
 not proof of appropriate remediation, execution or recovery. Investigation-only
-plans still require independent causal confirmation; these changes do not promote
-Fleet reported events into current-health facts or change published revisions.
+plans collect data for analysis and report writing after Fleet has raised the incident.
+Independent causal confirmation is not a report-generation requirement. Supported
+interpretations and debugging priorities remain useful without a confirmed cause.
+Fleet reports do not become current-health facts; published revisions stay immutable.
 
 Local regression coverage includes CPU/disk code-free alerts, XID/SXID namespace
 separation, multiple codes, the real Runbook catalog, and invalid synthesis evidence
@@ -189,9 +191,9 @@ identity because one query snapshot can contain multiple targets.
 Python and Backend authoring validators reject these requirements for causal
 Runbooks and reject their use as action/applicability scalar conditions. Existing
 `error_code`, `producer_contract` and `normalized_health` requirements retain their
-previous stronger gates. The investigation plan exposes `requirement_groups` for
-reported facts, device-state evidence, causal confirmation and action conditions.
-This metadata does not bypass compatibility, freshness, causality or action checks.
+previous stronger gates. The current investigation plan lists the complete planned collection. Legacy
+requirement metadata does not trigger goal grading or additional collection.
+Compatibility, identity and action-condition checks remain in force.
 Published contents and hashes are not changed by deploying the code: opting into
 report-only requirements requires separately reviewed and published new revisions.
 

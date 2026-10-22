@@ -27,12 +27,12 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 ## 1. 완료된 단계와 남은 경계
 
 - 콘텐츠: 최초 세 JSON의 지침 보강 후 코드별 263건을 추가했다. 일반 조사까지 파일은 267건이다.
-- 실행 의미: 모든 초안은 `investigation_only: true`다. 조건이 맞더라도 원인 supported 판정으로 승격하지 않는다. 1.1의 명시적 조사 목적·필수 기준·별도 검토가 충족되면 원인 미확정 상태로 목적 달성 종료할 수 있다. 조사 지침은 최종 Synthesis에 전달한다. 현재 workflow는 조사용 콘텐츠의 recommendations를 최종 eligible 조치 목록으로 발행하지 않는다.
+- 실행 의미: 모든 초안은 `investigation_only: true`다. 조건이 맞더라도 원인 supported 판정으로 승격하지 않는다. 현재는 모든 발행본의 계획을 한 단계에서 수집하며, 목표 달성·근거 충분성·별도 평가로 종료를 결정하지 않는다. 조사 지침은 최종 Synthesis에 전달한다. 현재 workflow는 조사용 콘텐츠의 recommendations를 최종 eligible 조치 목록으로 발행하지 않는다.
 - DB 경로: JSON은 작성 원본이다. 실행 원본은 기존 `knowledge_revisions`의 승인·발행된 revision이다. Backend가 생성·갱신·상태 전이를 소유한다. 직접 SQL 적재, 새 테이블, migration, 자동 seed는 추가하지 않았다.
 - 실제 검증: 격리 PostgreSQL에서 Backend 등록·검토·발행, JC revision 고정, 실제 RCA Worker/NAT/MCP 수집·Synthesis·결과 공개를 확인했다. 그래프 데이터와 모델 응답은 fixture다. 테스트 DB는 실행 후 정리하며 운영 DB에는 등록하지 않았다.
 - 저장소 JSON의 compatibility는 여전히 비어 있다. 실제 배포 조건을 만들거나 검증했다고 주장하지 않으며 초안 저장은 가능하지만 승인·발행은 차단한다.
 
-XID 79·SXID 11001 작성 원본은 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용한다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본은 기존 실행 경로를 유지한다.
+XID 79·SXID 11001 작성 원본은 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용한다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본도 같은 단일 수집·분석·보고서 작성 흐름을 사용한다.
 
 **Worker/UI 배포만으로 새 런북이 적용되지는 않는다.** 기존 knowledge ID와 검수된 compatibility를 유지하여 두 런북만 새 revision으로 등록·검토·발행한다. 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. Worker/UI 배포를 먼저 완료하고 실제 실행 프로필에 각 D 조회가 허용되는지 확인한 뒤 발행한다. 신규 사건 또는 승인된 재실행에서 JC가 새 revision/hash를 고정하는지 확인한다. 기존 결과와 발행 revision은 수정하지 않는다. 문제 발생 시 새 revision을 retire하고 이전 발행 revision 선택과 이전 RCA 이미지로 복귀하는 절차를 확인한다. Ops 런북·설정·이미지는 변경하지 않는다.
 
@@ -276,18 +276,6 @@ python -m rcca_agent.runbook_admin retire "$RcaPrefix-published.json" --profile 
 
 ## 조사 완료 기준 1.1
 
-XID 79·SXID 11001의 현재 작성 원본은 단일 observation plan을 사용하므로 `decision_policy`와 goal을 포함하지 않는다. Worker는 이 경로에서 과거 발행본의 goal 정책도 반복 조회·종료 평가에 사용하지 않으며 `causal_confirmation_evidence`를 자동 누락 항목으로 추가하지 않는다. 아래 1.1 정책 절차는 과거 발행본 호환 설명이다. 새 발행은 위의 전체 content 교체 절차를 사용하고, Worker 배포 후 새 draft → request → approve → publish 순서로 진행한다.
+과거 `decision_policy`와 goal은 발행 JSON 구조 호환을 위해 읽지만, 현재 모든 런북의 수집·분석·종료를 제어하지 않는다. D09만으로 목적 달성을 평가해 나머지 조회를 생략하는 절차는 폐기했다. 새 revision은 위의 전체 content 교체 절차로 발행한다.
 
-### 구 발행본의 D09 목적 종료 경로 (호환성 참고)
-
-아래는 기존 발행본의 동작이다. PR #170의 새 전체 수집 보고서 적용에는 §7을 사용하며, D09만으로 종료하는 아래 검수 기준을 적용하지 않는다.
-
-1. `GET /knowledge?kind=runbook&state=published&code=xid%3A79`와 `code=sxid%3A11001`로 실제 발행본의 knowledge ID·revision·hash·compatibility를 확인한다. 저장소 JSON이 1.1이라는 사실로 운영 적용을 판단하지 않는다.
-2. 발행 본문을 기준으로 `schema`를 `gpu-rca-runbook/1.1`로 바꾸고 해당 작성 원본의 `decision_policy`를 추가한 새 초안을 준비한다. 기존 compatibility·수집 계획·조건부 권고는 보존한다. 정책의 query와 기존 계획이 다르면 자동 병합하지 않고 조건을 먼저 맞춘다. `runbook_admin check --runtime`으로 실제 실행 프로필에서 검증한다.
-3. XID 79·SXID 11001 각각 D09만으로 필수 기준과 별도 검토가 충족되면 `goal_achieved`, 추가 조회 0건을 확인한다. 다른 대상·누락/부분 수집·의미 기준 미확정·검토 실패는 목적 달성으로 끝나면 안 된다. 합성 응답 재생은 종료 로직 검증이며 실제 모델 품질 검증과 구분한다.
-4. 운영 반영 승인을 받은 후 기존 knowledge ID에 새 revision을 등록·검토·발행한다. 같은 본문을 새 knowledge ID로 중복 생성하거나 과거 revision을 덮어쓰지 않는다. 문제가 있으면 새 revision을 retire하고 기존 발행본을 유지한다.
-5. **새 작업**의 고정 Runbook revision/hash, 품질 검토와 `investigation_decision`을 확인한다. GUI의 ‘다음 행동 결정’에서 목적 달성 이유, D09 수집, 목적 밖 선택 조회 생략을 확인한다. 이미 완료된 작업은 이전 발행본과 결과를 그대로 보존한다. `not_configured`이면 발행/선택이 아직 적용되지 않은 것이며 프롬프트나 품질 척도를 완화하지 않는다.
-
-`goal(id/question/conclusion_scope)`, `applies_when(reported_error_code/reported_producer_contract)`, `completion_criteria(id/question/method/required)`, `blocking_conditions`, `non_blocking_unknowns`, `followup_links(query_id/criterion_ids/required/expected_effect)`를 모두 요구한다. 첫 목적 ID는 `identify_error_report`, 코드 필수 기준은 `reported_error/scoped_source`다. 필수 LLM 기준도 하나 이상 있어야 한다. 차단 조건은 `scope_unverified/identity_conflict/required_query_incomplete/conflicting_reports` 네 항목이다. 모든 계획 query에 목적을 연결하며 기존 required를 false로 낮추거나 새 query를 끼워 넣을 수 없다. 지원하지 않는 필드·실행 표현식은 거절한다.
-
-Python과 Backend Go가 구조를 검사하고, 실행 코드는 scoped 보고·필수 근거·차단 조건을 확인한다. LLM의 기준 충족 제안에는 같은 응답 finding ID와 원본 관측 refs가 필요하며 독립 품질 검토를 통과해야 종료에 사용한다. 자세한 판단/표시는 [11 설계서](../../docs/specs/rca-agent/11_RCA_Agent_모듈_설계서.md#runbook-판단-기준과-품질-검토종료-설계)를 따른다. 1.0/legacy 지침의 선택·종료 의미와 기존 발행 hash는 유지한다.
+검수에서는 선택된 revision/hash, 계획된 조회 실행, 로그·메트릭·DB 이력을 함께 사용한 분석, 보고서 공개와 원문 연결을 확인한다. 장애 여부의 재판정이나 원인 확정은 생성 성공 조건이 아니다. 기존 발행본과 과거 결과는 수정하지 않는다. 현재 실행은 [RCA README](../README.md#현재-실행-흐름)를 따른다.

@@ -685,8 +685,8 @@ it.each([true, false])('reads unified or historical evaluation summary (%s)', (u
       onEvidence={() => {}}
     />,
   );
-  const expected = renderToStaticMarkup(<RcaReason value="insufficient_blocked" />);
-  expect(html).toContain(`근거 평가 판단</dt><dd>${expected}</dd>`);
+  expect(html).not.toContain('근거 평가 판단');
+  expect(html).not.toContain('기존 요건 충족 상태');
 });
 
 it('explains unconfigured auxiliary selection without blaming the model', () => {

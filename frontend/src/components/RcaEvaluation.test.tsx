@@ -1,34 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RcaDecisionSummary, RcaEvaluation } from './RcaEvaluation';
 import { RcaEvaluationTrace, RcaStageDetails } from './RcaEvaluationTrace';
 
 describe('separate RCA evaluations', () => {
-  const result = {
-    result_status: 'partial',
-    quality: {
-      rca_evaluation: {
-        schema_version: '1',
-        analysis_id: 'final-draft',
-        collection: { status: 'partial' },
-        evidence: { execution_status: 'complete' },
-        review: {
-          execution_status: 'complete',
-          verdict: 'acceptable',
-          analysis_id: 'final-draft',
-          rubric_version: '1',
-          criteria: {
-            grounding: {
-              status: 'pass',
-              reason: 'GPU 연결 미확인을 명시함',
-              evidence_refs: ['source-log'],
-            },
-          },
-        },
-        investigation: { status: 'finished', stop_reason: 'no_available_followup' },
-      },
-    },
-  };
   it('shows the combined author and independent reviewer without inventing a third stage', () => {
     const records = ['rca_synthesis', 'analysis_review'].map((query_id) => ({
       id: query_id,
@@ -39,118 +13,8 @@ describe('separate RCA evaluations', () => {
     const html = renderToStaticMarkup(<RcaEvaluationTrace items={records} onEvidence={() => {}} />);
     expect(html).toContain('증거 해석·RCA 분석');
     expect(html).toContain('작성 LLM');
-    expect(html).toContain('별도 검토 LLM');
+    expect(html).not.toContain('별도 검토 LLM');
     expect(html).not.toContain('LLM ③');
-  });
-  it('shows objective criteria and never treats a stale review as completed investigation', () => {
-    const value = structuredClone(result);
-    Object.assign(value.quality.rca_evaluation, {
-      schema_version: '2',
-      generation_mode: 'combined',
-    });
-    Object.assign(value.quality.rca_evaluation.investigation, {
-      objective: {
-        status: 'achieved',
-        analysis_id: 'final-draft',
-        policies: [
-          {
-            runbook_revision_id: 'book-1',
-            content_hash: 'hash',
-            goal: {
-              question: '대상 노드의 오류 보고를 확인했는가?',
-              conclusion_scope: '현재 상태와 근본 원인은 미확정',
-            },
-            criteria: [
-              {
-                key: 'criterion-1',
-                question: '보고 내용의 한계를 설명했는가?',
-                required: true,
-                method: 'llm',
-                status: 'satisfied',
-                evidence_refs: ['original-log'],
-              },
-            ],
-            blocking_conditions: [],
-            unmet_required_evidence: [],
-            non_blocking_unknowns: ['current_health'],
-          },
-        ],
-      },
-    });
-    const html = renderToStaticMarkup(<RcaEvaluation result={value} />);
-    for (const text of [
-      '조사 목적 달성',
-      '대상 노드의 오류 보고',
-      '보고 내용의 한계',
-      'original-log',
-      '현재 장치 상태',
-      '선택 조회가 남아 있어도 추가 수집 없이 종료',
-    ])
-      expect(html).toContain(text);
-    value.quality.rca_evaluation.review.analysis_id = 'old-draft';
-    const stale = renderToStaticMarkup(<RcaEvaluation result={value} />);
-    expect(stale).not.toContain('<h4>조사 목적 달성</h4>');
-    expect(stale).toContain('미검토');
-    expect(stale).not.toContain('선택 조회가 남아 있어도 추가 수집 없이 종료');
-  });
-  it.each([
-    ['XID 79', ['D44', 'D02', 'D11']],
-    ['SXID 11001', ['D02', 'D13']],
-  ])('explains completed D09 collection and skipped optional queries for %s', (_, deferred) => {
-    const html = renderToStaticMarkup(
-      <RcaDecisionSummary
-        value={{
-          reason: 'goal_achieved',
-          decision_policy_status: 'applied',
-          collected_queries: ['D09'],
-          deferred_queries: deferred,
-        }}
-      />,
-    );
-    expect(html).toContain('목표 확인에 사용한 수집: D09');
-    expect(html).toContain('목표를 충족해 추가로 수집하지 않은 선택 조회');
-    for (const query of deferred) expect(html).toContain(query);
-    expect(html).not.toContain('새 revision으로 발행');
-  });
-  it('explains missing published policy without inventing a policy for historical records', () => {
-    const html = renderToStaticMarkup(
-      <RcaDecisionSummary value={{ decision_policy_status: 'not_configured' }} />,
-    );
-    expect(html).toContain('품질 검토를');
-    expect(html).toContain('Runbook 1.1을 새 revision으로 발행');
-    expect(renderToStaticMarkup(<RcaDecisionSummary value={{}} />)).toBe('');
-  });
-  it('shows partial collection with an acceptable limited analysis without changing existing status', () => {
-    const before = JSON.stringify(result);
-    const html = renderToStaticMarkup(<RcaEvaluation result={result} />);
-    for (const text of [
-      '부분 수집',
-      '근거 범위에서 타당',
-      '원인 확정을 뜻하지 않습니다',
-      'GPU 연결 미확인을 명시함',
-      'source-log',
-    ])
-      expect(html).toContain(text);
-    expect(JSON.stringify(result)).toBe(before);
-  });
-  it('never labels an old draft, failed review, missing extension or unknown version acceptable', () => {
-    for (const change of [
-      { analysis_id: 'old-draft' },
-      { execution_status: 'failed' },
-      { execution_status: 'skipped' },
-    ]) {
-      const value = structuredClone(result);
-      Object.assign(value.quality.rca_evaluation.review, change);
-      const html = renderToStaticMarkup(<RcaEvaluation result={value} />);
-      expect(html).toContain('미검토');
-      expect(html).not.toContain('근거 범위에서 타당');
-    }
-    expect(renderToStaticMarkup(<RcaEvaluation result={{}} />)).toContain('검토 기록이 없습니다');
-    const value = structuredClone(result);
-    value.quality.rca_evaluation.schema_version = '99';
-    expect(renderToStaticMarkup(<RcaEvaluation result={value} />)).toContain(
-      '지원하지 않는 평가 형식',
-    );
   });
   it('distinguishes stage ownership from actual model calls and exposes the review target', () => {
     const html = renderToStaticMarkup(
@@ -176,16 +40,7 @@ describe('separate RCA evaluations', () => {
         ]}
       />,
     );
-    for (const text of [
-      '2회차',
-      '코드 · 상태 기록',
-      '논리 모델 요청 0회',
-      'new-draft',
-      '최종 초안은 미검토',
-      'LLM 예산 소진',
-      '조회 식별자',
-    ])
-      expect(html).toContain(text);
+    for (const text of ['2회차', 'LLM 예산 소진', '조회 식별자']) expect(html).toContain(text);
   });
   it('renders interpretation, rubric reasons, source links and omissions for debugging', () => {
     const html = renderToStaticMarkup(
@@ -222,15 +77,9 @@ describe('separate RCA evaluations', () => {
         }}
       />,
     );
-    for (const text of [
-      '평가 척도',
-      '공백 동안 원인을 배제할 수 없음',
-      'log-1',
-      'cause:c1',
-      '실제 실행 결정과 구분',
-      '일부 자료가 생략',
-    ])
-      expect(html).toContain(text);
+    expect(html).not.toContain('평가 척도');
+    expect(html).not.toContain('공백 동안 원인을 배제할 수 없음');
+    expect(html).toContain('일부 자료가 생략');
   });
 
   it.each([
@@ -260,8 +109,8 @@ describe('separate RCA evaluations', () => {
         ],
       };
       const record = {
-        id: 'review-limit',
-        query_id: 'analysis_review',
+        id: 'writer-limit',
+        query_id: 'report_assembly',
         quality: diagnostic,
         snapshot: diagnostic,
       };
@@ -284,15 +133,6 @@ describe('separate RCA evaluations', () => {
           expect(html).toContain(expected);
         expect(html).not.toContain('근거 범위에서 타당');
       }
-      const value = structuredClone(result);
-      Object.assign(value.quality.rca_evaluation.review, {
-        execution_status: 'skipped',
-        verdict: null,
-        reason,
-      });
-      const html = renderToStaticMarkup(<RcaEvaluation result={value} />);
-      expect(html).toContain(text);
-      expect(html).toContain('미검토');
     },
   );
 

@@ -451,7 +451,9 @@ export function RcaEvaluationTrace({
   items: Row[];
   onEvidence: (id: string) => void;
 }) {
-  const stages = items.filter((r) => rcaStages[str(r.query_id)]);
+  const stages = items.filter(
+    (r) => r.query_id !== 'analysis_review' && rcaStages[str(r.query_id)],
+  );
   if (!stages.length) return null;
   return (
     <section aria-label="RCA 처리 흐름">
@@ -536,9 +538,7 @@ export function RcaStageDetails({
   if (!step) return null;
   const body = obj(record.snapshot);
   const interpretation = obj(body.interpretation);
-  const review = obj(body.review);
   const synthesis = obj(body.diagnostics);
-  const allocation = obj(synthesis.budget_allocation);
   if (
     record.query_id === 'analysis_review' &&
     body.execution_status === 'skipped' &&
@@ -643,34 +643,6 @@ export function RcaStageDetails({
             선택된 근거는 모델 전송 완료와 별개입니다. 입력 제한과 관측 부재가 같은 코드로 기록된 구
             결과의 세부 원인은 추정하지 않습니다.
           </p>
-          {Object.keys(allocation).length > 0 && (
-            <details>
-              <summary>분석·검토 예산 배분</summary>
-              <p>
-                검토 예약 요청 {amount(allocation.requested_review_reserve)} → 적용{' '}
-                {amount(allocation.applied_review_reserve)} 토큰
-              </p>
-              <p>
-                남은 전체 예산: {amount(allocation.remaining_tokens)} · 검토 보호 하한:{' '}
-                {amount(allocation.review_floor_tokens)} 토큰
-              </p>
-              <p>
-                조정 사유:{' '}
-                {(
-                  {
-                    reservation_unchanged: '기존 예약 유지',
-                    analysis_input_preserved:
-                      '분석에 쓸 근거를 담기 위해 검토 예약의 일부를 분석에 배정했습니다.',
-                    analysis_review_budget_insufficient: '분석과 검토를 함께 감당할 예산 부족',
-                  } as Record<string, string>
-                )[str(allocation.reason)] || str(allocation.reason, '미기록')}
-              </p>
-              <p>
-                하한은 규칙 초안·검토 입력·기본 출력 상한을 기준으로 합니다. 이후 모델이 추가한
-                주장이나 재시도 비용까지 보장하지 않습니다. 구 기록에 없는 하한은 추정하지 않습니다.
-              </p>
-            </details>
-          )}
         </>
       )}
       {!compact && body.execution_status != null && (
@@ -775,49 +747,6 @@ export function RcaStageDetails({
           </table>
         </div>
       )}
-      {Object.keys(obj(review.criteria)).length > 0 && (
-        <>
-          <h4>평가 척도 · 버전 {str(body.rubric_version, '1')}</h4>
-          <p>판정: {label(review.verdict)}</p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>항목</th>
-                  <th>판정</th>
-                  <th>이유·근거</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(obj(review.criteria)).map(([key, value]) => {
-                  const row = obj(value);
-                  return (
-                    <tr key={key}>
-                      <th>{label(key)}</th>
-                      <td>{label(row.status)}</td>
-                      <td>
-                        {str(row.reason)} {refs(row.evidence_refs)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      {rows(review.issues).map((issue, i) => (
-        <p key={i}>
-          수정 대상 {str(issue.claim_id, '초안 전체')}: {str(issue.reason)} →{' '}
-          {str(issue.suggested_resolution)} {refs(issue.evidence_refs)}
-        </p>
-      ))}
-      {rows(review.followup_questions).map((question, i) => (
-        <p key={i}>
-          추가 확인: {str(question.question)} · 기대 효과: {str(question.expected_effect)} · 제안
-          조회: {strings(question.query_ids).join(', ')} (실제 실행 결정과 구분)
-        </p>
-      ))}
       {rows(body.claims).map((claim) => (
         <p key={str(claim.id)}>
           <strong>

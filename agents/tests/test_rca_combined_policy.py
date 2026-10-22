@@ -5,8 +5,7 @@ import json
 
 import pytest
 
-from agent_common.contracts import content_hash, validate_result
-from agent_common.rca_evaluation import source_evaluation
+from agent_common.contracts import content_hash
 from rcca_agent.runbook_contract import validate_runbook
 from rca_replay import replay
 from rca_replay_cases import ROOT, cases, reply
@@ -74,14 +73,6 @@ def policy_case(kind="xid"):
             "unknowns": [],
             "conflicts": [],
             "limitations": [],
-            "criterion_assessments": [
-                {
-                    "criterion_id": book["id"] + ":bounded_conclusion",
-                    "status": "satisfied",
-                    "finding_refs": ["finding-1"],
-                    "evidence_refs": {"$input": "/observation_refs"},
-                }
-            ],
         },
         "hypotheses": [],
         "limitations": ["원인과 현재 상태는 별도 확인이 필요합니다."],
@@ -89,53 +80,6 @@ def policy_case(kind="xid"):
     case["responses"].pop("evidence_interpretation")
     case["responses"]["synthesis"] = [reply(author)] * 2
     return case
-
-
-@pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_goal_defers_optional_queries_and_keeps_cause_unknown(
-    kind,
-):
-    case = policy_case(kind)
-    aux = {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
-    result = await replay(case)
-    assert result["missing_inputs"] == []
-    output = result["output"]
-    evaluation = output["result"]["quality"]["rca_evaluation"]
-    assert evaluation["schema_version"] == "2"
-    assert evaluation["generation_mode"] == "combined"
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved", result[
-        "summary"
-    ]
-    assert evaluation["review"]["rubric_version"] == "2"
-    assert sum(c["matched"] for c in result["query_calls"]) == 1
-    assert [call["stage"] for call in result["model_calls"]] == [
-        "synthesis",
-        "analysis_review",
-        "report_writing",
-    ]
-    assert not any(
-        e["query_id"] == "evidence_interpretation" for e in output["evidence"]
-    )
-    assert all(
-        c["causal_status"] != "confirmed" for c in output["result"]["cause_candidates"]
-    )
-    assert "causal_confirmation_evidence" not in output["result"]["missing_inputs"]
-    assert output["result"]["result_status"] == "ready"
-    assert source_evaluation(output["result"])["objective_status"] == "achieved"
-    reviewer = result["model_calls"][1]["input"]
-    assert any(c["source"] == "interpretation" for c in reviewer["draft"]["claims"])
-    assert not reviewer["evidence_context"]["interpretation_findings"]
-    decision = next(
-        e["snapshot"]
-        for e in output["evidence"]
-        if e["query_id"] == "investigation_decision"
-    )
-    assert decision["reason"] == "goal_achieved"
-    assert decision["decision_policy_status"] == "applied"
-    # Optional evidence does not displace a sufficient scoped report.
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["deferred_queries"]) == aux
-    assert decision["selected_queries"] == []
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -154,12 +98,12 @@ async def test_new_policy_revision_is_selected_while_old_published_revision_rema
     result = await replay(case)
     assert not result["missing_inputs"]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert evaluation["investigation"]["stop_reason"] == "no_available_followup"
     assert sum(c["matched"] for c in result["query_calls"]) == 1
-    assert [
-        p["runbook_revision_id"]
-        for p in evaluation["investigation"]["objective"]["policies"]
-    ] == [current["id"]]
+    assert [b["id"] for b in result["output"]["result"]["runbook_revisions"]] == [
+        current["id"]
+    ]
+    assert "objective" not in evaluation["investigation"]
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -172,61 +116,17 @@ async def test_published_legacy_policy_is_not_silently_upgraded(kind):
     for response in case["responses"]["synthesis"]:
         response["response"]["interpretation"].pop("criterion_assessments", None)
     result = await replay(case)
-    review = next(
+    assert not any(
+        e["query_id"] == "analysis_review" for e in result["output"]["evidence"]
+    )
+    frozen = next(
         e["snapshot"]
         for e in result["output"]["evidence"]
-        if e["query_id"] == "analysis_review"
+        if e["query_id"] == "runbook"
     )
-    assert review["review"]["verdict"] == "acceptable"
-    decision = next(
-        e["snapshot"]
-        for e in result["output"]["evidence"]
-        if e["query_id"] == "investigation_decision"
-    )
-    assert decision["reason"] == "authorized_followup"
-    assert decision["decision_policy_status"] == "not_configured"
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["selected_queries"]) == (
-        {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
-    )
-
-
-@pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_author_self_assessment_is_advisory_and_review_decides_scope(kind):
-    # 2026-10-19 14:50 SXID 11001 (b5ba138e): the author graded its own conclusion
-    # "unknown" and the goal could never complete despite a passing review.
-    case = policy_case(kind)
-    case["responses"]["synthesis"][0]["response"]["interpretation"][
-        "criterion_assessments"
-    ][0]["status"] = "unknown"
-    result = await replay(case)
-    ev = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert ev["review"]["verdict"] == "acceptable"
-    assert ev["investigation"]["stop_reason"] == "goal_achieved"
-    row = next(
-        r
-        for r in ev["investigation"]["objective"]["policies"][0]["criteria"]
-        if r["method"] == "llm"
-    )
-    assert row["status"] == "satisfied"
-    assert row["author_status"] == "unknown"
-    assert row["evidence_refs"] == ev["review"]["evidence_refs"]
-
-
-async def test_runbook_goal_also_works_without_combined_authoring():
-    case = policy_case()
-    case["attempt"]["profile"]["rca"]["generation_mode"] = "separate"
-    response = case["responses"]["synthesis"][0]["response"]
-    case["responses"]["evidence_interpretation"] = [reply(response["interpretation"])]
-    case["responses"]["synthesis"] = [
-        reply({"hypotheses": [], "limitations": response["limitations"]})
-    ]
-    result = await replay(case)
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert not result["missing_inputs"]
-    assert evaluation["schema_version"] == "2"
-    assert evaluation["generation_mode"] == "separate"
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert frozen == book["content"]
+    assert "decision_policy" not in frozen
+    assert result["output"]["result"]["quality"]["analysis"]["followups"] == 0
 
 
 async def test_valid_interpretation_survives_invalid_causal_refs_and_is_reviewed():
@@ -254,7 +154,7 @@ async def test_valid_interpretation_survives_invalid_causal_refs_and_is_reviewed
         "invalid_evidence_references"
     ]
     assert ev["evidence"]["interpretation"]["findings"]
-    assert ev["review"]["execution_status"] == "complete"
+    assert ev["review"]["reason"] == "not_requested"
     assert len([c for c in result["model_calls"] if c["stage"] == "synthesis"]) == 1
 
 
@@ -272,23 +172,6 @@ async def test_scope_mismatch_blocks_goal_even_with_forged_model_satisfaction(ki
         ]
         != "goal_achieved"
     )
-
-
-@pytest.mark.parametrize("mutation", ["status", "empty_criteria", "empty_blockers"])
-async def test_completion_validator_rejects_tampered_criteria(mutation):
-    result = await replay(policy_case())
-    output = deepcopy(result["output"])
-    policy = output["result"]["quality"]["rca_evaluation"]["investigation"][
-        "objective"
-    ]["policies"][0]
-    if mutation == "status":
-        policy["criteria"][0]["status"] = "unknown"
-    else:
-        policy[
-            "criteria" if mutation == "empty_criteria" else "blocking_conditions"
-        ] = []
-    with pytest.raises(ValueError, match="completion"):
-        validate_result(output["result"], output["evidence"])
 
 
 @pytest.mark.parametrize(
@@ -316,59 +199,6 @@ def test_runbook_policy_rejects_unsafe_contract(mutation):
             case["attempt"]["profile"]["queries"],
             list(case["attempt"]["profile"]["queries"]),
         )
-
-
-@pytest.mark.parametrize("failure", ["invalid_json", "truncated", "review_rejected"])
-@pytest.mark.parametrize("kind", ["xid", "sxid"])
-async def test_only_review_rejection_allows_one_reauthor_and_report_is_retained(
-    failure, kind
-):
-    from rca_replay_cases import review
-
-    case = policy_case(kind)
-    if failure == "invalid_json":
-        case["responses"]["synthesis"] = [
-            {"raw_text": "{broken", "usage": {"total_tokens": 1000}}
-        ]
-    elif failure == "truncated":
-        case["responses"]["synthesis"][0]["finish_reason"] = "length"
-    else:
-        response = review("revision_required")
-        response["issues"] = [
-            {
-                "claim_id": "interpretation:findings:finding-1",
-                "reason": "근거 범위를 넘어선 해석입니다.",
-                "evidence_refs": {"$input": "/input_evidence_refs"},
-                "suggested_resolution": "확인되지 않은 주장을 보류하세요.",
-            }
-        ]
-        case["responses"]["analysis_review"] = [reply(response), reply(review())]
-    result = await replay(case)
-    assert not result["missing_inputs"]
-    calls = [row for row in result["model_calls"] if row["stage"] == "synthesis"]
-    assert len(calls) == (2 if failure == "review_rejected" else 1)
-    assert all(len(call["requests"]) == 1 for call in calls)
-    output = result["output"]["result"]
-    assert (
-        output["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-        == "goal_achieved"
-    ) == (failure == "review_rejected")
-    if failure == "review_rejected":
-        assert calls[1]["input"]["review_feedback"]["issues"]
-        assert output["quality"]["rca_evaluation"]["review"]["verdict"] == "acceptable"
-    assert output["quality"]["report"]["status"] == "complete"
-    assert output["narrative"]
-    assert result["output"]["evidence"][-1]["query_id"] == "report_assembly"
-
-
-async def test_default_budget_preserves_author_and_independent_review():
-    case = policy_case()
-    case["token_budget"] = 32768
-    result = await replay(case)
-    ev = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert ev["evidence"]["execution_status"] == "complete", result["summary"]
-    assert ev["review"]["verdict"] == "acceptable"
-    assert ev["investigation"]["stop_reason"] == "goal_achieved"
 
 
 def test_source_identity_ignores_record_uuid_order_and_duplicates():
@@ -405,30 +235,6 @@ async def test_new_required_fact_cannot_be_bypassed_by_goal_policy():
             "stop_reason"
         ]
         != "goal_achieved"
-    )
-
-
-@pytest.mark.parametrize("mode", ["combined", "separate"])
-async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(
-    mode,
-):
-    case = cases()["followup_changes_review"]
-    case["attempt"]["profile"]["rca"]["generation_mode"] = mode
-    case["queries"][1]["response"] = deepcopy(case["queries"][0]["response"])
-    if mode == "combined":
-        author = deepcopy(policy_case()["responses"]["synthesis"][0])
-        author["response"]["interpretation"].pop("criterion_assessments")
-        case["responses"]["synthesis"] = [author]
-    result = await replay(case)
-    assert not result["missing_inputs"]
-    assert len([r for r in result["model_calls"] if r["stage"] == "synthesis"]) == 1
-    assert (
-        len([r for r in result["model_calls"] if r["stage"] == "analysis_review"]) == 1
-    )
-    assert any(
-        isinstance(row["snapshot"], dict)
-        and row["snapshot"].get("reason") == "no_new_evidence"
-        for row in result["output"]["evidence"]
     )
 
 

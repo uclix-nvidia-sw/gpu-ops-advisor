@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from rcca_agent.analysis_review import analysis_draft, review_payload
+from legacy_review_fixtures import analysis_draft, review_payload
 from rcca_agent.synthesis_context import bounded_context
 from rcca_agent.report_writer import report_sources
 from rca_replay import replay
@@ -38,22 +38,16 @@ async def test_no_cause_is_not_replaced_by_generic_symptom_with_independent_revi
     kind,
 ):
     case = component_case() if kind == "disk" else policy_case(kind)
-    criterion = case["responses"]["synthesis"][0]["response"]["interpretation"][
-        "criterion_assessments"
-    ][0]
-    criterion.update(status="unknown", evidence_refs=[], finding_refs=[])
-    # The independent review, not the author self-assessment, decides completion.
     outcome = await replay(case)
     result = outcome["output"]["result"]
     assert not result["cause_candidates"]
     assert (
         result["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-        == "goal_achieved"
+        == "no_available_followup"
     )
-    assert len(outcome["query_calls"]) == 1
+    assert len(outcome["query_calls"]) == {"xid": 4, "sxid": 3, "disk": 1}[kind]
     assert [c["stage"] for c in outcome["model_calls"]] == [
         "synthesis",
-        "analysis_review",
         "report_writing",
     ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])

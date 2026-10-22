@@ -255,19 +255,19 @@ it('keeps failed objective visible while collapsing processing details', () => {
       }}
     />,
   );
-  expect(html).toContain(
+  expect(html).not.toContain(
     '<summary>분석 처리: 목적 미달 · 가능한 보완 없음 · 수집·검토 상세</summary>',
   );
   expect(html).not.toContain('<details open');
   expect(html).toContain('SXID 이벤트 1건');
-  expect(html).toContain('수집·증거 해석·분석 품질');
+  expect(html).not.toContain('수집·증거 해석·분석 품질');
 });
 
 it('opens evaluation details for developers without changing report content', () => {
   const result = { narrative: [{ id: 'problem', title: '발생 내용', text: '관측 원문' }] };
   const developer = renderToStaticMarkup(<RcaNarrative result={result} evaluationExpanded />);
   const classic = renderToStaticMarkup(<RcaNarrative result={result} />);
-  expect(developer).toContain('<details open="">');
+  expect(developer).not.toContain('<details open="">');
   expect(classic).not.toContain('<details open');
   expect(developer).toContain('관측 원문');
   expect(classic).toContain('관측 원문');
@@ -292,7 +292,7 @@ it('does not present stale objective achievement as reviewed success in the summ
       }}
     />,
   );
-  expect(html).toContain(
+  expect(html).not.toContain(
     '<summary>분석 처리: 종료 · 최종 분석 검토 기록 확인 · 수집·검토 상세</summary>',
   );
 });

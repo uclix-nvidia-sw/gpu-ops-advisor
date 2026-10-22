@@ -4,9 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from rca_replay import replay
-from rca_replay_cases import reply, review
-from test_rca_combined_policy import policy_case
+from rca_replay_cases import review
 from test_rca_llm_roles import Writer, material
 from rcca_agent.report_writer import write_material_report
 from rcca_agent.evidence_interpretation import call_stage
@@ -23,40 +21,6 @@ def rejection():
         }
     ]
     return value
-
-
-@pytest.mark.parametrize("failure", ["rejected", "transport", "budget"])
-async def test_revision_is_bounded_and_never_bypasses_failed_review(failure):
-    case = policy_case()
-    first = reply(rejection())
-    if failure == "budget":
-        first["usage"]["total_tokens"] = case["token_budget"]
-    case["responses"]["analysis_review"] = [first, reply(rejection())]
-    if failure == "transport":
-        case["responses"]["synthesis"][1] = {"http_status": 503}
-    outcome = await replay(case)
-    calls = [c for c in outcome["model_calls"] if c["stage"] == "synthesis"]
-    assert len(calls) <= 2
-    if len(calls) == 2:
-        feedback = calls[1]["input"]["review_feedback"]
-        assert feedback["previous_claims"] and feedback["issues"]
-        assert (
-            feedback["previous_analysis_id"]
-            not in calls[1]["input"]["input_evidence_refs"]
-        )
-    result = outcome["output"]["result"]
-    if failure != "rejected":
-        assert (
-            result["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-            != "goal_achieved"
-        )
-    assert result["narrative"]
-    decisions = [
-        e["snapshot"]
-        for e in outcome["output"]["evidence"]
-        if e["query_id"] == "investigation_decision"
-    ]
-    assert sum(d.get("action") == "revise" for d in decisions) == 1
 
 
 async def test_report_does_not_send_fixed_sources_twice():
