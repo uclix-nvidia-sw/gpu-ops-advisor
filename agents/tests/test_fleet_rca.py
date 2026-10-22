@@ -312,7 +312,15 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_even
                 ]
                 == 31
             )
-            return analysis_reply(payload["observation_refs"])
+            return {
+                "interpretation": {
+                    "findings": [],
+                    "unknowns": [],
+                    "conflicts": [],
+                    "limitations": [],
+                },
+                **analysis_reply(payload["observation_refs"]),
+            }
 
     book = general_runbook()
     book["content"]["required_evidence"].append("incident_mapping")
@@ -377,7 +385,8 @@ async def test_fractional_fleet_logs_degraded_followup_and_r02_plan(include_even
     )
     assert synthesis_evidence["snapshot"]["diagnostics"] == diagnostics
     assert result["quality"]["analysis"]["status"] == "complete"
-    assert result["quality"]["analysis"]["sufficiency"] == "degraded"
+    assert "sufficiency" not in result["quality"]["analysis"]
+    assert "observation_degraded" in result["missing_inputs"]
     assert "mapping_target_unverified" in result["missing_inputs"]
     assert not result["pod_relations"] and result["result_status"] != "ready"
     assert all(c["causal_status"] == "candidate" for c in result["cause_candidates"])
@@ -644,24 +653,17 @@ async def test_alert_match_skips_analysis_and_review_models(kind):
     output = result["output"]["result"]
     analysis = output["quality"]["analysis"]
     assert analysis["alert_match"]["status"] == "match"
-    assert analysis["collection_stop_reason"] == "alert_match"
-    assert [c["stage"] for c in result["model_calls"]] == ["report_writing"]
-    assert [c["matched"] for c in result["query_calls"]] == [True]
-    evaluation = output["quality"]["rca_evaluation"]
-    assert evaluation["review"]["reason"] == "alert_match"
-    assert not any(m.startswith("synthesis_") for m in output["missing_inputs"])
+    assert analysis["collection_stop_reason"] == "no_remaining_queries"
+    assert [c["stage"] for c in result["model_calls"]] == [
+        "synthesis",
+        "report_writing",
+    ]
+    assert result["query_calls"][0]["matched"]
+    assert output["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
+    assert "sufficiency" not in analysis
     assert not any(
-        c["id"] == "observed_device_symptom" for c in output["cause_candidates"]
+        c["causal_status"] == "confirmed" for c in output["cause_candidates"]
     )
-    sources = output["quality"]["report"]["source_items"]
-    assert any(
-        s["text"].startswith("알림과 오류·상태 로그를 비교한 결과:") for s in sources
-    )
-    assert output["result_status"] == "ready"
-    assert not output["missing_inputs"]
-    assert analysis["sufficiency"] == "sufficient"
-    assert any(s["text"].startswith("이번 조사 범위 밖:") for s in sources)
-    assert not any("분석 처리 상태" in s["text"] for s in sources)
 
 
 async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
@@ -671,19 +673,17 @@ async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
     output = result["output"]
     analysis = output["result"]["quality"]["analysis"]
     assert analysis["alert_match"]["status"] == "pci_mismatch"
-    assert "pci_mismatch" not in output["result"]["missing_inputs"]
-    assert "pci_mismatch" in analysis["resolved_scope_gaps"]
-    investigation = output["result"]["quality"]["rca_evaluation"]["investigation"]
-    assert {"D44", "D02", "D11"} <= set(investigation["collected_queries"])
-    assert not any(
-        e["query_id"] == "investigation_decision" for e in output["evidence"]
-    )
-    # Analysis and review run once, after the auxiliary batch.
+    assert "pci_mismatch" in output["result"]["missing_inputs"]
+    assert "pci_mismatch" not in analysis["resolved_scope_gaps"]
+    collected = {e["query_id"] for e in output["evidence"]}
+    assert "investigation_decision" not in collected
+    assert {"D09", "D44", "D02", "D11"} <= collected
+    assert analysis["collection_stop_reason"] == "no_remaining_queries"
+    # Analysis and report writing run once, after the planned collection.
     assert [c["stage"] for c in result["model_calls"]] == [
         "synthesis",
-        "analysis_review",
         "report_writing",
     ]
     author = result["model_calls"][0]["input"]
     assert author["alert_match"]["status"] == "pci_mismatch"
-    assert "pci_mismatch" in author["evidence_gap"]
+    assert "evidence_gap" not in author

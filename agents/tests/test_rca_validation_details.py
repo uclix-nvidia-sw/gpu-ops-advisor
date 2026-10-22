@@ -7,14 +7,13 @@ import pytest
 
 from evaluation_fixtures import interpretation_reply, review_reply
 from rca_replay import replay
-from rcca_agent.analysis_review import analysis_draft, validate_review
+from legacy_review_fixtures import analysis_draft, validate_review
 from rcca_agent.combined_synthesis import author_prompt
 from rcca_agent.evidence_interpretation import (
     ResponseValidationError,
     call_stage,
     validate_interpretation,
 )
-from rcca_agent.workflow import choose_followup
 from test_rca_combined_policy import policy_case
 
 
@@ -146,7 +145,7 @@ async def test_prompt_conditions_and_corrected_response_reach_adoption_and_revie
     assert record["interpretation"]["unknowns"] == []
     # Same scenario as the E2E goal test: a dropped caveat never completes the goal.
     ev = bad["output"]["result"]["quality"]["rca_evaluation"]
-    assert ev["investigation"]["stop_reason"] == "goal_not_met"
+    assert ev["investigation"]["stop_reason"] == "no_available_followup"
     interpretation["unknowns"][0]["reason"] = (
         "No available source establishes current health"
     )
@@ -160,8 +159,8 @@ async def test_prompt_conditions_and_corrected_response_reach_adoption_and_revie
     assert record["interpretation"]["unknowns"] == interpretation["unknowns"]
     assert record["diagnostics"]["validation_failures"] == []
     ev = good["output"]["result"]["quality"]["rca_evaluation"]
-    assert ev["review"]["execution_status"] == "complete"
-    assert ev["investigation"]["stop_reason"] == "goal_achieved"
+    assert ev["review"]["reason"] == "not_requested"
+    assert ev["investigation"]["stop_reason"] == "no_available_followup"
     prompt = author_prompt({"decision_assessment": {"policies": []}})
     assert "ONLY unknowns may cite []" in prompt
     assert "nonempty reason" in prompt
@@ -244,23 +243,6 @@ async def test_invalid_json_keeps_its_own_failure_instead_of_shape_failure():
     ]
 
 
-async def test_selection_records_rejected_item_even_after_successful_repair():
-    class Model:
-        configured = True
-        calls = 0
-
-        async def complete(self, *args, **kwargs):
-            self.calls += 1
-            return {"query_ids": ["private-ref"] if self.calls == 1 else ["D09"]}
-
-    diagnostics = {}
-    assert await choose_followup(Model(), ["D09"], [], diagnostics) == ["D09"]
-    detail = diagnostics["validation_details"][0]["details"][0]
-    assert detail["path"] == "$.query_ids[0]"
-    assert detail["rule"] == "unknown_reference"
-    assert "private-ref" not in json.dumps(diagnostics)
-
-
 def synthesis_record(result):
     return next(
         e["snapshot"]
@@ -284,7 +266,7 @@ async def test_extra_item_field_is_stripped_and_caveat_kept():
     ]
     assert item in record["interpretation"]["unknowns"]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert evaluation["investigation"]["stop_reason"] == "no_available_followup"
 
 
 @pytest.mark.parametrize(
@@ -310,51 +292,11 @@ async def test_production_item_error_drops_only_that_item(field, item, code):
     assert diagnostics["adoption"] == "validated_response"
     assert [d["code"] for d in diagnostics["dropped_items"]] == [
         code,
-        "criterion_withheld",
     ]
     assert record["interpretation"]["findings"]
     assert item not in record["interpretation"][field]
     evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["investigation"]["stop_reason"] == "goal_not_met"
-
-
-async def test_dropped_finding_does_not_withhold_supported_criteria():
-    # A removed positive claim cannot make the conclusion look surer.
-    case = policy_case()
-    interpretation = case["responses"]["synthesis"][0]["response"]["interpretation"]
-    interpretation["findings"].append(
-        dict(id="extra", statement="근거 없는 발견", kind="observed", evidence_refs=[])
-    )
-    result = await replay(case)
-    record = synthesis_record(result)
-    assert [d["code"] for d in record["diagnostics"]["dropped_items"]] == [
-        "interpretation_missing_support"
-    ]
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
-
-
-async def test_invalid_criterion_answer_is_unknown_not_whole_rejection():
-    case = policy_case()
-    interpretation = case["responses"]["synthesis"][0]["response"]["interpretation"]
-    interpretation["criterion_assessments"][0]["criterion_id"] = "bounded_conclusion"
-    result = await replay(case)
-    record = synthesis_record(result)
-    assert record["diagnostics"]["adoption"] == "validated_response"
-    assert record["diagnostics"]["dropped_items"][0]["code"] == "criterion_status"
-    assert {r["status"] for r in record["interpretation"]["criterion_assessments"]} == {
-        "unknown"
-    }
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    # The malformed self-assessment is kept only as advisory author_status; the
-    # independent review rubric decides the semantic criterion.
-    row = next(
-        r
-        for r in evaluation["investigation"]["objective"]["policies"][0]["criteria"]
-        if r["method"] == "llm"
-    )
-    assert row["author_status"] == "unknown"
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
+    assert evaluation["investigation"]["stop_reason"] == "no_available_followup"
 
 
 async def test_author_view_uses_planned_budget_and_admits_observations_first():

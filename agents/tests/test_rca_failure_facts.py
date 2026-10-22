@@ -27,7 +27,6 @@ async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
     assert sum(c["matched"] for c in outcome["query_calls"]) == 1
     assert [c["stage"] for c in outcome["model_calls"]] == [
         "synthesis",
-        "analysis_review",
         "report_writing",
     ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
@@ -116,7 +115,7 @@ async def test_author_and_writer_failure_keep_facts_and_conditional_guidance(kin
     result = outcome["output"]["result"]
     assert not outcome["missing_inputs"]
     assert sum(c["matched"] for c in outcome["query_calls"]) == 1
-    assert len(outcome["model_calls"]) == 3
+    assert len(outcome["model_calls"]) == 2
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
     assert result["quality"]["report"]["method"] == "deterministic_fallback"
     problem = next(r for r in result["narrative"] if r["id"] == "problem")

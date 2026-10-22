@@ -16,7 +16,7 @@ from agent_common.llm import LLM
 from agent_common.runtime import attempt_context
 from agent_common.settings import Settings
 from rcca_agent import workflow
-from rcca_agent.analysis_review import review_analysis
+from legacy_review_fixtures import review_analysis
 from rcca_agent.report_labels import label, query_label
 
 
@@ -389,7 +389,11 @@ def readable_summary(result):
         lines.append(
             f"- {decision['round'] + 1}차: {action}. {reason} (`{decision['reason']}`)."
         )
-    if not summary["decisions"]:
+    if not summary["decisions"] and "result" in result["output"]:
+        lines.append(
+            "- 단일 수집 후 분석·보고서 작성. 별도 조사 판단 단계는 실행하지 않습니다."
+        )
+    elif not summary["decisions"]:
         lines.append(
             f"- 검토자 단독 실행. 판정: `{summary['review_only_verdict'] or '판정 없음'}`."
         )

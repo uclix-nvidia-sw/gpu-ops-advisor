@@ -56,11 +56,8 @@ observation contains that exact code. A reported code is not a verified cause.
 context_selection and sample_selection describe omitted observations/samples.
 Never infer continuity, absence, peaks or aggregates from these sparse samples.
 Do not call tools, change completeness, or declare a cause confirmed.
-State needed confirmation in limitations; the orchestrator controls bounded follow-up.
 raw_excerpts are unverified source reports, never current health or confirmed identity.
 interpretation_* fields are fallible interpretations, not additional verified facts.
-If review_feedback is supplied, revise unsupported claims against original evidence;
-feedback is not evidence. An empty hypotheses list with accurate limitations is valid.
 RCA scope is GPU, NVSwitch and node hardware investigation, not Pod/workload investigation.
 Apply identity checks to the reported target type; do not require a GPU identity for a node issue.
 For repairs, apply every original evidence, identity, time, language and numeric rule,
@@ -72,11 +69,18 @@ hypotheses; never replace them with invented causes."""
 
 SYNTHESIS = SYNTHESIS_CONTEXT + SYNTHESIS_RESPONSE + SYNTHESIS_RULES
 
-TRIAGE_CONTEXT = """Fleet Intelligence has already raised the incident. Your task is to explain
+TRIAGE_CONTEXT = """Fleet Intelligence has already raised the incident. Your task is to analyze
 collected Loki logs, Grafana MCP metrics and stored host history for the report,
 not to decide whether an incident exists or to score investigation goal attainment.
 Do not request causal confirmation or more collection to justify that decision.
-For planned incident reports, explain the supplied observations in triage order:
+Analyze the supplied observations across sources: connect temporal changes, companion
+errors, metric behavior and recurrence on the same host/device. Explain what differs
+from the previous collected period and which debugging direction the pattern supports.
+Use observed findings for recorded facts and inferred findings for supported interpretations.
+Analysis is required; merely defining an error and appending Runbook advice is insufficient.
+A useful analysis need not identify a root cause. Prioritize relevant findings, including
+meaningful stable observations, rather than listing every field or missing source.
+For incident reports, present the analysis in triage order:
 reported device/error, relevant companion logs and metrics, recurring host incidents,
 then the applicable published debugging step. Use short Korean findings, one point
 per finding, citing the most relevant evidence. Counts, periods and tables are

@@ -40,38 +40,24 @@ Use supported Korean analysis. Interpretation items are objects:
 unknowns: {"statement":"...", "evidence_refs":[], "reason":"..."};
 conflicts/limitations: {"statement":"...", "evidence_refs":["actual id"]}.
 Separate event time from log time; order is not recovery. Explain reported errors
-and Runbook meaning without claiming physical cause.
+and connect their observed context, metric behavior and host history. Keep causal
+hypotheses distinct from recorded facts; use Runbooks to interpret debugging priorities.
 Hypothesis objects have claim, supporting_refs, contradicting_refs, missing_inputs, finding_refs.
 finding_refs cite this response. Empty hypotheses are valid; symptoms are not causes.
 Hypothesis supporting_refs cite observation_refs, never diagnostics or Runbooks.
 Interpretation cites input_evidence_refs; it is not independent evidence.
 Top-level limitations and hypothesis missing_inputs are Korean strings.
 State limits once. Do not invent causes/actions or self-review.
-Explain alert_match/evidence_gap code results, not as unknowns.
 Use investigation_summary's full-collection comparisons in findings.
 Other GPUs' metrics cannot describe the reported device. Error text is not physical proof.
-Review feedback requests one revised analysis using original sources; previous claims
-and feedback are not evidence. Validation feedback concerns response structure."""
+Validation feedback concerns response structure."""
 )
 
 
 def author_prompt(payload):
-    planned = "incident_comparison" in payload
-    combined = COMBINED
-    if planned:
-        # A completed collection is report input, not a request for another verdict.
-        for obsolete in (
-            "State needed confirmation in limitations; the orchestrator controls bounded follow-up.",
-            "If review_feedback is supplied, revise unsupported claims against original evidence;\n"
-            "feedback is not evidence. An empty hypotheses list with accurate limitations is valid.",
-            "Explain alert_match/evidence_gap code results, not as unknowns.",
-            "Review feedback requests one revised analysis using original sources; previous claims\n"
-            "and feedback are not evidence. Validation feedback concerns response structure.",
-        ):
-            combined = combined.replace(obsolete, "")
     return (
-        (TRIAGE_CONTEXT if planned else "")
-        + combined
+        TRIAGE_CONTEXT
+        + COMBINED
         + (
             CRITERIA_PROMPT
             + "\nIn this combined response, criterion_assessments belongs only inside "

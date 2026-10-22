@@ -93,13 +93,12 @@ async def test_noncode_component_uses_one_query_and_three_calls():
     assert len(result["query_calls"]) == 1
     assert [c["stage"] for c in result["model_calls"]] == [
         "synthesis",
-        "analysis_review",
         "report_writing",
     ]
     output = result["output"]["result"]
     assert (
         output["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-        == "goal_achieved"
+        == "no_available_followup"
     )
     text = str(output["narrative"])
     assert "파일시스템 점검" in text and "유지보수 승인" in text
@@ -182,13 +181,17 @@ async def test_component_state_mixture_does_not_claim_goal_or_recovery(health):
     other["attributes"]["health"] = health
     values.append([values[0][0], json.dumps(other)])
     result = await replay(case)
-    objective = result["output"]["result"]["quality"]["rca_evaluation"][
+    investigation = result["output"]["result"]["quality"]["rca_evaluation"][
         "investigation"
-    ]["objective"]
-    assert objective["status"] != "achieved"
-    assert any(
-        r["id"] == "conflicting_reports" and r["status"] != "satisfied"
-        for r in objective["policies"][0]["blocking_conditions"]
+    ]
+    assert "objective" not in investigation
+    assert (
+        result["output"]["result"]["quality"]["rca_evaluation"]["review"]["verdict"]
+        is None
+    )
+    assert not any(
+        r.get("fact_eligible")
+        for r in result["output"]["result"]["device_observations"]
     )
 
 

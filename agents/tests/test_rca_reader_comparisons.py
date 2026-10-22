@@ -155,8 +155,8 @@ async def test_mismatch_collects_all_four_optional_queries_within_existing_budge
     )
     outcome = await replay(case)
     collected = {e["query_id"] for e in outcome["output"]["evidence"]}
-    assert {"D02", "D03", "D11", "D44"} <= collected
     assert "investigation_decision" not in collected
+    assert {"D02", "D03", "D11", "D44"} <= collected
 
 
 def test_full_post_event_utilization_summary_is_not_current_health():

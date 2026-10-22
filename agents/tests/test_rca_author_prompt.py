@@ -161,7 +161,82 @@ def test_planned_author_explains_collected_data_without_review_or_followup():
     assert "If review_feedback is supplied" not in prompt
     assert "controls bounded follow-up" not in prompt
     assert "Explain alert_match/evidence_gap" not in prompt
-    assert "Review feedback requests" in author_prompt({})
+    assert "Review feedback requests" not in author_prompt({})
+
+
+@pytest.mark.parametrize("payload", [{}, {"incident_comparison": []}])
+def test_every_author_analyzes_collected_sources_after_fleet_decision(payload):
+    prompt = author_prompt(payload)
+    assert "Fleet Intelligence has already raised the incident" in prompt
+    assert "Analysis is required" in prompt
+    assert "temporal changes, companion" in prompt
+    assert "Use observed findings" in prompt
+    assert (
+        "merely defining an error and appending Runbook advice is insufficient"
+        in prompt
+    )
+    assert "State unknowns explicitly" not in prompt
+    assert "without claiming physical cause" not in prompt
+    assert "controls bounded follow-up" not in prompt
+    assert "Review feedback requests" not in prompt
+
+
+def test_cross_source_inferred_analysis_is_accepted_with_real_references():
+    response = {
+        "interpretation": {
+            "findings": [
+                {
+                    "id": "relationship",
+                    "statement": "접근 오류 전후의 연결 오류 기록과 메트릭 변화가 함께 나타나 연결 경로 점검을 우선할 단서가 됩니다.",
+                    "kind": "inferred",
+                    "evidence_refs": ["log", "metric"],
+                }
+            ],
+            "unknowns": [],
+            "conflicts": [],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "limitations": [],
+    }
+    interpretation, candidates, _, errors = validate_author(
+        response,
+        {
+            "input_evidence_refs": ["log", "metric"],
+            "observation_refs": ["log", "metric"],
+            "device_observations": [],
+            "error_events": [],
+            "query_quality": [],
+        },
+        None,
+    )
+    assert not errors
+    assert interpretation["findings"] == response["interpretation"]["findings"]
+    assert candidates == []
+
+
+def test_supported_candidate_does_not_create_a_causal_confirmation_task():
+    from rcca_agent.synthesis import validate_synthesis
+
+    candidates = validate_synthesis(
+        {
+            "hypotheses": [
+                {
+                    "claim": "연결 경로의 문제가 동반됐을 가능성이 있다",
+                    "supporting_refs": ["log"],
+                    "contradicting_refs": [],
+                    "missing_inputs": [],
+                }
+            ],
+            "limitations": [],
+        },
+        ["log"],
+        [],
+        set(),
+        [],
+    )
+    assert candidates[0]["causal_status"] == "candidate"
+    assert candidates[0]["missing_inputs"] == []
 
 
 @pytest.mark.parametrize(

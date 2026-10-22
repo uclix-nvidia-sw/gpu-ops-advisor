@@ -12,7 +12,7 @@ from rcca_agent.report_writer import (
     validate_report,
 )
 from rcca_agent.synthesis_context import bounded_context, encoded_size
-from rcca_agent.analysis_review import review_payload, analysis_draft
+from legacy_review_fixtures import review_payload, analysis_draft
 from rcca_agent.evidence_interpretation import ResponseValidationError
 from rcca_agent.evaluation import BASE_LIMIT
 from rca_report_fixture import report_reply
@@ -139,7 +139,9 @@ async def test_report_preflight_keeps_complete_sources_and_never_raises_budget(m
         model.remaining = 1
     finding = source["evaluation"]["evidence"]["interpretation"]["findings"][0]
     if mode == "input":
-        finding["statement"] = "관측" * 20000
+        source["cause_candidates"] = [
+            {"claim": "관측" * 20000, "supporting_refs": ["D09-ref"]}
+        ]
     remaining = model.remaining
     result = {"quality": {}}
     await write_material_report(result, source, model)
@@ -214,13 +216,12 @@ async def test_three_roles_and_goal_stop_with_no_ordering_call(kind):
     assert not result["missing_inputs"]
     assert [row["stage"] for row in result["model_calls"]] == [
         "synthesis",
-        "analysis_review",
         "report_writing",
     ]
     output = result["output"]["result"]
     assert (
         output["quality"]["rca_evaluation"]["investigation"]["stop_reason"]
-        == "goal_achieved"
+        == "no_available_followup"
     )
     assert output["quality"]["report"]["method"] == "llm_composed"
     assert "runbook_guidance" in output["quality"]
@@ -228,40 +229,6 @@ async def test_three_roles_and_goal_stop_with_no_ordering_call(kind):
     assert assembly["execution_status"] == "complete"
     assert assembly["attempts"] == 1
     assert assembly["input_material_hash"] == assembly["material_hash"]
-
-
-@pytest.mark.asyncio
-async def test_review_withholds_only_affected_interpretation_and_dependencies():
-    from rca_replay_cases import reply, review
-
-    case = policy_case()
-    author = case["responses"]["synthesis"][0]["response"]["interpretation"]
-    extra = deepcopy(author["findings"][0])
-    extra.update(id="finding-2", statement="추가로 보존할 관측 보고입니다.")
-    author["findings"].append(extra)
-    verdict = review("revision_required")
-    verdict["issues"] = [
-        {
-            "claim_id": "interpretation:findings:finding-1",
-            "reason": "해당 항목은 보류해야 합니다.",
-            "evidence_refs": {"$input": "/input_evidence_refs"},
-            "suggested_resolution": "다른 유효한 관측은 보존하세요.",
-        }
-    ]
-    case["responses"]["analysis_review"] = [reply(verdict), reply(verdict)]
-    result = await replay(case)
-    assert not result["missing_inputs"]
-    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
-    kept = evaluation["evidence"]["interpretation"]
-    assert any(row["id"] == "finding-2" for row in kept["findings"])
-    assert not any(row["id"] == "finding-1" for row in kept["findings"])
-    assert kept["criterion_assessments"][0]["status"] == "unknown"
-    # The retained draft is the reviewed draft minus the challenged claim; every
-    # issue named a withheld claim, so the review rubric settles the scope.
-    assert evaluation["review"]["execution_status"] == "complete"
-    assert evaluation["review"]["verdict"] == "acceptable_after_feedback"
-    assert evaluation["review"]["unattributed_issues"] is False
-    assert evaluation["investigation"]["stop_reason"] == "goal_achieved"
 
 
 def test_report_retains_counter_evidence_and_withheld_action_conditions():

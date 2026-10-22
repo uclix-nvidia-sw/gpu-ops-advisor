@@ -31,14 +31,10 @@ describe('developer RCA workflow entry and evidence', () => {
         onEvidence={() => {}}
       />,
     );
-    for (const text of [
-      '조사 목적 달성',
-      'XID 79 보고',
-      '목표 확인에 사용한 수집: D09',
-      '목표를 충족해 추가로 수집하지 않은 선택 조회: D44, D02, D11',
-      '현재 장치 상태',
-    ])
-      expect(html).toContain(text);
+    expect(html).not.toContain('목표 확인에 사용한 수집');
+    expect(html).not.toContain('목표를 충족해 추가로 수집하지 않은');
+    expect(html).toContain('전체 저장 원문');
+    expect(html).toContain('decision_assessment');
   });
   it('explains combined authoring and frozen RCA material separately from report composition', () => {
     const render = (query_id: string, snapshot: Record<string, unknown>) =>
@@ -175,9 +171,10 @@ describe('developer RCA workflow entry and evidence', () => {
         onEvidence={() => {}}
       />,
     );
-    expect(html).toContain('20,000');
-    expect(html).toContain('18,000');
-    expect(html).toContain('검토 보호 하한: 기록 없음');
+    expect(html).not.toContain('분석·검토 예산 배분');
+    expect(html).toContain('requested_review_reserve');
+    expect(html).toContain('18000');
+    expect(html).not.toContain('검토 보호 하한');
     expect(html).toContain('모델 호출 여부 미확인');
   });
 

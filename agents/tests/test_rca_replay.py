@@ -44,50 +44,23 @@ async def test_frozen_replay_contract(name, monkeypatch):
         assert summary["transport_calls"] == 1
         return
     assert all(call["matched"] for call in result["query_calls"])
-    if name == "enough_budget":
-        assert summary["interpretation_statuses"] == ["complete"]
-        assert summary["synthesis_statuses"] == ["complete"]
-        assert summary["review_verdicts"] == ["acceptable"]
-        assert summary["transport_calls"] == 4
-        assert (
-            result["output"]["result"]["quality"]["rca_evaluation"]["investigation"][
-                "stop_reason"
-            ]
-            == "review_accepted"
-        )
-    elif name == "insufficient_budget":
+    assert summary["review_verdicts"] == []
+    assert [c["stage"] for c in result["model_calls"]] == (
+        [] if name == "insufficient_budget" else ["synthesis", "report_writing"]
+    )
+    assert summary["decisions"] == []
+    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
+    drafts = {
+        e["id"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "rca_analysis_draft"
+    }
+    assert drafts
+    assert set(evaluation["investigation"]["evidence_refs"]) == drafts
+    if name == "insufficient_budget":
         assert summary["transport_calls"] == 0
-        assert summary["fixture_reported_tokens"] is None
-        assert summary["review_verdicts"] == [None]
-        assert summary["synthesis_statuses"] != ["complete"]
-    elif name == "interpretation_only":
-        assert summary["interpretation_statuses"] == ["complete"]
-        assert summary["interpretation_only_rounds"] == 1
+    if name == "interpretation_only":
         assert summary["truncated_responses"] == 1
-        evidence = result["output"]["evidence"]
-        preserved = next(
-            e["snapshot"]
-            for e in evidence
-            if e["query_id"] == "evidence_interpretation"
-        )
-        assert preserved["interpretation"]["findings"]
-        assert any(
-            call["failure"] == "llm_output_truncated" for call in result["model_calls"]
-        )
-    else:
-        assert len(result["query_calls"]) == 2
-        assert summary["decisions"] == []
-        assert (
-            "D02"
-            in result["output"]["result"]["quality"]["rca_evaluation"]["investigation"][
-                "collected_queries"
-            ]
-        )
-        assert summary["review_verdicts"] == [
-            "undetermined" if name == "followup_changes_review" else "acceptable",
-            "acceptable",
-        ]
-        assert summary["transport_calls"] == 7
     # Every source retained by the model is a stored evidence ID.
     ids = {e["id"] for e in result["output"]["evidence"]}
     for call in result["model_calls"]:
@@ -138,11 +111,11 @@ async def test_compare_requires_same_frozen_inputs():
 async def test_summary_explains_followup_and_retained_partial_result():
     result = await replay(cases()["accepted_rule_followup"])
     text = readable_summary(result)
-    assert any(e["query_id"] == "D02" for e in result["output"]["evidence"])
-    assert "확보된 근거 범위에서 타당" in text
+    assert "추가 수집 D02(GPU 활동)" not in text
+    assert "단일 수집 후 분석·보고서 작성" in text
     assert "실제 모델의 판단 정확도·비용은 측정하지 않았습니다" in text
     result = await replay(cases()["interpretation_only"])
-    assert "해석만 보존된 라운드: 1개" in readable_summary(result)
+    assert "해석만 보존된 라운드: 0개" in readable_summary(result)
     assert "모델 응답이 출력 제한으로 잘렸습니다" in readable_summary(result)
 
 

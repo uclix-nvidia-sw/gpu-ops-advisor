@@ -63,9 +63,7 @@ async def test_selected_sources_precede_collection_and_keep_their_references(
             for entry in evidence
             if entry["query_id"] == "investigation_plan_extension"
         ]
-        if mode in {"xid", "sxid"}:
-            assert extensions
-            assert index[queries[0]["id"]] < index[extensions[0]["id"]]
+        assert not extensions
         if mode == "fast":
             assert len(sources) == 1 and "builtin-general" not in sources
         for entry in evidence:
