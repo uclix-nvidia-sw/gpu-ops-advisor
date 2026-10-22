@@ -685,3 +685,236 @@
     gap: 12px;
   }
 }
+
+/* Shared visual language with the RCA report: text size, section rhythm, callouts and tables. */
+.report-workspace .aggregate-report,
+.report-workspace .aggregate-report p,
+.report-workspace .aggregate-report li,
+.report-workspace .aggregate-report dd,
+.report-workspace .aggregate-report summary {
+  font-size: 13px;
+  line-height: 1.9;
+}
+.report-workspace .aggregate-report p {
+  margin: 0 0 14px;
+}
+.report-workspace .aggregate-report > .aggregate-major-topic {
+  margin-top: 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+}
+.report-workspace .aggregate-report h2 {
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+.report-workspace .aggregate-report .aggregate-subheading {
+  font-size: 15px;
+  margin: 24px 0 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+.report-workspace .aggregate-report h4,
+.report-workspace .aggregate-report .aggregate-chart-heading h4,
+.report-workspace .aggregate-report .aggregate-chart-metric-title,
+.report-workspace .aggregate-interpretation h3 {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+.report-workspace .aggregate-report .aggregate-static-note,
+.report-workspace .aggregate-report .aggregate-data-note,
+.report-workspace .aggregate-report .aggregate-unattributed,
+.report-workspace .aggregate-report .aggregate-summary-source,
+.report-workspace .aggregate-interpretation-limit {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.report-workspace .aggregate-report .aggregate-static-note strong {
+  display: inline;
+  margin-right: 6px;
+  color: var(--muted);
+}
+.report-workspace .aggregate-report > .aggregate-summary,
+.report-workspace .aggregate-report > .aggregate-summary-ai {
+  margin: 0 -28px;
+  padding: 24px 28px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--soft-green);
+}
+.report-workspace .aggregate-report .aggregate-summary-findings > li {
+  font-size: 14px;
+}
+.report-workspace .aggregate-interpretation {
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--green);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.report-workspace .aggregate-interpretation dl > div {
+  margin-top: 12px;
+}
+.report-workspace .aggregate-interpretation details {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.report-workspace .aggregate-report table {
+  table-layout: fixed;
+  font-size: 13px;
+}
+.report-workspace .aggregate-report th,
+.report-workspace .aggregate-report td {
+  padding: 10px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.report-workspace .aggregate-report thead {
+  background: var(--surface);
+}
+.report-workspace .aggregate-report th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.report-workspace .aggregate-report .aggregate-table-scroll {
+  max-height: 440px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.report-workspace .aggregate-report .aggregate-chart-heading {
+  background: transparent;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.report-workspace .aggregate-report .aggregate-model-detail {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+}
+.report-workspace .aggregate-report details {
+  margin: 8px 0;
+}
+.report-workspace .aggregate-report summary {
+  padding: 8px 0;
+  font-weight: 600;
+}
+.report-workspace .aggregate-report .aggregate-evidence {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+@media (max-width: 640px) {
+  .report-workspace .aggregate-report > .aggregate-summary,
+  .report-workspace .aggregate-report > .aggregate-summary-ai {
+    margin: 0 -16px;
+    padding: 18px 16px;
+  }
+}
+
+/* Chart layer: recessive axes, 2px lines, ringed markers, crosshair tooltip. */
+.aggregate-chart-frame {
+  position: relative;
+}
+.aggregate-time-chart {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.aggregate-chart text {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.aggregate-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.aggregate-crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.aggregate-marker {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.aggregate-tooltip {
+  position: absolute;
+  top: 6px;
+  transform: translateX(-50%);
+  max-width: 320px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(20, 45, 28, 0.1);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.aggregate-tooltip-time {
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.aggregate-tooltip svg {
+  width: 20px;
+  height: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.aggregate-tooltip strong {
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+}
+.aggregate-workload-track {
+  fill: var(--surface-2);
+}
+.aggregate-workload-bar {
+  fill: var(--green);
+}
+.report-workspace .aggregate-report .aggregate-evidence-links,
+.report-workspace .aggregate-report .aggregate-evidence-buttons {
+  gap: 4px 14px;
+}
+.report-workspace .aggregate-report .text-link {
+  font-size: 13px;
+}
+.report-workspace .aggregate-report .aggregate-number {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Workload bars reuse the RCA report's bar rows (label · track · value). */
+.report-workspace .aggregate-report .rca-bars {
+  margin: 8px 0 12px;
+}
+.report-workspace .aggregate-report .rca-bar {
+  grid-template-columns: minmax(150px, 260px) 1fr 56px;
+  font-size: 13px;
+}
+.report-workspace .aggregate-report .rca-bar-track {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.report-workspace .aggregate-report .rca-bar-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--muted);
+}
+.report-workspace .aggregate-report td .rca-bar-track {
+  margin-top: 6px;
+  max-width: 240px;
+}
+.report-workspace .aggregate-report .aggregate-workload-period {
+  display: block;
+  line-height: 1.4;
+}

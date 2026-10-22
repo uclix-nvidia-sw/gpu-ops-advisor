@@ -4,11 +4,19 @@ import { Modal } from './ui';
 import { QueryState } from './live';
 import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
 
-export function RcaEvidenceDialog({ id, onClose }: { id: string; onClose: () => void }) {
+export function RcaEvidenceDialog({
+  id,
+  onClose,
+  title = 'RCA 관측 원문',
+}: {
+  id: string;
+  onClose: () => void;
+  title?: string;
+}) {
   const q = useResource(`/evidence/${encodeURIComponent(id)}`);
   const evidence = obj(q.data);
   return (
-    <Modal title="RCA 관측 원문" wide onClose={onClose}>
+    <Modal title={title} wide onClose={onClose}>
       <QueryState query={q}>
         <p>
           {str(evidence.query_id)} · {str(evidence.cluster_id)} ·{' '}

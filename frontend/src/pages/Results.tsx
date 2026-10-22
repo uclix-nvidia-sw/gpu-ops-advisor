@@ -243,10 +243,14 @@ export function ResultPage({ kind }: { kind: string }) {
         )}
       </QueryState>
       {evidence &&
-        (kind === 'analysis' ? (
-          <RcaEvidenceDialog id={evidence} onClose={() => setEvidence('')} />
-        ) : (
+        (kind === 'incident' ? (
           <EvidenceDialog id={evidence} onClose={() => setEvidence('')} />
+        ) : (
+          <RcaEvidenceDialog
+            id={evidence}
+            title={kind === 'analysis' ? 'RCA 관측 원문' : '보고서 관측 원문'}
+            onClose={() => setEvidence('')}
+          />
         ))}
     </div>
   );
