@@ -164,6 +164,7 @@ export function ResultPage({ kind }: { kind: string }) {
                 job={r}
                 onEvidence={setEvidence}
                 evaluationExpanded={app.mode === 'developer'}
+                reader={app.mode !== 'developer'}
               />
             )}
             <div className="head-actions">
@@ -236,7 +237,7 @@ export function ResultPage({ kind }: { kind: string }) {
             )}
           </div>
         </Panel>
-        {!deleted && (
+        {!deleted && (kind !== 'analysis' || app.mode === 'developer') && (
           <Reviews
             id={id!}
             subject={kind === 'incident' ? 'incident' : 'job'}

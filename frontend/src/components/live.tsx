@@ -235,7 +235,7 @@ export function AlarmIdentity({
       str(target[key]) ||
       (key === 'node' ? str(target.k8s_node_name) : '') ||
       (key === 'cluster_id' ? str(record.cluster_id) : '');
-    return value ? [`${label}: ${value}`] : [];
+    return value ? [[label, value]] : [];
   });
   return (
     <span className="alarm-identity">
@@ -246,7 +246,18 @@ export function AlarmIdentity({
       {!rcaView && !compact && str(target.alertname) && target.alertname !== name && (
         <span className="cell-sub">{str(target.alertname)}</span>
       )}
-      {!compact && <span className="cell-sub">{targets.join(' · ') || '발생 대상 미확인'}</span>}
+      {!compact && (
+        <span className="cell-sub">
+          {targets.length
+            ? targets.map(([label, value], i) => (
+                <span key={label}>
+                  {i > 0 && ' · '}
+                  {label}: <strong>{value}</strong>
+                </span>
+              ))
+            : '발생 대상 미확인'}
+        </span>
+      )}
       {!compact && str(record.symptom) && record.symptom !== name && (
         <span className="cell-sub">{str(record.symptom)}</span>
       )}

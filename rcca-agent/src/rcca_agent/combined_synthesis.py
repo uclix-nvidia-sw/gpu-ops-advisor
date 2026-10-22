@@ -6,6 +6,7 @@ import time
 
 from agent_common.contracts import content_hash
 from .evidence_interpretation import (
+    complete_once,
     INTERPRET_CONTEXT,
     INTERPRET_RULES,
     CRITERIA_PROMPT,
@@ -22,6 +23,12 @@ from .synthesis import (
     SynthesisValidationError,
 )
 from .synthesis_context import bounded_context, encoded_size
+
+NUMERIC_REPAIR = (
+    "Previous findings were dropped because their prose contained quantities. "
+    "Rewrite each finding without digits or number words; cite values only through "
+    "the supplied value references. Keep the same evidence references."
+)
 
 COMBINED = (
     SYNTHESIS_CONTEXT
@@ -361,7 +368,7 @@ async def generate(llm, payload, diagnostics):
         request_limit = getattr(llm, "request_attempt_limit", 3)
         llm.request_attempt_limit = 1
         try:
-            response = await llm.complete(prompt, view, stage="synthesis")
+            response = await complete_once(llm, prompt, view, "synthesis", diagnostics)
         finally:
             llm.request_attempt_limit = request_limit
         if response is None:
@@ -373,6 +380,30 @@ async def generate(llm, payload, diagnostics):
             interpretation, candidates, limitations, errors = validate_author(
                 response, view, semantic_criteria(payload), details, dropped
             )
+            if errors and any(d.get("rule") == "numeric" for d in dropped):
+                # One repair request with fixed feedback; the same view is revalidated.
+                repair = {**view, "repair_feedback": NUMERIC_REPAIR}
+                llm.request_attempt_limit = 1
+                try:
+                    retry = await complete_once(
+                        llm, prompt, repair, "synthesis", diagnostics
+                    )
+                finally:
+                    llm.request_attempt_limit = request_limit
+                diagnostics["numeric_repair"] = "failed"
+                if retry is not None:
+                    retry_details, retry_dropped = [], []
+                    result = validate_author(
+                        retry,
+                        view,
+                        semantic_criteria(payload),
+                        retry_details,
+                        retry_dropped,
+                    )
+                    if not result[3]:
+                        interpretation, candidates, limitations, errors = result
+                        details, dropped[:] = retry_details, retry_dropped
+                        diagnostics["numeric_repair"] = "applied"
             if errors:
                 diagnostics["error_code"] = "invalid_author_response"
                 diagnostics["validation_failures"] = [

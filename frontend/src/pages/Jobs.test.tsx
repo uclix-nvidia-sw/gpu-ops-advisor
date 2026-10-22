@@ -226,7 +226,7 @@ it('opens published results from titles and keeps explicit job links', () => {
   expect(html.match(/>결과 보기<\/a>/g)).toHaveLength(2);
   expect(html).toContain('클러스터 c1 · Namespace inference');
   expect(html).toContain('<strong>GPU temperature</strong></span></a>');
-  expect(html).toContain('노드: gpu-node-1');
+  expect(html).toContain('노드: <strong>gpu-node-1</strong>');
   expect(html.indexOf('/jobs/complete')).toBeLessThan(html.indexOf('/jobs/pending'));
 });
 it('preserves unknown and empty namespace scope instead of claiming all namespaces', () => {
@@ -331,8 +331,8 @@ it('shows RCA node context without technical identifiers in the case list', () =
       />
     </MemoryRouter>,
   );
-  expect(html).toContain('노드: node-test');
-  expect(html).toContain('CPC: cluster-test');
+  expect(html).toContain('노드: <strong>node-test</strong>');
+  expect(html).toContain('CPC: <strong>cluster-test</strong>');
   expect(html).not.toContain('GPUAlert');
   expect(html).not.toContain('작업 ID ·');
   expect(html).toContain('/analyses/opaque-job#final-report');

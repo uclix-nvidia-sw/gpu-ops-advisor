@@ -497,3 +497,11 @@
 .rca-legend-current {
   color: var(--rca-alert);
 }
+.rca-id {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--rca-unknown-soft, #f1f3f2);
+  overflow-wrap: anywhere;
+}

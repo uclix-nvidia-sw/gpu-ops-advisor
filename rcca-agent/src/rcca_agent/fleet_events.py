@@ -283,7 +283,33 @@ def match_alert(clues, health, events):
     ]
     if not matched:
         # A component report persists until reboot, while its kmsg event is
-        # exported once; the event may precede the collection window.
+        # exported once. A Healthy report before the first Unhealthy one in the
+        # same window bounds the onset inside it even without the kmsg line.
+        dated = sorted(
+            (h for h in same if h.get("observed_at")),
+            key=lambda h: timestamp(h["observed_at"]),
+        )
+        first = timestamp(dated[0]["observed_at"]) if dated else None
+        healthy = sorted(
+            (
+                h
+                for h in health
+                if h.get("component") == component
+                and str(h.get("raw_health")).lower() == "healthy"
+                and h.get("observed_at")
+                and first is not None
+                and timestamp(h["observed_at"]) < first
+                and all(h.get("target", {}).get(k) == v for k, v in scope.items())
+            ),
+            key=lambda h: timestamp(h["observed_at"]),
+        )
+        if healthy:
+            return result(
+                "event_not_exported",
+                refs + healthy[-1]["evidence_refs"],
+                last_healthy_at=healthy[-1]["observed_at"],
+                first_unhealthy_at=dated[0]["observed_at"],
+            )
         return result(
             "event_not_found",
             refs,

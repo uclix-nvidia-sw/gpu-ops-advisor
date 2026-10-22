@@ -4,6 +4,26 @@ export function ToneBadge({ tone, label }: { tone: Tone; label?: string }) {
   return <span className={`rca-badge tone-${tone}`}>{label || toneLabels[tone]}</span>;
 }
 
+const ID =
+  /(GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|(?:PCI[: ])?[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?)/gi;
+
+/** Full GPU UUIDs and PCI addresses kept intact but set apart for reading. */
+export function Ids({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(ID).map((part, i) =>
+        i % 2 ? (
+          <code className="rca-id" key={i}>
+            {part}
+          </code>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 /** One numbered "1) 2)" line per item; a short "label: value" prefix is emphasised. */
 export function RcaPoints({ items }: { items: string[] }) {
   if (!items.length) return null;
@@ -19,10 +39,10 @@ export function RcaPoints({ items }: { items: string[] }) {
             {at > 0 && at <= 24 ? (
               <>
                 <strong>{body.slice(0, at)}</strong>
-                {body.slice(at)}
+                <Ids text={body.slice(at)} />
               </>
             ) : (
-              body
+              <Ids text={body} />
             )}
           </li>
         );

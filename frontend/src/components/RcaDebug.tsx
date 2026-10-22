@@ -134,18 +134,24 @@ export function IncidentDebug({ incident }: { incident: Row }) {
   );
 }
 
-export function RcaJobSummary({ job }: { job: Row }) {
+export function RcaJobSummary({ job, reader = false }: { job: Row; reader?: boolean }) {
   const published = job.result_ref != null,
     result = obj(job.result);
   const attempt = rows(job.attempts).find((row) => row.attempt_no === job.attempt_no);
-  return (
-    <div className="stack">
+  const identity = (
+    <>
       <AlarmIdentity record={job} rcaView />
       {str(job.incident_id) && (
         <Link className="text-link" to={`/incidents/${str(job.incident_id)}`}>
           알림 원본 보기
         </Link>
       )}
+    </>
+  );
+  if (reader && published) return <div className="stack">{identity}</div>;
+  return (
+    <div className="stack">
+      {identity}
       <Notice>
         <strong>
           {published
@@ -453,11 +459,14 @@ export function RcaResult({
   onEvidence,
   showEvidence = true,
   evaluationExpanded = false,
+  reader = false,
 }: {
   job: Row;
   onEvidence: (id: string) => void;
   showEvidence?: boolean;
   evaluationExpanded?: boolean;
+  /** Operator view: the report only; evidence and processing records stay in developer mode. */
+  reader?: boolean;
 }) {
   const result = obj(job.result),
     analysis = obj(obj(result.quality).analysis),
@@ -469,6 +478,15 @@ export function RcaResult({
       `${str(e.label)} · ${formatDate(str(obj(e.time_range).start))}–${formatDate(str(obj(e.time_range).end))}${typeof e.sample_count === 'number' ? ` · ${e.sample_count}건` : ''}`,
     ]),
   );
+  if (reader)
+    return (
+      <div className="stack">
+        <RcaJobSummary job={job} reader />
+        {job.result_ref != null && (
+          <RcaNarrative result={result} consolidateChecks onEvidence={onEvidence} />
+        )}
+      </div>
+    );
   return (
     <div className="stack">
       <RcaJobSummary job={job} />

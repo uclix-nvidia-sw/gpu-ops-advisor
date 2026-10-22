@@ -1,5 +1,6 @@
 import { obj, rows, str, strings, type Row } from '../lib/live';
 import { operatorView, sentences } from '../lib/rcaOperatorView';
+import { formatRcaTime } from '../lib/rcaTime';
 import { RcaPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
@@ -68,16 +69,38 @@ export function RcaOperatorReport({
       aria-label="RCA 최종 보고서"
     >
       <header className="rca-narrative-header">
-        <h3>RCA 장애 보고서</h3>
-        <p>한눈에 보기 · 대응 순서 · 로그·메트릭 · 분석 및 해석 · 이전 사건 · 참고 자료</p>
+        <h3>RCA 장애 보고서{v ? ` · ${v.node} · ${v.codes.join(', ')}` : ''}</h3>
+        {v && (
+          <p>
+            {v.family === 'nvswitch' ? 'NVSwitch' : `GPU${v.gpuIndex ? ` ${v.gpuIndex}` : ''}`} PCI{' '}
+            <code className="rca-id">{v.alertPci || '—'}</code>
+            {v.alertUuid && (
+              <>
+                {' '}
+                · <code className="rca-id">{v.alertUuid}</code>
+              </>
+            )}
+            {[v.gpuModel, v.driver && `드라이버 ${v.driver}`].filter(Boolean).map((x) => ` · ${x}`)}
+          </p>
+        )}
         <div className="rca-chips">
           {v?.ongoing && <ToneBadge tone="alert" label="오류 계속 보고 중" />}
-          {result.result_status === 'partial' && <ToneBadge tone="warn" label="일부 자료로 작성" />}
-          {missing.includes('synthesis_failed') && (
-            <ToneBadge tone="unknown" label="LLM 분석 미완료 · 코드 산출 자료 기반" />
+          {v && v.sameDeviceCount > 1 && (
+            <ToneBadge
+              tone="alert"
+              label={`같은 ${v.family === 'nvswitch' ? '스위치' : 'GPU'} ${v.sameDeviceCount}번째 발생`}
+            />
           )}
-          {missing.includes('event_not_found') && (
-            <ToneBadge tone="unknown" label="원본 이벤트 시각 미확인" />
+          {missing.some((c) => c !== 'synthesis_failed' && c !== 'event_not_found') && (
+            <ToneBadge tone="warn" label="일부 자료로 작성" />
+          )}
+          {missing.includes('synthesis_failed') && (
+            <span title={v?.aiReason}>
+              <ToneBadge tone="unknown" label="AI 해석 없음 · 표·판정은 코드 산출" />
+            </span>
+          )}
+          {missing.includes('event_not_found') && !v?.onsetText && (
+            <ToneBadge tone="unknown" label="시작 시각 미확인" />
           )}
         </div>
       </header>
@@ -90,9 +113,17 @@ export function RcaOperatorReport({
           <RcaPoints
             items={[
               `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}`,
-              `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertGpu ? ` · ${v.alertGpu}` : ''}`,
-              `지금: ${timing.verdict}`,
-              `반복: ${repeat.verdict}`,
+              `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertUuid ? ` · ${v.alertUuid}` : ''}`,
+              `언제: ${v.eventTime ? `${formatRcaTime(v.eventTime)} 커널 이벤트` : v.onsetText || '시작 시각 미확인'} — ${timing.verdict}`,
+              ...(v.workloads.some((w) => w.atIncident)
+                ? [
+                    `누구에게 영향: ${v.workloads
+                      .filter((w) => w.atIncident)
+                      .map((w) => w.name)
+                      .join(', ')} 작업이 사용 중 (DCGM 지표 라벨 기준)`,
+                  ]
+                : []),
+              `처음인가: ${repeat.verdict}`,
               `지표: ${telemetry.verdict}`,
               ...(first
                 ? [`우선 대응: ${str(first.title)} — ${sentences(str(first.text))[0]}`]
@@ -178,7 +209,7 @@ export function RcaOperatorReport({
                   <tr>
                     <td>수행한 조치 단계</td>
                     <td>⬜</td>
-                    <td>아래 ‘검토·조치 기록’에 남기기</td>
+                    <td>수행한 조치와 시각을 티켓에 기록</td>
                   </tr>
                   <tr>
                     <td>OS·드라이버 버전</td>

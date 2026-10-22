@@ -758,7 +758,10 @@ async def run(tools):
             obs, budget, clues, comparison["targets"]
         )
         result["quality"]["triage_observations"] = operator_view(
-            data, [e for values in collected.values() for e in values], comparison
+            data,
+            [e for values in collected.values() for e in values],
+            comparison,
+            state["health"],
         )
     await analyze_round(state, round_no)
     state.update(

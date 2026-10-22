@@ -424,3 +424,125 @@ def test_enum_brief_keeps_gpu_scope_and_no_health_mapping():
     assert row["enum_mapping"] is None
     assert row["last_value"] == 0
     assert "no health" in row["interpretation_limits"]
+
+
+def test_gpu_series_split_by_workload_labels_become_one_metric_with_workloads():
+    data, logs = records_fixture()
+    target = log_records([logs], data)[0]
+    end = timestamp(data["time_range"]["end"])
+    base = {"node": "node-1", "uuid": target["gpu"], "modelName": "NVIDIA A100"}
+    metric = dict(
+        id="util",
+        query_id="D02",
+        cluster_id="c",
+        time_range=data["time_range"],
+        tool_status="ok",
+        quality={"complete": True, "original_samples": True, "unit": "percent"},
+        snapshot={
+            "data": {
+                "result": [
+                    {"metric": base, "values": [[end - 600, "0"]]},
+                    {
+                        "metric": {**base, "namespace": "ns", "pod": "worker-a"},
+                        "values": [[end - 300, "100"], [end - 240, "90"]],
+                    },
+                    {
+                        "metric": {**base, "namespace": "ns", "pod": "worker-b"},
+                        "values": [[end - 120, "0"]],
+                    },
+                ]
+            }
+        },
+    )
+    data["target"]["machine_id"] = target["machine"]
+    health = [
+        dict(
+            component="accelerator-nvidia-error-xid",
+            target={"node": "node-1"},
+            raw_health=state,
+            error_code=code,
+            observed_at=at,
+            evidence_refs=[state],
+        )
+        for state, code, at in (
+            ("Healthy", None, "2026-01-01T00:00:00Z"),
+            ("Unhealthy", target["code"], "2026-01-01T00:01:00Z"),
+        )
+    ]
+    view = operator_view(data, [logs, metric], {"targets": [target]}, health)
+    assert [m["query_id"] for m in view["metrics"]] == ["D02"]
+    assert view["metrics"][0]["samples"] == 4 and view["metrics"][0]["max"] == 100
+    assert [w["pod"] for w in view["workloads"]] == ["worker-a", "worker-b"]
+    assert view["gpus"] == [{"gpu_uuid": target["gpu"], "model": "NVIDIA A100"}]
+    assert view["onset"]["last_healthy_at"] == "2026-01-01T00:00:00Z"
+    assert view["onset"]["first_unhealthy_at"] == "2026-01-01T00:01:00Z"
+
+
+async def test_transient_gateway_error_is_retried_once_and_recorded():
+    from rcca_agent.evidence_interpretation import complete_once
+
+    class Model:
+        deadline = float("inf")
+
+        def __init__(self, statuses):
+            self.statuses = list(statuses)
+
+        async def complete(self, prompt, payload, stage):
+            status = self.statuses.pop(0)
+            self.last_http_status = status
+            self.last_failure = "llm_http_error" if status else None
+            return None if status else {"ok": True}
+
+    diagnostics = {}
+    assert await complete_once(Model([503, None]), "p", {}, "s", diagnostics) == {
+        "ok": True
+    }
+    assert diagnostics == {"transient_retry_status": 503}
+    diagnostics = {}
+    model = Model([400])
+    assert await complete_once(model, "p", {}, "s", diagnostics) is None
+    assert diagnostics == {"http_status": 400} and model.statuses == []
+
+
+async def test_numeric_findings_get_one_repair_request_in_combined_author():
+    from rca_replay_cases import reply
+
+    def author(statement):
+        return reply(
+            {
+                "interpretation": {
+                    "findings": [
+                        {
+                            "id": "observed-report",
+                            "statement": statement,
+                            "kind": "observed",
+                            "evidence_refs": {"$input": "/observation_refs"},
+                        }
+                    ],
+                    "unknowns": [],
+                    "conflicts": [],
+                    "limitations": [],
+                },
+                "hypotheses": [],
+                "limitations": [],
+            }
+        )
+
+    case = dossier_case("xid")
+    case["token_budget"] = 131072
+    case["empty_unscripted_queries"] = True
+    case["attempt"]["profile"].setdefault("rca", {})["generation_mode"] = "combined"
+    case["responses"]["synthesis"] = [
+        author("같은 GPU에서 사건이 34건 반복됐습니다."),
+        author("노드에서 오류가 보고되었습니다."),
+    ]
+    case["responses"].pop("analysis_review", None)
+    result = await replay(case)
+    record = next(
+        e["snapshot"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "rca_synthesis"
+    )
+    assert record["diagnostics"]["numeric_repair"] == "applied"
+    assert record["diagnostics"]["adoption"] == "validated_response"
+    assert [c["stage"] for c in result["model_calls"]][:2] == ["synthesis"] * 2
