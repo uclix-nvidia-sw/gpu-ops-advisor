@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import { obj, rows, str, strings, num, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-
-function intervalLabel(ms: number) {
-  if (ms < 60000) return `${Math.round(ms / 1000)}초`;
-  if (ms < 3600000) return `${Math.round(ms / 60000)}분`;
-  if (ms < 86400000) return `${(ms / 3600000).toFixed(1)}시간`;
-  return `${(ms / 86400000).toFixed(1)}일`;
-}
+import { intervalLabel, shortGpu } from '../lib/rcaOperatorView';
 
 export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
   const history = obj(obj(result.quality).host_incident_history);
@@ -117,7 +111,8 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
                       ) : (
                         <details>
                           <summary>
-                            {key.split(' · ')[0]} · {str(items[0].device) || str(items[0].gpu_uuid)}
+                            {key.split(' · ')[0]} ·{' '}
+                            {shortGpu(str(items[0].device) || str(items[0].gpu_uuid))}
                           </summary>
                           {key}
                         </details>
@@ -163,10 +158,9 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
                   {strings(r.codes).join(', ').toUpperCase() || '기타 오류'}
                   <br />
                   {(str(r.device) || str(r.gpu_uuid)) && (
-                    <details>
-                      <summary>장치 식별자</summary>
-                      {str(r.device) || str(r.gpu_uuid)}
-                    </details>
+                    <span title={str(r.device) || str(r.gpu_uuid)}>
+                      {shortGpu(str(r.device) || str(r.gpu_uuid))}
+                    </span>
                   )}
                 </td>
                 <td>

@@ -41,7 +41,7 @@ SXID 수집에서는 D47(없으면 같은 수집의 D33/D34)로 해석된 Grafan
 
 ## 보고서와 조회 호환
 
-보고서는 사건 요약 → 권고 지침 → 관련 관측 표 → 분석 및 해석·이전 RCA → 참고 자료 순서다. 평가 상태·goal 달성 여부·근거 충분성·평가 예약 예산은 보고서 패널로 표시하지 않는다. 과거 저장 원문은 수정하지 않는다. 분석·비교 설명과 공식 참고 자료는 펼쳐진 본문으로 제공하며, 수집 원문과 처리 진단만 접을 수 있다. UUID를 임의의 GPU 번호로 바꾸지 않는다. 신규 실행은 `investigation_decision` 단계를 생성하지 않으며 완료 참조는 해당 `rca_analysis_draft`를 가리킨다.
+보고서 화면 구성은 [Frontend README](../frontend/README.md)의 고정 6단 구성(한눈에 보기 → 대응 순서 → 관련 로그·메트릭 → 분석 및 해석 → 이전 사건 이력 → 참고 자료)을 따른다. 평가 상태·goal 달성 여부·근거 충분성·평가 예약 예산은 보고서 패널로 표시하지 않는다. 과거 저장 원문은 수정하지 않는다. 분석·비교 설명과 공식 참고 자료는 펼쳐진 본문으로 제공하며, 수집 원문과 처리 진단만 접을 수 있다. UUID를 임의의 GPU 번호로 바꾸지 않는다. 신규 실행은 `investigation_decision` 단계를 생성하지 않으며 완료 참조는 해당 `rca_analysis_draft`를 가리킨다.
 
 기존 JC·Ops 소비자와의 계약을 변경하지 않기 위해 `quality.rca_evaluation` envelope는 유지한다. `review`는 항상 `skipped/not_requested`, 판정 `null`, 근거 목록 빈 배열이며 평가 성공을 뜻하지 않는다. `investigation.stop_reason=no_available_followup`은 기존 enum 호환값이다. 현재 실행에는 후속 조회나 goal 판정이 없다. 실제 수집·작성 상태는 collection·evidence·synthesis와 원문에 남는다.
 

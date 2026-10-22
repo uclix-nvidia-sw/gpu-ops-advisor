@@ -42,12 +42,12 @@ it('groups identical summaries without hiding different measurements or GPU iden
 it('shows guidance, observations, analysis and references in operator order', () => {
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaNarrative result={result} />);
-  expect(html.indexOf('1. 사건 요약')).toBeLessThan(html.indexOf('2. 권고 지침'));
+  expect(html.indexOf('2. 대응 순서')).toBeLessThan(html.indexOf('3. 관련 로그·메트릭'));
   expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('사건 로그와 관련 지표'));
   expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('기록에 근거한 결론'));
-  expect(html.indexOf('4. 분석 및 해석')).toBeLessThan(html.indexOf('5. 참고 자료'));
+  expect(html.indexOf('4. 분석 및 해석')).toBeLessThan(html.indexOf('6. 참고 자료'));
   expect(html).not.toContain('분석 처리:');
-  expect(html.indexOf('사건 로그와 관련 지표')).toBeLessThan(html.indexOf('5. 참고 자료'));
+  expect(html.indexOf('사건 로그와 관련 지표')).toBeLessThan(html.indexOf('6. 참고 자료'));
   expect(html).not.toContain('<summary>5. 조사');
   expect(html).toContain('저장된 비교 원문');
   expect(JSON.stringify(result)).toBe(before);
@@ -63,7 +63,7 @@ it('renders enum codes without treating them as numeric ranges or health', () =>
     },
   };
   const html = renderToStaticMarkup(<RcaTriageObservations result={value} />);
-  expect(html).toContain('상태 코드 0 · 관측 내 변화 없음');
+  expect(html).toContain('상태 코드 0 유지');
   expect(html).not.toContain('최소');
   expect(html).not.toContain('마지막 값');
   expect(html).not.toContain('정상');
@@ -175,4 +175,30 @@ it('keeps switch PCI separate from GPU inventory and links previous RCA', () => 
   expect(html).toContain('/analyses/prior-job#final-report');
   expect(html).toContain('알림 기준 시각');
   expect(html).toContain('일부 자료로 작성된 보고서');
+});
+
+it('takes fabric checks from the published Runbook and avoids a duplicate escalation step', () => {
+  const guidance = (text: string) => ({
+    report_applicability: 'matched',
+    guidance: {
+      meaning: 'SXID 11001 의미입니다.',
+      next_checks: [{ title: '패브릭 상태 확인', text }],
+      references: [],
+    },
+  });
+  const report = (text: string) =>
+    renderToStaticMarkup(
+      <RcaNarrative
+        result={{
+          ...result,
+          quality: { ...result.quality, runbook_guidance: [guidance(text)] },
+        }}
+      />,
+    );
+  const withEscalation = report(
+    'nvidia-smi nvlink -s로 확인합니다. dcgmi diag -r 3으로 진단합니다.',
+  );
+  expect(withEscalation).toContain('패브릭 상태 확인');
+  expect(withEscalation).not.toContain('조치 후 확인·에스컬레이션');
+  expect(report('nvidia-smi nvlink -s로 확인합니다.')).toContain('조치 후 확인·에스컬레이션');
 });

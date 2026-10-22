@@ -1618,6 +1618,87 @@
             ]
           }
         }
+      },
+      "fabric_guidance_update": {
+        "status": "local_review_not_published",
+        "checked_at": "2026-10-22",
+        "before_content_sha256": "855feb6acb6d2c3264bd23f8e2c98daa157c7a7ee10e28911595ef0a29698d03",
+        "after_content_sha256": "8ef760f4cf3c30cf27d6af498f35990c58b200dbe319662edd3b633b539e9549",
+        "change": "Move fabric checks from the report UI into operator_guidance: FM service/log (default path, SXID PCI·Link), nvidia-smi -q Fabric State/Status and nvidia-smi nvlink -s/-e, companion XID 74/other SXID scope, and recurrence escalation (dcgmi diag -r 3, vendor bundle). Adds the nvidia-smi document as source 5. Query plan, criteria and investigation-only boundary unchanged. No runtime publication. 보고서 화면의 고정 패브릭 점검 문구를 런북 지침으로 이동.",
+        "previous_values": {
+          "operator_guidance": {
+            "schema": "gpu-rca-guidance/1.0",
+            "meaning": "SXID 11001은 NVSwitch 수신(ingress) 측의 잘못된 명령 보고입니다. GPUd는 잠재적 Fatal로 분류합니다. 실제 영향 범위는 오류 포트와 연결된 GPU·VM·파티션에 따라 판단합니다.",
+            "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
+            "next_checks": [
+              {
+                "title": "진단 자료 보존",
+                "text": "Fabric Manager 로그의 같은 시각 포트 정보와 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
+              },
+              {
+                "title": "환경별 복구 조건",
+                "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 실제 장애는 플랫폼·FM 버전·bare-metal/가상화 모드와 포트 영향 범위를 먼저 대조합니다. 공유 NVSwitch의 access 포트는 해당 guest VM, trunk 포트는 해당 연결을 사용하는 VM 파티션의 종료·재생성 절차를 따릅니다. GPUd의 시스템 재부팅(REBOOT_SYSTEM)은 해당 플랫폼 복구 절차와 영향 범위가 맞을 때 진단 보존·작업 배출·유지보수 승인 후 적용합니다. 재부팅 뒤 같은 대상에서 재발하면 하드웨어 점검·수리를 요청합니다."
+              }
+            ],
+            "references": [
+              {
+                "title": "Fleet·GPUd 분류",
+                "text": "Fleet/GPUd의 정적 분류·기본 action은 사건별 영향 판정이나 동시 실행 지시가 아닙니다. GPUd의 재부팅 후 재발 조건을 하드웨어 점검에 연결합니다.",
+                "source_indices": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "title": "영향 범위",
+                "text": "access 포트이면 연결된 GPU·VM, trunk 포트이면 그 연결을 쓰는 파티션이 영향 범위입니다. B200·B300에는 이 지침을 적용하지 않습니다.",
+                "source_indices": [
+                  0,
+                  3
+                ]
+              },
+              {
+                "title": "GPU Node Triage 점검 순서",
+                "text": "SXID는 Fabric Manager 문헌의 오류·포트·플랫폼별 절차를 적용한다. 이 보고서의 스위치 PCI·동반 XID·같은 노드의 Fabric Manager 및 NVLink 지표·사건 이력을 먼저 대조하고, 실제 작업 전에 FM 로그와 연결 포트를 확인한다.",
+                "source_indices": [
+                  4
+                ]
+              }
+            ]
+          },
+          "sources": [
+            {
+              "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+              "revision": "Retrieved 2026-10-21; mutable upstream document",
+              "section": "Runtime NVSwitch Errors; Fatal NVSwitch SXid Errors; Table 23 Potential Fatal NVSwitch SXid Errors; B200/B300 exclusion",
+              "checked_at": "2026-10-21"
+            },
+            {
+              "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/sxid/sxid.go#L615",
+              "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+              "section": "SXID 11001 static definition",
+              "checked_at": "2026-09-28"
+            },
+            {
+              "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/sxid/sxid.go",
+              "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+              "section": "SXID 11001 details and conditional action comments",
+              "checked_at": "2026-09-28"
+            },
+            {
+              "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+              "revision": "Retrieved 2026-10-21; mutable upstream document",
+              "section": "Runtime NVSwitch Errors; Fatal NVSwitch SXid Errors; Table 23 Potential Fatal NVSwitch SXid Errors; B200/B300 exclusion",
+              "checked_at": "2026-10-21"
+            },
+            {
+              "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+              "revision": "Retrieved 2026-10-21; mutable upstream document",
+              "section": "Common XID Messages and Recommended Steps; Reporting a GPU Issue; DCGM Diagnostics",
+              "checked_at": "2026-10-21"
+            }
+          ]
+        }
       }
     }
   ]
