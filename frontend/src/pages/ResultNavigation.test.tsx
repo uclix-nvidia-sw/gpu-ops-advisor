@@ -234,7 +234,7 @@ it('shows the report identity under a fixed heading like the RCA result page', (
     </QueryClientProvider>,
   );
   expect(html).toContain('<h1 tabindex="-1">운영 분석 결과</h1>');
-  expect(html).toContain('<strong>2026. 10. 01. · Namespace별 GPU 사용 분석</strong>');
+  expect(html).toContain('<strong>Namespace별 GPU 사용 분석</strong>');
   expect(html).toContain('클러스터: <strong>cpc-2</strong> / training');
   expect(html).toContain('작업 ID: saved');
   expect(html).toContain('<div class="report-workspace">');

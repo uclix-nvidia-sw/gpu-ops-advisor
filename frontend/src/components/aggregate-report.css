@@ -9,7 +9,7 @@
 .report-workspace .aggregate-report > section {
   margin-top: 32px;
   padding-top: 32px;
-  border-top: 1px solid #baccc3;
+  border-top: 1px solid var(--line);
 }
 .report-workspace .aggregate-report h2 {
   margin: 0 0 16px;
@@ -88,10 +88,10 @@
   font-size: 14px;
 }
 .report-workspace .aggregate-report thead {
-  background: var(--surface-2, #f1f6f3);
+  background: var(--surface-2);
 }
 .report-workspace .aggregate-report tr.selected {
-  background: #edf5f0;
+  background: var(--surface-2);
 }
 .report-workspace .aggregate-report td span,
 .report-workspace .aggregate-report th span,
@@ -103,7 +103,7 @@
 .report-workspace .aggregate-report th button {
   border: 0;
   background: none;
-  color: var(--green, #176b53);
+  color: var(--green);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -115,7 +115,7 @@
 }
 .report-workspace .aggregate-report button:focus-visible,
 .report-workspace .aggregate-report summary:focus-visible {
-  outline: 2px solid #176b53;
+  outline: 2px solid var(--green);
   outline-offset: 3px;
 }
 .aggregate-chart {
@@ -129,10 +129,10 @@
 }
 .aggregate-chart text {
   font-size: 13px;
-  fill: #52665d;
+  fill: var(--muted);
 }
 .aggregate-grid {
-  stroke: #d9e3dd;
+  stroke: var(--line);
   stroke-width: 1;
 }
 .report-workspace .aggregate-report details {
@@ -141,14 +141,14 @@
 .report-workspace .aggregate-report summary {
   cursor: pointer;
   padding: 12px 0;
-  color: #176b53;
+  color: var(--green);
   font-weight: 600;
 }
 .aggregate-patterns {
   margin-top: 24px;
 }
 .aggregate-evidence {
-  border-top: 1px solid #baccc3;
+  border-top: 1px solid var(--line);
   padding-top: 8px;
 }
 .aggregate-evidence-buttons {
@@ -246,8 +246,8 @@
   padding: 5px 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #9b261e;
-  background: #fce8e6;
+  color: var(--alert);
+  background: var(--alert-soft);
 }
 .report-workspace .aggregate-report td small {
   margin-top: 4px;
@@ -261,7 +261,7 @@
 .report-workspace .aggregate-report .aggregate-data-note,
 .report-workspace .aggregate-report .aggregate-unattributed {
   padding: 12px 16px;
-  background: var(--surface-2, #f1f6f3);
+  background: var(--surface-2);
   border: 1px solid var(--line);
 }
 .report-workspace .aggregate-report .aggregate-unattributed summary {
@@ -311,11 +311,11 @@
   width: 15px;
   height: 15px;
   margin: 0;
-  accent-color: #176b53;
+  accent-color: var(--green);
   flex-shrink: 0;
 }
 .aggregate-report input[type='checkbox']:focus-visible {
-  outline: 2px solid #176b53;
+  outline: 2px solid var(--green);
   outline-offset: 3px;
 }
 .aggregate-color-key {
@@ -359,8 +359,8 @@
 
 .aggregate-chart-heading {
   padding: 14px 16px;
-  background: var(--surface-2, #f1f6f3);
-  border-bottom: 1px solid #baccc3;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
 }
 .report-workspace .aggregate-report .aggregate-chart-heading h4 {
   font-size: 18px;
@@ -407,13 +407,13 @@
 }
 .report-workspace .aggregate-report > .aggregate-summary-ai {
   background: var(--soft-green);
-  border-color: #bed5c8;
+  border-color: var(--green-line);
 }
 .report-workspace .aggregate-summary-ai h3 {
   color: var(--dark-green);
 }
 .report-workspace .aggregate-report .aggregate-summary-source {
-  color: #425c50;
+  color: var(--muted);
   font-size: 13px;
   margin: 0 0 20px;
 }
@@ -433,13 +433,13 @@
 .report-workspace .aggregate-interpretation {
   margin: 20px 0 28px;
   padding: 24px;
-  border: 1px solid #bed5c8;
+  border: 1px solid var(--green-line);
   border-radius: 10px;
-  background: #f0f7f3;
+  background: var(--soft-green);
 }
 .report-workspace .aggregate-interpretation h3 {
   margin: 0 0 10px;
-  color: #174f40;
+  color: var(--dark-green);
 }
 .report-workspace .aggregate-interpretation dl {
   margin: 0;
@@ -449,7 +449,7 @@
 }
 .report-workspace .aggregate-interpretation dt {
   font-weight: 700;
-  color: #174f40;
+  color: var(--dark-green);
   margin-bottom: 4px;
 }
 .report-workspace .aggregate-interpretation dd {
@@ -462,10 +462,10 @@
 .report-workspace .aggregate-interpretation-limit {
   font-size: 13px;
   line-height: 1.65;
-  color: #425c50;
+  color: var(--muted);
 }
 .report-workspace .aggregate-interpretation details {
-  border-top: 1px solid #bed5c8;
+  border-top: 1px solid var(--green-line);
   padding-top: 12px;
 }
 .report-workspace .aggregate-evidence-links {
@@ -529,17 +529,17 @@
 .report-workspace .aggregate-report > .aggregate-major-topic {
   margin-top: 48px;
   padding-top: 28px;
-  border-top: 3px solid #7a9688;
+  border-top: 3px solid var(--muted);
 }
 .report-workspace .aggregate-report .aggregate-subheading {
   margin-top: 32px;
   padding-top: 20px;
-  border-top: 1px solid #baccc3;
+  border-top: 1px solid var(--line);
 }
 .report-workspace .aggregate-report .aggregate-metric-chart + .aggregate-metric-chart {
   margin-top: 28px;
   padding-top: 24px;
-  border-top: 1px solid #d9e3dd;
+  border-top: 1px solid var(--line);
 }
 .aggregate-chart-controls {
   margin-top: 8px;
@@ -567,8 +567,8 @@
 
 .report-workspace .aggregate-report .aggregate-static-note {
   padding: 12px 14px;
-  background: #f3f4f5;
-  color: #4b5563;
+  background: var(--surface-2);
+  color: var(--muted);
   border: 0;
   font-size: 13px;
   line-height: 1.7;
@@ -576,7 +576,7 @@
 .report-workspace .aggregate-report .aggregate-static-note strong {
   display: block;
   margin-bottom: 4px;
-  color: #374151;
+  color: var(--ink);
 }
 
 .report-workspace .aggregate-report .aggregate-workload-charts {
@@ -615,13 +615,13 @@
   margin-top: 12px;
 }
 .aggregate-workload-detail > summary {
-  color: #176b53;
+  color: var(--green);
   cursor: pointer;
   font-weight: 600;
 }
 .aggregate-workload-namespace + .aggregate-workload-namespace {
   padding-top: 20px;
-  border-top: 1px solid #d9e3dd;
+  border-top: 1px solid var(--line);
 }
 .aggregate-workload-bars > div {
   display: grid;
@@ -648,14 +648,14 @@
   width: 100%;
 }
 .aggregate-workload-charts svg text {
-  fill: var(--ink, #253c35);
+  fill: var(--ink);
   font-size: 14px;
 }
 .aggregate-workload-track {
-  fill: #e5ebe8;
+  fill: var(--line);
 }
 .aggregate-workload-bar {
-  fill: #176b53;
+  fill: var(--green);
 }
 .report-workspace .aggregate-report .aggregate-workload-table {
   table-layout: fixed;
