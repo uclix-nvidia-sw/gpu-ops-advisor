@@ -13,7 +13,8 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D02"
     ],
     "observation_plan": [
       {
@@ -34,12 +35,12 @@
       },
       {
         "query_id": "D02",
-        "priority": 3,
-        "required": false,
+        "priority": 2,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 GPU의 사용률을 사건 전후로 비교해 작업 중단·멈춤 여부를 본다. 값이 0이거나 없다는 이유로 장치 상태를 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -63,16 +64,22 @@
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 151; Table 3 Resolution Buckets",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
-      "현재 D09/D02 계획은 host/guest 버전, vGPU·VM 배치 및 격리 범위를 보장하지 않는다. 해당 매핑이 없으면 호스트와 guest의 원인·영향 범위를 구분했다고 주장하지 않는다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "등록된 지표는 host·guest 버전과 vGPU·VM 배치를 제공하지 않는다. 해당 정보 없이 원인과 영향 범위를 구분했다고 주장하지 않는다."
     ],
-    "title": "XID 151 vGPU·가상화 조사",
+    "title": "XID 151 Key rotation Error · vGPU·가상화 오류 조사",
     "description": "XID 151: Key rotation Error.",
     "claim": "XID 151 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -94,8 +101,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집: 호스트/게스트 드라이버 버전, vGPU 프로필·GPU 모델·게스트 OS, 소유 VM과 passthrough/MIG 관계, VM 시작/종료 및 호스트 원본 로그를 모은다.",
-      "판단: 호스트/게스트 호환성 표와 지원 프로필을 대조한다. 특정 VM 문제와 호스트 공통 장애를 구분하고 VM 재시작·GPU reset·호스트 재부팅의 범위를 서로 대체하지 않는다.",
+      "수집 항목: 오류·상태 로그, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 오류 문구(예: guest 드라이버 비호환, vGPU 타입 미지원)와 해당 VM의 시작·재시작 시각을 대조한다.",
       "Fleet 고정 카탈로그: Key rotation Error; event_type=Warning; 기본 action=REBOOT_SYSTEM.",
       "NVIDIA 적용: H100, B100, GB200; 제외: A100.",
       "NVIDIA 조치 분류: immediate=RESTART_VM; investigatory=CONTACT_SUPPORT; Xid154 linkage=미기재.",
@@ -104,7 +111,27 @@
     ],
     "recommendations": [
       {
-        "text": "해당 GPU를 소유한 VM과 작업 영향·종료 전제를 확인한 뒤 운영자가 VM 재시작을 검토한다.",
+        "text": "오류별 판단 기준: 원인 조사는 공급사(지원 조직)에 원문과 진단 자료를 전달해 요청합니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:151"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: NVIDIA 즉시 조치 분류 RESTART_VM: 해당 GPU를 소유한 VM을 재시작합니다. NVIDIA 기준으로 GPU 리셋이나 노드 재시작은 필요하지 않습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:151"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "재발 시 진단·공급사 전달: 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -120,6 +147,46 @@
         "equals": "xid:151"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 151(ROBUST_CHANNEL_KEY_ROTATION_ERROR)는 NVIDIA Xid 카탈로그에서 'Key rotation Error'로 정의됩니다.",
+      "cause_note": "host·guest 드라이버 불일치, vGPU 타입과 guest OS·GPU의 비호환이 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. host·guest 드라이버 버전과 vGPU 타입, guest OS를 함께 기록합니다."
+        },
+        {
+          "title": "오류별 판단 기준",
+          "text": "원인 조사는 공급사(지원 조직)에 원문과 진단 자료를 전달해 요청합니다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "NVIDIA 즉시 조치 분류 RESTART_VM: 해당 GPU를 소유한 VM을 재시작합니다. NVIDIA 기준으로 GPU 리셋이나 노드 재시작은 필요하지 않습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            2
+          ],
+          "text": "ROBUST_CHANNEL_KEY_ROTATION_ERROR · Key rotation Error. 적용 제품: H100, B100, GB200. 즉시 조치 RESTART_VM, 조사 조치 CONTACT_SUPPORT."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "Fleet 고정 정의: event_type=Warning, 기본 action=REBOOT_SYSTEM. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        }
+      ]
+    }
   }
 }

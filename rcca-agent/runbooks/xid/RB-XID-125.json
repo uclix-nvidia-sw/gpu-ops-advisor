@@ -13,7 +13,8 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D02"
     ],
     "observation_plan": [
       {
@@ -34,12 +35,12 @@
       },
       {
         "query_id": "D02",
-        "priority": 3,
-        "required": false,
+        "priority": 2,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 GPU의 사용률을 사건 전후로 비교해 작업 중단·멈춤 여부를 본다. 값이 0이거나 없다는 이유로 장치 상태를 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -69,17 +70,23 @@
         "revision": "Archive landing page; select deployed GPU/driver documentation before use",
         "section": "Volta and older path referenced by current Xid Catalog",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "현행 표는 Unused다. 배포 버전의 의미 확인 전 조치를 선택하지 않는다.",
-      "현재 D09/D02 계획으로는 배포 드라이버·생산자 버전의 코드 정의를 확정할 수 없다. 구세대·미사용·정의 충돌은 원문 보존과 정의 확인을 위한 조사로 제한하고 원인·fatality·복구 조치 판정을 보류한다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "현재 NVIDIA 카탈로그상 미사용·구세대 코드라 배포 드라이버의 정의를 확인하기 전에는 원인·심각도·복구 조치를 판정하지 않는다."
     ],
-    "title": "XID 125 미사용·정의 확인 조사",
+    "title": "XID 125 Inforom FS Failure (미사용 코드) · 미사용·구세대 코드 조사",
     "description": "XID 125: Inforom FS Failure.",
     "claim": "XID 125 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -101,8 +108,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집: 코드 번호와 전체 원문, 발생 producer와 소스 revision, GPU 모델·드라이버·운영 모드·주변 이벤트를 확보한다. 파서가 다른 숫자를 Xid로 추출하지 않았는지 확인한다.",
-      "판단: 해당 버전의 공식 정의를 확인할 때까지 원인·fatality·reset 필요 여부를 보류한다. Reserved/Unused/빈 조치 칸을 정상 또는 IGNORE로 해석하지 않는다.",
+      "수집 항목: 오류·상태 로그, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 드라이버 버전과 원문으로 코드 정의를 먼저 확인하고, 같은 시각 다른 XID가 있는지 대조한다.",
       "Fleet 고정 카탈로그: Inforom FS Failure; event_type=Warning; 기본 action=nil (미정의).",
       "NVIDIA 적용: 해당 제품 없음; 제외: A100, H100, B100, GB200.",
       "NVIDIA 조치 분류: immediate=CONTACT_SUPPORT; investigatory=미기재; Xid154 linkage=미기재.",
@@ -111,7 +118,27 @@
     ],
     "recommendations": [
       {
-        "text": "대상·버전·원문 로그·재현/재발 이력을 정리해 지원 조직에 전달한다. 문헌에 없는 원인이나 수리 결과를 추가하지 않는다.",
+        "text": "오류별 판단 기준: 현재 카탈로그상 미사용 코드이므로 원문의 코드 번호·문구가 다른 XID의 오기이거나 구버전 드라이버의 보고인지 먼저 가립니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:125"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: 정의가 확인되기 전에는 복구 조치를 정하지 않습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:125"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "재발 시 진단·공급사 전달: 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -127,6 +154,46 @@
         "equals": "xid:125"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 125(INFOROM_FS_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Inforom FS Failure'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다.",
+      "cause_note": "현재 NVIDIA 카탈로그상 미사용 코드라 구버전 드라이버이거나 다른 코드의 해석 오류일 가능성을 먼저 봅니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. 오류 원문과 드라이버 버전, 같은 시각 다른 XID를 함께 보존합니다."
+        },
+        {
+          "title": "오류별 판단 기준",
+          "text": "현재 카탈로그상 미사용 코드이므로 원문의 코드 번호·문구가 다른 XID의 오기이거나 구버전 드라이버의 보고인지 먼저 가립니다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "정의가 확인되기 전에는 복구 조치를 정하지 않습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            2
+          ],
+          "text": "INFOROM_FS_ERROR · Unused. 적용 제품: 없음(표의 4개 제품 모두 NO). 즉시 조치 CONTACT_SUPPORT, 조사 조치 미기재."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "Fleet 고정 정의: event_type=Warning, 기본 action=없음. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        }
+      ]
+    }
   }
 }

@@ -21,6 +21,13 @@ INCIDENT_REVIEW = {
         (CATALOG / "incident-report-review-20261015.json").read_text("utf-8")
     )["entries"]
 }
+# Newest catalog-wide review: restore its previous values before the older chains.
+REPORT_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "operator-report-review-20261022.json").read_text("utf-8")
+    )["entries"]
+}
 ROWS = [json.loads((CATALOG / e["file"]).read_text("utf-8")) for e in REVIEW["entries"]]
 CODE_ROWS = [r for r in ROWS if r["knowledge_key"] != "RB-GENERAL-GPU-NODE"]
 
@@ -68,6 +75,22 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
+        report = REPORT_REVIEW.get(e["file"])
+        if report:
+            assert digest == report["after_content_sha256"]
+            row = deepcopy(row)
+            for field in report["added_fields"]:
+                row["content"].pop(field)
+            row["content"].update(deepcopy(report["previous_values"]))
+            digest = hashlib.sha256(
+                json.dumps(
+                    row["content"],
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            assert digest == report["before_content_sha256"]
         if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
             followup = json.loads(
                 (CATALOG / "general-requirements-review-20261012.json").read_text(
@@ -301,3 +324,38 @@ def test_general_observations_do_not_require_or_establish_health():
         "normalized_health",
     ]
     assert matching_runbooks([old], {}, {"observations": True}, data) == ([], [old])
+
+
+def test_every_code_has_operator_report_material_from_verified_queries():
+    chart = json.loads(
+        (ROOT / "charts/gpu-ops-advisor/files/agents.json").read_text("utf-8")
+    )
+    verified = {
+        key.split(".")[1]
+        for key, binding in chart["bindings"].items()
+        if binding.get("verification", {}).get("status") == "verified"
+    }
+    curated = {"xid/RB-XID-79.json", "sxid/RB-SXID-11001.json"}
+    assert (
+        set(REPORT_REVIEW)
+        == {e["file"] for e in REVIEW["entries"] if "/" in e["file"]} - curated
+    )
+    for row in CODE_ROWS:
+        content = row["content"]
+        assert content["operator_guidance"]["schema"] == "gpu-rca-guidance/1.0"
+        planned = {step["query_id"] for step in content["observation_plan"]}
+        assert "D09" in planned and planned <= verified
+
+
+def test_new_code_revisions_opt_into_incident_report_but_legacy_stays():
+    from rcca_agent.incident_dossier import enabled
+
+    assert all(enabled([row]) for row in CODE_ROWS)
+    legacy = json.loads(
+        (ROOT / "agents/tests/fixtures/RB-XID-79-published-legacy.json").read_text(
+            "utf-8"
+        )
+    )
+    assert not enabled([legacy])
+    general = next(r for r in ROWS if r["knowledge_key"] == "RB-GENERAL-GPU-NODE")
+    assert not enabled([general])

@@ -118,3 +118,42 @@ it('shortens GPU UUIDs and splits Korean guidance into lines', () => {
   expect(shortGpu(`on ${gpu}.`)).toBe('on GPU-81ec1404….');
   expect(sentences('보존합니다. 재시작은 상태를 바꿉니다. CUDA 12.7 기준')).toHaveLength(3);
 });
+
+it('flags uncorrectable ECC growth and treats bitmasks as codes', () => {
+  const view = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metrics: [
+          {
+            name: 'DBE',
+            unit: 'count',
+            kind: 'counter',
+            query_id: 'D40',
+            gpu_uuid: gpu,
+            last: '2026-10-22T03:28:40Z',
+            incident_windows: {
+              before: before(0),
+              at_or_after: { ...before(2, '2026-10-22T03:28:40Z'), min: 2 },
+            },
+          },
+          {
+            name: '클록 제한 사유',
+            unit: 'bitmask',
+            kind: 'enum',
+            query_id: 'D45',
+            gpu_uuid: gpu,
+            last: '2026-10-22T03:28:40Z',
+            incident_windows: {
+              before: { ...before(4), min: 4 },
+              at_or_after: { ...before(4, '2026-10-22T03:28:40Z'), min: 4 },
+            },
+          },
+        ],
+      },
+    },
+  })!;
+  expect(view.metrics[0].tone).toBe('alert');
+  expect(view.metrics[1].reading).toContain('상태 코드 4 유지');
+  expect(view.findings[2].tone).toBe('alert');
+});

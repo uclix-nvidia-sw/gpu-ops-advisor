@@ -45,7 +45,7 @@ XID/SXID 초기 조사 266개 중 먼저 변경한 XID79·SXID11001 외 264개�
 
 검토 범위는 기존 코드별 조사 지침·출처 분류와 새 필수 fact 의미의 일치다.
 출처 문헌을 새로 검증했다는 뜻은 아니다. 기존 manifest의 documented 187개,
-unused_or_legacy 63개, definition_conflict 13개, source_only 3개라는 분류를 유지한다.
+unused_or_legacy 63개, definition_conflict 13개, source_only 3개라는 분류를 유지한다(2026-10-22 SXID 22012 정정 뒤 documented 188개·source_only 2개, [CATALOG](CATALOG.md#운영자-보고서-지침과-조회-계획-2026-10-22-개정)).
 정의 미확정 코드도 보고 사실과 원문을 확인하는 조사에 한해 사용할 수 있다.
 그 코드의 의미·fatality·복구 조치를 승인한 것은 아니며, 기존 제한 사항을 유지한다.
 

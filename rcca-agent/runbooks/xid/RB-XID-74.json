@@ -13,7 +13,10 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D33",
+      "D34",
+      "D02"
     ],
     "observation_plan": [
       {
@@ -35,11 +38,11 @@
       {
         "query_id": "D33",
         "priority": 2,
-        "required": false,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "동일 GPU·기간의 NVLink 수신량(bytes/s)을 보조 관측한다. 링크별 remote endpoint·포트 역할·오류 원인을 증명하지 않는다.",
+        "purpose": "같은 노드 GPU별 NVLink 수신량을 사건 전후로 비교한다. 트래픽 0이나 결측을 링크 고장으로 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -47,11 +50,23 @@
       {
         "query_id": "D34",
         "priority": 3,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU별 NVLink 송신량을 사건 전후로 비교한다. 트래픽 0이나 결측을 링크 고장으로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D47",
+        "priority": 4,
         "required": false,
         "fact_names": [
           "observations"
         ],
-        "purpose": "동일 GPU·기간의 NVLink 송신량(bytes/s)을 보조 관측한다. 값이 0이거나 없다는 이유로 링크 고장·복구를 판정하지 않는다.",
+        "purpose": "같은 노드 GPU별 Fabric Manager 상태 코드를 사건 전후로 비교한다. 코드 의미 매핑 없이 정상·비정상으로 해석하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -59,11 +74,11 @@
       {
         "query_id": "D02",
         "priority": 5,
-        "required": false,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 GPU의 사용률을 사건 전후로 비교해 작업 중단·멈춤 여부를 본다. 값이 0이거나 없다는 이유로 장치 상태를 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -87,15 +102,22 @@
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 74; Table 3 Resolution Buckets",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "추가 조회는 보조 원본 관측이며 실행 예산에 따라 일부만 선택된다. 노드 inventory를 장애 GPU·PCIe root port·NVLink 상대 장치의 연결 증거로 사용하지 않는다. 같은 장치 매핑이 없으면 비교·영향 범위 판정을 보류한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "NVLink 수신·송신량은 처리량일 뿐 링크 번호·연결 상대·오류 카운터가 아니다. nvidia-smi nvlink -e와 원문 레지스터 해석 전에는 전파 방향과 영향 범위를 확정하지 않는다."
     ],
-    "title": "XID 74 NVLink·연결 상대 조사",
+    "title": "XID 74 NVLINK Error · NVLink 오류 조사",
     "description": "XID 74: NVLINK Error.",
     "claim": "XID 74 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -117,8 +139,9 @@
       ]
     },
     "analysis_guidance": [
-      "수집: GPU/NVSwitch 양쪽 원본 로그, link 번호·remote endpoint·포트 역할·partition 토폴로지, 링크 상태/대역폭·재전송/CRC/ECC 카운터의 같은 기간 변화를 수집한다.",
-      "판단: 장치 양쪽의 사건 시간과 링크 상태를 맞추고 reset·shutdown·소프트웨어 변경·열 사건을 대조한다. 상대 장치에서 전파된 오류와 로컬 원인을 구분하며 단일 GPU의 로그만으로 영향 범위를 넓히지 않는다.",
+      "수집 항목: 오류·상태 로그, NVLink 수신량, NVLink 송신량, Fabric Manager 상태 코드, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 오류 줄의 링크 번호와 레지스터 값을 보존하고, 같은 시각 다른 GPU의 XID 74·NVSwitch SXID가 있는지, 이전 사건 이력에서 같은 GPU·다른 GPU 반복 여부를 대조한다.",
+      "NVIDIA 발생 조건: GPU가 NVLink로 연결된 다른 GPU나 NVSwitch와의 연결 문제를 감지하면 기록됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. 링크 자체의 하드웨어 고장일 수도, 링크 반대편 장치의 문제일 수도 있습니다. 예를 들어 한 GPU가 고장 나 링크가 내려가면 연결된 다른 GPU도 XID 74 오류를 보고합니다.",
       "Fleet 고정 카탈로그: NVLINK Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "NVIDIA 적용: A100, H100; 제외: B100, GB200.",
       "NVIDIA 조치 분류: immediate=WORKFLOW_NVLINK_ERR; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
@@ -128,7 +151,27 @@
     ],
     "recommendations": [
       {
-        "text": "XID 74의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "text": "오류별 판단 기준: 원인 조사는 공급사(지원 조직)에 원문과 진단 자료를 전달해 요청합니다. 첫 번째 레지스터: 비트 0·23·30은 무시해도 됩니다. 비트 1·20은 대개 2차 오류로, 다른 비트나 XID/SXID가 함께면 그 지침을 따르고 단독이면 보고합니다. 비트 4·5는 ECC/패리티 하드웨어 문제 가능성이 커서 같은 링크에서 2회를 넘으면 보고합니다. 비트 8·9·12·16·17·24·28은 하드웨어 가능성이 있어 링크의 기계적 연결을 점검·재장착하고, 지속되면 진단을 실행합니다. 비트 21·22는 채널 신호 품질 문제로, 동반 오류가 있으면 그것부터 처리하고 아니면 기계적 연결을 점검한 뒤 Field Diagnostics를 실행합니다. 세 번째 레지스터 비트 0·1·2·6과 다섯 번째 레지스터 비트 18·19·21·22·24·25·27·28은 ECC/패리티 문제 가능성으로 같은 링크 2회 초과 시 보고합니다. 다섯 번째 레지스터 비트 20·23·26·29는 ECC 오류 임계 초과 알림일 뿐 정정 불가 오류가 아니므로 운영을 계속합니다. 네 번째 레지스터 비트 18은 2차 오류지만 fabric 리셋이 필요합니다. 이 비트 의미는 Hopper 기준이며 정의되지 않은 비트는 원문 그대로 보고합니다. GPU Node Triage: 메시지의 첫 번째 16진수 DWORD 비트로 분기합니다. 비트 4·5는 ECC/패리티 문제(같은 링크 2회 초과 시 보고), 21·22는 신호 품질 문제(기계적 연결 점검), 8·9·12·16·17·24·28은 커넥터 점검·재장착 뒤 지속 시 진단입니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:74"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: NVIDIA 즉시 조치 분류 WORKFLOW_NVLINK_ERR: 메시지의 16진수 필드 7개를 추출해 레지스터 비트로 조치를 정합니다(아래 판단 기준). 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:74"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "재발 시 진단·공급사 전달: 같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -144,6 +187,60 @@
         "equals": "xid:74"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 74(NVLINK_ERROR)는 NVIDIA Xid 카탈로그에서 'NVLINK Error'로 정의됩니다. GPU가 NVLink로 연결된 다른 GPU나 NVSwitch와의 연결 문제를 감지하면 기록됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. 링크 자체의 하드웨어 고장일 수도, 링크 반대편 장치의 문제일 수도 있습니다. 예를 들어 한 GPU가 고장 나 링크가 내려가면 연결된 다른 GPU도 XID 74 오류를 보고합니다.",
+      "cause_note": "NVLink 링크 하드웨어 고장 또는 링크 반대편 GPU·NVSwitch의 문제입니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터) 출력과 Xid 메시지의 16진수 필드 원문을 함께 저장합니다. HGX 시스템이면 같은 시각 Fabric Manager 로그도 확보합니다."
+        },
+        {
+          "title": "오류별 판단 기준",
+          "text": "원인 조사는 공급사(지원 조직)에 원문과 진단 자료를 전달해 요청합니다. 첫 번째 레지스터: 비트 0·23·30은 무시해도 됩니다. 비트 1·20은 대개 2차 오류로, 다른 비트나 XID/SXID가 함께면 그 지침을 따르고 단독이면 보고합니다. 비트 4·5는 ECC/패리티 하드웨어 문제 가능성이 커서 같은 링크에서 2회를 넘으면 보고합니다. 비트 8·9·12·16·17·24·28은 하드웨어 가능성이 있어 링크의 기계적 연결을 점검·재장착하고, 지속되면 진단을 실행합니다. 비트 21·22는 채널 신호 품질 문제로, 동반 오류가 있으면 그것부터 처리하고 아니면 기계적 연결을 점검한 뒤 Field Diagnostics를 실행합니다. 세 번째 레지스터 비트 0·1·2·6과 다섯 번째 레지스터 비트 18·19·21·22·24·25·27·28은 ECC/패리티 문제 가능성으로 같은 링크 2회 초과 시 보고합니다. 다섯 번째 레지스터 비트 20·23·26·29는 ECC 오류 임계 초과 알림일 뿐 정정 불가 오류가 아니므로 운영을 계속합니다. 네 번째 레지스터 비트 18은 2차 오류지만 fabric 리셋이 필요합니다. 이 비트 의미는 Hopper 기준이며 정의되지 않은 비트는 원문 그대로 보고합니다. GPU Node Triage: 메시지의 첫 번째 16진수 DWORD 비트로 분기합니다. 비트 4·5는 ECC/패리티 문제(같은 링크 2회 초과 시 보고), 21·22는 신호 품질 문제(기계적 연결 점검), 8·9·12·16·17·24·28은 커넥터 점검·재장착 뒤 지속 시 진단입니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "NVIDIA 즉시 조치 분류 WORKFLOW_NVLINK_ERR: 메시지의 16진수 필드 7개를 추출해 레지스터 비트로 조치를 정합니다(아래 판단 기준). 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            2
+          ],
+          "text": "NVLINK_ERROR · NVLINK Error. 적용 제품: A100, H100. 즉시 조치 WORKFLOW_NVLINK_ERR, 조사 조치 CONTACT_SUPPORT, Xid 154 연계 CUDA 12.7; GPU driver R565."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "Fleet 고정 정의: event_type=Fatal, 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        },
+        {
+          "title": "GPU Node Triage",
+          "source_indices": [
+            3
+          ],
+          "text": "메시지의 첫 번째 16진수 DWORD 비트로 분기합니다. 비트 4·5는 ECC/패리티 문제(같은 링크 2회 초과 시 보고), 21·22는 신호 품질 문제(기계적 연결 점검), 8·9·12·16·17·24·28은 커넥터 점검·재장착 뒤 지속 시 진단입니다."
+        },
+        {
+          "title": "리셋 방식",
+          "source_indices": [
+            3
+          ],
+          "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
+        }
+      ]
+    }
   }
 }
