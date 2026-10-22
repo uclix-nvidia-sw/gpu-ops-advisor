@@ -14,7 +14,12 @@ to completed jobs. Published result titles lead to the RCA report; unpublished
 jobs lead to execution history. Completion and result quality remain separate,
 and partial is never displayed as a confirmed cause. Duplicate report-list tabs,
 kind columns and repeated report buttons are removed only from `/cases`.
-`/reports`, Report Agent and report history retain their existing paths/behavior.
+`/reports` uses the same table as this list (title and target, received time, execution
+status, requirement status, execution record) and `/reports/:id` the same page chrome as
+`/analyses/:id`: a fixed `운영 분석 결과` heading, the `저장된 결과` panel, an identity block
+(dated title, cluster scope, period, topics, job ID) and the stored report inside the shared
+`rca-narrative` card. Report-specific filters, the origin badge, exports, deletion and the
+report body typography are unchanged, as are Report Agent paths and the list APIs.
 
 Evidence evaluation explains explicit model stop, malformed selection, unavailable
 model and a bounded selection repair separately. Legacy records without those
@@ -49,7 +54,7 @@ RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시�
 
 # Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
 
-`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged.
+`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged. The report page shares the RCA result chrome: AggregateReport renders inside the same `rca-narrative` card with a fixed `운영 분석 보고서` header, below the identity block; its internal typography and tables are unchanged.
 
 [계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). 미리보기의 실제 자료·합성 자료 구분과 검수 범위는 [QA](QA.md)를 따릅니다. 로컬 미리보기는 운영 작업을 접수하지 않습니다.
 
@@ -124,7 +129,7 @@ RCA 결과의 missing_inputs를 원본 조회·수집, 장치 신원·사건 시
 
 ## 보고서 목록 선택 흐름 — 2026-10-07
 
-최근 요청 강조와 1열 독립 카드를 유지하면서 제목·대상 요약·상태·본문 열기를 먼저 표시한다. 전체 클러스터 범위, 정확한 분석 기간, 접수 시각, 집계 기준과 ID는 기간·대상·요청 상세에서 펼친다. 저장 요약이 없으면 산출 가능한 세부 분석과 품질 건수를 안내하며, 첫 두 Namespace를 대표 결과처럼 노출하지 않는다. 실행시간은 최근 보고서 요약 안에서 펼쳐 확인한다.
+보고서 목록은 `/cases`의 RCA 조사 목록과 같은 표다. 첫 열에 제목·클러스터와 Namespace 범위·분석 대상 기간·분석 주제·생성 방식 배지를, 이어서 접수 시각·실행 상태·요건 충족 상태·실행 기록(작업 상태·시도 이력, 허용된 경우 삭제)을 표시한다. 목록에서 저장 요약을 추가 조회하지 않으며 실행시간·정확한 시간 범위·작업 ID는 보고서 화면에서 확인한다.
 
 보고서 화면에 적용되지 않는 전역 시간 선택은 숨긴다. 목록의 접수일 필터는 기존 API from/to(created_at)에 KST 시작일 00:00 이상, 종료일 다음 날 00:00 미만을 전달한다. 분석 대상 기간 검색이 아니며 31일 분석 요청 제한을 적용하지 않는다. 주제 선택은 기존 11개 값을 7개 종류별 optgroup으로 묶으며 종류 전체 OR 검색을 새로 구현한 것은 아니다. 필터 해제·조건별 빈 안내·불러온 건수·목록 복귀 포커스를 제공한다. 분석 기간/생성 방식 검색은 현재 API에 없어 이번 UI 수정에 포함하지 않는다. Agent·Backend·JC·DB는 변경하지 않는다.
 
@@ -188,13 +193,13 @@ Namespace 현황 앞에 요청한 모든 클러스터의 관측 GPU·연결 확�
 
 ## 클러스터별 분석 대상 — 2026-10-02
 
-보고서 목록·본문·작업 상세·자동 보고서 설정의 분석 대상은 클러스터마다 블록을 나누고, 클러스터 이름과 Namespace 범위를 별도 줄로 표시한다. 전체 Namespace·선택 목록·선택 없음·범위 미확인을 구분한다. 작은 보고서 카드에도 집계 기준을 접지 않고 표시한다.
+보고서 본문·작업 상세·자동 보고서 설정의 분석 대상은 클러스터마다 블록을 나누고, 클러스터 이름과 Namespace 범위를 별도 줄로 표시한다. 전체 Namespace·선택 목록·선택 없음·범위 미확인을 구분한다. 보고서 목록과 보고서 화면의 제목 아래에는 같은 구분을 `클러스터: 이름 / 범위` 한 줄로 표시한다.
 
 ## 요청 순서·접수 시각·분석 대상 기간 — 2026-10-02
 
-보고서 목록은 기존 API의 접수 내림차순을 유지한다. 이전 공개 보고서를 앞으로 옮기지 않고 최신 요청을 큰 카드로 표시한다. 아직 공개 결과가 없으면 실행 상태·시작 기록·대기 사유와 작업 링크를 제공하며 과거 결과 요약을 붙이지 않는다. 공개된 최신 요청만 저장 요약을 조회한다.
+보고서 목록은 기존 API의 접수 내림차순을 유지하며 최신 요청을 따로 강조하지 않는다. 아직 공개 결과가 없는 요청도 같은 행으로 표시하고 제목은 작성 현황 화면으로 연결하며 과거 결과 요약을 붙이지 않는다. 목록은 저장 요약을 조회하지 않는다.
 
-목록·운영 관점·작업 상세·최종 본문에 요청 접수 시각을 한국 시간의 연월일·시분초로 표시한다. 분석 대상 기간은 KST 자정에서 자정까지인 경우 `2026. 10. 01. 하루 · 1일(24시간)` 또는 마지막 포함 날짜까지의 일수로 표시한다. 카드·작업·최종 본문은 `정확한 시간 범위`를 펼쳐 종료 직전까지임을 확인할 수 있다. 이전 시간 단위 결과와 자정 기준이 아닌 24시간은 원래 시각을 그대로 표시한다. 잘못되거나 누락된 시각은 미확인이다. 요청 기본값은 어제 하루이며 최근 24시간과 다름을 안내한다. Backend 저장 시각·요청 기간·조회·GPU-hours·분석 계산·RCA 표시는 바꾸지 않는다.
+목록·운영 관점·작업 상세·최종 본문에 요청 접수 시각을 한국 시간의 연월일·시분초로 표시한다. 분석 대상 기간은 KST 자정에서 자정까지인 경우 `2026. 10. 01. 하루 · 1일(24시간)` 또는 마지막 포함 날짜까지의 일수로 표시한다. 작업·최종 본문은 `정확한 시간 범위`를 펼쳐 종료 직전까지임을 확인할 수 있다. 이전 시간 단위 결과와 자정 기준이 아닌 24시간은 원래 시각을 그대로 표시한다. 잘못되거나 누락된 시각은 미확인이다. 요청 기본값은 어제 하루이며 최근 24시간과 다름을 안내한다. Backend 저장 시각·요청 기간·조회·GPU-hours·분석 계산·RCA 표시는 바꾸지 않는다.
 
 ## 자동 보고서 실행 확인 — 2026-10-02
 
@@ -214,11 +219,11 @@ Namespace 현황 앞에 요청한 모든 클러스터의 관측 GPU·연결 확�
 
 # GPU Ops Advisor Frontend
 
-## 일 단위 요청·카드 배치 — 2026-10-01
+## 일 단위 요청·목록 배치 — 2026-10-01
 
 즉시 보고서와 비교 기간은 KST 날짜만 선택한다. 기본값은 직전 완료일이며 종료일을 포함해 같은 날짜 선택도 1일(24시간)이 된다. 요청에는 시작일 00:00부터 종료일 다음 날 00:00까지의 기존 절대 time_range를 보낸다. 최소 1일·최대 31일, 24시간 단위이며 역전·잘못된 날짜·한도 초과는 접수하지 않는다. 공통 상단의 최근 1시간 필터가 새 보고서의 기본 기간을 바꾸지 않는다. 정기는 일간·주간·월간만 제공하고 실행 시각은 분석 기간과 별개로 유지한다. 연간은 제외했다.
 
-보고서 목록은 화면 너비와 관계없이 동일한 너비의 카드 한 열로 배치한다. 맨 위 최신 요청만 큰 제목·강조 테두리를 넣고 공개 완료 시 저장 요약, 미완료 시 실행 상태를 표시하며, 나머지는 요약 없이 작은 여백과 가로로 묶인 메타 정보로 낮게 표시한다. 최신 요청 한 건의 공개 결과 요약, 기존 접수 시각 기준 순서·결과/작업 링크·목록 복귀를 유지한다. `자동 보고서 설정`에서 반복 주기를 등록하고 생성 방식 배지는 `자동 생성`과 `직접 요청`으로 구분한다.
+보고서 목록은 RCA 조사 목록과 같은 표이며 접수 시각 기준 순서·결과/작업 링크·목록 복귀를 유지한다. `자동 보고서 설정`에서 반복 주기를 등록하고 생성 방식 배지는 `자동 생성`과 `직접 요청`으로 구분한다.
 
 ## 운영자 가이드 — 2026-10-06
 
@@ -241,7 +246,7 @@ RCA 분석 요약은 전체 LLM 응답 기록과 `quality.analysis.synthesis`의
 
 기본 요청은 `Namespace별 GPU 사용 분석`(O08, namespace)이다. 대상·기간을 확인해 즉시 요청하고, 다른 주제·집계·조치/자원 조건은 접힌 `세부 분석 설정`에서 직접 편집한다. 기본 목적으로 복귀하면 이전 사용자 지정 조치/자원/비교 조건도 해제한다. 모든 주제를 자동 선택하거나 미지원 조합을 조용히 대체하지 않는다. 정기 등록도 같은 목적·조건에 반복 주기와 시각을 사용한다. Namespace 활동은 관측 GPU의 활동이며 실소비량·독점 할당량·회수 가능량을 뜻하지 않는다.
 
-기존 관점의 보고서 목록은 배경 위에 간격을 둔 독립 카드로 표시하고 분석 기간·대상·집계 기준을 이름과 값으로 정렬한다. 현재 불러온 필터 결과에서 접수 시각이 가장 최근인 요청을 완료 여부와 관계없이 큰 카드로, 나머지 요청·보고서를 작은 카드로 표시하며 큰 카드 아래에도 이어서 배치한다. 좁은 화면은 최신 카드부터 한 열로 표시한다. 큰 카드에 공개 참조가 있을 때만 기존 상세 API로 추가 조회해 주제별 산출 상태, 최대 두 Namespace의 저장 활동률, 부족 사유를 보여준다. 요약 조회 실패·공개 참조 불일치·기록 없음은 별도 표시하며 본문 링크를 유지한다. LLM 재호출이나 활동률 재계산은 하지 않는다. 접수 시각과 짧은 ID로 동일 조건의 보고서를 구분하며 세부 주제·전체 작업 ID는 접어서 확인한다. 일반 작업 목록은 기존 표시를 유지한다.
+기존 관점의 보고서 목록은 `/cases`의 RCA 조사 목록과 같은 표·글자 크기·상태 배지를 사용한다. 첫 열은 제목(분석 날짜·종류)·클러스터와 Namespace 범위·분석 대상 기간·분석 주제·생성 방식 배지이며 접수 시각·실행 상태·요건 충족 상태·실행 기록 열이 이어진다. 목록은 추가 API 조회·LLM 재호출·활동률 재계산을 하지 않는다. 접수 시각으로 동일 조건의 보고서를 구분하며 작업 ID는 보고서 화면에서 확인한다. 일반 작업 목록은 기존 표시를 유지한다.
 
 보고서 제목 앞에는 KST 기준 분석 날짜 또는 날짜 범위를 표시한다. 자정에 끝나는 기간은 직전 날짜까지 표기하고 정확한 시작·종료 시각은 본문에 유지한다. 유효한 기간이 없는 일정·구 결과는 날짜를 추정하지 않는다.
 

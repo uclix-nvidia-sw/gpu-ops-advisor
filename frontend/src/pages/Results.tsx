@@ -15,10 +15,9 @@ import {
   useResource,
   type Row,
 } from '../lib/live';
-import { ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
+import { ReportIdentity, ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
 import { formatDate } from '../lib/domain';
 import { reportReturnPath } from '../lib/reportNavigation';
-import { reportTitle } from '../lib/workflow';
 import { topicName } from '../lib/report';
 import { useApp } from '../lib/store';
 import { IncidentDebug, RcaResult } from '../components/RcaDebug';
@@ -45,8 +44,6 @@ export function ResultPage({ kind }: { kind: string }) {
     [status, setStatus] = useState(''),
     [reason, setReason] = useState('');
   const r = q.data || {};
-  const aggregateReport =
-    kind === 'report' && obj(obj(r.result).quality).report_format === 'report-aggregate-v1';
   const deleted = kind === 'report' && r.deletion != null;
   useEffect(() => {
     if (hash !== '#final-report' || !q.data) return;
@@ -56,13 +53,13 @@ export function ResultPage({ kind }: { kind: string }) {
     return () => cancelAnimationFrame(frame);
   }, [hash, q.data?.result_ref]);
   return (
-    <div className={kind === 'report' ? 'page report-workspace' : 'page'}>
+    <div className="page">
       <PageHead
         eyebrow={kind === 'incident' ? 'INCIDENT DETAIL' : 'SAVED RESULT'}
         title={
-          kind === 'incident' ? '사건 상세' : kind === 'report' ? reportTitle(r) : 'RCA 조사 결과'
+          kind === 'incident' ? '사건 상세' : kind === 'report' ? '운영 분석 결과' : 'RCA 조사 결과'
         }
-        description={kind === 'analysis' ? '' : id || ''}
+        description={kind === 'incident' ? id || '' : ''}
         actions={
           <>
             {app.mode === 'developer' && kind === 'analysis' && id && (
@@ -98,20 +95,16 @@ export function ResultPage({ kind }: { kind: string }) {
           </Notice>
         )}
         <Panel
-          title={
-            aggregateReport && !deleted
-              ? undefined
-              : str(
-                  r.title,
-                  kind === 'incident'
-                    ? '사건 관측'
-                    : deleted
-                      ? '보고서 삭제 기록'
-                      : kind === 'report' && r.result_ref == null
-                        ? '보고서 작성 현황'
-                        : '저장된 결과',
-                )
-          }
+          title={str(
+            r.title,
+            kind === 'incident'
+              ? '사건 관측'
+              : deleted
+                ? '보고서 삭제 기록'
+                : kind === 'report' && r.result_ref == null
+                  ? '보고서 작성 현황'
+                  : '저장된 결과',
+          )}
         >
           <div className="live-padding stack">
             <div className="head-actions">
@@ -120,11 +113,15 @@ export function ResultPage({ kind }: { kind: string }) {
               {kind !== 'incident' && <Badge status={str(r.result_status) || null} />}
               <span>{formatDate(str(r.created_at))}</span>
             </div>
+            {kind === 'report' && <ReportIdentity job={r} detail />}
             {deleted ? (
               <ReportDeletionNotice job={r} />
             ) : kind === 'report' ? (
               <>
-                <div className={app.mode === 'operations' ? 'ops-report-reader' : undefined}>
+                {/* The report body keeps its own reading typography; the page chrome matches RCA. */}
+                <div
+                  className={`report-workspace${app.mode === 'operations' ? ' ops-report-reader' : ''}`}
+                >
                   {app.mode === 'operations' && r.result_ref != null && (
                     <nav className="ops-report-index" aria-label="보고서 읽기 순서">
                       <span className="ops-overline">이 보고서 읽기</span>

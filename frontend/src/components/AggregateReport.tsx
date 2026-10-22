@@ -444,8 +444,14 @@ export function AggregateReport({
       ? '계산 결과 요약'
       : '저장된 주요 변화';
   return (
-    <section id="final-report" className="aggregate-report" aria-label="운영 분석 보고서">
-      <header className="aggregate-heading">
+    <section
+      id="final-report"
+      className="aggregate-report rca-narrative"
+      aria-label="운영 분석 보고서"
+    >
+      {/* Same card frame as the RCA report: a fixed heading above the stored sections. */}
+      <header className="rca-narrative-header">
+        <h3>운영 분석 보고서</h3>
         <ReportPeriod value={value.time_range} />
         <p>직전 같은 길이의 기간과 비교합니다. 모든 시각은 한국 시간 기준입니다.</p>
       </header>

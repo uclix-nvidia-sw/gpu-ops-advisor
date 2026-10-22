@@ -212,3 +212,31 @@ it('routes completed RCA titles to results and unfinished investigations to exec
   expect(html).not.toContain('최종 보고서 보기');
   expect(html).toContain('부분 산출');
 });
+
+it('shows the report identity under a fixed heading like the RCA result page', () => {
+  fixture.mode = 'classic';
+  fixture.job = {
+    ...fixture.job,
+    kind: 'report',
+    topic_ids: ['O08'],
+    group_by: ['namespace'],
+    scope: { clusters: [{ cluster_id: 'cpc-2', namespaces: ['training'] }] },
+    time_range: { start: '2026-09-30T15:00:00Z', end: '2026-10-01T15:00:00Z' },
+    created_at: '2026-10-02T02:37:18Z',
+  };
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/reports/saved']}>
+        <Routes>
+          <Route path="/reports/:id" element={<ResultPage kind="report" />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(html).toContain('<h1 tabindex="-1">운영 분석 결과</h1>');
+  expect(html).toContain('<strong>2026. 10. 01. · Namespace별 GPU 사용 분석</strong>');
+  expect(html).toContain('클러스터: <strong>cpc-2</strong> / training');
+  expect(html).toContain('작업 ID: saved');
+  expect(html).toContain('<div class="report-workspace">');
+  expect(html).not.toContain('page report-workspace');
+});
