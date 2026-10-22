@@ -738,7 +738,7 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "각 previous_summary의 오류만 고치세요. 운영 선택·이유와 대상·시간·필수 참조는 보존하되 오류로 지적된 표현은 바꾸세요. 현상·확인할 대상·관측 근거 순서로 쓰세요. 관측만 남기지 마세요. 실제 값으로 풀어 쓰지 마세요. 확인 대상과 확인·대조·검토·점검 동사를 명시하세요. 살펴보라는 표현만으로는 점검 제안을 충족하지 못하므로 알맞은 점검 동사로 바꾸세요. 이전 오류 문장을 그대로 반환하지 마세요. 중복 토큰만 제거하되 운영 선택과 점검 제안은 삭제하지 마세요. writing_focus와 queue_context에 맞게 무엇을 왜 확인할지 쓰세요. section_repair는 지정한 주제만 fact_ids·observation·meaning·next_check로 보완하고 수치·대상·기간은 참조 토큰으로 남기세요. response_shape에 없는 항목·주제는 반환하지 마세요.",
+                "instruction": "운영 선택·이유와 대상·시간·필수 참조는 보존하고 정상 항목은 바꾸지 마세요. response_shape의 현상·선택·조건과 summary_start를 유지하세요. 살펴보라는 표현만으로는 점검이 되지 않습니다. 이전 오류 문장을 그대로 반환하지 마세요. 실제 값으로 풀지 마세요. section_repair는 지정 주제와 참조를 보존하세요. response_shape만 JSON으로 반환하세요.",
                 "response_shape": {
                     **(
                         {
