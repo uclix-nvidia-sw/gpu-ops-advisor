@@ -3469,3 +3469,128 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
 
     assert review_calls == []
     assert sum(q == "rca_synthesis" for q, _ in evidence) == 1
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("kind,code", [("xid", "79"), ("sxid", "11001")])
+def test_planned_incident_report_publishes_without_review_or_decision(
+    stack, monkeypatch, kind, code
+):
+    from copy import deepcopy
+
+    monkeypatch.setattr(Upstream, "fleet_reports", True)
+    monkeypatch.setattr(Upstream, "fleet_component", "accelerator-nvidia-error-" + kind)
+    monkeypatch.setattr(Upstream, "fleet_reason", f"{kind.upper()} {code}")
+    review_calls = []
+
+    def unexpected_review(data):
+        review_calls.append(data)
+        return {}
+
+    def author(data):
+        return {
+            "interpretation": {
+                "findings": [
+                    {
+                        "id": "report",
+                        "kind": "observed",
+                        "statement": "노드의 오류 보고를 수집 자료와 대조했습니다.",
+                        "evidence_refs": data["observation_refs"][:1],
+                    }
+                ],
+                "unknowns": [],
+                "conflicts": [],
+                "limitations": [],
+            },
+            "hypotheses": [],
+            "limitations": [],
+        }
+
+    monkeypatch.setattr(sys.modules[__name__], "review_reply", unexpected_review)
+    monkeypatch.setattr(sys.modules[__name__], "combined_reply", author)
+    profile = deepcopy(stack["profile"])
+    profile["health_contracts"] = json.loads(
+        (ROOT / "agents/tests/fixtures/config-v7.json").read_text()
+    )["health_contracts"]
+    profile["queries"]["D47"] = dict(
+        source="mimir",
+        metric="fixture_fm",
+        unit="enum",
+        max_hold_seconds=30,
+        revision="fixture-v1",
+        validated=True,
+    )
+    config = LOCAL / f"planned-{kind}-profile.json"
+    config.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setitem(stack["env"], "AGENT_CONFIG_FILE", str(config))
+    book = json.loads(
+        (ROOT / f"rcca-agent/runbooks/{kind}/RB-{kind.upper()}-{code}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    book_id, iid = str(uuid4()), str(uuid4())
+    data = dict(
+        scope=SCOPE,
+        incident_id=iid,
+        evidence_version=1,
+        analysis_profile_revision="fixture-v1",
+        incident_time=PERIOD["start"],
+        time_range=PERIOD,
+        purpose_ids=["R01"],
+        target={"node": "node-1"},
+    )
+    snapshot = {
+        "input": data,
+        "alert": {
+            "labels": {
+                "component": "accelerator-nvidia-error-" + kind,
+                "reason": f"{kind.upper()} {code}",
+            }
+        },
+    }
+    with psycopg.connect(stack["url"]) as conn:
+        revision = conn.execute(
+            "SELECT coalesce(max(revision),0)+1 FROM knowledge_revisions WHERE knowledge_key=%s",
+            (book["knowledge_key"],),
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO knowledge_revisions(id,knowledge_id,knowledge_key,revision,kind,state,visibility,content,content_hash,reviewed_content_hash,compatibility) VALUES(%s,%s,%s,%s,'runbook','published','common',%s,%s,%s,%s)",
+            (
+                book_id,
+                str(uuid4()),
+                book["knowledge_key"],
+                revision,
+                Jsonb(book["content"]),
+                content_hash(book["content"]),
+                content_hash(book["content"]),
+                Jsonb({"cluster_id": "cpc-2"}),
+            ),
+        )
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version) VALUES(%s,'cpc-2',%s,%s,'open',1)",
+            (iid, Jsonb(SCOPE), data["incident_time"]),
+        )
+        conn.execute(
+            "INSERT INTO incident_evidence_versions(incident_id,revision,snapshot,content_hash) VALUES(%s,1,%s,%s)",
+            (iid, Jsonb(snapshot), content_hash(snapshot)),
+        )
+    jid = submit(stack, "rca", data)
+    result, evidence = worker_result(stack, "rca", jid, "-planned-" + kind)
+    assert result["quality"]["analysis"]["workflow"] == "single_collection"
+    assert any(
+        r["id"] == book_id and r["revision"] == revision
+        for r in result["runbook_revisions"]
+    )
+    assert result["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
+    assert not review_calls
+    kinds = [q for q, _ in evidence]
+    assert "analysis_review" not in kinds and "investigation_decision" not in kinds
+    assert set(book["content"]["required_queries"]) <= set(kinds)
+    assert kinds.count("D09") == 1
+    assert kinds.count("rca_synthesis") == 1
+    assert result["quality"]["report"]["status"] == "complete"
+    assert any(
+        "수집 자료와 대조" in row["text"]
+        for row in result["narrative"]
+        if row["id"] == "cause"
+    )

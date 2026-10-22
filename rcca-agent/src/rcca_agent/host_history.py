@@ -112,7 +112,7 @@ def history_summary(history):
     rows = [
         {
             "section": "comparison",
-            "text": f"호스트 사건 이력: {period['start']} ~ {period['end']}, 등록 사건 {len(history['rows'])}건. 사건 ID별로 집계했습니다.",
+            "text": f"호스트 사건 이력: {period['start']} ~ {period['end']}, 등록 사건 {len(history['rows'])}건. 현재 사건을 포함하며 사건 ID별로 집계했습니다.",
             "evidence_refs": refs,
         }
     ]
@@ -120,7 +120,7 @@ def history_summary(history):
         rows.append(
             {
                 "section": "comparison",
-                "text": f"{repeat['gpu_uuid'] or '이 호스트'}에서 {repeat['code'].upper()} 관련 사건 {repeat['incident_count']}건이 등록됐습니다. 이전 사건의 대상 장치·동반 오류를 함께 대조해 우선 점검 대상을 정하세요.",
+                "text": f"{repeat['gpu_uuid'] or '이 호스트'}에서 {repeat['code'].upper()} 관련 등록 사건 {repeat['incident_count']}건입니다(조회 범위의 집계이며 현재 사건 포함 여부는 사건 ID로 구분합니다). 이전 사건의 대상 장치·동반 오류를 함께 대조해 우선 점검 대상을 정하세요.",
                 "evidence_refs": refs,
             }
         )

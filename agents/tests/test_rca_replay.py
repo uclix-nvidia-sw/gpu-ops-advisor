@@ -48,9 +48,15 @@ async def test_frozen_replay_contract(name, monkeypatch):
     assert [c["stage"] for c in result["model_calls"]] == (
         [] if name == "insufficient_budget" else ["synthesis", "report_writing"]
     )
-    assert len(summary["decisions"]) == 1
-    assert summary["decisions"][0]["action"] == "finish"
-    assert summary["decisions"][0]["selected_queries"] == []
+    assert summary["decisions"] == []
+    evaluation = result["output"]["result"]["quality"]["rca_evaluation"]
+    drafts = {
+        e["id"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "rca_analysis_draft"
+    }
+    assert drafts
+    assert set(evaluation["investigation"]["evidence_refs"]) == drafts
     if name == "insufficient_budget":
         assert summary["transport_calls"] == 0
     if name == "interpretation_only":
@@ -106,7 +112,7 @@ async def test_summary_explains_followup_and_retained_partial_result():
     result = await replay(cases()["accepted_rule_followup"])
     text = readable_summary(result)
     assert "추가 수집 D02(GPU 활동)" not in text
-    assert "no_remaining_queries" in text
+    assert "단일 수집 후 분석·보고서 작성" in text
     assert "실제 모델의 판단 정확도·비용은 측정하지 않았습니다" in text
     result = await replay(cases()["interpretation_only"])
     assert "해석만 보존된 라운드: 0개" in readable_summary(result)

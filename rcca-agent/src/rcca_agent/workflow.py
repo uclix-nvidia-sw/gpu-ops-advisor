@@ -34,6 +34,7 @@ from .incident_dossier import (
     dossier_summary,
     error_tools,
     operator_view,
+    incident_brief,
 )
 from .operator_guidance import project_guidance
 from .collection_checks import collection_checks, reported_gpu_identity
@@ -694,6 +695,12 @@ async def run(tools):
             error_events,
         )
         if dossier:
+            payload["incident_brief"] = incident_brief(
+                data,
+                [e for values in collected.values() for e in values],
+                comparison,
+                result["quality"].get("host_incident_history"),
+            )
             payload.setdefault("incident_comparison", []).extend(
                 dossier_summary(
                     data,
@@ -759,35 +766,7 @@ async def run(tools):
     relations, available = state["relations"], state["available"]
     applicable, pending = state["applicable"], state["pending"]
     gaps, gate, stop_reason = state["gaps"], state["gate"], state["stop_reason"]
-    remaining, next_queries, approved = (
-        state["remaining"],
-        state["next_queries"],
-        state["approved"],
-    )
-    obs._evidence(
-        "investigation_decision",
-        None,
-        data["time_range"],
-        {
-            "round": round_no,
-            "action": "finish",
-            "reason": stop_reason,
-            "analysis_id": evaluation["draft"]["analysis_id"],
-            "selected_queries": next_queries,
-            "revisions": evaluation_state["revisions"],
-            "collected_queries": list(collected),
-            "deferred_queries": state["deferred_queries"],
-            "remaining_budget": dict(budget),
-            "evidence_refs": evaluation["evidence"]["evidence_refs"],
-        },
-        "ok",
-        {
-            "round": round_no,
-            "action": "finish",
-            "reason": stop_reason,
-            "analysis_id": evaluation["draft"]["analysis_id"],
-        },
-    )
+    remaining, approved = state["remaining"], state["approved"]
     analysis_missing = []
     if not fast_path and analysis_status not in {"complete", "skipped_alert_match"}:
         analysis_missing.append("synthesis_" + analysis_status)
@@ -973,9 +952,7 @@ async def run(tools):
             "status": "finished",
             "stop_reason": final_stop,
             "evidence_refs": [
-                e["id"]
-                for e in obs.evidence
-                if e["query_id"] == "investigation_decision"
+                e["id"] for e in obs.evidence if e["query_id"] == "rca_analysis_draft"
             ],
         },
     }

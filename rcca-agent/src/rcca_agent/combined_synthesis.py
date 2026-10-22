@@ -201,6 +201,30 @@ def validate_author(response, view, criteria, details=None, dropped=None):
             }
         )
         details.append({**detail, "path": "$.interpretation" + detail["path"][1:]})
+    if interpretation is not None and "incident_brief" in view:
+        retained = []
+        for index, finding in enumerate(interpretation["findings"]):
+            try:
+                # Apply the existing numeric/language contract to findings as well.
+                # Values stay in code-owned tables; prose explains their significance.
+                validate_synthesis(
+                    {"hypotheses": [], "limitations": [finding["statement"]]},
+                    finding["evidence_refs"],
+                    view["device_observations"] + view["error_events"],
+                    identifier_tokens(view),
+                    view["query_quality"],
+                )
+                retained.append(finding)
+            except SynthesisValidationError as exc:
+                dropped.append(
+                    {
+                        "code": "invalid_finding_prose",
+                        "path": f"$.interpretation.findings[{index}]",
+                        "rule": exc.diagnostic.get("rule", "invalid_prose"),
+                        "action": "dropped",
+                    }
+                )
+        interpretation["findings"] = retained
     try:
         findings = {row["id"] for row in (interpretation or {}).get("findings", [])}
         hypotheses = response["hypotheses"]

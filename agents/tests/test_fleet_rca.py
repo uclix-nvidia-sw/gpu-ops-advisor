@@ -675,15 +675,11 @@ async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
     assert analysis["alert_match"]["status"] == "pci_mismatch"
     assert "pci_mismatch" in output["result"]["missing_inputs"]
     assert "pci_mismatch" not in analysis["resolved_scope_gaps"]
-    decision = next(
-        e["snapshot"]
-        for e in output["evidence"]
-        if e["query_id"] == "investigation_decision"
-    )
-    assert decision["reason"] == "no_remaining_queries"
-    assert decision["selected_queries"] == []
-    assert {"D09", "D44", "D02", "D11"} <= set(decision["collected_queries"])
-    # Analysis and review run once, after the auxiliary batch.
+    collected = {e["query_id"] for e in output["evidence"]}
+    assert "investigation_decision" not in collected
+    assert {"D09", "D44", "D02", "D11"} <= collected
+    assert analysis["collection_stop_reason"] == "no_remaining_queries"
+    # Analysis and report writing run once, after the planned collection.
     assert [c["stage"] for c in result["model_calls"]] == [
         "synthesis",
         "report_writing",

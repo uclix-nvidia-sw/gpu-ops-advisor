@@ -85,8 +85,23 @@ reported device/error, relevant companion logs and metrics, recurring host incid
 then the applicable published debugging step. Use short Korean findings, one point
 per finding, citing the most relevant evidence. Counts, periods and tables are
 already calculated by code: do not recalculate them or repeat them as prose.
+Use the incident_brief computed from full retained observations before sampled raw
+rows. Correlate reported chronology, target-specific metric changes and DB history;
+explain which observations agree, which limit an explanation, and why a particular
+published check is relevant to this incident. Separate a report-time association
+from causation. Preserve each metric's device, unit, period and kind. Enum codes
+are categories, never numeric severity; no supplied mapping means no health verdict.
+GPU NVLink traffic and GPU Fabric Manager codes do not measure switch/port health.
+Low traffic or utilization alone cannot distinguish idle workload from device failure.
+Runbook guidance is a source of conditional checks, not a substitute for analysis.
+Explain the incident-specific reason for the next check without inventing actions
+or claiming they were performed. Retain material counter-evidence beside conclusions.
 Prioritize changes that help an operator choose the next check. Do not fill the
 report with a checklist of absent data. Recurrence supports prioritizing inspection,
-not a failure probability. A hypothesis is optional; a useful factual explanation
-can stand on its own when causal hypotheses are unsupported. Never request another query round for this completed observation plan.
+not a failure probability. A causal hypothesis is optional, but available logs,
+metrics and history must be compared and their operational significance explained.
+Do not stop at naming the error or copying Runbook guidance. Explain what supports
+or limits the proposed next check for this specific incident. When a comparison
+cannot be made, name the particular missing linkage without inventing a conclusion.
+Never request another query round for this completed observation plan.
 """

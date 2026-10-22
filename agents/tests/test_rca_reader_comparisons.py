@@ -154,15 +154,9 @@ async def test_mismatch_collects_all_four_optional_queries_within_existing_budge
         case["attempt"]["profile"]["queries"]["D02"]
     )
     outcome = await replay(case)
-    decision = next(
-        e["snapshot"]
-        for e in outcome["output"]["evidence"]
-        if e["query_id"] == "investigation_decision"
-    )
-    assert decision["selected_queries"] == []
-    assert {"D02", "D03", "D11", "D44"} <= set(decision["collected_queries"])
     collected = {e["query_id"] for e in outcome["output"]["evidence"]}
-    assert set(decision["selected_queries"]) <= collected
+    assert "investigation_decision" not in collected
+    assert {"D02", "D03", "D11", "D44"} <= collected
 
 
 def test_full_post_event_utilization_summary_is_not_current_health():

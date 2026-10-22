@@ -237,3 +237,52 @@ def test_supported_candidate_does_not_create_a_causal_confirmation_task():
     )
     assert candidates[0]["causal_status"] == "candidate"
     assert candidates[0]["missing_inputs"] == []
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "사용률과 전력 및 재전송이 모두 0~100% 범위입니다.",
+        "Fabric Manager 상태 코드가 0이므로 비정상 상태입니다.",
+    ],
+)
+def test_planned_findings_cannot_reintroduce_unregistered_numeric_semantics(statement):
+    view = {
+        "incident_brief": [],
+        "input_evidence_refs": ["e"],
+        "observation_refs": ["e"],
+        "device_observations": [],
+        "error_events": [],
+        "query_quality": [],
+    }
+    response = {
+        "interpretation": {
+            "findings": [
+                {
+                    "id": "bad",
+                    "kind": "observed",
+                    "statement": statement,
+                    "evidence_refs": ["e"],
+                },
+                {
+                    "id": "good",
+                    "kind": "observed",
+                    "statement": "노드에서 오류가 보고되었습니다.",
+                    "evidence_refs": ["e"],
+                },
+            ],
+            "unknowns": [],
+            "conflicts": [],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "limitations": [],
+    }
+    dropped = []
+    interpretation, _, _, errors = validate_author(
+        response, view, None, dropped=dropped
+    )
+    assert not errors
+    assert [r["id"] for r in interpretation["findings"]] == ["good"]
+    assert dropped[0]["code"] == "invalid_finding_prose"
+    assert statement not in json.dumps(dropped, ensure_ascii=False)

@@ -115,7 +115,7 @@ def report_sources(material):
     interpretation = evaluation.get("evidence", {}).get("interpretation") or {}
     items = []
 
-    def add(section, text, refs=(), *, fixed=False):
+    def add(section, text, refs=(), *, fixed=False, detail_only=False):
         if not text:
             return
         item = {
@@ -123,8 +123,9 @@ def report_sources(material):
             "text": reader_text(text),
             "evidence_refs": list(dict.fromkeys(refs)),
             "fixed": fixed,
+            **({"detail_only": True} if detail_only else {}),
         }
-        if any(all(row[k] == v for k, v in item.items()) for row in items):
+        if any(all(row.get(k) == v for k, v in item.items()) for row in items):
             return
         items.append({"id": f"source-{len(items) + 1}", **item})
 
@@ -146,7 +147,13 @@ def report_sources(material):
     known = {key for group in LABELS.values() for key in group}
     observations = material.get("reported_observations", [])
     for row in material.get("investigation_summary", []):
-        add(row["section"], row["text"], row["evidence_refs"], fixed=True)
+        add(
+            row["section"],
+            row["text"],
+            row["evidence_refs"],
+            fixed=True,
+            detail_only=row.get("detail_only", False),
+        )
     if observations:
         for row in observations:
             add(
@@ -157,14 +164,20 @@ def report_sources(material):
             )
         for row in interpretation.get("findings", []):
             add(
-                "cause" if row["kind"] == "inferred" else "comparison",
+                "cause",
                 "채택된 해석: " + row["statement"],
                 row["evidence_refs"],
+                fixed=True,
             )
     else:
         for row in interpretation.get("findings", []):
             prefix = "관측 보고: " if row["kind"] == "observed" else "해석: "
-            add("problem", prefix + row["statement"], row["evidence_refs"])
+            add(
+                "cause",
+                prefix + row["statement"],
+                row["evidence_refs"],
+                fixed=True,
+            )
     evidence = evaluation.get("evidence", {})
     if alert_match.get("status"):
         add(
@@ -213,7 +226,7 @@ def report_sources(material):
             + ". 확인 방법은 권고 대응의 확인 작업을 따르세요.",
             fixed=True,
         )
-    # An alert/D09 match skips analysis by design; it is not left incomplete.
+    # Compatibility for stored material from the retired alert-match fast path.
     by_design = evidence.get("reason") == "alert_match"
     if not by_design and evidence.get("execution_status") in {"failed", "skipped"}:
         add(
@@ -263,8 +276,12 @@ def report_sources(material):
             + json.dumps(row.get("preconditions", []), ensure_ascii=False),
             row["evidence_refs"],
         )
-    # Model unknowns/conflicts/limitations stay in diagnostics for review. The
-    # report states uncertainty only through coded gaps and fixed sentences.
+    # Retain incident-specific qualifications next to the analysis. Dropping them
+    # would make a valid, bounded interpretation appear more certain.
+    for kind in ("unknowns", "conflicts", "limitations"):
+        for row in interpretation.get(kind, []):
+            add("cause", row["statement"], row.get("evidence_refs", []), fixed=True)
+    # Preserve coded limitations in addition to incident-specific qualifications.
     for text in material.get("limitations", []):
         if text in FIXED_LIMITS:
             add("limits", text)

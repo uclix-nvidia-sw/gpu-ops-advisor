@@ -305,7 +305,7 @@ schema 2는 `generation_mode=combined/separate`를 명시한다. combined의 evi
 | `evidence_interpretation` | `interpretation.findings[]`: id/statement/kind(observed 또는 inferred)/evidence_refs, `unknowns/conflicts/limitations`: statement와 refs의 목록. unknown은 관측 ref가 없을 수 있으나 계획·실패 기록 또는 이유가 필요 |
 | `rca_analysis_draft` | analysis_id, input_view_hash, claims(id/source/statement/supporting_refs/contradicting_refs/value_refs), 권고·한계와 기존 결과 필드로의 연결 |
 | `analysis_review` | analysis_id, execution_status/reason, `review.verdict/criteria`, `review.issues[]`: claim_id 또는 초안 전체 대상/reason/evidence_refs/suggested_resolution, `followup_questions[]`: question/expected_effect/query_ids |
-| `investigation_decision` | action=`revise/collect/finish`, reason, 검토·초안·입력 기록 refs, 선택 query IDs, 라운드·수정 횟수·남은 예산 |
+| `investigation_decision` (과거 저장 기록) | 새 실행은 생성하지 않는다. 종료 사유·수집/보류 query 목록은 `quality.rca_evaluation.investigation`, 실제 수집·작성은 해당 evidence 참조로 추적한다 |
 
 새 LLM 단계에는 `round`, `stage`, `input_evidence_refs`, 실행 상태·시작/종료 시각을 기록한다. 코드 단계의 생성 시각은 실행 소요시간으로 해석하지 않는다. 모델 호출에는 실제 사용 모델, stage, 논리 호출 번호와 전송 시도 수, 토큰 사용량·경과시간·생략 이유, 실제 입력 refs·view hash·context_selection을 연결한다. API 키·원시 예외 메시지·숨겨진 사고 과정은 저장하지 않는다. `recorded_at/record_sequence/plan_order`의 기존 의미는 유지하며 timestamp만으로 단계 간 의존성을 만들지 않는다.
 

@@ -126,7 +126,7 @@ async def evaluate_analysis(
     )
     interpretation = None
     interpretation_diag = {}
-    # This bounded source view is retained with the draft; the critic sees sources too.
+    # Retain the bounded source view with the draft for report traceability.
     view = bounded_context(payload, 6000)
     rule_sources = [
         e for e in obs.evidence if e["query_id"] in {"runbook", "incident_snapshot"}

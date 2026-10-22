@@ -7,6 +7,7 @@ from itertools import zip_longest
 from .report_observations import event_devices_by_scope, report_scope
 
 SECTIONS = (
+    "incident_brief",
     "incident_comparison",
     "error_events",
     "device_observations",
@@ -25,6 +26,7 @@ SECTIONS = (
 
 OBSERVATION_SECTIONS = frozenset(
     {
+        "incident_brief",
         "incident_comparison",
         "error_events",
         "device_observations",
@@ -40,7 +42,11 @@ def encoded_size(value):
 
 
 def bounded_context(payload, max_bytes):
-    sections = tuple(k for k in SECTIONS if k != "incident_comparison" or k in payload)
+    sections = tuple(
+        k
+        for k in SECTIONS
+        if k not in {"incident_comparison", "incident_brief"} or k in payload
+    )
     # The limit applies to the serialized model view, not the source snapshots.
     view = {
         k: v
@@ -94,7 +100,8 @@ def bounded_context(payload, max_bytes):
     # Passed format checks carry no incident meaning; admit them only after observations.
     scheduled.sort(
         key=lambda item: (
-            item[0] == "evidence_checks" and item[1].get("outcome") == "pass"
+            item[0] != "incident_brief",
+            item[0] == "evidence_checks" and item[1].get("outcome") == "pass",
         )
     )
     for section, original in scheduled:
@@ -141,7 +148,13 @@ def bounded_context(payload, max_bytes):
             view["observation_refs"] = sorted(
                 set(previous_refs) | set(row.get("evidence_refs", []))
             )
-        if encoded_size(view) > max_bytes:
+        # Leave room for event identities and published checks, not only aggregates.
+        brief_overflow = (
+            section == "incident_brief"
+            and bool(payload.get("error_events") or payload.get("runbook_plans"))
+            and encoded_size(view["incident_brief"]) > max_bytes // 2
+        )
+        if encoded_size(view) > max_bytes or brief_overflow:
             view[section].pop()
             view["observation_refs"] = previous_refs
             view["input_evidence_refs"] = previous_inputs

@@ -1,6 +1,6 @@
 """RCA-only bounded collection and deterministic comparisons of recorded reports."""
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from copy import copy, deepcopy
 from datetime import datetime, timezone
 import json
@@ -268,6 +268,25 @@ def operator_view(data, evidence, comparison):
                     pass
             values = sorted(set(values))
             if values:
+                boundary = timestamp(data["incident_time"])
+                windows = {}
+                for label, selected in (
+                    ("before", [(t, v) for t, v in values if t < boundary]),
+                    ("at_or_after", [(t, v) for t, v in values if t >= boundary]),
+                ):
+                    windows[label] = (
+                        {
+                            "samples": len(selected),
+                            "min": min(v for _, v in selected),
+                            "max": max(v for _, v in selected),
+                            "first_value": selected[0][1],
+                            "last_value": selected[-1][1],
+                            "first": iso(selected[0][0]),
+                            "last": iso(selected[-1][0]),
+                        }
+                        if selected
+                        else None
+                    )
                 metrics.append(
                     {
                         "query_id": entry["query_id"],
@@ -277,6 +296,17 @@ def operator_view(data, evidence, comparison):
                         "min": min(v for _, v in values),
                         "max": max(v for _, v in values),
                         "last_value": values[-1][1],
+                        "incident_windows": windows,
+                        "max_sample_gap_seconds": max(
+                            (b[0] - a[0] for a, b in zip(values, values[1:])),
+                            default=None,
+                        ),
+                        "kind": "enum"
+                        if entry["query_id"] == "D47"
+                        else "counter"
+                        if entry["query_id"] == "D44"
+                        else "gauge",
+                        "enum_mapping": None if entry["query_id"] == "D47" else {},
                         "samples": len(values),
                         "first": iso(values[0][0]),
                         "last": iso(values[-1][0]),
@@ -297,9 +327,14 @@ def dossier_summary(data, current, comparison):
     """Fixed report material remains useful even when every model call fails."""
     rows = []
 
-    def add(section, text, refs):
+    def add(section, text, refs, *, detail_only=False):
         rows.append(
-            {"section": section, "text": text, "evidence_refs": sorted(set(refs))}
+            {
+                "section": section,
+                "text": text,
+                "evidence_refs": sorted(set(refs)),
+                "detail_only": detail_only,
+            }
         )
 
     refs = [e["id"] for e in current]
@@ -321,6 +356,7 @@ def dossier_summary(data, current, comparison):
             )
             + (". 이후 기록은 연결된 전체 원문 참조." if len(records) > 24 else "."),
             [ref for r in records for ref in r["refs"]],
+            detail_only=True,
         )
     groups = defaultdict(list)
     for r in records:
@@ -347,7 +383,9 @@ def dossier_summary(data, current, comparison):
         text += f"원문 발췌: {message[:700]}" + (
             " [발췌 생략; 전체 원문은 연결 근거에 보존]" if len(message) > 700 else ""
         )
-        add("problem", text, [ref for r in group for ref in r["refs"]])
+        add(
+            "problem", text, [ref for r in group for ref in r["refs"]], detail_only=True
+        )
     history, previous = comparison.get("history", []), comparison.get("previous", [])
     matched = comparison.get("matched", [])
     hp = comparison.get("history_period")
@@ -452,11 +490,13 @@ def dossier_summary(data, current, comparison):
                 )
                 if gaps:
                     text += f" 기록 사이 최대 간격 {max(gaps):g}초; 조회 구간 전체의 연속 관측을 보장하지 않습니다."
+                if q == "D47":
+                    text += " 열거형 상태 코드이며 의미 매핑 없이 정상·비정상 또는 심각도로 해석하지 않습니다."
                 if q == "D44":
                     text += " 누적값이며 reset·공백 검증 없이 사건 증가량이나 AER로 해석하지 않습니다."
                 if sxid:
                     text += " 같은 노드 GPU의 참고값이며 스위치·포트 상태가 아닙니다."
-                add("comparison", text, [e["id"]])
+                add("comparison", text, [e["id"]], detail_only=True)
             if not matched_series:
                 add(
                     "comparison",
@@ -464,3 +504,51 @@ def dossier_summary(data, current, comparison):
                     [e["id"]],
                 )
     return rows
+
+
+def incident_brief(data, current, comparison, history):
+    """Compact comparisons from complete scoped series, before model sampling."""
+    view = operator_view(data, current, comparison)
+    result = []
+    for metric in view["metrics"]:
+        result.append(
+            {
+                **metric,
+                "type": "metric_comparison",
+                "scope": view["metric_scope"],
+                "boundary": data["incident_time"],
+                "boundary_basis": "incident_time",
+                "interpretation_limits": (
+                    "Enum mapping unavailable; no health or severity inference."
+                    if metric["kind"] == "enum"
+                    else "Cumulative counter; resets and gaps prevent an incident increment claim."
+                    if metric["kind"] == "counter"
+                    else "Recorded values; no inference of continuous coverage, health or causation."
+                ),
+            }
+        )
+    for log in view["logs"]:
+        result.append(
+            {**log, "type": "log_report_group", "count_basis": "reports_not_incidents"}
+        )
+    if history:
+        previous = [r for r in history["rows"] if not r["current"]]
+        for code in sorted({c for r in history["rows"] for c in r["codes"]}):
+            rows = [r for r in previous if code in r["codes"]]
+            result.append(
+                {
+                    "type": "host_history",
+                    "code": code,
+                    "period": history["period"],
+                    "complete": history["complete"],
+                    "previous_incidents": len(rows),
+                    "current_excluded": True,
+                    "count_basis": "incident_id",
+                    "device_counts": dict(
+                        Counter(r["gpu_uuid"] or "unresolved_device" for r in rows)
+                    ),
+                    "latest_previous": rows[0]["occurred_at"] if rows else None,
+                    "evidence_refs": history["evidence_refs"],
+                }
+            )
+    return result

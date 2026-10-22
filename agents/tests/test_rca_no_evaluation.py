@@ -53,6 +53,7 @@ async def test_every_published_plan_uses_author_and_writer_only(
     evidence = output["evidence"]
     assert not {
         "analysis_review",
+        "investigation_decision",
         "evidence_evaluation",
         "investigation_plan_extension",
     } & {e["query_id"] for e in evidence}

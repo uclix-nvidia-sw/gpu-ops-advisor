@@ -39,15 +39,16 @@ it('groups identical summaries without hiding different measurements or GPU iden
   expect(html).toContain('GPU 2개');
   for (const gpu of ['GPU-A', 'GPU-B', 'GPU-C']) expect(html).toContain(gpu);
 });
-it('leads with the incident and recommendations, keeps comparisons and evaluation secondary', () => {
+it('shows incident analysis before guidance and keeps section five expanded', () => {
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaNarrative result={result} />);
   expect(html.indexOf('1. 사건 요약')).toBeLessThan(html.indexOf('2. 분석 결과'));
   expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('사건 로그와 관련 지표'));
-  expect(html.indexOf('진단 자료 보존')).toBeLessThan(html.indexOf('기록에 근거한 결론'));
+  expect(html.indexOf('기록에 근거한 결론')).toBeLessThan(html.indexOf('진단 자료 보존'));
   expect(html).not.toContain('분석 처리:');
   expect(html.indexOf('사건 로그와 관련 지표')).toBeLessThan(html.indexOf('5. 조사'));
-  expect(html).toContain('<summary>비교 상세</summary>');
+  expect(html).toContain('<h5>비교 상세</h5>');
+  expect(html).not.toContain('<summary>5. 조사');
   expect(html).toContain('저장된 비교 원문');
   expect(JSON.stringify(result)).toBe(before);
 });
@@ -66,4 +67,26 @@ it('renders enum codes without treating them as numeric ranges or health', () =>
   expect(html).not.toContain('최소');
   expect(html).not.toContain('마지막 값');
   expect(html).not.toContain('정상');
+});
+
+it('keeps analytical explanation visible and only folds tagged raw data', () => {
+  const value = {
+    ...result,
+    quality: {
+      ...result.quality,
+      report: {
+        ...result.quality.report,
+        source_items: [
+          { section: 'comparison', text: '원시 측정 목록', fixed: true, detail_only: true },
+        ],
+      },
+    },
+    narrative: [
+      { id: 'comparison', title: '자료 비교', text: '사건 전후의 변화 설명\n\n원시 측정 목록' },
+    ],
+  };
+  const html = renderToStaticMarkup(<RcaNarrative result={value} />);
+  expect(html).toContain('사건 전후의 변화 설명</p><details>');
+  expect(html).toContain('<summary>수집 데이터 원문·집계</summary>');
+  expect(html.match(/원시 측정 목록/g)).toHaveLength(1);
 });
