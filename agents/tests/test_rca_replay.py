@@ -49,7 +49,12 @@ async def test_frozen_replay_contract(name, monkeypatch):
         assert summary["synthesis_statuses"] == ["complete"]
         assert summary["review_verdicts"] == ["acceptable"]
         assert summary["transport_calls"] == 4
-        assert summary["decisions"][-1]["reason"] == "review_accepted"
+        assert (
+            result["output"]["result"]["quality"]["rca_evaluation"]["investigation"][
+                "stop_reason"
+            ]
+            == "review_accepted"
+        )
     elif name == "insufficient_budget":
         assert summary["transport_calls"] == 0
         assert summary["fixture_reported_tokens"] is None
@@ -71,9 +76,13 @@ async def test_frozen_replay_contract(name, monkeypatch):
         )
     else:
         assert len(result["query_calls"]) == 2
-        assert summary["decisions"][0]["selected_queries"] == ["D02"]
-        assert summary["decisions"][0]["action"] == "collect"
-        assert summary["decisions"][1]["action"] == "finish"
+        assert summary["decisions"] == []
+        assert (
+            "D02"
+            in result["output"]["result"]["quality"]["rca_evaluation"]["investigation"][
+                "collected_queries"
+            ]
+        )
         assert summary["review_verdicts"] == [
             "undetermined" if name == "followup_changes_review" else "acceptable",
             "acceptable",
@@ -129,7 +138,7 @@ async def test_compare_requires_same_frozen_inputs():
 async def test_summary_explains_followup_and_retained_partial_result():
     result = await replay(cases()["accepted_rule_followup"])
     text = readable_summary(result)
-    assert "추가 수집 D02(GPU 활동)" in text
+    assert any(e["query_id"] == "D02" for e in result["output"]["evidence"])
     assert "확보된 근거 범위에서 타당" in text
     assert "실제 모델의 판단 정확도·비용은 측정하지 않았습니다" in text
     result = await replay(cases()["interpretation_only"])

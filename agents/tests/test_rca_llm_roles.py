@@ -293,3 +293,29 @@ def test_report_retains_counter_evidence_and_withheld_action_conditions():
     assert any(
         "보류된 권고" in row["text"] and "대상 확인" in row["text"] for row in rows
     )
+
+
+async def test_planned_author_meaning_and_caveats_are_not_rewritten_by_writer():
+    source = material()
+    source["evaluation"]["review"] = {"reason": "not_requested"}
+    source["reported_observations"] = [
+        {"text": "기록된 오류", "evidence_refs": ["D09-ref"]}
+    ]
+    interpretation = source["evaluation"]["evidence"]["interpretation"]
+    interpretation["findings"][0]["statement"] = (
+        "전력과 사용률의 변화가 오류 보고 구간에 함께 관측됩니다. 인과 관계는 확인되지 않았습니다."
+    )
+    result = {"quality": {}}
+    llm = Writer()
+    await write_material_report(result, source, llm)
+    items = result["quality"]["report"]["source_items"]
+    assert any(
+        s["fixed"]
+        and s["section"] == "cause"
+        and interpretation["findings"][0]["statement"] in s["text"]
+        for s in items
+    )
+    text = str(result["narrative"])
+    assert interpretation["findings"][0]["statement"] in text
+    assert "단일 출처 보고입니다." in text
+    assert not any("전력" in str(i.get("source_items")) for i in llm.inputs)

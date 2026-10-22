@@ -188,7 +188,7 @@ RCA는 장애 관련 로그·지표를 모아 원인을 조사하는 과정이�
 
 ### 다음 행동과 반복 제한
 
-요건 미충족은 조사 제약이며 그 자체로 잘못된 분석이라는 뜻이 아니다. 반대로 기존 요건이 충족돼도 검토자가 중요한 보완 질문을 남겼다면 허용된 조회와 실행 조건을 다시 확인한다. `evaluate_requirements()`는 부족 조건과 정책 제안을 기록하고, `select_followup()`는 기존 Runbook 규칙·명시적 정책·허용 범위로 후보를 제한한다. `select_followup()`와 `evaluate_analysis()`의 결정이 `investigation_decision`에 실제 행동과 이유를 기록한다. LLM 제안은 등록 query ID와 목적·기대 효과만 포함하며 임의 조회식이나 새 Runbook 발행을 허용하지 않는다.
+요건 미충족은 조사 제약이며 그 자체로 잘못된 분석이라는 뜻이 아니다. 반대로 기존 요건이 충족돼도 검토자가 중요한 보완 질문을 남겼다면 허용된 조회와 실행 조건을 다시 확인한다. `evaluate_requirements()`는 부족 조건과 정책 제안을 기록하고, `select_followup()`는 기존 Runbook 규칙·명시적 정책·허용 범위로 후보를 제한한다. 새 실행은 `investigation_decision`을 생성하지 않는다. 최종 `quality.rca_evaluation.investigation`에 수집/보류 query·종료 사유와 실제 분석 초안 참조를 남긴다. 기존 저장 결정 기록은 읽기 호환으로 유지한다. LLM 제안은 등록 query ID와 목적·기대 효과만 포함하며 임의 조회식이나 새 Runbook 발행을 허용하지 않는다.
 
 | 조건 | 행동 |
 |---|---|

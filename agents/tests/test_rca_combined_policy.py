@@ -125,17 +125,13 @@ async def test_goal_defers_optional_queries_and_keeps_cause_unknown(
     reviewer = result["model_calls"][1]["input"]
     assert any(c["source"] == "interpretation" for c in reviewer["draft"]["claims"])
     assert not reviewer["evidence_context"]["interpretation_findings"]
-    decision = next(
-        e["snapshot"]
-        for e in output["evidence"]
-        if e["query_id"] == "investigation_decision"
+    investigation = output["result"]["quality"]["rca_evaluation"]["investigation"]
+    assert investigation["stop_reason"] == "goal_achieved"
+    assert investigation["collected_queries"] == ["D09"]
+    assert set(investigation["deferred_queries"]) == aux
+    assert not any(
+        e["query_id"] == "investigation_decision" for e in output["evidence"]
     )
-    assert decision["reason"] == "goal_achieved"
-    assert decision["decision_policy_status"] == "applied"
-    # Optional evidence does not displace a sufficient scoped report.
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["deferred_queries"]) == aux
-    assert decision["selected_queries"] == []
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -178,16 +174,13 @@ async def test_published_legacy_policy_is_not_silently_upgraded(kind):
         if e["query_id"] == "analysis_review"
     )
     assert review["review"]["verdict"] == "acceptable"
-    decision = next(
-        e["snapshot"]
-        for e in result["output"]["evidence"]
-        if e["query_id"] == "investigation_decision"
-    )
-    assert decision["reason"] == "authorized_followup"
-    assert decision["decision_policy_status"] == "not_configured"
-    assert decision["collected_queries"] == ["D09"]
-    assert set(decision["selected_queries"]) == (
-        {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
+    investigation = result["output"]["result"]["quality"]["rca_evaluation"][
+        "investigation"
+    ]
+    expected = {"D44", "D02", "D11"} if kind == "xid" else {"D02", "D13"}
+    assert expected <= set(investigation["collected_queries"])
+    assert not any(
+        e["query_id"] == "investigation_decision" for e in result["output"]["evidence"]
     )
 
 
@@ -425,9 +418,8 @@ async def test_duplicate_source_in_followup_does_not_repeat_author_or_review(
     assert (
         len([r for r in result["model_calls"] if r["stage"] == "analysis_review"]) == 1
     )
-    assert any(
-        isinstance(row["snapshot"], dict)
-        and row["snapshot"].get("reason") == "no_new_evidence"
+    assert not any(
+        row["query_id"] == "investigation_decision"
         for row in result["output"]["evidence"]
     )
 
@@ -462,3 +454,19 @@ async def test_report_cannot_change_rca_conclusion(monkeypatch):
     monkeypatch.setattr(workflow, "write_report", corrupt)
     with pytest.raises(ValueError, match="report changed frozen"):
         await replay(policy_case())
+
+
+async def test_completion_requires_matching_draft_after_decision_stage_removal():
+    from agent_common.contracts import validate_result
+
+    replayed = await replay(policy_case())
+    output = replayed["output"]
+    body = output["result"]
+    investigation = body["quality"]["rca_evaluation"]["investigation"]
+    assert investigation["stop_reason"] == "goal_achieved"
+    validate_result(body, output["evidence"])
+    unrelated = next(e["id"] for e in output["evidence"] if e["query_id"] == "D09")
+    changed = deepcopy(body)
+    changed["quality"]["rca_evaluation"]["investigation"]["evidence_refs"] = [unrelated]
+    with pytest.raises(ValueError, match="invalid investigation completion"):
+        validate_result(changed, output["evidence"])

@@ -95,7 +95,9 @@ export function RcaHostHistory({ result }: { result: Row }) {
                         key
                       ) : (
                         <details>
-                          <summary>{key.split(' · ')[0]} · 같은 GPU</summary>
+                          <summary>
+                            {key.split(' · ')[0]} · {str(items[0].gpu_uuid)}
+                          </summary>
                           {key}
                         </details>
                       )}

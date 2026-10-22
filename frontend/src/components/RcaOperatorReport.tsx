@@ -28,6 +28,7 @@ export function RcaOperatorReport({
         }
       : section,
   );
+  const sources = rows(obj(obj(result.quality).report).source_items);
   const paragraphs = (id: string) =>
     narrative
       .filter((s) => s.id === id)
@@ -58,6 +59,10 @@ export function RcaOperatorReport({
       <RcaIncidentSummary result={result} />
       <section className="rca-narrative-section">
         <h4>2. 분석 결과와 권고 조치</h4>
+        <h5>사건별 분석</h5>
+        {paragraphs('cause').map((text, i) => (
+          <p key={i}>{readable(text)}</p>
+        ))}
         <h5>런북 권고 조치</h5>
         <ol className="rca-action-list">
           {paragraphs('action')
@@ -76,9 +81,6 @@ export function RcaOperatorReport({
               ))}
           </details>
         )}
-        {paragraphs('cause').map((text, i) => (
-          <p key={i}>{readable(text)}</p>
-        ))}
         {ids.length > 0 && (
           <details>
             <summary>보고서 GPU 표기와 실제 식별자</summary>
@@ -92,16 +94,32 @@ export function RcaOperatorReport({
       </section>
       <RcaTriageObservations result={result} onEvidence={onEvidence} />
       <RcaHostHistory result={result} />
-      <details className="rca-narrative-section">
-        <summary>5. 조사·비교 원문과 처리 상세</summary>
+      <section className="rca-narrative-section">
+        <h4>5. 조사·비교 원문과 처리 상세</h4>
         {narrative
           .filter((s) => !['cause', 'action'].includes(str(s.id)) && str(s.text).trim())
-          .map((s, i) => (
-            <details key={i}>
-              <summary>{str(s.title)}</summary>
-              <p style={{ whiteSpace: 'pre-wrap' }}>{str(s.text)}</p>
-            </details>
-          ))}
+          .map((s, i) => {
+            const raw = sources.filter((r) => r.section === s.id && r.detail_only === true);
+            const text = raw
+              .reduce((value, r) => value.replace(str(r.text), ''), str(s.text))
+              .trim();
+            return (
+              <section key={i}>
+                <h5>{str(s.title)}</h5>
+                {text && <p style={{ whiteSpace: 'pre-wrap' }}>{text}</p>}
+                {raw.length > 0 && (
+                  <details>
+                    <summary>수집 데이터 원문·집계</summary>
+                    {raw.map((r, j) => (
+                      <p key={j} style={{ whiteSpace: 'pre-wrap' }}>
+                        {str(r.text)}
+                      </p>
+                    ))}
+                  </details>
+                )}
+              </section>
+            );
+          })}
         <details>
           <summary>저장된 분석·권고 원문</summary>
           {narrative
@@ -118,7 +136,7 @@ export function RcaOperatorReport({
             str(result.narrative_status) ||
             '저장 결과 기준'}
         </p>
-      </details>
+      </section>
     </section>
   );
 }

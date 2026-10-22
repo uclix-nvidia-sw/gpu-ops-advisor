@@ -286,7 +286,7 @@ XID 79·SXID 11001의 현재 작성 원본은 단일 observation plan을 사용�
 2. 발행 본문을 기준으로 `schema`를 `gpu-rca-runbook/1.1`로 바꾸고 해당 작성 원본의 `decision_policy`를 추가한 새 초안을 준비한다. 기존 compatibility·수집 계획·조건부 권고는 보존한다. 정책의 query와 기존 계획이 다르면 자동 병합하지 않고 조건을 먼저 맞춘다. `runbook_admin check --runtime`으로 실제 실행 프로필에서 검증한다.
 3. XID 79·SXID 11001 각각 D09만으로 필수 기준과 별도 검토가 충족되면 `goal_achieved`, 추가 조회 0건을 확인한다. 다른 대상·누락/부분 수집·의미 기준 미확정·검토 실패는 목적 달성으로 끝나면 안 된다. 합성 응답 재생은 종료 로직 검증이며 실제 모델 품질 검증과 구분한다.
 4. 운영 반영 승인을 받은 후 기존 knowledge ID에 새 revision을 등록·검토·발행한다. 같은 본문을 새 knowledge ID로 중복 생성하거나 과거 revision을 덮어쓰지 않는다. 문제가 있으면 새 revision을 retire하고 기존 발행본을 유지한다.
-5. **새 작업**의 고정 Runbook revision/hash, 품질 검토와 `investigation_decision`을 확인한다. GUI의 ‘다음 행동 결정’에서 목적 달성 이유, D09 수집, 목적 밖 선택 조회 생략을 확인한다. 이미 완료된 작업은 이전 발행본과 결과를 그대로 보존한다. `not_configured`이면 발행/선택이 아직 적용되지 않은 것이며 프롬프트나 품질 척도를 완화하지 않는다.
+5. **새 작업**의 고정 Runbook revision/hash와 수집·작성 기록을 확인한다. `investigation_decision`은 새 실행에서 생성하지 않으며 최종 `quality.rca_evaluation.investigation`에서 수집/보류 query와 종료 사유를 확인한다. XID 79·SXID 11001 단일 수집 경로는 품질 검토 호출 없이 사건별 분석·보고서를 작성한다. 이미 완료된 작업은 이전 발행본과 결과를 그대로 보존한다. `not_configured`이면 발행/선택이 아직 적용되지 않은 것이며 프롬프트나 품질 척도를 완화하지 않는다.
 
 `goal(id/question/conclusion_scope)`, `applies_when(reported_error_code/reported_producer_contract)`, `completion_criteria(id/question/method/required)`, `blocking_conditions`, `non_blocking_unknowns`, `followup_links(query_id/criterion_ids/required/expected_effect)`를 모두 요구한다. 첫 목적 ID는 `identify_error_report`, 코드 필수 기준은 `reported_error/scoped_source`다. 필수 LLM 기준도 하나 이상 있어야 한다. 차단 조건은 `scope_unverified/identity_conflict/required_query_incomplete/conflicting_reports` 네 항목이다. 모든 계획 query에 목적을 연결하며 기존 required를 false로 낮추거나 새 query를 끼워 넣을 수 없다. 지원하지 않는 필드·실행 표현식은 거절한다.
 

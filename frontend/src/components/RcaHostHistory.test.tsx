@@ -92,7 +92,7 @@ test('repeat intervals group the same code and device and mark the query boundar
     />,
   );
   expect(html).toContain('XID:79 · 호스트 전체</td><td>3건');
-  expect(html).toContain('XID:79 · 같은 GPU</summary>');
+  expect(html).toContain('XID:79 · GPU-A</summary>');
   expect(html).toContain('코드·대상별 등록 건수와 최근 간격');
   expect(html).toContain('XID:79 · GPU-A');
   expect(html).toContain('<td>2.0일</td>');

@@ -34,6 +34,7 @@ from .incident_dossier import (
     current_data,
     comparison_targets,
     dossier_summary,
+    incident_brief,
     error_tools,
     operator_view,
 )
@@ -999,6 +1000,12 @@ async def run(tools):
                 error_events,
             )
             if dossier:
+                payload["incident_brief"] = incident_brief(
+                    data,
+                    [e for values in collected.values() for e in values],
+                    comparison,
+                    result["quality"].get("host_incident_history"),
+                )
                 payload.setdefault("incident_comparison", []).extend(
                     dossier_summary(
                         data,
@@ -1020,21 +1027,6 @@ async def run(tools):
             }:
                 objective["compatible"] = False
             if evaluation and not source_hashes - evaluation_state["authored_sources"]:
-                obs._evidence(
-                    "investigation_decision",
-                    None,
-                    data["time_range"],
-                    {
-                        "round": round_no,
-                        "action": "reuse",
-                        "reason": "no_new_evidence",
-                        "analysis_id": evaluation["draft"]["analysis_id"],
-                        "source_hashes": sorted(source_hashes),
-                        "evidence_refs": evaluation["evidence"]["evidence_refs"],
-                    },
-                    "ok",
-                    {"round": round_no, "action": "reuse", "reason": "no_new_evidence"},
-                )
                 state["decision_assessment"] = finish_assessment(
                     objective,
                     evaluation.get("interpretation"),
@@ -1371,23 +1363,6 @@ async def run(tools):
             # then analyze D09 and the added evidence together in the next round.
             queries = list(state["remaining"])
             approved = state["approved"]
-            obs._evidence(
-                "investigation_decision",
-                None,
-                data["time_range"],
-                {
-                    "round": round_no,
-                    "action": "collect",
-                    "reason": "alert_mismatch",
-                    "alert_match": state["alert_match"],
-                    "selected_queries": queries,
-                    "collected_queries": list(collected),
-                    "remaining_budget": dict(budget),
-                    "evidence_refs": state["alert_match"]["evidence_refs"],
-                },
-                "ok",
-                {"round": round_no, "action": "collect", "reason": "alert_mismatch"},
-            )
             planned_queries.extend(q for q in queries if q not in planned_queries)
             followups += 1
             continue
@@ -1410,44 +1385,6 @@ async def run(tools):
             state["remaining"],
             state["next_queries"],
             state["approved"],
-        )
-        obs._evidence(
-            "investigation_decision",
-            None,
-            data["time_range"],
-            {
-                "round": round_no,
-                "action": "finish" if stop_reason else "collect",
-                "reason": stop_reason or "authorized_followup",
-                "analysis_id": evaluation["draft"]["analysis_id"],
-                "selected_queries": next_queries,
-                "revisions": evaluation_state["revisions"],
-                "collected_queries": list(collected),
-                "deferred_queries": state["deferred_queries"],
-                "decision_policy_status": (
-                    "applied"
-                    if (state.get("decision_assessment") or {}).get("compatible")
-                    else "mixed"
-                    if state.get("decision_assessment")
-                    else "not_configured"
-                ),
-                **(
-                    {"decision_assessment": state["decision_assessment"]}
-                    if state.get("decision_assessment")
-                    else {}
-                ),
-                "remaining_budget": dict(budget),
-                "evidence_refs": evaluation["evidence"]["evidence_refs"]
-                if single_phase
-                else evaluation["review"]["evidence_refs"],
-            },
-            "ok",
-            {
-                "round": round_no,
-                "action": "finish" if stop_reason else "collect",
-                "reason": stop_reason or "authorized_followup",
-                "analysis_id": evaluation["draft"]["analysis_id"],
-            },
         )
         if stop_reason:
             break
@@ -1683,8 +1620,12 @@ async def run(tools):
             "evidence_refs": [
                 e["id"]
                 for e in obs.evidence
-                if e["query_id"] == "investigation_decision"
+                if e["query_id"] == "rca_analysis_draft"
+                and e["snapshot"].get("analysis_id")
+                == evaluation["draft"]["analysis_id"]
             ],
+            "collected_queries": list(collected),
+            "deferred_queries": state.get("deferred_queries", []),
         },
     }
     # Published guidance remains reference data, never a second RCA conclusion.

@@ -226,8 +226,15 @@ def validate_evaluation(result, evidence):
             or evaluation["review"].get("rubric_version") != "2"
             or not objective.get("compatible")
             or not objective.get("policies")
-            or not decisions
-            or decisions[-1].get("decision_assessment") != objective
+            or (
+                decisions[-1].get("decision_assessment") != objective
+                if decisions
+                else not any(
+                    by_id[ref]["query_id"] == "rca_analysis_draft"
+                    and by_id[ref]["snapshot"].get("analysis_id") == analysis_id
+                    for ref in investigation["evidence_refs"]
+                )
+            )
             or any(
                 not policy["applicable"]
                 or policy.get("unmet_required_evidence")

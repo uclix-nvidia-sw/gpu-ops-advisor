@@ -56,7 +56,8 @@ async def test_revision_is_bounded_and_never_bypasses_failed_review(failure):
         for e in outcome["output"]["evidence"]
         if e["query_id"] == "investigation_decision"
     ]
-    assert sum(d.get("action") == "revise" for d in decisions) == 1
+    assert decisions == []
+    assert len(calls) == (1 if failure == "budget" else 2)
 
 
 async def test_report_does_not_send_fixed_sources_twice():

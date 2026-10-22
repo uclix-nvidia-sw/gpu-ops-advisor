@@ -224,7 +224,7 @@ async def test_single_collection_has_author_and_writer_without_critic(
             "findings": [
                 {
                     "id": "observed-report",
-                    "statement": "The node reported an error.",
+                    "statement": "노드에서 오류가 보고되었습니다.",
                     "kind": "observed",
                     "evidence_refs": {"$input": "/observation_refs"},
                 }
@@ -248,7 +248,12 @@ async def test_single_collection_has_author_and_writer_without_critic(
     assert stages == ["synthesis", "report_writing"]
     assert not any(
         e["query_id"]
-        in {"analysis_review", "evidence_evaluation", "investigation_plan_extension"}
+        in {
+            "analysis_review",
+            "evidence_evaluation",
+            "investigation_plan_extension",
+            "investigation_decision",
+        }
         for e in output["evidence"]
     )
     analysis = output["result"]["quality"]["analysis"]
@@ -291,3 +296,131 @@ async def test_single_collection_conflicting_target_does_not_reenter_legacy_revi
     assert output["quality"]["analysis"]["workflow"] == "single_collection"
     assert "target_identity_conflict" in output["missing_inputs"]
     assert output["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
+
+
+def test_incident_brief_preserves_full_series_units_windows_and_priority():
+    from rcca_agent.incident_dossier import incident_brief
+
+    data, logs = records_fixture()
+    target = log_records([logs], data)[0]
+    boundary = timestamp(data["incident_time"])
+    data["time_range"] = {
+        "start": "2026-09-14T23:30:00Z",
+        "end": "2026-09-15T00:30:00Z",
+    }
+    evidence = [logs]
+    for query, unit, values in [
+        ("D02", "percent", [10, 100, 0]),
+        ("D11", "watts", [88.32, 314.024, 88.32]),
+        ("D44", "count", [0, 0, 0]),
+    ]:
+        evidence.append(
+            {
+                "id": query,
+                "query_id": query,
+                "cluster_id": "c",
+                "time_range": data["time_range"],
+                "tool_status": "ok",
+                "quality": {"complete": True, "original_samples": True, "unit": unit},
+                "snapshot": {
+                    "data": {
+                        "result": [
+                            {
+                                "metric": {"node": "node-1", "uuid": target["gpu"]},
+                                "values": [
+                                    [boundary - 60, str(values[0])],
+                                    [boundary, str(values[1])],
+                                    [boundary + 60, str(values[2])],
+                                ],
+                            }
+                        ]
+                    }
+                },
+            }
+        )
+    original = deepcopy(evidence)
+    brief = incident_brief(data, evidence, {"targets": [target]}, None)
+    metrics = {r["query_id"]: r for r in brief if r["type"] == "metric_comparison"}
+    assert set(metrics) == {"D02", "D11", "D44"}
+    assert metrics["D11"]["max"] == 314.024
+    assert metrics["D11"]["unit"] == "watts"
+    assert metrics["D02"]["incident_windows"]["before"]["samples"] == 1
+    assert metrics["D02"]["incident_windows"]["at_or_after"]["max"] == 100
+    assert metrics["D44"]["kind"] == "counter"
+    payload = {
+        "incident_brief": brief,
+        "raw_excerpts": [{"text": "raw " * 10000, "evidence_refs": ["logs"]}],
+    }
+    view = bounded_context(payload, 6000)
+    assert len(view["incident_brief"]) == len(brief)
+    assert not view["raw_excerpts"]
+    assert evidence == original
+
+
+def test_brief_history_excludes_current_and_keeps_host_device_scope():
+    from rcca_agent.incident_dossier import incident_brief
+
+    data, logs = records_fixture()
+    history = {
+        "period": data["time_range"],
+        "complete": False,
+        "evidence_refs": ["history"],
+        "rows": [
+            {
+                "current": True,
+                "codes": ["xid:79"],
+                "gpu_uuid": "GPU-A",
+                "occurred_at": data["incident_time"],
+            },
+            {
+                "current": False,
+                "codes": ["xid:79"],
+                "gpu_uuid": "GPU-B",
+                "occurred_at": data["incident_time"],
+            },
+        ],
+    }
+    row = next(
+        r
+        for r in incident_brief(data, [logs], {}, history)
+        if r["type"] == "host_history"
+    )
+    assert row["previous_incidents"] == 1 and row["current_excluded"]
+    assert row["device_counts"] == {"GPU-B": 1}
+    assert row["complete"] is False
+
+
+def test_enum_brief_keeps_gpu_scope_and_no_health_mapping():
+    from rcca_agent.incident_dossier import incident_brief
+
+    data, logs = records_fixture("sxid")
+    target = log_records([logs], data)[0]
+    at = timestamp(data["time_range"]["end"]) - 10
+    metric = {
+        "id": "fm",
+        "query_id": "D47",
+        "cluster_id": "c",
+        "time_range": data["time_range"],
+        "tool_status": "ok",
+        "quality": {"complete": True, "original_samples": True, "unit": "enum"},
+        "snapshot": {
+            "data": {
+                "result": [
+                    {
+                        "metric": {"node": "node-1", "uuid": "GPU-A"},
+                        "values": [[at, "0"]],
+                    }
+                ]
+            }
+        },
+    }
+    row = next(
+        r
+        for r in incident_brief(data, [logs, metric], {"targets": [target]}, None)
+        if r["type"] == "metric_comparison"
+    )
+    assert row["scope"] == "node_gpu_context"
+    assert row["gpu_uuid"] == "GPU-A" and row["kind"] == "enum"
+    assert row["enum_mapping"] is None
+    assert row["last_value"] == 0
+    assert "no health" in row["interpretation_limits"]

@@ -162,3 +162,52 @@ def test_planned_author_explains_collected_data_without_review_or_followup():
     assert "controls bounded follow-up" not in prompt
     assert "Explain alert_match/evidence_gap" not in prompt
     assert "Review feedback requests" in author_prompt({})
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "사용률과 전력 및 재전송이 모두 0~100% 범위입니다.",
+        "Fabric Manager 상태 코드가 0이므로 비정상 상태입니다.",
+    ],
+)
+def test_planned_findings_cannot_reintroduce_unregistered_numeric_semantics(statement):
+    view = {
+        "incident_brief": [],
+        "input_evidence_refs": ["e"],
+        "observation_refs": ["e"],
+        "device_observations": [],
+        "error_events": [],
+        "query_quality": [],
+    }
+    response = {
+        "interpretation": {
+            "findings": [
+                {
+                    "id": "bad",
+                    "kind": "observed",
+                    "statement": statement,
+                    "evidence_refs": ["e"],
+                },
+                {
+                    "id": "good",
+                    "kind": "observed",
+                    "statement": "노드에서 오류가 보고되었습니다.",
+                    "evidence_refs": ["e"],
+                },
+            ],
+            "unknowns": [],
+            "conflicts": [],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "limitations": [],
+    }
+    dropped = []
+    interpretation, _, _, errors = validate_author(
+        response, view, None, dropped=dropped
+    )
+    assert not errors
+    assert [r["id"] for r in interpretation["findings"]] == ["good"]
+    assert dropped[0]["code"] == "invalid_finding_prose"
+    assert statement not in json.dumps(dropped, ensure_ascii=False)

@@ -394,28 +394,7 @@ async def evaluate_analysis(
                 "instruction": "Revise only supported claims using the original evidence. "
                 "Do not treat review feedback as evidence or invent missing observations.",
             }
-            record(
-                "investigation_decision",
-                {
-                    "action": "revise",
-                    "reason": "independent_review_feedback",
-                    "analysis_id": draft["analysis_id"],
-                    "revision": revision,
-                    "evidence_refs": [review_id],
-                },
-            )
             continue
-        record(
-            "investigation_decision",
-            {
-                "action": "withhold",
-                "reason": "revision_limit_reached"
-                if revision
-                else "same_evidence_rewrite_blocked",
-                "analysis_id": draft["analysis_id"],
-                "evidence_refs": [review_id],
-            },
-        )
         # Known-invalid assertions cannot survive exhaustion or an unrepairable rule claim.
         affected = {issue["claim_id"] for issue in review["issues"]}
         unattributed = None in affected
