@@ -267,4 +267,15 @@ it('keeps the six-section frame when a result has no triage observations', () =>
     expect(html).toContain(heading);
   expect(html).toContain('(사용 Runbook: RB-SXID-11001 rev 13)');
   expect(html).not.toContain('RB-GENERAL-GPU-NODE rev');
+  // Component alerts never get the comparison, so no "older revision" advice.
+  const component = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        runbook_revisions: [{ knowledge_key: 'RB-COMPONENT-DISK', revision: 1 }],
+        quality: { analysis: { workflow: 'single_collection' } },
+      }}
+    />,
+  );
+  expect(component).toContain('XID/SXID 오류에만 만듭니다 (사용 Runbook: RB-COMPONENT-DISK rev 1)');
+  expect(component).not.toContain('이전 Runbook revision');
 });

@@ -67,11 +67,13 @@ export function RcaOperatorReport({
   const books = rows(result.runbook_revisions).filter(
     (b) => !str(b.knowledge_key).includes('GENERAL'),
   );
-  const noSummary = `이 결과에는 1·3장을 채우는 요약 자료가 저장되지 않았습니다${
-    books.length
-      ? ` (사용 Runbook: ${books.map((b) => `${str(b.knowledge_key)} rev ${num(b.revision)}`).join(', ')})`
-      : ''
-  }. 대개 지표 조회 계획이 없는 이전 Runbook revision으로 실행된 경우이며, 최신 revision으로 다시 분석하면 채워집니다.`;
+  const used = books.length
+    ? ` (사용 Runbook: ${books.map((b) => `${str(b.knowledge_key)} rev ${num(b.revision)}`).join(', ')})`
+    : '';
+  // The 30-minute comparison exists only for XID/SXID plans; component alerts never get one.
+  const noSummary = books.some((b) => /^RB-S?XID-/.test(str(b.knowledge_key)))
+    ? `이 결과에는 1·3장을 채우는 요약 자료가 저장되지 않았습니다${used}. 대개 지표 조회 계획이 없는 이전 Runbook revision으로 실행된 경우이며, 최신 revision으로 다시 분석하면 채워집니다.`
+    : `1·3장의 요약과 30분 로그·지표 비교는 XID/SXID 오류에만 만듭니다${used}. 2·4·5·6장을 확인하세요.`;
   const podText = (w: { name: string; gpus: string; gpuCount: number }) =>
     `${w.name} (${w.gpus}${w.gpuCount > 1 ? ` · ${w.gpuCount}개 함께 사용` : ''})`;
   return (
