@@ -51,12 +51,12 @@ export function Reports() {
   return (
     <div className="page">
       <PageHead
-        eyebrow="OPERATIONS REPORT"
+        eyebrow=""
         title="운영 분석·보고서"
         description="진행 중인 요청과 완료된 보고서를 한 목록에서 확인합니다. 제목을 선택하면 보고서 화면으로 이동하며, 결과가 없으면 작성 현황을 표시합니다."
         actions={
           <Link className="button primary" to="/reports/new">
-            새 보고서 만들기
+            보고서 요청
           </Link>
         }
       />
@@ -85,7 +85,7 @@ export function Reports() {
               emptyDescription={
                 filtered
                   ? '위의 필터 해제로 다른 보고서를 확인하세요.'
-                  : '새 보고서 만들기에서 분석을 요청하세요.'
+                  : '보고서 요청에서 분석을 요청하세요.'
               }
             >
               <p className="muted">
@@ -227,7 +227,7 @@ export function LegacyReportForm() {
   return (
     <div className="page report-workspace">
       <PageHead
-        eyebrow="NEW REPORT"
+        eyebrow=""
         title="새 운영 보고서"
         description="사용 패턴·장비 점검·장애 현황과 자료 신뢰도를 보고 확인할 일을 정하세요."
       />

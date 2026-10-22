@@ -1,15 +1,15 @@
 import { ArrowRight, ClipboardList, FileChartColumn, Radar, Telescope } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../lib/store';
-import { obj, queryPath, str, useList, useResource, type Row } from '../lib/live';
+import { obj, queryPath, str, strings, useList, useResource, type Row } from '../lib/live';
 import { ReportOrigin, ReportTimeNote, ReportScope } from '../components/ReportMeta';
 import { formatDate, labels } from '../lib/domain';
 import { reportPeriodLabel, reportRequestTime } from '../lib/reportPeriod';
-import { reportTitle, reportTopics } from '../lib/workflow';
+import { reportTitle } from '../lib/workflow';
 import { ReportFilters } from './Reports';
 import { reportReceivedRange } from '../lib/reportPeriod';
 import { reportTabs, useReportListPosition } from '../lib/reportNavigation';
-import { groupLabel } from '../lib/report';
+import { groupLabel, topicName } from '../lib/report';
 import { AlarmIdentity, JobRows, More, QueryState } from '../components/live';
 import { Badge, NavTabs } from '../components/ui';
 import { IncidentStates } from '../components/RcaDebug';
@@ -352,7 +352,7 @@ export function OperationsReports() {
                       {reportTitle(r)}
                     </Link>
                   </h2>
-                  <p className="muted">{reportTopics(r)}</p>
+                  <p className="muted">{strings(r.topic_ids).map(topicName).join(' · ')}</p>
                   <ReportScope job={r} />
                   <dl>
                     <dt>요청 집계</dt>

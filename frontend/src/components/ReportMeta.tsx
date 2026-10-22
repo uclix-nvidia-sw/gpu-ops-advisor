@@ -1,4 +1,4 @@
-import { reportScopeClusters, reportTitle } from '../lib/workflow';
+import { reportPurpose, reportScopeClusters } from '../lib/workflow';
 import { topicName } from '../lib/report';
 import { num, obj, rows, str, strings, type Row } from '../lib/live';
 import { reportPeriodLabel, reportRequestTime } from '../lib/reportPeriod';
@@ -130,12 +130,11 @@ export function ReportIdentity({ job, detail = false }: { job: Row; detail?: boo
   const range = obj(job.time_range);
   return (
     <span className="alarm-identity">
-      <strong>{reportTitle(job)}</strong>
+      <strong>{reportPurpose(job)}</strong>
       <span className="cell-sub">
         {clusters.length
           ? clusters.map(({ cluster, namespaces }, index) => (
-              <span key={index}>
-                {index > 0 && ' · '}
+              <span className="report-scope-chip" key={index}>
                 클러스터: <strong>{cluster}</strong> / {namespaces}
               </span>
             ))
@@ -146,9 +145,12 @@ export function ReportIdentity({ job, detail = false }: { job: Row; detail?: boo
         {strings(job.topic_ids).map(topicName).join(' · ') || '분석 주제 미확인'}
       </span>
       {detail && (
-        <span className="cell-sub">
-          요청 접수: {reportRequestTime(str(job.created_at))} · 작업 ID: {str(job.id) || '미확인'}
-        </span>
+        <details className="report-identity-meta">
+          <summary>요청 정보</summary>
+          <span className="cell-sub">
+            요청 접수: {reportRequestTime(str(job.created_at))} · 작업 ID: {str(job.id) || '미확인'}
+          </span>
+        </details>
       )}
     </span>
   );

@@ -79,7 +79,7 @@ export function AggregateReportForm() {
     <div className="page aggregate-form">
       <PageHead
         eyebrow=""
-        title={app.mode === 'new' && scheduled ? '자동 보고서 일정 추가' : '운영 보고서 만들기'}
+        title={app.mode === 'new' && scheduled ? '자동 보고서 일정 추가' : '보고서 요청'}
         description="Namespace별 GPU 활동과 기간 내 사건을 이전 기간과 비교합니다."
       />
       <form
@@ -176,7 +176,7 @@ export function AggregateReportForm() {
             type="submit"
             disabled={!app.canOperate || command.busy}
           >
-            {scheduled ? '자동 보고서 등록' : '보고서 생성 요청'}
+            {scheduled ? '자동 보고서 등록' : '요청 보내기'}
           </button>
           <Link to={app.mode === 'new' && scheduled ? '/schedules' : '/reports'}>
             {app.mode === 'new'

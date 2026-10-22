@@ -29,7 +29,7 @@ export function Cases() {
   return (
     <div className="page">
       <PageHead
-        eyebrow="ROOT CAUSE ANALYSIS"
+        eyebrow=""
         title={app.mode === 'developer' ? '사건·RCA 연결' : 'RCA 조사'}
         description="진행 중인 조사와 완료된 결과를 한 목록에서 확인합니다. 완료된 제목을 선택하면 RCA 보고서로, 결과가 없으면 실행 이력으로 이동합니다."
         actions={

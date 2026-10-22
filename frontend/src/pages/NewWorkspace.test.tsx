@@ -257,7 +257,7 @@ it('distinguishes schedule creation and its return destination from a one-time r
   expect(scheduled).toMatch(/aria-current="location" href="\/schedules"/);
   expect(scheduled).toMatch(/href="\/schedules"[^>]*>자동 보고서 설정 목록으로/);
   const manual = render('/reports/new');
-  expect(manual).toContain('운영 보고서 만들기');
+  expect(manual).toContain('보고서 요청');
   expect(manual).toMatch(/href="\/reports"[^>]*>보고서 목록으로/);
 });
 
