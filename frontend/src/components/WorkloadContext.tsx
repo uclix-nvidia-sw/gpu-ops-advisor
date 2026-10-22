@@ -168,7 +168,7 @@ export function WorkloadContext({
                         onEvidence ? (
                           <button
                             type="button"
-                            className="button small"
+                            className="text-link"
                             key={id}
                             onClick={() => onEvidence(id)}
                           >

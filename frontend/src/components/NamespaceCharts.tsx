@@ -4,15 +4,16 @@ import { reportRequestTime } from '../lib/reportPeriod';
 import { Notice } from './ui';
 
 export type NamespaceGroup = { key: string; cluster: string; namespace: string; models: Row[] };
+// Validated categorical palette (dataviz skill: lightness band, chroma floor, CVD and normal-vision separation).
 const colors = [
-  '#176b53',
-  '#2869a5',
-  '#9a4c15',
-  '#7d4aa2',
-  '#aa395d',
-  '#487326',
-  '#007c86',
-  '#635837',
+  '#2a78d6',
+  '#eb6834',
+  '#1baf7a',
+  '#eda100',
+  '#e87ba4',
+  '#008300',
+  '#6250d6',
+  '#e34948',
 ];
 const dashes = ['', '8 5', '2 4', '10 4 2 4'];
 
@@ -95,58 +96,138 @@ function TimeChart({
   maximum?: number;
   unit?: string;
 }) {
+  const [hover, setHover] = useState<number | null>(null);
+  // One crosshair column per observed hour; the tooltip lists every visible series at that X.
+  const columns = [...new Set(series.flatMap((s) => s.points.map((p) => Math.round(p.x))))].sort(
+    (a, b) => a - b,
+  );
+  const hoverRows =
+    hover === null
+      ? []
+      : series.flatMap((s) => {
+          const point = s.points.find((p) => Math.round(p.x) === hover);
+          return point
+            ? [
+                {
+                  key: s.key,
+                  name: s.name,
+                  color: s.color,
+                  dash: s.dash,
+                  label: point.label,
+                  y: point.y,
+                },
+              ]
+            : [];
+        });
+  const hoverTime = hoverRows[0]?.label.split(' · ')[0];
+  const isolated = (points: ChartSeries['points'], i: number) =>
+    points[i].move && (i + 1 >= points.length || points[i + 1].move);
   return (
-    <svg
-      className="aggregate-time-chart"
-      viewBox="0 0 960 270"
-      role="img"
-      aria-label={`${label}. 색은 Namespace, 선 모양은 GPU 모델. 상세 수치는 아래에서 확인할 수 있습니다.`}
-    >
-      {[0, maximum / 2, maximum].map((n) => (
-        <g key={n}>
-          <line
-            x1="48"
-            x2="924"
-            y1={220 - (n / maximum) * 180}
-            y2={220 - (n / maximum) * 180}
-            className="aggregate-grid"
-          />
-          <text x="2" y={224 - (n / maximum) * 180}>
-            {Number(n.toFixed(2))}
-            {unit}
-          </text>
-        </g>
-      ))}
-      {series.map((s) => (
-        <g key={s.key} aria-label={s.name}>
-          <path
-            d={s.points.map((p) => `${p.move ? 'M' : 'L'}${p.x},${p.y}`).join(' ')}
-            fill="none"
-            stroke={s.color}
-            strokeWidth="2.5"
-            strokeDasharray={s.dash}
-          />
-          {s.points.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="3" fill={s.color}>
-              <title>{`${s.name} · ${p.label}`}</title>
-            </circle>
-          ))}
-        </g>
-      ))}
-      {Number.isFinite(start) &&
-        Number.isFinite(end) &&
-        end > start &&
-        [0, 0.25, 0.5, 0.75, 1].map((f) => (
-          <text
-            key={f}
-            x={48 + 876 * f}
-            y="250"
-            textAnchor={f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}
-          >
-            {reportRequestTime(new Date(start + (end - start) * f).toISOString()).slice(0, -3)}
-          </text>
+    <div className="aggregate-chart-frame">
+      <svg
+        className="aggregate-time-chart"
+        viewBox="0 0 960 270"
+        role="img"
+        aria-label={`${label}. 색은 Namespace, 선 모양은 GPU 모델. 상세 수치는 아래에서 확인할 수 있습니다.`}
+        onPointerMove={(event) => {
+          if (!columns.length) return;
+          const box = event.currentTarget.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * 960;
+          const nearest = columns.reduce((best, c) =>
+            Math.abs(c - x) < Math.abs(best - x) ? c : best,
+          );
+          setHover(Math.abs(nearest - x) <= 30 ? nearest : null);
+        }}
+        onPointerLeave={() => setHover(null)}
+      >
+        {[0, maximum / 2, maximum].map((n) => (
+          <g key={n}>
+            <line
+              x1="48"
+              x2="924"
+              y1={220 - (n / maximum) * 180}
+              y2={220 - (n / maximum) * 180}
+              className="aggregate-grid"
+            />
+            <text x="2" y={224 - (n / maximum) * 180}>
+              {Number(n.toFixed(2))}
+              {unit}
+            </text>
+          </g>
         ))}
-    </svg>
+        {hover !== null && (
+          <line x1={hover} x2={hover} y1="30" y2="222" className="aggregate-crosshair" />
+        )}
+        {series.map((s) => (
+          <g key={s.key} aria-label={s.name}>
+            <path
+              d={s.points.map((p) => `${p.move ? 'M' : 'L'}${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="2"
+              strokeDasharray={s.dash}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {s.points.map((p, i) => (
+              <circle key={`hit-${i}`} cx={p.x} cy={p.y} r="8" fill="transparent">
+                <title>{`${s.name} · ${p.label}`}</title>
+              </circle>
+            ))}
+            {s.points.map((p, i) =>
+              isolated(s.points, i) || Math.round(p.x) === hover ? (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r="4"
+                  fill={s.color}
+                  className="aggregate-marker"
+                />
+              ) : null,
+            )}
+          </g>
+        ))}
+        {Number.isFinite(start) &&
+          Number.isFinite(end) &&
+          end > start &&
+          [0, 0.25, 0.5, 0.75, 1].map((f) => (
+            <text
+              key={f}
+              x={48 + 876 * f}
+              y="250"
+              textAnchor={f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}
+            >
+              {reportRequestTime(new Date(start + (end - start) * f).toISOString()).slice(0, -3)}
+            </text>
+          ))}
+      </svg>
+      {hover !== null && hoverRows.length > 0 && (
+        <div
+          className="aggregate-tooltip"
+          role="status"
+          style={{ left: `${(hover / 960) * 100}%` }}
+        >
+          <div className="aggregate-tooltip-time">{hoverTime}</div>
+          {hoverRows.map((row) => (
+            <div key={row.key}>
+              <svg viewBox="0 0 20 4" aria-hidden="true">
+                <line
+                  x1="0"
+                  x2="20"
+                  y1="2"
+                  y2="2"
+                  stroke={row.color}
+                  strokeWidth="2"
+                  strokeDasharray={row.dash}
+                />
+              </svg>
+              <strong>{row.label.split(' · ')[1]}</strong> {row.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

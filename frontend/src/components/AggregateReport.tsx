@@ -243,12 +243,7 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
         {onEvidence ? (
           <div className="aggregate-evidence-links">
             {strings(item.evidence_refs).map((id, i) => (
-              <button
-                type="button"
-                className="button secondary"
-                key={id}
-                onClick={() => onEvidence(id)}
-              >
+              <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
                 원본 근거 {i + 1}
               </button>
             ))}
@@ -382,12 +377,7 @@ function TopicInterpretation({
         <div className="aggregate-evidence-links">
           {onEvidence &&
             strings(section.evidence_refs).map((id, i) => (
-              <button
-                type="button"
-                className="button secondary"
-                key={id}
-                onClick={() => onEvidence(id)}
-              >
+              <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
                 근거 {i + 1} 확인
               </button>
             ))}
@@ -473,13 +463,13 @@ export function AggregateReport({
                 ? 'AI 응답을 사용하지 않은 기본 요약입니다. 계산된 관측 결과를 표시합니다.'
                 : '요약의 AI 선택 여부가 기록되지 않았습니다. 저장된 문장을 그대로 표시합니다.'}
           </p>
-          <div className="aggregate-summary-findings">
+          <ul className="rca-points aggregate-summary-findings">
             {rows(value.narrative)
               .slice(0, 3)
               .map((finding) => (
-                <p key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</p>
+                <li key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</li>
               ))}
-          </div>
+          </ul>
         </section>
       )}
       <p className="aggregate-static-note">
@@ -1015,7 +1005,7 @@ export function AggregateReport({
         <div className="aggregate-evidence-buttons">
           {onEvidence &&
             strings(value.evidence_refs).map((id, i) => (
-              <button key={id} className="button" onClick={() => onEvidence(id)}>
+              <button key={id} className="text-link" onClick={() => onEvidence(id)}>
                 집계 근거 {i + 1}
               </button>
             ))}
