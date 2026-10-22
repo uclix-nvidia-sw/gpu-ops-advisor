@@ -149,3 +149,52 @@ async def test_legacy_plan_passes_host_history_to_analysis_not_only_the_report()
     assert any("등록 사건 1건" in row["text"] for row in rows)
     history = outcome["output"]["result"]["quality"]["host_incident_history"]
     assert all(row["evidence_refs"] == history["evidence_refs"] for row in rows)
+
+
+def test_switch_history_uses_full_pci_not_alert_gpu_label():
+    case, item = history_case()
+    item["snapshot"]["alert"]["labels"]["reason"] = "SXid 11001 PCI:0000:ca:00.0"
+    result = host_history(case["attempt"]["context"], case["attempt"]["claim"]["input"])
+    row = result["rows"][0]
+    assert row["device"] == "NVSwitch PCI:0000:ca:00.0"
+    assert row["gpu_uuid"] is None
+
+
+async def test_prior_rca_uses_only_published_cutoff_scoped_results():
+    from rcca_agent.store import read_prior_rca
+
+    case, item = history_case()
+    history = case["attempt"]["context"]["host_incidents"]
+
+    class Connection:
+        async def execute(self, sql, args):
+            self.sql, self.args = sql, args
+            return self
+
+        async def fetchall(self):
+            return [
+                {
+                    "incident_id": item["body"]["id"],
+                    "job_id": "job",
+                    "result_id": "result",
+                    "content_hash": "hash",
+                    "result_status": "partial",
+                    "narrative_status": "complete",
+                    "cause_candidates": [
+                        {"claim": "과거 후보", "causal_status": "hypothesis"}
+                    ],
+                }
+            ]
+
+    conn = Connection()
+    await read_prior_rca(conn, case["attempt"]["claim"]["input"], history)
+    assert "published_result_id" in conn.sql and "a.ended_at<=%s" in conn.sql
+    assert "dsx_scope_contains" in conn.sql and "LIMIT 500" in conn.sql
+    assert conn.args[-1] == history["period"]["end"]
+    assert item["prior_rca"]["content_hash"] == "hash"
+    assert item["prior_rca"]["result_status"] == "partial"
+    result = host_history(case["attempt"]["context"], case["attempt"]["claim"]["input"])
+    assert (
+        result["rows"][0]["prior_rca"]["cause_candidates"][0]["causal_status"]
+        == "hypothesis"
+    )

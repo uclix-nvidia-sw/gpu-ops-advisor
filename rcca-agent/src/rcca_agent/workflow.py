@@ -26,6 +26,7 @@ from .fleet_events import (
 from .report import write_report
 from .report_observations import summarize_reports
 from .investigation_summary import investigation_summary
+from .switch_inventory import collect_switch_pci
 from .host_history import host_history, history_summary
 from .incident_dossier import (
     enabled as dossier_enabled,
@@ -752,6 +753,9 @@ async def run(tools):
     if dossier and round_no == 0:
         comparison = comparison_targets(
             data, clues, [e for values in collected.values() for e in values]
+        )
+        comparison["switch_pci"] = await collect_switch_pci(
+            obs, budget, clues, comparison["targets"]
         )
         result["quality"]["triage_observations"] = operator_view(
             data, [e for values in collected.values() for e in values], comparison

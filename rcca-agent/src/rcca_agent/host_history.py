@@ -5,7 +5,8 @@ from collections import Counter
 from agent_common.contracts import incident_source, timestamp
 
 from .incident import alert_clues
-from .fleet_events import STATUS_UUID
+from .fleet_events import STATUS_UUID, pci
+from .incident_dossier import ADDRESSES
 
 
 def host_history(context, data):
@@ -60,6 +61,16 @@ def host_history(context, data):
             and any(c.startswith("xid:") for c in clues["error_codes"])
             else None
         )
+        addresses = {pci(a) for a in ADDRESSES.findall(clues.get("reason") or "")}
+        switch = any(c.startswith("sxid:") for c in clues["error_codes"])
+        address = next(iter(addresses)) if len(addresses) == 1 else None
+        device = (
+            f"NVSwitch PCI:{address[0]:04x}:{address[1]:02x}:{address[2]:02x}.{address[3]}"
+            if switch and address
+            else None
+            if switch
+            else identity.get("gpu_uuid") or reported_gpu
+        )
         first = item.get("episode_started_at") or item.get("first_seen") or at
         last = item.get("last_observed_at") or item.get("last_seen") or at
         span = None
@@ -81,9 +92,18 @@ def host_history(context, data):
                 "last_report_capped": last_capped,
                 "reported_span_seconds": span,
                 "codes": clues["error_codes"],
-                "gpu_uuid": identity.get("gpu_uuid") or reported_gpu,
+                "gpu_uuid": None
+                if switch
+                else identity.get("gpu_uuid") or reported_gpu,
+                "device": device,
+                "device_type": "nvswitch" if switch else "gpu",
                 "reason": clues.get("reason", ""),
                 "current": item["id"] == data["incident_id"],
+                **(
+                    {"prior_rca": record["prior_rca"]}
+                    if record.get("prior_rca")
+                    else {}
+                ),
             }
         )
     result["rows"].sort(

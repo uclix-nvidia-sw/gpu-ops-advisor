@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { obj, rows, str, strings, num, type Row } from '../lib/live';
-import { formatDate } from '../lib/domain';
+import { formatRcaTime as formatDate } from '../lib/rcaTime';
 
 function intervalLabel(ms: number) {
   if (ms < 60000) return `${Math.round(ms / 1000)}초`;
@@ -9,10 +9,11 @@ function intervalLabel(ms: number) {
   return `${(ms / 86400000).toFixed(1)}일`;
 }
 
-export function RcaHostHistory({ result }: { result: Row }) {
+export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
   const history = obj(obj(result.quality).host_incident_history);
   const [days, setDays] = useState(14);
   const [code, setCode] = useState('');
+  const [related, setRelated] = useState(embedded);
   if (history.schema !== 'rca-host-history/1') return null;
   const period = obj(history.period);
   const end = Date.parse(str(period.end));
@@ -23,28 +24,48 @@ export function RcaHostHistory({ result }: { result: Row }) {
   incidents.forEach((r) =>
     strings(r.codes).forEach((c) => counts.set(c, (counts.get(c) || 0) + 1)),
   );
-  const visible = incidents.filter((r) => !code || strings(r.codes).includes(code));
+  const current = incidents.find((r) => r.current === true);
+  const currentDevice = str(current?.device) || str(current?.gpu_uuid);
+  const visible = incidents.filter(
+    (r) =>
+      (!code || strings(r.codes).includes(code)) &&
+      (!related ||
+        !currentDevice ||
+        ((str(r.device) || str(r.gpu_uuid)) === currentDevice &&
+          strings(r.codes).some((c) => strings(current?.codes).includes(c)))),
+  );
   const groups = new Map<string, Row[]>();
   visible.forEach((r) =>
     strings(r.codes)
       .filter((c) => !code || c === code)
       .forEach((c) => {
         const hostKey = `${c.toUpperCase()} · 호스트 전체`;
-        groups.set(hostKey, [...(groups.get(hostKey) || []), r]);
-        if (str(r.gpu_uuid)) {
-          const key = `${c.toUpperCase()} · ${str(r.gpu_uuid)}`;
+        if (!related || !currentDevice) groups.set(hostKey, [...(groups.get(hostKey) || []), r]);
+        if (str(r.device) || str(r.gpu_uuid)) {
+          const key = `${c.toUpperCase()} · ${str(r.device) || str(r.gpu_uuid)}`;
           groups.set(key, [...(groups.get(key) || []), r]);
         }
       }),
   );
   return (
     <section className="rca-host-history" aria-label="호스트 사건 이력">
-      <h4>4. 호스트 이력 · 반복된 사건</h4>
+      {embedded ? <h5>이전 사건과 RCA</h5> : <h4>4. 호스트 이력 · 반복된 사건</h4>}
       <p>
         {formatDate(new Date(cutoff).toISOString())} ~ {formatDate(str(period.end))} · 등록 사건{' '}
         {incidents.length}건{code && ` · 선택 코드 ${visible.length}건`}
+        {related && currentDevice && ` · 동일 장치·오류 ${visible.length}건`}
       </p>
       <div className="rca-history-filters">
+        {currentDevice && (
+          <label>
+            <input
+              type="checkbox"
+              checked={related}
+              onChange={(e) => setRelated(e.target.checked)}
+            />
+            동일 장치·오류만 보기
+          </label>
+        )}
         <label>
           조회 기간{' '}
           <select
@@ -96,7 +117,7 @@ export function RcaHostHistory({ result }: { result: Row }) {
                       ) : (
                         <details>
                           <summary>
-                            {key.split(' · ')[0]} · {str(items[0].gpu_uuid)}
+                            {key.split(' · ')[0]} · {str(items[0].device) || str(items[0].gpu_uuid)}
                           </summary>
                           {key}
                         </details>
@@ -141,10 +162,10 @@ export function RcaHostHistory({ result }: { result: Row }) {
                 <td>
                   {strings(r.codes).join(', ').toUpperCase() || '기타 오류'}
                   <br />
-                  {str(r.gpu_uuid) && (
+                  {(str(r.device) || str(r.gpu_uuid)) && (
                     <details>
-                      <summary>GPU 식별자</summary>
-                      {str(r.gpu_uuid)}
+                      <summary>장치 식별자</summary>
+                      {str(r.device) || str(r.gpu_uuid)}
                     </details>
                   )}
                 </td>
@@ -169,6 +190,19 @@ export function RcaHostHistory({ result }: { result: Row }) {
                 </td>
                 <td>
                   <a href={`/incidents/${encodeURIComponent(str(r.incident_id))}`}>사건 열기</a>
+                  {str(obj(r.prior_rca).job_id) && (
+                    <>
+                      <br />
+                      <a
+                        href={`/analyses/${encodeURIComponent(str(obj(r.prior_rca).job_id))}#final-report`}
+                      >
+                        이전 RCA 열기
+                      </a>
+                      <br />
+                      {str(obj(r.prior_rca).result_status) === 'partial' &&
+                        '일부 자료로 작성된 보고서'}
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

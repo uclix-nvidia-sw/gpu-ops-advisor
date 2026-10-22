@@ -108,8 +108,10 @@ async def test_writer_only_rephrases_frozen_material_once(failure):
     assert report["writer"]["usage"]["total_tokens"] == 42
     assert report["material_hash"] == before
     limits = next(r["text"] for r in result["narrative"] if r["id"] == "limits")
-    # Model-authored caveats stay in diagnostics; the report keeps fixed ones.
-    assert "단일 출처 보고입니다." not in limits
+    # Standalone interpretation caveats remain available in collection details.
+    assert "단일 출처 보고입니다." in limits
+    cause = next(r["text"] for r in result["narrative"] if r["id"] == "cause")
+    assert "단일 출처 보고입니다." not in cause
     assert "모델이 작성한 한계 문장입니다." not in limits
     assert BASE_LIMIT in limits
     if failure in {"number", "refs"}:

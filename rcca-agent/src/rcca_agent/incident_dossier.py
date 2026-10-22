@@ -12,6 +12,7 @@ from agent_common.observation import series, usable_observation
 from agent_common.parsers import ERROR_CODE, log_entries
 
 from .fleet_events import object_value, pci
+from .analysis_values import compact_brief, register_values
 
 
 METRICS = {
@@ -235,6 +236,7 @@ def operator_view(data, evidence, comparison):
             "first": group[0]["recorded_at"],
             "last": group[-1]["recorded_at"],
             "reports": len(group),
+            "event_times": sorted({r["event_time"] for r in group if r["event_time"]}),
             "evidence_refs": sorted({ref for row in group for ref in row["refs"]}),
         }
         for (code, device, message), group in groups.items()
@@ -268,7 +270,7 @@ def operator_view(data, evidence, comparison):
                     pass
             values = sorted(set(values))
             if values:
-                boundary = timestamp(data["incident_time"])
+                boundary = timestamp(event_boundary(data, targets)[0])
                 windows = {}
                 for label, selected in (
                     ("before", [(t, v) for t, v in values if t < boundary]),
@@ -317,7 +319,11 @@ def operator_view(data, evidence, comparison):
         "schema": "rca-triage-observations/1",
         "target": data["target"],
         "period": data["time_range"],
+        "event_boundary": event_boundary(data, targets)[0],
+        "boundary_basis": event_boundary(data, targets)[1],
+        "alert_time": data["incident_time"],
         "logs": logs,
+        "switch_pci": comparison.get("switch_pci", []),
         "metrics": metrics,
         "metric_scope": "node_gpu_context" if switch else "reported_gpu",
     }
@@ -516,8 +522,8 @@ def incident_brief(data, current, comparison, history):
                 **metric,
                 "type": "metric_comparison",
                 "scope": view["metric_scope"],
-                "boundary": data["incident_time"],
-                "boundary_basis": "incident_time",
+                "boundary": view["event_boundary"],
+                "boundary_basis": view["boundary_basis"],
                 "interpretation_limits": (
                     "Enum mapping unavailable; no health or severity inference."
                     if metric["kind"] == "enum"
@@ -545,10 +551,50 @@ def incident_brief(data, current, comparison, history):
                     "current_excluded": True,
                     "count_basis": "incident_id",
                     "device_counts": dict(
-                        Counter(r["gpu_uuid"] or "unresolved_device" for r in rows)
+                        Counter(
+                            r.get("device") or r["gpu_uuid"] or "node" for r in rows
+                        )
                     ),
                     "latest_previous": rows[0]["occurred_at"] if rows else None,
                     "evidence_refs": history["evidence_refs"],
                 }
             )
-    return result
+    if history:
+        targets = comparison.get("targets", [])
+        for row in history["rows"]:
+            if row["current"] or not row.get("prior_rca"):
+                continue
+            matched = any(
+                t["code"] in row["codes"]
+                and (
+                    (t["gpu"] and t["gpu"] == row["gpu_uuid"])
+                    or (
+                        t["code"].startswith("sxid:")
+                        and pci(t["device"])
+                        == pci((row.get("device") or "").removeprefix("NVSwitch "))
+                    )
+                )
+                for t in targets
+            )
+            if matched:
+                result.append(
+                    {
+                        "type": "prior_rca",
+                        "occurred_at": row["occurred_at"],
+                        "device": row.get("device"),
+                        "codes": row["codes"],
+                        "report": row["prior_rca"],
+                        "evidence_refs": history["evidence_refs"],
+                        "interpretation_limits": "Previous report claims are hypotheses, not new observations or performed actions.",
+                    }
+                )
+    result.extend(comparison.get("switch_pci", []))
+    return register_values(compact_brief(result))
+
+
+def event_boundary(data, targets):
+    """A unique producer event time takes precedence over alert receipt time."""
+    times = {r["event_time"] for r in targets if r.get("event_time")}
+    if len(times) == 1:
+        return next(iter(times)), "producer_event_time"
+    return data["incident_time"], "alert_time"

@@ -1,5 +1,15 @@
 import { obj, rows, str, num, strings, type Row } from '../lib/live';
-import { formatDate } from '../lib/domain';
+import { formatRcaTime as formatDate } from '../lib/rcaTime';
+
+const unitLabels: Record<string, string> = {
+  bytes_per_second: 'B/s',
+  percent: '%',
+  watts: 'W',
+  enum: '상태 코드',
+  state: '상태 코드',
+  count: '회',
+};
+const unitLabel = (unit: unknown) => unitLabels[str(unit)] || str(unit);
 
 export function RcaTriageObservations({
   result,
@@ -14,9 +24,18 @@ export function RcaTriageObservations({
   const groups = new Map<string, Row[]>();
   for (const metric of rows(view.metrics)) {
     const key = JSON.stringify(
-      ['name', 'unit', 'min', 'max', 'last_value', 'first', 'last', 'samples'].map(
-        (field) => metric[field],
-      ),
+      [
+        'name',
+        'unit',
+        'kind',
+        'enum_mapping',
+        'min',
+        'max',
+        'last_value',
+        'first',
+        'last',
+        'samples',
+      ].map((field) => metric[field]),
     );
     groups.set(key, [...(groups.get(key) || []), metric]);
   }
@@ -36,13 +55,25 @@ export function RcaTriageObservations({
       <p>
         {formatDate(str(period.start))} ~ {formatDate(str(period.end))}
       </p>
+      {rows(view.switch_pci).map((r, i) => (
+        <p key={i}>
+          NVSwitch PCI 대조 · 로그/알림: {strings(r.reported_pci).join(', ')} · Grafana PCI 라벨
+          조회:{' '}
+          {strings(r.observed_pci).length
+            ? strings(r.observed_pci).join(', ')
+            : r.status === 'empty'
+              ? '해당 구간에 일치하는 시계열 없음'
+              : '조회 상세 참조'}{' '}
+          {links(r.evidence_refs)}
+        </p>
+      ))}
       <div className="rca-history-table">
         <table>
           <caption>동일 내용은 묶고, 처음·마지막 보고 시각과 원문을 함께 표시합니다.</caption>
           <thead>
             <tr>
               <th>오류·장치</th>
-              <th>보고 구간</th>
+              <th>발생 시각 · 보고 구간</th>
               <th>수신</th>
               <th>로그</th>
             </tr>
@@ -56,7 +87,10 @@ export function RcaTriageObservations({
                   {str(r.device)}
                 </td>
                 <td>
-                  {formatDate(str(r.first))}
+                  {strings(r.event_times).map((at) => (
+                    <div key={at}>발생: {formatDate(at)}</div>
+                  ))}
+                  보고: {formatDate(str(r.first))}
                   <br />~ {formatDate(str(r.last))}
                 </td>
                 <td>{num(r.reports)}건</td>
@@ -97,11 +131,7 @@ export function RcaTriageObservations({
                     <td>
                       {str(m.name)}
                       <br />
-                      {m.unit === 'bytes_per_second'
-                        ? 'B/s'
-                        : m.unit === 'enum'
-                          ? '상태 코드'
-                          : str(m.unit)}
+                      {unitLabel(m.unit)}
                     </td>
                     <td>
                       {group.length === 1 ? (
@@ -132,11 +162,10 @@ export function RcaTriageObservations({
                       ) : typeof m.min !== 'number' || typeof m.max !== 'number' ? (
                         '수치 표본 없음'
                       ) : m.min === m.max ? (
-                        `수집된 표본 모두 ${m.min} ${str(m.unit) === 'bytes_per_second' ? 'B/s' : str(m.unit)}`
+                        `수집된 표본 모두 ${m.min} ${unitLabel(m.unit)}`
                       ) : (
                         <>
-                          관측 범위 {m.min} ~ {m.max}{' '}
-                          {str(m.unit) === 'bytes_per_second' ? 'B/s' : str(m.unit)}
+                          관측 범위 {m.min} ~ {m.max} {unitLabel(m.unit)}
                           <br />
                           마지막 표본 {String(m.last_value ?? '—')}
                         </>
@@ -146,6 +175,11 @@ export function RcaTriageObservations({
                       {formatDate(str(m.first))} ~ {formatDate(str(m.last))}
                       <br />
                       {num(m.samples)}개 {links(m.evidence_refs)}
+                      {Date.parse(str(m.last)) < Date.parse(str(view.event_boundary)) && (
+                        <p>사건 발생 이전의 측정 기록</p>
+                      )}
+                      {m.kind === 'counter' && <p>누적 카운터 · 사건 증가량과 구분</p>}
+                      {m.kind === 'enum' && <p>열거형 코드 · 수치 크기로 심각도를 비교하지 않음</p>}
                     </td>
                   </tr>
                 );

@@ -103,6 +103,92 @@ def test_dossier_host_history_survives_real_publication(
     assert "analysis_review" not in {q for q, status in evidence}
     assert result["quality"]["rca_evaluation"]["review"]["reason"] == "not_requested"
     assert result["narrative"]
+    # Read back the actual published result contract, including partial status.
+    import asyncio
+    from datetime import datetime, timezone
+    from psycopg.rows import dict_row
+    from rcca_agent.store import read_prior_rca
+
+    async def published_history():
+        async with await psycopg.AsyncConnection.connect(
+            stack["url"], row_factory=dict_row
+        ) as conn:
+            history = {
+                "period": {"end": datetime.now(timezone.utc).isoformat()},
+                "rows": [{"body": {"id": iid}}],
+            }
+            await read_prior_rca(conn, {**data, "incident_id": str(uuid4())}, history)
+            prior = history["rows"][0]["prior_rca"]
+            assert prior["job_id"] == jid
+            assert prior["content_hash"]
+            assert prior["result_status"] == result["result_status"]
+            earlier = {
+                "period": {"end": "2000-01-01T00:00:00Z"},
+                "rows": [{"body": {"id": iid}}],
+            }
+            await read_prior_rca(conn, {**data, "incident_id": str(uuid4())}, earlier)
+            assert "prior_rca" not in earlier["rows"][0]
+
+    asyncio.run(published_history())
     (LOCAL / ("published-dossier-" + kind + ".json")).write_text(
         json.dumps(result, ensure_ascii=False), encoding="utf-8"
     )
+
+
+@pytest.mark.e2e
+async def test_sxid_pci_lookup_through_official_grafana_mcp(dossier_stack, monkeypatch):
+    import time
+    from agent_common.contracts import timestamp
+    from agent_common.grafana_mcp import GrafanaMCPClient
+    from agent_common.observation import Observation
+    from rcca_agent.switch_inventory import collect_switch_pci
+
+    stack = dossier_stack
+    monkeypatch.setattr(
+        Upstream,
+        "prometheus_rows",
+        {
+            "": [
+                {
+                    "metric": {
+                        "node": "node-1",
+                        "cluster_id": "cpc-2",
+                        "pci_bus_id": "00000000:CA:00.0",
+                    },
+                    "values": [[timestamp(PERIOD["start"]), "0"]],
+                }
+            ]
+        },
+    )
+    async with GrafanaMCPClient(stack["env"]["GRAFANA_MCP_URL"]) as client:
+        tool = await client.get_tool("query_prometheus")
+        obs = Observation(
+            {"query_prometheus": tool.acall},
+            stack["profile"],
+            {"scope": SCOPE, "target": {"node": "node-1"}, "time_range": PERIOD},
+            time.monotonic() + 30,
+        )
+        # Resolved source metadata is fixture-owned; the request itself uses official MCP.
+        obs.evidence.append(
+            {
+                "query_id": "D47",
+                "cluster_id": "cpc-2",
+                "quality": {
+                    "datasource_uid": "mimir",
+                    "resolved_cluster_selector": {"cluster_id": "cpc-2"},
+                    "target_labels": {"node": "node"},
+                },
+            }
+        )
+        budget = {"queries": 1}
+        rows = await collect_switch_pci(
+            obs,
+            budget,
+            {"error_codes": ["sxid:11001"], "reason": "PCI:0000:ca:00.0"},
+            [{"code": "sxid:11001", "device": "PCI:00000000:CA:00.0"}],
+        )
+    assert rows[0]["status"] == "ok"
+    assert rows[0]["observed_pci"] == ["00000000:CA:00.0"]
+    assert rows[0]["event_pci"] == rows[0]["alert_pci"] == ["0000:ca:00.0"]
+    assert obs.evidence[-1]["query_id"] == "nvswitch_pci_inventory"
+    assert budget["queries"] == 0

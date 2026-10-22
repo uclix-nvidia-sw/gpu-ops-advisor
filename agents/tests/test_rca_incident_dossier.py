@@ -344,8 +344,8 @@ def test_incident_brief_preserves_full_series_units_windows_and_priority():
     assert set(metrics) == {"D02", "D11", "D44"}
     assert metrics["D11"]["max"] == 314.024
     assert metrics["D11"]["unit"] == "watts"
-    assert metrics["D02"]["incident_windows"]["before"]["samples"] == 1
-    assert metrics["D02"]["incident_windows"]["at_or_after"]["max"] == 100
+    assert metrics["D02"]["incident_windows"]["before"]["samples"] == 2
+    assert metrics["D02"]["incident_windows"]["at_or_after"]["max"] == 0
     assert metrics["D44"]["kind"] == "counter"
     payload = {
         "incident_brief": brief,
@@ -420,7 +420,7 @@ def test_enum_brief_keeps_gpu_scope_and_no_health_mapping():
         if r["type"] == "metric_comparison"
     )
     assert row["scope"] == "node_gpu_context"
-    assert row["gpu_uuid"] == "GPU-A" and row["kind"] == "enum"
+    assert row["gpu_uuids"] == ["GPU-A"] and row["kind"] == "enum"
     assert row["enum_mapping"] is None
     assert row["last_value"] == 0
     assert "no health" in row["interpretation_limits"]
