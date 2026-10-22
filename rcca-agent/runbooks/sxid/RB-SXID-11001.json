@@ -102,6 +102,12 @@
         "revision": "Retrieved 2026-10-21; mutable upstream document",
         "section": "Common XID Messages and Recommended Steps; Reporting a GPU Issue; DCGM Diagnostics",
         "checked_at": "2026-10-21"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "nvlink subcommand: -s/--status, -e/--errorcounters",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
@@ -193,8 +199,20 @@
           "text": "Fabric Manager 로그의 같은 시각 포트 정보와 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
         },
         {
+          "title": "패브릭 상태 확인",
+          "text": "sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi -q의 Fabric State·Status와 nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다."
+        },
+        {
+          "title": "동반 오류와 영향 범위",
+          "text": "같은 시각 GPU 쪽 XID 74(NVLink 오류)나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다. 이 보고서의 이전 사건 이력에서 같은 스위치·다른 스위치의 반복 여부를 함께 확인합니다."
+        },
+        {
           "title": "환경별 복구 조건",
           "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 실제 장애는 플랫폼·FM 버전·bare-metal/가상화 모드와 포트 영향 범위를 먼저 대조합니다. 공유 NVSwitch의 access 포트는 해당 guest VM, trunk 포트는 해당 연결을 사용하는 VM 파티션의 종료·재생성 절차를 따릅니다. GPUd의 시스템 재부팅(REBOOT_SYSTEM)은 해당 플랫폼 복구 절차와 영향 범위가 맞을 때 진단 보존·작업 배출·유지보수 승인 후 적용합니다. 재부팅 뒤 같은 대상에서 재발하면 하드웨어 점검·수리를 요청합니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "재부팅 뒤 같은 대상에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, Fabric Manager 로그, DCGM 진단 로그, 수행한 조치 기록을 갖춰 시스템 공급사에 전달합니다."
         }
       ],
       "references": [
@@ -219,6 +237,13 @@
           "text": "SXID는 Fabric Manager 문헌의 오류·포트·플랫폼별 절차를 적용한다. 이 보고서의 스위치 PCI·동반 XID·같은 노드의 Fabric Manager 및 NVLink 지표·사건 이력을 먼저 대조하고, 실제 작업 전에 FM 로그와 연결 포트를 확인한다.",
           "source_indices": [
             4
+          ]
+        },
+        {
+          "title": "NVLink 상태 명령",
+          "text": "nvidia-smi nvlink -s는 GPU NVLink의 링크 상태, -e는 NVLink 오류 카운터를 보여 줍니다. 값의 의미와 임계값은 설치된 드라이버 문서를 따릅니다.",
+          "source_indices": [
+            5
           ]
         }
       ]

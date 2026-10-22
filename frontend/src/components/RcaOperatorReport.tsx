@@ -130,32 +130,21 @@ export function RcaOperatorReport({
                   <RcaPoints items={sentences(str(c.text))} />
                 </li>
               ))}
-              {v.family === 'nvswitch' && (
+              {/* Generic triage close-out unless the published Runbook already covers it. */}
+              {!v.actionChecks.some((c) => str(c.text).includes('dcgmi diag')) && (
                 <li>
                   <div className="rca-step-head">
-                    <strong>패브릭 상태 확인 (Fabric Manager·NVLink)</strong>
+                    <strong>조치 후 확인·에스컬레이션</strong>
                   </div>
                   <RcaPoints
                     items={[
-                      'FM 서비스·로그: systemctl status nvidia-fabricmanager 와 Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID와 포트 번호를 확인합니다.',
-                      '링크 상태: nvidia-smi -q 의 Fabric 항목, nvidia-smi nvlink -s(상태)·-e(오류 카운터)로 연결 GPU의 NVLink를 확인합니다.',
-                      '동반 오류: 같은 시각 GPU 쪽 XID 74(NVLink 오류)가 있으면 그 GPU·링크를 우선 영향 범위로 봅니다.',
+                      '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
+                      '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
+                      '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
                     ]}
                   />
                 </li>
               )}
-              <li>
-                <div className="rca-step-head">
-                  <strong>조치 후 확인·에스컬레이션</strong>
-                </div>
-                <RcaPoints
-                  items={[
-                    '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
-                    '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
-                    '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
-                  ]}
-                />
-              </li>
             </ol>
             {guidance.map((g, i) => (
               <span key={i}>{links([g.evidence_id])}</span>

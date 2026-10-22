@@ -176,3 +176,29 @@ it('keeps switch PCI separate from GPU inventory and links previous RCA', () => 
   expect(html).toContain('알림 기준 시각');
   expect(html).toContain('일부 자료로 작성된 보고서');
 });
+
+it('takes fabric checks from the published Runbook and avoids a duplicate escalation step', () => {
+  const guidance = (text: string) => ({
+    report_applicability: 'matched',
+    guidance: {
+      meaning: 'SXID 11001 의미입니다.',
+      next_checks: [{ title: '패브릭 상태 확인', text }],
+      references: [],
+    },
+  });
+  const report = (text: string) =>
+    renderToStaticMarkup(
+      <RcaNarrative
+        result={{
+          ...result,
+          quality: { ...result.quality, runbook_guidance: [guidance(text)] },
+        }}
+      />,
+    );
+  const withEscalation = report(
+    'nvidia-smi nvlink -s로 확인합니다. dcgmi diag -r 3으로 진단합니다.',
+  );
+  expect(withEscalation).toContain('패브릭 상태 확인');
+  expect(withEscalation).not.toContain('조치 후 확인·에스컬레이션');
+  expect(report('nvidia-smi nvlink -s로 확인합니다.')).toContain('조치 후 확인·에스컬레이션');
+});
