@@ -14,12 +14,14 @@ export function QueryState({
   empty = false,
   emptyTitle = '저장된 결과가 없습니다.',
   emptyDescription = '선택한 범위에서 서버에 등록된 기록이 없습니다.',
+  emptyAction,
   children,
 }: {
   query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown };
   empty?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyAction?: ReactNode;
   children: ReactNode;
 }) {
   if (query.isPending)
@@ -38,7 +40,8 @@ export function QueryState({
         </button>
       </div>
     );
-  if (empty) return <Empty title={emptyTitle} description={emptyDescription} />;
+  if (empty)
+    return <Empty title={emptyTitle} description={emptyDescription} action={emptyAction} />;
   return <>{children}</>;
 }
 export function More({

@@ -43,14 +43,24 @@
   margin: 8px 0 0;
   font-size: 13px;
 }
-.report-workspace .aggregate-report > .rca-narrative-header {
+.report-workspace .aggregate-report > .rca-narrative-header,
+.report-workspace .aggregate-report > .rca-narrative-nav {
   margin: 0 -28px;
+}
+.report-workspace .aggregate-report > .rca-narrative-nav a {
+  font-size: 13px;
+  color: var(--green);
+}
+.report-workspace .aggregate-report h2[id],
+.report-workspace .aggregate-report #report-evidence {
+  scroll-margin-top: 80px;
 }
 @media (max-width: 640px) {
   .report-workspace .aggregate-report {
     padding: 0 16px 16px;
   }
-  .report-workspace .aggregate-report > .rca-narrative-header {
+  .report-workspace .aggregate-report > .rca-narrative-header,
+  .report-workspace .aggregate-report > .rca-narrative-nav {
     margin: 0 -16px;
   }
 }

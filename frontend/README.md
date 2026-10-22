@@ -19,7 +19,11 @@ status, requirement status, execution record) and `/reports/:id` the same page c
 `/analyses/:id`: a fixed `운영 분석 결과` heading, the `저장된 결과` panel, an identity block
 (dated title, cluster scope, period, topics, job ID) and the stored report inside the shared
 `rca-narrative` card. Report-specific filters, the origin badge, exports, deletion and the
-report body typography are unchanged, as are Report Agent paths and the list APIs.
+report body typography are unchanged, as are Report Agent paths and the list APIs. Report and RCA
+page heads carry no English eyebrow label; the request flow uses one verb (`보고서 요청` → `요청 보내기`);
+chrome text has a 12px floor and AA contrast; the saved report card starts with its stored summary
+and a table of contents, folds request metadata under `요청 정보`, and lists workload observations as
+section 1.4 after the comparison table and charts.
 
 Evidence evaluation explains explicit model stop, malformed selection, unavailable
 model and a bounded selection repair separately. Legacy records without those
@@ -242,7 +246,7 @@ RCA 분석 요약은 전체 LLM 응답 기록과 `quality.analysis.synthesis`의
 
 ## 보고서 요청·이력·진단 — 2026-10-01
 
-기본 화면은 전체 보고서 이력이다. 기존·운영·개발 관점에서 `보고서 이력 / 자동 보고서 설정 / 운영자 가이드` 세 메뉴과 `새 보고서 만들기` 버튼을 사용하며 실행 상태·주제는 필터로 선택한다. 기존 `?tab=final` 링크는 완료 필터로 계속 열린다. 성공 상태와 공개 참조·결과 품질은 별개다. 보고서 전용 표에서는 종류·중복 결과 링크 열을 제거하며 일반 작업 표와 RCA 경로는 유지한다.
+기본 화면은 전체 보고서 이력이다. 기존·운영·개발 관점에서 `보고서 이력 / 자동 보고서 설정 / 운영자 가이드` 세 메뉴과 `보고서 요청` 버튼을 사용하며 실행 상태·주제는 필터로 선택한다. 기존 `?tab=final` 링크는 완료 필터로 계속 열린다. 성공 상태와 공개 참조·결과 품질은 별개다. 보고서 전용 표에서는 종류·중복 결과 링크 열을 제거하며 일반 작업 표와 RCA 경로는 유지한다.
 
 기본 요청은 `Namespace별 GPU 사용 분석`(O08, namespace)이다. 대상·기간을 확인해 즉시 요청하고, 다른 주제·집계·조치/자원 조건은 접힌 `세부 분석 설정`에서 직접 편집한다. 기본 목적으로 복귀하면 이전 사용자 지정 조치/자원/비교 조건도 해제한다. 모든 주제를 자동 선택하거나 미지원 조합을 조용히 대체하지 않는다. 정기 등록도 같은 목적·조건에 반복 주기와 시각을 사용한다. Namespace 활동은 관측 GPU의 활동이며 실소비량·독점 할당량·회수 가능량을 뜻하지 않는다.
 
