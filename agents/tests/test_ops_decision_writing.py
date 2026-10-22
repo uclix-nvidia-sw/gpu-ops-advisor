@@ -80,7 +80,10 @@ def test_first_sentence_explains_the_allowed_operating_purpose(
 
 
 @pytest.mark.parametrize("origin", ["schedule", "manual"])
-async def test_initial_and_repair_input_supply_bounds_without_finished_advice(origin):
+@pytest.mark.parametrize("problem", ["overlong", "observation_only"])
+async def test_initial_and_repair_input_supply_bounds_without_finished_advice(
+    origin, problem
+):
     from unittest.mock import AsyncMock
 
     from ops_agent.report_interpretation import interpret_report, payload_for
@@ -101,6 +104,8 @@ async def test_initial_and_repair_input_supply_bounds_without_finished_advice(or
         assert "decision.option" not in system
         requests.append(payload)
         summary = context["summary_start"]
+        if problem == "overlong" and len(requests) == 1:
+            summary = "관측 " * 49 + summary
         if len(requests) == 2:
             summary = (
                 "활동률이 낮았던 구간에 작업 일부의 시작 시간을 조정할지, "
@@ -133,5 +138,14 @@ async def test_initial_and_repair_input_supply_bounds_without_finished_advice(or
         assert context["decision"]["option"] not in str(item)
     assert requests[0]["response_shape"]["sections"][0]["advice"][0]["summary"] == ""
     assert requests[1]["response_shape"]["advice"][0]["summary"] == ""
+    assert (
+        "설명을 전부 삭제하거나 summary_start만 반환하지" in requests[1]["instruction"]
+    )
+    assert "해당 후보에만" in requests[1]["instruction"]
+    assert result["quality"]["report"]["failures"][0]["reason"] == (
+        "invalid_namespace_advice_text"
+        if problem == "overlong"
+        else "actionable_namespace_summary_required"
+    )
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["topics"] == before["topics"]
