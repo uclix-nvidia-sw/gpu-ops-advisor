@@ -15,7 +15,7 @@ import {
   useResource,
   type Row,
 } from '../lib/live';
-import { ReportIdentity, ReportOrigin, ReportTimeNote } from '../components/ReportMeta';
+import { ReportIdentity, ReportOrigin } from '../components/ReportMeta';
 import { formatDate } from '../lib/domain';
 import { reportReturnPath } from '../lib/reportNavigation';
 import { topicName } from '../lib/report';
@@ -55,7 +55,7 @@ export function ResultPage({ kind }: { kind: string }) {
   return (
     <div className="page">
       <PageHead
-        eyebrow={kind === 'incident' ? 'INCIDENT DETAIL' : 'SAVED RESULT'}
+        eyebrow=""
         title={
           kind === 'incident' ? '사건 상세' : kind === 'report' ? '운영 분석 결과' : 'RCA 조사 결과'
         }
@@ -82,7 +82,6 @@ export function ResultPage({ kind }: { kind: string }) {
           </>
         }
       />
-      {kind === 'report' && <ReportTimeNote />}
       <QueryState query={q}>
         {app.mode === 'developer' && kind === 'incident' && (
           <Notice>

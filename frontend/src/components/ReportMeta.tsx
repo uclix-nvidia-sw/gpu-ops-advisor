@@ -146,9 +146,12 @@ export function ReportIdentity({ job, detail = false }: { job: Row; detail?: boo
         {strings(job.topic_ids).map(topicName).join(' · ') || '분석 주제 미확인'}
       </span>
       {detail && (
-        <span className="cell-sub">
-          요청 접수: {reportRequestTime(str(job.created_at))} · 작업 ID: {str(job.id) || '미확인'}
-        </span>
+        <details className="report-identity-meta">
+          <summary>요청 정보</summary>
+          <span className="cell-sub">
+            요청 접수: {reportRequestTime(str(job.created_at))} · 작업 ID: {str(job.id) || '미확인'}
+          </span>
+        </details>
       )}
     </span>
   );

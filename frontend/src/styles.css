@@ -5445,3 +5445,48 @@ body:has(dialog[open]) {
   outline: 2px solid var(--accent, #176b55);
   outline-offset: 3px;
 }
+
+/* Report and RCA chrome: one type floor (12px) and AA contrast for secondary text. */
+.eyebrow:empty {
+  display: none;
+}
+.eyebrow {
+  color: #5e7262;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.page-head p,
+.panel-head p,
+.tabs > a,
+.tabs > button,
+.text-link,
+.text-button {
+  font-size: 13px;
+}
+.tabs > a,
+.tabs > button {
+  color: #5e7262;
+}
+th {
+  color: #5e7262;
+  font-size: 12px;
+}
+td {
+  font-size: 13px;
+}
+td small {
+  font-size: 12px;
+}
+.badge {
+  font-size: 11px;
+  color: #5e7262;
+}
+.app-footer {
+  color: #68796d;
+  font-size: 11px;
+}
+.report-identity-meta summary {
+  cursor: pointer;
+  color: var(--green);
+  font-size: 12px;
+}
