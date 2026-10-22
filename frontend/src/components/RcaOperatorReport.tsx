@@ -1,8 +1,14 @@
 import { obj, rows, str, strings, type Row } from '../lib/live';
-import { RcaIncidentSummary } from './RcaIncidentSummary';
+import { operatorView, sentences } from '../lib/rcaOperatorView';
+import { RcaPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
 
+const TRIAGE_URL = 'https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html';
+const FM_URL = 'https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html';
+
+// Fixed report template: 1 summary, 2 response order, 3 logs/metrics, 4 analysis,
+// 5 history, 6 references. Every section is filled from stored result fields.
 export function RcaOperatorReport({
   result,
   onEvidence,
@@ -11,6 +17,7 @@ export function RcaOperatorReport({
   onEvidence?: (id: string) => void;
 }) {
   const quality = obj(result.quality);
+  const v = operatorView(result);
   const narrative = rows(result.narrative).map((section) =>
     section.id === 'limits'
       ? {
@@ -36,18 +43,24 @@ export function RcaOperatorReport({
       .filter((s) => s.id === id)
       .flatMap((s) => str(s.text).split(/\n\s*\n/))
       .filter(Boolean);
-  const analysis = sources.filter(
+  const notes = sources.filter(
     (r) => r.section === 'cause' && !str(r.text).startsWith('발행 Runbook의 오류 설명:'),
   );
+  // Older results without source items keep their stored cause prose.
+  const noteTexts = sources.length ? notes.map((r) => str(r.text)) : paragraphs('cause');
   const refs = guidance.flatMap((g) => rows(g.sources));
   const links = (value: unknown) =>
-    strings(value).map((id) =>
+    [...new Set(strings(value))].map((id, i, all) =>
       onEvidence ? (
         <button className="text-link" key={id} onClick={() => onEvidence(id)}>
-          근거 원문
+          {all.length > 1 ? `근거 원문 ${i + 1}` : '근거 원문'}
         </button>
       ) : null,
     );
+  const missing = strings(result.missing_inputs);
+  const [identity, timing, telemetry, repeat] = v?.findings || [];
+  const first = v?.actionChecks[0];
+  const maxCount = Math.max(1, ...(v?.devices || []).map((d) => d.count));
   return (
     <section
       id="final-report"
@@ -56,58 +69,277 @@ export function RcaOperatorReport({
     >
       <header className="rca-narrative-header">
         <h3>RCA 장애 보고서</h3>
-        <p>노드 사건 · 대응 순서 · 관측 자료 · 분석과 이력</p>
+        <p>한눈에 보기 · 대응 순서 · 로그·메트릭 · 분석 및 해석 · 이전 사건 · 참고 자료</p>
+        <div className="rca-chips">
+          {v?.ongoing && <ToneBadge tone="alert" label="오류 계속 보고 중" />}
+          {result.result_status === 'partial' && <ToneBadge tone="warn" label="일부 자료로 작성" />}
+          {missing.includes('synthesis_failed') && (
+            <ToneBadge tone="unknown" label="LLM 분석 미완료 · 코드 산출 자료 기반" />
+          )}
+          {missing.includes('event_not_found') && (
+            <ToneBadge tone="unknown" label="원본 이벤트 시각 미확인" />
+          )}
+        </div>
       </header>
-      <RcaIncidentSummary result={result} />
+
+      {v && (
+        <section className="rca-glance" aria-label="사건 핵심 요약">
+          <h4>
+            1. 한눈에 보기 · {v.node} · {v.codes.join(', ') || '장애 알림'}
+          </h4>
+          <RcaPoints
+            items={[
+              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}`,
+              `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertGpu ? ` · ${v.alertGpu}` : ''}`,
+              `지금: ${timing.verdict}`,
+              `반복: ${repeat.verdict}`,
+              `지표: ${telemetry.verdict}`,
+              ...(first
+                ? [`우선 대응: ${str(first.title)} — ${sentences(str(first.text))[0]}`]
+                : []),
+            ]}
+          />
+        </section>
+      )}
+
       <section className="rca-narrative-section">
-        <h4>2. 권고 지침</h4>
-        <p>실제 조치 직전에 대상 노드와 장치 PCI 주소를 대조하세요. 조치는 운영자가 수행합니다.</p>
-        {guidance.length
-          ? guidance.map((g, i) => (
-              <div key={i}>
-                <ol className="rca-action-list">
-                  {rows(obj(g.guidance).next_checks)
-                    .filter((c) => !str(c.title).startsWith('알림이 가리키는'))
-                    .map((c, j) => (
-                      <li key={j}>
-                        <strong>{str(c.title)}</strong>
-                        {str(c.text)
-                          .split(/(?<=다[.])\s+/)
-                          .map((sentence, k) => (
-                            <p key={k}>{sentence}</p>
-                          ))}
-                      </li>
-                    ))}
-                </ol>
-                {links([g.evidence_id])}
+        <h4>2. 대응 순서</h4>
+        <p className="rca-muted">
+          <a href={TRIAGE_URL} target="_blank" rel="noreferrer">
+            NVIDIA GPU Node Triage
+          </a>{' '}
+          순서: 대상 확정 → 진단 자료 보존 → 작업 배출·복구 → 조치 후 확인 → 공급사 전달. 실제
+          조치는 운영자가 수행하며, 직전에 노드와 장치 PCI 주소를 다시 대조하세요.
+        </p>
+        {v && guidance.length ? (
+          <>
+            <ol className="rca-steps">
+              <li>
+                <div className="rca-step-head">
+                  <strong>대상 장치 확정</strong>{' '}
+                  <ToneBadge tone={identity.tone} label={identity.label} />
+                </div>
+                <p>{identity.verdict}</p>
+                <RcaPoints items={sentences(str(v.targetCheck?.text))} />
+              </li>
+              {v.actionChecks.map((c, i) => (
+                <li key={i}>
+                  <div className="rca-step-head">
+                    <strong>{str(c.title)}</strong>
+                  </div>
+                  <RcaPoints items={sentences(str(c.text))} />
+                </li>
+              ))}
+              {v.family === 'nvswitch' && (
+                <li>
+                  <div className="rca-step-head">
+                    <strong>패브릭 상태 확인 (Fabric Manager·NVLink)</strong>
+                  </div>
+                  <RcaPoints
+                    items={[
+                      'FM 서비스·로그: systemctl status nvidia-fabricmanager 와 Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID와 포트 번호를 확인합니다.',
+                      '링크 상태: nvidia-smi -q 의 Fabric 항목, nvidia-smi nvlink -s(상태)·-e(오류 카운터)로 연결 GPU의 NVLink를 확인합니다.',
+                      '동반 오류: 같은 시각 GPU 쪽 XID 74(NVLink 오류)가 있으면 그 GPU·링크를 우선 영향 범위로 봅니다.',
+                    ]}
+                  />
+                </li>
+              )}
+              <li>
+                <div className="rca-step-head">
+                  <strong>조치 후 확인·에스컬레이션</strong>
+                </div>
+                <RcaPoints
+                  items={[
+                    '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
+                    '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
+                    '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
+                  ]}
+                />
+              </li>
+            </ol>
+            {guidance.map((g, i) => (
+              <span key={i}>{links([g.evidence_id])}</span>
+            ))}
+            <div className="rca-history-table">
+              <table>
+                <caption>공급사 전달 자료 체크리스트 (NVIDIA GPU Node Triage)</caption>
+                <thead>
+                  <tr>
+                    <th>전달 자료</th>
+                    <th>이 보고서</th>
+                    <th>운영자가 할 일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>이슈 요약·핵심 로그</td>
+                    <td>✅ 1·3장</td>
+                    <td>원문 링크와 함께 첨부</td>
+                  </tr>
+                  <tr>
+                    <td>장치 식별(PCI·UUID)</td>
+                    <td>{identity.tone === 'ok' ? '✅ 알림·로그 일치' : '⚠️ 대조 필요'}</td>
+                    <td>조치 직전 재확인</td>
+                  </tr>
+                  <tr>
+                    <td>관련 지표·이전 사건</td>
+                    <td>✅ 3·5장</td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td>수행한 조치 단계</td>
+                    <td>⬜</td>
+                    <td>아래 ‘검토·조치 기록’에 남기기</td>
+                  </tr>
+                  <tr>
+                    <td>OS·드라이버 버전</td>
+                    <td>⬜ 미수집</td>
+                    <td>nvidia-smi 출력으로 확인</td>
+                  </tr>
+                  <tr>
+                    <td>nvidia-bug-report.sh</td>
+                    <td>⬜ 미수집</td>
+                    <td>재시작·리셋 전에 확보</td>
+                  </tr>
+                  {v.family === 'nvswitch' && (
+                    <tr>
+                      <td>Fabric Manager 로그</td>
+                      <td>⬜ 미수집</td>
+                      <td>HGX 시스템 필수 · 재부팅 전에 확보</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td>DCGM 진단 로그</td>
+                    <td>⬜ 미수집</td>
+                    <td>dcgmi diag 실행 후 첨부</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <details>
+              <summary>GPU·NVSwitch 리셋 방식 선택 (NVIDIA GPU Node Triage 표 2)</summary>
+              <div className="rca-history-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>구성</th>
+                      <th>리셋 방식</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Ampere+ NVSwitch · bare metal · FM 실행 중</td>
+                      <td>GPU 개별 리셋 가능, FM이 해당 NVSwitch 링크를 함께 리셋</td>
+                    </tr>
+                    <tr>
+                      <td>Ampere+ NVSwitch · bare metal · FM 미실행</td>
+                      <td>개별 리셋 불가, NVLink로 연결된 GPU·NVSwitch 전체 리셋</td>
+                    </tr>
+                    <tr>
+                      <td>Hopper+ NVSwitch · bare metal</td>
+                      <td>개별 리셋 지원, -i 없이 nvidia-smi 리셋 시 전체 리셋</td>
+                    </tr>
+                    <tr>
+                      <td>가상화(VM 안의 GPU)</td>
+                      <td>GPU 리셋 미지원 → VM 재시작 (Hopper+는 하이퍼바이저 권한에 따라 다름)</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            ))
-          : paragraphs('action').map((text, i) => <p key={i}>{text}</p>)}
+              <p className="rca-muted">
+                리셋은 대상 GPU를 쓰는 프로세스가 없어야 하며 root 권한이 필요합니다. 작업 배출 후
+                수행합니다.
+              </p>
+            </details>
+          </>
+        ) : (
+          paragraphs('action').map((text, i) => <p key={i}>{text}</p>)
+        )}
       </section>
+
       <RcaTriageObservations result={result} onEvidence={onEvidence} />
+
       <section className="rca-narrative-section">
         <h4>4. 분석 및 해석</h4>
-        {analysis.length
-          ? analysis.map((r, i) => (
-              <div key={i}>
-                <p>{str(r.text)}</p>
-                {links(r.evidence_refs)}
+        {v ? (
+          <>
+            <p className="rca-muted">
+              수집한 로그·지표·사건 이력으로 운영자가 먼저 알아야 할 다섯 질문에 답합니다. ‘추정’
+              표시는 확정이 아닌 점검 방향입니다.
+            </p>
+            {v.findings.map((f, i) => (
+              <article key={f.key} className={`rca-finding tone-${f.tone}`}>
+                <header>
+                  <span className="rca-q">Q{i + 1}</span>
+                  <h5>{f.question}</h5>
+                  <ToneBadge tone={f.tone} label={f.label} />
+                </header>
+                <p className="rca-verdict">{f.verdict}</p>
+                <RcaPoints items={f.points} />
+                {links(f.refs)}
+              </article>
+            ))}
+            {noteTexts.length > 0 && (
+              <article className="rca-finding tone-unknown">
+                <header>
+                  <h5>보고서 작성기 분석 메모</h5>
+                </header>
+                <RcaPoints items={noteTexts} />
+                {links(notes.flatMap((r) => strings(r.evidence_refs)))}
+              </article>
+            )}
+          </>
+        ) : (
+          paragraphs('cause').map((text, i) => <p key={i}>{text}</p>)
+        )}
+        <details>
+          <summary>저장된 비교 원문</summary>
+          {paragraphs('comparison')
+            .filter(
+              (text) => !sources.some((r) => r.detail_only === true && str(r.text) === text.trim()),
+            )
+            .map((text, i) => (
+              <p key={i}>{text}</p>
+            ))}
+        </details>
+      </section>
+
+      <section className="rca-narrative-section">
+        <h4>5. 이전 사건 이력</h4>
+        {v && v.devices.length > 0 && (
+          <figure className="rca-bars" aria-label="장치별 같은 오류 사건 수">
+            <figcaption>
+              같은 오류({v.codes.join(', ')})의 장치별 사건 수 ·{' '}
+              <span className="rca-legend-current">■</span> 이번 장치
+            </figcaption>
+            {v.devices.map((d) => (
+              <div key={d.label} className={d.current ? 'rca-bar current' : 'rca-bar'}>
+                <span>{d.label}</span>
+                <span className="rca-bar-track">
+                  <span style={{ width: `${(d.count / maxCount) * 100}%` }} />
+                </span>
+                <strong>{d.count}건</strong>
               </div>
-            ))
-          : paragraphs('cause').map((text, i) => <p key={i}>{text}</p>)}
-        {paragraphs('comparison').map((text, i) => {
-          const visible = sources
-            .filter((r) => r.section === 'comparison' && r.detail_only === true)
-            .reduce((value, r) => value.replace(str(r.text), ''), text)
-            .trim();
-          return visible ? <p key={i}>{visible}</p> : null;
-        })}
+            ))}
+          </figure>
+        )}
         <RcaHostHistory result={result} embedded />
       </section>
+
       <section className="rca-narrative-section">
-        <h4>5. 참고 자료</h4>
+        <h4>6. 참고 자료</h4>
         <ul>
-          {[...new Map(refs.map((r) => [str(r.url), r])).values()]
+          {[
+            ...new Map(
+              [
+                ...refs,
+                { url: TRIAGE_URL, section: 'NVIDIA GPU Node Triage' },
+                ...(v?.family === 'nvswitch'
+                  ? [{ url: FM_URL, section: 'NVIDIA Fabric Manager User Guide' }]
+                  : []),
+              ].map((r) => [str(r.url), r]),
+            ).values(),
+          ]
             .filter((r) => /^https:\/\//.test(str(r.url)))
             .map((r) => (
               <li key={str(r.url)}>
@@ -118,13 +350,22 @@ export function RcaOperatorReport({
             ))}
         </ul>
         {guidance.map((g, i) => (
-          <div key={i}>
+          <dl key={i} className="rca-reference-guide">
+            {str(obj(g.guidance).meaning) && (
+              <div>
+                <dt>오류 의미</dt>
+                <dd>{str(obj(g.guidance).meaning)}</dd>
+              </div>
+            )}
             {rows(obj(g.guidance).references).map((r, j) => (
-              <p key={j}>
-                <strong>{str(r.title)}</strong> · {str(r.text)}
-              </p>
+              <div key={j}>
+                <dt>{str(r.title)}</dt>
+                <dd>
+                  <RcaPoints items={sentences(str(r.text))} />
+                </dd>
+              </div>
             ))}
-          </div>
+          </dl>
         ))}
         <details>
           <summary>수집 원문·처리 상세</summary>
