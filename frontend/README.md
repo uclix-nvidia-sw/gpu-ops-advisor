@@ -23,7 +23,7 @@ report body typography are unchanged, as are Report Agent paths and the list API
 page heads carry no English eyebrow label; the request flow uses one verb (`보고서 요청` → `요청 보내기`);
 chrome text has a 12px floor and AA contrast; the saved report card starts with its stored summary
 and a table of contents, folds request metadata under `요청 정보`, and lists workload observations as
-section 1.4 after the comparison table and charts.
+section 1.4 after the comparison table and charts. The identity block leads with the report purpose and shows each cluster scope as a chip; `aggregate-report.css` uses the shared color tokens (`--ink`, `--line`, `--surface-2`, `--green-line`, `--alert`) instead of hardcoded hex; the new-mode reader wraps the report in `report-workspace` so it keeps the report typography, and the operations list shows topic names instead of raw ids.
 
 Evidence evaluation explains explicit model stop, malformed selection, unavailable
 model and a bounded selection repair separately. Legacy records without those

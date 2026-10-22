@@ -39,6 +39,12 @@
   --surface: #fff;
   --amber: #a16922;
   --soft-green: #eaf3ee;
+  --ink: #253c35;
+  --line: #e2e8e4;
+  --surface-2: #f1f6f3;
+  --green-line: #bed5c8;
+  --alert: #9b261e;
+  --alert-soft: #fce8e6;
 }
 * {
   box-sizing: border-box;
@@ -5489,4 +5495,11 @@ td small {
   cursor: pointer;
   color: var(--green);
   font-size: 12px;
+}
+.report-scope-chip {
+  display: inline-block;
+  margin: 2px 6px 2px 0;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
 }

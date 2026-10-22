@@ -954,6 +954,7 @@ function Report({ id }: { id: string }) {
                 <CommandError error={exportError} />
               </div>
               <div
+                className="report-workspace"
                 onClickCapture={(e) => {
                   const a = (e.target as HTMLElement).closest('a');
                   if (

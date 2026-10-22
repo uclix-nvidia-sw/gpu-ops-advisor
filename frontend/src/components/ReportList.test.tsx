@@ -52,7 +52,7 @@ it('lists reports in the RCA table layout without fetching any report detail', (
   );
   expect(html).toContain('href="/reports/older#final-report"');
   expect(html).toContain('href="/jobs/pending"');
-  expect(html).toContain('2026. 10. 01. · Namespace별 GPU 사용 분석');
+  expect(html).toContain('<strong>Namespace별 GPU 사용 분석</strong>');
   expect(html).toContain('클러스터: <strong>cpc-2</strong> / training');
   expect(html).toContain('2026. 10. 01. 하루 · 1일(24시간)');
   expect(html).toContain('2026. 10. 02.');
