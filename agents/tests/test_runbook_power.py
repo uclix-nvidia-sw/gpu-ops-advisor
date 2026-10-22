@@ -105,6 +105,9 @@ async def test_power_followup_never_establishes_health_or_recovery(
         ("D44", "count"),
         ("D33", "bytes_per_second"),
         ("D34", "bytes_per_second"),
+        ("D45", "bitmask"),
+        ("D47", "enum"),
+        ("D48", "W"),
     ):
         profile["queries"][query_id] = dict(
             source="mimir",

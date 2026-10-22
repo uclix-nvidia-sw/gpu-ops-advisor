@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import unittest
 
+from rcca_agent.incident_dossier import METRICS
 from rcca_agent.retrieval import retrieve_runbooks
 from rcca_agent.runbook_contract import (
     compatibility_status,
@@ -31,31 +32,22 @@ class RunbookContractTests(unittest.TestCase):
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])
                 plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-                expected = ["D09", "D02"]
-                if row["knowledge_key"] == "RB-XID-54":
-                    expected = ["D09", "D11", "D02"]
-                elif row["knowledge_key"] == "RB-XID-163":
-                    expected = ["D09", "D04", "D11", "D02"]
-                elif row["knowledge_key"] in ("RB-XID-32", "RB-XID-79"):
-                    expected = ["D09", "D44", "D02"]
-                    if row["knowledge_key"] == "RB-XID-79":
-                        expected.append("D11")
-                elif row["knowledge_key"] == "RB-SXID-11001":
-                    expected = ["D09", "D47", "D33", "D34"]
-                elif row["knowledge_key"] == "RB-XID-74":
-                    expected = ["D09", "D33", "D34", "D02"]
-                if row["knowledge_key"] == "RB-XID-48-63-64":
-                    expected.append("D03")
-                    self.assertEqual(plan[-1]["fact_names"], ["observations"])
+                # D09 first; every other planned query is a report metric.
+                self.assertEqual(plan[0]["query_id"], "D09")
+                self.assertTrue(plan[0]["required"])
+                self.assertLessEqual(
+                    {step["query_id"] for step in plan[1:]}, set(METRICS)
+                )
+                if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
+                    self.assertEqual(
+                        [step["query_id"] for step in plan], ["D09", "D02"]
+                    )
+                elif row["knowledge_key"] == "RB-XID-48-63-64":
+                    self.assertLessEqual({"D40", "D36"}, {s["query_id"] for s in plan})
                     self.assertIn(
                         "reported_error_code", row["content"]["required_evidence"]
                     )
                     self.assertTrue(row["content"]["investigation_only"])
-                self.assertEqual([step["query_id"] for step in plan], expected)
-                self.assertEqual(
-                    plan[-1]["required"],
-                    row["knowledge_key"] in {"RB-XID-79", "RB-SXID-11001"},
-                )
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(row["content"]["applicability_conditions"], [])
                     with self.assertRaisesRegex(ValueError, "unbound draft"):

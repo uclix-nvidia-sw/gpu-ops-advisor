@@ -32,7 +32,7 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 - 실제 검증: 격리 PostgreSQL에서 Backend 등록·검토·발행, JC revision 고정, 실제 RCA Worker/NAT/MCP 수집·Synthesis·결과 공개를 확인했다. 그래프 데이터와 모델 응답은 fixture다. 테스트 DB는 실행 후 정리하며 운영 DB에는 등록하지 않았다.
 - 저장소 JSON의 compatibility는 여전히 비어 있다. 실제 배포 조건을 만들거나 검증했다고 주장하지 않으며 초안 저장은 가능하지만 승인·발행은 차단한다.
 
-XID 79·SXID 11001 작성 원본은 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용한다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본도 같은 단일 수집·분석·보고서 작성 흐름을 사용한다.
+XID/SXID 작성 원본은 모두 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. 보고서 수집은 required_queries에 메트릭 조회가 있는 XID/SXID revision에서 켜지며 D09만 필수인 기존 발행본은 기존 경로를 쓴다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용하고, 나머지 264건의 유형별 계획은 [CATALOG](CATALOG.md#운영자-보고서-지침과-조회-계획-2026-10-22-개정)를 따른다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본도 같은 단일 수집·분석·보고서 작성 흐름을 사용한다.
 
 **Worker/UI 배포만으로 새 런북이 적용되지는 않는다.** 기존 knowledge ID와 검수된 compatibility를 유지하여 두 런북만 새 revision으로 등록·검토·발행한다. 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. Worker/UI 배포를 먼저 완료하고 실제 실행 프로필에 각 D 조회가 허용되는지 확인한 뒤 발행한다. 신규 사건 또는 승인된 재실행에서 JC가 새 revision/hash를 고정하는지 확인한다. 기존 결과와 발행 revision은 수정하지 않는다. 문제 발생 시 새 revision을 retire하고 이전 발행 revision 선택과 이전 RCA 이미지로 복귀하는 절차를 확인한다. Ops 런북·설정·이미지는 변경하지 않는다.
 

@@ -13,7 +13,10 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D40",
+      "D36",
+      "D02"
     ],
     "observation_plan": [
       {
@@ -33,13 +36,73 @@
         "freshness": "query_contract"
       },
       {
-        "query_id": "D02",
+        "query_id": "D40",
+        "priority": 2,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 정정 불가(DBE) ECC 휘발성 누적값을 사건 전후로 비교한다. 드라이버 재로드·리셋에 따른 초기화를 감소·증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D42",
         "priority": 3,
         "required": false,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 GPU의 정정 불가(DBE) ECC 영구 누적값을 사건 전후로 비교한다. 누적값 자체를 사건 횟수로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D36",
+        "priority": 4,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 정정 가능(SBE) ECC 휘발성 누적값을 사건 전후로 비교한다. 드라이버 재로드·리셋에 따른 초기화를 감소·증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D38",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 정정 가능(SBE) ECC 영구 누적값을 사건 전후로 비교한다. 누적값 자체를 사건 횟수로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D23",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 메모리 온도(°C)를 사건 전후로 비교한다. 제품별 임계값 없이 과열로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 7,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 사용률을 사건 전후로 비교해 작업 중단·멈춤 여부를 본다. 값이 0이거나 없다는 이유로 장치 상태를 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -63,16 +126,22 @@
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 172; Table 3 Resolution Buckets",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
-      "현재 D09/D02 계획은 ECC 종류·변화량, row-remap 결과와 모델별 오류 플래그를 제공하지 않는다. 메모리 사용량·GPU 사용률은 이 근거의 대체값이 아니며 메모리 부품 고장이나 정상 판정을 보류한다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "ECC 카운터는 GPU 단위 누적값이며 DRAM/SRAM 위치, row remapping 결과·pending, SRAM 임계 플래그를 알려 주지 않는다. nvidia-smi -q -d ECC,ROW_REMAPPER 확인 전에는 동반 코드 분기와 RMA 판단을 보류한다. 휘발성 값은 드라이버 재로드·리셋 때 초기화된다."
     ],
-    "title": "XID 172 ECC·메모리 조사",
+    "title": "XID 172 Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM · ECC·메모리 오류 조사",
     "description": "XID 172: Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM.",
     "claim": "XID 172 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -94,8 +163,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집: GPU UUID와 PCI BDF를 검증하고 휘발성/누적 ECC의 교정·비교정 카운터, DRAM/SRAM 구분, ECC 모드, page retirement/row remap pending·failure·가용 상태 및 동반 오류 시각을 수집한다.",
-      "판단: 같은 장치의 카운터 변화와 초기화 시각을 함께 비교한다. 누적값을 이번 사건의 증가량으로 보지 않으며 ECC·row-remap 지원 모델별 의미와 SRAM threshold 플래그를 확인한다.",
+      "수집 항목: 오류·상태 로그, DBE ECC(휘발성), DBE ECC(영구), SBE ECC(휘발성), SBE ECC(영구), GPU 메모리 온도, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 같은 GPU의 DBE·SBE 누적값이 사건 시각 전후로 늘었는지, XID 48·63·64·94·95가 함께 보고됐는지, 이전 사건 이력에서 같은 GPU가 반복되는지를 대조한다.",
       "Fleet 고정 카탈로그: Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM; event_type=Warning; 기본 action=REBOOT_SYSTEM.",
       "NVIDIA 적용: A100, H100, B100, GB200.",
       "NVIDIA 조치 분류: immediate=미기재; investigatory=미기재; Xid154 linkage=미기재.",
@@ -103,7 +172,27 @@
     ],
     "recommendations": [
       {
-        "text": "XID 172의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "text": "오류별 판단 기준: 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:172"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:172"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "재발 시 진단·공급사 전달: 같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -119,6 +208,53 @@
         "equals": "xid:172"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 172(UNCORRECTABLE_SRAM_ERROR)는 NVIDIA Xid 카탈로그에서 'Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM'로 정의됩니다.",
+      "cause_note": "GPU 메모리(DRAM)나 내부 SRAM의 비트 오류, 메모리 노후화가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d ECC,ROW_REMAPPER 출력(구세대 GPU는 PAGE_RETIREMENT)도 함께 저장합니다."
+        },
+        {
+          "title": "오류별 판단 기준",
+          "text": "이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            2
+          ],
+          "text": "UNCORRECTABLE_SRAM_ERROR · Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM. 적용 제품: A100, H100, B100, GB200. 즉시 조치 미기재, 조사 조치 미기재."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "Fleet 고정 정의: event_type=Warning, 기본 action=REBOOT_SYSTEM. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        },
+        {
+          "title": "리셋 방식",
+          "source_indices": [
+            3
+          ],
+          "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
+        }
+      ]
+    }
   }
 }

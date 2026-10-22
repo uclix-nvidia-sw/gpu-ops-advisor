@@ -21,18 +21,40 @@ JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등�
 - 기존 `RB-XID-48-63-64`의 검색 진입은 계속 **XID 48만**이다. XID 63과 64에는 각각 독립 콘텐츠를 작성했다. 동반 코드 관계는 조사 지침이며 equality 조건식의 자동 시간 판정 기능을 추가한 것은 아니다.
 - 범위는 제공된 자료의 XID/SXID 코드다. NCCL·InfiniBand·OS·디스크의 비코드 조건형 Runbook이나 아직 자료에 없는 오류를 모두 작성했다는 의미는 아니다.
 
-각 파일은 코드 의미·출처별 event/action·적용 제품·필요 로그/메트릭·대상/시각·판별 절차·조건부 권고·부족 시 처리·조치 후 확인을 담는다. 앱/펌웨어/ECC/PCIe/NVLink/전원/가상화/정보 이벤트/NVSwitch/미정의 코드로 필요한 증거를 구분했다. 공통 문장에 코드 번호만 바꾼 항목이 아니라 코드별 출처 및 필요한 분기를 포함한다. 다만 Reserved/Unused처럼 원문에 절차가 없는 항목은 원문·버전을 확인하는 절차까지 작성하고 진단 규칙을 만들지 않았다.
+각 파일은 코드 의미·출처별 event/action·적용 제품·필요 로그/메트릭·대상/시각·판별 절차·조건부 권고·부족 시 처리·조치 후 확인을 담는다. Reserved/Unused처럼 원문에 절차가 없는 항목은 원문·버전을 확인하는 절차까지 작성하고 진단 규칙을 만들지 않았다.
+
+### 운영자 보고서 지침과 조회 계획 (2026-10-22 개정)
+
+공식 문헌·고정 소스와 코드별로 대조한 결과, 출처에서 옮긴 사실(설명·NVIDIA 적용 제품·즉시/조사 조치 분류·Fleet event_type/action·GPUd 치명도)은 264건 모두 일치했다. 반면 `수집:`/`판단:` 문장과 제목은 증거 그룹마다 모든 코드가 같은 문장이었고, 259건의 조회 계획은 D09·D02뿐이었다. 각 런북의 한계 문장도 ECC·전력·NVLink 근거가 없다고 적고 있었다. RB-XID-79·RB-SXID-11001을 제외한 264건을 다음과 같이 고쳤다. 대조 방법·코드별 이전 값·해시는 [검토 기록](operator-report-review-20261022.json)에 있다.
+
+| 보고서 유형 | 대상 | 조회 계획(D09 외) |
+|---|---|---|
+| ECC·메모리 | XID 48·63·64·92·94·95·140·156·157·168·171·172 | DBE D40(필수)·D42, SBE D36(필수)·D38, 메모리 온도 D23, 사용률 D02 |
+| NVLink | XID 74·136·144~150·155·166·170 | NVLink 수신·송신 D33·D34, FM 상태 D47, D02 |
+| C2C | XID 121·159·173 | 전력 D11, 온도 D04, D02 (C2C 카운터는 등록 지표 없음) |
+| PCIe·버스 | XID 32·167 | PCIe replay D44, 전력 D11, 온도 D04, D02 |
+| 전원·열·전력 평활 | XID 54·162~165 | 전력 D11, 전력 한도 D48, 클록 제한 사유 D45, 온도 D04, D02 |
+| 드라이버·펌웨어 | XID 37·38·62·66·67·110·119·120·143·169 | D11, D04, D02 |
+| GPU 응답 정지 | XID 46·109·158 | 메모리 사용량 D03, D11, D04, D02 |
+| 애플리케이션·엔진 | 그 밖의 app 그룹 XID·137 | D03, D11, D02 |
+| 가상화·정보성·미사용 | virtual·info·reserved 그룹 | D02 |
+| NVSwitch | SXID 92건 | FM 상태 D47, NVLink D33·D34 (열 이벤트 10004·10005는 온도 D04 추가) |
+
+- 조회는 배포 프로필에서 verified binding인 D만 쓴다(D46 등 candidate 제외). 검사: `test_every_code_has_operator_report_material_from_verified_queries`.
+- `operator_guidance`는 오류 의미(NVIDIA 발생 조건 요약) → 진단 자료 보존 → 오류별 판단 기준(NVIDIA 조사 분기·GPU Node Triage) → 복구 조치(NVIDIA 즉시 조치 분류) → 재발 시 진단·공급사 전달의 고정 순서다. SXID는 FM 가이드 표 22~25의 분류별 영향·복구와 패브릭 상태 확인을 쓴다. 문헌 문장을 복사하지 않고 요약했으며 문헌에 없는 임계값·조치는 추가하지 않았다.
+- 정정: SXID 22012는 FM 가이드 표 23(Potential Fatal)과 고정 Fleet 소스에 모두 정의돼 있어 `documented`로 바꾸고, "Fleet 카탈로그에 없음" 서술을 지웠다.
+- 저장소 원본 개정이며 발행 revision은 바꾸지 않는다. 새 revision 발행 전에는 기존 발행본(D09만 필수)이 그대로 쓰이고, 보고서 6단 형식의 전체 화면은 새 revision이 메트릭 조회를 필수로 갖는 경우에만 만들어진다.
 
 ## 출처 간 차이와 판정 제한
 
 | 자료 상태 | 건수 | 의미 |
 |---|---:|---|
 | Unused·구세대 정의 확인 (`unused_or_legacy`) | 63 | 최신 Xid 표의 Unused. 구세대/Fleet 의미를 현행 장비에 바로 적용하지 않음 |
-| 문헌/소스 정의 (`documented`) | 187 | 참조 자료에 정의가 있음. 운영 검증 완료를 뜻하지 않음 |
+| 문헌/소스 정의 (`documented`) | 188 | 참조 자료에 정의가 있음. 운영 검증 완료를 뜻하지 않음 |
 | 정의 차이 확인 (`definition_conflict`) | 13 | 현재 NVIDIA 표와 고정 Fleet의 정의 차이. 배포 버전 확인 전 전문 조치 보류 |
-| 코드 소스만 확인 (`source_only`) | 3 | 참조 코드에는 있으나 이번 공식 표에서 직접 대응 항목을 확인하지 못함 |
+| 코드 소스만 확인 (`source_only`) | 2 | 참조 코드에는 있으나 이번 공식 표에서 직접 대응 항목을 확인하지 못함 |
 
-특히 XID 142는 고정 Fleet/GPUd의 ECC 설명과 최신 NVIDIA의 NVENC3 설명이 다르다. XID 126–132·134–136·139·141은 고정 Fleet의 Reserved와 최신 표의 정의가 다르다. XID 173, SXID 20009·22012는 코드 소스 근거와 공식 표의 범위를 분리했다. 미기재 action을 IGNORE로 변환하지 않는다.
+특히 XID 142는 고정 Fleet/GPUd의 ECC 설명과 최신 NVIDIA의 NVENC3 설명이 다르다. XID 126–132·134–136·139·141은 고정 Fleet의 Reserved와 최신 표의 정의가 다르다. XID 173, SXID 20009는 코드 소스 근거와 공식 표의 범위를 분리했다. SXID 22012는 FM 가이드 표 23에 있어 문헌 정의로 분류한다. 미기재 action을 IGNORE로 변환하지 않는다.
 
 SXID 10003은 GPUd EventType=Warning이어도 PotentialFatal/AlwaysFatal=true다. 이벤트 등급만으로 영향 범위를 결정하지 않는다. SXID 11001 등의 PotentialFatal은 source port의 access/trunk·VM/partition에 따라 판단하고, AlwaysFatal 그룹은 해당 FM 운영 모드의 전체 fabric 영향과 복구 전제를 설명한다. Single-bit ECC, TX replay, 열 시작/종료, 계획되지 않은 shutdown, 무시 가능한 interrupt는 별도 절차를 사용한다.
 
@@ -305,7 +327,7 @@ Backend 검증기도 전체 267개 JSON을 검사한다. 실제 DB E2E는 기존
 | `sxid:20034` | [RB-SXID-20034](sxid/RB-SXID-20034.json) | fabric | 문헌/소스 정의 |
 | `sxid:22003` | [RB-SXID-22003](sxid/RB-SXID-22003.json) | fabric | 문헌/소스 정의 |
 | `sxid:22011` | [RB-SXID-22011](sxid/RB-SXID-22011.json) | fabric | 문헌/소스 정의 |
-| `sxid:22012` | [RB-SXID-22012](sxid/RB-SXID-22012.json) | fabric | 코드 소스만 확인 |
+| `sxid:22012` | [RB-SXID-22012](sxid/RB-SXID-22012.json) | fabric | 문헌/소스 정의 |
 | `sxid:22013` | [RB-SXID-22013](sxid/RB-SXID-22013.json) | fabric | 문헌/소스 정의 |
 | `sxid:23001` | [RB-SXID-23001](sxid/RB-SXID-23001.json) | fabric | 문헌/소스 정의 |
 | `sxid:23002` | [RB-SXID-23002](sxid/RB-SXID-23002.json) | fabric | 문헌/소스 정의 |

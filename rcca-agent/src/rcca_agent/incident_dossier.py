@@ -17,12 +17,24 @@ from .analysis_values import compact_brief, register_values
 
 METRICS = {
     "D02": "GPU 사용률",
+    "D03": "GPU 메모리 사용량",
+    "D04": "GPU 온도",
     "D11": "GPU 전력",
+    "D23": "GPU 메모리 온도",
+    "D36": "정정 가능 ECC(SBE) 휘발성 누적값",
+    "D38": "정정 가능 ECC(SBE) 영구 누적값",
+    "D40": "정정 불가 ECC(DBE) 휘발성 누적값",
+    "D42": "정정 불가 ECC(DBE) 영구 누적값",
     "D44": "PCIe replay 누적값",
+    "D45": "클록 제한 사유 비트마스크",
     "D47": "GPU별 Fabric Manager 상태 코드",
+    "D48": "적용 전력 한도",
     "D33": "NVLink 수신량",
     "D34": "NVLink 송신량",
 }
+COUNTERS = {"D36", "D38", "D40", "D42", "D44"}
+# Coded values: compare equality only, never magnitude or health.
+ENUMS = {"D45", "D47"}
 ADDRESSES = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 ERROR_FILTER = (
     ' | json rca_component="attributes[\\"component\\"]"'
@@ -43,12 +55,14 @@ def error_tools(tools):
 
 
 def enabled(books):
-    """New authoring revisions opt in through their explicit required observation plan."""
+    """XID/SXID revisions opt in by requiring a report metric; legacy D09-only stays."""
     return any(
-        (book.get("knowledge_key"), marker)
-        in {("RB-XID-79", "D44"), ("RB-SXID-11001", "D47")}
-        for book in books
-        for marker in book["content"].get("required_queries", [])
+        any(
+            c.startswith(("xid:", "sxid:"))
+            for c in content.get("search", {}).get("codes", [])
+        )
+        and any(q in METRICS for q in content.get("required_queries", []))
+        for content in (book["content"] for book in books)
     )
 
 
@@ -304,11 +318,11 @@ def operator_view(data, evidence, comparison):
                             default=None,
                         ),
                         "kind": "enum"
-                        if entry["query_id"] == "D47"
+                        if entry["query_id"] in ENUMS
                         else "counter"
-                        if entry["query_id"] == "D44"
+                        if entry["query_id"] in COUNTERS
                         else "gauge",
-                        "enum_mapping": None if entry["query_id"] == "D47" else {},
+                        "enum_mapping": None if entry["query_id"] in ENUMS else {},
                         "samples": len(values),
                         "first": iso(values[0][0]),
                         "last": iso(values[-1][0]),
@@ -496,10 +510,12 @@ def dossier_summary(data, current, comparison):
                 )
                 if gaps:
                     text += f" 기록 사이 최대 간격 {max(gaps):g}초; 조회 구간 전체의 연속 관측을 보장하지 않습니다."
-                if q == "D47":
+                if q in ENUMS:
                     text += " 열거형 상태 코드이며 의미 매핑 없이 정상·비정상 또는 심각도로 해석하지 않습니다."
                 if q == "D44":
                     text += " 누적값이며 reset·공백 검증 없이 사건 증가량이나 AER로 해석하지 않습니다."
+                elif q in COUNTERS:
+                    text += " 누적값이며 reset·공백 검증 없이 사건 증가량으로 해석하지 않습니다."
                 if sxid:
                     text += " 같은 노드 GPU의 참고값이며 스위치·포트 상태가 아닙니다."
                 add("comparison", text, [e["id"]], detail_only=True)

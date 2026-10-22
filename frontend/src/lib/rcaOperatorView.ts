@@ -61,6 +61,9 @@ const units: Record<string, string> = {
   enum: '상태 코드',
   state: '상태 코드',
   count: '회',
+  MiB: 'MiB',
+  celsius: '°C',
+  bitmask: '비트마스크',
 };
 export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
 
@@ -271,7 +274,7 @@ export function operatorView(result: Row) {
     // Older results carry only the whole-query summary without an incident split.
     const whole = m.incident_windows === undefined ? win(m) : null;
     const u = unitLabel(m.unit);
-    const enumKind = m.kind === 'enum' || m.unit === 'enum' || m.unit === 'state';
+    const enumKind = m.kind === 'enum' || ['enum', 'state', 'bitmask'].includes(str(m.unit));
     const gap = num(m.max_sample_gap_seconds) * 1000;
     let tone: Tone = 'unknown';
     let reading: string;
@@ -292,8 +295,10 @@ export function operatorView(result: Row) {
         reading = `사건 이후 0 ${u}로 떨어졌습니다 (사건 전 최대 ${fmtNum(before.max)} ${u}).`;
         tone = 'warn';
       } else if (m.kind === 'counter' && after.max > before.max) {
-        reading = `사건 이후 누적값이 ${fmtNum(after.max - before.max)} 증가했습니다.`;
-        tone = 'warn';
+        // Uncorrectable ECC growth is the decisive memory signal; other counters stay a caution.
+        const dbe = ['D40', 'D42'].includes(str(m.query_id));
+        reading = `사건 이후 누적값이 ${fmtNum(after.max - before.max)} 증가했습니다.${dbe ? ' 정정 불가 ECC가 늘었으므로 해당 GPU를 메모리 오류 대상으로 봅니다.' : ''}`;
+        tone = dbe ? 'alert' : 'warn';
       } else {
         reading = `사건 전 ${range(before)} → 사건 이후 ${range(after)}.`;
         tone = 'ok';
@@ -325,18 +330,20 @@ export function operatorView(result: Row) {
       refs: refsOf(group),
     };
   });
-  const changed = metrics.filter((m) => m.tone === 'warn');
+  const changed = metrics.filter((m) => m.tone === 'warn' || m.tone === 'alert');
   const noAfter = metrics.filter((m) => !m.after && !m.whole);
   const telemetry: Finding = {
     key: 'telemetry',
     question: '사건 전후로 장치 지표는 어떻게 달라졌나요?',
     tone: !metrics.length
       ? 'unknown'
-      : changed.length
-        ? 'warn'
-        : metrics.every((m) => m.after)
-          ? 'ok'
-          : 'unknown',
+      : changed.some((m) => m.tone === 'alert')
+        ? 'alert'
+        : changed.length
+          ? 'warn'
+          : metrics.every((m) => m.after)
+            ? 'ok'
+            : 'unknown',
     verdict: !metrics.length
       ? '관련 지표를 수집하지 못했습니다.'
       : changed.length

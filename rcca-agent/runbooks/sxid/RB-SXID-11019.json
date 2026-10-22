@@ -13,7 +13,10 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D47",
+      "D33",
+      "D34"
     ],
     "observation_plan": [
       {
@@ -33,13 +36,37 @@
         "freshness": "query_contract"
       },
       {
-        "query_id": "D02",
-        "priority": 3,
-        "required": false,
+        "query_id": "D47",
+        "priority": 2,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 노드 GPU별 Fabric Manager 상태 코드를 사건 전후로 비교한다. 코드 의미 매핑 없이 정상·비정상으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D33",
+        "priority": 3,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU별 NVLink 수신량을 사건 전후로 비교한다. 트래픽 0이나 결측을 링크 고장으로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D34",
+        "priority": 4,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU별 NVLink 송신량을 사건 전후로 비교한다. 트래픽 0이나 결측을 링크 고장으로 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -63,15 +90,27 @@
         "revision": "Page last updated 2025-11-14; mutable upstream",
         "section": "Table 22 Potential Fatal NVSwitch SXid Errors",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "nvlink subcommand: -s/--status, -e/--errorcounters; -q display sections",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
-      "현재 D09/D02 계획만으로 FM 원문·버전, NVSwitch 포트 역할, partition·VM 연결을 확보했다고 간주하지 않는다. 이 자료가 없으면 fatality·영향 범위·조치 전제는 미확정이며 GPU 사용률을 NVSwitch 상태로 대체하지 않는다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "GPU별 Fabric Manager 상태 코드와 NVLink 처리량은 같은 노드 GPU 쪽 관측일 뿐 NVSwitch 포트 상태가 아니다. FM 로그와 포트 역할 확인 전에는 영향 범위와 조치 전제를 확정하지 않는다."
     ],
-    "title": "SXID 11019 NVSwitch·Fabric Manager 조사",
+    "title": "SXID 11019 ingress RLAN DBE · NVSwitch 조사",
     "description": "SXID 11019: ingress RLAN DBE.",
     "claim": "SXID 11019 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -93,8 +132,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집: FM 서비스/커널의 원본 SXid, NVSwitch PCI·source port·link 번호, access/trunk 역할, GPU/VM/partition 연결, FM/드라이버 버전과 FM 시작/설정 변경 이력을 수집한다.",
-      "판단: 포트와 partition이 확인된 범위에서만 영향 대상을 정한다. 스위치/양쪽 GPU의 동반 오류, 링크 상태·재전송·ECC·throughput과 재발 시각을 대조한다. Xid 74가 같이 있어도 전파 방향은 별도 증거가 필요하다.",
+      "수집 항목: 오류·상태 로그, Fabric Manager 상태 코드, NVLink 수신량, NVLink 송신량. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 오류 줄의 스위치 PCI·Link 번호를 보존하고, access/trunk 포트와 연결 GPU·VM·파티션이 확인된 범위에서만 영향 대상을 정한다. 같은 시각 GPU 쪽 XID 74와 다른 SXID, 이전 사건 이력의 같은 스위치·다른 스위치 반복을 대조한다.",
       "Fleet 고정 카탈로그: ingress RLAN DBE; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
@@ -104,7 +143,27 @@
     ],
     "recommendations": [
       {
-        "text": "SXID 11019의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "text": "패브릭 상태 확인: sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi -q의 Fabric State·Status와 nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "sxid:11019"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "영향 범위: 오류가 access 포트에서 났다면 영향은 해당 guest VM으로 한정되고, trunk 포트에서 났다면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "sxid:11019"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: access 포트면 해당 guest VM을 종료합니다. trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. bare metal에서는 해당 플랫폼의 GPU·NVSwitch 리셋 또는 재부팅 절차를 따릅니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -120,6 +179,64 @@
         "equals": "sxid:11019"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "SXID 11019(ingress RLAN DBE)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 치명(Potential Fatal)입니다. 오류가 access 포트에서 났다면 영향은 해당 guest VM으로 한정되고, trunk 포트에서 났다면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다.",
+      "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "Fabric Manager 로그의 같은 시각 SXID 줄(NVSwitch PCI·Link 번호)과 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
+        },
+        {
+          "title": "패브릭 상태 확인",
+          "text": "sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi -q의 Fabric State·Status와 nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다."
+        },
+        {
+          "title": "영향 범위",
+          "text": "오류가 access 포트에서 났다면 영향은 해당 guest VM으로 한정되고, trunk 포트에서 났다면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "access 포트면 해당 guest VM을 종료합니다. trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. bare metal에서는 해당 플랫폼의 GPU·NVSwitch 리셋 또는 재부팅 절차를 따릅니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "재부팅이나 리셋 뒤 같은 스위치·포트에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, Fabric Manager 로그, DCGM 진단 로그, 수행한 조치 기록을 갖춰 시스템 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fabric Manager 가이드 분류",
+          "source_indices": [
+            2
+          ],
+          "text": "잠재적 치명(Potential Fatal). 영향: 오류가 access 포트에서 났다면 영향은 해당 guest VM으로 한정되고, trunk 포트에서 났다면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: access 포트면 해당 guest VM을 종료합니다. trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. bare metal에서는 해당 플랫폼의 GPU·NVSwitch 리셋 또는 재부팅 절차를 따릅니다."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false, 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION. 정적 분류이며 사건별 영향 판정이 아닙니다."
+        },
+        {
+          "title": "NVLink 상태 명령",
+          "source_indices": [
+            4
+          ],
+          "text": "nvidia-smi nvlink -s는 GPU NVLink의 링크 상태, -e는 NVLink 오류 카운터를 보여 줍니다. 값의 의미와 임계값은 설치된 드라이버 문서를 따릅니다."
+        },
+        {
+          "title": "리셋 방식",
+          "source_indices": [
+            3
+          ],
+          "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋 대신 VM을 재시작합니다."
+        }
+      ]
+    }
   }
 }

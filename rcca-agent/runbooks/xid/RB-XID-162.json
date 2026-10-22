@@ -13,7 +13,12 @@
     ],
     "exclusion_conditions": [],
     "required_queries": [
-      "D09"
+      "D09",
+      "D11",
+      "D48",
+      "D45",
+      "D04",
+      "D02"
     ],
     "observation_plan": [
       {
@@ -33,13 +38,61 @@
         "freshness": "query_contract"
       },
       {
-        "query_id": "D02",
-        "priority": 3,
-        "required": false,
+        "query_id": "D11",
+        "priority": 2,
+        "required": true,
         "fact_names": [
           "observations"
         ],
-        "purpose": "사건 전후 GPU 사용률 비교.",
+        "purpose": "같은 GPU의 소비 전력(W)을 사건 전후로 비교한다. 표본 부재나 이전 값 유지를 장치 접근 가능으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D48",
+        "priority": 3,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 적용 전력 한도(W)를 사건 전후로 비교한다. 소비 전력과 합산하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D45",
+        "priority": 4,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 클록 제한 사유 비트마스크를 사건 전후로 비교한다. 드라이버 버전별 비트 의미 확인 없이 원인을 단정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 5,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 온도(°C)를 사건 전후로 비교한다. 제품별 임계값 없이 과열로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "priority": 6,
+        "required": true,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 사용률을 사건 전후로 비교해 작업 중단·멈춤 여부를 본다. 값이 0이거나 없다는 이유로 장치 상태를 판정하지 않는다.",
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
@@ -63,16 +116,22 @@
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 162; Table 3 Resolution Buckets",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Retrieved 2026-10-22; mutable upstream document",
+        "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
+        "checked_at": "2026-10-22"
       }
     ],
     "limitations": [
       "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
-      "현재 D09/D02 계획은 온도·전력·클록·제한 사유와 제품별 임계값을 보장하지 않는다. 사용률만으로 열·전력 제한이나 전원 경로 이상을 판정하지 않는다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다."
+      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "클록 제한 사유는 드라이버 버전별 비트 의미 확인이 필요하고, 전력 평활 회로의 수명·상태는 등록된 지표로 직접 관측되지 않는다. 제품별 임계값 없이 열·전력 원인을 확정하지 않는다."
     ],
-    "title": "XID 162 전원·열·전력 평활화 조사",
+    "title": "XID 162 Power Smoothing HW Circuitry capability reengaged · 전원·열·전력 평활 조사",
     "description": "XID 162: Power Smoothing HW Circuitry capability reengaged.",
     "claim": "XID 162 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
@@ -94,8 +153,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집: 원본 이벤트와 GPU/보드 온도·팬/냉각 상태·전력·제한/스로틀 이유·전력 변동, 평활화 기능 활성/수명 상태, 최근 전원·냉각 변경 이력을 모은다.",
-      "판단: 장비 지원 기능과 전력/온도 단위를 확인하고 사건 전후의 변화를 비교한다. 임계값·수명 기준은 해당 모델 문헌으로 확인하며 사용률 하락을 전원 고장이나 회복으로 치환하지 않는다.",
+      "수집 항목: 오류·상태 로그, GPU 전력, 적용 전력 한도, 클록 제한 사유, GPU 온도, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "판단: 같은 GPU의 전력·전력 한도·온도·클록 제한 사유가 사건 시각 전후로 어떻게 변했는지와 같은 노드 다른 GPU의 동시 변화를 대조한다.",
       "Fleet 고정 카탈로그: Power Smoothing HW Circuitry capability reengaged; event_type=Info; 기본 action=nil (미정의).",
       "NVIDIA 적용: B100, GB200; 제외: A100, H100.",
       "NVIDIA 조치 분류: immediate=미기재; investigatory=미기재; Xid154 linkage=미기재.",
@@ -103,7 +162,27 @@
     ],
     "recommendations": [
       {
-        "text": "XID 162의 원본·장치 버전·필수 증거를 확보해 위 조건별 조치를 검토한다.",
+        "text": "오류별 판단 기준: 같은 GPU의 전력·전력 한도·온도·클록 제한 사유가 사건 시각 전후로 어떻게 변했는지와 같은 노드 다른 GPU의 동시 변화를 대조한다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:162"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "복구 조치: NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "preconditions": [
+          {
+            "field": "error_code",
+            "equals": "xid:162"
+          }
+        ],
+        "execution": "not_performed"
+      },
+      {
+        "text": "재발 시 진단·공급사 전달: 같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -119,6 +198,53 @@
         "equals": "xid:162"
       }
     ],
-    "investigation_only": true
+    "investigation_only": true,
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "XID 162(PSHC_REENGAGED)는 NVIDIA Xid 카탈로그에서 'Power Smoothing HW Circuitry capability reengaged'로 정의됩니다.",
+      "cause_note": "보조 전원 연결, 전원 공급·열 이벤트, 전력 평활 회로 수명이 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "진단 자료 보존",
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d POWER,TEMPERATURE,PERFORMANCE 출력(클록 제한 사유 포함)을 함께 저장합니다."
+        },
+        {
+          "title": "오류별 판단 기준",
+          "text": "같은 GPU의 전력·전력 한도·온도·클록 제한 사유가 사건 시각 전후로 어떻게 변했는지와 같은 노드 다른 GPU의 동시 변화를 대조한다."
+        },
+        {
+          "title": "복구 조치",
+          "text": "NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "재발 시 진단·공급사 전달",
+          "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            2
+          ],
+          "text": "PSHC_REENGAGED · Power Smoothing HW Circuitry capability reengaged. 적용 제품: B100, GB200. 즉시 조치 미기재, 조사 조치 미기재."
+        },
+        {
+          "title": "Fleet·GPUd 분류",
+          "source_indices": [
+            0,
+            1
+          ],
+          "text": "Fleet 고정 정의: event_type=Info, 기본 action=없음. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        },
+        {
+          "title": "리셋 방식",
+          "source_indices": [
+            3
+          ],
+          "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
+        }
+      ]
+    }
   }
 }
