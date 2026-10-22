@@ -184,12 +184,12 @@ export function OperatorGuide() {
   return (
     <div className="page operator-guide">
       <PageHead
-        eyebrow="OPERATOR GUIDE"
+        eyebrow=""
         title="운영자 가이드"
         description="GPU 운영 분석의 주제, 필요한 근거와 결과를 읽는 방법입니다."
         actions={
           <Link className="button primary" to="/reports/new">
-            새 보고서 만들기
+            보고서 요청
           </Link>
         }
       />

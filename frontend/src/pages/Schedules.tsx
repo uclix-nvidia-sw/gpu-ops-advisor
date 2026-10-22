@@ -21,7 +21,7 @@ function ScheduleList() {
   return (
     <div className="page">
       <PageHead
-        eyebrow="REPORT SCHEDULES"
+        eyebrow=""
         title="자동 보고서 설정"
         description={
           app.mode === 'new'
@@ -37,7 +37,17 @@ function ScheduleList() {
       {app.mode !== 'new' && <NavTabs items={reportTabs} />}
       <ReportTimeNote />
       <Panel title="등록된 일정">
-        <QueryState query={q} empty={!q.items.length}>
+        <QueryState
+          query={q}
+          empty={!q.items.length}
+          emptyTitle="등록된 자동 보고서가 없습니다."
+          emptyDescription="자동 생성 설정에서 첫 일정을 만드세요. 등록한 일정은 지정한 시각에 보고서를 요청합니다."
+          emptyAction={
+            <Link className="button primary" to="/reports/new?schedule=true">
+              자동 생성 설정
+            </Link>
+          }
+        >
           <div className="table-wrap">
             <table>
               <thead>
@@ -135,7 +145,7 @@ function ScheduleDetail({ id }: { id: string }) {
   return (
     <div className="page">
       <PageHead
-        eyebrow="SCHEDULE DETAIL"
+        eyebrow=""
         title={str(s.name, reportTitle(obj(s.report_spec)))}
         description={app.mode === 'new' ? '실행 조건과 생성된 보고서를 확인하세요.' : id}
         actions={
