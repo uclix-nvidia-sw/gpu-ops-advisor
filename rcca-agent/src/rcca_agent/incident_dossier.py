@@ -238,7 +238,59 @@ def metric_host_matches(target, labels):
     return bool(node or (machine and labels.get("machine_id") == machine))
 
 
-def operator_view(data, evidence, comparison):
+def state_onset(health, target, codes):
+    """Bracket the first Unhealthy report by the last Healthy one (Loki record time)."""
+    node = target.get("node") or target.get("k8s_node_name")
+    for code in codes:
+        component = "accelerator-nvidia-error-" + code.split(":")[0]
+        rows = sorted(
+            (
+                h
+                for h in health
+                if h.get("component") == component
+                and h.get("observed_at")
+                and isinstance(h.get("raw_health"), str)
+                and (not node or h.get("target", {}).get("node") == node)
+            ),
+            key=lambda h: timestamp(h["observed_at"]),
+        )
+        bad = [
+            h
+            for h in rows
+            if h["raw_health"].lower() != "healthy" and h.get("error_code") == code
+        ]
+        if not bad:
+            continue
+        first = timestamp(bad[0]["observed_at"])
+        good = [
+            h
+            for h in rows
+            if h["raw_health"].lower() == "healthy"
+            and timestamp(h["observed_at"]) < first
+        ]
+        return {
+            "code": code,
+            "time_basis": "loki_recorded_at",
+            "last_healthy_at": good[-1]["observed_at"] if good else None,
+            "first_unhealthy_at": bad[0]["observed_at"],
+            "evidence_refs": sorted(
+                {r for h in good[-1:] + bad[:1] for r in h.get("evidence_refs", [])}
+            ),
+        }
+    return None
+
+
+# DCGM exporter labels; recorded as observed, never as allocation or ownership.
+WORKLOAD_LABELS = ("namespace", "pod", "container")
+GPU_LABELS = {
+    "model": "modelName",
+    "driver": "DCGM_FI_DRIVER_VERSION",
+    "pci_bus_id": "pci_bus_id",
+    "gpu_index": "gpu",
+}
+
+
+def operator_view(data, evidence, comparison, health=()):
     groups = defaultdict(list)
     for row in log_records(evidence, data):
         groups[(row["code"], row["device"], row["message"])].append(row)
@@ -255,9 +307,14 @@ def operator_view(data, evidence, comparison):
         }
         for (code, device, message), group in groups.items()
     ]
-    metrics = []
     targets = comparison.get("targets", [])
     switch = any(t["code"].startswith("sxid:") for t in targets)
+    start, end = (
+        timestamp(data["time_range"]["start"]),
+        timestamp(data["time_range"]["end"]),
+    )
+    # One row per (query, GPU): exporters split a GPU's series by workload labels.
+    merged, workloads, gpus = {}, {}, {}
     for entry in evidence:
         if entry["query_id"] not in METRICS or not usable_observation(entry):
             continue
@@ -272,63 +329,80 @@ def operator_view(data, evidence, comparison):
                 continue
             if not switch and not any(t["gpu"] and t["gpu"] == gpu for t in targets):
                 continue
-            values = []
+            values = set()
             for at, value in metric["samples"]:
                 try:
                     at, value = float(at), float(value)
-                    if math.isfinite(value) and timestamp(
-                        data["time_range"]["start"]
-                    ) <= at <= timestamp(data["time_range"]["end"]):
-                        values.append((at, value))
+                    if math.isfinite(value) and start <= at <= end:
+                        values.add((at, value))
                 except (ValueError, TypeError):
                     pass
-            values = sorted(set(values))
-            if values:
-                boundary = timestamp(event_boundary(data, targets)[0])
-                windows = {}
-                for label, selected in (
-                    ("before", [(t, v) for t, v in values if t < boundary]),
-                    ("at_or_after", [(t, v) for t, v in values if t >= boundary]),
-                ):
-                    windows[label] = (
-                        {
-                            "samples": len(selected),
-                            "min": min(v for _, v in selected),
-                            "max": max(v for _, v in selected),
-                            "first_value": selected[0][1],
-                            "last_value": selected[-1][1],
-                            "first": iso(selected[0][0]),
-                            "last": iso(selected[-1][0]),
-                        }
-                        if selected
-                        else None
-                    )
-                metrics.append(
-                    {
-                        "query_id": entry["query_id"],
-                        "name": METRICS[entry["query_id"]],
-                        "gpu_uuid": gpu,
-                        "unit": metric.get("unit"),
-                        "min": min(v for _, v in values),
-                        "max": max(v for _, v in values),
-                        "last_value": values[-1][1],
-                        "incident_windows": windows,
-                        "max_sample_gap_seconds": max(
-                            (b[0] - a[0] for a, b in zip(values, values[1:])),
-                            default=None,
-                        ),
-                        "kind": "enum"
-                        if entry["query_id"] in ENUMS
-                        else "counter"
-                        if entry["query_id"] in COUNTERS
-                        else "gauge",
-                        "enum_mapping": None if entry["query_id"] in ENUMS else {},
-                        "samples": len(values),
-                        "first": iso(values[0][0]),
-                        "last": iso(values[-1][0]),
-                        "evidence_refs": [entry["id"]],
-                    }
-                )
+            if not values:
+                continue
+            row = merged.setdefault(
+                (entry["query_id"], gpu),
+                {"values": set(), "unit": metric.get("unit"), "refs": set()},
+            )
+            row["values"] |= values
+            row["refs"].add(entry["id"])
+            if gpu:
+                info = gpus.setdefault(gpu, {})
+                for key, label in GPU_LABELS.items():
+                    if isinstance(labels.get(label), str) and labels[label]:
+                        info.setdefault(key, labels[label])
+            work = tuple(labels.get(k) for k in WORKLOAD_LABELS)
+            if gpu and work[1]:
+                times = [t for t, _ in values]
+                seen = workloads.setdefault((gpu, work), [min(times), max(times)])
+                seen[0], seen[1] = min(seen[0], *times), max(seen[1], *times)
+    boundary = timestamp(event_boundary(data, targets)[0])
+    metrics = []
+    for (query_id, gpu), row in merged.items():
+        values = sorted(row["values"])
+        windows = {}
+        for label, selected in (
+            ("before", [(t, v) for t, v in values if t < boundary]),
+            ("at_or_after", [(t, v) for t, v in values if t >= boundary]),
+        ):
+            windows[label] = (
+                {
+                    "samples": len(selected),
+                    "min": min(v for _, v in selected),
+                    "max": max(v for _, v in selected),
+                    "first_value": selected[0][1],
+                    "last_value": selected[-1][1],
+                    "first": iso(selected[0][0]),
+                    "last": iso(selected[-1][0]),
+                }
+                if selected
+                else None
+            )
+        metrics.append(
+            {
+                "query_id": query_id,
+                "name": METRICS[query_id],
+                "gpu_uuid": gpu,
+                "unit": row["unit"],
+                "min": min(v for _, v in values),
+                "max": max(v for _, v in values),
+                "last_value": values[-1][1],
+                "incident_windows": windows,
+                "max_sample_gap_seconds": max(
+                    (b[0] - a[0] for a, b in zip(values, values[1:])),
+                    default=None,
+                ),
+                "kind": "enum"
+                if query_id in ENUMS
+                else "counter"
+                if query_id in COUNTERS
+                else "gauge",
+                "enum_mapping": None if query_id in ENUMS else {},
+                "samples": len(values),
+                "first": iso(values[0][0]),
+                "last": iso(values[-1][0]),
+                "evidence_refs": sorted(row["refs"]),
+            }
+        )
     return {
         "schema": "rca-triage-observations/1",
         "target": data["target"],
@@ -340,6 +414,20 @@ def operator_view(data, evidence, comparison):
         "switch_pci": comparison.get("switch_pci", []),
         "metrics": metrics,
         "metric_scope": "node_gpu_context" if switch else "reported_gpu",
+        "onset": state_onset(
+            health, data["target"], sorted({row["code"] for row in logs})
+        ),
+        "gpus": [{"gpu_uuid": g, **info} for g, info in sorted(gpus.items())],
+        "workloads": [
+            {
+                "gpu_uuid": gpu,
+                **dict(zip(WORKLOAD_LABELS, work)),
+                "first": iso(seen[0]),
+                "last": iso(seen[1]),
+                "label_basis": "dcgm_exporter_labels",
+            }
+            for (gpu, work), seen in sorted(workloads.items(), key=lambda x: x[1][0])
+        ],
     }
 
 

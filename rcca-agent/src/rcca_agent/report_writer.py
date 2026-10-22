@@ -82,6 +82,8 @@ MATCH_DETAIL = {
     "event_devices": "D09 이벤트 장치",
     "event_device": "D09 이벤트 장치",
     "inventory_gpu_candidates": "로그의 GPU 목록에서 대응된 GPU",
+    "last_healthy_at": "마지막 정상 보고",
+    "first_unhealthy_at": "첫 오류 보고",
 }
 NUMBERS = re.compile(r"\d+(?:[.:/-]\d+)*")
 

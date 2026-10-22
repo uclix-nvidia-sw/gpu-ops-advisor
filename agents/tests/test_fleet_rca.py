@@ -499,6 +499,26 @@ def kmsg_event(kind="xid", **change):
     }
 
 
+def test_missing_kmsg_with_in_window_state_change_is_not_a_prior_event():
+    from rcca_agent.fleet_events import match_alert
+
+    healthy = state_report(
+        raw_health="Healthy",
+        reason="XIDComponent is healthy",
+        observed_at="2026-01-01T00:00:00Z",
+        evidence_refs=["healthy"],
+    )
+    failed = state_report(observed_at="2026-01-01T00:01:00Z")
+    result = match_alert(alert("xid"), [healthy, failed], [])
+    assert result["status"] == "event_not_exported"
+    assert result["detail"] == {
+        "last_healthy_at": "2026-01-01T00:00:00Z",
+        "first_unhealthy_at": "2026-01-01T00:01:00Z",
+    }
+    assert "healthy" in result["evidence_refs"]
+    assert match_alert(alert("xid"), [failed], [])["status"] == "event_not_found"
+
+
 @pytest.mark.parametrize(
     "kind,change,status",
     [

@@ -1,5 +1,6 @@
 """Interpret bounded source material without promoting it into verified facts."""
 
+import asyncio
 import re
 import time
 
@@ -301,6 +302,29 @@ def validate_interpretation(response, refs, criteria=None, observation_refs=None
     return response
 
 
+# Gateway overload/unavailability; one delayed retry inside the stage deadline.
+TRANSIENT_HTTP = {429, 502, 503, 504}
+
+
+async def complete_once(llm, prompt, payload, stage, diagnostics):
+    """One model call; retry once only for a transient HTTP status and record it."""
+    response = await llm.complete(prompt, payload, stage=stage)
+    status = getattr(llm, "last_http_status", None)
+    if (
+        response is None
+        and getattr(llm, "last_failure", None) == "llm_http_error"
+        and status in TRANSIENT_HTTP
+        and time.monotonic() + 2 < getattr(llm, "deadline", float("inf"))
+    ):
+        diagnostics["transient_retry_status"] = status
+        await asyncio.sleep(1)
+        response = await llm.complete(prompt, payload, stage=stage)
+        status = getattr(llm, "last_http_status", None)
+    if response is None and getattr(llm, "last_failure", None) == "llm_http_error":
+        diagnostics["http_status"] = status
+    return response
+
+
 async def call_stage(
     llm, stage, prompt, payload, validator, *, max_bytes=16000, max_attempts=2
 ):
@@ -368,7 +392,7 @@ async def call_stage(
             diagnostics.update(attempts=attempt + 1, execution_status="failed")
             check["model_called"] = True
             try:
-                response = await llm.complete(prompt, request, stage=stage)
+                response = await complete_once(llm, prompt, request, stage, diagnostics)
                 if response is None:
                     failure = getattr(llm, "last_failure", None)
                     if failure == "llm_deadline_exhausted":

@@ -53,6 +53,29 @@ describe('RCA diagnostics', () => {
       render(<RcaResult job={{ result_ref: 'old', result: {} }} onEvidence={() => {}} />),
     ).toContain('구 결과에는 단계별 기록이 없습니다');
   });
+  it('shows operators only the alarm identity and the report', () => {
+    const job = {
+      id: 'job',
+      result_ref: 'result',
+      target: { cluster_id: 'cpc-1', node: 'dgx01', title: 'XID 79' },
+      result: {
+        missing_inputs: ['synthesis_failed'],
+        narrative: [{ id: 'action', text: '런북 권고' }],
+        quality: { analysis: { workflow: 'single_collection', synthesis: {} } },
+      },
+    };
+    const reader = render(<RcaResult job={job} onEvidence={() => {}} reader />);
+    expect(reader).toContain('RCA 장애 보고서');
+    expect(reader).toContain('노드: <strong>dgx01</strong>');
+    for (const hidden of [
+      '수집·판단 근거',
+      '분석 요약·LLM 실행 기록',
+      '결과 공개 완료',
+      '서버 단계',
+    ])
+      expect(reader).not.toContain(hidden);
+    expect(render(<RcaResult job={job} onEvidence={() => {}} />)).toContain('결과 공개 완료');
+  });
   it('labels every missing input the RCA worker emits for this incident', () => {
     for (const code of [
       'error_code',
@@ -116,7 +139,7 @@ describe('RCA diagnostics', () => {
     };
     const html = render(<JobRows items={[job]} />);
     expect(html).toContain('GPUHighTemperature');
-    expect(html).toContain('노드: gpu-node-1');
+    expect(html).toContain('노드: <strong>gpu-node-1</strong>');
     expect(html).toContain('작업 ID · job-123');
     expect(render(<AlarmIdentity record={{}} />)).toContain('알람 이름 미확인');
     expect(

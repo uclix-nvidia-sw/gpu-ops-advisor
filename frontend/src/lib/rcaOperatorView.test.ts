@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { operatorView, sentences, shortGpu } from './rcaOperatorView';
+import { fullPci, operatorView, sentences } from './rcaOperatorView';
 
 const gpu = 'GPU-81ec1404-9d04-9bdf-0bdc-c852d61759a9';
 const other = 'GPU-7608a7b1-ec78-22f7-d932-8c629aed27b1';
@@ -50,6 +50,7 @@ const result = {
         },
         {
           name: 'GPU 사용률',
+          query_id: 'D02',
           unit: 'percent',
           kind: 'gauge',
           gpu_uuid: gpu,
@@ -95,27 +96,30 @@ it('answers the operator questions from collected evidence only', () => {
   const v = operatorView(result)!;
   const [identity, timing, telemetry, repeat, gaps] = v.findings;
   expect(identity.tone).toBe('ok');
-  expect(identity.points.join()).toContain('PCI 4e:00 = GPU-81ec1404…');
+  expect(identity.points.join()).toContain(`PCI 0000:4e:00.0 = ${gpu}`);
   expect(timing.tone).toBe('alert');
-  expect(timing.points[0]).toContain('원본 이벤트 시각이 조회 구간에 없습니다');
+  expect(timing.points[0]).toContain('정상→오류 전환도 없습니다');
   expect(telemetry.tone).toBe('warn');
-  expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.reading).toContain('0 %로 떨어졌습니다');
+  expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.short).toContain('작업이 멈췄습니다');
   // 83 s of silence is within a 300 s collection gap, so absence is not called an outage.
-  expect(v.metrics.find((m) => m.name === 'GPU 전력')!.reading).toContain('단정할 수 없습니다');
+  expect(v.metrics.find((m) => m.name === 'GPU 전력')!.tag).toBe('판단 보류');
   expect(repeat.tone).toBe('alert');
   expect(repeat.points.join('\n')).toContain('(추정) 여러 GPU에서 같은 오류');
   expect(repeat.points.join('\n')).toContain('XID)와 NVSwitch 오류(SXID)');
   expect(v.devices[0]).toMatchObject({ count: 2, current: true });
-  expect(gaps.points.join()).toContain('LLM 원인 분석이 완료되지 않아');
-  expect(JSON.stringify(v.findings)).not.toContain('정상');
+  expect(gaps.points.join()).toContain('AI 해석 문장이 없습니다');
+  // '정상 보고' names Fleet's Healthy report; the report never judges the device healthy.
+  expect(JSON.stringify(v.findings)).not.toMatch(
+    /정상(입니다|으로 판단|으로 회복|으로 보입니다| 상태)/,
+  );
 });
 
 it('returns null for results without triage observations', () => {
   expect(operatorView({ quality: {} })).toBeNull();
 });
 
-it('shortens GPU UUIDs and splits Korean guidance into lines', () => {
-  expect(shortGpu(`on ${gpu}.`)).toBe('on GPU-81ec1404….');
+it('keeps full PCI addresses and splits Korean guidance into lines', () => {
+  expect(fullPci('PCI:00000000:4E:00.0')).toBe('0000:4e:00.0');
   expect(sentences('보존합니다. 재시작은 상태를 바꿉니다. CUDA 12.7 기준')).toHaveLength(3);
 });
 
@@ -156,4 +160,44 @@ it('flags uncorrectable ECC growth and treats bitmasks as codes', () => {
   expect(view.metrics[0].tone).toBe('alert');
   expect(view.metrics[1].reading).toContain('상태 코드 4 유지');
   expect(view.findings[2].tone).toBe('alert');
+});
+
+it('bounds the onset by state reports and names workloads on the GPU', () => {
+  const view = operatorView({
+    ...result,
+    quality: {
+      ...result.quality,
+      triage_observations: {
+        ...result.quality.triage_observations,
+        onset: {
+          last_healthy_at: '2026-10-22T03:26:24Z',
+          first_unhealthy_at: '2026-10-22T03:27:24Z',
+        },
+        gpus: [
+          {
+            gpu_uuid: gpu,
+            pci_bus_id: '00000000:4E:00.0',
+            model: 'NVIDIA A100',
+            driver: '580.1',
+            gpu_index: '3',
+          },
+        ],
+        workloads: [
+          {
+            gpu_uuid: gpu,
+            namespace: 'ns',
+            pod: 'worker-b',
+            first: '2026-10-22T03:20:00Z',
+            last: '2026-10-22T03:28:40Z',
+          },
+        ],
+      },
+    },
+  })!;
+  expect(view.onsetText).toContain('사이에 시작');
+  expect(view.findings[1].points[0]).toContain('상태 보고로');
+  expect(view.workloads).toMatchObject([{ name: 'ns / worker-b', atIncident: true }]);
+  expect([view.gpuModel, view.driver, view.gpuIndex]).toEqual(['NVIDIA A100', '580.1', '3']);
+  expect(view.findings[4].points.join()).not.toContain('드라이버 버전');
+  expect(view.metrics[0].gpus[0]).toBe(`PCI 0000:4e:00.0 · ${gpu}`);
 });

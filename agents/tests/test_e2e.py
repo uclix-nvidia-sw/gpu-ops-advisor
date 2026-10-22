@@ -2012,7 +2012,11 @@ def test_rca_without_published_runbook_collects_and_publishes_final_report(
         "deterministic_fallback" if llm_failed else "llm_composed"
     )
     assert report["writer"]["stage"] == "report_writing"
-    assert report["writer"]["usage"]["request_attempts"] == 1
+    # A 503 gateway reply is retried once and its status is recorded.
+    assert report["writer"]["usage"]["request_attempts"] == (2 if llm_failed else 1)
+    if llm_failed:
+        assert report["writer"]["http_status"] == 503
+        assert report["writer"]["transient_retry_status"] == 503
     assert {"D09", "investigation_plan"} <= {q for q, _ in evidence}
     assert any(path == "/v1/chat/completions" for path, _ in Upstream.requests[start:])
     text = "\n".join(section["text"] for section in result["narrative"])

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { obj, rows, str, strings, num, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-import { intervalLabel, shortGpu } from '../lib/rcaOperatorView';
+import { intervalLabel } from '../lib/rcaOperatorView';
+import { Ids } from './RcaReportParts';
 
 export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
   const history = obj(obj(result.quality).host_incident_history);
@@ -112,7 +113,7 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
                         <details>
                           <summary>
                             {key.split(' · ')[0]} ·{' '}
-                            {shortGpu(str(items[0].device) || str(items[0].gpu_uuid))}
+                            <Ids text={str(items[0].device) || str(items[0].gpu_uuid)} />
                           </summary>
                           {key}
                         </details>
@@ -159,7 +160,7 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
                   <br />
                   {(str(r.device) || str(r.gpu_uuid)) && (
                     <span title={str(r.device) || str(r.gpu_uuid)}>
-                      {shortGpu(str(r.device) || str(r.gpu_uuid))}
+                      <Ids text={str(r.device) || str(r.gpu_uuid)} />
                     </span>
                   )}
                 </td>

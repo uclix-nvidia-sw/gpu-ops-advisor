@@ -31,6 +31,10 @@ export interface Window {
 }
 export interface MetricRow {
   name: string;
+  /** Short verdict word shown first: 멈춤, 끊김, 판단 보류, 변화 없음 … */
+  tag: string;
+  /** One-line plain reading for the table and Q3. */
+  short: string;
   unit: string;
   kind: string;
   gpus: string[];
@@ -75,9 +79,13 @@ export function intervalLabel(ms: number) {
 }
 
 const UUID = /GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i;
-/** GPU-81ec1404-9d04-… → GPU-81ec1404…; the full value stays in titles and raw evidence. */
-export const shortGpu = (text: string) =>
-  text.replace(/(GPU-[0-9a-f]{8})(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/gi, '$1…');
+/** Full PCI address with a 4-digit domain, e.g. 00000000:4E:00.0 → 0000:4e:00.0. */
+export const fullPci = (v: string) =>
+  v
+    .toLowerCase()
+    .replace(/^(nvswitch\s+)?pci:/, '')
+    .replace(/^0{4}(0{4}:)/, '$1')
+    .trim();
 export const normPci = (v: string) =>
   v
     .toLowerCase()
@@ -109,9 +117,66 @@ const win = (v: unknown): Window | null => {
 };
 
 const missingLabels: Record<string, string> = {
-  event_not_found: '조회 구간에서 원본 오류 이벤트(발생 시각)를 찾지 못했습니다.',
-  synthesis_failed: 'LLM 원인 분석이 완료되지 않아 코드로 산출한 자료만으로 작성됐습니다.',
+  event_not_found:
+    '조회 구간에 커널 원본 이벤트도, 정상→오류 상태 전환도 없습니다. 오류는 구간보다 먼저 시작됐을 수 있습니다.',
+  synthesis_failed: 'AI 해석 문장이 없습니다. 표와 판정은 코드로 산출한 수집 자료입니다.',
 };
+const aiReasons: Record<string, string> = {
+  llm_http_error: 'LLM 호출 실패',
+  invalid_author_response: 'LLM 응답이 형식 검사를 통과하지 못함(숫자 직접 기재 등)',
+  llm_output_truncated: 'LLM 응답이 잘림',
+  llm_invalid_output: 'LLM 응답을 읽을 수 없음',
+  llm_token_budget_exhausted: 'LLM 토큰 예산 부족',
+  llm_context_budget_exhausted: 'LLM 입력 예산 부족',
+  model_not_configured: 'LLM 미설정',
+};
+
+/** Merge rows of one query and GPU that exporters split by workload labels (older results). */
+function mergeSeries(metricRows: Row[]) {
+  const merged = new Map<string, Row>();
+  const join = (a: unknown, b: unknown) => {
+    const x = obj(a),
+      y = obj(b);
+    if (typeof x.min !== 'number') return typeof y.min === 'number' ? y : null;
+    if (typeof y.min !== 'number') return x;
+    const later = t(y.last) > t(x.last) ? y : x;
+    return {
+      min: Math.min(num(x.min), num(y.min)),
+      max: Math.max(num(x.max), num(y.max)),
+      samples: num(x.samples) + num(y.samples),
+      first: t(y.first) < t(x.first) ? y.first : x.first,
+      last: later.last,
+      last_value: later.last_value,
+    };
+  };
+  for (const m of metricRows) {
+    const key = `${str(m.query_id) || str(m.name)}|${str(m.gpu_uuid)}`;
+    const seen = merged.get(key);
+    if (!seen) {
+      merged.set(key, { ...m });
+      continue;
+    }
+    const a = obj(seen.incident_windows),
+      b = obj(m.incident_windows);
+    merged.set(key, {
+      ...seen,
+      ...join(seen, m),
+      incident_windows:
+        seen.incident_windows === undefined
+          ? undefined
+          : {
+              before: join(a.before, b.before),
+              at_or_after: join(a.at_or_after || a.after, b.at_or_after || b.after),
+            },
+      max_sample_gap_seconds: Math.max(
+        num(seen.max_sample_gap_seconds),
+        num(m.max_sample_gap_seconds),
+      ),
+      evidence_refs: [...new Set([...strings(seen.evidence_refs), ...strings(m.evidence_refs)])],
+    });
+  }
+  return [...merged.values()];
+}
 
 export function operatorView(result: Row) {
   const quality = obj(result.quality);
@@ -135,19 +200,21 @@ export function operatorView(result: Row) {
   const targetCheck = checks.find((c) => str(c.title).startsWith('알림이 가리키는'));
   const actionChecks = checks.filter((c) => c !== targetCheck);
 
-  // GPU UUID → PCI slot from the node inventory report (unverified mapping, labelled as such).
+  // GPU UUID → PCI slot: exporter labels first, then the node inventory report.
   const inventory = new Map<string, string>();
   rows(result.device_observations).forEach((d) =>
     rows(d.gpu_candidates).forEach((c) => {
       if (str(c.gpu_uuid) && str(c.bus_id)) inventory.set(str(c.gpu_uuid), str(c.bus_id));
     }),
   );
+  const gpuInfo = new Map(rows(view.gpus).map((g) => [str(g.gpu_uuid), g]));
+  gpuInfo.forEach((g, uuid) => str(g.pci_bus_id) && inventory.set(uuid, str(g.pci_bus_id)));
   const gpuLabel = (uuid: string) => {
     const bus = inventory.get(uuid);
-    return `${shortGpu(uuid)}${bus ? ` (PCI ${normPci(bus)})` : ''}`;
+    return bus ? `PCI ${fullPci(bus)} · ${uuid}` : uuid;
   };
   const deviceLabel = (device: string) =>
-    UUID.test(device) && !/pci/i.test(device) ? gpuLabel(device) : shortGpu(device);
+    UUID.test(device) && !/pci/i.test(device) ? gpuLabel(device) : device;
 
   // When: producer event time, report span and whether reports continue to the query end.
   const eventTimes = logs.flatMap((r) => strings(r.event_times)).filter((v) => !isNaN(t(v)));
@@ -169,7 +236,7 @@ export function operatorView(result: Row) {
   const matched = alertPci && logDevices.some((d) => normPci(d) === normPci(alertPci));
   const idPoints: string[] = [];
   idPoints.push(
-    `알림 장치: ${family === 'nvswitch' ? 'NVSwitch ' : ''}PCI ${alertPci || '표기 없음'}${alertUuid ? ` · ${gpuLabel(alertUuid)}` : ''}`,
+    `알림 장치: ${family === 'nvswitch' ? 'NVSwitch ' : ''}PCI ${alertPci || '표기 없음'}${alertUuid ? ` · ${alertUuid}` : ''}`,
   );
   idPoints.push(
     logDevices.length
@@ -188,7 +255,7 @@ export function operatorView(result: Row) {
     const inv = [...inventory].find(([, bus]) => normPci(bus) === normPci(alertPci));
     if (inv)
       idPoints.push(
-        `노드 GPU 목록에서 PCI ${normPci(alertPci)} = ${shortGpu(inv[0])} (인벤토리 보고 기준, 미검증 매핑)`,
+        `노드 GPU 목록에서 PCI ${fullPci(inv[1])} = ${inv[0]} (인벤토리 보고 기준, 미검증 매핑)`,
       );
   }
   rows(view.switch_pci).forEach((r) => {
@@ -206,20 +273,30 @@ export function operatorView(result: Row) {
       : !alertPci
         ? `알림 제목에 장치 주소가 없습니다. 오류 로그의 ${logDevices.map(deviceLabel).join(', ')}를 알림 원문과 대조하세요.`
         : matched
-          ? `알림과 오류 로그가 같은 장치(PCI ${normPci(alertPci)})를 가리킵니다. 이 장치를 조치 대상으로 봅니다.`
+          ? `알림과 오류 로그가 같은 장치(PCI ${alertPci})를 가리킵니다. 이 장치를 조치 대상으로 봅니다.`
           : '알림과 오류 로그의 장치가 다릅니다. 조치 전에 장치 주소를 다시 대조하세요.',
     label: !logDevices.length || !alertPci ? '확인 필요' : matched ? '일치' : '불일치',
     points: idPoints,
     refs: refsOf(logs),
   };
 
-  // 2. Timing and persistence.
+  // 2. Timing and persistence. Healthy→Unhealthy reports bound the onset without kmsg.
+  const onset = obj(view.onset);
+  const healthyAt = str(onset.last_healthy_at);
+  const unhealthyAt = str(onset.first_unhealthy_at);
+  const onsetText =
+    healthyAt && unhealthyAt
+      ? `${fmt(healthyAt)}(마지막 정상 보고)~${fmt(unhealthyAt)}(첫 오류 보고) 사이에 시작`
+      : '';
   const timePoints: string[] = [];
   timePoints.push(
     eventTimes.length
-      ? `오류 발생(원본 이벤트 시각): ${fmt(eventTimes[0])}`
-      : '원본 이벤트 시각이 조회 구간에 없습니다 — 구간 이전에 이미 발생했을 수 있습니다.',
+      ? `오류 발생(커널 원본 이벤트 시각): ${fmt(eventTimes[0])}`
+      : onsetText
+        ? `시작 구간: 커널 원본 이벤트는 수집되지 않았지만 상태 보고로 ${onsetText}했습니다.`
+        : '시작 시각: 조회 구간에 커널 원본 이벤트도, 정상→오류 전환도 없습니다 — 구간보다 먼저 시작됐을 수 있습니다.',
   );
+  if (eventTimes.length && onsetText) timePoints.push(`상태 보고 기준: ${onsetText}`);
   if (firstReport) timePoints.push(`첫 보고: ${fmt(firstReport)}`);
   if (lastReport)
     timePoints.push(
@@ -250,7 +327,7 @@ export function operatorView(result: Row) {
 
   // 3. Telemetry before/after the incident boundary, grouped when identical across GPUs.
   const groups = new Map<string, Row[]>();
-  metricRows.forEach((m) => {
+  mergeSeries(metricRows).forEach((m) => {
     const key = JSON.stringify(
       [
         'name',
@@ -262,6 +339,7 @@ export function operatorView(result: Row) {
         'first',
         'last',
         'samples',
+        'query_id',
       ].map((f) => m[f]),
     );
     groups.set(key, [...(groups.get(key) || []), m]);
@@ -276,47 +354,71 @@ export function operatorView(result: Row) {
     const u = unitLabel(m.unit);
     const enumKind = m.kind === 'enum' || ['enum', 'state', 'bitmask'].includes(str(m.unit));
     const gap = num(m.max_sample_gap_seconds) * 1000;
-    let tone: Tone = 'unknown';
-    let reading: string;
+    const q = str(m.query_id);
     const range = (w: Window) =>
       w.min === w.max ? `${fmtNum(w.min)} ${u}` : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
-    if (!before && !after && !whole) reading = '수치 표본이 없습니다.';
-    else if (enumKind) {
+    let tone: Tone = 'unknown';
+    let tag: string;
+    let short: string;
+    if (!before && !after && !whole) {
+      [tag, short] = ['자료 없음', '수치 표본이 없습니다'];
+    } else if (enumKind) {
       const all = [before, after, whole].filter(Boolean) as Window[];
       const changed = all.some((w) => w.min !== w.max) || new Set(all.map((w) => w.min)).size > 1;
-      reading = changed
-        ? '여러 상태 코드가 관측됐습니다 — 원문에서 전환 시각을 확인하세요.'
-        : `상태 코드 ${fmtNum(all[0].min)} 유지 (코드 의미는 원문 기준, 수치 크기로 비교하지 않음).`;
+      [tag, short] = changed
+        ? ['변화', '코드가 바뀌었습니다 — 원문에서 전환 시각을 확인하세요']
+        : ['변화 없음', `상태 코드 ${fmtNum(all[0].min)} 유지 (코드 의미는 원문 기준)`];
       tone = changed ? 'warn' : 'unknown';
     } else if (whole) {
-      reading = `조회 구간 ${range(whole)} · 사건 전후 구분 정보가 없는 결과입니다.${!isNaN(boundary) && t(whole.end) < boundary ? ' 사건 발생 이전의 측정 기록입니다.' : ''}`;
+      [tag, short] = [
+        '구분 불가',
+        `조회 구간 ${range(whole)}${!isNaN(boundary) && t(whole.end) < boundary ? ' · 사건 발생 이전의 측정 기록' : ''}`,
+      ];
     } else if (after && before) {
       if (after.max === 0 && before.max > 0) {
-        reading = `사건 이후 0 ${u}로 떨어졌습니다 (사건 전 최대 ${fmtNum(before.max)} ${u}).`;
+        tag = '멈춤';
+        short = `${q === 'D02' ? '작업이 멈췄습니다' : ['D33', 'D34'].includes(q) ? 'NVLink 트래픽이 멈췄습니다' : '0으로 떨어졌습니다'} (사건 전 최대 ${fmtNum(before.max)} ${u})`;
         tone = 'warn';
       } else if (m.kind === 'counter' && after.max > before.max) {
         // Uncorrectable ECC growth is the decisive memory signal; other counters stay a caution.
-        const dbe = ['D40', 'D42'].includes(str(m.query_id));
-        reading = `사건 이후 누적값이 ${fmtNum(after.max - before.max)} 증가했습니다.${dbe ? ' 정정 불가 ECC가 늘었으므로 해당 GPU를 메모리 오류 대상으로 봅니다.' : ''}`;
+        const dbe = ['D40', 'D42'].includes(q);
+        tag = '증가';
+        short = `사건 뒤 +${fmtNum(after.max - before.max)}${dbe ? ' · 정정 불가 ECC 증가 → 메모리 오류 대상' : ''}`;
         tone = dbe ? 'alert' : 'warn';
+      } else if (m.kind !== 'counter' && after.samples === 1) {
+        [tag, short] = [
+          '판단 보류',
+          `사건 뒤 1회(${range(after)})만 수집 — 장치가 응답한다는 증거가 아닙니다`,
+        ];
+      } else if (m.kind === 'counter') {
+        [tag, short] = ['변화 없음', `증가 없음 (${range(after)})`];
+        tone = 'ok';
+      } else if (before.max === 0 && after.max === 0) {
+        [tag, short] = ['변화 없음', `사건 전후 모두 0 ${u}`];
+        tone = 'ok';
       } else {
-        reading = `사건 전 ${range(before)} → 사건 이후 ${range(after)}.`;
+        [tag, short] = ['큰 변화 없음', `${range(before)} → ${range(after)}`];
         tone = 'ok';
       }
     } else if (before) {
       const quiet = periodEnd - t(before.end);
       const stopped = gap > 0 && quiet > gap * 1.5;
-      reading = `${m.kind === 'counter' && before.min === before.max ? `사건 전 누적값 변화 없음(${range(before)})` : before.max === 0 ? `사건 전 내내 0 ${u}` : `사건 전 ${range(before)}`}. 사건 이후 표본 없음 — ${
-        stopped
-          ? `수집 주기(최대 ${intervalLabel(gap)})를 넘겨 끊겼습니다. 장치 응답 여부를 직접 확인하세요.`
-          : `수집 주기(최대 ${intervalLabel(gap || 0)}) 안이라 끊김으로 단정할 수 없습니다.`
-      }`;
+      const prior = before.max === 0 ? `사건 전에도 0 ${u}` : `사건 전 ${range(before)}`;
+      [tag, short] = stopped
+        ? ['끊김', `사건 뒤 수집이 끊겼습니다 (${prior}) — 장치 응답을 직접 확인하세요`]
+        : [
+            '판단 보류',
+            `사건 뒤 아직 수집 전입니다 (${prior}, 수집 간격 최대 ${intervalLabel(gap || 0)})`,
+          ];
       tone = stopped ? 'warn' : 'unknown';
     } else {
-      reading = `사건 이후 ${range(after!)} (사건 전 표본 없음).`;
+      [tag, short] = ['사건 후만', `사건 뒤 ${range(after!)} (사건 전 표본 없음)`];
     }
+    const reading = `${short}.`;
     return {
       name: str(m.name),
+      tag,
+      short,
       unit: u,
       kind: str(m.kind),
       gpus: group.map((r) => gpuLabel(str(r.gpu_uuid))),
@@ -332,6 +434,8 @@ export function operatorView(result: Row) {
   });
   const changed = metrics.filter((m) => m.tone === 'warn' || m.tone === 'alert');
   const noAfter = metrics.filter((m) => !m.after && !m.whole);
+  const okNames = [...new Set(metrics.filter((m) => m.tone === 'ok').map((m) => m.name))];
+  const holdNames = [...new Set(metrics.filter((m) => m.tone === 'unknown').map((m) => m.name))];
   const telemetry: Finding = {
     key: 'telemetry',
     question: '사건 전후로 장치 지표는 어떻게 달라졌나요?',
@@ -347,16 +451,33 @@ export function operatorView(result: Row) {
     verdict: !metrics.length
       ? '관련 지표를 수집하지 못했습니다.'
       : changed.length
-        ? `${metrics.length}개 지표 중 ${changed.length}개에서 사건 전후 변화가 보입니다: ${changed.map((m) => m.name).join(', ')}.`
+        ? [
+            `사건 뒤 변화 — ${changed.map((m) => `${m.name}: ${m.short}`).join('; ')}.`,
+            okNames.length ? `이상 신호 없음 — ${okNames.join(', ')}.` : '',
+            holdNames.length ? `판단 보류 — ${holdNames.join(', ')}.` : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
         : metrics.every((m) => m.whole)
           ? '사건 전후 구분 없이 조회 구간 요약만 있습니다. 사건 이후 장치 상태는 판단할 수 없습니다.'
           : noAfter.length === metrics.length
             ? '모든 지표가 사건 이전 표본뿐입니다. 사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
             : '사건 전후 지표에서 뚜렷한 변화는 보이지 않습니다. 장치가 괜찮다는 판정은 아닙니다.',
-    points: metrics.map(
-      (m) =>
-        `${m.name} · ${m.gpus.length > 1 ? `GPU ${m.gpus.length}개 동일` : m.gpus[0]}: ${m.reading}`,
-    ),
+    // One line per metric and verdict; per-GPU ranges stay in the section 3 table.
+    points: [
+      ...metrics
+        .reduce(
+          (map, m) => map.set(`${m.tag}|${m.name}`, [...(map.get(`${m.tag}|${m.name}`) || []), m]),
+          new Map<string, MetricRow[]>(),
+        )
+        .values(),
+    ].map((group) => {
+      const gpus = group.reduce((n, m) => n + m.gpus.length, 0);
+      const m = group[0];
+      return group.length === 1
+        ? `${m.tag}: ${m.name}${gpus > 1 ? ` (GPU ${gpus}개 동일)` : ''} — ${m.short}`
+        : `${m.tag}: ${m.name} (GPU ${gpus}개) — ${m.short.replace(/\s*\([^()]*\)$/, '')}`;
+    }),
     refs: refsOf(metricRows),
   };
 
@@ -432,8 +553,17 @@ export function operatorView(result: Row) {
   };
 
   // 5. Gaps an operator must fill before acting.
-  const gapPoints = strings(result.missing_inputs).map(
-    (c) => missingLabels[c] || `미확보 자료: ${c}`,
+  const synthesis = obj(obj(quality.analysis).synthesis);
+  const writer = obj(obj(quality.report).writer);
+  const aiCode = str(synthesis.error_code) || str(writer.reason);
+  const httpStatus = synthesis.http_status ?? writer.http_status;
+  const aiReason = aiCode
+    ? `${aiReasons[aiCode] || aiCode}${aiCode === 'llm_http_error' ? ` (HTTP ${typeof httpStatus === 'number' ? httpStatus : '상태 미기록'})` : ''}`
+    : '';
+  const gapPoints = strings(result.missing_inputs).map((c) =>
+    c === 'synthesis_failed' && aiReason
+      ? `${missingLabels[c]} 사유: ${aiReason}.`
+      : missingLabels[c] || `미확보 자료: ${c}`,
   );
   rows(quality.collection_checks)
     .filter((c) => str(c.status) && c.status !== 'collected')
@@ -449,8 +579,9 @@ export function operatorView(result: Row) {
   gapPoints.push(
     `근본 원인은 확정되지 않았습니다${str(g0.cause_note) ? ` — 원인 후보: ${str(g0.cause_note)}` : '.'}`,
   );
+  const alertInfo = obj(gpuInfo.get(alertUuid) || [...gpuInfo.values()][0]);
   gapPoints.push(
-    `이 보고서에 없는 자료: OS·드라이버 버전, nvidia-bug-report.sh, ${family === 'nvswitch' ? 'Fabric Manager 로그, ' : ''}DCGM 진단(dcgmi diag) 결과.`,
+    `이 보고서에 없는 자료: ${str(alertInfo.driver) ? '' : 'OS·드라이버 버전, '}nvidia-bug-report.sh, ${family === 'nvswitch' ? 'Fabric Manager 로그, ' : ''}DCGM 진단(dcgmi diag) 결과.`,
   );
   const gaps: Finding = {
     key: 'gaps',
@@ -465,7 +596,12 @@ export function operatorView(result: Row) {
   };
 
   const timeline: TimelineItem[] = [
-    ...eventTimes.map((at) => ({ at, label: '오류 발생 (원본 이벤트)', tone: 'alert' as Tone })),
+    ...(healthyAt ? [{ at: healthyAt, label: '마지막 정상 상태 보고', tone: 'ok' as Tone }] : []),
+    ...eventTimes.map((at) => ({
+      at,
+      label: '오류 발생 (커널 원본 이벤트)',
+      tone: 'alert' as Tone,
+    })),
     ...(firstReport ? [{ at: firstReport, label: '첫 오류 보고', tone: 'warn' as Tone }] : []),
     ...(lastReport && lastReport !== firstReport
       ? [{ at: lastReport, label: `마지막 오류 보고 (총 ${reports}건)`, tone: 'warn' as Tone }]
@@ -481,8 +617,27 @@ export function operatorView(result: Row) {
     .filter((i) => !isNaN(t(i.at)))
     .sort((a, b) => t(a.at) - t(b.at));
 
+  const workloads = rows(view.workloads)
+    .filter((w) => family === 'nvswitch' || !alertUuid || str(w.gpu_uuid) === alertUuid)
+    .map((w) => ({
+      gpu: str(w.gpu_uuid),
+      name: [str(w.namespace), str(w.pod)].filter(Boolean).join(' / '),
+      container: str(w.container),
+      first: str(w.first),
+      last: str(w.last),
+      atIncident: !isNaN(boundary) && t(w.last) >= boundary - 120000,
+    }));
+
   return {
     family,
+    gpuModel: str(alertInfo.model),
+    driver: str(alertInfo.driver),
+    gpuIndex: str(alertInfo.gpu_index),
+    workloads,
+    onsetText,
+    aiReason,
+    sameDeviceCount: same.length,
+    historyDays: days,
     node: str(target.node) || str(target.k8s_node_name) || str(target.machine_id),
     cluster: str(target.cluster_id),
     codes: codes.map((c) => c.toUpperCase()),

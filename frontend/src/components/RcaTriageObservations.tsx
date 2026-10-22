@@ -1,7 +1,7 @@
 import { obj, rows, str, num, strings, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-import { intervalLabel, operatorView, shortGpu, type Window } from '../lib/rcaOperatorView';
-import { ToneBadge } from './RcaReportParts';
+import { intervalLabel, operatorView, type Window } from '../lib/rcaOperatorView';
+import { Ids, ToneBadge } from './RcaReportParts';
 
 const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
 
@@ -40,6 +40,7 @@ export function RcaTriageObservations({
   const start = Date.parse(v.timeline[0]?.at || '');
   const end = Date.parse(v.timeline[v.timeline.length - 1]?.at || '');
   const origin = Date.parse(v.eventTime || v.firstReport);
+  const multiGpu = new Set(v.metrics.flatMap((m) => m.gpus)).size > 1;
   return (
     <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
       <h4>3. 관련 로그·메트릭 · {v.node}</h4>
@@ -53,16 +54,15 @@ export function RcaTriageObservations({
             <th>언제</th>
             <td>
               {v.eventTime ? (
-                <>
-                  <mark>오류 발생 {formatDate(v.eventTime)}</mark>
-                  <br />
-                </>
+                <mark>오류 발생 {formatDate(v.eventTime)}</mark>
+              ) : v.onsetText ? (
+                <mark>{v.onsetText}</mark>
               ) : (
                 <>
-                  <mark>원본 이벤트 시각 미확인</mark> (조회 구간 이전 발생 가능)
-                  <br />
+                  <mark>시작 시각 미확인</mark> (조회 구간보다 먼저 시작됐을 수 있음)
                 </>
               )}
+              <br />
               보고 {formatDate(v.firstReport)} ~ {formatDate(v.lastReport)}
             </td>
           </tr>
@@ -76,17 +76,49 @@ export function RcaTriageObservations({
             <th>무엇이</th>
             <td>
               <strong>
-                {v.family === 'nvswitch' ? 'NVSwitch ' : 'GPU '}PCI {v.alertPci || '—'}
+                {v.family === 'nvswitch'
+                  ? 'NVSwitch '
+                  : `GPU ${v.gpuIndex ? `${v.gpuIndex} ` : ''}`}
+                PCI <code className="rca-id">{v.alertPci || '—'}</code>
               </strong>
-              {v.alertGpu && <span title={v.alertUuid}> · {v.alertGpu}</span>}
+              {v.alertUuid && (
+                <>
+                  {' '}
+                  · <code className="rca-id">{v.alertUuid}</code>
+                </>
+              )}
+              {(v.gpuModel || v.driver) && (
+                <>
+                  <br />
+                  <small>
+                    {[v.gpuModel, v.driver && `드라이버 ${v.driver}`].filter(Boolean).join(' · ')}
+                  </small>
+                </>
+              )}
             </td>
           </tr>
           <tr>
             <th>무엇을</th>
             <td>
-              <mark>{v.codes.join(', ')}</mark> {shortGpu(v.message)}
+              <mark>{v.codes.join(', ')}</mark> <Ids text={v.message} />
             </td>
           </tr>
+          {v.workloads.length > 0 && (
+            <tr>
+              <th>누구에게</th>
+              <td>
+                {v.workloads
+                  .filter((w) => w.atIncident)
+                  .map((w) => (
+                    <div key={w.name}>
+                      <strong>{w.name}</strong> 작업이 이{' '}
+                      {v.family === 'nvswitch' ? '노드 GPU' : 'GPU'}를 사용 중
+                    </div>
+                  ))}
+                <small>DCGM 지표에 기록된 파드 라벨 기준(관측) · 할당 정보가 아닙니다</small>
+              </td>
+            </tr>
+          )}
           <tr>
             <th>어떻게</th>
             <td>
@@ -180,7 +212,9 @@ export function RcaTriageObservations({
                 <td>{num(r.reports)}건</td>
                 <td>
                   <details>
-                    <summary>{shortGpu(str(r.message)).slice(0, 160)}</summary>
+                    <summary>
+                      <Ids text={str(r.message)} />
+                    </summary>
                     <pre>{str(r.message)}</pre>
                   </details>
                   {links(r.evidence_refs)}
@@ -202,32 +236,35 @@ export function RcaTriageObservations({
             </caption>
             <thead>
               <tr>
-                <th>지표·단위</th>
-                <th>GPU</th>
+                <th>지표</th>
                 <th>사건 전</th>
-                <th>사건 이후</th>
-                <th>판독</th>
+                <th>사건 후</th>
+                <th>한 줄 해석</th>
               </tr>
             </thead>
             <tbody>
               {v.metrics.map((m, i) => (
                 <tr key={i}>
                   <td>
-                    {m.name}
+                    <strong>{m.name}</strong>
                     <br />
                     <small>{m.unit}</small>
-                  </td>
-                  <td>
-                    {m.gpus.length === 1 ? (
-                      m.gpus[0]
-                    ) : (
-                      <details>
-                        <summary>GPU {m.gpus.length}개 · 동일 관측값</summary>
-                        {m.gpus.map((g) => (
-                          <p key={g}>{g}</p>
-                        ))}
-                      </details>
-                    )}
+                    {(view.metric_scope === 'node_gpu_context' || multiGpu) &&
+                      (m.gpus.length === 1 ? (
+                        <small>
+                          <br />
+                          <Ids text={m.gpus[0]} />
+                        </small>
+                      ) : (
+                        <details>
+                          <summary>GPU {m.gpus.length}개 · 동일 관측값</summary>
+                          {m.gpus.map((g) => (
+                            <p key={g}>
+                              <Ids text={g} />
+                            </p>
+                          ))}
+                        </details>
+                      ))}
                   </td>
                   {m.whole ? (
                     <td colSpan={2}>조회 구간 전체: {windowText(m.whole, m.unit)}</td>
@@ -238,15 +275,25 @@ export function RcaTriageObservations({
                     </>
                   )}
                   <td>
-                    <ToneBadge tone={m.tone} />
-                    <p>{m.reading}</p>
-                    {links(m.refs)}
+                    <ToneBadge tone={m.tone} label={m.tag} /> {m.short}
+                    <div>{links(m.refs)}</div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+      {v.workloads.length > 0 && (
+        <p className="rca-muted">
+          이 {v.family === 'nvswitch' ? '노드의 GPU' : 'GPU'}를 쓴 작업(DCGM 지표 라벨 기준):{' '}
+          {v.workloads.map((w, i) => (
+            <span key={w.name + w.first}>
+              {i > 0 && ' → '}
+              {formatDate(w.first).slice(-12)} <strong>{w.name}</strong>
+            </span>
+          ))}
+        </p>
       )}
     </section>
   );
