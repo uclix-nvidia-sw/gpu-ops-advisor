@@ -691,7 +691,7 @@ def partial_repair(reply, payload, result):
                     {
                         "fact_id": fact["fact_id"],
                         "kind": fact["kind"],
-                        **summary_context(fact),
+                        **writing_context(fact),
                         "previous_summary": item.get("summary"),
                         "validation_error": str(exc),
                     }
@@ -701,6 +701,58 @@ def partial_repair(reply, payload, result):
             return None
         items.extend(invalid)
     return (items, topics, reply) if items or topics else None
+
+
+def writing_context(fact):
+    """Keep evidence and decision bounds without supplying finished advice prose."""
+    context = summary_context(fact)
+    context["decision"] = {
+        key: value for key, value in context["decision"].items() if key != "option"
+    }
+    # Account for the evidence suffix inside the unchanged 360/220-character guards.
+    evidence = context["summary_start"]
+    context["prose_max_chars"] = min(
+        360 - len(evidence) - 1,
+        220 - len(re.sub(r"\{\{[a-z_]+\}\}", "", evidence)) - 1,
+    )
+    context["writing_checks"] = {
+        "relative_activity": [
+            "일부 작업의 시작 시각 조정·시범 실행 검토",
+            "마감·예약·가용 GPU·메모리 요구 확인 후/뒤에만 검토",
+            "비교 구간보다 낮았던 GPU 활동률 관측",
+        ],
+        "repeated_activity": [
+            "대기 작업 실행을 위한 요청·실제 할당·스케줄러 기록 대조",
+            "각 관측 구간의 노드 배정 조건 점검만 허용",
+        ],
+        "capacity_review": [
+            "GPU 부족 여부·실제 할당·보장량·가용 자원·운영정책 확인 뒤 추가 할당 검토"
+        ],
+        "schedule_candidate": [
+            "예약·대기·가용 GPU 확인 후/뒤 일부 작업 시범 실행 검토"
+        ],
+        "queue_review": ["queue_context 단계에 맞는 Pod 상태·스케줄러 이벤트 점검"],
+        "resident_memory": [
+            "새 작업 배치 판단에 필요한 메모리 점유 주체·상주 목적 확인; 서빙·캐시는 가능한 예시"
+        ],
+        "batch_progress": [
+            "성공 완료 Job 일부의 기록; 대기 단계에 맞는 기록·작업 유형 확인"
+        ],
+    }[fact["kind"]]
+    if fact["kind"] == "relative_activity":
+        context["required_prose_terms"] = [
+            "마감",
+            "예약",
+            "가용",
+            "메모리",
+            "일부",
+            "시범",
+            "검토",
+            "조정",
+            "확인",
+            "뒤",
+        ]
+    return context
 
 
 async def interpret_report(result, llm):
@@ -738,18 +790,14 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "각 previous_summary의 오류만 고치세요. 운영 선택·이유와 대상·시간·필수 참조는 보존하되 오류로 지적된 표현은 바꾸세요. 현상·확인할 대상·관측 근거 순서로 쓰세요. 관측만 남기지 마세요. 실제 값으로 풀어 쓰지 마세요. 확인 대상과 확인·대조·검토·점검 동사를 명시하세요. 살펴보라는 표현만으로는 점검 제안을 충족하지 못하므로 알맞은 점검 동사로 바꾸세요. 이전 오류 문장을 그대로 반환하지 마세요. 중복 토큰만 제거하되 운영 선택과 점검 제안은 삭제하지 마세요. writing_focus와 queue_context에 맞게 무엇을 왜 확인할지 쓰세요. section_repair는 지정한 주제만 fact_ids·observation·meaning·next_check로 보완하고 수치·대상·기간은 참조 토큰으로 남기세요. response_shape에 없는 항목·주제는 반환하지 마세요.",
+                "instruction": "운영 선택·이유와 대상·시간·필수 참조는 보존하고 정상 항목은 바꾸지 마세요. decision의 판단 범위·필요한 확인 조건과 summary_start를 유지하세요. 살펴보라는 표현만으로는 점검이 되지 않습니다. 이전 오류 문장을 그대로 반환하지 마세요. 실제 값으로 풀지 마세요. section_repair는 지정 주제와 참조를 보존하세요. response_shape만 JSON으로 반환하세요.",
                 "response_shape": {
                     **(
                         {
                             "advice": [
                                 {
                                     "fact_id": item["fact_id"],
-                                    "summary": (
-                                        item["decision"]["option"]
-                                        + " "
-                                        + item["summary_start"]
-                                    ),
+                                    "summary": "",
                                 }
                                 for item in items
                             ]
@@ -811,11 +859,7 @@ async def interpret_report(result, llm):
                         "advice": [
                             {
                                 "fact_id": fact["fact_id"],
-                                "summary": (
-                                    summary_context(fact)["decision"]["option"]
-                                    + " "
-                                    + summary_context(fact)["summary_start"]
-                                ),
+                                "summary": "",
                             }
                             for fact in t["findings"]
                         ]
@@ -871,7 +915,7 @@ async def interpret_report(result, llm):
                                     else ("fact_id", "target", "values", "text")
                                 )
                             },
-                            **(summary_context(f) if t.get("advice_mode") else {}),
+                            **(writing_context(f) if t.get("advice_mode") else {}),
                         }
                         for f in t["findings"]
                     ],

@@ -222,9 +222,15 @@ async def test_workload_context_reaches_actual_llm_initial_and_repair_inputs(
             return {"sections": []}
         if "summary_repair" in data:
             example = data["response_shape"]["advice"][0]["summary"]
-            assert example.startswith(data["summary_repair"][0]["decision"]["option"])
-            assert "{{target}}" in example and "{{activity}}" in example
-            return data["response_shape"]
+            assert "option" not in data["summary_repair"][0]["decision"]
+            assert example == ""
+            assert "{{target}}" in data["summary_repair"][0]["summary_start"]
+            response = deepcopy(data["response_shape"])
+            context = summary_context(fact)
+            response["advice"][0]["summary"] = (
+                context["decision"]["option"] + " " + context["summary_start"]
+            )
+            return response
         response = deepcopy(data["response_shape"])
         response["sections"][0]["advice"][0]["summary"] += " {{activity}}"
         return response
