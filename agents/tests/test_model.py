@@ -104,3 +104,62 @@ async def test_private_dns_requires_allowlist_and_keeps_original_host(monkeypatc
     ]:
         with pytest.raises(ValueError, match="endpoint"):
             await model_destination(raw)
+
+
+@pytest.mark.parametrize("kind", ["report", "rca"])
+@pytest.mark.parametrize("medium_effort", [False, True])
+async def test_ops_medium_effort_override_is_explicit_and_does_not_change_rca(
+    kind, medium_effort
+):
+    settings = Settings(
+        kind,
+        llm_base_url="http://test/v1",
+        llm_model="auto-router",
+        llm_api_key="fixture",
+        ops_llm_medium_effort=medium_effort,
+    )
+
+    def handler(request):
+        payload = json.loads(request.content)
+        if kind == "report" and medium_effort:
+            assert payload["chat_template_kwargs"] == {
+                "enable_thinking": True,
+                "medium_effort": True,
+            }
+        else:
+            assert "chat_template_kwargs" not in payload
+        assert payload["model"] == "auto-router"
+        assert payload["max_tokens"] == settings.llm_synthesis_max_tokens
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": '{"ok":true}'}}
+                ],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 4,
+                    "total_tokens": 14,
+                },
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 65536, lambda _: None, http)
+        assert await llm.complete("fixture", {}) == {"ok": True}
+        assert llm.usage["charged_tokens"] == 14
+
+
+@pytest.mark.parametrize(
+    "raw,expected", [("", False), ("true", True), ("false", False)]
+)
+def test_ops_medium_effort_environment(monkeypatch, raw, expected):
+    monkeypatch.setenv("OPS_LLM_MEDIUM_EFFORT", raw)
+    assert Settings("report").ops_llm_medium_effort is expected
+
+
+@pytest.mark.parametrize("raw", ["0", "1", '"false"', "[]", "{}", "False", "null"])
+def test_ops_medium_effort_rejects_ambiguous_values(monkeypatch, raw):
+    monkeypatch.setenv("OPS_LLM_MEDIUM_EFFORT", raw)
+    with pytest.raises(ValueError):
+        Settings("report")
