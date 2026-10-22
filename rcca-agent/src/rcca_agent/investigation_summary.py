@@ -46,7 +46,7 @@ def investigation_summary(data, evidence, health, events):
     query_ids = list(dict.fromkeys(e["query_id"] for e in collected))
     add(
         "investigation",
-        "알림이 어떤 장치의 어떤 오류를 가리키는지 확인하기 위해, "
+        "Fleet이 보고한 노드 장애의 경과와 대응 정보를 정리하기 위해, "
         "알림 내용과 같은 서버·조사 시간대에 수집된 기록을 비교했습니다. "
         "이번에 조회한 자료는 "
         + ", ".join(QUERY_NAMES.get(q, "추가 관측 자료") for q in query_ids)

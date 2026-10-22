@@ -49,6 +49,42 @@ async def read_host_history(conn, data, cutoff):
     return result
 
 
+async def read_prior_rca(conn, data, history):
+    ids = [
+        r["body"]["id"]
+        for r in history["rows"]
+        if r["body"]["id"] != data["incident_id"]
+    ]
+    if not ids:
+        return
+    records = await (
+        await conn.execute(
+            "SELECT DISTINCT ON (j.incident_id) j.incident_id,j.id AS job_id,c.id AS result_id,c.content_hash,c.body->>'result_status' AS result_status,c.body->>'narrative_status' AS narrative_status,c.body->'cause_candidates' AS cause_candidates "
+            "FROM jobs j JOIN result_candidates c ON c.id=j.published_result_id JOIN job_attempts a ON a.job_id=j.id AND a.attempt_no=j.attempt_no "
+            "WHERE j.kind='rca' AND j.status='succeeded' AND dsx_scope_contains(%s,j.scope) AND j.incident_id=ANY(%s::uuid[]) AND a.ended_at<=%s "
+            "ORDER BY j.incident_id,a.ended_at DESC,j.id LIMIT 500",
+            (Jsonb(data["scope"]), ids, history["period"]["end"]),
+        )
+    ).fetchall()
+    by_id = {
+        str(r["incident_id"]): dict(
+            r,
+            job_id=str(r["job_id"]),
+            result_id=str(r["result_id"]),
+            incident_id=str(r["incident_id"]),
+        )
+        for r in records
+    }
+    for row in history["rows"]:
+        prior = by_id.get(str(row["body"]["id"]))
+        if prior:
+            prior["cause_candidates"] = [
+                {"claim": c.get("claim", ""), "causal_status": c.get("causal_status")}
+                for c in (prior["cause_candidates"] or [])[:5]
+            ]
+            row["prior_rca"] = prior
+
+
 class RcaStore(Store):
     async def read_context(self, claim):
         context = await super().read_context(claim)
@@ -64,4 +100,5 @@ class RcaStore(Store):
                 context["host_incidents"] = await read_host_history(
                     conn, claim["input"], context["data_cutoff_at"]
                 )
+                await read_prior_rca(conn, claim["input"], context["host_incidents"])
         return context

@@ -189,10 +189,6 @@
       "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
       "next_checks": [
         {
-          "title": "알림이 가리키는 NVSwitch와 영향 범위를 확인하세요.",
-          "text": "NVSwitch는 GPU 사이의 통신을 연결하는 장치입니다. 알림과 오류 로그의 스위치 주소가 일치하는지 먼저 확인합니다. GPU 목록이나 GPU 사용률에 값이 있어도 그 스위치의 정상 동작이나 영향받은 GPU를 확인한 것은 아닙니다. 영향 범위를 확인해야 할 때는 같은 시각의 Fabric Manager 로그에서 연결 포트와 GPU·가상 머신의 연결 관계를 확인합니다."
-        },
-        {
           "title": "진단 자료 보존",
           "text": "Fabric Manager 로그의 같은 시각 포트 정보와 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
         },

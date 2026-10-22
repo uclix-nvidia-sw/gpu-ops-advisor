@@ -105,3 +105,16 @@ or limits the proposed next check for this specific incident. When a comparison
 cannot be made, name the particular missing linkage without inventing a conclusion.
 Never request another query round for this completed observation plan.
 """
+
+TRIAGE_CONTEXT += """
+In findings, insert incident_brief.value_token verbatim when a measurement is useful.
+The application expands that token to its exact device, metric, unit, measured period
+and values. Cite all of that row's evidence_refs. Do not copy or translate the numeric
+phrase yourself. Explain the operational meaning immediately after the token.
+Write three to five focused findings when supported: chronology, device-specific
+measurements, comparison with prior incidents and the resulting debugging priority.
+Distinguish producer_event_time from alert_time and repeated status receptions.
+For pre-event-only samples, state their last measured period and explain that they
+characterize the earlier interval; do not present them as the event-time state.
+Keep missing-source diagnostics in limitations, not a list of unknowns in findings.
+"""

@@ -280,7 +280,7 @@ def report_sources(material):
     # would make a valid, bounded interpretation appear more certain.
     for kind in ("unknowns", "conflicts", "limitations"):
         for row in interpretation.get(kind, []):
-            add("cause", row["statement"], row.get("evidence_refs", []), fixed=True)
+            add("limits", row["statement"], row.get("evidence_refs", []), fixed=True)
     # Preserve coded limitations in addition to incident-specific qualifications.
     for text in material.get("limitations", []):
         if text in FIXED_LIMITS:
@@ -314,9 +314,7 @@ def report_sources(material):
         }:
             add(
                 "action",
-                "먼저 알림에 적힌 장치 주소와 서버의 장치 목록을 확인하세요. "
-                "대상을 연결하기 전에는 아래 일반 오류 대응 안내를 특정 장치의 "
-                "재시작·교체 지시로 적용하지 마세요.",
+                "실제 조치 직전에 대상 노드와 장치 PCI 주소를 대조하세요.",
                 alert_match.get("evidence_refs", []),
                 fixed=True,
             )

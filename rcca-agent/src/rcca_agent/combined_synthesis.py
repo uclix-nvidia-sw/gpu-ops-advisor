@@ -13,6 +13,7 @@ from .evidence_interpretation import (
     validate_interpretation,
     ResponseValidationError,
 )
+from .analysis_values import resolve_values
 from .prompts import SYNTHESIS_CONTEXT, SYNTHESIS_RULES, TRIAGE_CONTEXT
 from .synthesis import (
     synthesis_view,
@@ -205,26 +206,38 @@ def validate_author(response, view, criteria, details=None, dropped=None):
         retained = []
         for index, finding in enumerate(interpretation["findings"]):
             try:
-                # Apply the existing numeric/language contract to findings as well.
-                # Values stay in code-owned tables; prose explains their significance.
+                prose, expanded = resolve_values(
+                    finding["statement"], finding["evidence_refs"], view
+                )
                 validate_synthesis(
-                    {"hypotheses": [], "limitations": [finding["statement"]]},
+                    {"hypotheses": [], "limitations": [prose]},
                     finding["evidence_refs"],
                     view["device_observations"] + view["error_events"],
                     identifier_tokens(view),
                     view["query_quality"],
                 )
-                retained.append(finding)
-            except SynthesisValidationError as exc:
+                retained.append({**finding, "statement": expanded})
+            except ValueError as exc:
                 dropped.append(
                     {
                         "code": "invalid_finding_prose",
                         "path": f"$.interpretation.findings[{index}]",
-                        "rule": exc.diagnostic.get("rule", "invalid_prose"),
+                        "rule": getattr(exc, "diagnostic", {}).get(
+                            "rule", "invalid_value_reference"
+                        ),
                         "action": "dropped",
                     }
                 )
         interpretation["findings"] = retained
+        if not retained and view.get("incident_brief"):
+            errors.append("empty_incident_analysis")
+            details.append(
+                {
+                    "code": "empty_incident_analysis",
+                    "path": "$.interpretation.findings",
+                    "rule": "no_retained_findings",
+                }
+            )
     try:
         findings = {row["id"] for row in (interpretation or {}).get("findings", [])}
         hypotheses = response["hypotheses"]
