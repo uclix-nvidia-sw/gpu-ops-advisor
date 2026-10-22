@@ -47,8 +47,12 @@ async def test_reference_failure_details_do_not_store_model_text(origin, problem
     repair = llm.complete.call_args.args[1]
     example = repair["response_shape"]["advice"][0]["summary"]
     context = repair["summary_repair"][0]
-    assert all(example.count(t) == 1 for t in context["required_summary_tokens"])
-    assert context["summary_start"] in example
+    assert example == ""
+    assert "option" not in context["decision"]
+    assert all(
+        context["summary_start"].count(t) == 1
+        for t in context["required_summary_tokens"]
+    )
     assert result["quality"]["report"]["failures"] == [
         {
             "attempt": attempt,
@@ -939,8 +943,12 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
         f["fact_id"] for f in wire["topics"][0]["findings"]
     ]
     for example, fact in zip(examples, wire["topics"][0]["findings"], strict=True):
-        assert example["summary"].endswith(fact["summary_start"])
-        assert "{{target}}" in example["summary"] and "{{period}}" in example["summary"]
+        assert example["summary"] == ""
+        assert (
+            "{{target}}" in fact["summary_start"]
+            and "{{period}}" in fact["summary_start"]
+        )
+        assert "option" not in fact["decision"]
     assert "재선택하지 마세요" in system
     assert {
         f["summary_tokens"]["{{target}}"].split(" / ")[0]
@@ -2160,7 +2168,8 @@ async def test_operating_choice_reaches_llm_and_stored_result_without_changing_t
     await interpret_report(result, llm)
     sent = llm.complete.call_args.args[1]["topics"][0]["findings"][0]["decision"]
     saved = result["narrative"][0]["advice"][0]["decision"]
-    assert sent == saved == decision_context(fact)
+    assert sent == {key: value for key, value in saved.items() if key != "option"}
+    assert saved == decision_context(fact)
     assert result["topics"] == [original]
     assert result["narrative_status"] == "complete"
 
