@@ -1174,7 +1174,7 @@ async def test_summary_repair_preserves_previous_answer_within_input_limit(
     assert second["summary_repair"][0]["fact_id"] == item["fact_id"]
     assert "previous_response" not in feedback
     # Includes the same candidate-specific reference example as the first request.
-    assert len(json.dumps(second, ensure_ascii=False).encode()) < 4500
+    assert len(json.dumps(second, ensure_ascii=False).encode()) < 4000
     assert first["topics"][0]["topic_id"] == "namespace_usage"
     assert result["narrative_status"] == "complete"
     assert result["topics"] == before["topics"]
