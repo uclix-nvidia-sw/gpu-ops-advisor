@@ -17,7 +17,7 @@ RCA의 출발점은 Fleet Intelligence가 판단한 장애다. 수집 목적은 
 
 ## Xid 79·SXid 11001 비교 자료
 
-[incident_dossier.py](src/rcca_agent/incident_dossier.py)의 30분 로그·지표 비교는 `required_queries`에 보고서 메트릭(`METRICS`)을 가진 XID/SXID 발행 계획에서 제공한다. D09만 필수인 기존 발행본은 기존 경로를 유지한다. 같은 쿼리·GPU 시계열은 exporter의 파드 라벨로 나뉘어도 하나로 합치고, 그 라벨은 `gpus`(모델·드라이버·PCI·GPU 번호)와 `workloads`(namespace·pod·container와 관측 구간, 할당이 아닌 관측)로 남긴다. `onset`은 같은 노드·컴포넌트의 마지막 Healthy 보고와 첫 Unhealthy 보고(Loki 기록 시각)다. 알림 대조에서 kmsg 이벤트가 없더라도 구간 안에 Healthy→Unhealthy 전환이 있으면 `event_not_exported`(결손 아님)로, 전환도 없으면 기존 `event_not_found`로 기록한다. 기존 발행본의 의미·조회를 자동으로 새 revision 내용으로 바꾸지 않는다. 비교 자료가 필요하면 검수된 최신 계획을 발행해야 하지만, 평가 제거 자체에는 새 발행이 필요하지 않다.
+[incident_dossier.py](src/rcca_agent/incident_dossier.py)의 30분 로그·지표 비교는 `required_queries`에 보고서 메트릭(`METRICS`)을 가진 XID/SXID 발행 계획에서 제공한다. D09만 필수인 기존 발행본은 기존 경로를 유지한다. 같은 쿼리·GPU 시계열은 exporter의 파드 라벨로 나뉘어도 하나로 합치고, 그 라벨은 `gpus`(모델·드라이버·PCI·GPU 번호)와 `workloads`(namespace·pod·container와 관측 구간, 할당이 아닌 관측)로 남긴다. `gpus`·`workloads`는 같은 노드의 모든 GPU를 담아 한 파드가 함께 쓰는 GPU와 다른 작업을 보이게 하고, 지표 비교는 XID면 알림 GPU만 쓴다. `onset`은 같은 노드·컴포넌트의 마지막 Healthy 보고와 첫 Unhealthy 보고(Loki 기록 시각)다. 알림 대조에서 kmsg 이벤트가 없더라도 구간 안에 Healthy→Unhealthy 전환이 있으면 `event_not_exported`(결손 아님)로, 전환도 없으면 기존 `event_not_found`로 기록한다. 기존 발행본의 의미·조회를 자동으로 새 revision 내용으로 바꾸지 않는다. 비교 자료가 필요하면 검수된 최신 계획을 발행해야 하지만, 평가 제거 자체에는 새 발행이 필요하지 않다.
 
 - 첫 라운드: 고정 cutoff를 넘지 않는 조회 종료 시각까지 30분의 같은 노드 XID/SXID 로그(D09)와 관련 메트릭을 기존 Grafana MCP binding·공유 예산으로 함께 수집한다. XID 79는 PCIe replay(D44), 사용률(D02), 전력(D11); SXID 11001은 Fabric Manager 원시 상태 코드(D47), NVLink 수신/송신(D33/D34)이다. 그 밖의 코드는 오류 유형별 계획(ECC D36·D38·D40·D42·D23, 전원 D11·D48·D45·D04 등)을 쓰며 목록은 [Runbook CATALOG](runbooks/CATALOG.md#운영자-보고서-지침과-조회-계획-2026-10-22-개정)에 있다. 누적 카운터(ECC·PCIe replay)와 코드형 값(D45 비트마스크·D47)은 각각 counter·enum으로 표시한다. 알림 일치와 LLM 예산 부족도 이 수집을 생략시키지 않는다.
 - 이력: RCA 전용 `RcaStore`가 기존 저장소 context를 읽은 뒤 별도 읽기 전용 트랜잭션에서 같은 host의 최근 14일 Incident를 가져온다. scope·cluster와 machine ID(없으면 node)를 고정하고 최대 500건을 저장한다. 사건 최초 snapshot의 코드·사유와 사건 ID를 사용한다. 현재 로그의 반복 전달 건수와 등록 사건 수를 합치지 않는다. 같은 cutoff로 기간을 제한하지만 두 DB 읽기가 하나의 트랜잭션은 아니다. 이력은 원본 evidence로 고정한다. 이전 기간 Loki/메트릭 재조회는 하지 않는다.
@@ -32,7 +32,7 @@ SXID 수집에서는 D47(없으면 같은 수집의 D33/D34)로 해석된 Grafan
 
 이전 RCA는 같은 노드의 이력에 속한 사건 중 cutoff 이전에 완료·발행된 최신 결과를 읽는다. 결과 ID·hash·job 링크·partial 여부와 원인 후보를 보존한다. 작성 입력은 동일 장치·동일 코드의 이전 RCA를 비교 자료로 사용하며 과거 후보를 현재 사실이나 수행된 조치로 승격하지 않는다.
 
-LLM 단계 실패 처리: 결합 분석과 보고서 작성은 요청 1회를 유지하되 HTTP 429·502·503·504만 1초 뒤 1회 재시도하고, 실패하면 `http_status`를 진단 기록에 남긴다. 결합 분석의 문장이 숫자 규칙(`numeric`)으로 모두 버려지면 고정 피드백으로 1회 다시 요청하고 같은 입력으로 다시 검증한다(`numeric_repair`). 그 밖의 같은 근거 재작성은 하지 않는다.
+LLM 단계 실패 처리: 결합 분석과 보고서 작성은 요청 1회를 유지하되 HTTP 429·500·502·503·504만 1초 뒤 1회 재시도하고, 실패하면 `http_status`를 진단 기록에 남긴다. 결합 분석의 문장이 숫자 규칙(`numeric`)으로 모두 버려지면 고정 피드백으로 1회 다시 요청하고 같은 입력으로 다시 검증한다(`numeric_repair`). 그 밖의 같은 근거 재작성은 하지 않는다.
 
 ## 관측과 판단의 경계
 

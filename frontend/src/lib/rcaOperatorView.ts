@@ -102,6 +102,7 @@ export const sentences = (text: string) =>
     .filter(Boolean);
 
 const t = (v: unknown) => Date.parse(str(v));
+const IDLE = '사건 전부터 0';
 const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
 const win = (v: unknown): Window | null => {
   const w = obj(v);
@@ -130,6 +131,20 @@ const aiReasons: Record<string, string> = {
   llm_context_budget_exhausted: 'LLM 입력 예산 부족',
   model_not_configured: 'LLM 미설정',
 };
+
+/** Why the AI narrative is missing, read from the stored stage diagnostics. */
+export function aiFailure(result: Row) {
+  const quality = obj(result.quality);
+  const synthesis = obj(obj(quality.analysis).synthesis);
+  const writer = obj(obj(quality.report).writer);
+  const code = str(synthesis.error_code) || str(writer.reason);
+  const raw = synthesis.http_status ?? writer.http_status;
+  const status = typeof raw === 'number' ? raw : undefined;
+  const reason = code
+    ? `${aiReasons[code] || code}${code === 'llm_http_error' ? ` (HTTP ${status ?? '상태 미기록'})` : ''}`
+    : '';
+  return { status, reason };
+}
 
 /** Merge rows of one query and GPU that exporters split by workload labels (older results). */
 function mergeSeries(metricRows: Row[]) {
@@ -375,7 +390,11 @@ export function operatorView(result: Row) {
         `조회 구간 ${range(whole)}${!isNaN(boundary) && t(whole.end) < boundary ? ' · 사건 발생 이전의 측정 기록' : ''}`,
       ];
     } else if (after && before) {
-      if (after.max === 0 && before.max > 0) {
+      if (after.max === 0 && before.max > 0 && before.last === 0) {
+        // Already zero at the last pre-incident sample: the error did not stop it.
+        tag = IDLE;
+        short = `${q === 'D02' ? 'GPU가 사건 전에 이미 쉬고 있었습니다' : '사건 전에 이미 0이었습니다'} (직전 값 0 ${u}, 사건 전 최대 ${fmtNum(before.max)} ${u})`;
+      } else if (after.max === 0 && before.max > 0) {
         tag = '멈춤';
         short = `${q === 'D02' ? '작업이 멈췄습니다' : ['D33', 'D34'].includes(q) ? 'NVLink 트래픽이 멈췄습니다' : '0으로 떨어졌습니다'} (사건 전 최대 ${fmtNum(before.max)} ${u})`;
         tone = 'warn';
@@ -433,9 +452,12 @@ export function operatorView(result: Row) {
     };
   });
   const changed = metrics.filter((m) => m.tone === 'warn' || m.tone === 'alert');
+  const idle = metrics.filter((m) => m.tag === IDLE);
   const noAfter = metrics.filter((m) => !m.after && !m.whole);
   const okNames = [...new Set(metrics.filter((m) => m.tone === 'ok').map((m) => m.name))];
-  const holdNames = [...new Set(metrics.filter((m) => m.tone === 'unknown').map((m) => m.name))];
+  const holdNames = [
+    ...new Set(metrics.filter((m) => m.tone === 'unknown' && m.tag !== IDLE).map((m) => m.name)),
+  ];
   const telemetry: Finding = {
     key: 'telemetry',
     question: '사건 전후로 장치 지표는 어떻게 달라졌나요?',
@@ -450,9 +472,12 @@ export function operatorView(result: Row) {
             : 'unknown',
     verdict: !metrics.length
       ? '관련 지표를 수집하지 못했습니다.'
-      : changed.length
+      : changed.length || idle.length
         ? [
-            `사건 뒤 변화 — ${changed.map((m) => `${m.name}: ${m.short}`).join('; ')}.`,
+            changed.length
+              ? `사건 뒤 변화 — ${changed.map((m) => `${m.name}: ${m.short}`).join('; ')}.`
+              : '',
+            idle.length ? `${IDLE} — ${idle.map((m) => `${m.name}: ${m.short}`).join('; ')}.` : '',
             okNames.length ? `이상 신호 없음 — ${okNames.join(', ')}.` : '',
             holdNames.length ? `판단 보류 — ${holdNames.join(', ')}.` : '',
           ]
@@ -553,13 +578,7 @@ export function operatorView(result: Row) {
   };
 
   // 5. Gaps an operator must fill before acting.
-  const synthesis = obj(obj(quality.analysis).synthesis);
-  const writer = obj(obj(quality.report).writer);
-  const aiCode = str(synthesis.error_code) || str(writer.reason);
-  const httpStatus = synthesis.http_status ?? writer.http_status;
-  const aiReason = aiCode
-    ? `${aiReasons[aiCode] || aiCode}${aiCode === 'llm_http_error' ? ` (HTTP ${typeof httpStatus === 'number' ? httpStatus : '상태 미기록'})` : ''}`
-    : '';
+  const aiReason = aiFailure(result).reason;
   const gapPoints = strings(result.missing_inputs).map((c) =>
     c === 'synthesis_failed' && aiReason
       ? `${missingLabels[c]} 사유: ${aiReason}.`
@@ -617,16 +636,52 @@ export function operatorView(result: Row) {
     .filter((i) => !isNaN(t(i.at)))
     .sort((a, b) => t(a.at) - t(b.at));
 
-  const workloads = rows(view.workloads)
-    .filter((w) => family === 'nvswitch' || !alertUuid || str(w.gpu_uuid) === alertUuid)
-    .map((w) => ({
-      gpu: str(w.gpu_uuid),
-      name: [str(w.namespace), str(w.pod)].filter(Boolean).join(' / '),
-      container: str(w.container),
-      first: str(w.first),
-      last: str(w.last),
-      atIncident: !isNaN(boundary) && t(w.last) >= boundary - 120000,
-    }));
+  // Pods from DCGM exporter labels across the node. A pod may hold several GPUs, so
+  // pods on the alert device carry their whole GPU set; other running pods are neighbours.
+  const podRows = rows(view.workloads).map((w) => ({
+    gpu: str(w.gpu_uuid),
+    name: [str(w.namespace), str(w.pod)].filter(Boolean).join(' / '),
+    container: str(w.container),
+    first: str(w.first),
+    last: str(w.last),
+    atIncident: !isNaN(boundary) && t(w.last) >= boundary - 120000,
+  }));
+  type PodRow = (typeof podRows)[number];
+  const byPod = (list: PodRow[]) =>
+    [
+      ...list
+        .reduce((pods, r) => {
+          const seen = pods.get(r.name);
+          return pods.set(
+            r.name,
+            seen
+              ? {
+                  ...seen,
+                  first: t(r.first) < t(seen.first) ? r.first : seen.first,
+                  last: t(r.last) > t(seen.last) ? r.last : seen.last,
+                  atIncident: seen.atIncident || r.atIncident,
+                }
+              : r,
+          );
+        }, new Map<string, PodRow>())
+        .values(),
+    ].map((w) => {
+      const held = [...new Set(podRows.filter((r) => r.name === w.name).map((r) => r.gpu))];
+      const numbers = held
+        .map((g) => str(obj(gpuInfo.get(g)).gpu_index))
+        .sort((a, b) => Number(a) - Number(b));
+      return {
+        ...w,
+        gpuCount: held.length,
+        gpus: numbers.every(Boolean) ? `GPU ${numbers.join('·')}번` : `GPU ${held.length}개`,
+      };
+    });
+  const workloads = byPod(
+    podRows.filter((r) => family === 'nvswitch' || !alertUuid || r.gpu === alertUuid),
+  );
+  const neighbours = byPod(
+    podRows.filter((r) => r.atIncident && !workloads.some((w) => w.name === r.name)),
+  );
 
   return {
     family,
@@ -634,8 +689,8 @@ export function operatorView(result: Row) {
     driver: str(alertInfo.driver),
     gpuIndex: str(alertInfo.gpu_index),
     workloads,
+    neighbours,
     onsetText,
-    aiReason,
     sameDeviceCount: same.length,
     historyDays: days,
     node: str(target.node) || str(target.k8s_node_name) || str(target.machine_id),

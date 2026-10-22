@@ -303,7 +303,8 @@ def validate_interpretation(response, refs, criteria=None, observation_refs=None
 
 
 # Gateway overload/unavailability; one delayed retry inside the stage deadline.
-TRANSIENT_HTTP = {429, 502, 503, 504}
+# Same set as the shared transport retry; gateways report upstream faults as 500.
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 
 
 async def complete_once(llm, prompt, payload, stage, diagnostics):

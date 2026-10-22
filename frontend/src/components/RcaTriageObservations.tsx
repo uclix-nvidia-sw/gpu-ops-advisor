@@ -112,9 +112,16 @@ export function RcaTriageObservations({
                   .map((w) => (
                     <div key={w.name}>
                       <strong>{w.name}</strong> 작업이 이{' '}
-                      {v.family === 'nvswitch' ? '노드 GPU' : 'GPU'}를 사용 중
+                      {v.family === 'nvswitch' ? '노드 GPU' : 'GPU'}를 사용 중 · {w.gpus}
+                      {w.gpuCount > 1 && ` (${w.gpuCount}개 함께 사용 — 파드 단위로 영향 확인)`}
                     </div>
                   ))}
+                {v.neighbours.length > 0 && (
+                  <div>
+                    같은 노드 다른 GPU 작업:{' '}
+                    {v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}
+                  </div>
+                )}
                 <small>DCGM 지표에 기록된 파드 라벨 기준(관측) · 할당 정보가 아닙니다</small>
               </td>
             </tr>
