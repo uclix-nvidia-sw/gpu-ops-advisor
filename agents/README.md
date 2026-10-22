@@ -117,7 +117,7 @@ NAT 1.5.0은 MCP 조회 오류를 문자열로 반환할 수 있습니다. 수�
 
 Grafana MCP 1.4.2의 Prometheus·Loki 시간 파서는 마이크로초 시각(예: `2026-09-21T02:34:41.713295Z`)을 거부할 수 있습니다. 두 Worker의 공통 수집기는 MCP 탐색·조회 요청 시각을 UTC 밀리초로 변환합니다. 시작은 올림, 종료는 내림하여 요청 범위를 넓히지 않으며 원본 Incident snapshot·해시·증거 시각을 유지합니다. Loki 조회 경계의 정밀도가 줄면 `quality.reason=time_precision_reduced`, `complete=false`, 실제 `request_time_range`를 기록하고 부분 근거로 처리합니다. 조회 성공·미잘림·경고 없음이면 `observation_usable=true`로 실제 요청 구간 안의 개별 health 관측을 RCA Synthesis에 사용할 수 있습니다. 기간 전체의 완전성·오류 부재·집계는 보장하지 않으며 다른 partial 사유는 제외합니다. 밀리초 단위 조회창이 남지 않으면 조회하지 않습니다.
 
-LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사 성공은 이전 원격 추론의 종료 증거가 아닙니다. [Job Controller 실행 정책](../job-controller/README.md#추론-격리와-취소)에 따라 실패한 실행 슬롯을 반환하고 종료 미확인 이력을 보존합니다.
+LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 공통 LLM 객체의 `last_http_status`는 매 호출 시작에 초기화하며, 최종 HTTP 오류의 상태 코드만 보존합니다. Ops는 이를 보고서 실패 상세에 저장합니다([Ops 해석](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation)). 전송 재시도·timeout·예산과 RCA 판단은 바꾸지 않습니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사 성공은 이전 원격 추론의 종료 증거가 아닙니다. [Job Controller 실행 정책](../job-controller/README.md#추론-격리와-취소)에 따라 실패한 실행 슬롯을 반환하고 종료 미확인 이력을 보존합니다.
 
 이 처리는 공유 Python 모듈에 있으므로 배포할 때 `rcca-agent`와 `ops-agent` 이미지를 함께 다시 빌드합니다.
 

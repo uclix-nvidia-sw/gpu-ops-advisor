@@ -3087,6 +3087,7 @@ def test_aggregate_report_transition_verification_is_published(
     [
         ("json", None),
         ("mixed_topics", None),
+        ("namespace_refs", None),
         ("json", "repeated_activity"),
         ("json", "relative_activity"),
     ],
@@ -3160,7 +3161,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                         item["advice"][0]["summary"] = item["advice"][0][
                             "summary"
                         ].replace("{{period}}", "")
-                    else:
+                    elif failure == "mixed_topics":
                         item["observation"] = "알림은 3건입니다."
                 content = json.dumps(reply)
             body = {
@@ -3241,6 +3242,12 @@ def test_scheduled_and_manual_reports_repair_same_data(
             if failure == "json"
             else {"namespace_summary_tokens_required", "unsupported_prose"}
         )
+        if failure == "namespace_refs":
+            assert failures[0]["reference_errors"] == {
+                "missing": ["period"],
+                "duplicate": [],
+                "unavailable_count": 0,
+            }
         assert {n["topic_id"] for n in result["narrative"]} == {
             "namespace_usage",
             "incident_summary",
@@ -3270,8 +3277,9 @@ def test_scheduled_and_manual_reports_repair_same_data(
 
 
 @pytest.mark.e2e
+@pytest.mark.parametrize("failure", ["structure", "http"])
 def test_aggregate_invalid_interpretation_keeps_published_calculations(
-    stack, monkeypatch
+    stack, monkeypatch, failure
 ):
     from test_aggregate_report import DATA
     from ops_agent.report_contract import VERSION
@@ -3279,12 +3287,27 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
     monkeypatch.setattr(
         sys.modules[__name__], "interpretation_reply", lambda data: {"sections": []}
     )
+    if failure == "http":
+        send = Upstream.send
+
+        def unavailable(self, body, status=200):
+            if self.path == "/v1/chat/completions":
+                return send(self, {"error": "private-upstream-response"}, 503)
+            return send(self, body, status)
+
+        monkeypatch.setattr(Upstream, "send", unavailable)
     jid = submit(stack, "report", {**DATA, "scope": SCOPE}, execution_profile=VERSION)
     body, evidence = worker_result(stack, "report", jid, "-invalid-interpretation")
     assert body["result_status"] == "ready"
     assert body["narrative_status"] == "failed"
     assert body["quality"]["report"]["method"] == "deterministic_fallback"
-    assert body["quality"]["report"]["attempts"] == 2
+    assert body["quality"]["report"]["attempts"] == (1 if failure == "http" else 2)
+    if failure == "http":
+        assert body["quality"]["report"]["failures"] == [
+            {"attempt": 1, "reason": "llm_http_error", "http_status": 503}
+        ]
+        assert body["llm_usage"]["request_attempts"] == 3
+        assert "private-upstream-response" not in json.dumps(body)
     assert (
         next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")["rows"][
             0
