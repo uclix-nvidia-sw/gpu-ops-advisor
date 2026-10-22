@@ -33,7 +33,7 @@ Agent는 **GPU Node RCA·운영보고서** 두 개의 독립 실행·배포 모�
 
 Job Controller는 큐 관리와 **기존 자원 한도 안에서 잡 배분**을 맡습니다. 처리 여유가 없으면 큐에서 대기합니다. Backend·Incident·Job Controller·RCA·보고서는 각각 독립 실행·배포합니다. 두 Agent는 **NVIDIA NeMo Agent Toolkit(NAT)** 워크플로를 내부에서 실행하며, 공통 정규화·계산 함수만 라이브러리로 재사용합니다.
 
-- RCA: 발행 Runbook 선택 → 계획된 로그·메트릭·host 이력 수집 → 분석·권고 통합 작성 → 자료 고정 → 보고서 구성·공개.
+- RCA: Fleet Intelligence가 장애를 판단한 뒤, 보고서 작성을 위해 발행 Runbook 선택 → 계획된 로그·메트릭·host 이력 수집 → 분석·권고 통합 작성 → 자료 고정 → 보고서 구성·공개.
 - 운영보고서: 사건·공개 RCA 결과 + Grafana MCP 기간 관측 → 코드 집계·계산 → 주제별 AI 운영 해석 → 보고서·HTML/CSV 저장. 신규 보고서는 Namespace 사용과 사건 현황을 직전 기간과 비교하며 기존 O계열 보고서·일정도 유지합니다.
 
 Grafana MCP는 관측 조회 연결을 맡으며 최종 결과 공개는 Job Controller 완료 검증을 거칩니다. 실제 Incident·JC·Worker·공식 MCP 프로세스를 연결한 시험 기록이 있습니다. 해당 시험의 Grafana 데이터와 LLM 응답은 fixture이며 운영 환경의 데이터·모델 품질 검수와 구분합니다.

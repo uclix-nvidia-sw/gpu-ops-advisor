@@ -466,11 +466,7 @@ def validate_synthesis(
                 supporting_refs=sorted(supporting),
                 contradicting_refs=sorted(contradicting),
                 value_refs=[],
-                missing_inputs=list(
-                    dict.fromkeys(
-                        h["missing_inputs"] + ["causal_confirmation_evidence"]
-                    )
-                ),
+                missing_inputs=list(dict.fromkeys(h["missing_inputs"])),
             )
         )
     return candidates

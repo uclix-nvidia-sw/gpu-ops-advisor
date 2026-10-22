@@ -701,9 +701,11 @@ async def run(tools):
                     comparison,
                 )
             )
-            payload["incident_comparison"].extend(
-                history_summary(result["quality"].get("host_incident_history"))
-            )
+        history_findings = history_summary(
+            result["quality"].get("host_incident_history")
+        )
+        if history_findings:
+            payload.setdefault("incident_comparison", []).extend(history_findings)
         source_hashes = observation_hashes(collected)
         evaluation_state["authored_sources"].update(source_hashes)
         payload["source_version"] = content_hash(sorted(source_hashes))
