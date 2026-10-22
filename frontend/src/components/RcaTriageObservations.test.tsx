@@ -138,7 +138,7 @@ it('preserves actual UUIDs, event time and pre-event measurement limits in Korea
   const html = renderToStaticMarkup(<RcaNarrative result={value} />);
   expect(html).toContain(gpu);
   expect(html).not.toContain('GPU 1 (보고서 표기)');
-  expect(html).toContain('10:10:12 KST');
+  expect(html).toContain('2026. 01. 02. 10:10:12 KST');
   expect(html).toContain('사건 발생 이전의 측정 기록');
   expect(html).toContain('0 %');
   expect(html).not.toContain('0 percent');
@@ -173,5 +173,6 @@ it('keeps switch PCI separate from GPU inventory and links previous RCA', () => 
   expect(html).toContain('NVSwitch PCI:0000:ca:00.0');
   expect(html).toContain('해당 구간에 일치하는 시계열 없음');
   expect(html).toContain('/analyses/prior-job#final-report');
+  expect(html).toContain('알림 기준 시각');
   expect(html).toContain('일부 자료로 작성된 보고서');
 });

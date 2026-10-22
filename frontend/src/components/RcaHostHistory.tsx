@@ -145,7 +145,7 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
           </caption>
           <thead>
             <tr>
-              <th>사건 시각</th>
+              <th>알림 기준 시각</th>
               <th>코드·대상</th>
               <th>보고 구간</th>
               <th>핵심 메시지</th>
