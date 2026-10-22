@@ -1,0 +1,154 @@
+{
+  "knowledge_key": "RB-COMPONENT-MEMORY",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "메모리 정보 수집 오류 보고 조사 (Fleet memory)",
+    "description": "Fleet memory 점검이 가상 메모리·BPF JIT 정보를 읽지 못해 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "NODE_SYSTEM",
+      "category": "memory_monitor"
+    },
+    "search": {
+      "producer_events": [
+        "memory"
+      ],
+      "aliases": [
+        "error getting virtual memory",
+        "error getting bpf jit buffer bytes"
+      ],
+      "symptoms": [
+        "메모리 정보 수집 오류"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet memory 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/memory/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): virtual memory and BPF JIT errors; injected memory fault",
+        "checked_at": "2026-10-22"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 memory 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 모니터링 에이전트의 수집 오류이며 메모리 하드웨어 상태가 아니다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet memory 점검이 가상 메모리나 BPF JIT 버퍼 정보를 읽지 못해 Unhealthy로 보고한 것입니다. 메모리 하드웨어 오류 보고가 아니라 모니터링 에이전트의 수집 오류이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다.",
+      "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. free -h와 cat /proc/meminfo로 노드 메모리 상태를 직접 확인합니다."
+        },
+        {
+          "title": "판단",
+          "text": "노드 메모리가 정상이면 하드웨어 조치는 필요 없습니다. Fleet 에이전트 파드 로그에서 같은 시각의 오류 메시지를 확인하고, 오류가 계속되면 에이전트 파드를 다시 시작합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "Fleet memory 컴포넌트 보고가 Healthy로 돌아왔는지 확인합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 가상 메모리 정보나 BPF JIT 버퍼 크기를 읽지 못하면 Unhealthy로 보고합니다. 시험용 메모리 장애 주입도 같은 경로로 보고됩니다.",
+          "source_indices": [
+            0
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet memory Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "memory",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet memory 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

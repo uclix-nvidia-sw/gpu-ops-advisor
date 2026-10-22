@@ -2,6 +2,7 @@
 
 import json
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -12,6 +13,8 @@ from rcca_agent.report_writer import report_sources, write_material_report
 from rca_replay import replay
 from test_rca_combined_policy import policy_case
 from test_rca_llm_roles import Writer, material
+
+BOOKS = Path(__file__).resolve().parents[2] / "rcca-agent/runbooks"
 
 
 def component_case():
@@ -104,6 +107,35 @@ async def test_noncode_component_uses_one_query_and_three_calls():
     assert "파일시스템 점검" in text and "유지보수 승인" in text
     assert "RESTART_BM" not in text
     assert all(not r.get("fact_eligible") for r in output["device_observations"])
+
+
+async def test_shipped_component_guidance_survives_healthy_reports_before_failure():
+    # Production disk windows hold periodic Healthy "ok" reports before the failure;
+    # the unmapped Healthy state and mixed reasons must not hide component guidance.
+    case = component_case()
+    book = case["attempt"]["context"]["runbooks"][0]
+    shipped = json.loads(
+        (BOOKS / "component/RB-COMPONENT-DISK.json").read_text(encoding="utf-8")
+    )
+    book["knowledge_key"] = shipped["knowledge_key"]
+    book["content"] = shipped["content"]
+    book.update(
+        content_hash=content_hash(book["content"]),
+        reviewed_content_hash=content_hash(book["content"]),
+    )
+    values = case["queries"][0]["response"]["data"]["result"][0]["values"]
+    start, line = int(values[0][0]), values[0][1]
+    values[0][0] = str(start + 40 * 10**9)
+    for seconds in (10, 20, 30):
+        healthy = json.loads(line)
+        healthy["attributes"].update(health="Healthy", reason="ok")
+        values.append([str(start + seconds * 10**9), json.dumps(healthy)])
+    result = await replay(case)
+    output = result["output"]["result"]
+    assert len(output["device_observations"]) == 4
+    guidance = output["quality"]["runbook_guidance"]
+    assert [g["report_applicability"] for g in guidance] == ["matched"]
+    assert "findmnt -O ro" in str(output["narrative"])
 
 
 @pytest.mark.parametrize("component", [None, "cpu", ["disk"]])

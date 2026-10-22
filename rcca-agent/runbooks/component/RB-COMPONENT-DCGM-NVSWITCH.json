@@ -1,0 +1,253 @@
+{
+  "knowledge_key": "RB-COMPONENT-DCGM-NVSWITCH",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "DCGM NVSwitch 건강 점검 실패 조사 (Fleet dcgm-nvswitch)",
+    "description": "Fleet dcgm-nvswitch 점검이 DCGM NVSwitch 건강 점검(치명·비치명) 실패를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_INTERCONNECT",
+      "category": "dcgm_nvswitch_health"
+    },
+    "search": {
+      "producer_events": [
+        "accelerator-nvidia-dcgm-nvswitch"
+      ],
+      "aliases": [
+        "NVSwitch health failure",
+        "failed to get DCGM NVSwitch fatal health check result",
+        "failed to get DCGM NVSwitch non-fatal health check result",
+        "failed to query NVSwitch entities from DCGM"
+      ],
+      "symptoms": [
+        "NVSwitch 오류",
+        "NVSwitch 다운"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-nvswitch 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D33",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 같은 노드 GPU의 NVLink 수신량을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D34",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 같은 노드 GPU의 NVLink 송신량을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/nvswitch/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+        "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+        "section": "DCGM_FR codes 15, 16, 17, 88, 100, 109: messages and next steps",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+        "revision": "Last updated 2026-06-17; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Background Health Checks"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+        "revision": "Document History v2.6 (Sep 21, 2026); mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Bare Metal Mode: Non-Fatal and Fatal SXid Errors; Managing the Fabric Manager Service"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 dcgm-nvswitch 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 DCGM_FR 코드·스위치·링크 정보를 확인한다.",
+      "D33·D34는 GPU 쪽 NVLink 송수신량이며 스위치 자체 상태가 아니다. 트래픽 감소는 작업 중단의 보조 단서일 뿐이다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet가 DCGM NVSwitch(치명·비치명) 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+      "cause_note": "NVSwitch 링크·포트의 치명 오류(SXID), NVSwitch 포트 다운, Fabric Manager 미실행·초기화 실패가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "D09 원문 extra_info.dcgm_incidents에서 DCGM_FR 코드와 스위치·링크 정보를 확인합니다. systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log에서 같은 시각의 SXID·오류 줄을 확인합니다. dmesg -T에서 같은 시각의 SXID와 GPU 쪽 XID 74·45를 찾고, nvidia-smi nvlink -s로 GPU 쪽 링크 상태를 봅니다."
+        },
+        {
+          "title": "판단: DCGM 코드별 조치",
+          "text": "15 NVSwitch 치명 오류: Field Diagnostics 대상이며 아래 치명 SXID 복구를 따릅니다. 16 비치명 오류: 감시하며 계속 운용할 수 있습니다. 17 NVSwitch 포트 다운: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다. 88 NVSwitch NVLink 다운: Fabric Manager와 초기화 로그로 원인을 확인하고, 필요하면 Field Diagnostics를 실행합니다. 100 기대보다 적은 링크 활성: Fabric Manager가 실행 중인지와 시스템·dmesg·Fabric Manager 로그를 확인합니다. 109 치명 SXID: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다."
+        },
+        {
+          "title": "복구",
+          "text": "bare metal에서 치명 SXID가 GPU 쪽 access 포트에서 났으면 그 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 작업 배출과 유지보수 승인 뒤 노드를 재부팅하거나 전원 사이클합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "systemctl status nvidia-fabricmanager가 active이고 Fabric Manager 로그에 새 오류가 없는지, nvidia-smi nvlink -s에서 모든 링크가 Active인지 확인합니다. dcgmi diag -r 2로 점검하고 필요하면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "재부팅 뒤에도 같은 스위치·포트에서 반복되면 nvidia-bug-report.sh 결과, Fabric Manager 로그, DCGM 진단 로그, 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 DCGM NVSwitch 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+          "source_indices": [
+            0,
+            1
+          ]
+        },
+        {
+          "title": "DCGM 코드와 권고",
+          "text": "15 NVSwitch 치명 오류(Field Diagnostics), 16 비치명 오류(감시, 계속 운용 가능), 17 NVSwitch 포트 다운(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행), 88 NVSwitch NVLink 다운(Fabric Manager·초기화 로그 확인, 필요하면 Field Diagnostics), 100 기대보다 적은 링크 활성(Fabric Manager 실행 확인), 109 치명 SXID(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행).",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "DCGM 건강 점검",
+          "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "Fabric Manager 가이드 (bare metal)",
+          "text": "비치명 SXID는 정보성이며 Fabric Manager가 작업을 중단하지 않습니다. 치명 SXID가 access 포트에서 나면 그 GPU의 작업이 중단되고 해당 GPU와 같은 작업의 GPU를 리셋하며, trunk 포트에서 나면 Fabric Manager가 모든 작업을 중단하므로 Fabric Manager를 멈춘 상태에서 모든 GPU·NVSwitch를 리셋합니다.",
+          "source_indices": [
+            4
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "보고는 Fleet가 받은 점검 결과이며 현재 장치 상태나 원인 확정이 아니다. 로그 주입 시험과 실제 장애는 같은 경로로 보고될 수 있다.",
+      "Fabric Manager 로그·SXID 커널 로그는 수집하지 않는다. 미수집을 정상 근거로 쓰지 않는다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet accelerator-nvidia-dcgm-nvswitch Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "accelerator-nvidia-dcgm-nvswitch",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-nvswitch 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D33",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 같은 노드 GPU의 NVLink 수신량을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D34",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 같은 노드 GPU의 NVLink 송신량을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        }
+      ]
+    }
+  }
+}

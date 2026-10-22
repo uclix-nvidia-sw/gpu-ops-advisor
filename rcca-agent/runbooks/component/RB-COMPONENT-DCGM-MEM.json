@@ -1,0 +1,286 @@
+{
+  "knowledge_key": "RB-COMPONENT-DCGM-MEM",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "DCGM 메모리 건강 점검 실패 조사 (Fleet dcgm-mem)",
+    "description": "Fleet dcgm-mem 점검이 DCGM 메모리 건강 점검 실패(FAIL)를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_MEMORY",
+      "category": "dcgm_memory_health"
+    },
+    "search": {
+      "producer_events": [
+        "accelerator-nvidia-dcgm-mem"
+      ],
+      "aliases": [
+        "memory health failure",
+        "failed to get DCGM memory health check result"
+      ],
+      "symptoms": [
+        "GPU 메모리 오류",
+        "ECC 오류",
+        "row remapping"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-mem 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D40",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 같은 노드 GPU의 정정 불가 ECC(DBE) 휘발성 누적값을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D36",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 같은 노드 GPU의 정정 가능 ECC(SBE) 휘발성 누적값을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D23",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "사건 전후 같은 노드 GPU의 GPU 메모리 온도을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/mem/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+        "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+        "section": "DCGM_FR codes 4, 5, 80, 81, 83, 85, 118, 131, 132: messages and next steps",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+        "revision": "Last updated 2026-06-17; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Background Health Checks"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/a100-gpu-mem-error-mgmt/index.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Row Remapping; Error Recovery and Response Flags; RMA Policy Thresholds for Row Remapping; SRAM Uncorrectable Errors"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Table 1 rows 48, 63, 64, 94, 95; Table 2; Running DCGM Diagnostics; Running Field Diagnostics"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 dcgm-mem 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다. 코드 번호는 원문 값 그대로 인용한다.",
+      "D40·D36은 GPU 단위 누적값이며 사건 전후 증가 여부만 비교한다. 드라이버 재로드·리셋으로 휘발성 값이 초기화될 수 있으므로 감소를 오류 해소로 해석하지 않는다. D23은 보조 관측이며 임계값 판정에 쓰지 않는다.",
+      "row remapping 대기·실패와 SRAM 임계 플래그는 수집하지 않는다. 운영자가 nvidia-smi -q -d ROW_REMAPPER로 확인할 항목으로 남긴다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet가 DCGM 메모리 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+      "cause_note": "GPU 메모리의 정정 불가(DBE) 오류, row remapping 대기·실패, 격리되지 않은 오류, SRAM 오류 임계 초과가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -d ECC,ROW_REMAPPER로 해당 GPU의 Pending·Remapping Failure Occurred와 정정 불가 오류 수를 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). 같은 시각 dmesg의 XID 48·63·64·94·95 줄도 함께 기록합니다."
+        },
+        {
+          "title": "판단: DCGM 코드별 조치",
+          "text": "4 정정 불가 ECC 검출: 작업을 배출하고 GPU를 리셋하거나 노드를 재부팅합니다. 81 격리되지 않은 오류(XID 95): 작업을 배출하고 GPU를 리셋하거나 노드를 재부팅합니다. 131 격리된 오류(XID 94): 오류를 겪은 애플리케이션만 재시작하고 GPU 리셋은 편한 시점으로 미룰 수 있습니다. 85 row remapping 대기: 로그를 확인하고 GPU 리셋으로 remap을 적용한 뒤 DCGM을 재시작하고 진단을 다시 실행합니다. 80 row remapping 실패: 복구할 수 없는 메모리 하드웨어 손상이므로 즉시 GPU를 리셋하거나 노드를 재부팅하고 Field Diagnostics로 RMA 대상 여부를 판정합니다. 132 정정 불가 remap 한도 초과: Field Diagnostics 대상입니다. 118 SRAM 임계 초과: 메모리를 점검합니다. 5 정정 가능 ECC 증가: 감시만 하며 GPU는 계속 운용할 수 있습니다."
+        },
+        {
+          "title": "복구",
+          "text": "A100에서 MIG가 꺼진 상태로 격리되지 않은 오류가 났다면 GPU Node Triage는 노드 즉시 재부팅을 안내합니다. GPU 리셋은 그 GPU를 쓰는 프로세스를 모두 끝낸 뒤 root로 nvidia-smi -r -i <번호>로 하며, Ampere+NVSwitch는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. 리셋·재부팅은 작업 배출과 유지보수 승인 뒤 수행합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "nvidia-smi -q -d ROW_REMAPPER에서 Pending이 No로 바뀌었는지, Remapping Failure Occurred가 No인지 확인합니다. dcgmi diag -r 2로 빠르게 점검하고, 메모리 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "Remapping Failure Occurred가 Yes이거나 SRAM 임계를 넘었으면 Field Diagnostics 결과로 RMA를 요청합니다. 전달 자료는 nvidia-smi -q -d ECC,ROW_REMAPPER 출력, nvidia-bug-report.sh 결과, DCGM 진단 로그, 수행한 조치입니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 DCGM 메모리 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+          "source_indices": [
+            0,
+            1
+          ]
+        },
+        {
+          "title": "DCGM 코드와 권고",
+          "text": "4 정정 불가 ECC(작업 배출 후 GPU 리셋 또는 노드 재부팅), 5 정정 가능 ECC 증가(감시, 계속 운용 가능), 80 row remapping 실패(즉시 GPU 리셋 또는 노드 재부팅), 81 격리되지 않은 오류(작업 배출 후 GPU 리셋 또는 노드 재부팅), 83 DBE와 함께 대기 중인 page retirement(작업 배출 후 GPU 리셋 또는 노드 재부팅), 85 row remapping 대기(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행), 118 SRAM 임계 초과(메모리 점검), 131 격리된 오류(앱 재시작, 리셋은 나중에), 132 remap 한도 초과(Field Diagnostics).",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "DCGM 건강 점검",
+          "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "row remapping과 RMA 기준",
+          "text": "row remapping은 GPU 리셋 뒤에 적용됩니다. Pending은 다음 리셋 때 적용될 remap이 있다는 뜻이며 그동안 작업은 계속할 수 있습니다. Remapping Failure Occurred가 설정되고 Field Diagnostics가 확인하면 DRAM RMA 대상입니다.",
+          "source_indices": [
+            4
+          ]
+        },
+        {
+          "title": "GPU Node Triage",
+          "text": "XID 95(격리되지 않은 오류)는 A100에서 MIG가 꺼져 있으면 노드를 즉시 재부팅하고, MIG가 켜져 있으면 다른 인스턴스 작업을 배출한 뒤 GPU를 리셋합니다. XID 94(격리된 오류)는 해당 애플리케이션만 재시작합니다.",
+          "source_indices": [
+            5
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "보고는 Fleet가 받은 점검 결과이며 현재 장치 상태나 원인 확정이 아니다. 로그 주입 시험과 실제 장애는 같은 경로로 보고될 수 있다.",
+      "row remapping·SRAM 상태와 XID 커널 로그는 수집하지 않는다. 미수집을 오류 부재로 해석하지 않는다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet accelerator-nvidia-dcgm-mem Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "accelerator-nvidia-dcgm-mem",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-mem 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D40",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 같은 노드 GPU의 정정 불가 ECC(DBE) 휘발성 누적값을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D36",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 같은 노드 GPU의 정정 가능 ECC(SBE) 휘발성 누적값을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D23",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "사건 전후 같은 노드 GPU의 GPU 메모리 온도을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        }
+      ]
+    }
+  }
+}

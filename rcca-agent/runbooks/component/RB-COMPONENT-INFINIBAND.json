@@ -1,0 +1,233 @@
+{
+  "knowledge_key": "RB-COMPONENT-INFINIBAND",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "InfiniBand 포트 이상 보고 조사 (Fleet infiniband)",
+    "description": "Fleet infiniband 점검이 IB 포트 수·속도·물리 상태 기준 미달, 장시간 다운, flapping을 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "NETWORK_IB",
+      "category": "infiniband_port"
+    },
+    "search": {
+      "producer_events": [
+        "accelerator-nvidia-infiniband"
+      ],
+      "aliases": [
+        "device(s) down too long",
+        "device(s) flapping between ACTIVE<>DOWN",
+        "port(s) are active and",
+        "Insufficient power on MLX5 PCIe slot",
+        "Overheated MLX5 adapter",
+        "MLX5 ACCESS_REG command failed"
+      ],
+      "symptoms": [
+        "IB 포트 다운",
+        "IB flapping",
+        "InfiniBand 링크"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet accelerator-nvidia-infiniband 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/infiniband/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): down-too-long and flapping events, HARDWARE_INSPECTION",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/infiniband/check_thresholds.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "active port count, rate and physical state thresholds",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/infiniband/kmsg_matcher.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "mlx5 kernel message patterns",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/networking_troubleshooting.html",
+        "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "NIC-level diagnostics; IB port state and counters"
+      },
+      {
+        "url": "https://networking-docs.nvidia.com/mftswum/4.36.0/mlxlink-utility",
+        "revision": "MFT 4.36.0-147 (June 03, 2026); mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "mlxlink: link, counters and module information"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Network Testing"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 infiniband 컴포넌트의 Unhealthy 보고 사유(활성 포트 수·속도 부족, 물리 상태, 장시간 다운, flapping)와 해당 장치 이름을 확인한다.",
+      "IB 포트·카운터 지표는 등록 조회가 없으므로 보고 사유와 시각만으로 설명하고, GPU 지표로 네트워크 상태를 판단하지 않는다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet infiniband 점검이 IB 포트 상태가 기대치에 못 미치거나(활성 포트 수·속도 부족, 물리 상태 이상), 포트가 오래 내려가 있거나 ACTIVE와 DOWN 사이를 반복(flapping)한다고 Unhealthy로 보고한 것입니다. 다중 노드 학습(NCCL over IB)을 쓰는 작업이 느려지거나 멈출 수 있습니다.",
+      "cause_note": "케이블·트랜시버 불량이나 접촉 불량, 스위치 쪽 포트 문제, 어댑터(HCA) 과열·슬롯 전원 부족, 서브넷 관리자 문제가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인·영향",
+          "text": "보고 사유에서 해당 장치(mlx5_N)와 증상(활성 포트 부족, 장시간 다운, flapping)을 확인합니다. ibstat로 그 포트의 State(Active), Physical state(LinkUp), Rate가 기대값인지 확인합니다. 이 노드가 다중 노드 작업에 쓰이면 작업 소유자에게 알리고 kubectl cordon <노드>로 새 작업 배치를 막습니다."
+        },
+        {
+          "title": "진단 자료 보존",
+          "text": "dmesg -T에서 같은 시각 mlx5 메시지(PCIe 슬롯 전원 부족, 어댑터 과열, ACCESS_REG 실패 등)를 저장합니다. ibstat 출력과 sudo perfquery -x <LID>의 SymbolErrorCounter·LinkErrorRecoveryCounter·LinkDownedCounter 값을 기록합니다."
+        },
+        {
+          "title": "판단",
+          "text": "오류 카운터가 0이 아니거나 늘고 있으면 케이블·스위치 문제 쪽으로 봅니다. mlxlink -d <장치>로 링크 폭·속도와 오류 상태를, -m 옵션으로 트랜시버 온도·전압·광 출력을 확인합니다. sudo sminfo가 실패하면 서브넷 관리자(opensm 또는 스위치 SM) 상태를 확인합니다. 과열 메시지는 어댑터 냉각을, 슬롯 전원 부족 메시지는 슬롯 전원 사양을 점검할 근거입니다."
+        },
+        {
+          "title": "복구",
+          "text": "작업을 배출한 뒤 케이블·트랜시버를 다시 꽂거나 교체하고, 스위치 쪽 포트 상태를 네트워크 담당자와 확인합니다. mlxlink는 고급 사용자용 도구이므로 관리되지 않는 스위치 방향으로 포트 상태를 바꾸는 옵션은 쓰지 않습니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "ibstat에서 State가 Active, Physical state가 LinkUp이고 Rate가 기대 속도인지, perfquery 오류 카운터가 더 늘지 않는지 확인합니다. NCCL 성능 시험(nccl-tests all_reduce_perf)으로 이 노드가 포함된 노드 쌍의 대역폭이 기준값과 같은지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "같은 포트에서 반복되면 Fleet 권고대로 하드웨어 점검(HARDWARE_INSPECTION)을 요청합니다. 전달 자료는 ibstat·perfquery·mlxlink 출력, mlx5 커널 메시지, 스위치 포트 로그, 수행한 조치입니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 활성 포트 수·속도·물리 상태가 설정 기준에 못 미치거나, 포트가 오래 내려가 있거나 ACTIVE와 DOWN을 반복하면 Unhealthy로 보고하고 하드웨어 점검(HARDWARE_INSPECTION)을 권고합니다.",
+          "source_indices": [
+            0,
+            1
+          ]
+        },
+        {
+          "title": "Fleet 커널 이벤트",
+          "text": "Fleet은 mlx5의 PCIe 슬롯 전원 부족, 포트 모듈 고온, ACCESS_REG 명령 실패 메시지도 이벤트로 기록합니다.",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "NVIDIA 네트워크 진단",
+          "text": "정상 포트는 State Active, Physical state LinkUp, 기대 속도이며 모든 NIC의 link layer가 같습니다. perfquery의 SymbolErrorCounter·LinkErrorRecoveryCounter·LinkDownedCounter가 0이 아니거나 늘면 케이블·스위치 문제를 가리킵니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "mlxlink",
+          "text": "mlxlink -d <장치>는 링크 폭·속도·오류 상태를, -c는 물리 카운터와 BER을, -m은 트랜시버 온도·전압·광 출력과 결함을 보여 줍니다.",
+          "source_indices": [
+            4
+          ]
+        },
+        {
+          "title": "GPU Node Triage 네트워크 시험",
+          "text": "nccl-tests의 all_reduce_perf로 노드 쌍 성능을 비교하고, 느린 쌍은 다른 노드와 다시 시험해 문제 노드를 좁힙니다. 운영 전에 기준 성능을 기록해 둡니다.",
+          "source_indices": [
+            5
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "IB 포트 상태·오류 카운터·스위치 로그는 수집하지 않는다. 미수집을 정상 근거로 쓰지 않는다.",
+      "보고는 Fleet 점검 결과이며 현재 포트 상태나 원인 확정이 아니다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet accelerator-nvidia-infiniband Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "accelerator-nvidia-infiniband",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-infiniband 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

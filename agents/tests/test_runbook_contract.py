@@ -27,7 +27,8 @@ XID = next(row for row in ROWS if row["knowledge_key"] == "RB-XID-79")
 
 class RunbookContractTests(unittest.TestCase):
     def test_content_retrieval_plan_and_unbound_runtime(self):
-        self.assertEqual(len(ROWS), 267)
+        components = [r for r in ROWS if r["knowledge_key"].startswith("RB-COMPONENT-")]
+        self.assertEqual(len(ROWS) - len(components), 267)
         for row in ROWS:
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])
@@ -48,7 +49,7 @@ class RunbookContractTests(unittest.TestCase):
                         "reported_error_code", row["content"]["required_evidence"]
                     )
                     self.assertTrue(row["content"]["investigation_only"])
-                if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
+                if row["knowledge_key"] == "RB-GENERAL-GPU-NODE" or row in components:
                     self.assertEqual(row["content"]["applicability_conditions"], [])
                     with self.assertRaisesRegex(ValueError, "unbound draft"):
                         validate_runbook(row, QUERIES, ALLOWED)

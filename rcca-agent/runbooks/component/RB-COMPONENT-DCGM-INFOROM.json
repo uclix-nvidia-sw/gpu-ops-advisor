@@ -1,0 +1,223 @@
+{
+  "knowledge_key": "RB-COMPONENT-DCGM-INFOROM",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "DCGM InfoROM 건강 점검 실패 조사 (Fleet dcgm-inforom)",
+    "description": "Fleet dcgm-inforom 점검이 DCGM InfoROM 건강 점검 실패(FAIL)를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "GPU_DEVICE",
+      "category": "dcgm_inforom_health"
+    },
+    "search": {
+      "producer_events": [
+        "accelerator-nvidia-dcgm-inforom"
+      ],
+      "aliases": [
+        "InfoROM health failure",
+        "failed to get DCGM InfoROM health check result"
+      ],
+      "symptoms": [
+        "InfoROM 손상"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-inforom 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/inforom/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+        "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+        "section": "DCGM_FR codes 9: messages and next steps",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+        "revision": "Last updated 2026-06-17; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Background Health Checks"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+        "revision": "Undated page; change log through v610 Update; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Inforom Version; --query-gpu inforom.checksum_validation"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/troubleshooting.html",
+        "revision": "Undated page (GPU Operator latest); mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "infoROM is corrupted"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 dcgm-inforom 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드를 확인한다.",
+      "InfoROM 손상 보고는 GPU 보드 영구 저장 영역의 문제이며 사용률·온도 지표로 판단하지 않는다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet가 DCGM InfoROM 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다. InfoROM은 GPU의 설정·상태 데이터를 담는 작은 영구 저장 영역입니다.",
+      "cause_note": "InfoROM 데이터 손상(DCGM 코드 9)이 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -i <번호>의 Inforom Version 항목과 nvidia-smi --query-gpu=inforom.checksum_validation --format=csv로 InfoROM 검증 결과를 확인합니다."
+        },
+        {
+          "title": "판단",
+          "text": "9 InfoROM 손상: DCGM은 InfoROM을 다시 기록(flash)해 손상을 지우라고 권고합니다. GPU Operator 환경에서 InfoROM 손상은 검증 파드(driver-validation) 로그에도 나타나며, GPU Operator 문서는 이 경우 GPU 교체를 안내합니다. InfoROM에는 메모리 오류 기록도 저장되므로 같은 GPU의 XID 63·64 기록을 함께 확인합니다."
+        },
+        {
+          "title": "복구",
+          "text": "InfoROM 재기록은 GPU 펌웨어 작업이므로 운영자가 임의로 하지 말고 시스템 공급사(또는 NVIDIA 지원)의 도구와 절차로 진행합니다. 작업 전에 해당 GPU의 작업을 배출합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "재기록이나 교체 뒤 InfoROM 건강 점검 보고가 사라졌는지, inforom.checksum_validation 결과가 정상인지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "nvidia-bug-report.sh 결과, Inforom Version 출력, DCGM 진단 로그를 갖춰 시스템 공급사에 InfoROM 재기록이나 보드 교체를 요청합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 DCGM InfoROM 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+          "source_indices": [
+            0,
+            1
+          ]
+        },
+        {
+          "title": "DCGM 코드와 권고",
+          "text": "9 InfoROM 손상: InfoROM을 다시 기록(flash)해 손상을 지웁니다.",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "DCGM 건강 점검",
+          "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "InfoROM (nvidia-smi)",
+          "text": "InfoROM은 GPU의 설정·상태 데이터를 담는 작은 영구 저장소이며 일부 기능은 특정 InfoROM 버전 이상에서만 동작합니다. --query-gpu의 inforom.checksum_validation으로 검증 결과를 조회합니다.",
+          "source_indices": [
+            4
+          ]
+        },
+        {
+          "title": "GPU Operator 문제 해결",
+          "text": "InfoROM 손상은 검증 파드의 driver-validation 로그에 나타나며 nvidia-smi가 오류 코드 14를 반환합니다. 문서는 GPU 교체를 안내합니다.",
+          "source_indices": [
+            5
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "보고는 Fleet가 받은 점검 결과이며 현재 장치 상태나 원인 확정이 아니다. 로그 주입 시험과 실제 장애는 같은 경로로 보고될 수 있다.",
+      "InfoROM 버전·검증 결과는 수집하지 않는다. 운영자가 nvidia-smi로 확인할 항목으로 남긴다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet accelerator-nvidia-dcgm-inforom Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "accelerator-nvidia-dcgm-inforom",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-inforom 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

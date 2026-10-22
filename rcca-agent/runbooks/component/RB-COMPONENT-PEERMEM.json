@@ -1,0 +1,186 @@
+{
+  "knowledge_key": "RB-COMPONENT-PEERMEM",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "GPUDirect RDMA(peermem) 오류 보고 조사 (Fleet peermem)",
+    "description": "Fleet peermem 점검이 nvidia-peermem의 invalid context 커널 메시지를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "NETWORK_IB",
+      "category": "gpudirect_rdma"
+    },
+    "search": {
+      "producer_events": [
+        "accelerator-nvidia-peermem"
+      ],
+      "aliases": [
+        "peermem error detected (possible GPU communication issue)"
+      ],
+      "symptoms": [
+        "GPUDirect RDMA 오류",
+        "peermem 오류"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet accelerator-nvidia-peermem 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/kmsg_matcher.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "invalid context pattern",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/gpu_troubleshooting.html",
+        "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "GPU Direct (nvidia-peermem, DMA-BUF), ACS and IOMMU"
+      },
+      {
+        "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/logging.html",
+        "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 peermem 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 커널 메시지 패턴 일치이며 통신 실패나 원인 확정이 아니다.",
+      "같은 시각 NCCL·IB 보고는 D09 범위에 없으므로 운영자 확인 항목으로 남긴다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet peermem 점검이 커널 로그에서 nvidia-peermem의 'ERROR detected invalid context' 메시지를 찾아 Unhealthy로 보고한 것입니다. GPU 메모리를 네트워크 어댑터가 직접 읽고 쓰는 GPUDirect RDMA 경로에서 오류가 있었을 수 있다는 뜻입니다.",
+      "cause_note": "GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "dmesg -T에서 같은 시각 nvidia-peermem 메시지와 그 전후 프로세스 종료·mlx5 메시지를 확인합니다. 같은 시각 NCCL을 쓰던 작업이 실패했는지 작업 소유자에게 확인합니다."
+        },
+        {
+          "title": "판단",
+          "text": "lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
+        },
+        {
+          "title": "복구",
+          "text": "작업이 반복해서 실패하면 작업을 배출한 뒤 nvidia-peermem 모듈과 네트워크 드라이버 구성을 점검하고, 필요하면 유지보수 승인 뒤 노드를 재부팅합니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "같은 노드에서 반복되면 dmesg의 peermem·mlx5 메시지, NCCL 로그, nvidia-bug-report.sh 결과를 갖춰 NVIDIA 또는 공급사에 보고합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 커널 로그의 'ERROR detected invalid context, skipping further processing' 패턴을 peermem 오류로 보고합니다.",
+          "source_indices": [
+            0
+          ]
+        },
+        {
+          "title": "NCCL GPU Direct 점검",
+          "text": "GPUDirect RDMA에는 nvidia-peermem 모듈이 필요하며 lsmod로 확인하고 부팅마다 modprobe로 올립니다. 최근 커널과 open 드라이버에서는 DMA-BUF가 자동으로 쓰일 수 있습니다.",
+          "source_indices": [
+            1
+          ]
+        },
+        {
+          "title": "NCCL 로그",
+          "text": "NCCL_DEBUG=INFO 로그에서 사용한 전송 경로(예: DMA-BUF 사용 가능 여부, 네트워크 종류)를 확인합니다.",
+          "source_indices": [
+            2
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+      "nvidia-peermem 모듈 상태와 작업 로그는 수집하지 않는다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet accelerator-nvidia-peermem Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "accelerator-nvidia-peermem",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-peermem 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

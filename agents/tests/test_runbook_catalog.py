@@ -22,13 +22,19 @@ def test_catalog_coverage_and_code_specific_guidance():
         )
     }
     entries = manifest["entries"]
+    components = manifest["component_entries"]
     codes = {entry["code"] for entry in entries}
     assert len(source_codes) == 264
     assert codes == source_codes | {"xid:133", "sxid:22012"}
     assert len(entries) == len(codes) == 266
-    assert manifest["counts"] == {"xid": 173, "sxid": 93, "generic": 1}
+    assert manifest["counts"] == {
+        "xid": 173,
+        "sxid": 93,
+        "generic": 1,
+        "component": len(components),
+    }
     assert {p.relative_to(BOOKS).as_posix() for p in BOOKS.rglob("RB-*.json")} == {
-        e["file"] for e in entries
+        e["file"] for e in entries + components
     } | {"RB-GENERAL-GPU-NODE.json"}
     for entry in entries:
         row = json.loads((BOOKS / entry["file"]).read_text("utf-8"))
@@ -44,6 +50,42 @@ def test_catalog_coverage_and_code_specific_guidance():
         assert all(
             r["execution"] == "not_performed" for r in content["recommendations"]
         )
+
+
+def test_component_runbooks_are_registered_and_select_only_their_component():
+    manifest = json.loads((BOOKS / "catalog-manifest.json").read_text("utf-8"))
+    profile = json.loads((ROOT / "agents/config.example.json").read_text("utf-8"))
+    registered = profile["health_contracts"]["fleet-component-log-v1"]["components"]
+    rows = [json.loads(p.read_text("utf-8")) for p in BOOKS.rglob("RB-*.json")]
+    for entry in manifest["component_entries"]:
+        row = json.loads((BOOKS / entry["file"]).read_text("utf-8"))
+        content = row["content"]
+        component = entry["component"]
+        assert row["knowledge_key"] == entry["knowledge_key"]
+        assert row["compatibility"] == {} and content["investigation_only"] is True
+        assert content["schema"] == "gpu-rca-runbook/1.2"
+        assert "codes" not in content["search"]
+        assert content["decision_policy"]["applies_when"] == {
+            "reported_component": component,
+            "reported_normalized_health": "unhealthy",
+            "reported_producer_contract": "fleet-component-log-v1",
+        }
+        # Without the health-contract entry D09 reports are not parsed for it.
+        assert registered[component] == "component"
+        ranked = retrieve_runbooks(
+            rows,
+            {
+                "alert": {
+                    "labels": {
+                        "component": component,
+                        "reason": content["search"]["aliases"][0],
+                    }
+                }
+            },
+        )
+        keys = [r["runbook"]["knowledge_key"] for r in ranked]
+        assert keys[0] == entry["knowledge_key"]
+        assert not any(k.startswith("RB-COMPONENT-") for k in keys[1:])
 
 
 def test_conflicting_definitions_decoder_and_fatality_are_preserved():
