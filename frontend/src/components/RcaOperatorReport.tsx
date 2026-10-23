@@ -239,6 +239,7 @@ export function RcaOperatorReport({
               `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}`,
               `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertUuid ? ` · ${v.alertUuid}` : ''}`,
               `언제: ${v.eventTime ? `${formatRcaTime(v.eventTime)} 커널 이벤트` : v.onsetText || '시작 시각 미확인'} — ${timing.verdict}`,
+              ...v.otherNotes.map((note) => `같은 노드 다른 오류: ${note}`),
               ...(v.workloads.some((w) => w.atIncident)
                 ? [
                     `누구에게 영향: ${v.workloads

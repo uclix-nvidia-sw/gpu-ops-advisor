@@ -1,7 +1,17 @@
+import { Fragment } from 'react';
 import { obj, rows, str, num, strings, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-import { intervalLabel, operatorView, valueText, type Window } from '../lib/rcaOperatorView';
+import {
+  intervalLabel,
+  operatorView,
+  valueText,
+  type MetricRow,
+  type Window,
+} from '../lib/rcaOperatorView';
 import { Ids, ToneBadge } from './RcaReportParts';
+
+// Raw rows shown before the rest fold; eight covers one metric per GPU on 8-GPU nodes.
+const RAW_ROWS = 8;
 
 const rangeText = (w: Window, unit: string) =>
   w.min === w.max
@@ -38,6 +48,36 @@ export function RcaTriageObservations({
         </small>
       </>
     );
+  const rawRow = (m: MetricRow, i: number) => {
+    const set = v.gpuSet(m.uuids);
+    return (
+      <tr key={i}>
+        <td>{m.name}</td>
+        <td>
+          {set}
+          {/* GPUs without an index stay identifiable by UUID. */}
+          {!/모두|번$/.test(set) &&
+            m.gpus.map((g) => (
+              <small key={g}>
+                <br />
+                <Ids text={g} />
+              </small>
+            ))}
+        </td>
+        {m.whole ? (
+          <td colSpan={2}>조회 구간 전체 {m.wholeText}</td>
+        ) : (
+          <>
+            <td>{m.beforeText || <span className="rca-muted">표본 없음</span>}</td>
+            <td>{m.afterText || <span className="rca-muted">표본 없음</span>}</td>
+          </>
+        )}
+        <td>
+          <ToneBadge tone={m.tone} label={m.tag} /> {links(m.refs)}
+        </td>
+      </tr>
+    );
+  };
   const start = Date.parse(v.timeline[0]?.at || '');
   const end = Date.parse(v.timeline[v.timeline.length - 1]?.at || '');
   const origin = Date.parse(v.eventTime || v.firstReport);
@@ -208,33 +248,40 @@ export function RcaTriageObservations({
             </tr>
           </thead>
           <tbody>
-            {rows(view.logs).map((r, i) => (
-              <tr key={i}>
-                <td>
-                  <mark>{str(r.code).toUpperCase()}</mark>
-                  <br />
-                  {str(r.device)}
-                </td>
-                <td>
-                  {strings(r.event_times).map((at) => (
-                    <div key={at}>
-                      <strong>발생: {formatDate(at)}</strong>
-                    </div>
-                  ))}
-                  보고: {formatDate(str(r.first))}
-                  <br />~ {formatDate(str(r.last))}
-                </td>
-                <td>{num(r.reports)}건</td>
-                <td>
-                  <details>
-                    <summary>
-                      <Ids text={str(r.message)} />
-                    </summary>
-                    <pre>{str(r.message)}</pre>
-                  </details>
-                  {links(r.evidence_refs)}
-                </td>
-              </tr>
+            {[...v.logs, ...v.otherLogs].map((r, i) => (
+              <Fragment key={i}>
+                {i === v.logs.length && (
+                  <tr>
+                    <th colSpan={4}>같은 노드의 다른 오류 (참고 · 이 보고서 대상 아님)</th>
+                  </tr>
+                )}
+                <tr className={i >= v.logs.length ? 'rca-muted' : undefined}>
+                  <td>
+                    <mark>{str(r.code).toUpperCase()}</mark>
+                    <br />
+                    {str(r.device)}
+                  </td>
+                  <td>
+                    {strings(r.event_times).map((at) => (
+                      <div key={at}>
+                        <strong>발생: {formatDate(at)}</strong>
+                      </div>
+                    ))}
+                    보고: {formatDate(str(r.first))}
+                    <br />~ {formatDate(str(r.last))}
+                  </td>
+                  <td>{num(r.reports)}건</td>
+                  <td>
+                    <details>
+                      <summary>
+                        <Ids text={str(r.message)} />
+                      </summary>
+                      <pre>{str(r.message)}</pre>
+                    </details>
+                    {links(r.evidence_refs)}
+                  </td>
+                </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -337,57 +384,29 @@ export function RcaTriageObservations({
         </div>
       )}
       {v.metrics.length > 0 && v.multiGpu && (
-        <details className="rca-history-table">
-          <summary>GPU별 원자료 ({v.metrics.length}행)</summary>
+        <div className="rca-history-table">
           <table>
+            <caption>GPU별 원자료 · 한 줄에 한 지표 · 값이 같은 GPU는 묶음</caption>
             <thead>
               <tr>
-                <th>지표</th>
+                <th style={{ width: '28%' }}>지표</th>
+                <th style={{ width: '16%' }}>GPU</th>
                 <th>사건 전</th>
                 <th>사건 후</th>
-                <th>한 줄 해석</th>
+                <th style={{ width: '18%' }}>판정</th>
               </tr>
             </thead>
-            <tbody>
-              {v.metrics.map((m, i) => (
-                <tr key={i}>
-                  <td>
-                    <strong>{m.name}</strong>
-                    <br />
-                    <small>{m.unit}</small>
-                    {m.gpus.length === 1 ? (
-                      <small>
-                        <br />
-                        <Ids text={m.gpus[0]} />
-                      </small>
-                    ) : (
-                      <details>
-                        <summary>GPU {m.gpus.length}개 · 동일 관측값</summary>
-                        {m.gpus.map((g) => (
-                          <p key={g}>
-                            <Ids text={g} />
-                          </p>
-                        ))}
-                      </details>
-                    )}
-                  </td>
-                  {m.whole ? (
-                    <td colSpan={2}>조회 구간 전체: {windowText(m.whole, m.unit)}</td>
-                  ) : (
-                    <>
-                      <td>{windowText(m.before, m.unit)}</td>
-                      <td>{windowText(m.after, m.unit)}</td>
-                    </>
-                  )}
-                  <td>
-                    <ToneBadge tone={m.tone} label={m.tag} /> {m.short}
-                    <div>{links(m.refs)}</div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody>{v.metrics.slice(0, RAW_ROWS).map(rawRow)}</tbody>
           </table>
-        </details>
+          {v.metrics.length > RAW_ROWS && (
+            <details>
+              <summary>나머지 {v.metrics.length - RAW_ROWS}행</summary>
+              <table>
+                <tbody>{v.metrics.slice(RAW_ROWS).map(rawRow)}</tbody>
+              </table>
+            </details>
+          )}
+        </div>
       )}
       {v.workloads.length > 0 && (
         <p className="rca-muted">

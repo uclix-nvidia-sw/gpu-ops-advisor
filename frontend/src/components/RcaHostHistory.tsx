@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { obj, rows, str, strings, num, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
 import { intervalLabel } from '../lib/rcaOperatorView';
-import { Ids } from './RcaReportParts';
+import { Ids, ToneBadge } from './RcaReportParts';
 
 export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
   const history = obj(obj(result.quality).host_incident_history);
@@ -29,19 +29,31 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
         ((str(r.device) || str(r.gpu_uuid)) === currentDevice &&
           strings(r.codes).some((c) => strings(current?.codes).includes(c)))),
   );
-  const groups = new Map<string, Row[]>();
+  // Code → device → incidents. The current alert's code leads; each code's host-wide row
+  // heads its own device rows, busiest device first.
+  const byCode = new Map<string, Map<string, Row[]>>();
   visible.forEach((r) =>
     strings(r.codes)
       .filter((c) => !code || c === code)
       .forEach((c) => {
-        const hostKey = `${c.toUpperCase()} · 호스트 전체`;
-        if (!related || !currentDevice) groups.set(hostKey, [...(groups.get(hostKey) || []), r]);
-        if (str(r.device) || str(r.gpu_uuid)) {
-          const key = `${c.toUpperCase()} · ${str(r.device) || str(r.gpu_uuid)}`;
-          groups.set(key, [...(groups.get(key) || []), r]);
-        }
+        const devices = byCode.get(c) || new Map<string, Row[]>();
+        const d = str(r.device) || str(r.gpu_uuid);
+        byCode.set(c, devices.set(d, [...(devices.get(d) || []), r]));
       }),
   );
+  const hostRows = !related || !currentDevice;
+  const curCodes = strings(current?.codes);
+  const groups = [...byCode]
+    .sort(
+      ([a], [b]) =>
+        Number(curCodes.includes(b)) - Number(curCodes.includes(a)) || a.localeCompare(b),
+    )
+    .flatMap(([c, devices]) => [
+      ...(hostRows ? [{ c, device: '', host: true, items: [...devices.values()].flat() }] : []),
+      ...[...devices]
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([device, items]) => ({ c, device, host: false, items })),
+    ]);
   return (
     <section className="rca-host-history" aria-label="호스트 사건 이력">
       {embedded ? <h5>이전 사건과 RCA</h5> : <h4>4. 호스트 이력 · 반복된 사건</h4>}
@@ -86,7 +98,7 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
           </select>
         </label>
       </div>
-      {groups.size > 0 && (
+      {groups.length > 0 && (
         <div className="rca-history-table">
           <table>
             <caption>코드·대상별 등록 건수와 최근 간격</caption>
@@ -99,26 +111,29 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
               </tr>
             </thead>
             <tbody>
-              {[...groups].map(([key, items]) => {
+              {groups.map(({ c, device, host, items }) => {
                 const times = items
                   .map((r) => Date.parse(str(r.occurred_at)))
                   .sort((a, b) => a - b);
                 const gaps = times.slice(1).map((t, i) => t - times[i]);
                 return (
-                  <tr key={key}>
-                    <td>
-                      {key.endsWith('호스트 전체') ? (
-                        key
-                      ) : (
-                        <details>
-                          <summary>
-                            {key.split(' · ')[0]} ·{' '}
-                            <Ids text={str(items[0].device) || str(items[0].gpu_uuid)} />
-                          </summary>
-                          {key}
-                        </details>
-                      )}
-                    </td>
+                  <tr key={`${c}|${host ? '*' : device}`}>
+                    {host ? (
+                      <td>
+                        <strong>{c.toUpperCase()} · 호스트 전체</strong>
+                      </td>
+                    ) : (
+                      <td style={hostRows ? { paddingLeft: '1.5em' } : undefined}>
+                        {!hostRows && `${c.toUpperCase()} · `}
+                        {device ? <Ids text={device} /> : '장치 정보 없음'}
+                        {device === currentDevice && curCodes.includes(c) && (
+                          <>
+                            {' '}
+                            <ToneBadge tone="warn" label="이번 장치" />
+                          </>
+                        )}
+                      </td>
+                    )}
                     <td>{items.length}건</td>
                     <td>{gaps.length ? intervalLabel(gaps[gaps.length - 1]) : '—'}</td>
                     <td>

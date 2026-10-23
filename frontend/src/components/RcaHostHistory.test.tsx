@@ -92,11 +92,48 @@ test('repeat intervals group the same code and device and mark the query boundar
       }}
     />,
   );
-  expect(html).toContain('XID:79 · 호스트 전체</td><td>3건');
-  expect(html).toContain('XID:79 · GPU-A</summary>');
+  expect(html).toContain('<strong>XID:79 · 호스트 전체</strong></td><td>3건');
+  // Device rows sit under their code's host row, busiest first, without a repeating toggle.
+  expect(html.indexOf('GPU-A</td><td>2건')).toBeLessThan(html.indexOf('GPU-B</td><td>1건'));
+  expect(html).not.toContain('<summary>XID:79');
   expect(html).toContain('코드·대상별 등록 건수와 최근 간격');
-  expect(html).toContain('XID:79 · GPU-A');
   expect(html).toContain('<td>2.0일</td>');
   expect(html).not.toContain('GPU-B · 2건');
   expect(html).toContain('(조회 종료)');
+});
+
+test('device rows stay under their own code, the current alert code first', () => {
+  const row = (id: string, day: number, code: string, device: string) => ({
+    incident_id: id,
+    occurred_at: `2026-10-${day}T00:00:00Z`,
+    codes: [code],
+    device,
+    current: id === 'a',
+  });
+  // Incidents interleave codes; grouping must not follow first appearance.
+  const result = {
+    quality: {
+      host_incident_history: {
+        schema: 'rca-host-history/1',
+        complete: true,
+        period: { start: '2026-10-07T00:00:00Z', end: '2026-10-21T00:00:00Z' },
+        rows: [
+          row('a', 20, 'sxid:11001', 'NVSwitch PCI:0000:c4:00.0'),
+          row('b', 19, 'xid:79', 'GPU-X'),
+          row('c', 18, 'sxid:11001', 'NVSwitch PCI:0000:c7:00.0'),
+        ],
+      },
+    },
+  };
+  const all = renderToStaticMarkup(<RcaHostHistory result={result} />);
+  const at = (s: string) => all.indexOf(s);
+  expect(at('SXID:11001 · 호스트 전체')).toBeLessThan(at('0000:c7:00.0'));
+  expect(at('0000:c7:00.0')).toBeLessThan(at('XID:79 · 호스트 전체'));
+  expect(at('XID:79 · 호스트 전체')).toBeLessThan(at('GPU-X</td>'));
+  expect(all).toContain('이번 장치');
+  // The embedded report starts on the same device and code, as before: no host rows.
+  const related = renderToStaticMarkup(<RcaHostHistory result={result} embedded />);
+  expect(related).not.toContain('호스트 전체');
+  expect(related).not.toContain('GPU-X');
+  expect(related).toContain('SXID:11001 · ');
 });

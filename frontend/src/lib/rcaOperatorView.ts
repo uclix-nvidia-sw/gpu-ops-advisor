@@ -45,6 +45,10 @@ export interface MetricRow {
   before: Window | null;
   after: Window | null;
   whole: Window | null;
+  /** Compact cell values ('' when absent); status codes carry their meaning when known. */
+  beforeText: string;
+  afterText: string;
+  wholeText: string;
   samples: number;
   lastSample: string;
   tone: Tone;
@@ -258,14 +262,34 @@ export function operatorView(result: Row) {
   if (view.schema !== 'rca-triage-observations/1') return null;
   const target = obj(view.target);
   const period = obj(view.period);
-  const logs = rows(view.logs);
+  const allLogs = rows(view.logs);
   const periodEnd = t(period.end);
   const boundary = t(view.event_boundary);
-  const codes = [...new Set(logs.map((r) => str(r.code).toLowerCase()).filter(Boolean))];
-  const family = codes.some((c) => c.startsWith('sxid')) ? 'nvswitch' : 'gpu';
   const title = str(target.title);
   const alertPci = (title.match(/PCI:([0-9a-f:.]+)/i) || [])[1] || '';
   const alertUuid = (title.match(UUID) || [])[0] || '';
+  // The report covers the alert's code on the alert's device; other errors the node logged
+  // in the same window are context only. A device mismatch keeps the code's logs for Q1.
+  const named = title.match(/\b(S?XID)[\s:]*(\d+)/i);
+  const alertCode = named
+    ? `${named[1]}:${named[2]}`.toLowerCase()
+    : str(obj(view.onset).code).toLowerCase();
+  const ofCode = alertCode
+    ? allLogs.filter((r) => str(r.code).toLowerCase() === alertCode)
+    : allLogs;
+  const onDevice = ofCode.filter((r) => {
+    const d = str(r.device);
+    return (
+      (!!alertPci && !!d && normPci(d) === normPci(alertPci)) ||
+      (!!alertUuid && d.toLowerCase() === alertUuid.toLowerCase())
+    );
+  });
+  const logs = onDevice.length ? onDevice : ofCode;
+  const otherLogs = allLogs.filter((r) => !logs.includes(r));
+  const codes = alertCode
+    ? [alertCode]
+    : [...new Set(logs.map((r) => str(r.code).toLowerCase()).filter(Boolean))];
+  const family = codes.some((c) => c.startsWith('sxid')) ? 'nvswitch' : 'gpu';
   const guidance = rows(quality.runbook_guidance).filter(
     (g) => g.report_applicability !== 'reference_only',
   );
@@ -305,6 +329,44 @@ export function operatorView(result: Row) {
 
   const refsOf = (items: Row[]) => [...new Set(items.flatMap((r) => strings(r.evidence_refs)))];
 
+  // Other errors on this node, one entry per code and device, timed against the alert error.
+  const byTime = (a: string, b: string) => t(a) - t(b);
+  const otherGroups = new Map<string, Row[]>();
+  otherLogs.forEach((r) => {
+    const key = `${str(r.code)}|${str(r.device)}`;
+    otherGroups.set(key, [...(otherGroups.get(key) || []), r]);
+  });
+  const origin = eventTimes[0] || firstReport;
+  const others = [...otherGroups.values()].map((group) => {
+    const events = group.flatMap((r) => strings(r.event_times)).filter((v) => !isNaN(t(v)));
+    const seen = group.flatMap((r) => [str(r.first), str(r.last)]).filter((v) => !isNaN(t(v)));
+    events.sort(byTime);
+    seen.sort(byTime);
+    const device = str(group[0].device);
+    const owner = /^xid/i.test(str(group[0].code))
+      ? [...inventory].find(([, bus]) => !!device && normPci(bus) === normPci(device))?.[0]
+      : undefined;
+    const index = owner ? str(obj(gpuInfo.get(owner)).gpu_index) : '';
+    const at = events[0] || seen[0] || '';
+    const gap = t(at) - t(origin);
+    return {
+      code: str(group[0].code).toUpperCase(),
+      device: index ? `GPU ${index} (PCI ${fullPci(device)})` : deviceLabel(device),
+      at,
+      event: !!events[0],
+      last: seen[seen.length - 1] || '',
+      reports: group.reduce((n, r) => n + num(r.reports), 0),
+      offset: isNaN(gap)
+        ? ''
+        : `이 알림 오류 ${intervalLabel(Math.abs(gap))} ${gap < 0 ? '전' : '뒤'}`,
+      refs: refsOf(group),
+    };
+  });
+  const otherNotes = others.map(
+    (o) =>
+      `${o.code} · ${o.device} · ${fmt(o.at)} ${o.event ? '발생' : '첫 보고'}${o.last ? `, ${fmt(o.last)}까지 ${o.reports}건 보고` : ''}${o.offset ? ` — ${o.offset}` : ''}, 이 보고서의 대상 아님(별도 사건으로 확인)`,
+  );
+
   // 1. Device identity.
   const logDevices = [...new Set(logs.map((r) => str(r.device)).filter(Boolean))];
   const matched = alertPci && logDevices.some((d) => normPci(d) === normPci(alertPci));
@@ -314,7 +376,7 @@ export function operatorView(result: Row) {
   );
   idPoints.push(
     logDevices.length
-      ? `오류 로그 장치: ${logDevices.map(deviceLabel).join(', ')} → ${matched ? '알림과 일치' : '알림과 다름'}`
+      ? `오류 로그 장치: ${logDevices.map(deviceLabel).join(', ')} → ${matched ? '알림과 일치' : '알림과 다름'}${others.length ? ` (같은 노드의 ${others.map((o) => `${o.device} ${o.code}`).join(', ')}는 대조에서 제외)` : ''}`
       : '오류 로그에서 장치를 찾지 못했습니다.',
   );
   const metricRows = rows(view.metrics);
@@ -435,6 +497,11 @@ export function operatorView(result: Row) {
           ? `${val(w.min)} ~ ${val(w.max)}`
           : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
     const once = after?.samples === 1 ? ', 사건 뒤 표본 1회' : '';
+    const fm = q === 'D47';
+    const code = (c: number) => `${fmtNum(c)}${fm && FM_STATUS[c] ? ` (${FM_STATUS[c]})` : ''}`;
+    // One-line cell values for the per-GPU raw table.
+    const cell = (w: Window | null) =>
+      !w ? '' : fm ? (w.min === w.max ? code(w.min) : `${code(w.min)} ~ ${code(w.max)}`) : range(w);
     let tone: Tone = 'unknown';
     let tag: string;
     let short: string;
@@ -444,8 +511,6 @@ export function operatorView(result: Row) {
     } else if (enumKind) {
       const all = [before, after, whole].filter(Boolean) as Window[];
       const changed = all.some((w) => w.min !== w.max) || new Set(all.map((w) => w.min)).size > 1;
-      const fm = q === 'D47';
-      const code = (c: number) => `${fmtNum(c)}${fm && FM_STATUS[c] ? ` (${FM_STATUS[c]})` : ''}`;
       const c = all[0].min;
       if (changed) {
         enumChange =
@@ -559,6 +624,9 @@ export function operatorView(result: Row) {
       before,
       after,
       whole,
+      beforeText: cell(before),
+      afterText: after ? `${cell(after)}${after.samples === 1 ? ' · 1회' : ''}` : '',
+      wholeText: cell(whole),
       samples: num(m.samples),
       lastSample: str(m.last),
       tone,
@@ -721,14 +789,15 @@ export function operatorView(result: Row) {
     sameTimes.length > 1 ? sameTimes[sameTimes.length - 1] - sameTimes[sameTimes.length - 2] : 0;
   const days = Math.round((t(obj(history.period).end) - t(obj(history.period).start)) / 86400000);
   const codeText = curCodes.map((c) => c.toUpperCase()).join(', ');
-  const unit = family === 'nvswitch' ? 'NVSwitch' : 'GPU';
+  // History counts distinct NVSwitch addresses, which need not match the switch count.
+  const spread = (n: number) => (family === 'nvswitch' ? `NVSwitch 주소 ${n}곳` : `GPU ${n}개`);
   const repeatPoints: string[] = [];
   if (hrows.length) {
     repeatPoints.push(
       `같은 장치·같은 오류: ${same.length}건 (이번 포함, 최근 ${days}일)${lastGap ? ` · 직전 사건과 ${intervalLabel(lastGap)} 간격` : ''}`,
     );
     repeatPoints.push(
-      `같은 호스트에서 ${codeText} 오류가 난 ${unit}: ${byDevice.size}개, 사건 ${sameCode.length}건`,
+      `같은 호스트에서 ${codeText} 오류가 난 장치: ${spread(byDevice.size)}, 사건 ${sameCode.length}건`,
     );
     if (otherCodes.size)
       repeatPoints.push(
@@ -759,9 +828,9 @@ export function operatorView(result: Row) {
     verdict: !hrows.length
       ? '호스트 사건 이력을 조회하지 못했습니다.'
       : same.length > 1
-        ? `같은 장치에서 최근 ${days}일 동안 ${same.length}번째 같은 오류입니다${lastGap ? ` (직전 ${intervalLabel(lastGap)} 전)` : ''}.${byDevice.size > 1 ? ` 같은 호스트의 다른 ${unit} ${byDevice.size - 1}개에서도 발생했습니다.` : ''}`
+        ? `같은 장치에서 최근 ${days}일 동안 ${same.length}번째 같은 오류입니다${lastGap ? ` (직전 ${intervalLabel(lastGap)} 전)` : ''}.${byDevice.size > 1 ? ` 같은 호스트의 다른 ${spread(byDevice.size - 1)}에서도 발생했습니다.` : ''}`
         : byDevice.size > 1
-          ? `이 장치는 처음이지만 같은 호스트의 다른 ${unit} ${byDevice.size - 1}개에서 같은 오류가 있었습니다.`
+          ? `이 장치는 처음이지만 같은 호스트의 다른 ${spread(byDevice.size - 1)}에서 같은 오류가 있었습니다.`
           : `최근 ${days}일 동안 이 호스트에서 처음 등록된 ${codeText} 사건입니다.`,
     points: repeatPoints,
     refs: strings(history.evidence_refs),
@@ -823,6 +892,11 @@ export function operatorView(result: Row) {
     ...(str(view.alert_time)
       ? [{ at: str(view.alert_time), label: '알림 시작', tone: 'unknown' as Tone }]
       : []),
+    ...others.map((o) => ({
+      at: o.at,
+      label: `참고: 같은 노드 ${o.code} · ${o.device} (이 보고서 대상 아님)`,
+      tone: 'unknown' as Tone,
+    })),
     ...metrics
       .filter((m) => m.before && !m.after && m.lastSample)
       .map((m) => ({ at: m.lastSample, label: `${m.name} 마지막 표본`, tone: 'unknown' as Tone })),
@@ -919,6 +993,12 @@ export function operatorView(result: Row) {
     timeline,
     devices,
     deviceLabel,
+    gpuSet,
+    /** Alert-scoped logs; `others` are the node's other errors in the same window. */
+    logs,
+    otherLogs,
+    others,
+    otherNotes,
   };
 }
 export type OperatorView = NonNullable<ReturnType<typeof operatorView>>;

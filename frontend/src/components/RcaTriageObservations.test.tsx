@@ -38,7 +38,7 @@ it('groups identical summaries without hiding different measurements or GPU iden
   // One summary line for the shared verdict, two raw rows (identical A·B, different C).
   expect(html.match(/NVLink RX/g)).toHaveLength(3);
   expect(html).toContain('GPU 3개');
-  expect(html).toContain('GPU 2개 · 동일 관측값');
+  expect(html).toContain('<td>GPU 2개<small>');
   for (const gpu of ['GPU-A', 'GPU-B', 'GPU-C']) expect(html).toContain(gpu);
 });
 it('adds the console decision summary while preserving the main report sections and evidence', () => {

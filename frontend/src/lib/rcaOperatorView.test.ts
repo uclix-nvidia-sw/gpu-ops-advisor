@@ -114,6 +114,58 @@ it('answers the operator questions from collected evidence only', () => {
   );
 });
 
+it('scopes the report to the alert code and device; other node errors stay context', () => {
+  // Shape of a stored SXID 11001 result whose window also caught a GPU XID 79 (synthetic).
+  const view = (title: string) =>
+    operatorView({
+      quality: {
+        triage_observations: {
+          schema: 'rca-triage-observations/1',
+          target: { node: 'dgx02', title },
+          period: { start: '2026-10-23T04:55:16Z', end: '2026-10-23T05:25:16Z' },
+          gpus: [{ gpu_index: '5', gpu_uuid: gpu, pci_bus_id: '0000:90:00.0' }],
+          logs: [
+            {
+              code: 'xid:79',
+              device: 'PCI:0000:90:00',
+              event_times: ['2026-10-23T05:03:00Z'],
+              first: '2026-10-23T05:03:00Z',
+              last: '2026-10-23T05:17:25Z',
+              reports: 16,
+              message: 'NVRM: Xid (PCI:0000:90:00): 79, GPU has fallen off the bus',
+            },
+            {
+              code: 'sxid:11001',
+              device: 'PCI:0000:c4:00.0',
+              event_times: ['2026-10-23T05:23:44Z'],
+              first: '2026-10-23T05:23:44Z',
+              last: '2026-10-23T05:24:25Z',
+              reports: 2,
+              message: 'SXID 11001(ingress invalid command) detected on PCI:0000:c4:00.0',
+            },
+          ],
+        },
+      },
+    })!;
+  const v = view('SXID 11001(ingress invalid command) detected on PCI:0000:c4:00.0');
+  expect(v.codes).toEqual(['SXID:11001']);
+  expect([v.eventTime, v.reports]).toEqual(['2026-10-23T05:23:44Z', 2]);
+  expect(v.message).toContain('SXID 11001');
+  expect(v.findings[0].tone).toBe('ok');
+  expect(v.findings[0].points[1]).toBe(
+    '오류 로그 장치: PCI:0000:c4:00.0 → 알림과 일치 (같은 노드의 GPU 5 (PCI 0000:90:00) XID:79는 대조에서 제외)',
+  );
+  expect(v.otherNotes[0]).toContain('XID:79 · GPU 5 (PCI 0000:90:00)');
+  expect(v.otherNotes[0]).toContain('16건 보고 — 이 알림 오류 21분 전, 이 보고서의 대상 아님');
+  expect(v.timeline.map((i) => i.label)).toContain(
+    '참고: 같은 노드 XID:79 · GPU 5 (PCI 0000:90:00) (이 보고서 대상 아님)',
+  );
+  // Same code on another device is still the alert's error, reported as a mismatch.
+  const moved = view('SXID 11001(ingress invalid command) detected on PCI:0000:c7:00.0');
+  expect(moved.findings[0].tone).toBe('warn');
+  expect(moved.reports).toBe(2);
+});
+
 it('returns null for results without triage observations', () => {
   expect(operatorView({ quality: {} })).toBeNull();
 });

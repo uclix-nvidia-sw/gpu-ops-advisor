@@ -57,7 +57,7 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | XID 95 | A100에서 MIG가 꺼져 있으면 노드 즉시 재부팅, 켜져 있으면 다른 인스턴스 배출 뒤 GPU 리셋(Triage). XID 94·95의 "2차 오류" 문장을 원인 조사 방향(동반 메모리 오류 우선)으로 정정 |
 | XID 61·123 | 카탈로그상 Unused이지만 Triage 표 1이 보고와 GPU 리셋을 안내하므로 "복구 조치를 정하지 않습니다"를 CONTACT_SUPPORT·GPU 리셋 단계로 교체 |
 | XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |
-| SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가. 2026-10-23 운영자 문장의 내부 조회 ID를 의미 이름으로 바꾸고 선택 D02를 추가([검토 기록](operator-wording-review-20261023.json)) |
+| SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가. 2026-10-23 운영자 문장의 내부 조회 ID와 출처 제목의 DCGM 열거형 이름을 의미 이름으로 바꾸고 선택 D02를 추가([검토 기록](operator-wording-review-20261023.json)) |
 | SXID 잠재적 치명 41건·11001 | 영향·복구를 bare metal 절차(access 포트: 해당 GPU와 같은 작업 GPU 리셋, trunk 포트: FM 정지 후 전체 리셋) 먼저, 공유 NVSwitch 가상화(guest VM) 절차를 다음에 적음 |
 | SXID 11004·12028 | 비치명 SXID는 bare metal에서 정보성이고 FM이 작업을 중단하지 않음을 명시, guest VM 재시작은 가상화 절차로 분리 |
 | SXID 19084·10003 | 전체 GPU·NVSwitch 리셋에 bare metal 절차(FM 정지 → `-i` 없는 `nvidia-smi -r` → FM 재시작) 추가 |
