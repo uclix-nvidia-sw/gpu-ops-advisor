@@ -125,17 +125,32 @@ class AlertRuleCatalogTests(unittest.TestCase):
             {e["code"] for e in MANIFEST["entries"] if e["fleet_event_type"] is None},
         )
 
-    def test_event_rules_split_rca_and_notice_by_the_same_allowlist(self):
+    def test_state_rule_raises_fatal_and_critical_from_repeating_state_lines(self):
+        # Event lines are written once and can be lost (SetHealthy purges unexported
+        # events), so codes that change the component state must alert from state lines.
+        _, rule = RULES["gpuops-xid-sxid-state"]
+        expr = rule["data"][0]["model"]["expr"]
+        self.assertIn('log_type="component_data"', expr)
+        # Fleet maps Fatal to Unhealthy and Critical to Degraded.
+        self.assertIn('health=~"Unhealthy|Degraded"', expr)
+        self.assertIn('component=~"accelerator-nvidia-error-(xid|sxid)"', expr)
+
+    def test_event_rules_split_allowlist_and_notice_without_state_codes(self):
         _, rca = RULES["gpuops-xid-sxid-rca"]
         _, notice = RULES["gpuops-xid-sxid-notice"]
         regex = code_regex()
         rca_expr = rca["data"][0]["model"]["expr"]
         notice_expr = notice["data"][0]["model"]["expr"]
-        self.assertIn(f'event_type=~"Fatal|Critical" or code=~"{regex}"', rca_expr)
+        # Fatal/Critical stay with the state rule; repeating them here would open a
+        # second incident and RCA for the same error.
+        self.assertIn(f'event_type!~"Fatal|Critical" and code=~"{regex}"', rca_expr)
         self.assertIn(f'event_type!~"Fatal|Critical" and code!~"{regex}"', notice_expr)
-        for expr in (rca_expr, notice_expr):
+        for rule, expr in ((rca, rca_expr), (notice, notice_expr)):
             self.assertIn('log_type="event"', expr)
             self.assertIn('event_name=~"error_(xid|sxid)"', expr)
+            # Fleet exports events on an interval; a short window misses late lines.
+            self.assertIn("[10m]", expr)
+            self.assertEqual(rule["data"][0]["relativeTimeRange"]["from"], 600)
         # An unanchored xid pattern would also match inside sxid codes (xid:150 in sxid:15001).
         self.assertTrue(regex.startswith("^(") and regex.endswith(")$"))
 
@@ -154,6 +169,7 @@ class AlertRuleCatalogTests(unittest.TestCase):
     def test_alert_names_match_incident_analysis_policy(self):
         policies = {p["alertname"] for p in INCIDENT["analysis_policies"]}
         for uid, title in (
+            ("gpuops-xid-sxid-state", "GPUAlert"),
             ("gpuops-xid-sxid-rca", "GPUAlert"),
             ("gpuops-component-rca", "GPUAlert"),
             ("gpuops-xid-sxid-notice", "GPUErrorNotice"),
