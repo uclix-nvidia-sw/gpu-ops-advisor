@@ -1,0 +1,39 @@
+{
+  "purpose": "Fleet event types that do not trigger RCA by themselves but whose NVIDIA guidance requires an operator action. The GPUAlert event rule adds these codes to every Fatal/Critical Fleet event.",
+  "basis": {
+    "fleet": "Pinned Fleet SDK 84f99bee catalog event_type (rcca-agent/runbooks/catalog-manifest.json fleet_event_type)",
+    "xid": "NVIDIA Xid catalog (Xid-Catalog.xlsx, Sep 09, 2026) immediate-action bucket and GPU Node Triage table 1 (Oct 04, 2026)",
+    "sxid": "Fabric Manager User Guide v2.6 tables 23 (potentially fatal) and 24 (always fatal); table 25 SXID 10003 is fatal to the fabric/system"
+  },
+  "xid": [
+    {"code": 54, "fleet_event_type": "Warning", "nvidia": "Immediate action CHECK_MECHANICALS: auxiliary power is not connected"},
+    {"code": 92, "fleet_event_type": "Warning", "nvidia": "GPU Node Triage table 1: run Field Diagnostics; RMA guidance for excessive errors"},
+    {"code": 109, "fleet_event_type": "Warning", "nvidia": "Immediate action RESET_GPU"},
+    {"code": 136, "fleet_event_type": "Warning", "nvidia": "Immediate action RESET_GPU"},
+    {"code": 144, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 145, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 146, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 147, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 148, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 149, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 150, "fleet_event_type": "Warning", "nvidia": "Immediate action WORKFLOW_NVLINK5_ERR: decode with the Xid 144-150 table"},
+    {"code": 151, "fleet_event_type": "Warning", "nvidia": "Immediate action RESTART_VM"},
+    {"code": 154, "fleet_event_type": "Warning", "nvidia": "Immediate action XID_154: follow the reported GPU recovery action"},
+    {"code": 155, "fleet_event_type": "Warning", "nvidia": "Immediate action RESET_GPU"},
+    {"code": 156, "fleet_event_type": "Warning", "nvidia": "Immediate action RESET_GPU"},
+    {"code": 158, "fleet_event_type": "Warning", "nvidia": "Immediate action RESET_GPU"},
+    {"code": 159, "fleet_event_type": "Warning", "nvidia": "Immediate action CHECK_UVM: reset the GPU when UVM/vGPU is used"}
+  ],
+  "sxid": [
+    {"code": 10003, "fleet_event_type": "Warning", "nvidia": "FM guide table 25: never expected; fatal to the fabric/system; reset all GPUs and NVSwitches"},
+    {"code": 12030, "fleet_event_type": "Warning", "nvidia": "FM guide table 23: potentially fatal NVSwitch SXID"}
+  ],
+  "opt_in": [
+    {"code": "xid:13", "reason": "Triage table 1 action, but usually an application fault; frequent in shared clusters. Default stays in GPUErrorNotice."},
+    {"code": "xid:31", "reason": "Triage table 1 action, but the Xid catalog treats it as usually an application fault. Default stays in GPUErrorNotice."},
+    {"code": "xid:45", "reason": "Triage table 1: informational, follow the other Xid; restart Fabric Manager only when seen alone. Default stays in GPUErrorNotice."}
+  ],
+  "not_emitted_by_fleet": [
+    {"code": "xid:133", "reason": "Listed in the NVIDIA Xid catalog but not in the Fleet catalog, so the Fleet matcher drops it and no alert can be raised."}
+  ]
+}
