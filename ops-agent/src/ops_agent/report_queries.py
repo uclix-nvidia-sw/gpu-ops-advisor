@@ -13,7 +13,8 @@ from agent_common.grafana_time import mcp_time
 from agent_common.observation import evidence_stamp, unwrap
 
 from .report_contract import MAX_BYTES, MAX_POINTS, VERSION, iso
-from .identity_transitions import sample_bounds, verified_transitions
+from .identity_transitions import identity, sample_bounds, verified_transitions
+from .collector_identity import groups, source_values, verified, JOB_FIELDS
 
 
 def selector(metric, cluster, *, namespace=True):
@@ -103,6 +104,8 @@ class ReportQueries:
         self.discovery = Discovery(self.call)
         self.calls = 0
         self.bytes_received = 0
+        self.collector_calls = 0
+        self.collector_deadline = None
         self.transition_calls = 0
         self.transition_deadline = None
 
@@ -279,3 +282,74 @@ class ReportQueries:
                     )
                 )
         return output
+
+    async def check_collectors(self, cluster, period, uid, evidence):
+        # Optional raw reads stay inside the existing total call/byte/deadline limits.
+        if self.collector_deadline is None:
+            self.collector_deadline = min(self.deadline - 30, time.monotonic() + 20)
+        stop = self.collector_deadline
+        for e in evidence:
+            if e["tool_status"] != "ok":
+                continue
+            ambiguous = defaultdict(list)
+            for (at, key), rows in groups(e).items():
+                sources = source_values(rows, e["query_id"])
+                if sources and len(sources) > 1:
+                    ambiguous[at].append((key, rows))
+            for at, items in sorted(ambiguous.items()):
+                if self.collector_calls >= 4 or time.monotonic() >= stop:
+                    return
+                query = e["query_id"]
+                label = "pod" if query == "hourly_pod_identity" else "job_name"
+                # Bound exceptional targets; skipped targets remain conservatively excluded.
+                names = sorted({dict(key).get(label, "") for key, _ in items})[:64]
+                metric = (
+                    "kube_pod_info"
+                    if query == "hourly_pod_identity"
+                    else "kube_job_created"
+                )
+                expr = selector(metric, cluster)
+                if query == "hourly_gpu_jobs":
+                    expr = expr.replace(
+                        "kube_job_created{",
+                        '{__name__=~"' + "|".join(JOB_FIELDS) + '",',
+                        1,
+                    )
+                expr = (
+                    expr[:-1]
+                    + f",{label}=~{json.dumps('|'.join(re.escape(n) for n in names))}}}[1h] offset 1ms"
+                )
+                args = dict(
+                    datasourceUid=uid,
+                    expr=expr,
+                    queryType="instant",
+                    endTime=mcp_time(iso(at)),
+                )
+                audit = dict(
+                    hour_end=iso(at),
+                    reason=None,
+                    verified_groups=0,
+                    raw_samples_stored=False,
+                )
+                e["quality"].setdefault("collector_verification", []).append(audit)
+                self.collector_calls += 1
+                try:
+                    async with asyncio.timeout_at(stop):
+                        raw = matrix(await self.call("query_prometheus", args))
+                    bounds = []
+                    for row in raw:
+                        checked = sample_bounds([row], at, cluster["cluster_id"])[0]
+                        checked["metric_name"] = row["metric"].get("__name__", metric)
+                        bounds.append(checked)
+                    for key, rows in items:
+                        expected = {identity(labels) for labels, _ in rows}
+                        selected = [
+                            b for b in bounds if identity(b["labels"]) in expected
+                        ]
+                        if verified(at, rows, query, selected):
+                            e["quality"].setdefault("collector_handoffs", []).append(
+                                dict(at=at, identity=key, bounds=selected)
+                            )
+                            audit["verified_groups"] += 1
+                except Exception:
+                    audit["reason"] = "collector_verification_unavailable"
