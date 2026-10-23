@@ -56,6 +56,12 @@ LLM 단계 실패 처리: 결합 분석과 보고서 작성은 요청 1회를 �
 - `python -m rcca_agent.runbook_transition --snapshot published.json --profile profile.json --output new-review-directory`는 제공된 발행 snapshot으로 전환 검토안을 만든다. 입력 hash를 확인하고 새 출력 폴더만 사용한다. Backend 호출·승인·발행은 없다.
 - [265개 전환 검토](runbooks/transition-review-20261014.json)는 196개 계약 통과 제안과 69개 보류(정의 미확정 64개·정보성 5개)를 기록한다. 의미 검토·운영 발행 완료를 뜻하지 않는다. 원인·필수 근거·출처를 보존하고 발행 전 최신 revision/hash와 다시 대조해야 한다.
 
+## 비코드 Fleet 오류와 평가
+
+XID/SXID가 없는 Fleet 컴포넌트 알림(disk, cpu, DCGM 건강 점검, InfiniBand 등)은 Runbook 1.2의 컴포넌트 목표로 처리한다. 검색은 `decision_policy.applies_when.reported_component`가 알림의 `component` 라벨과 정확히 같을 때만 허용한다. 사유 문자열은 여러 패턴이 쉼표로 묶이거나 같은 구간의 Healthy `ok` 보고와 섞이므로 컴포넌트 Runbook의 게이트로 쓰지 않는다. 보고 지침은 D09에서 같은 대상·컴포넌트의 Unhealthy 보고가 확인될 때 `matched`가 되어 보고서의 다음에 할 일에 실린다.
+
+D09 보고는 `health_contracts.fleet-component-log-v1.components`에 등록된 컴포넌트만 파싱한다. 저장소 기본 프로필(`agents/config.example.json`과 차트 사본)은 XID/SXID 외에 컴포넌트 Runbook이 있는 17개 컴포넌트를 `component`로 등록한다. 등록만으로 현재 상태·원인 fact가 생기지 않는다(Healthy는 매핑이 없어 unknown). 비코드 사건은 XID/SXID 전용 30분 비교 자료와 6단 운영자 화면을 만들지 않으며, 평가 호출·추가 조회 선택도 하지 않는다. 운영 반영에는 새 프로필 배포와 컴포넌트 Runbook의 검토·발행이 각각 필요하다. 목록은 [CATALOG](runbooks/CATALOG.md#fleet-컴포넌트-runbook)를 따른다.
+
 ## 오프라인 RCA 재생
 
 [rca_replay.py](../agents/tests/rca_replay.py)는 실제 Worker 흐름을 고정 조회·모델 응답으로 실행한다. 과거 `review_*` 사례는 테스트 폴더의 구 결과 호환 fixture만 실행한다. 실제 Grafana·Nemotron·DB 공개 검증을 대신하지 않는다. 출력은 합성·비식별 자료로 `.local/`에 둔다.

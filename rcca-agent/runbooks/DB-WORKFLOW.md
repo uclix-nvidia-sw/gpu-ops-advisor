@@ -40,7 +40,7 @@ XID 79·SXID 11001의 1.1 변경 hash와 이전 1.0 복원 정보는 [기존 검
 
 ### 기존 DB와의 대응
 
-Runbook 267건은 기존 `knowledge_revisions`에 저장하는 논리 지식 267건이다. 수정 이력이 쌓이면 각 지식의 revision 행이 늘어난다. [기존 migration](../../shared/migrations/001_backend.sql)의 테이블·컬럼·제약은 변경하지 않았다.
+Runbook 284건(XID·SXID 266건, Fleet 컴포넌트 17건, 일반 조사 1건)은 기존 `knowledge_revisions`에 저장하는 논리 지식 284건이다. 수정 이력이 쌓이면 각 지식의 revision 행이 늘어난다. [기존 migration](../../shared/migrations/001_backend.sql)의 테이블·컬럼·제약은 변경하지 않았다.
 
 | 기존 필드 | 저장하는 값 |
 |---|---|
@@ -97,17 +97,17 @@ Python 3.12 환경과 설치 방법은 [Agent 안내](../../agents/README.md)를
 
 ### 폴더별 일괄 초안 등록
 
-폴더는 `xid/`(173건), `sxid/`(93건), 상위의 일반 조사 JSON(1건)으로 구분한다. [일괄 등록 Python](../src/rcca_agent/runbook_import.py)은 하위 폴더의 `RB-*.json`을 모두 읽는다. 전체 검증이 끝난 뒤 기존 Backend API로 draft만 등록한다. DB 직접 SQL·자동 승인·발행은 없다.
+폴더는 `xid/`(173건), `sxid/`(93건), `component/`(Fleet 컴포넌트 17건), 상위의 일반 조사 JSON(1건)으로 구분한다. [일괄 등록 Python](../src/rcca_agent/runbook_import.py)은 하위 폴더의 `RB-*.json`을 모두 읽는다. 전체 검증이 끝난 뒤 기존 Backend API로 draft만 등록한다. DB 직접 SQL·자동 승인·발행은 없다.
 
 ```sh
-# 전체 267건 형식 검사. 서버 접속/쓰기 없음.
+# 전체 284건 형식 검사. 서버 접속/쓰기 없음.
 python -m rcca_agent.runbook_import rcca-agent/runbooks --profile agents/config.example.json --dry-run
 
 # 승인된 개발 Backend에 전체 초안 등록. 주소는 실제 대상에 맞게 지정.
 python -m rcca_agent.runbook_import rcca-agent/runbooks --profile agents/config.example.json --backend http://127.0.0.1:8080/api/v1 --batch-key xid-sxid-20260928 --receipts .local/runbook-import-20260928
 ```
 
-XID만 등록하려면 입력 폴더를 `rcca-agent/runbooks/xid`, SXID만이면 `rcca-agent/runbooks/sxid`로 바꾼다. 파일마다 `<batch-key>:<knowledge_key>`를 멱등 키로 사용한다. 성공 응답은 receipts 폴더에 파일별로 저장하며 개별 관리 CLI의 검토 명령 입력으로도 사용할 수 있다.
+XID만 등록하려면 입력 폴더를 `rcca-agent/runbooks/xid`, SXID만이면 `rcca-agent/runbooks/sxid`, 컴포넌트만이면 `rcca-agent/runbooks/component`로 바꾼다. 파일마다 `<batch-key>:<knowledge_key>`를 멱등 키로 사용한다. 성공 응답은 receipts 폴더에 파일별로 저장하며 개별 관리 CLI의 검토 명령 입력으로도 사용할 수 있다.
 
 중단 후에는 **같은 대상·입력·batch key·receipts 경로**로 재실행한다. 기록된 성공 항목은 API 재호출 없이 건너뛴다. `resumed`는 저장된 응답 재사용 건수이며 현재 DB 상태를 다시 검사했다는 뜻은 아니다. 본문뿐 아니라 compatibility·대상 URL·revision 대상이 달라져도 receipt 불일치로 중단한다. 응답 유실 때에는 같은 요청 키로 재전송해 Backend receipt를 복구한다.
 

@@ -1,0 +1,190 @@
+{
+  "knowledge_key": "RB-COMPONENT-NETWORK-ETHERNET",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "이더넷 링크 전체 다운 보고 조사 (Fleet network-ethernet)",
+    "description": "Fleet network-ethernet 점검이 노드의 모든 물리 이더넷 링크 다운을 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "NODE_SYSTEM",
+      "category": "ethernet_link"
+    },
+    "search": {
+      "producer_events": [
+        "network-ethernet"
+      ],
+      "aliases": [
+        "all ethernet links are down"
+      ],
+      "symptoms": [
+        "이더넷 링크 다운",
+        "노드 네트워크 단절"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet network-ethernet 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/network/ethernet/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "computeHealth(): all links down, partial stats",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.kernel.org/networking/operstates.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "Operational states (operstate)",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Figure 1 GPU Triage Flowchart: System Issue branch"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 network-ethernet 컴포넌트의 Unhealthy 보고 사유와 다운된 인터페이스 목록을 확인한다.",
+      "모든 링크가 다운이면 로그 전송도 끊겼을 수 있으므로 보고 시각과 수신 지연을 구분하고, 지표 공백을 장애 지속 시간으로 바꾸지 않는다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet network-ethernet 점검이 노드의 모든 물리 이더넷 링크가 내려갔다고 Unhealthy로 보고한 것입니다. 보고 사유 괄호 안에 다운된 인터페이스 목록이 있습니다.",
+      "cause_note": "케이블·스위치 포트 문제, 네트워크 어댑터·드라이버 문제, 인터페이스 설정 변경이 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인",
+          "text": "노드에 원격 접속이 안 되면 BMC 콘솔로 접근합니다. ip -br link로 각 인터페이스 상태를, cat /sys/class/net/<인터페이스>/operstate로 운영 상태(UP·DOWN)를 확인합니다. 모든 링크가 다운이면 kubelet과 로그 전송도 끊기므로 이 노드의 작업 상태를 쿠버네티스 쪽에서 확인합니다."
+        },
+        {
+          "title": "판단",
+          "text": "operstate가 DOWN이면 케이블이 빠졌거나 인터페이스가 관리자 설정으로 내려간 상태입니다. 같은 스위치에 연결된 다른 노드도 함께 내려갔으면 스위치·상위 네트워크 문제로, 이 노드만이면 노드의 케이블·어댑터 문제로 봅니다."
+        },
+        {
+          "title": "복구",
+          "text": "케이블·스위치 포트를 점검하고 인터페이스를 다시 올립니다(ip link set <인터페이스> up). 어댑터·드라이버 문제가 의심되면 유지보수 승인 뒤 노드를 재부팅합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "ip -br link에서 링크가 UP인지, 노드가 쿠버네티스에서 Ready로 돌아왔는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "같은 어댑터에서 반복되면 dmesg의 네트워크 드라이버 메시지와 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 물리 이더넷 인터페이스가 하나도 링크 업이 아닐 때 Unhealthy로 보고합니다. 일부 인터페이스만 다운이면 Healthy로 두고 사유에 다운된 인터페이스를 적습니다.",
+          "source_indices": [
+            0
+          ]
+        },
+        {
+          "title": "operstate",
+          "text": "operstate는 인터페이스가 실제로 데이터를 보낼 수 있는지(RFC 2863 운영 상태)를 뜻합니다. DOWN은 케이블 분리나 관리자 다운처럼 물리 계층에서 전송할 수 없는 상태입니다.",
+          "source_indices": [
+            1
+          ]
+        },
+        {
+          "title": "GPU Node Triage 흐름도",
+          "text": "GPU가 관련되지 않은 시스템 문제는 시스템 공급사 티켓으로 처리합니다.",
+          "source_indices": [
+            2
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+      "스위치 포트·케이블 상태는 수집하지 않는다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet network-ethernet Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "network-ethernet",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet network-ethernet 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

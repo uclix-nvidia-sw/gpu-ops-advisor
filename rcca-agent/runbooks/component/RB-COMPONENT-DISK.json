@@ -1,0 +1,250 @@
+{
+  "knowledge_key": "RB-COMPONENT-DISK",
+  "kind": "runbook",
+  "visibility": "common",
+  "scope": null,
+  "compatibility": {},
+  "source_refs": [],
+  "content": {
+    "schema": "gpu-rca-runbook/1.2",
+    "title": "디스크·파일시스템 오류 보고 조사 (Fleet disk)",
+    "description": "Fleet disk 점검이 커널 로그의 디스크·파일시스템 오류 패턴을 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
+    "classification": {
+      "domain": "NODE_SYSTEM",
+      "category": "disk_filesystem"
+    },
+    "search": {
+      "producer_events": [
+        "disk"
+      ],
+      "aliases": [
+        "filesystem remounted as read-only due to errors",
+        "RAID array has failed due to disk failure",
+        "NVMe device has no available path, I/O failing",
+        "NVME controller I/O timeout detected, attempting reset",
+        "NVME device disabled after reset failure",
+        "I/O attempt beyond device boundaries detected",
+        "Buffer I/O error detected on device",
+        "I/O error while writing superblock"
+      ],
+      "symptoms": [
+        "파일시스템 읽기 전용",
+        "디스크 I/O 오류",
+        "NVMe 장애",
+        "RAID 실패"
+      ]
+    },
+    "required_evidence": [
+      "reported_component",
+      "reported_normalized_health",
+      "reported_producer_contract"
+    ],
+    "applicability_conditions": [],
+    "exclusion_conditions": [],
+    "required_queries": [
+      "D09"
+    ],
+    "observation_plan": [
+      {
+        "query_id": "D09",
+        "priority": 1,
+        "required": true,
+        "fact_names": [
+          "reported_component",
+          "reported_normalized_health",
+          "reported_producer_contract"
+        ],
+        "purpose": "같은 노드·기간의 Fleet disk 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      }
+    ],
+    "recommendations": [],
+    "sources": [
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/disk/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): failure reasons and Degraded free-space threshold",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/disk/kmsg_matcher.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "kernel message patterns and reasons",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/pkg/eventstore/suggested_actions.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "EvaluateSuggestedActions: reboot history rule",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.kernel.org/admin-guide/ext4.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "Mount options: errors=",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.kernel.org/admin-guide/md.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "md/degraded; per-device state",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "Figure 1 GPU Triage Flowchart: System Issue branch; Reporting a GPU Issue"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/nvsm/nvsm-user-guide/latest/using-nvsm-cli.html",
+        "revision": "NVSM User Guide release 25.03; mutable upstream document",
+        "checked_at": "2026-10-22",
+        "section": "nvsm show health; nvsm show storage; nvsm dump health"
+      }
+    ],
+    "analysis_guidance": [
+      "D09에서 같은 노드 disk 컴포넌트의 Unhealthy 보고 사유와 처음·마지막 보고 시각을 확인한다. 사유 문자열이 여러 패턴을 쉼표로 묶을 수 있으므로 패턴별로 나눠 설명한다.",
+      "보고에 포함된 파티션 정보(장치·마운트 지점·파일시스템·여유 공간)는 Fleet 보고 시점의 값이며 현재 마운트 상태가 아니다.",
+      "Fleet 권고(REBOOT_SYSTEM·HARDWARE_INSPECTION)는 재부팅 이력 기반 규칙의 결과이며 수행 증거가 아니다. GPU 지표는 디스크 상태를 알려 주지 않는다."
+    ],
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "Fleet disk 점검이 커널 로그에서 디스크·파일시스템 오류 패턴을 찾아 Unhealthy로 보고한 것입니다. 보고 사유가 조치를 정합니다: 읽기 전용 재마운트, RAID 배열 실패, NVMe 경로 실패·I/O 타임아웃·장치 비활성화, 장치 범위 밖 접근, 버퍼 I/O 오류, superblock 쓰기 오류.",
+      "cause_note": "파일시스템이 오류를 감지해 읽기 전용으로 전환했거나(ext4 errors=remount-ro), 그 아래 저장 장치(NVMe·RAID 구성 디스크)의 I/O 오류가 주요 원인 후보입니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인·영향",
+          "text": "findmnt -O ro로 읽기 전용이 된 마운트를 찾습니다. 루트(/)나 컨테이너·kubelet 저장소가 읽기 전용이면 새 파드 생성과 로그 기록이 실패하므로 kubectl cordon <노드>로 새 작업 배치를 막습니다. 데이터·캐시 볼륨만 영향이면 그 볼륨을 쓰는 작업을 먼저 확인합니다. 보고 사유는 여러 패턴이 쉼표로 묶여 올 수 있으므로 각각 확인합니다."
+        },
+        {
+          "title": "진단 자료 보존",
+          "text": "dmesg -T와 journalctl -k에서 사건 전후 EXT4-fs error·I/O error·nvme·md/raid 줄을 저장하며, 루트가 읽기 전용이면 다른 장치나 원격 위치에 저장합니다. cat /proc/mdstat와 mdadm --detail <md 장치>로 RAID 상태를, nvme list와 nvme smart-log <장치>로 NVMe 상태를 기록합니다. DGX 시스템은 sudo nvsm show storage로 드라이브 상태를 함께 확인합니다."
+        },
+        {
+          "title": "판단: 보고 사유별",
+          "text": "읽기 전용 재마운트: 파일시스템이 오류를 감지해 보호 모드로 바뀐 것이므로 같은 시각에 그 아래 장치의 I/O 오류가 있는지 먼저 봅니다. RAID 배열 실패: /proc/mdstat에서 실패한 구성 디스크를 확인하며, RAID 0처럼 중복이 없는 배열은 데이터가 손실됐을 수 있습니다. NVMe 타임아웃·경로 실패·장치 비활성화: 컨트롤러 리셋이 실패하면 장치가 비활성화되므로 해당 NVMe의 연결·펌웨어·교체를 검토합니다. 버퍼 I/O·superblock 쓰기 오류·범위 밖 접근: 장치 I/O 실패나 파티션·파일시스템 크기 불일치를 뜻하므로 장치 상태와 파티션 정보를 함께 봅니다."
+        },
+        {
+          "title": "복구",
+          "text": "읽기 전용이 된 루트·컨테이너 저장소에서는 작업을 계속 운영하지 않습니다. 작업을 배출하고(kubectl drain <노드> --ignore-daemonsets) 유지보수 승인을 받은 뒤 재부팅합니다. 파일시스템 점검(fsck)은 해당 파일시스템을 마운트 해제한 유지보수 상태에서 합니다. Fleet 권고는 재부팅 이력으로 정해집니다: 첫 보고는 재부팅, 재부팅 뒤 같은 오류가 2번 이상 다시 나면 하드웨어 점검입니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "findmnt로 해당 마운트가 다시 rw인지, dmesg에 새 I/O 오류가 없는지, /proc/mdstat의 배열이 모든 구성 디스크로 동작하는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "재부팅 뒤 같은 장치에서 다시 나면 장치 점검·교체(HARDWARE_INSPECTION)를 요청합니다. 전달 자료는 커널 로그 줄, /proc/mdstat·mdadm --detail 출력, nvme smart-log 출력, 수행한 조치이며 DGX는 sudo nvsm dump health 결과를 더합니다. GPU Node Triage 흐름도는 GPU가 관련되지 않은 시스템 문제를 시스템 공급사 티켓으로 처리합니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "Fleet 판정 기준",
+          "text": "Fleet은 커널 로그에서 8가지 패턴(읽기 전용 재마운트, RAID 실패, NVMe 경로 실패·타임아웃·비활성화, 범위 밖 접근, 버퍼 I/O 오류, superblock 쓰기 오류)을 찾으면 Unhealthy로 보고합니다. 루트 파티션 여유 공간 부족은 Degraded로 따로 보고합니다.",
+          "source_indices": [
+            0,
+            1
+          ]
+        },
+        {
+          "title": "Fleet 권고 규칙",
+          "text": "재부팅 이력이 없으면 재부팅(REBOOT_SYSTEM)을, 재부팅 뒤 오류가 다시 나는 경우가 2번 이상이면 하드웨어 점검(HARDWARE_INSPECTION)을 권고합니다. 재부팅 뒤 오류가 다시 나지 않으면 권고를 내지 않습니다.",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "ext4 errors 옵션",
+          "text": "ext4는 errors=remount-ro 설정에서 오류를 감지하면 파일시스템을 읽기 전용으로 다시 마운트합니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "md RAID 상태",
+          "text": "md 구성 장치는 오류가 감지되면 faulty로 표시되고, sysfs의 md/degraded 값은 빠진 장치 수입니다. RAID 0과 linear 배열에는 중복 정보가 없습니다.",
+          "source_indices": [
+            4
+          ]
+        },
+        {
+          "title": "GPU Node Triage 흐름도",
+          "text": "GPU가 관련됐다는 로그·덤프가 없는 시스템 문제(커널 오류, 노드 멈춤, 재부팅 등)는 시스템 공급사 티켓으로 처리합니다.",
+          "source_indices": [
+            5
+          ]
+        },
+        {
+          "title": "NVSM",
+          "text": "DGX의 sudo nvsm show health는 전체 상태를, nvsm show storage는 저장 장치 상태를 보여 줍니다. nvsm dump health는 지원 티켓용 진단 묶음(/tmp/nvsm-health-<호스트>-<시각>.tar.xz)을 만듭니다.",
+          "source_indices": [
+            6
+          ]
+        }
+      ]
+    },
+    "limitations": [
+      "커널 로그 원문·SMART·RAID 상태는 수집하지 않는다. 미수집을 정상 근거로 쓰지 않는다.",
+      "보고는 커널 로그 패턴 일치 결과이며 장치 고장 확정이 아니다."
+    ],
+    "investigation_only": true,
+    "decision_policy": {
+      "goal": {
+        "id": "identify_error_report",
+        "question": "사건 대상·기간에서 Fleet disk Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+        "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+      },
+      "applies_when": {
+        "reported_component": "disk",
+        "reported_normalized_health": "unhealthy",
+        "reported_producer_contract": "fleet-component-log-v1"
+      },
+      "completion_criteria": [
+        {
+          "id": "reported_error",
+          "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "scoped_source",
+          "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+          "method": "code",
+          "required": true
+        },
+        {
+          "id": "bounded_conclusion",
+          "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+          "method": "llm",
+          "required": true
+        }
+      ],
+      "blocking_conditions": [
+        "scope_unverified",
+        "identity_conflict",
+        "required_query_incomplete",
+        "conflicting_reports"
+      ],
+      "non_blocking_unknowns": [
+        "causal_confirmation_evidence",
+        "current_health",
+        "physical_or_synthetic_origin"
+      ],
+      "followup_links": [
+        {
+          "query_id": "D09",
+          "criterion_ids": [
+            "reported_error",
+            "scoped_source"
+          ],
+          "required": true,
+          "expected_effect": "같은 노드·기간의 Fleet disk 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        }
+      ]
+    }
+  }
+}

@@ -21,11 +21,17 @@ INCIDENT_REVIEW = {
         (CATALOG / "incident-report-review-20261015.json").read_text("utf-8")
     )["entries"]
 }
-# Newest catalog-wide review: restore its previous values before the older chains.
+# Newest catalog-wide reviews: restore their previous values before the older chains.
 REPORT_REVIEW = {
     e["file"]: e
     for e in json.loads(
         (CATALOG / "operator-report-review-20261022.json").read_text("utf-8")
+    )["entries"]
+}
+TRIAGE_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "triage-guidance-review-20261022.json").read_text("utf-8")
     )["entries"]
 }
 ROWS = [json.loads((CATALOG / e["file"]).read_text("utf-8")) for e in REVIEW["entries"]]
@@ -62,8 +68,11 @@ def test_every_code_can_investigate_report_without_promoting_state_or_action(row
 
 def test_review_covers_every_source_and_preserves_general_adapter_boundary():
     assert len(REVIEW["entries"]) == len(ROWS) == 267
+    # Component runbooks were authored after this anchor review; they have no chain.
     assert {e["file"] for e in REVIEW["entries"]} == {
-        p.relative_to(CATALOG).as_posix() for p in CATALOG.rglob("RB-*.json")
+        p.relative_to(CATALOG).as_posix()
+        for p in CATALOG.rglob("RB-*.json")
+        if p.parent.name != "component"
     }
     assert len(CODE_ROWS) == 266
     for e, row in zip(REVIEW["entries"], ROWS):
@@ -75,8 +84,11 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        report = REPORT_REVIEW.get(e["file"])
-        if report:
+        # Newest review first: the triage review sits on top of the report review.
+        for review in (TRIAGE_REVIEW, REPORT_REVIEW):
+            report = review.get(e["file"])
+            if not report:
+                continue
             assert digest == report["after_content_sha256"]
             row = deepcopy(row)
             for field in report["added_fields"]:

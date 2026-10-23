@@ -87,8 +87,8 @@
       },
       {
         "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
-        "revision": "Retrieved 2026-10-22; mutable upstream document",
-        "section": "Tables 22-25 NVSwitch SXid Errors; Fatal NVSwitch SXid recovery; B200/B300 exclusion",
+        "revision": "Document History v2.6 (Sep 21, 2026); mutable upstream document",
+        "section": "Tables 22-25 NVSwitch SXid Errors; Fatal NVSwitch SXid recovery; B200/B300 exclusion; Bare Metal Mode: Non-Fatal and Fatal SXid Errors",
         "checked_at": "2026-10-22"
       },
       {
@@ -100,7 +100,13 @@
       {
         "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
         "revision": "Retrieved 2026-10-22; mutable upstream document",
-        "section": "nvlink subcommand: -s/--status, -e/--errorcounters; -q display sections",
+        "section": "nvlink subcommand: -s/--status, -e/--errorcounters; -q Fabric Health; deprecation notice v580 (Fabric State and Status)",
+        "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_structs.h",
+        "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+        "section": "dcgmFabricManagerStatus_t (DCGM_FI_DEV_FABRIC_MANAGER_STATUS values)",
         "checked_at": "2026-10-22"
       }
     ],
@@ -143,7 +149,7 @@
     ],
     "recommendations": [
       {
-        "text": "패브릭 상태 확인: sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi -q의 Fabric State·Status와 nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다.",
+        "text": "패브릭 상태 확인: sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다. Hopper 이후 시스템은 nvidia-smi -q의 Fabric 항목에서 Health Summary·Bandwidth를 확인합니다. Fabric State·Status 필드는 R580 nvidia-smi에서 폐기됐습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -191,7 +197,7 @@
         },
         {
           "title": "패브릭 상태 확인",
-          "text": "sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi -q의 Fabric State·Status와 nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다."
+          "text": "sudo systemctl status nvidia-fabricmanager로 Fabric Manager 서비스가 실행 중인지 확인합니다. Fabric Manager 로그(기본 /var/log/fabricmanager.log)에서 같은 시각의 SXID 줄과 그 줄의 NVSwitch PCI·Link 번호를 확인합니다. nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터)로 연결 GPU 쪽 NVLink 상태를 확인합니다. Hopper 이후 시스템은 nvidia-smi -q의 Fabric 항목에서 Health Summary·Bandwidth를 확인합니다. Fabric State·Status 필드는 R580 nvidia-smi에서 폐기됐습니다."
         },
         {
           "title": "영향 범위",
@@ -235,6 +241,13 @@
             3
           ],
           "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋 대신 VM을 재시작합니다."
+        },
+        {
+          "title": "D47 상태 코드 읽는 법",
+          "text": "보고서의 'GPU별 Fabric Manager 상태 코드'(D47)는 DCGM 값입니다: 0 미지원, 1 시작 전, 2 시작 중, 3 성공, 4 실패, 5 인식 불가, 6 NVML 버전 낮음. 0이면 그 GPU에서는 이 지표로 Fabric Manager 상태를 판단할 수 없으므로 서비스 상태와 Fabric Manager 로그로 확인합니다.",
+          "source_indices": [
+            5
+          ]
         }
       ]
     }

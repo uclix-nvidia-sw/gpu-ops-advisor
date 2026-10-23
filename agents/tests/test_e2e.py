@@ -2407,9 +2407,11 @@ def test_runbook_api_lifecycle_and_real_rca_consumption(stack, monkeypatch):
         rows = []
         for path in sorted((ROOT / "rcca-agent/runbooks").rglob("RB-*.json")):
             row = json.loads(path.read_text(encoding="utf-8"))
+            # The code-keyed bulk import covers XID/SXID; component runbooks have no code.
             if (
                 row["knowledge_key"] in pilots
                 or row["knowledge_key"] == "RB-GENERAL-GPU-NODE"
+                or not row["content"]["search"].get("codes")
             ):
                 continue
             code = row["content"]["search"]["codes"][0]

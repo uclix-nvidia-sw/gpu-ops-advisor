@@ -189,7 +189,7 @@ D는 오류 코드별 목록이 아니라 재사용 가능한 단일 관측 쿼�
 | Node 상태 이상 | 장비·Kubernetes·Host·수집 문제를 구분할 근거가 있는가 | D20,D18,D19,D09,D10,D22 | 대상에 맞는 GPU 오류/온도 D | condition·Host 부하·사건·수집 공백. 네트워크·runtime·storage 직접 근거가 없으면 해당 원인 미확정 |
 | 데이터 공백·지표 소실 | target 수집 실패인가, 특정 장비 관측 부재인가 | D10,D22, 해당 대상의 D02/D06 | producer 로그 D09 | target 상태·표본 공백·신원 상태. 기대 inventory/주기 없으면 전체 coverage와 장비 장애를 확정하지 않음 |
 
-위는 설계상 조사 계획이며 실제 비코드 Runbook은 아직 구현·발행하지 않았다. 기존 267개는 `investigation_only: true`인 조사 초안이다. D 추가만으로 원인 확정용 Runbook으로 승격하지 않으며, 원인 판정 범위를 넓히려면 별도로 fact·조건·충분성 검수를 완료해야 한다. 해당 질문에 대응하는 Runbook이 없으면 기존 일반 조사로 근거를 수집하고 미해결 질문을 남긴다. 신규 D 35개 추가만으로 network/storage/runtime/업무 성과 등 모든 사례를 커버한다고 주장하지 않는다. 재사용 가능한 D가 없을 때만 목적·원본·반환 사실을 정의해 독립 D를 추가하며 사례마다 같은 메트릭을 새 D로 복제하지 않는다.
+위는 설계상 조사 계획이다. 비코드 Runbook은 Fleet 컴포넌트 보고(컴포넌트·Unhealthy) 단위의 조사 초안 17건만 작성했고 아직 발행하지 않았다([목록](../../../rcca-agent/runbooks/CATALOG.md#fleet-컴포넌트-runbook)). 수치 시계열을 계산 fact로 판정하는 비코드 Runbook은 없다. 기존 267개와 컴포넌트 17개는 모두 `investigation_only: true`인 조사 초안이다. D 추가만으로 원인 확정용 Runbook으로 승격하지 않으며, 원인 판정 범위를 넓히려면 별도로 fact·조건·충분성 검수를 완료해야 한다. 해당 질문에 대응하는 Runbook이 없으면 기존 일반 조사로 근거를 수집하고 미해결 질문을 남긴다. 신규 D 35개 추가만으로 network/storage/runtime/업무 성과 등 모든 사례를 커버한다고 주장하지 않는다. 재사용 가능한 D가 없을 때만 목적·원본·반환 사실을 정의해 독립 D를 추가하며 사례마다 같은 메트릭을 새 D로 복제하지 않는다.
 
 현행 `runbook_contract.py`의 FACT_NAMES/SCALAR_FACTS는 제한된 상태·코드·producer 등이며 `_conditions()`는 등록된 scalar의 `field/equals`만 허용한다. 수치 시계열 비교·지속시간·부족량 계산을 문자열 fact나 임의 LLM 판정으로 우회하지 않는다. 비코드 Runbook 구현 전에 등록된 계산 함수가 생산할 typed fact/quality와 validator·판단 소비를 함께 정의한다. 원본 D→계산 fact→Runbook 적용/지지·반박→조건부 추가 D→종료/보류를 검수한다. 일반 조건 DSL을 먼저 만드는 대신 필요한 계산만 등록한다.
 

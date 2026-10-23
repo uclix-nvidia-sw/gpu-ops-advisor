@@ -26,7 +26,8 @@
   "counts": {
     "xid": 173,
     "sxid": 93,
-    "generic": 1
+    "generic": 1,
+    "component": 17
   },
   "entries": [
     {
@@ -4620,6 +4621,110 @@
       "investigatory_action": null,
       "gpud_potential_fatal": true,
       "gpud_always_fatal": false
+    }
+  ],
+  "component_entries": [
+    {
+      "component": "cpu",
+      "file": "component/RB-COMPONENT-CPU.json",
+      "knowledge_key": "RB-COMPONENT-CPU",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/cpu/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-inforom",
+      "file": "component/RB-COMPONENT-DCGM-INFOROM.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-INFOROM",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/inforom/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-mem",
+      "file": "component/RB-COMPONENT-DCGM-MEM.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-MEM",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/mem/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-nvlink",
+      "file": "component/RB-COMPONENT-DCGM-NVLINK.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-NVLINK",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/nvlink/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-nvswitch",
+      "file": "component/RB-COMPONENT-DCGM-NVSWITCH.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-NVSWITCH",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/nvswitch/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-pcie",
+      "file": "component/RB-COMPONENT-DCGM-PCIE.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-PCIE",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/pcie/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-power",
+      "file": "component/RB-COMPONENT-DCGM-POWER.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-POWER",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/power/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-dcgm-thermal",
+      "file": "component/RB-COMPONENT-DCGM-THERMAL.json",
+      "knowledge_key": "RB-COMPONENT-DCGM-THERMAL",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/thermal/component.go"
+    },
+    {
+      "component": "disk",
+      "file": "component/RB-COMPONENT-DISK.json",
+      "knowledge_key": "RB-COMPONENT-DISK",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/disk/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-infiniband",
+      "file": "component/RB-COMPONENT-INFINIBAND.json",
+      "knowledge_key": "RB-COMPONENT-INFINIBAND",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/infiniband/component.go"
+    },
+    {
+      "component": "library",
+      "file": "component/RB-COMPONENT-LIBRARY.json",
+      "knowledge_key": "RB-COMPONENT-LIBRARY",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/library/component.go"
+    },
+    {
+      "component": "memory",
+      "file": "component/RB-COMPONENT-MEMORY.json",
+      "knowledge_key": "RB-COMPONENT-MEMORY",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/memory/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-nccl",
+      "file": "component/RB-COMPONENT-NCCL.json",
+      "knowledge_key": "RB-COMPONENT-NCCL",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/nccl/kmsg_matcher.go"
+    },
+    {
+      "component": "network-ethernet",
+      "file": "component/RB-COMPONENT-NETWORK-ETHERNET.json",
+      "knowledge_key": "RB-COMPONENT-NETWORK-ETHERNET",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/network/ethernet/component.go"
+    },
+    {
+      "component": "os",
+      "file": "component/RB-COMPONENT-OS.json",
+      "knowledge_key": "RB-COMPONENT-OS",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/os/component.go"
+    },
+    {
+      "component": "accelerator-nvidia-peermem",
+      "file": "component/RB-COMPONENT-PEERMEM.json",
+      "knowledge_key": "RB-COMPONENT-PEERMEM",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/kmsg_matcher.go"
+    },
+    {
+      "component": "accelerator-nvidia-persistence-mode",
+      "file": "component/RB-COMPONENT-PERSISTENCE-MODE.json",
+      "knowledge_key": "RB-COMPONENT-PERSISTENCE-MODE",
+      "fleet_source": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/persistence-mode/component.go"
     }
   ]
 }

@@ -59,7 +59,24 @@
       "adapter": "fleet_component_v1",
       "components": {
         "accelerator-nvidia-error-xid": "xid",
-        "accelerator-nvidia-error-sxid": "sxid"
+        "accelerator-nvidia-error-sxid": "sxid",
+        "accelerator-nvidia-persistence-mode": "component",
+        "accelerator-nvidia-dcgm-mem": "component",
+        "accelerator-nvidia-dcgm-pcie": "component",
+        "accelerator-nvidia-dcgm-nvlink": "component",
+        "accelerator-nvidia-dcgm-nvswitch": "component",
+        "accelerator-nvidia-dcgm-thermal": "component",
+        "accelerator-nvidia-dcgm-power": "component",
+        "accelerator-nvidia-dcgm-inforom": "component",
+        "accelerator-nvidia-infiniband": "component",
+        "accelerator-nvidia-nccl": "component",
+        "accelerator-nvidia-peermem": "component",
+        "disk": "component",
+        "network-ethernet": "component",
+        "library": "component",
+        "os": "component",
+        "cpu": "component",
+        "memory": "component"
       },
       "checks": {
         "reported": "valid"
