@@ -138,6 +138,18 @@
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 48; Table 3 Resolution Buckets",
         "checked_at": "2026-09-28"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/a100-gpu-mem-error-mgmt/rma-policy-thresholds-for-row-remapping.html",
+        "revision": "Retrieved 2026-10-23; mutable upstream document",
+        "section": "RMA Policy Thresholds for Row Remapping",
+        "checked_at": "2026-10-23"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/a100-gpu-mem-error-mgmt/user-visible-statistics.html",
+        "revision": "Retrieved 2026-10-23; mutable upstream document",
+        "section": "User Visible Statistics (row remapping, Xid 48/63/64/94/95/160/171/172)",
+        "checked_at": "2026-10-23"
       }
     ],
     "limitations": [
@@ -222,24 +234,24 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "XID 48(ROBUST_CHANNEL_GPU_ECC_DBE)는 NVIDIA Xid 카탈로그에서 'Double Bit ECC Error'로 정의됩니다. GPU에서 정정 불가(uncorrectable) 오류가 감지되면 기록되며 애플리케이션에도 보고됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. SRAM(프레임버퍼 제외) 오류이면 SRAM DBE 임계값 초과 여부를 확인해 초과 시 RMA 절차를 따릅니다.",
+      "meaning": "XID 48(ROBUST_CHANNEL_GPU_ECC_DBE)는 NVIDIA Xid 카탈로그에서 'Double Bit ECC Error'로 정의됩니다. GPU에서 정정 불가(uncorrectable) 오류가 감지되면 기록되며 애플리케이션에도 보고됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. 오류 메시지 문구가 영역을 알려 줍니다: 'framebuffer'가 있으면 GPU 메모리(DRAM), 그 밖은 GPU 내부 SRAM입니다. XID 171(DRAM)·172(SRAM)가 함께 기록되면 영역을 더 자세히 알려 줍니다.",
       "cause_note": "GPU 메모리(DRAM) 또는 내부 SRAM의 정정 불가 비트 오류입니다.",
       "next_checks": [
         {
           "title": "진단 자료 보존",
-          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d ECC,ROW_REMAPPER 출력(구세대 GPU는 PAGE_RETIREMENT)도 함께 저장합니다."
+          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d ECC,ROW_REMAPPER 출력(행 재매핑이 없는 구세대 GPU는 PAGE_RETIREMENT)도 함께 저장합니다. 커널 로그에서 같은 GPU의 XID 63·64(행 재매핑 기록 성공·실패), 94·95(격리·비격리 ECC 오류), 171·172(DRAM·SRAM 상세) 줄도 찾아 함께 보존합니다."
         },
         {
           "title": "오류별 판단 기준",
-          "text": "단독이면 Field Diagnostics를 실행합니다. 메시지에 표시된 영역이 프레임버퍼(FB)이면 XID 63·64 지침을, 그 밖의 SRAM이면 nvidia-smi의 SRAM 오류 임계 플래그(sram_threshold_exceeded)를 확인해 설정돼 있으면 Field Diagnostics를 실행합니다. GPU Node Triage: XID 63·64가 뒤따르면 노드를 drain/cordon하고 작업이 끝난 뒤 GPU를 리셋합니다. 뒤따르지 않으면 Field Diagnostics로 추가 자료를 수집합니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
+          "text": "메시지에 'framebuffer'가 있으면 GPU 메모리(DRAM) 오류이며 XID 63·64 지침을 따릅니다. 행 재매핑을 지원하는 GPU(A100 이후)는 nvidia-smi -q -d ROW_REMAPPER의 Pending과 Remapping Failure Occurred를 확인합니다. Pending이 Yes면 재매핑이 GPU 리셋 뒤에 적용되므로 리셋이 필요합니다. Remapping Failure Occurred가 Yes면 Field Diagnostics로 확인한 뒤 RMA 대상입니다. 행 재매핑이 없는 구세대 GPU는 nvidia-smi -q -d PAGE_RETIREMENT의 폐기·대기 페이지를 확인합니다. 그 밖의 SRAM 오류면 nvidia-smi의 SRAM 오류 임계 플래그(sram_threshold_exceeded)를 확인해 설정돼 있으면 Field Diagnostics를 실행하고, 임계를 넘었으면 RMA 절차를 따릅니다. GPU Node Triage: XID 63·64가 뒤따르면 노드를 drain/cordon하고 작업이 끝난 뒤 GPU를 리셋합니다. 뒤따르지 않으면 Field Diagnostics로 추가 자료를 수집합니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
         },
         {
           "title": "복구 조치",
-          "text": "NVIDIA 즉시 조치 분류 WORKFLOW_XID_48: XID 63·64가 함께 보고되면 작업을 배출한 뒤 GPU를 리셋합니다(DRAIN_AND_RESET). 단독으로 보고되면 GPU를 리셋합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+          "text": "NVIDIA 즉시 조치 분류 WORKFLOW_XID_48: XID 63·64가 함께 보고되면 작업을 배출한 뒤 GPU를 리셋합니다(DRAIN_AND_RESET). 단독으로 보고되면 GPU를 리셋합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다. 리셋 뒤 nvidia-smi -q -d ROW_REMAPPER에서 Pending이 No로 바뀌었는지 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",
-          "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+          "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 행 재매핑 실패 플래그가 서고 Field Diagnostics가 이를 확인하면 RMA 대상입니다. 이 플래그는 한 뱅크에 정정 불가 오류(UCE) 재매핑이 이미 8개인데 또 재매핑하려 할 때, 이미 재매핑한 행을 다시 재매핑하려 할 때, UCE 재매핑이 모두 512개에 이를 때 섭니다. Blackwell은 한 뱅크의 세 번째 재매핑에서 예비 채널이 있으면 HBM 채널 수리를 먼저 시도합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, nvidia-smi -q -d ECC,ROW_REMAPPER 출력, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
         }
       ],
       "references": [
@@ -248,7 +260,22 @@
           "source_indices": [
             3
           ],
-          "text": "ROBUST_CHANNEL_GPU_ECC_DBE · Double Bit ECC Error. 적용 제품: A100, H100, B100, GB200. 즉시 조치 WORKFLOW_XID_48, 조사 조치 WORKFLOW_XID_48, Xid 154 연계 CUDA 12.7; GPU driver R565."
+          "text": "ROBUST_CHANNEL_GPU_ECC_DBE · Double Bit ECC Error. 적용 제품: A100, H100, B100, GB200(카탈로그 기준 CUDA 12.7·드라이버 R565). 즉시 조치 WORKFLOW_XID_48: 단독이면 GPU 리셋, XID 63·64와 함께면 작업 배출 뒤 리셋입니다. 조사 조치: 단독이면 Field Diagnostics, 그렇지 않으면 메시지가 가리키는 영역으로 나눕니다(프레임버퍼는 XID 63·64 지침, 그 밖의 SRAM은 임계 플래그 확인)."
+        },
+        {
+          "title": "행 재매핑·RMA 기준",
+          "text": "NVIDIA GPU 메모리 오류 관리 문서: 행 재매핑은 GPU 리셋 뒤에 적용되며 GPU 수명 동안 유지됩니다. RMA 대상은 행 재매핑 실패 플래그가 서고 NVIDIA Field Diagnostic이 이를 확인한 GPU입니다. 플래그 조건은 한 뱅크의 UCE 재매핑 8개 초과 시도, 이미 재매핑한 행의 재시도, UCE 재매핑 합계 512개입니다. Blackwell은 한 뱅크의 세 번째 재매핑에서 HBM 채널 수리를 먼저 시도합니다. 재매핑 행 수·Pending·실패 플래그는 NVML/nvidia-smi로 확인합니다.",
+          "source_indices": [
+            5,
+            6
+          ]
+        },
+        {
+          "title": "함께 보는 Xid",
+          "text": "XID 171·172: XID 48에 더해 DRAM·SRAM 오류를 구분합니다. XID 63·64: 행 재매핑 기록의 성공·실패입니다. XID 94·95: 격리된(contained)·격리되지 않은(uncontained) ECC 오류입니다. XID 160: 메모리가 수리 대상으로 표시됐다는 뜻입니다.",
+          "source_indices": [
+            6
+          ]
         },
         {
           "title": "Fleet·GPUd 분류",

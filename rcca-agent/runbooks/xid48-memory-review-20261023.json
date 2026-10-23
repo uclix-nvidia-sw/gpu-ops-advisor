@@ -1,0 +1,103 @@
+{
+  "status": "local_review_not_published",
+  "checked_at": "2026-10-23",
+  "scope": "XID 48 운영자 지침에 NVIDIA GPU 메모리 오류 관리 문서의 행 재매핑(Pending·실패 플래그)·RMA 기준과 함께 보는 Xid(63·64·94·95·160·171·172)를 더하고, 카탈로그 요약의 'Xid 154 연계' 오표기를 적용 버전 문구로 바로잡는다. 세대별로 행 재매핑(A100 이후)과 페이지 폐기(구세대)를 나눠 적는다.",
+  "method": "Manual comparison with docs.nvidia.com Xid catalog (Xid 48 row, WORKFLOW_XID_48) and GPU Memory Error Management pages retrieved 2026-10-23; before/after sha256 over canonical content JSON with previous_values for exact restoration. Observation plan and applicability are unchanged.",
+  "entries": [
+    {
+      "file": "xid/RB-XID-48-63-64.json",
+      "before_content_sha256": "573e98382a9db5ca311f30cf6ade39525964ee79fd30278251f3429f11cb7d27",
+      "after_content_sha256": "63ef99c9fad62f623ffe500b9b640086bd7e98ac0f1398d7335e6b5d75c77ef0",
+      "change": "guidance: row remapping, RMA policy and related Xids; sources: NVIDIA memory error management",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "XID 48(ROBUST_CHANNEL_GPU_ECC_DBE)는 NVIDIA Xid 카탈로그에서 'Double Bit ECC Error'로 정의됩니다. GPU에서 정정 불가(uncorrectable) 오류가 감지되면 기록되며 애플리케이션에도 보고됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. SRAM(프레임버퍼 제외) 오류이면 SRAM DBE 임계값 초과 여부를 확인해 초과 시 RMA 절차를 따릅니다.",
+          "cause_note": "GPU 메모리(DRAM) 또는 내부 SRAM의 정정 불가 비트 오류입니다.",
+          "next_checks": [
+            {
+              "title": "진단 자료 보존",
+              "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d ECC,ROW_REMAPPER 출력(구세대 GPU는 PAGE_RETIREMENT)도 함께 저장합니다."
+            },
+            {
+              "title": "오류별 판단 기준",
+              "text": "단독이면 Field Diagnostics를 실행합니다. 메시지에 표시된 영역이 프레임버퍼(FB)이면 XID 63·64 지침을, 그 밖의 SRAM이면 nvidia-smi의 SRAM 오류 임계 플래그(sram_threshold_exceeded)를 확인해 설정돼 있으면 Field Diagnostics를 실행합니다. GPU Node Triage: XID 63·64가 뒤따르면 노드를 drain/cordon하고 작업이 끝난 뒤 GPU를 리셋합니다. 뒤따르지 않으면 Field Diagnostics로 추가 자료를 수집합니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
+            },
+            {
+              "title": "복구 조치",
+              "text": "NVIDIA 즉시 조치 분류 WORKFLOW_XID_48: XID 63·64가 함께 보고되면 작업을 배출한 뒤 GPU를 리셋합니다(DRAIN_AND_RESET). 단독으로 보고되면 GPU를 리셋합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+            },
+            {
+              "title": "재발 시 진단·공급사 전달",
+              "text": "같은 GPU에서 재발하거나 하드웨어 문제가 의심되면 dcgmi diag -r 3(약 30분)으로 진단합니다. 해결되지 않으면 nvidia-bug-report.sh 결과, 진단 로그, 수행한 조치 기록을 갖춰 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "NVIDIA Xid 카탈로그",
+              "source_indices": [
+                3
+              ],
+              "text": "ROBUST_CHANNEL_GPU_ECC_DBE · Double Bit ECC Error. 적용 제품: A100, H100, B100, GB200. 즉시 조치 WORKFLOW_XID_48, 조사 조치 WORKFLOW_XID_48, Xid 154 연계 CUDA 12.7; GPU driver R565."
+            },
+            {
+              "title": "Fleet·GPUd 분류",
+              "source_indices": [
+                1,
+                2
+              ],
+              "text": "Fleet 고정 정의: event_type=Fatal, 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+            },
+            {
+              "title": "GPU Node Triage",
+              "source_indices": [
+                0
+              ],
+              "text": "XID 63·64가 뒤따르면 노드를 drain/cordon하고 작업이 끝난 뒤 GPU를 리셋합니다. 뒤따르지 않으면 Field Diagnostics로 추가 자료를 수집합니다."
+            },
+            {
+              "title": "리셋 방식",
+              "source_indices": [
+                0
+              ],
+              "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Page last updated 2026-09-09; mutable upstream document",
+            "section": "GPU Node Triage",
+            "checked_at": "2026-09-28"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/xid/xid.go#L1005",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "XID 48 static definition",
+            "checked_at": "2026-09-28"
+          },
+          {
+            "url": "https://github.com/leptonai/gpud/blob/0857190a63e3a01ee45dcaaae715e9f063f9eb5f/components/accelerator/nvidia/xid/xid.go",
+            "revision": "0857190a63e3a01ee45dcaaae715e9f063f9eb5f",
+            "section": "XID 48 details and conditional action comments",
+            "checked_at": "2026-09-28"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+            "revision": "Page last updated 2026-09-09; mutable upstream document",
+            "section": "Xids; Resolution Buckets; Steps 1-4",
+            "checked_at": "2026-09-28"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+            "revision": "Page last updated 2026-09-09; mutable upstream",
+            "section": "Table 1 Xids: 48; Table 3 Resolution Buckets",
+            "checked_at": "2026-09-28"
+          }
+        ]
+      }
+    }
+  ]
+}

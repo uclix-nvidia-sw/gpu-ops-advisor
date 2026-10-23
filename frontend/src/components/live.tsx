@@ -8,6 +8,7 @@ import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
 import { topicDisplayBases } from '../lib/reportKinds';
+import { plainReason } from '../lib/rcaOperatorView';
 import { groupLabel } from '../lib/report';
 export function QueryState({
   query,
@@ -216,13 +217,15 @@ export function AlarmIdentity({
   rcaView?: boolean;
 }) {
   const target = obj(record.target);
-  const name =
+  const raw =
     str(target.reason) ||
     str(target.title) ||
     str(record.title) ||
     str(record.symptom) ||
     str(target.alertname) ||
     '알람 이름 미확인';
+  // The RCA report shows the alert reason without Fleet event-log tags.
+  const name = rcaView ? plainReason(raw) || raw : raw;
   const targets = [
     ['cluster_id', 'CPC'],
     ['namespace', 'Namespace'],

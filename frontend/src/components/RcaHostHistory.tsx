@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { obj, rows, str, strings, num, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-import { intervalLabel } from '../lib/rcaOperatorView';
+import { intervalLabel, plainReason } from '../lib/rcaOperatorView';
 import { Ids, ToneBadge } from './RcaReportParts';
 
 export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
@@ -191,7 +191,7 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
                 <td>
                   <details>
                     <summary>
-                      {str(r.reason)
+                      {plainReason(str(r.reason))
                         .replace(/GPU-[a-f\d-]{36}/gi, '')
                         .slice(0, 110)}
                     </summary>

@@ -1,9 +1,9 @@
 import { num, obj, rows, str, strings, type Row } from '../lib/live';
-import { aiFailure, operatorView, sentences } from '../lib/rcaOperatorView';
+import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperatorView';
 import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons } from '../lib/rcaLabels';
 import { formatRcaTime } from '../lib/rcaTime';
-import { RcaPoints, ToneBadge } from './RcaReportParts';
+import { Ids, RcaPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
 
@@ -114,7 +114,12 @@ export function RcaOperatorReport({
     >
       <header className="rca-narrative-header">
         <h3>RCA 장애 보고서{v ? ` · ${v.node} · ${v.codes.join(', ')}` : ''}</h3>
-        {v && (
+        {v?.family === 'component' && (
+          <p>
+            {v.codes[0]} 컴포넌트 · 노드 {v.node} · 장치 정보 없음
+          </p>
+        )}
+        {v && v.family !== 'component' && (
           <p>
             {v.family === 'nvswitch' ? 'NVSwitch' : `GPU${v.gpuIndex ? ` ${v.gpuIndex}` : ''}`} PCI{' '}
             <code className="rca-id">{v.alertPci || '—'}</code>
@@ -132,7 +137,7 @@ export function RcaOperatorReport({
           {v && v.sameDeviceCount > 1 && (
             <ToneBadge
               tone="alert"
-              label={`같은 ${v.family === 'nvswitch' ? '스위치' : 'GPU'} ${v.sameDeviceCount}번째 발생`}
+              label={`같은 ${{ nvswitch: '스위치', gpu: 'GPU', component: '노드·사유' }[v.family]} ${v.sameDeviceCount}번째 발생`}
             />
           )}
           {missing.some((c) => c !== 'synthesis_failed' && c !== 'event_not_found') && (
@@ -236,8 +241,10 @@ export function RcaOperatorReport({
           </h4>
           <RcaPoints
             items={[
-              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}`,
-              `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertUuid ? ` · ${v.alertUuid}` : ''}`,
+              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}${v.family === 'component' ? ` · 보고 사유: ${v.message}` : ''}`,
+              v.family === 'component'
+                ? `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.codes[0]} 컴포넌트 — 보고에 장치 정보가 없어 대응 순서의 즉시 확인으로 찾습니다`
+                : `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertUuid ? ` · ${v.alertUuid}` : ''}`,
               `언제: ${v.eventTime ? `${formatRcaTime(v.eventTime)} 커널 이벤트` : v.onsetText || '시작 시각 미확인'} — ${timing.verdict}`,
               ...v.otherNotes.map((note) => `같은 노드 다른 오류: ${note}`),
               ...(v.workloads.some((w) => w.atIncident)
@@ -249,13 +256,17 @@ export function RcaOperatorReport({
                         ', ',
                       )}${v.family === 'nvswitch' ? ' — NVSwitch가 연결하는 노드 GPU의 작업' : ''} (DCGM 지표 라벨 기준)`,
                   ]
-                : v.metrics.length
+                : v.family === 'component'
                   ? [
-                      v.podsKnown
-                        ? `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`
-                        : '누구에게 영향: 수집한 지표에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 노드의 작업을 확인하세요',
+                      `누구에게 영향: 수집한 자료에 파드 정보가 없습니다 — kubectl get pods -A -o wide --field-selector spec.nodeName=${v.node}로 이 노드의 작업을 확인하세요`,
                     ]
-                  : []),
+                  : v.metrics.length
+                    ? [
+                        v.podsKnown
+                          ? `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`
+                          : '누구에게 영향: 수집한 지표에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 노드의 작업을 확인하세요',
+                      ]
+                    : []),
               ...(v.neighbours.length
                 ? [
                     `같은 노드 다른 GPU 작업: ${v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}`,
@@ -287,6 +298,12 @@ export function RcaOperatorReport({
         </p>
         {v && guidance.length ? (
           <>
+            {v.message && (
+              <p>
+                이번 로그 원문: <Ids text={v.message} /> — 아래 판단 기준의 분기(오류 영역·사유)를
+                이 문구로 고르세요.
+              </p>
+            )}
             <ol className="rca-steps">
               <li>
                 <div className="rca-step-head">
@@ -305,135 +322,142 @@ export function RcaOperatorReport({
                 </li>
               ))}
               {/* Generic triage close-out unless the published Runbook already covers it. */}
-              {!v.actionChecks.some((c) => str(c.text).includes('dcgmi diag')) && (
-                <li>
-                  <div className="rca-step-head">
-                    <strong>조치 후 확인·에스컬레이션</strong>
-                  </div>
-                  <RcaPoints
-                    items={[
-                      '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
-                      '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
-                      '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
-                    ]}
-                  />
-                </li>
-              )}
+              {v.family !== 'component' &&
+                !v.actionChecks.some((c) => str(c.text).includes('dcgmi diag')) && (
+                  <li>
+                    <div className="rca-step-head">
+                      <strong>조치 후 확인·에스컬레이션</strong>
+                    </div>
+                    <RcaPoints
+                      items={[
+                        '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
+                        '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
+                        '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
+                      ]}
+                    />
+                  </li>
+                )}
             </ol>
             {guidance.map((g, i) => (
               <span key={i}>{links([g.evidence_id])}</span>
             ))}
-            <div className="rca-history-table">
-              <table>
-                <caption>
-                  공급사 전달 자료 체크리스트 (NVIDIA GPU Node Triage) · ✅ 이 보고서에 있음 · ⬜
-                  미수집(운영자가 확보) · ✍ 운영자가 작성
-                </caption>
-                <thead>
-                  <tr>
-                    <th>전달 자료</th>
-                    <th>이 보고서</th>
-                    <th>운영자가 할 일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>이슈 요약·핵심 로그</td>
-                    <td>✅ 1·3장</td>
-                    <td>원문 링크와 함께 첨부</td>
-                  </tr>
-                  <tr>
-                    <td>장치 식별(PCI·UUID)</td>
-                    <td>{identity.tone === 'ok' ? '✅ 알림·로그 일치' : '⚠️ 대조 필요'}</td>
-                    <td>조치 직전 재확인</td>
-                  </tr>
-                  <tr>
-                    <td>관련 지표·이전 사건</td>
-                    <td>✅ 3·5장</td>
-                    <td>—</td>
-                  </tr>
-                  <tr>
-                    <td>수행한 조치 단계</td>
-                    <td>
-                      ✍ 운영자 작성
-                      <br />
-                      <small>이 보고서는 조치를 수행하지 않습니다</small>
-                    </td>
-                    <td>수행한 조치·시각·결과를 티켓에 기록</td>
-                  </tr>
-                  <tr>
-                    <td>OS·드라이버 버전</td>
-                    <td>
-                      {v.driver ? (
-                        <>
-                          {`✅ 드라이버 ${v.driver} (DCGM 라벨)`}
-                          <br />⬜ OS 미수집
-                        </>
-                      ) : (
-                        '⬜ 미수집'
-                      )}
-                    </td>
-                    <td>
-                      {v.driver
-                        ? 'OS는 /etc/os-release·uname -r로 확인'
-                        : 'nvidia-smi와 /etc/os-release로 확인'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>nvidia-bug-report.sh</td>
-                    <td>⬜ 미수집</td>
-                    <td>재시작·리셋 전에 확보</td>
-                  </tr>
-                  {v.family === 'nvswitch' && (
-                    <tr>
-                      <td>Fabric Manager 로그</td>
-                      <td>⬜ 미수집</td>
-                      <td>HGX 시스템 필수 · 재부팅 전에 확보</td>
-                    </tr>
-                  )}
-                  <tr>
-                    <td>DCGM 진단 로그</td>
-                    <td>⬜ 미수집</td>
-                    <td>dcgmi diag 실행 후 첨부</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <details>
-              <summary>GPU·NVSwitch 리셋 방식 선택 (NVIDIA GPU Node Triage 표 2)</summary>
+            {v.family !== 'component' && (
               <div className="rca-history-table">
                 <table>
+                  <caption>
+                    공급사 전달 자료 체크리스트 (NVIDIA GPU Node Triage) · ✅ 이 보고서에 있음 · ⬜
+                    미수집(운영자가 확보) · ✍ 운영자가 작성
+                  </caption>
                   <thead>
                     <tr>
-                      <th>구성</th>
-                      <th>리셋 방식</th>
+                      <th>전달 자료</th>
+                      <th>이 보고서</th>
+                      <th>운영자가 할 일</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>Ampere+ NVSwitch · bare metal · FM 실행 중</td>
-                      <td>GPU 개별 리셋 가능, FM이 해당 NVSwitch 링크를 함께 리셋</td>
+                      <td>이슈 요약·핵심 로그</td>
+                      <td>✅ 1·3장</td>
+                      <td>원문 링크와 함께 첨부</td>
                     </tr>
                     <tr>
-                      <td>Ampere+ NVSwitch · bare metal · FM 미실행</td>
-                      <td>개별 리셋 불가, NVLink로 연결된 GPU·NVSwitch 전체 리셋</td>
+                      <td>장치 식별(PCI·UUID)</td>
+                      <td>{identity.tone === 'ok' ? '✅ 알림·로그 일치' : '⚠️ 대조 필요'}</td>
+                      <td>조치 직전 재확인</td>
                     </tr>
                     <tr>
-                      <td>Hopper+ NVSwitch · bare metal</td>
-                      <td>개별 리셋 지원, -i 없이 nvidia-smi 리셋 시 전체 리셋</td>
+                      <td>관련 지표·이전 사건</td>
+                      <td>✅ 3·5장</td>
+                      <td>—</td>
                     </tr>
                     <tr>
-                      <td>가상화(VM 안의 GPU)</td>
-                      <td>GPU 리셋 미지원 → VM 재시작 (Hopper+는 하이퍼바이저 권한에 따라 다름)</td>
+                      <td>수행한 조치 단계</td>
+                      <td>
+                        ✍ 운영자 작성
+                        <br />
+                        <small>이 보고서는 조치를 수행하지 않습니다</small>
+                      </td>
+                      <td>수행한 조치·시각·결과를 티켓에 기록</td>
+                    </tr>
+                    <tr>
+                      <td>OS·드라이버 버전</td>
+                      <td>
+                        {v.driver ? (
+                          <>
+                            {`✅ 드라이버 ${v.driver} (DCGM 라벨)`}
+                            <br />⬜ OS 미수집
+                          </>
+                        ) : (
+                          '⬜ 미수집'
+                        )}
+                      </td>
+                      <td>
+                        {v.driver
+                          ? 'OS는 /etc/os-release·uname -r로 확인'
+                          : 'nvidia-smi와 /etc/os-release로 확인'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>nvidia-bug-report.sh</td>
+                      <td>⬜ 미수집</td>
+                      <td>재시작·리셋 전에 확보</td>
+                    </tr>
+                    {v.family === 'nvswitch' && (
+                      <tr>
+                        <td>Fabric Manager 로그</td>
+                        <td>⬜ 미수집</td>
+                        <td>HGX 시스템 필수 · 재부팅 전에 확보</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td>DCGM 진단 로그</td>
+                      <td>⬜ 미수집</td>
+                      <td>dcgmi diag 실행 후 첨부</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p className="rca-muted">
-                리셋은 대상 GPU를 쓰는 프로세스가 없어야 하며 root 권한이 필요합니다. 작업 배출 후
-                수행합니다.
-              </p>
-            </details>
+            )}
+            {v.family !== 'component' && (
+              <details>
+                <summary>GPU·NVSwitch 리셋 방식 선택 (NVIDIA GPU Node Triage 표 2)</summary>
+                <div className="rca-history-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>구성</th>
+                        <th>리셋 방식</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Ampere+ NVSwitch · bare metal · FM 실행 중</td>
+                        <td>GPU 개별 리셋 가능, FM이 해당 NVSwitch 링크를 함께 리셋</td>
+                      </tr>
+                      <tr>
+                        <td>Ampere+ NVSwitch · bare metal · FM 미실행</td>
+                        <td>개별 리셋 불가, NVLink로 연결된 GPU·NVSwitch 전체 리셋</td>
+                      </tr>
+                      <tr>
+                        <td>Hopper+ NVSwitch · bare metal</td>
+                        <td>개별 리셋 지원, -i 없이 nvidia-smi 리셋 시 전체 리셋</td>
+                      </tr>
+                      <tr>
+                        <td>가상화(VM 안의 GPU)</td>
+                        <td>
+                          GPU 리셋 미지원 → VM 재시작 (Hopper+는 하이퍼바이저 권한에 따라 다름)
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="rca-muted">
+                  리셋은 대상 GPU를 쓰는 프로세스가 없어야 하며 root 권한이 필요합니다. 작업 배출 후
+                  수행합니다.
+                </p>
+              </details>
+            )}
           </>
         ) : (
           paragraphs('action').map((text, i) => <p key={i}>{text}</p>)
@@ -468,6 +492,38 @@ export function RcaOperatorReport({
                 </header>
                 <p className="rca-verdict">{f.verdict}</p>
                 <RcaPoints items={f.points} />
+                {f.key === 'telemetry' && !v.multiGpu && v.metrics.length > 0 && (
+                  <div className="rca-history-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '38%' }}>지표</th>
+                          <th>사건 전 (직전)</th>
+                          <th>사건 후</th>
+                          <th style={{ width: '20%' }}>판정</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {v.metrics.map((m, j) => (
+                          <tr key={j}>
+                            <td>{m.name}</td>
+                            <td>
+                              {m.whole
+                                ? `조회 구간 ${m.wholeText}`
+                                : m.before
+                                  ? `${valueText(m.before.last, m.unit)}${m.before.min !== m.before.max ? ` (${m.beforeText})` : ''}`
+                                  : '표본 없음'}
+                            </td>
+                            <td>{m.whole ? '—' : m.afterText || '수집 전'}</td>
+                            <td>
+                              <ToneBadge tone={m.tone} label={m.tag} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {links(f.refs)}
               </article>
             ))}

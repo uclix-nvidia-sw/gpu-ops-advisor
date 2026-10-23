@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { aiFailure, fullPci, operatorView, sentences } from './rcaOperatorView';
+import { aiFailure, fullPci, operatorView, plainReason, sentences } from './rcaOperatorView';
 
 const gpu = 'GPU-81ec1404-9d04-9bdf-0bdc-c852d61759a9';
 const other = 'GPU-7608a7b1-ec78-22f7-d932-8c629aed27b1';
@@ -426,4 +426,99 @@ it('requires workload observations to bracket the incident time', () => {
     },
   })!;
   expect(v.workloads.map((w) => w.atIncident)).toEqual([false, false, true, false]);
+});
+
+it('builds the same report sections for component alerts from stored Fleet reports', () => {
+  const report = (at: string, health: string, reason: string) => ({
+    component: 'disk',
+    cluster_id: 'cpc-1',
+    raw_health: health,
+    reason,
+    observed_at: at,
+    target: { node: 'dgx01', machine_id: 'm-1' },
+    evidence_refs: ['log'],
+  });
+  const ro = 'filesystem remounted as read-only due to errors';
+  const v = operatorView({
+    runbook_revisions: [{ knowledge_key: 'RB-COMPONENT-DISK', revision: 1 }],
+    time_range: { start: '2026-10-23T07:48:50Z', end: '2026-10-23T08:22:06Z' },
+    incident_time: '2026-10-23T08:18:50Z',
+    missing_inputs: ['report_reason_changed'],
+    device_observations: [
+      report('2026-10-23T08:16:24Z', 'Healthy', 'ok'),
+      report('2026-10-23T08:17:24Z', 'Healthy', 'ok'),
+      report('2026-10-23T08:18:24Z', 'Unhealthy', ro),
+      report('2026-10-23T08:21:24Z', 'Unhealthy', ro),
+    ],
+    quality: {
+      host_incident_history: {
+        schema: 'rca-host-history/1',
+        period: { start: '2026-10-09T08:22:06Z', end: '2026-10-23T08:22:06Z' },
+        rows: [
+          {
+            incident_id: 'a',
+            current: true,
+            codes: [],
+            reason: ro,
+            occurred_at: '2026-10-23T08:18:50Z',
+          },
+          {
+            incident_id: 'b',
+            codes: ['xid:79'],
+            gpu_uuid: gpu,
+            occurred_at: '2026-10-22T08:00:00Z',
+          },
+        ],
+      },
+    },
+  })!;
+  const [identity, timing, telemetry, repeat, gaps] = v.findings;
+  expect([v.family, v.codes, v.node, v.reports, v.ongoing]).toEqual([
+    'component',
+    ['disk'],
+    'dgx01',
+    2,
+    true,
+  ]);
+  expect(v.onsetText).toContain('(마지막 정상 보고)');
+  expect(identity).toMatchObject({ tone: 'ok', label: '일치' });
+  expect(timing.points.join()).toContain('보고 2건');
+  expect(telemetry.verdict).toContain('오류·상태 로그로 판단');
+  expect(repeat.verdict).toBe('최근 14일 동안 이 노드에서 처음 등록된 disk 사건입니다.');
+  expect(repeat.points.join()).not.toContain('NVSwitch 오류(SXID)');
+  // Labels are sentences, never internal codes.
+  expect(gaps.points[0]).toContain('Fleet 상태 보고(Unhealthy)의 사유가 알람 사유와 다릅니다');
+  expect(gaps.points.join()).toContain('장치 식별 정보');
+});
+
+it('strips Fleet event-log tags from alert reasons', () => {
+  expect(
+    plainReason('[Fatal] accelerator-nvidia-error-sxid:  [Potential Fatal] SXID 11001 x'),
+  ).toBe('SXID 11001 x');
+  expect(plainReason('XID 79 ROBUST')).toBe('XID 79 ROBUST');
+});
+
+it('says when no post-incident sample exists yet instead of leading with an idle GPU', () => {
+  const pending = (name: string, query: string, last: number) => ({
+    name,
+    query_id: query,
+    unit: 'count',
+    kind: 'counter',
+    gpu_uuid: gpu,
+    last: '2026-10-22T03:27:24Z',
+    max_sample_gap_seconds: 240,
+    incident_windows: { before: { ...before(last), last_value: last }, at_or_after: null },
+  });
+  const v = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metrics: [pending('정정 불가 ECC(DBE) 휘발성 누적값', 'D40', 0)],
+      },
+    },
+  })!;
+  expect(v.findings[2].verdict).toBe(
+    '사건 뒤 지표 표본이 아직 없습니다(수집 간격 최대 4분). 사건 전 정정 불가 ECC(DBE) 휘발성 누적값은 0 회라 이번 오류가 반영됐는지는 nvidia-smi -q -d ECC로 직접 확인하세요.',
+  );
+  expect(v.findings[2].points).toEqual([]);
 });

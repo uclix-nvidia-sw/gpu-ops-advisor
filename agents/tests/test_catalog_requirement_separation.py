@@ -40,6 +40,12 @@ TRIAGE_REVIEW = {
         (CATALOG / "triage-guidance-review-20261022.json").read_text("utf-8")
     )["entries"]
 }
+MEMORY_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "xid48-memory-review-20261023.json").read_text("utf-8")
+    )["entries"]
+}
 WORDING_REVIEW = {
     e["file"]: e
     for e in json.loads(
@@ -96,8 +102,15 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        # Newest review first: wording, catalog actions, triage, then the report review.
-        for review in (WORDING_REVIEW, XID_ACTION_REVIEW, TRIAGE_REVIEW, REPORT_REVIEW):
+        # Newest review first: memory guidance, wording, catalog actions, triage,
+        # then the report review.
+        for review in (
+            MEMORY_REVIEW,
+            WORDING_REVIEW,
+            XID_ACTION_REVIEW,
+            TRIAGE_REVIEW,
+            REPORT_REVIEW,
+        ):
             report = review.get(e["file"])
             if not report:
                 continue
