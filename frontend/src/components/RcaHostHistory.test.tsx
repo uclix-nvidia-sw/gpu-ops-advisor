@@ -64,9 +64,10 @@ test('metric table preserves zero, units and node context', () => {
       }}
     />,
   );
-  expect(html).toContain('같은 노드 GPU별 관측');
-  expect(html).toContain('B/s');
-  expect(html).toContain('0 ~ 4');
+  expect(html).toContain('GPU별 지표');
+  expect(html).toContain('조회 구간 0 B/s ~ 4 B/s');
+  // Results stored before pod labels existed do not claim that no pod was running.
+  expect(html).not.toContain('파드가 없습니다');
 });
 
 test('repeat intervals group the same code and device and mark the query boundary', () => {

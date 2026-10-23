@@ -44,8 +44,12 @@ export function RcaOperatorReport({
       .filter((s) => s.id === id)
       .flatMap((s) => str(s.text).split(/\n\s*\n/))
       .filter(Boolean);
+  // Fixed code sentences repeat Q1-Q5; only model-written analysis is shown here.
   const notes = sources.filter(
-    (r) => r.section === 'cause' && !str(r.text).startsWith('발행 Runbook의 오류 설명:'),
+    (r) =>
+      r.section === 'cause' &&
+      r.fixed !== true &&
+      !str(r.text).startsWith('발행 Runbook의 오류 설명:'),
   );
   // Older results without source items keep their stored cause prose.
   const noteTexts = sources.length ? notes.map((r) => str(r.text)) : paragraphs('cause');
@@ -60,7 +64,7 @@ export function RcaOperatorReport({
     );
   const missing = strings(result.missing_inputs);
   const ai = aiFailure(result);
-  const [identity, timing, telemetry, repeat] = v?.findings || [];
+  const [identity, timing, , repeat] = v?.findings || [];
   const first = v?.actionChecks[0];
   const maxCount = Math.max(1, ...(v?.devices || []).map((d) => d.count));
   // Sections 1 and 3 need the triage observations; say why they are empty.
@@ -144,12 +148,17 @@ export function RcaOperatorReport({
                         ', ',
                       )}${v.family === 'nvswitch' ? ' — NVSwitch가 연결하는 노드 GPU의 작업' : ''} (DCGM 지표 라벨 기준)`,
                   ]
-                : []),
+                : v.podsKnown && v.metrics.length
+                  ? [
+                      `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`,
+                    ]
+                  : []),
               ...(v.neighbours.length
-                ? [`같은 노드 다른 GPU 작업: ${v.neighbours.map(podText).join(', ')}`]
+                ? [
+                    `같은 노드 다른 GPU 작업: ${v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}`,
+                  ]
                 : []),
               `처음인가: ${repeat.verdict}`,
-              `지표: ${telemetry.verdict}`,
               ...(first
                 ? [`우선 대응: ${str(first.title)} — ${sentences(str(first.text))[0]}`]
                 : []),
@@ -360,7 +369,7 @@ export function RcaOperatorReport({
             {noteTexts.length > 0 && (
               <article className="rca-finding tone-unknown">
                 <header>
-                  <h5>보고서 작성기 분석 메모</h5>
+                  <h5>AI 해석</h5>
                 </header>
                 <RcaPoints items={noteTexts} />
                 {links(notes.flatMap((r) => strings(r.evidence_refs)))}

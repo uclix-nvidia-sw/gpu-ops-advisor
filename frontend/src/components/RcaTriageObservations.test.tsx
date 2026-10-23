@@ -35,8 +35,10 @@ const result = {
 };
 it('groups identical summaries without hiding different measurements or GPU identities', () => {
   const html = renderToStaticMarkup(<RcaTriageObservations result={result} />);
-  expect(html.match(/NVLink RX/g)).toHaveLength(2);
-  expect(html).toContain('GPU 2개');
+  // One summary line for the shared verdict, two raw rows (identical A·B, different C).
+  expect(html.match(/NVLink RX/g)).toHaveLength(3);
+  expect(html).toContain('GPU 3개');
+  expect(html).toContain('GPU 2개 · 동일 관측값');
   for (const gpu of ['GPU-A', 'GPU-B', 'GPU-C']) expect(html).toContain(gpu);
 });
 it('shows guidance, observations, analysis and references in operator order', () => {
@@ -212,6 +214,12 @@ it('explains a missing AI narrative, operator-written checklist rows and pods by
         missing_inputs: ['synthesis_failed'],
         quality: {
           analysis: { synthesis: { error_code: 'llm_http_error', http_status: 500 } },
+          report: {
+            source_items: [
+              { section: 'cause', fixed: true, text: '고정 문장: GPU 목록과 대조했습니다.' },
+              { section: 'cause', text: 'LLM 해석 문장입니다.', evidence_refs: ['e1'] },
+            ],
+          },
           runbook_guidance: [{ guidance: { meaning: 'XID 79 의미입니다.', next_checks: [] } }],
           triage_observations: {
             schema: 'rca-triage-observations/1',
@@ -241,6 +249,10 @@ it('explains a missing AI narrative, operator-written checklist rows and pods by
   expect(html).toContain('✅ 드라이버 580.173.02 (DCGM 라벨)');
   expect(html).toContain('ns / worker-a (GPU 4·7번 · 2개 함께 사용)');
   expect(html).toContain('ns / worker-c (GPU 0번)');
+  expect(html).not.toContain('<strong>지표</strong>');
+  expect(html).toContain('<h5>AI 해석</h5>');
+  expect(html).toContain('LLM 해석 문장입니다.');
+  expect(html).not.toContain('고정 문장');
 });
 
 it('keeps the six-section frame when a result has no triage observations', () => {

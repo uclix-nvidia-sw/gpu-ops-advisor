@@ -38,6 +38,10 @@ export interface MetricRow {
   unit: string;
   kind: string;
   gpus: string[];
+  /** GPU UUIDs behind `gpus`, for per-GPU grouping. */
+  uuids: string[];
+  /** Last value before → last value after, or a word when there is no pair. */
+  change: string;
   before: Window | null;
   after: Window | null;
   whole: Window | null;
@@ -71,6 +75,22 @@ const units: Record<string, string> = {
 };
 export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
 
+const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
+/** Value with its unit label; byte rates scale to KB/MB/GB per second. */
+export function valueText(v: number, unit: string) {
+  if (unit === 'B/s') {
+    const step = (
+      [
+        [1e9, 'GB/s'],
+        [1e6, 'MB/s'],
+        [1e3, 'KB/s'],
+      ] as const
+    ).find(([size]) => Math.abs(v) >= size);
+    if (step) return `${(v / step[0]).toFixed(1)} ${step[1]}`;
+  }
+  return `${fmtNum(v)} ${unit}`;
+}
+
 export function intervalLabel(ms: number) {
   if (ms < 60000) return `${Math.round(ms / 1000)}초`;
   if (ms < 3600000) return `${Math.round(ms / 60000)}분`;
@@ -103,7 +123,28 @@ export const sentences = (text: string) =>
 
 const t = (v: unknown) => Date.parse(str(v));
 const IDLE = '사건 전부터 0';
-const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
+// Lower rank reads first: alert, caution, hold, steady, idle, unchanged codes.
+const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
+  m.tone === 'alert'
+    ? 0
+    : m.tone === 'warn'
+      ? m.tag === '멈춤'
+        ? 1
+        : 1.5
+      : m.tag === IDLE
+        ? 4
+        : m.tag === '변화 없음' && m.kind === 'enum'
+          ? 5
+          : m.tone === 'ok' || m.tag === '유지'
+            ? 3
+            : 2;
+/** "NVLink 수신량" + "NVLink 송신량" → "NVLink 수신량·송신량". */
+const joinNames = (names: string[]) => {
+  const first = names[0]?.split(' ')[0];
+  return names.length > 1 && names.every((n) => n.startsWith(`${first} `))
+    ? `${first} ${names.map((n) => n.slice(first.length + 1)).join('·')}`
+    : names.join('·');
+};
 const win = (v: unknown): Window | null => {
   const w = obj(v);
   if (typeof w.min !== 'number' || typeof w.max !== 'number') return null;
@@ -370,8 +411,14 @@ export function operatorView(result: Row) {
     const enumKind = m.kind === 'enum' || ['enum', 'state', 'bitmask'].includes(str(m.unit));
     const gap = num(m.max_sample_gap_seconds) * 1000;
     const q = str(m.query_id);
+    const val = (v: number) => valueText(v, u);
     const range = (w: Window) =>
-      w.min === w.max ? `${fmtNum(w.min)} ${u}` : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
+      w.min === w.max
+        ? val(w.min)
+        : u === 'B/s'
+          ? `${val(w.min)} ~ ${val(w.max)}`
+          : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
+    const once = after?.samples === 1 ? ', 사건 뒤 표본 1회' : '';
     let tone: Tone = 'unknown';
     let tag: string;
     let short: string;
@@ -393,11 +440,24 @@ export function operatorView(result: Row) {
       if (after.max === 0 && before.max > 0 && before.last === 0) {
         // Already zero at the last pre-incident sample: the error did not stop it.
         tag = IDLE;
-        short = `${q === 'D02' ? 'GPU가 사건 전에 이미 쉬고 있었습니다' : '사건 전에 이미 0이었습니다'} (직전 값 0 ${u}, 사건 전 최대 ${fmtNum(before.max)} ${u})`;
+        short = `${q === 'D02' ? 'GPU가 사건 전에 이미 쉬고 있었습니다' : '사건 전에 이미 0이었습니다'} (직전 값 ${val(0)}, 사건 전 최대 ${val(before.max)})`;
       } else if (after.max === 0 && before.max > 0) {
         tag = '멈춤';
-        short = `${q === 'D02' ? '작업이 멈췄습니다' : ['D33', 'D34'].includes(q) ? 'NVLink 트래픽이 멈췄습니다' : '0으로 떨어졌습니다'} (사건 전 최대 ${fmtNum(before.max)} ${u})`;
+        short = `${q === 'D02' ? '작업이 멈췄습니다' : ['D33', 'D34'].includes(q) ? 'NVLink 트래픽이 멈췄습니다' : '0으로 떨어졌습니다'} (사건 전 최대 ${val(before.max)}${once})`;
         tone = 'warn';
+      } else if (m.kind !== 'counter' && before.last > 0 && after.max <= before.last * 0.1) {
+        // A ≥90% fall from the last pre-incident value is shown even from one sample.
+        tag = '급감';
+        short = `${Math.round((1 - after.max / before.last) * 100)}% 감소 (${val(before.last)} → ${val(after.last)}${once})`;
+        tone = 'warn';
+      } else if (
+        m.kind !== 'counter' &&
+        after.samples === 1 &&
+        before.last > 0 &&
+        Math.abs(after.last - before.last) <= before.last * 0.2
+      ) {
+        tag = '유지';
+        short = `${val(before.last)} → ${val(after.last)} (사건 뒤 표본 1회)`;
       } else if (m.kind === 'counter' && after.max > before.max) {
         // Uncorrectable ECC growth is the decisive memory signal; other counters stay a caution.
         const dbe = ['D40', 'D42'].includes(q);
@@ -407,7 +467,7 @@ export function operatorView(result: Row) {
       } else if (m.kind !== 'counter' && after.samples === 1) {
         [tag, short] = [
           '판단 보류',
-          `사건 뒤 1회(${range(after)})만 수집 — 장치가 응답한다는 증거가 아닙니다`,
+          `사건 뒤 1회만 수집 (${range(after)}) — 장치가 응답한다는 증거가 아닙니다`,
         ];
       } else if (m.kind === 'counter') {
         [tag, short] = ['변화 없음', `증가 없음 (${range(after)})`];
@@ -434,6 +494,15 @@ export function operatorView(result: Row) {
       [tag, short] = ['사건 후만', `사건 뒤 ${range(after!)} (사건 전 표본 없음)`];
     }
     const reading = `${short}.`;
+    const change = enumKind
+      ? short.replace(/\s*\([^()]*\)$/, '')
+      : before && after
+        ? `${val(before.last)} → ${val(after.last)}`
+        : whole
+          ? `조회 구간 ${range(whole)}`
+          : after
+            ? `사건 뒤 ${val(after.last)}`
+            : '사건 뒤 표본 없음';
     return {
       name: str(m.name),
       tag,
@@ -441,6 +510,8 @@ export function operatorView(result: Row) {
       unit: u,
       kind: str(m.kind),
       gpus: group.map((r) => gpuLabel(str(r.gpu_uuid))),
+      uuids: group.map((r) => str(r.gpu_uuid)),
+      change,
       before,
       after,
       whole,
@@ -452,12 +523,102 @@ export function operatorView(result: Row) {
     };
   });
   const changed = metrics.filter((m) => m.tone === 'warn' || m.tone === 'alert');
-  const idle = metrics.filter((m) => m.tag === IDLE);
   const noAfter = metrics.filter((m) => !m.after && !m.whole);
-  const okNames = [...new Set(metrics.filter((m) => m.tone === 'ok').map((m) => m.name))];
-  const holdNames = [
-    ...new Set(metrics.filter((m) => m.tone === 'unknown' && m.tag !== IDLE).map((m) => m.name)),
-  ];
+  // Several GPUs: say which GPUs share a verdict instead of repeating each series.
+  const multi =
+    view.metric_scope === 'node_gpu_context' || new Set(metrics.flatMap((m) => m.uuids)).size > 1;
+  const order = [...new Set(metrics.map((m) => m.name))];
+  const allGpus = new Set(metrics.flatMap((m) => m.uuids));
+  const gpuSet = (uuids: string[]) => {
+    const unique = [...new Set(uuids)];
+    const nos = unique.map((u) => str(obj(gpuInfo.get(u)).gpu_index));
+    if (unique.length > 2 && unique.length === allGpus.size) return `GPU ${unique.length}개 모두`;
+    return nos.every(Boolean)
+      ? `GPU ${nos.sort((a, b) => Number(a) - Number(b)).join('·')}번`
+      : `GPU ${unique.length}개`;
+  };
+  const describe = (group: MetricRow[]) => {
+    if (!multi) return joinNames([...new Set(group.map((m) => m.name))]);
+    const byGpu = new Map<string, string[]>();
+    group.forEach((m) =>
+      m.uuids.forEach((u) => byGpu.set(u, [...new Set([...(byGpu.get(u) || []), m.name])])),
+    );
+    const byNames = new Map<string, string[]>();
+    byGpu.forEach((names, u) => {
+      const key = joinNames(names.sort((a, b) => order.indexOf(a) - order.indexOf(b)));
+      byNames.set(key, [...(byNames.get(key) || []), u]);
+    });
+    return [...byNames].map(([names, uuids]) => `${gpuSet(uuids)} ${names}`).join(', ');
+  };
+  const tagGroups = [
+    ...metrics
+      .reduce(
+        (map, m) => map.set(m.tag, [...(map.get(m.tag) || []), m]),
+        new Map<string, MetricRow[]>(),
+      )
+      .values(),
+  ].sort((a, b) => rank(a[0]) - rank(b[0]));
+  const withShort = (g: MetricRow[], text: string) =>
+    !multi && g.length === 1 ? `${text} — ${g[0].short}` : text;
+  const warnGroups = tagGroups.filter((g) => rank(g[0]) < 2);
+  const idleGroups = tagGroups.filter((g) => g[0].tag === IDLE);
+  const headline = [
+    warnGroups.length
+      ? `사건 직후 ${warnGroups.map((g) => withShort(g, `${describe(g)} ${g[0].tag}`)).join(', ')}`
+      : '',
+    idleGroups.length
+      ? `${IDLE}: ${idleGroups.map((g) => withShort(g, describe(g))).join(', ')}`
+      : '',
+  ].filter(Boolean);
+  // Section 3 rows: GPUs whose metrics share every verdict collapse into one row.
+  const perGpu = new Map<string, MetricRow[]>();
+  metrics.forEach((m) => m.uuids.forEach((u) => perGpu.set(u, [...(perGpu.get(u) || []), m])));
+  const gpuGroups = new Map<string, string[]>();
+  perGpu.forEach((items, u) => {
+    const key = items
+      .map((m) => `${m.name}:${m.tag}`)
+      .sort()
+      .join('|');
+    gpuGroups.set(key, [...(gpuGroups.get(key) || []), u]);
+  });
+  const gpuRowsAll = multi
+    ? [...gpuGroups.values()]
+        .map((uuids) => {
+          const items = uuids.flatMap((u) => perGpu.get(u) || []);
+          const worst = [...items].sort((a, b) => rank(a) - rank(b))[0];
+          const lines = new Map<string, string[]>();
+          order.forEach((name) => {
+            const values = [...new Set(items.filter((m) => m.name === name).map((m) => m.change))];
+            if (!values.length) return;
+            const text = values.length <= 3 ? values.join(' · ') : `GPU별 값 ${values.length}가지`;
+            lines.set(text, [...(lines.get(text) || []), name]);
+          });
+          return {
+            gpus: gpuSet(uuids),
+            pci: uuids
+              .map((u) => normPci(inventory.get(u) || ''))
+              .filter(Boolean)
+              .sort()
+              .join(' · '),
+            lines: [...lines].map(([text, names]) => `${joinNames(names)}: ${text}`),
+            tag: worst.tag,
+            tone: worst.tone,
+            once:
+              worst.tag !== IDLE && items.some((m) => m.after?.samples === 1 && m.kind !== 'enum'),
+            rank: rank(worst),
+          };
+        })
+        .sort((a, b) => a.rank - b.rank || a.gpus.localeCompare(b.gpus))
+    : [];
+  // A line every GPU row shares (e.g. an unchanged status code) is said once under the table.
+  const gpuCommon =
+    gpuRowsAll.length > 1
+      ? gpuRowsAll[0].lines.filter((line) => gpuRowsAll.every((r) => r.lines.includes(line)))
+      : [];
+  const gpuRows = gpuRowsAll.map((r) => ({
+    ...r,
+    lines: r.lines.filter((line) => !gpuCommon.includes(line)),
+  }));
   const telemetry: Finding = {
     key: 'telemetry',
     question: '사건 전후로 장치 지표는 어떻게 달라졌나요?',
@@ -472,37 +633,24 @@ export function operatorView(result: Row) {
             : 'unknown',
     verdict: !metrics.length
       ? '관련 지표를 수집하지 못했습니다.'
-      : changed.length || idle.length
-        ? [
-            changed.length
-              ? `사건 뒤 변화 — ${changed.map((m) => `${m.name}: ${m.short}`).join('; ')}.`
-              : '',
-            idle.length ? `${IDLE} — ${idle.map((m) => `${m.name}: ${m.short}`).join('; ')}.` : '',
-            okNames.length ? `이상 신호 없음 — ${okNames.join(', ')}.` : '',
-            holdNames.length ? `판단 보류 — ${holdNames.join(', ')}.` : '',
-          ]
-            .filter(Boolean)
-            .join(' ')
+      : headline.length
+        ? `${headline.join('. ')}.`
         : metrics.every((m) => m.whole)
           ? '사건 전후 구분 없이 조회 구간 요약만 있습니다. 사건 이후 장치 상태는 판단할 수 없습니다.'
           : noAfter.length === metrics.length
             ? '모든 지표가 사건 이전 표본뿐입니다. 사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
             : '사건 전후 지표에서 뚜렷한 변화는 보이지 않습니다. 장치가 괜찮다는 판정은 아닙니다.',
-    // One line per metric and verdict; per-GPU ranges stay in the section 3 table.
-    points: [
-      ...metrics
-        .reduce(
-          (map, m) => map.set(`${m.tag}|${m.name}`, [...(map.get(`${m.tag}|${m.name}`) || []), m]),
-          new Map<string, MetricRow[]>(),
-        )
-        .values(),
-    ].map((group) => {
-      const gpus = group.reduce((n, m) => n + m.gpus.length, 0);
-      const m = group[0];
-      return group.length === 1
-        ? `${m.tag}: ${m.name}${gpus > 1 ? ` (GPU ${gpus}개 동일)` : ''} — ${m.short}`
-        : `${m.tag}: ${m.name} (GPU ${gpus}개) — ${m.short.replace(/\s*\([^()]*\)$/, '')}`;
-    }),
+    // One line per verdict; several GPUs are named by number, per-GPU values stay in section 3.
+    points: multi
+      ? tagGroups.map((g) => {
+          const values = [...new Set(g.map((m) => m.change))];
+          const detail = g[0].tag !== IDLE && values.length <= 2 ? ` — ${values.join(' · ')}` : '';
+          const once = g.every((m) => m.after?.samples === 1 && m.kind !== 'enum' && m.tag !== IDLE)
+            ? ' (사건 뒤 표본 1회)'
+            : '';
+          return `${g[0].tag}: ${describe(g)}${detail}${once}`;
+        })
+      : metrics.map((m) => `${m.tag}: ${m.name} — ${m.short}`),
     refs: refsOf(metricRows),
   };
 
@@ -714,6 +862,13 @@ export function operatorView(result: Row) {
     periodEnd: str(period.end),
     findings: [identity, timing, telemetry, repeat, gaps],
     metrics,
+    multiGpu: multi,
+    /** Results from before pod labels were stored cannot say "no pods". */
+    podsKnown: Array.isArray(view.workloads),
+    gpuRows,
+    gpuCommon,
+    /** Headline of what changed, for the 5W "어떻게" row; empty when nothing stands out. */
+    telemetryHeadline: headline.join('. '),
     timeline,
     devices,
     deviceLabel,
