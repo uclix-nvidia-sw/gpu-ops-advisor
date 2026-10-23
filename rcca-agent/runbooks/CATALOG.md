@@ -80,7 +80,7 @@ XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/dep
 | SXID 리셋 문장 42건·XID 79·XID 63 | 특정 서버(A100) 기준 문장을 모든 세대로 확장: Hopper 이후는 FM과 관계없이 개별 리셋(Triage 표 2), "DGX A100은 8개" 대신 장착된 GPU 전체, Triage의 A100 행을 row remapping을 쓰는 GPU에 적용 |
 | SXID 단일 비트 ECC 19건 | "guest VM 영향이 없습니다"만 있던 영향 문장 앞에 FM 가이드의 bare metal 동작(실행 중인 작업을 중단하지 않고 새 작업도 막지 않음)을 추가 |
 
-- 남은 범위: open-gpu-kernel-modules의 NVSwitch 드라이버는 SXID를 약 420개 정의하고, A100용 LR10 인터럽트 코드가 보고하는 164개 중 80개, H100용 LS10이 보고하는 221개 중 137개에는 전용 Runbook이 없다. 이 코드는 일반 GPU 노드 조사 Runbook으로 처리된다. FM 가이드는 이 코드들의 코드별 조치를 따로 싣지 않으며, 로그 줄의 Fatal/Non-fatal 표시와 포트 종류에 따른 일반 절차만 제공한다.
+- 남은 범위: open-gpu-kernel-modules의 NVSwitch 드라이버는 SXID를 약 420개 정의하고, A100용 LR10 인터럽트 코드가 보고하는 164개 중 80개, H100용 LS10이 보고하는 221개 중 137개에는 전용 Runbook이 없다. 그러나 고정 Fleet SDK(`84f99bee`)와 최신 Fleet·GPUd의 SXID 매처는 자체 카탈로그 93개(이 저장소의 SXID Runbook과 같은 집합)에 없는 코드를 버리므로(`kmsg.go`의 `Match`가 `nil` 반환) 이 코드들은 D09 보고·알림·RCA로 들어오지 않는다. 전용 Runbook을 써도 생산자가 해당 코드를 내보내기 전에는 선택되지 않는다. FM 가이드는 이 코드들의 코드별 조치를 따로 싣지 않으며, 로그 줄의 Fatal/Non-fatal 표시와 포트 종류에 따른 일반 절차만 제공한다.
 - XID 162~172는 카탈로그의 즉시 조치가 비어 있고, XID 173은 카탈로그(172번까지)에 없어 Fleet 고정 정의만 있다. 두 경우는 현재 서술을 유지한다.
 
 ## 출처 간 차이와 판정 제한
