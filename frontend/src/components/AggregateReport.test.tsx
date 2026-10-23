@@ -540,7 +540,7 @@ it('renders Namespace proposals with code observations, AI meaning and condition
       />
     </MemoryRouter>,
   );
-  expect(html).toContain('aggregate-namespace-advice');
+  expect(html).toContain('aggregate-advice-groups');
   expect(html).toContain('long-project-namespace');
   expect(html).toContain('해당 구간 최대 대기 Pod 수 2개');
   expect(html).toContain('스케줄러 이벤트와 배치 제약을 대조하세요.');
@@ -680,11 +680,15 @@ it.each([
   expect(html).toContain('원본 근거 1');
   expect(html).toContain('Namespace 전용 사용량이 아닙니다.');
   expect(html).not.toContain('changed');
-  expect(html).toContain('<dt>클러스터</dt>');
-  expect(html).toContain('<dt>네임스페이스</dt>');
+  expect(html).toContain(
+    '<h3 class="aggregate-advice-card-title">AI 운영 해석</h3><p class="aggregate-advice-cluster-target"><span>대상 클러스터 :</span> <code>cpc-1</code></p>',
+  );
+  expect(html).toContain(
+    '<h4 class="aggregate-advice-identity"><span>네임스페이스</span><span aria-hidden="true">:</span>',
+  );
   expect(html).toContain('<code>cpc-1</code>');
   expect(html).toContain('<code>serving</code>');
-  expect(html.indexOf('aggregate-advice-target')).toBeLessThan(html.indexOf(decision));
+  expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-target'));
   if (matching) {
     expect(html.indexOf(decision)).toBeLessThan(html.indexOf('<details'));
     expect(html.indexOf('활동률 0.36%')).toBeGreaterThan(html.indexOf('<details'));
@@ -721,6 +725,7 @@ it.each([
                   period: { start: '2026-10-19T12:00:00Z', end: '2026-10-19T14:00:00Z' },
                   reference_period: { start: '2026-10-19T10:00:00Z', end: '2026-10-19T12:00:00Z' },
                   target: { cluster_id: 'cpc-1', namespace: 'example' },
+                  gpu_models: ['A100'],
                   summary: `${decision} ${evidence}`,
                   summary_parts: { decision, evidence },
                   observation: evidence,
@@ -737,6 +742,11 @@ it.each([
   );
   const visible = html.replace(/<\/?span[^>]*>/g, '');
   expect(visible).toContain(periods);
+  const heading = html.slice(html.indexOf('class="aggregate-advice-heading"'), html.indexOf('<dl'));
+  expect(heading).not.toContain('GPU 모델');
+  expect(html.indexOf('GPU 모델 · A100')).toBeGreaterThan(html.indexOf(decision));
+  expect(html.indexOf('GPU 모델 · A100')).toBeLessThan(html.indexOf('<details'));
+  expect(html).not.toContain('aggregate-advice-tag');
   expect(visible.indexOf(decision)).toBeLessThan(visible.indexOf('<details'));
   expect(visible.indexOf(periods)).toBeGreaterThan(visible.indexOf('<details'));
   expect(html).toContain('구간 사이의 관측을 추정하지 않습니다.');
@@ -745,19 +755,24 @@ it.each([
     expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-scope'));
     expect(html.indexOf('aggregate-advice-scope')).toBeLessThan(html.indexOf('<details'));
     const firstView = html.slice(0, html.indexOf('<details'));
-    expect(firstView).toContain('작업 시작 시간 검토 · 과거 관측');
+    expect(firstView).toContain('작업 시간대 비교·시험 검토');
+    expect(firstView).toContain('과거 관측');
     expect(firstView).toContain('낮은 활동 구간');
     expect(firstView).toContain('비교 구간');
     expect(firstView.indexOf('<dt>비교 구간</dt>')).toBeLessThan(
       firstView.indexOf('<dt>낮은 활동 구간</dt>'),
     );
-    expect(firstView).toContain(
-      '앞으로 작업 일부를 시험할 시간대를 찾기 위한 비교입니다. 같은 날, 이 네임스페이스에서 GPU 활동률이 더 낮았던 구간을 보여줍니다.',
+    expect(firstView).not.toContain('같은 날의 두 구간을 비교한 시험 후보입니다.');
+    expect(html.slice(html.indexOf('<details'))).toContain(
+      '같은 날의 두 구간을 비교한 시험 후보입니다.',
     );
-    expect(firstView).toContain('2026. 10. 19. 21:00:00');
-    expect(firstView).toContain('2026. 10. 19. 19:00:00');
-    expect(firstView).toContain('이미 지난 구간입니다.');
+    expect(firstView).toContain('2026. 10. 19. 21:00');
+    expect(firstView).toContain('2026. 10. 19. 19:00');
     expect(firstView).toContain(
+      '과거 관측입니다. 향후 시간대 변경은 반복성과 실행 조건을 확인한 뒤 판단하세요.',
+    );
+    expect(html.slice(html.indexOf('<details'))).toContain('이미 지난 구간입니다.');
+    expect(html.slice(html.indexOf('<details'))).toContain(
       '활동률이 낮은지와 사용 가능한 GPU를 확인한 뒤, 시작 시간을 바꿀 수 있는 작업 일부만',
     );
     expect(firstView).toContain('끝 시각은 포함하지 않습니다.');
@@ -824,10 +839,13 @@ it.each([
   );
   expect((html.match(/시간 범위 미확인/g) || []).length).toBe(unknownCount);
   expect(html).toContain('원문을 바꾸지 않습니다.');
-  expect(html).toContain('작업 시작 시간 검토 · 과거 관측');
+  expect(html).toContain(
+    kind === 'relative_activity' ? '작업 시간대 비교·시험 검토' : '작업 시간대 시험 검토',
+  );
+  expect(html).toContain('과거 관측');
   expect(html.includes('<dt>비교 구간</dt>')).toBe(kind === 'relative_activity');
   if (period?.start === '2026-10-19T20:00:00Z') {
-    expect(html).toContain('(2026. 10. 20. 05:00 ~ 07:00)');
+    expect(html).toContain('(2026. 10. 20. 05:00 ~ 07:00 KST)');
   }
   if (period?.start === '2026-10-19T14:00:09Z') {
     const text = html.replace(/<[^>]*>/g, '');
@@ -845,4 +863,61 @@ it('frames the stored report like the RCA report card with a fixed heading', () 
   );
   expect(html).toContain('<section id="final-report" class="aggregate-report rca-narrative"');
   expect(html).toContain('<header class="rca-narrative-header"><h3>운영 분석 보고서</h3>');
+});
+
+it('uses an independent original-style AI card for each selected cluster', () => {
+  const value = {
+    narrative_status: 'complete',
+    quality: { report: { method: 'llm_interpreted' } },
+    topics: [{ topic_id: 'namespace_usage', rows: [], findings: [] }],
+    narrative: [
+      {
+        topic_id: 'namespace_usage',
+        observation: '관측',
+        meaning: '의미',
+        next_check: '확인',
+        advice: [
+          {
+            fact_id: 'service',
+            target: { cluster_id: 'cpc-2', namespace: 'service' },
+            kind: 'schedule_candidate',
+            summary: 'stored service advice',
+          },
+          {
+            fact_id: 'capacity',
+            target: { cluster_id: 'cpc-1', namespace: 'batch' },
+            kind: 'capacity_review',
+            summary: 'stored capacity advice',
+          },
+          {
+            fact_id: 'complete',
+            target: { cluster_id: 'cpc-1', namespace: 'batch' },
+            kind: 'batch_progress',
+            summary: 'stored completion advice',
+          },
+        ],
+      },
+    ],
+  };
+  const original = JSON.stringify(value);
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} />
+    </MemoryRouter>,
+  );
+  expect(html.match(/class="aggregate-advice-cluster"/g)).toHaveLength(2);
+  expect(html).toContain('aria-label="cpc-1 클러스터 AI 운영 해석"');
+  expect(html).toContain('aria-label="cpc-2 클러스터 AI 운영 해석"');
+  expect(html).toContain(
+    '<h3 class="aggregate-advice-card-title">AI 운영 해석</h3><p class="aggregate-advice-cluster-target"><span>대상 클러스터 :</span> <code>cpc-1</code></p>',
+  );
+  expect(html.indexOf('cpc-1 클러스터 AI 운영 해석')).toBeLessThan(
+    html.indexOf('cpc-2 클러스터 AI 운영 해석'),
+  );
+  expect(html.indexOf('stored capacity advice')).toBeLessThan(
+    html.indexOf('stored completion advice'),
+  );
+  expect(html.match(/class="aggregate-advice-namespace"/g)).toHaveLength(2);
+  expect(html.match(/<strong>작성 방식<\/strong>/g)).toHaveLength(1);
+  expect(JSON.stringify(value)).toBe(original);
 });

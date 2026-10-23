@@ -115,3 +115,26 @@ it('keeps a guide entry on reports when the connection fails', () => {
   expect(html).toContain('fixture offline');
   expect(html).not.toContain('report-content-marker');
 });
+
+it('explains current aggregate advice order, time windows, AI fallback and all seven types', () => {
+  app.mode = 'control';
+  const html = render('/operator-guide#guide-values');
+  for (const text of [
+    '클러스터와 네임스페이스는',
+    '이름순이며',
+    '저장된 제안 순서',
+    '계산 요약을 표시합니다',
+    '표본 수로 나눈',
+    'KST이며 끝 시각은 포함하지 않습니다',
+    'GPU 추가 할당 검토',
+    '작업 시간대 시험 검토',
+    '작업 시간대 비교·시험 검토',
+    '작업 시작 지연 점검',
+    '배치 완료·남은 대기 점검',
+    'GPU 메모리 점유 점검',
+    '여러 시간대의 GPU 활동·대기 점검',
+  ])
+    expect(html).toContain(text);
+  expect(html).not.toContain('AI는 검증된 문장의 우선순위를 정합니다');
+  expect(html).not.toContain('Namespace 비교표에서 대상을 선택하세요');
+});

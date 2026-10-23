@@ -18,7 +18,7 @@ describe('mode-independent published data and developer guides', () => {
     expect(reportTopics({ topic_ids: ['O01', 'O11', 'future-topic'] })).toBe(
       '장비·Node 변화 · 관측 품질 · future-topic',
     );
-    expect(reportTitle({ topic_ids: ['O01', 'O11'] })).toBe('GPU 운영 보고서 · 2개 주제');
+    expect(reportTitle({ topic_ids: ['O01', 'O11'] })).toBe('GPU 클러스터 운영 분석 보고서');
     expect(reportTitle({ topic_ids: ['O08'], group_by: ['namespace'] })).toBe(
       'Namespace별 GPU 사용 분석',
     );
@@ -172,4 +172,19 @@ describe('mode-independent published data and developer guides', () => {
     expect(html).toContain('수치 참조 미확인');
     expect(html).toContain('AI 설명을 생성하지 못했습니다');
   });
+});
+
+it.each([
+  ['2026-10-21T15:00:00Z', '2026-10-22T15:00:00Z', '2026년 10월 22일'],
+  ['2026-10-15T15:00:00Z', '2026-10-22T15:00:00Z', '2026년 10월 16일 ~ 2026년 10월 22일'],
+])('names aggregate reports by analyzed dates, not creation date', (start, end, label) => {
+  const input = {
+    topic_ids: ['namespace_usage', 'incident_summary'],
+    time_range: { start, end },
+    created_at: '2026-10-23T04:00:00Z',
+  };
+  const original = JSON.stringify(input);
+  expect(reportTitle(input)).toBe(`${label} GPU 클러스터 운영 분석 보고서`);
+  expect(reportTitle(input)).not.toContain('개 주제');
+  expect(JSON.stringify(input)).toBe(original);
 });

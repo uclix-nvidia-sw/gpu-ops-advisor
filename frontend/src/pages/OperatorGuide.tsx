@@ -4,6 +4,39 @@ import { NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { topicId, topics } from '../lib/live';
 import { reportKinds, topicDisplayBases } from '../lib/reportKinds';
 import { reportTabs } from '../lib/reportNavigation';
+import { advicePresentation } from '../lib/namespaceAdvice';
+import '../lib/advice-colors.css';
+
+const adviceGuides = [
+  [
+    'capacity_review',
+    'GPU 활동이 높고 대기 Pod도 있던 관측 구간입니다. 실제 GPU 부족인지와 할당·운영정책을 확인한 뒤 추가 할당을 검토합니다.',
+  ],
+  [
+    'schedule_candidate',
+    '낮은 활동 기준에 해당했던 구간만 표시합니다. 다른 구간보다 여유롭다는 비교는 아닙니다. 이후 같은 시간대의 반복성과 가용 GPU를 확인해 일부 작업을 시험할지 판단합니다.',
+  ],
+  [
+    'relative_activity',
+    '같은 Namespace의 비교 구간과 낮은 활동 구간을 나란히 표시합니다. 지난 관측이므로 앞으로도 같은지 확인한 뒤 시작 시간을 바꿀 수 있는 작업 일부의 시험을 검토합니다.',
+  ],
+  [
+    'queue_review',
+    '대기 Pod가 노드를 배정받기 전인지, 노드 배정 뒤 컨테이너 시작을 준비하는 중인지 구분하는 점검입니다. 대기 Pod 수만으로 GPU 부족을 확정하지 않습니다.',
+  ],
+  [
+    'batch_progress',
+    '관측 기간의 완료 Job과 남아 있던 대기를 함께 살펴봅니다. Job 경과시간은 대기·준비를 포함하며, 완료가 대기를 줄인 원인이라고 단정하지 않습니다.',
+  ],
+  [
+    'resident_memory',
+    'GPU 활동률은 낮지만 장치 메모리 점유가 높았던 관측입니다. 새 작업 배치 전에 어떤 작업이 메모리를 사용했는지 확인하며, 작업 유형 라벨 없이 서빙·학습 목적을 추정하지 않습니다.',
+  ],
+  [
+    'repeated_activity',
+    '떨어진 여러 관측 구간을 각각 표시합니다. 관측 사이도 같은 상태였다거나 매일 반복된다고 해석하지 않습니다.',
+  ],
+];
 
 // Keep current behavior distinct from the development goals in specification 12.
 const topicGuides = [
@@ -227,16 +260,22 @@ export function OperatorGuide() {
                 이전 계산 기준을 유지합니다. 새 방식은 새 일정을 등록해 사용하세요.
               </li>
               <li>
-                <strong>Namespace 비교표에서 대상을 선택하세요.</strong> 클러스터·Namespace·GPU
-                모델별 활동률과 시간대 그래프를 확인합니다. 빈 구간은 0%가 아닙니다. 활동률은 연결
-                GPU의 관측 표본 평균이며, 독점 사용량이나 회수 가능한 GPU를 뜻하지 않습니다. 사건
-                현황에서는 알림 상태, RCA 조사, 실제 복구를 구분합니다.
+                <strong>AI 운영 해석에서 대상을 찾고 표·그래프로 근거를 확인하세요.</strong>
+                제안은 클러스터·Namespace 이름순으로 묶습니다. 같은 Namespace 안에서는 저장된 제안
+                순서를 유지하며, 표에 있는 모든 Namespace에 AI 제안이 생기는 것은 아닙니다. 그래프의
+                비교 대상 선택으로 클러스터·Namespace·GPU 모델별 시간대 관측을 확인합니다. 빈 구간은
+                0%가 아닙니다. 활동률은 연결 GPU의 관측 표본 평균이며, 독점 사용량이나 회수 가능한
+                GPU를 뜻하지 않습니다. 사건 현황에서는 알림 상태, RCA 조사, 실제 복구를 구분합니다.
               </li>
               <li>
-                <strong>관측 범위와 분석 날짜를 확인하세요.</strong> CPC는 클러스터입니다. 전체
-                클러스터 또는 필요한 클러스터·Namespace를 선택하세요. 모든 표시 시각은 한국 시간
-                기준이며 요청 접수 시각·분석 대상 기간·보고서 실행시간은 서로 다릅니다. 기간 밖의
-                LLM 추론 부하는 해당 보고서 수치에 포함되지 않습니다.
+                <strong>관측 범위와 분석 날짜를 확인하세요.</strong> 보고서 제목의 날짜는 작성일이
+                아닌 분석 대상일입니다. 예를 들어 23일에 만든 22일 보고서는 ‘2026년 10월 22일 GPU
+                클러스터 운영 분석 보고서’로 표시합니다. 주간 보고서는 분석한 날짜 범위를
+                표시합니다. 수집·집계 주제 수와 운영 제안 유형 수는 다르므로 제목에 개수를 붙이지
+                않습니다. CPC는 클러스터입니다. 전체 클러스터 또는 필요한 클러스터·Namespace를
+                선택하세요. 모든 표시 시각은 한국 시간 기준이며 요청 접수 시각·분석 대상 기간·보고서
+                실행시간은 서로 다릅니다. 기간 밖의 LLM 추론 부하는 해당 보고서 수치에 포함되지
+                않습니다.
               </li>
               <li>
                 <strong>일일 또는 주간과 마지막 분석 날짜를 정합니다.</strong>
@@ -413,9 +452,10 @@ export function OperatorGuide() {
                   <tr>
                     <th scope="row">연결 GPU 평균 활동률</th>
                     <td>
-                      귀속을 확인할 수 있는 연결 구간과 활동 표본을 겹쳐 시간 가중으로 계산합니다.
-                      짧은 부하가 평균에서 작게 보일 수 있으며 Namespace의 실제 연산 소비 비율과는
-                      다릅니다.
+                      새 일일·주간 집계 보고서는 유효한 활동률 표본의 합계를 표본 수로 나눈
+                      평균입니다. 기존 O08 기준 1.3의 시간 가중 평균과 구분하세요. 짧은 부하는
+                      평균에서 작게 보일 수 있으며 Namespace의 독점 사용량이나 실제 연산 소비 비율을
+                      뜻하지 않습니다.
                     </td>
                   </tr>
                   <tr>
@@ -475,16 +515,69 @@ export function OperatorGuide() {
             </section>
             <section className="guide-reading-group">
               <h3>AI 해석과 권고</h3>
+              <p>
+                AI 운영 해석은 클러스터별 카드로 나누고 카드 안에서 네임스페이스별로 묶습니다.
+                제목은 ‘AI 운영 해석’이며, 바로 아래에 대상 클러스터 : <code>cpc-1</code>처럼 분석
+                대상을 표시합니다. 네임스페이스 : <code>프로젝트 이름</code>은 라벨·콜론·값의 열을
+                맞추고 아래 제안에 붙여 표시합니다. 소제목은 배지 대신 색이 있는 글자로 본문과 이어
+                표시합니다. 소제목 다음에 AI 제안 본문을 읽고, 그 아래에서 관측 시간과 GPU 모델을
+                확인합니다. 일반적인 유형 설명은 ‘판단 근거와 적용 조건’을 펼치면 볼 수 있습니다.
+                과거 관측이며 반복성과 실행 조건 확인이 필요하다는 안내는 본문 아래에 짧게 남깁니다.
+                자세한 조건은 상세 근거로 모읍니다. 클러스터와 네임스페이스는 이름순이며 같은
+                네임스페이스 안에서는 저장된 제안 순서입니다. 네임스페이스 사이는 구분선으로, 같은
+                네임스페이스의 제안 사이는 간격으로 나눕니다. 소제목·본문·시간·상세 근거의 시작선을
+                맞추고 작은 화면에서는 추가 들여쓰기를 없앱니다. 표시 순서는 심각도나 실행
+                우선순위를 뜻하지 않습니다.
+              </p>
               <table className="guide-kind-table guide-values-table" aria-label="AI 해석과 권고">
                 <tbody>
                   <tr>
                     <th scope="row">해석과 실행의 구분</th>
                     <td>
-                      현재 수치는 코드가 계산하고 AI는 검증된 문장의 우선순위를 정합니다. AI 편집
-                      실패 시 기본 보고서를 사용할 수 있습니다. 판단 보류 권고는 조치 승인이나 수행
-                      완료가 아니며 GPU 회수·설정 변경은 자동 실행하지 않습니다.
+                      코드가 수치를 계산하고 근거 후보를 선별하면, AI가 그 근거 안에서 관측한 현상과
+                      운영 선택·확인할 사항을 설명합니다. AI 응답이 검증을 통과하지 못하면 계산
+                      요약을 표시합니다. 실행 완료와 AI 해석 채택은 구분하며, 제안은 조치 승인이나
+                      수행 완료가 아닙니다. GPU 회수·설정 변경은 자동 실행하지 않습니다.
                     </td>
                   </tr>
+                  <tr>
+                    <th scope="row">관측 구간과 비교 구간</th>
+                    <td>
+                      관측 구간은 해당 현상이 확인된 시간 범위입니다. 비교형 제안에만 비교 구간과
+                      낮은 활동 구간이 함께 나옵니다. 여러 구간형은 각각 따로 표시합니다. 모든
+                      구간은 KST이며 끝 시각은 포함하지 않습니다. 시간 범위를 확인할 수 없으면
+                      미확인으로 남깁니다. 이미 지난 시간대는 앞으로의 사용 가능한 GPU를 보장하지
+                      않습니다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">화면과 HTML</th>
+                    <td>
+                      ‘판단 근거와 적용 조건’을 열면 해당 제안의 근거와 한계를 확인할 수 있습니다.
+                      운영 콘솔의 현재 화면 HTML 저장과 서버 HTML 다운로드도 같은 정렬·대상·시간
+                      표시를 사용합니다. 저장된 AI 원문과 수치·근거는 바꾸지 않으며 조회·내보내기는
+                      AI를 다시 호출하지 않습니다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <h3>운영 제안의 소제목은 이렇게 읽으세요</h3>
+              <p>
+                아래 유형 중 근거가 있어 선별된 제안만 보고서에 표시됩니다. 소제목의 색은 제안
+                종류를 구분하며 심각도나 실행 우선순위를 뜻하지 않습니다.
+              </p>
+              <table className="guide-kind-table guide-values-table" aria-label="운영 제안 유형">
+                <tbody>
+                  {adviceGuides.map(([kind, meaning]) => (
+                    <tr key={kind}>
+                      <th scope="row">
+                        <span className="advice-kind" data-kind={kind}>
+                          {advicePresentation({ kind }).title}
+                        </span>
+                      </th>
+                      <td>{meaning}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </section>
@@ -575,19 +668,21 @@ export function OperatorGuide() {
         </Panel>
       </section>
       <details className="guide-sources">
-        <summary>안내 기준과 개발 범위 · 2026-10-06</summary>
+        <summary>안내 기준과 적용 범위</summary>
         <p>
-          12번 보고서 Agent 설계서의 현재 구현·§3 주제 표, 04번 공통 판단 명세와 Ops Worker 코드를
-          대조했습니다. 종합·다중 선택과 소주제별 기준, 불필요한 조회 생략을 반영했습니다. 임의의
-          모든 그룹별 재집계나 자유 생성형 종합 조언을 구현했다는 뜻은 아닙니다. 서버 버전·프로필에
-          따라 결과가 다를 수 있습니다.
+          일일·주간 집계 보고서는 Ops 집계 명세의 수치·해석 범위와 화면·HTML 표시 규칙을 따릅니다.
+          기존 보고서 종류는 생성 당시의 계산 기준을 유지하므로 새 집계 보고서와 구분해 읽으세요. 이
+          안내는 모든 대상에 제안이 생기거나 AI가 자유롭게 원인을 확정한다는 뜻이 아닙니다. 실제
+          보고서에 기록된 계산 기준·분석 기간·자료 상태를 함께 확인하세요.
         </p>
         <ul>
+          <li>docs/specs/ops-agent/aggregate-report-v1.md</li>
           <li>docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md</li>
           <li>docs/specs/common/04_Agent_동작_판단_명세서.md</li>
           <li>
             ops-agent/src/ops_agent/workflow.py · namespace_usage.py · collection.py · report.py
           </li>
+          <li>ops-agent/src/ops_agent/namespace_advice.py · report_interpretation.py</li>
           <li>shared/python/src/agent_common/calculations.py</li>
         </ul>
       </details>

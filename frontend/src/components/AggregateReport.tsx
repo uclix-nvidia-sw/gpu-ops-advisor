@@ -1,9 +1,11 @@
+import { adviceGroups, advicePresentation, adviceTime } from '../lib/namespaceAdvice';
 import { useState } from 'react';
 import { obj, rows, str, strings, type Row } from '../lib/live';
 import { ReportPeriod } from './ReportMeta';
 import { Badge, Notice, TextLink } from './ui';
 import { reportRequestTime } from '../lib/reportPeriod';
 import './aggregate-report.css';
+import '../lib/advice-colors.css';
 import { memoryPercent, NamespaceCharts } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
 import { WorkloadContext } from './WorkloadContext';
@@ -149,85 +151,50 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
     (`${decision} ${evidence}` === str(item.summary) ||
       `${decision}${evidence}` === str(item.summary));
   const target = obj(item.target);
-  const trial = ['relative_activity', 'schedule_candidate'].includes(str(item.kind));
-  const windows = trial
-    ? [
-        ...(item.kind === 'relative_activity' ? [['비교 구간', obj(item.reference_period)]] : []),
-        ['낮은 활동 구간', obj(item.period)],
-      ].map(([label, value]) => ({ label: str(label), period: obj(value) }))
-    : [];
+  const { title, basis, trial, windows, models } = advicePresentation(item);
   return (
-    <li>
-      {str(target.cluster_id) && str(target.namespace) ? (
-        <dl className="aggregate-advice-target">
-          <div>
-            <dt>클러스터</dt>
-            <dd>
-              <code>{str(target.cluster_id)}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>네임스페이스</dt>
-            <dd>
-              <code>{str(target.namespace)}</code>
-            </dd>
-          </div>
-        </dl>
-      ) : null}
-      {trial ? (
-        <strong className="aggregate-advice-trial">작업 시작 시간 검토 · 과거 관측</strong>
-      ) : null}
-      <p className="aggregate-advice-decision">
-        <InterpretationText text={separated ? decision : str(item.summary)} />
-      </p>
-      {trial ? (
+    <li data-advice-id={str(item.fact_id)}>
+      <div className="aggregate-advice-heading">
+        <h5 className="advice-kind" data-kind={str(item.kind)}>
+          {title}
+        </h5>
+        {trial && <span className="aggregate-advice-history">과거 관측</span>}
+      </div>
+      {str(item.summary) ? (
+        <p className="aggregate-advice-decision">
+          <InterpretationText text={separated ? decision : str(item.summary)} />
+        </p>
+      ) : (
         <>
-          <p className="aggregate-advice-scope">
-            {item.kind === 'relative_activity'
-              ? '앞으로 작업 일부를 시험할 시간대를 찾기 위한 비교입니다. 같은 날, 이 네임스페이스에서 GPU 활동률이 더 낮았던 구간을 보여줍니다.'
-              : '앞으로 작업 일부를 시험할 시간대를 찾기 위한 참고 자료입니다. 이 네임스페이스에서 GPU 활동률이 낮았던 구간을 보여줍니다.'}
+          <p>
+            <InterpretationText text={str(item.observation)} />
           </p>
-          <dl className="aggregate-advice-target aggregate-advice-windows">
-            {windows.map(({ label, period }) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>
-                  {Number.isFinite(Date.parse(str(period.start))) &&
-                  Date.parse(str(period.end)) > Date.parse(str(period.start)) ? (
-                    <span
-                      className="aggregate-advice-window-time"
-                      title={`${reportRequestTime(str(period.start))} ～ ${reportRequestTime(str(period.end))} KST`}
-                    >
-                      (
-                      {new Intl.DateTimeFormat('ko-KR', {
-                        timeZone: 'Asia/Seoul',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        ...(Date.parse(str(period.start)) % 60000 ||
-                        Date.parse(str(period.end)) % 60000
-                          ? { second: '2-digit' as const }
-                          : {}),
-                        hour12: false,
-                      }).formatRange(new Date(str(period.start)), new Date(str(period.end)))}
-                      )
-                    </span>
-                  ) : (
-                    '시간 범위 미확인'
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="aggregate-advice-scope">
-            과거 관측 · KST · 끝 시각은 포함하지 않습니다. 이미 지난 구간입니다. 이후 같은
-            시간대에도 활동률이 낮은지와 사용 가능한 GPU를 확인한 뒤, 시작 시간을 바꿀 수 있는 작업
-            일부만 시험할지 판단하세요.
+          <p>
+            <strong>운영 제안</strong> {str(item.meaning)}
+          </p>
+          <p>
+            <strong>다음 확인</strong> {str(item.next_check)}
           </p>
         </>
-      ) : null}
+      )}
+      <dl className="aggregate-advice-target aggregate-advice-windows">
+        {windows.map(({ label, period }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              <span className="aggregate-advice-window-time">({adviceTime(period)})</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {models.length > 0 && (
+        <p className="aggregate-advice-model">GPU 모델 · {models.join(' · ')}</p>
+      )}
+      {trial && (
+        <p className="aggregate-advice-scope">
+          과거 관측입니다. 향후 시간대 변경은 반복성과 실행 조건을 확인한 뒤 판단하세요.
+        </p>
+      )}
       <details className="aggregate-advice-evidence">
         <summary>
           판단 근거와 적용 조건
@@ -236,10 +203,26 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
             · {str(target.cluster_id)} / {str(target.namespace)}
           </span>
         </summary>
+        {basis && (
+          <p className="aggregate-advice-basis">
+            <strong>해석 기준</strong> {basis}
+          </p>
+        )}
         <p>
+          <strong>관측 근거</strong>{' '}
           <InterpretationText text={separated ? evidence : str(item.observation)} />
         </p>
-        <p className="aggregate-static-note">{str(item.conditions)}</p>
+        {str(item.conditions) && (
+          <p className="aggregate-static-note">
+            <strong>적용 조건</strong> {str(item.conditions)}
+          </p>
+        )}
+        {trial && (
+          <p className="aggregate-static-note">
+            이미 지난 구간입니다. 이후 같은 시간대에도 활동률이 낮은지와 사용 가능한 GPU를 확인한
+            뒤, 시작 시간을 바꿀 수 있는 작업 일부만 시험할지 판단하세요.
+          </p>
+        )}
         {onEvidence ? (
           <div className="aggregate-evidence-links">
             {strings(item.evidence_refs).map((id, i) => (
@@ -275,17 +258,47 @@ function TopicInterpretation({
   const criteria = obj(selection.criteria);
   return (
     <section
-      className="aggregate-interpretation"
+      className={`aggregate-interpretation${advice.length ? ' aggregate-interpretation-grouped' : ''}`}
       aria-label={`${str(topic.topic_id)} AI 운영 해석`}
     >
-      <h3>AI 운영 해석</h3>
-      {hasSummary ? (
-        <ul className="aggregate-namespace-summary">
-          {advice.map((item) => (
-            <AdviceSummary key={str(item.fact_id)} item={item} onEvidence={onEvidence} />
+      {advice.length === 0 && <h3>AI 운영 해석</h3>}
+      {advice.length > 0 && (
+        <div className="aggregate-advice-groups">
+          {adviceGroups(advice).map((cluster) => (
+            <section
+              className="aggregate-advice-cluster"
+              key={cluster.key}
+              aria-label={`${cluster.cluster || '미확인'} 클러스터 AI 운영 해석`}
+            >
+              <h3 className="aggregate-advice-card-title">AI 운영 해석</h3>
+              <p className="aggregate-advice-cluster-target">
+                <span>대상 클러스터 :</span> <code>{cluster.cluster || '미확인'}</code>
+              </p>
+              <p className="aggregate-advice-time-note">
+                구간 시각은 KST 기준이며 끝 시각은 포함하지 않습니다.
+              </p>
+              {cluster.namespaces.map((ns) => (
+                <section className="aggregate-advice-namespace" key={ns.key}>
+                  <h4 className="aggregate-advice-identity">
+                    <span>네임스페이스</span>
+                    <span aria-hidden="true">:</span>
+                    <code>{ns.namespace || '미확인'}</code>
+                  </h4>
+                  <ul className="aggregate-namespace-summary">
+                    {ns.items.map((item, i) => (
+                      <AdviceSummary
+                        key={str(item.fact_id, String(i))}
+                        item={item}
+                        onEvidence={onEvidence}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </section>
           ))}
-        </ul>
-      ) : null}
+        </div>
+      )}
       <p className="aggregate-summary-source aggregate-static-note">
         <strong>작성 방식</strong>
         {hasSummary
@@ -295,28 +308,7 @@ function TopicInterpretation({
             : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
         {hasSummary ? null : '확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.'}
       </p>
-      {hasSummary ? null : advice.length > 0 ? (
-        <ol className="aggregate-namespace-advice">
-          {rows(section.advice).map((item) => (
-            <li key={str(item.fact_id)}>
-              <h4>
-                {str(obj(item.target).cluster_id)} / {str(obj(item.target).namespace)} ·{' '}
-                {str(item.recommendation)}
-              </h4>
-              <p>
-                <InterpretationText text={str(item.observation)} />
-              </p>
-              <p>
-                <strong>운영 제안</strong> {str(item.meaning)}
-              </p>
-              <p>
-                <strong>다음 확인</strong> {str(item.next_check)}
-              </p>
-              <p className="aggregate-static-note">{str(item.conditions)}</p>
-            </li>
-          ))}
-        </ol>
-      ) : (
+      {advice.length > 0 ? null : (
         <dl>
           {[
             ['observation', '눈에 띄는 변화'],
