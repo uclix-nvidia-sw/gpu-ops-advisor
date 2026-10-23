@@ -80,10 +80,10 @@ export function reportPeriodLabel(start: string, end: string) {
   return `${reportRequestTime(start)} – ${reportRequestTime(end)} · ${hours.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}시간`;
 }
 
-// List filters use created_at, not the report's analysis period. No 31-day report limit.
-export function reportReceivedRange(params: URLSearchParams) {
-  const first = params.get('received_from') || '';
-  const last = params.get('received_to') || '';
+// Inclusive KST dates become a half-open query range, without the creation form's 31-day limit.
+export function reportReceivedRange(params: URLSearchParams, prefix = 'received', label = '접수') {
+  const first = params.get(`${prefix}_from`) || '';
+  const last = params.get(`${prefix}_to`) || '';
   const date = (value: string) => {
     if (!value) return undefined;
     const parsed = new Date(`${value}T00:00:00Z`);
@@ -92,14 +92,14 @@ export function reportReceivedRange(params: URLSearchParams) {
       !Number.isFinite(+parsed) ||
       parsed.toISOString().slice(0, 10) !== value
     )
-      throw new Error('올바른 접수일을 선택해 주세요.');
+      throw new Error(`올바른 ${label}일을 선택해 주세요.`);
     return +parsed - 9 * 3600000;
   };
   try {
     const start = date(first),
       end = date(last);
     if (start !== undefined && end !== undefined && start > end)
-      throw new Error('접수 종료일은 시작일과 같거나 이후여야 합니다.');
+      throw new Error(`${label} 종료일은 시작일과 같거나 이후여야 합니다.`);
     return {
       from: start === undefined ? undefined : new Date(start).toISOString(),
       to: end === undefined ? undefined : new Date(end + dayMs).toISOString(),

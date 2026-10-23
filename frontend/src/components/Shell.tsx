@@ -19,10 +19,12 @@ import { obj, useResource } from '../lib/live';
 import { reportScopeClusters } from '../lib/workflow';
 import { reportTabs } from '../lib/reportNavigation';
 import { scopeLabel } from '../lib/domain';
+import { returnPath } from '../lib/debug';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
 import { Empty, Field, Modal, NavTabs, PageHead } from './ui';
 import { NewWorkspace } from '../pages/NewWorkspace';
+import { ConsoleWorkspace } from '../pages/ConsoleWorkspace';
 import { ViewMode } from './ViewMode';
 import { ApiInspector, DeveloperContext } from './DeveloperContext';
 const nav = [
@@ -38,6 +40,7 @@ export function Shell() {
   const app = useApp(),
     location = useLocation(),
     me = app.connection;
+  const consoleMode = app.mode === 'workbench' || app.mode === 'control';
   const reportId = matchPath('/reports/:id', location.pathname)?.params.id;
   const isSavedReport = !!reportId && reportId !== 'new';
   const report = useResource(isSavedReport ? `/reports/${reportId}` : null, undefined, true);
@@ -45,39 +48,54 @@ export function Shell() {
   const isGuide = location.pathname === '/operator-guide';
   const isJobHistory = location.pathname === '/jobs' || location.pathname.startsWith('/jobs/');
   const names =
-    app.mode === 'operations'
-      ? [
-          '오늘의 운영',
-          '자산 탐색',
-          '사건 대응',
-          '분석 서재',
-          '요청 진행',
-          '운영 지식',
-          '환경 관리',
-        ]
-      : app.mode === 'developer'
-        ? [
-            '처리 흐름·검증',
-            '관측·신원',
-            '사건·RCA',
-            '보고서·일정',
-            '작업 디버깅',
-            'Runbook·revision',
-            '연결·구성',
-          ]
-        : nav.map((n) => n.label);
+    app.mode === 'workbench'
+      ? ['실패 진단', '자산·관측', '사건·RCA', 'Ops 보고서', '전체 작업', 'Runbook', '연결·설정']
+      : app.mode === 'control'
+        ? ['운영 개요', '자산·관측', 'RCA 사건', 'Ops 보고서', '작업 이력', 'Runbook', '연결·설정']
+        : app.mode === 'operations'
+          ? [
+              '오늘의 운영',
+              '자산 탐색',
+              '사건 대응',
+              '분석 서재',
+              '요청 진행',
+              '운영 지식',
+              '환경 관리',
+            ]
+          : app.mode === 'developer'
+            ? [
+                '처리 흐름·검증',
+                '관측·신원',
+                '사건·RCA',
+                '보고서·일정',
+                '작업 디버깅',
+                'Runbook·revision',
+                '연결·구성',
+              ]
+            : nav.map((n) => n.label);
   const menus =
-    app.mode === 'new'
-      ? [
-          { ...nav[0], label: '운영 현황' },
-          { ...nav[2], label: '사건 분석' },
-          { ...nav[3], label: '운영 보고서' },
-        ]
-      : nav.map((n, i) => ({ ...n, label: names[i] }));
+    app.mode === 'control'
+      ? [0, 2, 3]
+          .map((i) => ({ ...nav[i], label: names[i] }))
+          .concat([{ to: '/schedules', label: '자동 보고서', icon: History }])
+      : app.mode === 'new'
+        ? [
+            { ...nav[0], label: '운영 현황' },
+            { ...nav[2], label: '사건 분석' },
+            { ...nav[3], label: '운영 보고서' },
+          ]
+        : nav.map((n, i) => ({ ...n, label: names[i] }));
   const [mobile, setMobile] = useState(false),
     [scopeOpen, setScopeOpen] = useState(false),
     [draft, setDraft] = useState(app.scope),
     [scopeError, setScopeError] = useState('');
+  const [debugReturn, setDebugReturn] = useState('');
+  const isConfiguration = /^\/(settings|knowledge)(\/|$)/.test(location.pathname);
+  useEffect(() => {
+    const from = returnPath(obj(location.state).from, '');
+    if (isConfiguration && /^\/jobs\/[^/?#]+/.test(from)) setDebugReturn(from);
+    else if (!isConfiguration) setDebugReturn('');
+  }, [isConfiguration, location.pathname, location.state]);
   useEffect(() => {
     setMobile(false);
     window.scrollTo(0, 0);
@@ -94,7 +112,8 @@ export function Shell() {
   const active = (to: string) =>
     location.pathname.startsWith(to.split('/').slice(0, 2).join('/')) ||
     (to === '/cases' && /analyses|incidents/.test(location.pathname)) ||
-    (to === '/reports' && (isGuide || location.pathname.startsWith('/schedules')));
+    (to === '/reports' &&
+      (isGuide || (app.mode !== 'control' && location.pathname.startsWith('/schedules'))));
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
@@ -131,7 +150,11 @@ export function Shell() {
         <div className="environment">
           <span className={app.ready ? 'pulse-dot' : ''} />
           <span>
-            {app.ready ? (app.mode === 'new' ? '데이터 연결됨' : '로컬 API 연결') : '연결 확인 중'}
+            {app.ready
+              ? app.mode === 'new' || app.mode === 'control'
+                ? '조회 API 연결됨'
+                : '로컬 API 연결'
+              : '연결 확인 중'}
           </span>
           <span className="version">v1.3</span>
         </div>
@@ -148,7 +171,7 @@ export function Shell() {
     </>
   );
   return (
-    <div className={`app-shell view-${app.mode}`}>
+    <div className={`app-shell view-${app.mode}${consoleMode ? ' console-shell' : ''}`}>
       <a href="#main-content" className="skip-link">
         본문으로 이동
       </a>
@@ -169,7 +192,13 @@ export function Shell() {
               <Menu size={20} />
             </button>
             <Layers size={17} />
-            <span>Workspace</span>
+            <span>
+              {app.mode === 'workbench'
+                ? 'DEVELOPER'
+                : app.mode === 'control'
+                  ? 'OPERATIONS'
+                  : 'Workspace'}
+            </span>
             <span>/</span>
             <b>{menus.find((n) => active(n.to))?.label || '업무 상세'}</b>
           </div>
@@ -178,7 +207,7 @@ export function Shell() {
           </div>
         </header>
         {!isGuide &&
-          (app.mode !== 'new' ||
+          ((app.mode !== 'new' && app.mode !== 'control') ||
             ['/dashboard', '/cases', '/reports', '/reports/new', '/schedules'].includes(
               location.pathname,
             )) && (
@@ -229,6 +258,8 @@ export function Shell() {
                   <div className="scope-right">
                     <span className="time-zone">Asia/Seoul</span>
                     {!isJobHistory &&
+                      app.mode !== 'workbench' &&
+                      app.mode !== 'control' &&
                       !location.pathname.startsWith('/reports') &&
                       (app.mode !== 'new' ||
                         ['/dashboard', '/cases'].includes(location.pathname)) && (
@@ -255,6 +286,14 @@ export function Shell() {
             </div>
           )}
         <main id="main-content">
+          {app.mode === 'workbench' && isConfiguration && debugReturn && (
+            <div className="console-return">
+              <Link className="button" to={debugReturn}>
+                ← 조사 중인 작업으로
+              </Link>
+              <span>현재 설정 화면 · 작업 당시 설정은 고정 revision으로 확인</span>
+            </div>
+          )}
           {app.mode === 'developer' && <DeveloperContext />}
           {app.mode !== 'new' &&
             location.pathname === '/reports' &&
@@ -292,18 +331,26 @@ export function Shell() {
                     }
                   />
                 </div>
+              ) : consoleMode ? (
+                <ConsoleWorkspace />
               ) : (
                 <Outlet />
               )}
             </QueryState>
           )}
-          {app.mode === 'developer' && <ApiInspector />}
+          {(app.mode === 'developer' || app.mode === 'workbench') && <ApiInspector />}
         </main>
         <footer className="app-footer">
           <span>
-            {app.mode === 'new' ? 'GPU Ops Advisor' : 'GPU Ops Advisor · Go API · PostgreSQL'}
+            {app.mode === 'new' || app.mode === 'control'
+              ? 'GPU Ops Advisor'
+              : 'GPU Ops Advisor · Go API · PostgreSQL'}
           </span>
-          <span>관측에서 근거로, 근거에서 판단으로.</span>
+          <span>
+            {consoleMode
+              ? 'Asia/Seoul · 저장된 관측 자료 기준'
+              : '관측에서 근거로, 근거에서 판단으로.'}
+          </span>
         </footer>
       </div>
       {app.toast && (

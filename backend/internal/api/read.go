@@ -54,8 +54,32 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 		return e
 	}
 	values := q.R.URL.Query()
-	if e = onlyQuery(q, "scope", "kind", "status", "from", "to", "cursor", "limit", "sort", "target", "topic_id", "incident_id"); e != nil {
+	allowed := []string{"scope", "kind", "status", "from", "to", "cursor", "limit", "sort", "target", "topic_id", "incident_id"}
+	if kind == "reports" {
+		allowed = append(allowed, "analysis_from", "analysis_to")
+	}
+	if kind == "jobs" {
+		allowed = append(allowed, "node")
+	}
+	if e = onlyQuery(q, allowed...); e != nil {
 		return e
+	}
+	for _, field := range []string{"analysis_from", "analysis_to"} {
+		if v := values.Get(field); v != "" {
+			if _, err := time.Parse(time.RFC3339Nano, v); err != nil {
+				return Invalid(field)
+			}
+		}
+	}
+	if values.Get("analysis_from") != "" && values.Get("analysis_to") != "" {
+		start, _ := time.Parse(time.RFC3339Nano, values.Get("analysis_from"))
+		end, _ := time.Parse(time.RFC3339Nano, values.Get("analysis_to"))
+		if !start.Before(end) {
+			return Invalid("analysis_from/analysis_to")
+		}
+	}
+	if node := values.Get("node"); len([]rune(node)) > 253 || strings.ContainsAny(node, "\r\n\x00") {
+		return Invalid("node")
 	}
 	want := values.Get("kind")
 	if kind == "analyses" {
@@ -71,7 +95,13 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	if status != "" && !Has([]string{"queued", "running", "retry_wait", "succeeded", "failed", "cancelled", "expired"}, status) {
 		return Invalid("status")
 	}
-	filter := Hash(Object{"resource": kind, "scope": scope, "kind": want, "status": status, "from": values.Get("from"), "to": values.Get("to"), "target": values.Get("target"), "topic_id": values.Get("topic_id"), "incident_id": values.Get("incident_id"), "sort": values.Get("sort")})
+	filters := Object{"resource": kind, "scope": scope, "kind": want, "status": status, "from": values.Get("from"), "to": values.Get("to"), "target": values.Get("target"), "topic_id": values.Get("topic_id"), "incident_id": values.Get("incident_id"), "sort": values.Get("sort")}
+	for _, field := range []string{"analysis_from", "analysis_to", "node"} {
+		if v := values.Get(field); v != "" {
+			filters[field] = v
+		}
+	}
+	filter := Hash(filters)
 	args := []any{scope}
 	where := "dsx_scope_contains($1,scope)"
 	if kind == "reports" {
@@ -92,6 +122,20 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	}
 	if v := values.Get("to"); v != "" {
 		add("created_at < $%d::timestamptz", v)
+	}
+	// Legacy jobs may have missing or malformed periods; they cannot match a dated search.
+	if values.Get("analysis_from") != "" || values.Get("analysis_to") != "" {
+		where += " AND CASE WHEN pg_input_is_valid(input_snapshot#>>'{time_range,start}', 'timestamp with time zone') AND pg_input_is_valid(input_snapshot#>>'{time_range,end}', 'timestamp with time zone') THEN (input_snapshot#>>'{time_range,start}')::timestamptz < (input_snapshot#>>'{time_range,end}')::timestamptz ELSE false END"
+	}
+	if v := values.Get("analysis_from"); v != "" {
+		add("CASE WHEN pg_input_is_valid(input_snapshot#>>'{time_range,end}', 'timestamp with time zone') THEN (input_snapshot#>>'{time_range,end}')::timestamptz END > $%d::timestamptz", v)
+	}
+	if v := values.Get("analysis_to"); v != "" {
+		add("CASE WHEN pg_input_is_valid(input_snapshot#>>'{time_range,start}', 'timestamp with time zone') THEN (input_snapshot#>>'{time_range,start}')::timestamptz END < $%d::timestamptz", v)
+	}
+	if node := values.Get("node"); node != "" {
+		args = append(args, node)
+		where += fmt.Sprintf(" AND (input_snapshot#>>'{target,node}'=$%d OR input_snapshot#>>'{target,node_uid}'=$%d)", len(args), len(args))
 	}
 	if v := values.Get("target"); v != "" {
 		var target Object
@@ -136,10 +180,14 @@ func (s *Server) list(w http.ResponseWriter, q *Request, kind string) error {
 	if hasRetryable {
 		retryable = "retryable"
 	}
+	preview := "NULL::jsonb"
+	if kind == "reports" {
+		preview = reportPreviewSQL
+	}
 	// Page first, then read only the published candidate's list fields. Never serialize its body.
 	rows, e := s.DB.Pool.Query(q.R.Context(), `
 SELECT to_jsonb(j) || jsonb_build_object('deletion',to_jsonb(d)-'job_id'), jsonb_build_object('id',c.id,
- 'result_status',c.body->'result_status','narrative_status',c.body->'narrative_status')
+ 'result_status',c.body->'result_status','narrative_status',c.body->'narrative_status','report_preview',`+preview+`)
 FROM (
  SELECT id,kind,status,stage,attempt_no,created_at,started_at,deadline_at,queue_reason,
   cancel_requested_at,termination_reason,version,parent_job_id,scope,source_module,source_key,
@@ -194,6 +242,9 @@ ORDER BY j.created_at DESC,j.id DESC`, args...)
 			dto["result_ref"] = id
 			dto["result_status"] = v.result["result_status"]
 			dto["narrative_status"] = v.result["narrative_status"]
+			if v.result["report_preview"] != nil {
+				dto["report_preview"] = v.result["report_preview"]
+			}
 		}
 		items = append(items, dto)
 	}

@@ -62,9 +62,9 @@ export function ResultPage({ kind }: { kind: string }) {
         description={kind === 'incident' ? id || '' : ''}
         actions={
           <>
-            {app.mode === 'developer' && kind === 'analysis' && id && (
-              <RcaWorkflowButton jobId={id} />
-            )}
+            {(app.mode === 'developer' || app.mode === 'workbench') &&
+              kind === 'analysis' &&
+              id && <RcaWorkflowButton jobId={id} />}
             {kind === 'report' && !deleted && r.result_ref != null && <ReportExports id={id!} />}
             {kind === 'report' && <ReportDeleteButton job={r} />}
             {kind !== 'incident' && (
@@ -83,7 +83,7 @@ export function ResultPage({ kind }: { kind: string }) {
         }
       />
       <QueryState query={q}>
-        {app.mode === 'developer' && kind === 'incident' && (
+        {(app.mode === 'developer' || app.mode === 'workbench') && kind === 'incident' && (
           <Notice>
             <strong>이 화면의 검증 지점: Incident → RCA 작업 연결</strong>
             <p>
@@ -159,8 +159,8 @@ export function ResultPage({ kind }: { kind: string }) {
                 key={str(r.id)}
                 job={r}
                 onEvidence={setEvidence}
-                evaluationExpanded={app.mode === 'developer'}
-                reader={app.mode !== 'developer'}
+                evaluationExpanded={app.mode === 'developer' || app.mode === 'workbench'}
+                reader={app.mode !== 'developer' && app.mode !== 'workbench'}
               />
             )}
             <div className="head-actions">
@@ -233,14 +233,15 @@ export function ResultPage({ kind }: { kind: string }) {
             )}
           </div>
         </Panel>
-        {!deleted && (kind !== 'analysis' || app.mode === 'developer') && (
-          <Reviews
-            id={id!}
-            subject={kind === 'incident' ? 'incident' : 'job'}
-            target={obj(r.target)}
-            reportDisplay={kind === 'report'}
-          />
-        )}
+        {!deleted &&
+          (kind !== 'analysis' || app.mode === 'developer' || app.mode === 'workbench') && (
+            <Reviews
+              id={id!}
+              subject={kind === 'incident' ? 'incident' : 'job'}
+              target={obj(r.target)}
+              reportDisplay={kind === 'report'}
+            />
+          )}
       </QueryState>
       {evidence &&
         (kind === 'incident' ? (

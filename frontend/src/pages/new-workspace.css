@@ -328,6 +328,37 @@
   justify-content: flex-end;
   margin: 20px 0;
 }
+.new-report-document > .new-detail-meta {
+  align-items: start;
+  padding: 16px 20px;
+  margin: 12px 0;
+  gap: 16px;
+}
+.new-report-document .new-print {
+  margin: 12px 0;
+}
+.new-report-body {
+  min-width: 0;
+  padding: clamp(16px, 2vw, 28px);
+  background: #fff;
+  border: 1px solid var(--new-line, #dce0dc);
+  border-radius: 8px;
+}
+.view-control .new-report-document > .new-detail-meta {
+  background: #e9ece8;
+  border: 1px solid #dce0dc;
+  border-radius: 2px;
+}
+.view-control .new-report-body {
+  border-radius: 2px;
+}
+@media (max-width: 700px) {
+  .view-control .new-report-document .aggregate-report .aggregate-chart-controls .button,
+  .view-control .new-report-document .aggregate-report .aggregate-incident-table .text-link,
+  .view-control .new-report-document .aggregate-chart-legend label {
+    min-height: 44px;
+  }
+}
 .new-back {
   display: inline-block;
   margin-bottom: 22px;

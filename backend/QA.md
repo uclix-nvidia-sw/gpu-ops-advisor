@@ -255,3 +255,11 @@ Go 단위 테스트, vet, 서버 빌드 및 Backend E2E 전체(`TestFreshBackend
 [한도 회귀](internal/api/limits_e2e_test.go)는 지식 등록·revision·발행의 공통 카운터, 지식 한도 소진 후 보고서의 JC 계약 fixture 접수(202), 보고서 자체 429, 양방향 동시 요청 격리, 그룹별 창 초기화, GET 조회와 `Retry-After` 보존을 검사한다. 이 검사의 DB·Backend는 실제 구현이며 JC는 계약 fixture다. 전체 Backend E2E에는 실제 Backend·JC 접수/명령/발행과 정기 일정 outbox 복구 검사가 포함된다.
 
 운영 배포·실제 모델 추론·운영 부하는 미검증이다. 한도는 프로세스별 두 그룹이며, 그룹별 제한을 모두 사용하면 전체 허용량은 커진다. 사용자별·복제본 공통 제한이나 내부 정기 접수·LLM 해석 실패를 해결하는 변경은 아니다.
+
+## 콘솔 목록 검색·미리보기 계약 — 2026-10-23 (local)
+
+- 기준: main `43b35d7` 기반 통합 변경. Windows, Go 1.26.2, PostgreSQL 16.9 loopback의 새 전용 인스턴스·테스트별 고유 schema. 운영 DB는 사용하지 않았다.
+- **통과:** Backend `go vet ./...`, `go test -race ./...`, `go build ./...`, `go test -race -tags=e2e ./... -count=1 -timeout=10m` 전체. Windows 경로 제약 때문에 현재 소스와 Runbook/Agent fixture를 ASCII 임시 경로에 복사해 실행했다. main의 지식/보고서 쓰기 한도 격리 회귀도 포함한다.
+- **통과:** `TestConsoleLists`는 접수일과 다른 분석 기간·반개구간 겹침·시차·잘못된 과거 기간·필터 cursor 결합, 현재 신원 이력 없이 저장 node/node_uid 정확 검색과 scope 제한, 오래된 open/acknowledged 및 legacy 미종결 사건의 페이지 조회를 검증한다. 기존 `TestJobListProjection`의 공개 후보 연결·원문 제외·필터·정렬·명령 가능 여부도 통과했다.
+- **통과:** 발행 aggregate의 저장 요약·한계·누락 사유만 제한된 크기로 읽고, 미발행/legacy/삭제 결과와 잘못된 자료 형식을 안전하게 처리한다. 110만 자 원시 관측을 넣어도 미리보기에 전송하지 않으며 저장 본문을 유지한다. 자료가 없을 때 정상 관측·원인·조치를 만들어 넣지 않는다. 최종 `narrative_status` 추가 후 두 목록 DB suite와 서버 빌드를 재검사해 complete/failed/누락 상태가 저장값대로 전달되는지 확인했다.
+- **미검증:** 운영 데이터 규모의 검색 지연·PostgreSQL JSON 압축 해제 비용, 실제 모델·Grafana 품질 및 운영 배포. UI 검증은 [Frontend QA](../frontend/QA.md)에서 구분한다. DB migration·Worker/JC 정책 변경은 없다.

@@ -1,11 +1,12 @@
 import { RcaEvaluationTrace, rcaStages } from './RcaEvaluationTrace';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { canonical, obj, rows, str, useList, useResource, type Row } from '../lib/live';
 import { Badge, Field, Notice } from './ui';
 import { DataView, More, QueryState } from './live';
-import { relationMismatch, returnPath } from '../lib/debug';
+import { debugPath, relationMismatch, returnPath } from '../lib/debug';
 import { reportRequestTime } from '../lib/reportPeriod';
+import { rcaReasons } from '../lib/rcaLabels';
 
 export function RawRecord({
   value,
@@ -45,7 +46,17 @@ export function differences(
     return [{ path, left: a, right: b }];
   });
 }
-export function DifferenceTable({ left, right }: { left: Row; right: Row }) {
+export function DifferenceTable({
+  left,
+  right,
+  leftLabel = '기준',
+  rightLabel = '비교 대상',
+}: {
+  left: Row;
+  right: Row;
+  leftLabel?: string;
+  rightLabel?: string;
+}) {
   const changes = differences(left, right);
   return changes.length ? (
     <div className="table-wrap">
@@ -53,8 +64,8 @@ export function DifferenceTable({ left, right }: { left: Row; right: Row }) {
         <thead>
           <tr>
             <th>필드</th>
-            <th>기준</th>
-            <th>비교 대상</th>
+            <th>{leftLabel}</th>
+            <th>{rightLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -74,6 +85,46 @@ export function DifferenceTable({ left, right }: { left: Row; right: Row }) {
     </div>
   ) : (
     <p>제공된 두 기록의 값이 같습니다. 조회되지 않은 데이터까지 같다는 의미는 아닙니다.</p>
+  );
+}
+
+export function AttemptComparison({ attempts, attempt }: { attempts: Row[]; attempt: number }) {
+  const selected = attempts.find((a) => a.attempt_no === attempt);
+  const previous = attempts
+    .filter((a) => typeof a.attempt_no === 'number' && a.attempt_no < attempt)
+    .sort((a, b) => Number(b.attempt_no) - Number(a.attempt_no))[0];
+  const select = (a: Row): Row => ({
+    단계: a.stage ?? '미기록',
+    '종료 사유': a.termination_reason
+      ? rcaReasons[str(a.termination_reason)]
+        ? `${rcaReasons[str(a.termination_reason)]} (${str(a.termination_reason)})`
+        : str(a.termination_reason)
+      : '미기록',
+    '시작 시각 (KST)': a.started_at ? reportRequestTime(str(a.started_at)) : '미기록',
+    '종료 시각 (KST)': a.ended_at ? reportRequestTime(str(a.ended_at)) : '미기록',
+    '실행 슬롯': a.slot_state ?? '미기록',
+    '원격 추론 상태': a.remote_call_state ?? '미기록',
+  });
+  return (
+    <section className="stack" aria-label="이전 시도와 비교">
+      <h3>이전 시도와 달라진 점</h3>
+      {selected && previous ? (
+        <>
+          <DifferenceTable
+            left={select(previous)}
+            right={select(selected)}
+            leftLabel={`이전 시도 ${previous.attempt_no}`}
+            rightLabel={`선택한 시도 ${attempt}`}
+          />
+          <p className="muted">
+            같은 작업의 시도 기록을 비교합니다. 입력·설정 버전은 작업에 고정되며, 단계가 달라져도
+            원인 해결이나 원격 추론 종료를 뜻하지 않습니다.
+          </p>
+        </>
+      ) : (
+        <p>비교할 이전 시도 기록이 없습니다.</p>
+      )}
+    </section>
   );
 }
 
@@ -367,6 +418,7 @@ function EvidenceComparison({
 
 export function JobComparison({ job, trace, from }: { job: Row; trace: Row; from?: unknown }) {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const id = params.get('compare') || '';
   const [draft, setDraft] = useState(id);
   const other = useResource(id ? `/jobs/${encodeURIComponent(id)}` : null);
@@ -413,7 +465,7 @@ export function JobComparison({ job, trace, from }: { job: Row; trace: Row; from
                   result: other.data?.result_ref != null ? other.data.result : null,
                 }}
               />
-              <Link to={`/jobs/${encodeURIComponent(id)}?tab=evidence`}>
+              <Link to={debugPath(id, 'evidence', location.pathname + location.search)}>
                 비교 대상의 조회·판단 기록 열기
               </Link>
             </QueryState>

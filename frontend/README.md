@@ -1,451 +1,105 @@
-## RCA evidence evaluation — 2026-10-14
+# Frontend
 
-New RCA diagnostics use the unified evaluation decision. Missing auxiliary selection conditions are labeled 조회 선택 조건 미설정 and state that the selection model was not called. Historical result summaries and raw stage records remain readable. A rule that does not match is shown as unmet selection conditions, never as sufficient evidence.
+GPU Ops Advisor의 React·TypeScript 화면이다. 모든 관점은 같은 Backend API와 저장 결과를 사용한다. 화면 전환은 권한이나 실행 경계를 바꾸지 않는다.
 
-## RCA compact typography — 2026-10-14
+## 여섯 가지 GUI 탭
 
-RCA section headings remain 18px and the detected-problem summary 16px. Body, checks and reference items use 13px. Applied Runbook metadata starts collapsed; reference items share one bottom divider after the whole group. Report/Ops rendering is unchanged.
+상단 순서는 **기존 / 운영 / 개발자 / 신규 / 개발 콘솔 / 운영 콘솔**이다. `gpu-advisor-view`에 선택을 저장하며 기본값 `classic`과 기존 네 선택값을 유지한다.
 
-## Unified RCA list / RCA 목록 통합 — 2026-10-14
+| 관점 | 저장값 | 주 용도 |
+|---|---|---|
+| 기존 | classic | 전체 기능과 기존 결과 읽기 |
+| 운영 | operations | 운영 대시보드·사건·보고서 |
+| 개발자 | developer | 처리 흐름·작업·원본 기록 |
+| 신규 | new | 사건·보고서 중심의 결과 읽기와 기록 |
+| 개발 콘솔 | workbench | 실패 작업 탐색, 입력→시도→근거→발행 결과 대조 |
+| 운영 콘솔 | control | 사건의 최신 조사와 발행된 RCA, 기간별 Ops 보고서 및 검토·처리 |
 
-In classic/developer modes, `/cases` has one RCA investigation list with server-side execution status filters,
-alongside the incident tab. Legacy `?tab=reports` links open the same list filtered
-to completed jobs. Published result titles lead to the RCA report; unpublished
-jobs lead to execution history. Completion and result quality remain separate,
-and partial is never displayed as a confirmed cause. Duplicate report-list tabs,
-kind columns and repeated report buttons are removed only from `/cases`.
-`/reports` uses the same table as this list (title and target, received time, execution
-status, requirement status, execution record) and `/reports/:id` the same page chrome as
-`/analyses/:id`: a fixed `운영 분석 결과` heading, the `저장된 결과` panel, an identity block
-(dated title, cluster scope, period, topics, job ID) and the stored report inside the shared
-`rca-narrative` card. Report-specific filters, the origin badge, exports, deletion and the
-report body typography are unchanged, as are Report Agent paths and the list APIs. Report and RCA
-page heads carry no English eyebrow label; the request flow uses one verb (`보고서 요청` → `요청 보내기`);
-chrome text has a 12px floor and AA contrast; the saved report card starts with its stored summary
-and a table of contents, folds request metadata under `요청 정보`, and lists workload observations as
-section 1.4 after the comparison table and charts. The identity block leads with the report purpose and shows each cluster scope as a chip; `aggregate-report.css` uses the shared color tokens (`--ink`, `--line`, `--surface-2`, `--green-line`, `--alert`) instead of hardcoded hex; the new-mode reader wraps the report in `report-workspace` so it keeps the report typography, and the operations list shows topic names instead of raw ids. Inside the card the body follows the RCA report's visual language: 13px text, 1px section rules, the stored summary in a soft-green glance box with numbered points, AI interpretation as a green-edged card, plain muted notes instead of boxes, and compact fixed-layout tables with sticky heads. Time charts use a validated eight-hue categorical palette, 2px lines, ringed markers only on isolated points, and a crosshair tooltip listing every visible series at the nearest hour; workload pending/elapsed bars reuse the RCA bar rows; evidence opens in the same observation dialog as RCA.
+[ConsoleWorkspace](src/pages/ConsoleWorkspace.tsx)는 두 콘솔의 목록과 진입 동선을 소유한다. [Shell](src/components/Shell.tsx)은 메뉴·관측 범위·연결 상태를, [JobDebug](src/components/JobDebug.tsx)는 개발 콘솔의 상세를, [NewWorkspace](src/pages/NewWorkspace.tsx)는 운영 콘솔의 사건·보고서 상세와 기록을 담당한다. 기존 네 관점은 보존한다.
 
-Evidence evaluation explains explicit model stop, malformed selection, unavailable
-model and a bounded selection repair separately. Legacy records without those
-diagnostics do not invent a reason.
+개발 콘솔의 `/dashboard`는 실패 작업으로 시작하고 `/jobs`는 전체 작업을 보여준다. 작업 종류·실행 상태·노드 이름 또는 UID·사건 ID·접수일을 서버에서 검색하며 작업 ID로도 바로 연다. 목록에서 단계·종료 사유·시도를 확인하고, 선택한 작업의 진단 패널에서 고정 입력·시도 비교·근거·발행 결과로 이동한다. 미발행 결과는 표시하지 않는다. 필터를 바꾸면 이전 작업 선택을 해제하며 상세를 방문한 뒤에는 URL의 검색 조건과 선택 작업으로 복귀한다. Ops 작업은 보고서 제목과 분석 범위로 표시한다.
 
-## RCA 작성·검토·보고서 호출 구분
+운영 콘솔은 기간 제한 없이 미종결(`open`·`acknowledged`) 사건을 먼저 보여준다. 전체 이력 또는 개별 처리 상태에서는 발생일로 좁힐 수 있다. 정렬은 사건 접수 최신순이다. `latest_job`과 `latest_published`를 독립적으로 읽어 최근 조사가 진행 중이어도 이전 발행 RCA에 접근한다. RCA 읽기와 검토·조치는 같은 사건 상세로 연결하며, 발행 요약 부재는 미확인이다.
 
-RCA 본문의 수집·검토·조사 목적 상세는 기존·운영 관점에서 기본 접힘, 개발자 관점에서 기본 펼침 토글로 제공하고, 요약에는 종료 판정을 유지한다. 처리 상태를 숨기거나 목적 미달을 성공으로 바꾸지 않는다.
+Ops 목록은 선택한 날짜와 분석 기간이 겹치는 보고서를 찾는다. 상태·주제·요청 접수일은 보조 조건이며 분석 기간만, 보조 조건만, 모든 조건을 각각 해제할 수 있다. 저장된 주요 변화와 관측·해석 한계를 먼저 보여주고, `method`·`narrative_status`에 따라 AI 해석·AI가 고른 변화·계산 요약을 구분한다. 생성 방식이 확인되지 않으면 ‘저장된 주요 변화’로 표시한다. 발췌 여부를 알리고 전체 본문으로 연결한다. 작성 중·삭제된 결과는 작성 현황·삭제 기록으로 연결하며 일부 목록을 전체 건수나 클러스터 건강 점수로 표시하지 않는다.
 
-관측 표가 있는 RCA는 사건 핵심 요약 → 사건별 분석·런북 권고 조치 → 로그·지표 → 호스트 이력 순서로 읽는다. 번호가 있는 다섯 구역으로 구성하고 5번 조사·비교·처리 설명은 펼친 본문으로 제공하며 중복된 저장 원문과 단순 데이터 목록만 접힘 상세로 제공한다. 단일 수집 보고서 본문에는 goal/근거 충분성 평가를 표시하지 않으며 기존 디버깅 기록은 보존한다. 상태 코드는 최소·최대 대신 코드 변화, 전송률은 표본 값으로 설명한다. 호스트 이력의 GPU별 집계는 실제 UUID를 표시해 다른 GPU를 같은 장치로 읽지 않도록 한다. 동일 지표의 값·시간·표본 수가 모두 같은 GPU만 묶고, GPU별 원문과 다른 관측값은 보존한다. 관측 표가 없는 과거 결과는 기존 순서를 유지한다. 장치 주소 대조는 수집된 GPU 목록과의 비교이며 물리적 점검을 뜻하지 않는다. 과거 부분 산출 기록은 재작성하지 않고, 조사 목적 밖의 원인 확정 근거 때문에 붙은 상태는 상세 설명에서 구분한다.
-
-`rca-material/1` 결과는 고정된 RCA 자료를 보고서 LLM이 서술한 결과다. 워크플로우는 저장 순서를 유지하면서 `report_assembly`의 실제 호출 상태·횟수·시간·모델·usage·실패 경로와 결과 구성 완료를 구분한다. 보고서 실패에도 기본 자료는 표시하며 RCA 검토 통과나 원인 확정으로 바꾸지 않는다. 보고서 본문과 디버깅의 ‘서술 전 RCA 자료’에서 `source_items` 원문을 대조한다. 새 결과에는 과거 원인 문장 보정 렌더를 적용하지 않으며 한계/추가 확인을 중복 제거 옵션으로 숨기지 않는다. 과거 정렬 방식 결과는 기존 설명으로 유지한다. 역할·계약은 [RCA](../rcca-agent/README.md#보고서와-조회-호환)를 따른다.
-
-## Runbook-driven RCA guidance
-
-개발용 RCA의 **워크플로우 디버깅 → 다음 행동 결정**은 Runbook 목적 달성 시 실제 수집한 조회와 추가로 수집하지 않은 선택 조회를 표시한다. ‘조사 목적과 완료 기준’에서 오류 보고·범위·한계 설명과 같은 분석본의 품질 검토를 확인한다. 새 기록에 `decision_policy_status=not_configured`가 있으면 실제 사용한 지침에 종료 기준이 없으며 Runbook 1.1 새 revision 발행이 필요함을 설명한다. 코드 배포·품질 검토 통과·근본 원인 확정을 서로 구분하고, 이 필드가 없는 과거 기록의 미적용 원인은 추정하지 않는다.
-
-RCA reads `quality.runbook_guidance` projected from selected published Runbook
-evidence. `gpu-rca-guidance/1.0` contains meaning, next checks, references and a
-conditional cause note. Unknown errors use the same renderer; legacy results show
-saved guidance without invented catalog details. Reference explanations remain
-visible, with source links and original guidance in disclosures. Report rendering
-and APIs are unchanged.
-
-## RCA 운영자 읽기 순서 — 2026-10-13
-
-RCA 목록은 작업 UUID 대신 CPC와 노드(k8s_node_name 포함)를 표시하고 반복적인 알림 규칙 이름은 생략한다. RCA 결과의 ID는 연결 정보에 보존하며 알림 원본 링크는 사람이 읽을 수 있는 이름으로 표시한다. Report 화면의 ID와 목록 경로는 유지한다.
-
-오류 보고 확인 문구는 오류 코드를 읽기 쉽게 표시하며 고장 확정과 구분한다. SXID 의미는 참고 안내에서 설명한다. `quality.report.presentation=incident-first/1` 결과는 발생 내용 → 영향과 심각도 → 원인 분석 → 권고 조치 → 추가 확인 사항 순서로 표시한다. 참고 지침과 분석 한계는 펼침 영역에 보존하며 추가 확인 사항은 중복 제거 옵션으로 숨기지 않는다. 구 결과는 기존 표시를 유지한다. 구조화된 오류 이벤트는 초 단위 KST와 장비 연결을 표시하고 상태 보고의 인벤토리 일치는 현재 고장 판정과 구분한다. 구조화된 관측 사실·원인 후보·조치·조사별 판단·Runbook 기록은 별도 펼침으로 보존한다. PCI 불일치가 기록된 XID79 결과에서는 장치 존재를 전제한 저장 문장을 주의 원문으로 옮기고 조건부 일반 안내를 표시한다. 저장 결과와 Agent 판단은 수정하지 않는다. 알려지지 않은 오류에 XID 설명을 적용하지 않는다.
-
-검증: 프런트엔드 정적 렌더 회귀검사와 빌드·포맷 검사. 새 운영 배포와 실제 LLM 재실행은 미검증이며, 이 변경은 LLM 검증기 자체의 보강이 아니다. 오류별 참고 안내는 발행 Runbook의 구조화된 지침을 사용한다. 저작 파일 변경은 운영 지식 발행과 별도다.
-
-# Aggregate report UI / 신규 집계 보고서 화면 (2026-10-13)
-
-`/reports/new` defaults to daily/weekly Namespace activity and incident comparison. `?legacy=true` preserves the old topic form; stored legacy reports retain their renderer. `quality.report_format=report-aggregate-v1` selects AggregateReport: cluster/namespace table, per-cluster multi-Namespace hourly graphs, missing-data reasons, prior-period changes and bounded incident list. Graph gaps are not zero. Existing schedules remain unchanged. The report page shares the RCA result chrome: AggregateReport renders inside the same `rca-narrative` card with a fixed `운영 분석 보고서` header, below the identity block; its internal typography and tables are unchanged.
-
-[계산 의미·제한·검증](../docs/specs/ops-agent/aggregate-report-v1.md). 미리보기의 실제 자료·합성 자료 구분과 검수 범위는 [QA](QA.md)를 따릅니다. 로컬 미리보기는 운영 작업을 접수하지 않습니다.
-
-### AI 운영 해석과 과거 요약 / AI interpretation and historical summaries
-
-Complete `llm_interpreted` narrative appears in each topic as **AI 운영 해석**: observation, meaning/limits and next check. The green surface distinguishes model-authored prose from calculated tables/graphs. Expandable sources show selected findings, stored hourly metrics and evidence links; code-supplied partial-data/report-time limits remain visible. Text is React-escaped and HTML export uses the same stored narrative. Generation and validation belong to [Ops](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation).
-
-When every `narrative[].advice` item has a stored `summary`, show LLM-authored bullets first. If `summary_parts.decision` and `summary_parts.evidence` reconstruct that exact summary with one space, show the decision and target first and put evidence, conditions and source links in that bullet's disclosure. Otherwise show the full original summary with calculated observations in the disclosure. Older advice and three-field narratives retain their renderer. / 구조화된 대상이 있으면 클러스터·네임스페이스 식별자를 각각 라벨이 있는 두 줄의 코드 표기로 제안 위에 표시합니다. 시간대 후보는 같은 Namespace에서 작업 시작 시간을 조정한다는 고정 범위를 표시하며 대상 이전을 제안하지 않습니다. 저장 원문과 정확히 일치하는 분리 정보가 있으면 제안을 먼저, 수치·기간·조건은 항목별 ‘판단 근거와 적용 조건’에 보여줍니다. 정보가 없거나 맞지 않으면 원문 전체를 표시합니다. 화면에서 AI 문장·산식·제안 판정을 만들지 않습니다.
-
-For workload evidence, each cluster first shows up to three namespaces with the largest positive observed Pending Pod peak and the first hour of that peak. The observed hourly rows, including zero values, and explicit missing-data labels remain behind “Namespace별 모든 시간대 보기”; completed Job evidence remains visible. The displayed peak is a count, never a waiting duration. / 작업 관측은 양수 대기가 컸던 Namespace 최대 3개와 최초 최대 관측 시간대만 먼저 보여주고 모든 시간대는 펼쳐 확인합니다. 대기 시간으로 읽지 않습니다.
-
-
-기존 `llm_prioritized` 결과는 **AI가 고른 주요 변화**로 표시합니다. 코드가 만든 문장 중 AI가 선택한 결과이며 새로 작성한 해석은 아닙니다. `deterministic_fallback`은 **계산 결과 요약**, 출처 미기록은 **저장된 주요 변화**로 구분하고 빈 narrative는 표시하지 않습니다. 기존 계산·저장 문장·RCA는 변경하지 않습니다. 새 해석의 시간대 근거는 선택된 Namespace·모델과 전후 구간의 저장 수치를 표시해 그래프·표와 대조할 수 있습니다.
-
-## RCA 실행별 제한과 수정 응답 — 2026-10-13
-
-missing_data 요약은 저장된 missing_inputs의 구체적 의미를 표시한다. 알 수 없는 코드는 보존한다. 수정 검증 실패 후 검증된 일부만 채택한 분석은 전체 성공과 구분하며, 분석 자체가 실패했다면 미채택으로 표시한다. PCI 불일치에는 시험 주입 로그인지도 확인하라고 안내하되, 시험 데이터라고 단정하지 않는다.
-
-## RCA 오류 설명과 근거 우선 배치 — 2026-10-13
-
-RCA 전용 화면은 최종 보고서 → 관측 근거 → 수집·판단 근거 → 접힌 실행/검증 진단 순으로 읽는다. Runbook 안내가 있으면 상세 진단의 반복된 다음 확인 문장은 생략하되 원본 결과·진단 코드는 보존한다. 다음 확인은 굵은 행동 제목과 설명을 분리하고 참고 안내는 질문/답변 형태로 표시한다. 저장된 카탈로그 문구와 선택 Runbook에 맞는 설명만 제공하며 없는 모델·조치 정보를 만들지 않는다.
-
-XID79의 물리적 연결 후보는 일반적인 검토 대상으로 명시하고 반복 로그를 반복 장애의 증거로 취급하지 않는다. 기존 결과의 장치 식별 불확실성 원인 문장은 해석 주의와 함께 펼침 원문으로 보존하며 PCI 불일치는 판단 제한으로 설명한다. 기존 결과에는 UI 해설을 제공하며 저장된 Agent 판단/DB는 수정하지 않는다. 새 RCA 응답은 장치 식별 불확실성을 원인으로 쓰는 문장을 검증기에서 거절한다. SXID11001은 수신 측의 잘못된 명령 보고임을 먼저 설명하고 스위치·포트·연결 범위 확인을 안내한다. 근거: [NVIDIA SXID 문헌](https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html#fatal-nvswitch-sxid-errors), [XID 카탈로그](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html). Report 화면과 실행 경로는 변경하지 않는다.
-
-## 운영자가 확인할 일을 중심으로 한 보고서 — 2026-10-13
-
-새 보고서의 기본 선택은 **GPU 사용 패턴(O08)·장비/Node 점검 대상(O01)·장애/조사/처리 현황(O05)**과 **공통 자료 신뢰도(O11)**입니다. 전용 할당 활용도·장애 당시 작업·배치 대기·에너지·조치 비교는 추가 분석으로 남깁니다. 주제 ID와 기존 종류 링크를 유지하며 저장된 자동 일정·보고서를 새 구성으로 바꾸지 않습니다.
-
-`next_check`가 있는 Ops 판단은 **먼저 확인할 내용**에 우선순위·ID 순으로 정렬해 5개를 먼저 표시하고 나머지를 펼칩니다. 대상·시간대·다음 확인·근거 및 사건 링크를 함께 제공하며 판단이 없는 구 결과는 기존 수치 표시를 유지합니다. 저장된 보고서 문장은 별도로 펼쳐 확인합니다. UI가 원인·복구·회수 가능량을 새로 계산하지 않습니다.
-
-O08은 기존 모델별 시간대 활동률 그래프에 저장된 GPU별 연속 저활동 구간을 음영으로 겹칩니다. 서로 겹치는 구간은 표시용으로만 합치며 관측 공백을 이어 붙이거나 시간 평균에서 저활동을 다시 판단하지 않습니다. 선택한 모델의 일부 GPU에 대한 표시이고 Namespace 전체의 유휴를 뜻하지 않습니다. 첫 그래프는 우선 확인할 대상에 맞추고 이후 사용자의 선택을 유지합니다. 대상별 정확한 구간·시간대별 GPU 대수는 펼침 표에 남깁니다.
-
-O01은 판단 근거의 우선순위대로 최대 12개 수치를 먼저 표시합니다. O05는 분석 기간에 발생한 사건의 저장 알람 상태·공개 RCA·연결 조치 기록을 함께 보여주며 자료 기준 시각과 실시간 상태를 구분합니다. 조치 기록 없음은 미수행 확정이 아니고 알람 해제·RCA 공개는 복구 완료가 아닙니다. O11 수집 응답·공백·지연은 공통 자료 신뢰도 영역에서 확인합니다.
-
-운영자 가이드는 통합 D 설정/criteria 1.3에서 O01의 D06 제외, O05의 DB 자료 재사용과 D10/D22 생략, O06의 D09/D13 생략을 설명합니다. O08에 필요한 D06 및 D10/D22는 유지됩니다. RCA Agent·RCA 화면·공통 실행 계약은 이번 Frontend 변경 대상이 아닙니다.
-
-## 운영 보고서 영구 삭제 — 2026-10-12
-
-보고서 목록(기존·운영 관점)과 상세에 서버가 `can_delete=true`로 허용한 보고서의 **보고서 삭제** 버튼을 표시합니다. 확인 창에서 삭제 범위와 복구 불가를 안내하고 사유를 입력받습니다. 기존 `useCommand`의 멱등 키와 현재 버전 `If-Match`를 사용해 `POST /jobs/{id}/delete`를 보냅니다. 요청 중 중복 제출·닫기를 막으며, 참조 충돌·버전 변경·통신 오류는 사유를 보존한 채 표시하고 현재 상태를 다시 확인할 수 있습니다.
-
-삭제된 보고서는 보고서 목록에서 빠지고 작업 이력에는 남습니다. 보고서 주소를 직접 열어도 본문·다운로드·같은 조건 재요청 대신 삭제 시각·사유·전용 근거 수와 파일 정리 상태를 표시합니다. 파일은 비동기 정리이므로 대기·지연·완료를 구분하고, 정리가 남아 있는 동안만 종료 작업을 계속 조회합니다. 원본 RCA와 다른 보고서는 유지하며 다른 기록이 해당 근거를 참조하면 서버가 삭제를 거절합니다. UI 자체는 DB나 공유 저장소를 직접 수정하지 않습니다.
-
-## 보고서 원본 지연 표시 — 2026-10-12
-
-보고서 본문·작업 결과의 원본 보기는 펼칠 때만 내용을 렌더하고 닫으면 해제합니다. 다른 보고서나 공개 결과로 이동하면 접힘 상태로 시작합니다. 계산 수치·요약·근거 버튼은 유지하며 근거 원본은 기존처럼 버튼을 눌렀을 때 조회합니다.
-
-Backend가 `result_projection.omitted_fields`로 O01의 `quality.node_condition_observations` 생략을 알리면 원본 대신 **조회용 결과 보기**라고 표시합니다. Node 상태의 원본 구간 기록만 응답에서 제외됐고 저장된 분석 결과는 수정되지 않았음을 안내합니다. 필드가 없는 구 API·신규 결과는 기존 원본 표시를 유지합니다. 이 UI 변경 자체가 저장된 자료를 삭제하거나 수집량을 줄이지는 않습니다.
-
-기본 보고서(criteria 1.3)의 O01은 D02·D03·D04·D06·D16·D20을 사용하며, D15·D18·D19를 제외합니다. 운영자 가이드는 이전 기준(criteria 1.2)의 조회와 구 결과가 유지됨을 구분합니다.
-
-## RCA 최종 보고서 읽기 순서 — 2026-10-12
-
-RcaResult는 실행·공개 상태 다음에 최종 보고서를 먼저 배치한다. 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계의 목차와 구획을 제공하고, 저장된 next/limits 문단은 항목별 목록으로 표시한다. 문장·순서·중복·불확실성·품질을 재작성하지 않으며 알 수 없는 구획도 유지한다. 분석 요약과 LLM 실행 통계는 보고서 뒤 펼침 영역에 남긴다. 미발행 결과를 최종 보고서로 보여주지 않는다.
-
-RCA 전용 컴포넌트·CSS에 한정하며 Report 화면·Agent·Runbook·DB 상태 변경은 없다. 화면의 가독성 개선은 상태 의미 검증이나 원인 확정을 대신하지 않는다.
-
-## RCA 판단 제한·다음 확인 — 2026-10-12
-
-RCA 결과의 missing_inputs를 원본 조회·수집, 장치 신원·사건 시각 연결, 상태·값 의미, LLM 분석, Runbook, 원인 추가 검토, 미분류 사유로 나눈다. 각 범주에 다음 확인을 표시하며 unknown_value를 원본 부재로, 원인 미확정을 수집 실패로 추정하지 않는다. 중복 코드는 제거하고 알려지지 않은 코드는 그대로 보존한다. 기존·운영·개발 관점이 사용하는 RcaResult에 적용된다.
-
-저장된 종료 코드·품질·보고서 문장과 hash는 변경하지 않는다. 부족 목록이 없는 구 결과와 명시적 빈 목록을 구분하며 미발행 결과에 품질 안내를 만들지 않는다. #98 repair_gate가 있으면 실제 기록된 숫자만 표시하고, 구 budget_or_deadline_exhausted는 어느 조건인지 추측하지 않는다. 조치 권고와 수행은 별개이며 미수행 자체를 실패로 설명하지 않는다. Report 화면·Agent·API·DB·Runbook 발행은 변경하지 않는다.
-
-후속 RCA 개선 우선순위(이번 변경에 미포함):
-1. 주장마다 지지·반박 근거와 대상·유효 시각 연결을 명확히 표시하고, 관측된 증상/현재 상태/원인 후보를 구분한다.
-2. 권장 조치를 확인 절차·적용 조건·중단 조건으로 표시한다. 원천 REBOOT_SYSTEM은 검증된 실행 권고로 승격하지 않는다.
-3. 운영자 첫 화면을 확인 사실·미확정 사항·다음 행동으로 압축하고, Runbook revision·D-query·모델 진단은 펼쳐 읽는다.
-4. CPU 일반 조사, XID/SXID, 다른 장치·과거 이벤트·근거 누락을 고정 평가 사례로 유지한다. 성공률뿐 아니라 잘못된 장치 연결·근거 없는 단정·불필요한 재조회도 평가한다.
-
-## 운영자 가이드 진입 위치 — 2026-10-07
-
-운영자 가이드는 왼쪽 독립 메뉴 대신 운영 분석·보고서의 공통 하위 탭(보고서 이력 / 자동 보고서 설정 / 운영자 가이드)에서 연다. 가이드·자동 설정에서도 왼쪽 보고서 메뉴를 선택 상태로 표시한다. 종류 버튼은 왼쪽 정렬을 유지하고 긴 장비 종류만 `GPU 상태·에너지·장애`로 줄여 표시한다. 설명 제목과 실제 보고서 종류명은 그대로 유지한다. 기존 /operator-guide 주소와 목차 링크는 유지하며, 연결 실패·클러스터 미등록 상태에서도 보고서 메뉴의 하위 탭으로 가이드에 접근할 수 있다.
-
-## 보고서 목록 선택 흐름 — 2026-10-07
-
-보고서 목록은 `/cases`의 RCA 조사 목록과 같은 표다. 첫 열에 제목·클러스터와 Namespace 범위·분석 대상 기간·분석 주제·생성 방식 배지를, 이어서 접수 시각·실행 상태·요건 충족 상태·실행 기록(작업 상태·시도 이력, 허용된 경우 삭제)을 표시한다. 목록에서 저장 요약을 추가 조회하지 않으며 실행시간·정확한 시간 범위·작업 ID는 보고서 화면에서 확인한다.
-
-보고서 화면에 적용되지 않는 전역 시간 선택은 숨긴다. 목록의 접수일 필터는 기존 API from/to(created_at)에 KST 시작일 00:00 이상, 종료일 다음 날 00:00 미만을 전달한다. 분석 대상 기간 검색이 아니며 31일 분석 요청 제한을 적용하지 않는다. 주제 선택은 기존 11개 값을 7개 종류별 optgroup으로 묶으며 종류 전체 OR 검색을 새로 구현한 것은 아니다. 필터 해제·조건별 빈 안내·불러온 건수·목록 복귀 포커스를 제공한다. 분석 기간/생성 방식 검색은 현재 API에 없어 이번 UI 수정에 포함하지 않는다. Agent·Backend·JC·DB는 변경하지 않는다.
-
-## 미발행 보고서도 보고서 화면에서 확인 — 2026-10-07
-
-보고서 목록·작업 목록·운영측 카드의 보고서 제목은 result_ref 유무와 관계없이 /reports/:id로 이동한다. 직접 요청 접수 직후도 보고서 화면을 연다. 미발행이면 결과를 만들어 보여주지 않고 요청 대상·기간·주제, 접수 시각, 실행 상태·대기/종료 사유를 표시한다. 재시도·취소·디버깅 기록은 별도 작업 상태·시도 이력 링크로 접근한다. RCA의 미발행 작업 경로는 이번 후속 변경 대상이 아니다.
-
-## 분석 결과와 작업 이력 이동 — 2026-10-07
-
-RCA·보고서의 발행된 제목은 분석 본문을 바로 연다. 별도 `작업 상태·시도 이력` 링크는 실행 기록을 연다. result_ref가 없는 RCA는 실행 상태로, 보고서는 자체 작성 현황 화면으로 연결한다. 기존·운영·개발 관점 모두 같은 결과 URL을 사용하며 개발측 결과 페이지/조사 탭의 자동 작업 화면 전환을 제거했다. 작업 디버깅 기능은 /jobs에서 유지한다. API·수집·계산·Agent·DB에는 변경이 없다.
-
-## 작업 이력 목록 가독성 — 2026-10-06
-
-RCA 조사와 운영 보고서를 같은 다섯 열·글자 크기·상태 배지·날짜 형식으로 표시한다. 두 종류의 발행된 제목과 `결과 보기`는 각각 analyses/reports로, 별도 `작업 상태·시도 이력`은 jobs로 연결한다. 공통 `대상·요청 조건 보기`에서 보고서는 분석 주제·기간·범위, RCA는 기존 알람 식별 정보와 노드·Pod·기록 단계를 확인한다. RCA의 생성 방식을 보고서의 자동/직접 요청 값으로 추정하지 않는다. 기존 AlarmIdentity의 기본 표시는 유지하고 작업 이력 제목에만 compact 옵션을 사용한다.
-
-작업 이력은 작업·대상 요약, 실행 상태, 결과 품질, 접수 시각, 결과 링크의 다섯 열로 표시한다. 보고서 제목은 공개 결과가 있으면 본문, 없으면 보고서 작성 현황으로 연결하며 별도 결과 보기 링크는 result_ref가 있을 때만 제공한다. RCA 결과는 기존 analyses 경로로 연결한다. 보고서 메뉴와 대시보드 등 다른 목록의 기존 결과 우선 경로는 바꾸지 않는다.
-
-대상은 클러스터 수와 Namespace 범위로 요약하고, 전체 클러스터·분석 주제·기간·집계·작업 ID는 기본으로 접힌 영역에서 확인한다. 범위 누락과 빈 Namespace는 전체로 추정하지 않는다. 상태 필터는 기존 코드를 그대로 전송하며 공통 한국어 이름으로 표시한다. 필터 초기화는 종류·상태만 지우고 다른 URL 조건을 보존한다. 현재 표시 건수는 읽어 온 항목 수이며 전체 작업 건수가 아니다. 마지막 조회는 클라이언트 쿼리 성공 시각이다.
-
-작업 목록·상세에 적용되지 않는 상단 조회 기간 선택은 숨기며 범위와 새로고침은 유지한다. 접수일 필터/API/수집·계산은 추가하지 않는다. 기존 초록색 스타일 안에서 표의 핵심 문자는 13px, 제목은 16px로 맞추고 PC에서 결과 열까지 읽을 수 있게 한다. 좁은 폭은 표 내부 스크롤을 유지한다.
-
-## 운영 보고서·운영자 가이드 가독성 정리 — 2026-10-06
-
-현재 기능·주제·요청 계약을 유지하고 보고서 목록/요청/저장 결과와 운영자 가이드의 표시만 다듬었다. 보고서 본문 14px, 표/보조 정보 13px, 소제목 16~18px와 44px 동작 버튼을 화면 범위 안에서 맞췄다. 최신 보고서 강조와 한 열 이력, 상태별 문구·색, 직접/자동 생성 표시와 목록 위치 복원은 유지한다. 이전 보고서 메타 정보는 정렬된 두 열로 배치하되 대상은 전체 폭, 좁은 화면은 한 열로 읽는다. 숫자 표의 가로 스크롤은 유지하며 가이드의 장문 안내 표만 줄바꿈한다.
-
-가이드의 7종류 선택은 넓은 화면에서 설명 옆 목록, 1100px 이하에서 같은 상태를 사용하는 기본 select로 표시한다. 네 목차·한 종류씩 보기·종류별 요청 링크·질문 예시 두 개·접힘 세부 근거는 유지한다. 포함된 세부 분석은 같은 안내 패널 안에서 두 열 전체 폭을 쓰며 제목과 질문은 짙은 글자로 표시한다. 시작 안내의 자동 일정·기간 제한을 별도 문단으로, 수치 안내를 숫자/단위·실행/품질·AI 해석으로 나눴다. 근거 부족 표는 14px 본문과 의미/확인 문단을 사용하고 모바일에서는 상태명 아래에 설명을 둔다. RCA 화면·Agent·Backend·JC·DB 및 실제 조회·계산에는 변경이 없다.
-
-네 안내 메뉴는 같은 흰색 패널·제목 영역·메뉴 아래 여백을 사용한다. 보고서 종류의 긴 버튼 이름은 단어 단위로 줄바꿈하고, 수치 읽는 법도 항목명 배경과 행 구분선이 있는 표로 통일한다. PC 화면을 기준으로 확인했으며 선택 상태·링크·설명 내용은 유지한다.
-
-## 운영 보고서 작업 상세 — 2026-10-06
-
-작업 이력의 실행 상태·결과 품질 배지는 직접 요청/자동 생성 배지와 같은 13px 글자·여백·모서리 크기를 사용하며 앞의 상태 점은 숨긴다. 상태별 색과 문구는 유지한다. 접수 시각은 날짜와 시간을 두 줄로 표시하며 실행 상태·결과 품질 열 제목과 너비는 일반 표 규칙을 따른다.
-
-기존·운영 관점의 보고서 작업 상세 상단에는 이력과 같은 분석 날짜·보고서 제목, 그 아래에는 작업 ID를 표시한다. 직접 요청/자동 생성 배지는 실행 패널 제목 옆에 둔다. 글자 크기는 운영 분석 보고서와 같은 공통 페이지 제목 규칙, 소제목 14px·본문/상태 값 13px·표 11px를 따른다. 보고서 상단에도 `작업 상태·시도 이력` 링크를 제공해 본문 맨 아래까지 내려가지 않고 작업 상세로 이동한다. 전체 작업 목록은 좌측 `작업 이력`(운영 관점 `요청 진행`, 개발 관점 `작업 디버깅`)에서 연다. 보고서 작업 상세는 실행 상태·결과 품질·현재 시도·마지막 기록 단계를 요약하고 바로 아래에 시도 이력을 최신 순으로 표시한다. 이력은 Backend가 제공하는 attempt_no·started_at·ended_at·stage·termination_reason만 사용한다. 종료 시각이나 사유 부재를 성공으로 추정하지 않고, 현재 실행 중인 회차와 종료 기록 없음·시도 이력 미확인을 구분한다. 기록된 단계이며 실시간 세부 진행률은 아니다. 원본 기록은 접어 유지한다.
-
-분석 대상은 클러스터·Namespace별로 나누고 분석 주제는 이름·O ID·요청 집계 기준으로 표시한다. 주제별 집계 map이 있으면 해당 주제의 값만 사용하고, 이전 요청은 기존 group_by를 표시한다. 선택한 주제를 산출 완료로 표시하지 않는다. RCA 상세와 개발 관점 디버깅, 취소/재시도 접수 조건·API·Worker·DB 계약은 변경하지 않는다.
-
-## 보고서 종류 선택 — 2026-10-06
-
-신규 보고서는 **전체 종합보고서** 또는 **7개 종류 중 다중 선택**으로 요청한다. 선택한 O01~O11의 합집합을 한 작업·한 보고서로 만든다. `reportKinds.ts`를 요청 폼·운영자 가이드가 함께 사용하며 카드와 결과 소제목에 실제 표시 기준을 안내한다. Namespace별 O08과 나머지 주제의 기준은 선택적 `topic_group_by`로 전달한다. O09는 여전히 선택 범위 전체의 에너지 합계이며 클러스터별로 새로 분해하지 않는다. 전체 선택은 조회량·시간을 줄인다는 뜻이 아니다.
-
-조치 비교 조건은 직접 요청에서 선택적으로 입력한다. 조건이 없거나 자동보고서인 경우 O10은 조건 미지정 사유를 표시하고 다른 소주제는 계속한다. 구 일정과 결과를 자동 변환하지 않는다. 입력·호환·배포 순서는 [02 API 계약](../docs/specs/backend/02_백엔드_API_작업명세서.md#소주제별-기준을-가진-보고서--2026-10-06)을 따른다.
-
-O07이 포함되면 선택 자원 조건을 보여준다. 직접 선택으로 전환하거나 관련 종류를 해제하면 불필요한 조치·비교·자원 입력을 정리한다. 종합·선택 보고서는 일간/주간/월간 자동 일정으로 등록할 수 있으며 O10의 비교 입력이 없으면 사유만 남긴다. 기존 일정 편집은 report_spec을 변경하지 않으며 기존 조합·과거 결과·주제 이름은 유지한다. 운영자 가이드에서 종류를 선택해 요청 화면으로 이동할 수 있고 11개 세부 분석 설명도 남긴다. 새 입력은 Backend·JC·Ops와 공통 검증/내보내기에 반영하며 RCA 분석·JC 실행 정책·DB 구조는 유지한다.
-
-## 보고서 실행시간 — 2026-10-02
-
-보고서 본문의 분석 요약, 완료된 최신 카드의 요약, 운영 보고서 작업 상세에 실행시간을 표시한다. 기존 상세 API의 각 시도 `started_at`~`ended_at`을 합산해 대기시간을 제외하고, 여러 번 실행했다면 시도 수를 함께 표시한다. 접수 `created_at`부터 마지막 실행 종료까지의 전체 소요시간은 대기를 포함한 별도 줄로 표시한다. 분석 대상 기간이나 수집 단계만의 소요시간을 보고서 생성시간으로 사용하지 않는다.
-
-완료 전에는 실행 대기/진행/재시도 상태를, 실패·취소·기한 만료에는 해당 상태를 표시한다. 시도 기록 누락·순번 불일치·시간 역전·구간 중첩은 미확인으로 남기며 접수 시각만 없으면 실행시간을 보존하고 전체 소요시간만 미확인으로 표시한다. 작은 카드별 추가 API 조회·타이머·Backend/DB/result 변경은 없다. 기존 결과도 시도 기록이 있으면 화면에서 계산하며 HTML/CSV 다운로드는 기존 형식을 유지한다.
-
-
-## 클러스터 관측과 연결 부재 — 2026-10-02
-
-Namespace 현황 앞에 요청한 모든 클러스터의 관측 GPU·연결 확인 GPU·연결 시간을 표시한다. Pod 연결 라벨 없음과 신원 연결 실패를 구분하고 유휴 여부를 단정하지 않는다. 과거 저장 결과에 요약 metric이 없으면 0으로 추정하지 않고 미확인으로 표시한다. 요청 Namespace 범위 안의 관측이며 클러스터 전체 자산 대수가 아니다.
-=======
-## 작업 디버깅 기록 순서 — 2026-10-02
-
-기록 생성 시각을 KST로 표시하고 시간 우선으로 정렬한다. 같은 시각·회차의 계획된 조회끼리는 계획 순서를 적용하며 계획 밖 기록은 생성 순번을 유지한다. 원본 정밀도는 툴팁/원본 JSON에 남는다. 기존 기록은 저장 시각·회차·계획·파생 관계로 순서를 추정하고 생성 시각과 구분한다. 확인할 수 없는 순서는 미확인으로 표시한다. API가 시도 전체의 메타데이터를 정렬한 뒤 페이지를 나누므로 화면 페이지별 재정렬은 하지 않는다.
-
-
-## 클러스터별 분석 대상 — 2026-10-02
-
-보고서 본문·작업 상세·자동 보고서 설정의 분석 대상은 클러스터마다 블록을 나누고, 클러스터 이름과 Namespace 범위를 별도 줄로 표시한다. 전체 Namespace·선택 목록·선택 없음·범위 미확인을 구분한다. 보고서 목록과 보고서 화면의 제목 아래에는 같은 구분을 `클러스터: 이름 / 범위` 한 줄로 표시한다.
-
-## 요청 순서·접수 시각·분석 대상 기간 — 2026-10-02
-
-보고서 목록은 기존 API의 접수 내림차순을 유지하며 최신 요청을 따로 강조하지 않는다. 아직 공개 결과가 없는 요청도 같은 행으로 표시하고 제목은 작성 현황 화면으로 연결하며 과거 결과 요약을 붙이지 않는다. 목록은 저장 요약을 조회하지 않는다.
-
-목록·운영 관점·작업 상세·최종 본문에 요청 접수 시각을 한국 시간의 연월일·시분초로 표시한다. 분석 대상 기간은 KST 자정에서 자정까지인 경우 `2026. 10. 01. 하루 · 1일(24시간)` 또는 마지막 포함 날짜까지의 일수로 표시한다. 작업·최종 본문은 `정확한 시간 범위`를 펼쳐 종료 직전까지임을 확인할 수 있다. 이전 시간 단위 결과와 자정 기준이 아닌 24시간은 원래 시각을 그대로 표시한다. 잘못되거나 누락된 시각은 미확인이다. 요청 기본값은 어제 하루이며 최근 24시간과 다름을 안내한다. Backend 저장 시각·요청 기간·조회·GPU-hours·분석 계산·RCA 표시는 바꾸지 않는다.
-
-## 자동 보고서 실행 확인 — 2026-10-02
-
-`자동 보고서 설정` 목록에서 최근 예정 회차의 실제 작업 상태, 최신 시도의 시작·종료, 종료·대기 사유와 다음 예정 시각을 확인한다. `사용`은 일정 활성화일 뿐 실행 성공이 아니다. 전달 확인 중·접수/실행 대기·실행 중·완료·실패·재시도 대기·건너뜀을 구분한다. pending은 접수 응답이 유실된 상태일 수도 있으므로 미실행으로 단정하지 않는다. `실행 내역 보기`는 회차 상세로, 완료된 공개 결과의 `보고서 보기`는 본문으로 연결한다. 상세의 원본 회차 기록은 접어 표시한다.
-
-서버가 활성 일정의 예정 시각 경과와 해당 회차 기록 부재를 확인하면 이전 성공 회차가 있어도 `예정 시각 지남 · 요청 기록 없음`을 표시한다. 실패·장애 원인은 추정하지 않는다. 첫 회차 없음과 구 Backend의 필드 미지원은 구분하며 API 오류는 조회 오류로 남긴다. 목록·상세는 기존 5초 조회/오류 backoff를 재사용한다. 시각은 한국 시간이고 일시 정지된 일정은 다음 자동 실행을 약속하지 않는다. 상태는 저장 기록이며 성공도 분석 근거 충족을 보장하지 않는다. 알림 전송이나 자동 재실행 기능은 추가하지 않는다.
-
-## 보고서 시각·생성 방식 — 2026-10-01
-
-## Runbook 조사별 판단 — 2026-10-02
-
-새 RCA assessment의 `question`과 `assessment_id`를 조사별 판단으로 표시한다. 기존 결과의 `purpose_id`는 계속 한국어 라벨로 표시한다. 결과가 발행되기 전에는 표시하지 않으며 partial/blocked 및 부족 근거를 유지한다. 신규 입력은 purpose_ids를 포함하지 않는다.
-
-운영 보고서의 목록·상세·실행 조건·수집 진단·검토 기록은 기존 Asia/Seoul 포맷을 재사용하며 `(KST)`를 반복하지 않고 화면에 한국 시간 안내를 한 번 표시한다. 시각과 별개인 시간 길이·GPU-hours는 변환하지 않는다. DB/API 저장값과 원본 결과·추적 자료·다운로드는 그대로 보존한다. 정기 일정의 다음 실행은 한국 시간으로 표시하며, 다른 시간대 일정 편집은 원본 실행 시각·시간대를 명시해 기존 실행 정책을 보존한다.
-
-목록 카드·운영 관점 목록·상세에서 `report_origin`에 따라 보라색 달력 배지 `자동 생성`, 주황색 배지 `직접 요청`을 표시한다. 필드가 없거나 식별되지 않으면 `생성 방식 미확인`으로 표시하며 날짜나 주기로 추정하지 않는다.
-
-# GPU Ops Advisor Frontend
-
-## 일 단위 요청·목록 배치 — 2026-10-01
-
-즉시 보고서와 비교 기간은 KST 날짜만 선택한다. 기본값은 직전 완료일이며 종료일을 포함해 같은 날짜 선택도 1일(24시간)이 된다. 요청에는 시작일 00:00부터 종료일 다음 날 00:00까지의 기존 절대 time_range를 보낸다. 최소 1일·최대 31일, 24시간 단위이며 역전·잘못된 날짜·한도 초과는 접수하지 않는다. 공통 상단의 최근 1시간 필터가 새 보고서의 기본 기간을 바꾸지 않는다. 정기는 일간·주간·월간만 제공하고 실행 시각은 분석 기간과 별개로 유지한다. 연간은 제외했다.
-
-보고서 목록은 RCA 조사 목록과 같은 표이며 접수 시각 기준 순서·결과/작업 링크·목록 복귀를 유지한다. `자동 보고서 설정`에서 반복 주기를 등록하고 생성 방식 배지는 `자동 생성`과 `직접 요청`으로 구분한다.
-
-## 운영자 가이드 — 2026-10-06
-
-주 메뉴와 보고서 하위 메뉴의 `운영자 가이드`(`/operator-guide`)에서 O01~O11의 목적·현재 산출값·필요한 데이터·제한·다음 확인을 읽는다. 요청 화면과 같은 주제명을 사용하며 각 주제의 한 줄 설명과 선택 질문 예시 두 개를 접힌 카드에서도 보여준다. 예시는 현재 계산 가능한 범위에 한정한다. 보고서 종류·분석 내용은 7개 버튼 중 고른 종류의 설명과 포함 소주제만 표시한다. 종류 버튼은 이름만 표시하고, 선택한 종류의 목적·필요 자료·주의·포함 세부 분석을 구분선이 있는 한 표로 묶는다. 보고서 만들기는 제목 우상단에 놓는다. 기본은 Namespace 현황이고 세부 계산·수집 설명은 접어 둔다. 각 소주제의 질문 예시 두 개는 유지하며 실제 요청 화면에서는 종합·다중 선택이 가능하다고 구분해 안내한다. 상단 네 버튼은 선택한 내용만 표시하며 기본은 시작 방법이다. 선택된 버튼은 진한 초록색으로 구분하고 URL fragment로 새로고침 후에도 선택을 유지한다. 종합·다중 선택이 한 보고서가 되는 방식, 직접 요청/자동 생성, 일간·주간·월간과 한국 시간 기준 날짜, 소주제별 표시 기준, GPU·시간·0/null/미계산, 실행 상태와 결과 품질을 함께 안내한다. O01 미사용 D06 제거·O06 사건 0건 로그 생략·O10 조건 부재 시 전용 조회 생략과 수집 실패의 차이를 설명하며 공통 표시 기준 문구는 reportKinds.ts를 재사용한다.
-
-안내는 [12번 설계서](../docs/specs/ops-agent/12_보고서_Agent_모듈_설계서.md), [04번 계산·판단 기준](../docs/specs/common/04_Agent_동작_판단_명세서.md), [현재 계산](../ops-agent/src/ops_agent/workflow.py)과 [Namespace 집계](../ops-agent/src/ops_agent/namespace_usage.py)를 대조한 정적 설명이다. O05 발생률·O07 GPU 부족량·O11 전체 커버리지와 전체 그룹 집계·자유 생성형 조언 등 개발 목표를 현재 기능으로 소개하지 않는다. 실제 배포의 데이터 존재·연결 성공은 판정하지 않는다.
-
-세 GUI 관점에서 같은 가이드를 제공한다. 클러스터 미등록·Backend 연결 실패 중에도 가이드는 열리며 범위·기간 필터는 숨긴다. 공통 앱의 연결 조회는 유지하지만 가이드 자체는 분석·추가 API 조회를 실행하지 않는다. 기존 보고서 실행의 연결·등록 조건, Backend/Agent/API/DB는 변경하지 않는다.
-
-## 보고서 기간·수집 구간 표시 — 2026-10-01
-
-요청 직전에 입력한 시작/종료·시간 길이(정기는 직전 완료된 일/주/월)를 보여준다. 실제 수집 한도와 초기 조회량은 Worker가 관측 전에 검사하며 접수 화면에서 성공을 보장하지 않는다. 결과의 `quality.collection`이 있으면 계획 중단/전체 구간 응답 완료/일부 미완료, 초기 계획·실제 조회량을 표시한다. 분석 진행 상세에서 query+CPC+비교 기간별 요청 범위, 데이터 응답·빈 응답·미완료 시간, 각 구간의 상태/사유/근거를 확인한다. 조회 응답 시간은 GPU 사용시간·원본 표본 커버리지가 아니다. 구 결과에 없는 진단은 추정하지 않는다.
-
-
-RCA 분석 요약은 전체 LLM 응답 기록과 `quality.analysis.synthesis`의 원인 분석 요청 시도·응답 기록·실패 코드를 구분한다. 전체 기록에는 최종 보고서 편집도 포함된다. 구 결과의 단계별 진단이 없으면 0으로 추정하지 않고 미확인으로 표시한다. 응답 수가 양수여도 검증 성공/원인 확정은 아니며, 기존 공개 결과를 재작성하지 않는다.
-
-## 보고서 요청·이력·진단 — 2026-10-01
-
-기본 화면은 전체 보고서 이력이다. 기존·운영·개발 관점에서 `보고서 이력 / 자동 보고서 설정 / 운영자 가이드` 세 메뉴과 `보고서 요청` 버튼을 사용하며 실행 상태·주제는 필터로 선택한다. 기존 `?tab=final` 링크는 완료 필터로 계속 열린다. 성공 상태와 공개 참조·결과 품질은 별개다. 보고서 전용 표에서는 종류·중복 결과 링크 열을 제거하며 일반 작업 표와 RCA 경로는 유지한다.
-
-기본 요청은 `Namespace별 GPU 사용 분석`(O08, namespace)이다. 대상·기간을 확인해 즉시 요청하고, 다른 주제·집계·조치/자원 조건은 접힌 `세부 분석 설정`에서 직접 편집한다. 기본 목적으로 복귀하면 이전 사용자 지정 조치/자원/비교 조건도 해제한다. 모든 주제를 자동 선택하거나 미지원 조합을 조용히 대체하지 않는다. 정기 등록도 같은 목적·조건에 반복 주기와 시각을 사용한다. Namespace 활동은 관측 GPU의 활동이며 실소비량·독점 할당량·회수 가능량을 뜻하지 않는다.
-
-기존 관점의 보고서 목록은 `/cases`의 RCA 조사 목록과 같은 표·글자 크기·상태 배지를 사용한다. 첫 열은 제목(분석 날짜·종류)·클러스터와 Namespace 범위·분석 대상 기간·분석 주제·생성 방식 배지이며 접수 시각·실행 상태·요건 충족 상태·실행 기록 열이 이어진다. 목록은 추가 API 조회·LLM 재호출·활동률 재계산을 하지 않는다. 접수 시각으로 동일 조건의 보고서를 구분하며 작업 ID는 보고서 화면에서 확인한다. 일반 작업 목록은 기존 표시를 유지한다.
-
-보고서 제목 앞에는 KST 기준 분석 날짜 또는 날짜 범위를 표시한다. 자정에 끝나는 기간은 직전 날짜까지 표기하고 정확한 시작·종료 시각은 본문에 유지한다. 유효한 기간이 없는 일정·구 결과는 날짜를 추정하지 않는다.
-
-목록 제목은 O08/namespace 단독이면 목적명, 복수 주제면 `GPU 운영 보고서 · N개 주제`로 줄이고 실제 주제·대상·기간·집계를 보존한다. 일정 목록은 UUID 대신 저장된 이름 또는 분석 목적과 주기·대상을 표시하고 revision/ID는 상세에 남긴다. 보고서 제목은 항상 보고서 화면을 열며 미발행 요청은 작성 현황을 표시한다. 보고서 목록에서 진입한 결과/작업 상세의 `목록으로`는 기존 필터와 불러온 목록의 해당 행 위치를 복원한다. 직접 URL 진입·목록 데이터 변경으로 해당 행이 없으면 위치 복원은 보장하지 않는다.
-
-본문의 `#final-report`는 한국어 분석 요약부터 시작한다. 운영 보고서의 주요 영역과 펼친 해석·주제별 내용은 구분선과 제목 아래 여백으로 구분한다. 이 스타일은 운영 보고서 본문에만 적용한다. 저장된 LLM/기본 보고서 문구는 `저장된 보고서 해석`에 접어 보존하며 수치·상태·권고·원문을 재작성하지 않는다. `분석 진행 상세`는 기본 접힘이며 주제별 산출/산출 불가, 부족 사유와 원본 코드, 권고 보류, 기록된 query/CPC의 수집 상태와 다음 확인, 원본 수집 기록·근거를 연결한다. 이는 실시간 단계 로그가 아니다. 조회 기록 부재를 미조회/데이터 없음으로 추정하지 않는다. 수집 완료도 계산·권고 가능을 보장하지 않는다. 다음 확인은 저장 상태에 따른 점검 안내이며 확인된 장애 원인이나 자동 조치가 아니다. 수집 합계는 기존 중복 제거 규칙을 유지한다.
-
-Backend·Agent·DB·조회 한도·API 계약·HTML/CSV 다운로드 내용은 변경하지 않는다. 화면은 같은 결과의 읽기 순서와 진단 노출만 바꾼다.
-
-## 최종 보고서 접근·표시 — 2026-09-30
-
-RCA 첫 페이지(`/cases`)의 버튼과 `최종 보고서` 탭에서 공개 RCA 결과에 접근한다. 기존·운영·개발 관점 모두 결과 본문을 열며 작업 디버깅은 별도 링크로 접근한다. 실행 성공과 결과 품질은 구분한다. 공통 작업 목록은 `result_ref`가 있는 RCA/Ops에만 `최종 보고서 보기` 링크를 표시한다. 미발행은 진행 상태만 표시하고 구 결과도 기존 상세 화면으로 열린다. 보고서 hash 링크는 데이터가 로드된 뒤 해당 섹션으로 이동한다.
-
-Ops의 다섯 섹션 narrative는 위 2026-10-01 기준에 따라 접힌 해석 영역에 보존하고 LLM 편집과 결정적 기본 보고서를 구분한다. Namespace 요약/단위/부분 산출 표시를 유지하며 구 narrative는 기존 방식으로 읽는다. 문자열은 React로 escape한다. Worker/Backend HTML도 같은 저장 narrative를 사용하고 CSV 계산값은 유지한다.
-
-## RCA 최종 보고서 · 2026-09-30
-
-공개 RCA 결과의 `narrative`를 감지된 문제·원인 판단·권고 조치와 조건·추가 확인·분석 한계로 표시한다. LLM 편집 complete와 failed/omitted의 기본 보고서를 구분하며, result_status와 원인 확정을 변경하지 않는다. 미발행 결과는 표시하지 않고 narrative 없는 기존 결과는 기존 화면을 유지한다. 원문 문자열은 React로 escape한다.
-
-React + TypeScript + Vite. [v1.3 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)의 Backend 계약 변경에 맞춰 실제 Go API 연결을 갱신했습니다. 사용자/권한 DTO, Assistant, 직접 RCA 실행, GUI 용량 변경은 제외했습니다.
-
-## Namespace 보고서 실행·표시
-
-`운영 분석·보고서 → 새 보고서 만들기`의 기본 O08·namespace 조건에서 CPC·Namespace 범위와 기간을 확인하고 요청한다. 정기 일정도 같은 프로필 선택을 따른다. 서버의 새 보고서 전용 프로필이 필요하다. 저장된 결과에는 요청 그룹·계산 기준과 O08의 적용 여부, namespace별 연결/유효시간·활동률을 먼저 표시한다. 구 결과의 미계산과 자료 부족의 null, 실제 0을 구분한다. 수집 제한은 미연결로 표시하지 않으며 권고와 근거 상세는 펼쳐 본다. 화면·HTML의 메모리는 읽기 쉬운 단위로, CSV는 원시 수치·단위로 유지한다. [검증 기록](../agents/QA.md).
-
-분석 요약은 주제별 산출 상태와 부족 근거를 먼저 표시한다. Namespace 전용 표는 요청 또는 적용 집계가 namespace일 때만 표시하며, 분석 경과 시간·기간 중 연결 GPU 고유 대수·활동률·누적 GPU·시간을 구분한다. 평균 계산의 유효시간은 상세로 이동했다. 저장 결과에 없는 GPU 대수는 추정하지 않는다. 수집 상태에서 실제 호출 수, 제한한 namespace와 동일 조회 재사용 여부를 확인할 수 있다.
+두 콘솔은 검정·회색 바탕과 녹색 강조, 얇은 구분선과 표를 사용한다. 상태는 색상과 글자를 함께 제공한다. 좁은 화면은 메뉴를 접고 긴 표 안에서 스크롤하며, 선택 범위와 여섯 관점 전환은 유지한다.
 
 ## 실행
 
-저장소 루트에서 DB와 Backend를 각각 별도 터미널로 실행하고 Frontend를 실행합니다.
+Node 24와 저장소 lockfile을 사용한다. 먼저 [Backend 로컬 실행](../backend/README.md)의 격리 DB와 API를 준비한다. 개발 서버는 migration·예시 seed를 실행할 수 있으므로 공유/운영 DB의 `DATABASE_URL`을 사용하지 않는다.
 
 ```powershell
-./backend/scripts/dev-db.ps1
-./backend/scripts/dev-server.ps1
 cd frontend
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 
-개발 주소는 http://127.0.0.1:5173/dashboard 입니다. Vite가 `/api`를 127.0.0.1:8080으로 전달합니다. Docker가 필요하지 않습니다.
-
-## 연결
-
-- 공통 범위: `/clusters`의 등록 CPC를 필터로 사용합니다. 로그인/권한은 없습니다.
-- 최초 설치: 클러스터 0건이면 빈 상태와 등록 안내를 표시합니다. 연결·설정 → 데이터 연결에서 클러스터 ID를 등록하면 목록과 공통 관측 범위가 갱신됩니다. 등록 전에는 분석 화면의 조회/실행을 시작하지 않습니다.
-- 대시보드: GET `/dashboard`, 작업·서비스 상태. 최근 작업 아래에 내부 서비스 준비 상태를 작은 요약으로 표시한다. `/service-status`의 available은 '응답 정상', unavailable은 '응답 확인 실패', 누락/알 수 없는 상태는 '미확인'이다. Backend의 readiness 확인이며 Agent·MCP·실제 작업 성공을 보장하지 않는다.
-- 자산/Pod: 저장된 identity 및 관측·매핑 스냅샷. 실시간 소스가 없으면 미확인입니다.
-- 사건/RCA: 저장 사건·분석 조회, Incident 메타데이터 PATCH. 새 RCA는 Incident에서 생성합니다.
-- 보고서: JC 접수 응답 후 job 이동, 저장된 final의 주제별 수치·산출 불가 이유·수집 상태 표시, HTML/CSV 다운로드. GPU–Pod 연결 관측 시간과 독점 할당량을 구분합니다.
-- 일정: Backend의 평탄한 calendar 입력·report_spec, revision 수정·일시 정지·occurrence 조회.
-- 지식/모델: 불변 revision·검토/발행, rca/report 모델 라우팅, secret_ref만 저장.
-- 모델 등록: 기본 화면에서 API 주소(`/chat/completions` 제외)·모델명·인증을 지정합니다. 인증은 배포된 API 키 사용 또는 인증 없음이며 키 원문은 저장하지 않습니다. revision·정밀도 등만 선택 설정입니다. 연결 검사는 선택한 인증으로 실제 추론을 요청합니다. 질의·Agent별 모델 지정 후 새 작업부터 해당 revision을 두 Worker가 사용합니다. [키 배포와 확인](../docs/model-connection.md).
-- 변경 요청: 멱등 키를 생성하고 응답 유실 시 같은 본문/키/최초 버전을 재사용합니다.
-- HTTP NodePort 접속: 요청 fingerprint는 브라우저 SHA-256 구현으로, UUID는 `crypto.getRandomValues`로 생성합니다. HTTPS 전용 `crypto.subtle`·`crypto.randomUUID`에 의존하지 않습니다. 기존 SHA-256 fingerprint와 재시도 키는 유지합니다.
-
-분석 실행에는 배포 환경의 JC·Incident·Agent·관측/LLM 연결이 필요합니다. 의존 서비스 미연결로 요청이 실패하면 오류를 표시하고 가짜 완료·결과를 만들지 않습니다. JC가 접수했지만 Agent가 없으면 queued 상태를 유지합니다. 테스트 fixture는 앱에 연결하지 않습니다. 검증 환경과 실제 연결 범위는 아래 QA를 따릅니다.
+개발 주소는 http://127.0.0.1:5173/dashboard 이며 Vite가 `/api`를 `127.0.0.1:8080`으로 전달한다.
 
 ```powershell
-npm run test
-npm run build
 npm run format:check
+npm test
+npm run build
 ```
 
-[검증 기록](QA.md) · [Backend API](../backend/API.md)
+실행 증거와 미검증 범위는 [QA](QA.md), 화면 계약은 [07 개발 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)·[08 화면 설계](../docs/specs/frontend/08_GUI_화면설계서.md)를 따른다.
+
+## 연결과 명령
+
+- `/clusters`의 CPC·Namespace가 공통 범위다. 클러스터가 없으면 등록을 안내한다. 연결·설정과 지식 관리는 빈 설치에서도 접근할 수 있다.
+- 사건 발생일·작업 접수일·보고서 분석 기간을 구분한다. 운영 콘솔의 미종결 사건에는 기간을 적용하지 않는다. 보고서 분석일 검색은 저장된 `time_range`와의 겹침이며 접수일 검색과 독립적이다. 기존 관점의 보고서 접수일 검색은 유지한다. 상세의 범위·기간은 생성 당시 값이며 전역 기간으로 재계산하지 않는다.
+- 자산·Pod 관계는 저장 관측이다. 등록 성공이나 서비스 readiness를 실제 수집·모델·분석 성공으로 표시하지 않는다.
+- RCA는 Incident가 접수한다. GUI는 사건 메타데이터, 보고서 요청, 일정, 검토와 실제 수행 조치 기록을 기존 API로 처리한다. Worker 직접 호출·장비 제어는 없다.
+- 명령은 기존 `If-Match` 버전과 멱등 키를 사용한다. 연결 오류·409·자료 부재를 성공으로 숨기지 않는다. 재시도는 동일 본문에 동일 키를 재사용한다.
+- 삭제는 현재 상태·참조 보호·사유·버전을 확인하고 완료 전에 목록에서 지우지 않는다. 사건 원본·발행 Runbook·과거 결과를 화면 전환 때문에 수정하지 않는다.
+- 입력 중 관점을 바꾸면 이탈 확인을 제공한다. 신규·운영 콘솔의 보고서/기록/일정 초안은 탭 저장소로 복원한다. 사건 기록 저장과 검토 상태·처리 상태 변경은 별도 명령이다. RCA 분석별 이전 기록은 원래 job에 남겨 읽기 전용으로 보존하고 새 사건 기록과 섞지 않는다. 복귀 경로는 허용된 앱 내부 경로만 사용한다.
+- HTTP NodePort에서도 브라우저 SHA-256과 `crypto.getRandomValues`로 fingerprint·UUID를 생성한다. 비밀·본문·쿼리 값을 API 관찰 기록에 저장하지 않는다.
+
+[Backend API](../backend/API.md)가 필드·상태·명령 계약의 기준이다.
+
+## RCA 결과와 근거
+
+현재 Worker는 **수집 1회 → 통합 분석 작성 → 최종 보고서 작성 → JC 발행**이다. 독립 검토 LLM·목표 판정·추가 수집 루프는 현재 실행 경로가 아니다. [RCA README](../rcca-agent/README.md)가 재시도·검증·기본 보고서 규칙을 소유한다. 과거 결과의 review/goal/selection 진단은 저장된 기록으로 읽으며 새 실행에 없는 단계를 만들지 않는다.
+
+RCA 본문은 main의 여섯 구역(한눈에 보기·대응 순서·로그와 지표·분석·이력·참고 자료)을 유지한다. 운영 콘솔에서는 그 앞에 확인한 사실·원인 후보·확인하지 못한 사항·다음 확인을 추가하며 나머지 원문도 펼쳐 읽을 수 있다. 안내는 선택된 발행 Runbook의 의미·확인 순서·출처·한계를 사용한다. 일반 오류에 XID/SXID 전용 내용을 적용하지 않는다.
+
+- 오류 발생 시각, 상태 보고 시각, 알림 시작(`startsAt`)을 구분한다. 알림 시작을 수신 시각이라고 표시하지 않는다. 반복 보고 수는 장애 횟수가 아니다.
+- GPU UUID·PCI를 줄이지 않고 원본 식별자를 보존한다. 인벤토리 대조·보고된 관계를 물리적 검증이나 현재 고장 확정으로 바꾸지 않는다.
+- gauge는 사건 전후 값을 비교하며 검증된 임계값 없이 정상·변화 없음을 단정하지 않는다. 0 표본만으로 작업 중단을 판단하지 않는다. 누적값 감소는 재설정·대상 변경 확인 대상으로, enum/bitmask는 코드 변화로 표시한다.
+- 작업의 관측 시작과 끝이 사건 시각을 포함할 때만 당시 관측으로 표시한다. 결측과 0, 수집 간격 안의 지연과 이후 수집 단절을 구분한다.
+- 호스트 이력은 저장된 기간·조회 한도·대상·코드 필터를 따른다. 다른 GPU나 스위치를 합쳐 동일 장치 반복으로 단정하지 않는다. 등록 간격은 고장 주기 예측이 아니다.
+- 부분 산출·근거 부족·서술 실패를 실행 성공과 구분한다. 기본 보고서나 검증된 일부 해석을 제공해도 원인 확정·업무 복구를 뜻하지 않는다.
+- `rca-material/1`, `incident-first`, 과거 구조화 결과의 읽기 호환을 유지한다. 원문·근거 참조·추가 확인 사항을 보존하며 저장된 본문을 프런트엔드에서 새로 작성하지 않는다.
+
+Fabric Manager 상태 코드에는 DCGM 정의(0 미지원·1 시작 전·2 시작 중·3 성공·4 실패·5 인식 불가·6 NVML 버전 낮음)를 표시한다. 0은 정상 상태가 아니라 해당 지표로 판단할 수 없다는 뜻이다. NVSwitch 보고서의 모델·드라이버는 이를 보고한 노드 GPU 라벨에서 가져온다. Pod 라벨을 제공할 수 없는 지표만 수집했다면 작업이 없다고 단정하지 않고 확인하지 못했다고 안내한다. AI 해석 실패는 HTTP 상태 외에 저장된 게이트웨이 오류 클래스와 출력 토큰/입력 길이 한도 종류를 함께 표시하며 민감한 오류 원문을 노출하지 않는다.
+
+GPU별 요약은 같은 판독의 장치를 묶고 전송률 단위를 환산한다. 사건 전부터 0인 표본과 사건 뒤 급감을 구분하며, 단일 표본의 한계를 표시한다. 같은 Pod가 사용한 여러 GPU와 같은 노드의 다른 작업을 함께 보여주되 DCGM 라벨 관측을 할당 또는 실제 피해로 확정하지 않는다. AI 해석 실패는 HTTP 상태·사유와 코드 산출 결과를 분리하고 XID/SXID 요약이 없는 결과의 이유도 보존한다.
+
+판정과 시간 대조는 [rcaOperatorView](src/lib/rcaOperatorView.ts), 결과 표시는 [RcaNarrative](src/components/RcaNarrative.tsx)와 [RcaOperatorReport](src/components/RcaOperatorReport.tsx)가 소유한다.
 
 ## RCA 디버깅 화면
 
-목록과 조사 상세는 저장된 target.alertname과 CPC·노드·Pod 등 발생 대상을 먼저 표시하고 사건/작업 ID를 보조 정보로 유지한다. 알람 이름이 없으면 제목·관측 증상을 사용하며 모두 없으면 미확인으로 표시한다. 이름에서 원인이나 심각도를 추정하지 않는다. 알람·사건·검토 상태는 목록에서 개별 컬럼의 배지로, 상세에서 별도 상자로 강조한다. 사건 원본 필드는 한국어 이름과 원래 키를 제공하며 항목 이름에 마우스를 올리거나 클릭/Enter로 설명을 확인할 수 있다. 제품 표기는 GPU Ops Advisor로 통일한다.
+개발자·개발 콘솔의 `/jobs/:id`는 입력·출처 / 실행·시도 / 근거·데이터 / 결과·공개로 나뉜다. 시도 선택기는 모든 탭 상단에 있으며 탭·시도·선택 근거·복귀 필터를 URL에 보존한다. 워크플로우 팝업도 같은 시도와 근거를 공유한다. 없는 시도를 최신 시도나 0으로 대체하지 않는다. 공개 결과 참조는 시도 선택과 별개이며 실행 실패의 저장 사유는 한국어 설명과 원래 코드를 함께 제공한다.
 
-사건 목록은 알람·발생 대상 / 알람 / 사건 / 검토 / 발생 시각의 다섯 컬럼으로 표시하며 상태 칸에는 배지만 제공한다. 상세에서는 alarm_status(발생/해제), state(열림/확인/종결), review_status를 이름이 있는 상태 상자로 분리한다. 상세의 연결된 RCA 작업에서 실행 상태·시도 이력 및 공개 결과로 이동한다. 새 RCA 실행·취소·재시도 기능은 추가하지 않는다.
+입력은 고정 사건 revision·snapshot·outbox·즉시 보고서·정기 회차를 조회한다. 결과 발행 전에도 `/jobs/:id/trace`의 모델·실행 프로필·지식 버전을 확인하며 지식 후보 목록은 펼쳐 읽는다. 실행 당시 자료를 현재 사건 revision이나 현재 설정으로 대체하지 않는다. 현재 설정을 열면 조사 중인 작업의 시도·근거·목록 조건으로 돌아올 수 있다. 같은 작업의 선택 시도와 직전 기록을 단계·종료 사유·시각·원격 추론 상태로 비교하며, 다른 작업 비교는 접수 조건·버전·상태·공개 결과를 대조한다. 설정 식별자가 실제 모델 호출 성공을 증명하지는 않는다.
 
-RCA 결과는 공개 상태, 결과 품질, 종료 사유, 근거 충분성, 분석 경로, LLM 응답 사용 기록을 구분한다. llm_usage.calls는 원격 요청의 완전한 감사 기록이 아니므로 0건을 연결 실패나 미호출 확정으로 표시하지 않는다. 내부 evidence는 종료 후 일괄 저장되며 실행 중에는 서버 stage만 표시한다.
+근거는 50건씩 조회하고 불러온 기록 안에서 검색·비교한다. 기록 생성 시각과 계획 순서로 정렬하며 생성 시각을 실행 시작이나 소요시간으로 추정하지 않는다. 원문을 열 때 ID/job/attempt, 지식의 ID/revision/hash를 검사한다. 연결 불일치나 API 오류는 본문 대신 별도로 표시한다.
 
-공개 결과의 evidence_refs를 기존 GET /evidence/{id}로 사용자가 8건씩 불러온다. 동일 job/attempt인지 검사하고 조회 실패는 별도 재조회로 제공한다. D-query별 구간·datasource UID·완전성·표본 수·안전한 오류 코드를 표시하며 구간 표본을 합산하지 않는다. 내부 조사 기록과 원본 결과는 펼쳐 볼 수 있다. 현재 API가 제외하는 input 쿼리 원문과 공개되지 않은 후보·webhook/outbox 기록은 제공하지 않는다. 화면은 운영 Grafana/LLM 검증을 대신하지 않는다.
+워크플로우 디버깅은 저장된 수집·작성·자료 고정·보고서 호출과 원문 참조를 연결한다. 실제 요청·응답 횟수·usage·실패 경로만 표시하며 미기록을 0이나 성공으로 만들지 않는다. 과거 검토/목적/선택 기록은 당시 결과의 진단으로 유지한다.
 
-## 네 가지 GUI 탭
+Backend 요청 관찰은 현재 탭의 최근 50개 HTTP 메타데이터만 보여준다. 내부 Worker 호출·다운로드는 포함하지 않으며 페이지 재시작 때 초기화된다.
 
-`기존(classic) / 운영(operations) / 개발자(developer) / 신규(new)` 순서로 비교할 수 있다. 저장 키는 `gpu-advisor-view`, 기본값은 classic이며 기존 선택값을 유지한다. 신규는 명시적으로 선택한다. 모드는 권한이나 인증 경계가 아니다.
+## Ops 보고서와 일정
 
-- 기존·운영·개발자의 메뉴, 화면, 결과·디버깅 경로를 보존한다. 기존/개발자의 `/cases`는 사건/RCA 조사 두 탭, 운영은 사건/조사 이력/최종 보고서 세 탭이다.
-- 신규는 운영 현황·사건 분석·운영 보고서 세 메뉴다. Shell에서 전용 화면 구성을 선택하므로 기존 원본/진단 화면을 먼저 마운트하지 않는다. 개발 경로 직접 진입은 명시적 개발자 전환을 안내하고 `/jobs/:id`는 해당 결과 화면으로 연결한다.
-- 사건 목록은 한 사건당 한 항목이다. `rca_summary`의 최신 조사 상태와 마지막 공개 분석을 구분한다. 구 Backend에서 필드가 없으면 미확인으로 남기며 각 사건의 상세를 순회 조회하지 않는다.
-- 공개 RCA의 설명·한계·오류 이벤트·상태 보고, 집계 보고서의 표·그래프, 구 O계열의 수치·권고 자격을 읽는다. 원본 JSON, 근거 ID 입력, 모델/시도 디버깅은 신규에 포함하지 않는다.
-- 보고서 생성·일정·취소/재시도/삭제, 사건 처리, 검토·실제 조치·정정은 기존 API와 멱등/버전 계약을 쓴다. 조치 대상은 수행 시각의 자산에서 선택한다. 정정은 기존 주체와 근거 참조를 유지한다. 보고서·기록·일정 초안은 같은 브라우저 탭의 sessionStorage로 복원한다.
-- 신규의 링크는 목적지를 이름에 표시하고 제목·본문 링크에 밑줄을 사용한다. 보고서 목록·상세·생성·일정·안내 화면에 같은 보고서 메뉴를 유지한다. 일정 추가는 별도 제목과 자동 보고서 설정 목록 복귀 링크로 구분한다. 사건 상세 상단에는 결과·조사 이력·처리 상태·검토/조치 기록 바로가기가 있다. 본문 목차 이동에서도 출발 정보를 유지하며, 일정에서 연 보고서는 원래 일정으로 돌아간다. 조치 저장에 빠진 입력은 버튼 옆에 안내한다.
-- 신규의 **현재 화면 HTML 저장**은 화면에 렌더링된 결과와 범위/기간/제한을 저장한다. 선택된 그래프/화면 범위이며 전체 원본 내보내기가 아니다. 폼·버튼·링크를 제거하고 CSP를 포함한다. 기존 세 화면의 서버 HTML/CSV 내보내기는 유지한다.
-- 목록 필터는 URL, 추가 페이지와 읽던 위치는 탭 저장소로 복원한다. 외부 복귀 URL은 사용하지 않는다.
+`/reports/new`의 기본은 일간·주간 Namespace 활동·사건 비교 집계다. `?legacy=true`와 기존 종류 링크, 구 O계열 보고서·월간 일정·시간대를 보존한다. `quality.report_format=report-aggregate-v1`은 [AggregateReport](src/components/AggregateReport.tsx)를 사용한다.
 
-설계·호환 조건은 [07](../docs/specs/frontend/07_프론트엔드_개발명세서.md), 화면별 계약은 [08](../docs/specs/frontend/08_GUI_화면설계서.md), 검수 기준은 [05](../docs/specs/05_테스트_검수_기준서.md#네-탭-gui-개편-검수), 실행 증거와 미검증은 [QA](QA.md)를 따른다. 로컬 구현은 운영 배포를 의미하지 않는다.
+기존 보고서 목록·상세는 RCA와 같은 표·카드·제목 체계를 유지한다. 요청 정보·목차·근거 대화상자, 시간대 crosshair와 모든 선택 계열의 tooltip, 그래프별 Namespace 선택, 보조 작업 관측 1.4절을 보존한다. 운영 콘솔도 같은 AggregateReport를 재사용하며 두 본문 스타일을 합쳐 적용한다.
 
-## 작업 중심 개발자 디버깅 — 2026-10-01
+표·그래프는 저장된 계산값과 단위·분모·제외 이유를 따른다. GPU–Pod 연결 활동은 독점 할당량이 아니며, 결측 구간은 0으로 잇지 않는다. 활동률·메모리·작업 대기 관측과 완료 Job 표본을 구분한다. 대기 Pod 최댓값은 대기 시간이 아니고 완료 Job 경과시간은 순수 GPU 실행시간이 아니다. 클러스터별 그래프 범례·Namespace 선택은 독립적이다.
 
-개발측 작업 상세(`/jobs/:id`)를 입력·출처 / 실행·시도 / 근거·데이터 / 결과·공개로 구분한다. 입력은 접수된 조건과 원본 사건, 실행은 시도별 종료 사유, 근거는 공개 결과의 참조 데이터, 결과는 공개 본문·고정 버전·검토 기록을 담당한다. 과거 시도를 선택하면 근거·데이터도 해당 시도의 저장 기록을 조회한다. 공개 결과는 현재 공개 참조를 유지한다.
+AI 해석, AI가 선택한 기존 변화, 계산 요약, 출처 미기록 문장을 구분한다. 저장된 요약 분리 정보가 원문과 일치할 때만 결정·근거를 나눠 보여준다. 조건부 제안과 과거 저활동 구간은 향후 가용 GPU나 이동 대상의 확정 정보가 아니다. 선별 기준·근거·제한은 펼쳐 확인한다. 산식과 생산자 의미는 [Ops 집계 명세](../docs/specs/ops-agent/aggregate-report-v1.md)가 소유한다.
 
-`연결 정보` 버튼은 키의 출처 테이블·필드, 복합 연결 조건, 사용 목적과 관련 API 기록을 같은 화면에 표시한다. 사건·이전 작업·근거·고정 지식 revision은 기존 읽기 API를 사용한다. 근거의 id/job_id/attempt_no, 지식의 knowledge_id/revision/content_hash가 다르면 본문 표시를 차단한다. 현재 사건 revision을 실행 당시 증거로 대체하지 않는다. 사건 증거 스냅샷·요청 출처·시도별 근거는 아래 웹 추적 API로 보강했다. 모델 설정 스냅샷·미공개 후보 본문 등 미제공 정보는 조회 한계를 명시한다.
+일정의 활성화·접수·실행·발행은 별도 상태다. 예정 회차, 실제 작업, 다음 예정 시각을 연결하고 일시중지가 이미 실행 중인 작업을 취소하는 것처럼 표시하지 않는다. 보고서 생성과 반복 일정 생성은 별도 제목·복귀 경로를 사용한다.
 
-개발측 RCA/보고서 결과 URL도 분석 본문을 열며 작업 디버깅은 별도 작업 상태 링크로 접근한다. 작업 디버깅에서는 탭·시도·원래 목록 필터를 URL에 유지한다. 작업 목록에서는 ID로 바로 열 수 있다. 개발측 사건 목록의 조사 이력·최종 보고서 탭은 RCA 메뉴 안에서 열고, 공통 상단의 중복 관련 메뉴는 제거했다. 보고서의 전체/최종 구분은 필터, 보고서/일정 구분은 탐색 메뉴로 유지한다. 지식 작성은 지식 메뉴에 모으고 Backend 설정에서 중복 작성 폼을 제거했다. 기존·운영측의 결과 읽기 화면은 유지한다.
-
-## 저장 기록 추적·비교와 Runbook 본문 — 2026-10-01
-
-개발측 입력·출처에서 작업의 고정 사건 revision, outbox, 즉시 보고서 원본, 정기 회차·revision, 알람 수신 이력을 조회한다. 전달 전후 input 필드 차이를 비교하며 원본 JSON의 소수점 시각을 보존한다. 다른 job ID를 입력하면 접수 조건·고정 버전·작업 상태·공개 결과 차이를 표시한다. 비교 ID와 원래 목록 경로는 URL에 유지한다.
-
-근거·데이터는 선택한 시도에 저장된 근거를 50건씩 조회한다. 조회 ID·상태·사유 검색은 불러온 기록에 한정한다. 이름을 누르면 저장된 요청 인자(LogQL/PromQL 포함)와 응답 snapshot을 확인한다. 두 행을 선택하면 요청·시간 범위·품질·응답 해시 차이를 비교한다. 값이 같아도 중복 호출·같은 조사 목적이라고 단정하지 않는다. 실행 순서와 시간은 미기록이므로 저장 시각 순서로만 표시하고 sufficiency의 round/remaining을 대조한다.
-
-지식 상세와 작업에 고정된 지식 revision은 `content.text`뿐 아니라 description, claim, 검색 코드, 적용/제외 조건, 필수 근거/쿼리, 관측 계획, 권고, 출처와 한계를 표시한다. 알 수 없는 content 필드도 숨기지 않으며 원본 JSON을 펼쳐 볼 수 있다. 기존 본문/편집·발행 경로를 유지하고 HTML 문자열은 텍스트로 표시한다.
-
-Backend와 Frontend를 함께 갱신해야 새 추적 기능을 사용할 수 있다. 기존 Backend의 404나 조회 오류는 정상·빈 기록으로 표시하지 않는다. 일반 결과·근거 조회 계약은 유지하며 Worker·DB 스키마 변경은 없다.
-
-## RCA 한국어 표기·부족 근거 분류 — 2026-10-01
-
-기준 `529df747173e76a908ff2d56b1ac3688c4a3e648`, 브랜치 `fix/rca-report-korean-labels`.
-`src/lib/rcaLabels.json`은 RCA Worker 표기 사전과 테스트로 일치를 확인한다. 기존 `queryName()`은 이 사전을 재사용하며 수집 조회와 R01~R09 목적에 이름·필수 근거를 표시한다. 부족한 근거는 설계상 미확정·원천/연결·생산자 계약·실행 품질로 묶고 각 확인 방향을 안내한다. 이 분류만으로 실제 exporter 부재나 Fleet 설정을 단정하지 않는다.
-
-최종 보고서가 있으면 부족 근거 영역에서 `limitations`를 중복 렌더링하지 않는다. 본문 없는 구 결과는 별도 분석 한계 영역에서 보존하며, 접힌 공개 결과 원본은 그대로 조회할 수 있다. 새 한국어/단정 검증 오류는 한국어 설명과 코드로 표시한다. API·결과 스키마는 변경하지 않았고 저장된 보고서 본문은 자동 번역하지 않는다. [Frontend QA](QA.md)에 검증 범위를 기록한다.
-
-### RCA 관측 상세 표시
-
-RCA 관측 모달은 최대 1100px이며, 깊이 2 이상 객체는 한 열로 표시합니다. Loki 로그와 Mimir 시계열은 별도 표 및 접힌 원본 JSON으로 표시합니다. 모바일 표는 가로 스크롤을 사용하고 값 셀 최소 폭은 120px입니다. 로그 시각은 KST로 표시하며 원본 나노초 값은 원본 보기에서 확인합니다.
-
-새 결과의 `quality.evidence_catalog`와 Runbook 제목 메타데이터로 참조를 표시합니다. 기존 결과에 이름이 없으면 미확인으로 표시하고 원본 식별자는 툴팁/원본 보기에서 보존합니다. 알람 표시 제목과 테스트 배지는 원인·복구 판정이 아닙니다. RCA 라벨은 Python 패키지의 사전에서 `tools/generate_rca_labels.py`로 생성합니다.
-
-운영 보고서의 분석 요약은 기준 시각·접수 시각·분석 기간·대상·집계를 라벨/값 행과 구분선으로 나눈다. 좁은 화면에서는 라벨과 값을 세로로 배치하고, 본문 소제목에는 구분선과 문단 여백을 적용한다. 저장 수치·기간과 RCA 화면은 바꾸지 않는다.
-
-저장된 보고서 상세의 상단 범위는 생성 당시 범위를 표시하며 전역 관측 범위·최근 시간 선택을 노출하지 않는다. Namespace GPU 현황의 `클러스터 골라 보기`는 클러스터 요약과 Namespace 활동 두 표만 필터링한다. 분석 요약·해석·상세 근거·다운로드는 전체 결과를 유지하며 화면에 이를 안내한다. 목록과 새 요청은 기존 전역 범위를 사용한다.
-
-RCA final reports show the detected-problem headline prominently and separate context
-paragraphs with visual boundaries. Report-generation details are collapsed. Additional
-checks/limitations show their first two stored paragraphs and an explicit remaining
-count; expansion retains all text. No Report components or global styles are changed.
-
-
-RCA result pages now use one final-report layout in both application modes. The
-`확인할 사항` section keeps stored next steps visible, explains missing-evidence
-codes in operational terms, and collapses repeated limitations and diagnostic codes.
-Opaque machine identifiers remain available under target correlation details;
-they do not establish which physical device failed. Classic/developer Cases defaults to RCA results,
-and incident details link directly to results. Report rendering is unchanged.
-
-
-## RCA incident time and investigation diagnostics — 2026-10-12
-
-RCA narrative incident timestamps display in Asia/Seoul with seconds and a KST label.
-Only the explicitly labelled incident timestamp is localized; saved text, quoted
-logs and other narrative sections remain unchanged. Analysis details distinguish
-collection stop reasons and remaining queries, and distinguish rejected hypothesis
-sentences from limitations. Older results without these diagnostics remain unknown.
-
-
-### 집계 보고서의 Namespace 요약과 장애 내용
-
-AI 운영 해석과 표·그래프의 안내 문장은 각 영역의 폭을 사용하며, AI 해석은 저장된 문단 구분을 유지한다. `MM/DD HH:mm` 형식의 날짜·시간은 함께 줄바꿈해 날짜만 앞줄에 남지 않게 한다. Namespace 표는 이름·노드 열의 비율을 고정하고 사건 표는 날짜·노드 열의 최소 공간을 확보한다. 긴 이름은 셀 안에서 줄바꿈하며 좁은 화면은 표 영역만 가로 스크롤한다. 저장 문장·계산 결과·RCA 표시에는 영향을 주지 않는다.
-
-신규 집계 보고서는 실제 보고서 제목 아래 두 대주제(Namespace별 GPU 활동 현황, 기간 내 장애 알림 현황)와 하위 제목을 표시한다. 비교표는 항상 전체 Namespace를 보여주며 필터 체크박스를 넣지 않는다. 클러스터별 그래프만 범례로 대상을 선택하며 기본은 전체 선택이며, 모두 해제하면 축·격자만 남기고 선과 점을 숨긴다. 일부 선택 시 해당 Namespace의 모든 GPU 모델만 표시하며 다른 클러스터의 선택에는 영향을 주지 않는다. 같은 Namespace는 같은 색, GPU 모델은 선 모양으로 구분한다. 모델·시간대 수치와 자료 부족 사유는 기본 접힌 세부 수치 영역에서 확인한다. 미표기 Namespace는 비교표와 분리한다. 현재 관측과 이전 비교의 자료 상태를 구분하며 관측 공백을 0으로 표시하지 않는다. 장애 종류별 현황·노드·저장 증상과 사건 링크를 보여주고 장비 반복 여부와 구분한다. 이전 결과에 증상이 없으면 설명 미저장을 안내하며 추가 API 조회로 본문을 채우지 않는다. 보고서 내부 제목/본문 스타일은 공통 패널의 작은 글자 규칙을 덮어쓰도록 보고서 범위에 한정한다.
-
-집계 보고서 비교표는 관측 구성과 실제 평균 활동률을 먼저 표시한다. 여러 모델이면 모델별 평균의 최소–최대를 표시하며 모델 평균을 다시 합치지 않는다. 유효 시간 수·전기 비교 조건은 상세에 남긴다. 사건 목록은 발생 시각·클러스터·노드·알림 내용·알림 상태·상세 보기의 독립 열로 표시한다. 날짜/시간은 두 줄로, 발생 중은 강조 배지로, 해제·미확인은 일반 텍스트로 구분한다. 상태는 보고서 작성 당시 기준이며 실시간 상태를 의미하지 않는다. 원문 펼침과 제목 링크를 제거하고 오른쪽 상세 보기로 이동 경로를 통합한다. 발행된 결과는 RCA 보기, 미발행은 사건 보기와 RCA 미발행 안내를 표시하며 밑줄·화살표로 링크를 구분한다. 저장 원문은 변경하지 않는다.
-
-UI 단독 배포는 저장 결과에 없는 노드·알림 제목·장애 종류를 새로 만들지 않는다. 관련 선택 필드가 없는 과거 결과는 미확인·미저장 안내로 표시한다. Ops 집계 생산자 보완은 별도 변경이며, 로컬 실제 관측 미리보기와 배포 후 결과의 필드 제공 범위가 다를 수 있다.
-
-사건 표 바로 위에 보고서 작성 중 알림 조회 당시의 저장 상태임을 안내하고 `summary.status_as_of`를 KST로 표시한다. 시각이 없는 과거 결과는 미저장으로 표시한다. 상태 열에는 작성 기준을 명시하며 현재 상태를 추가 조회하거나 저장 상태를 갱신하지 않는다.
-
-## RCA 근거 평가와 제목 계층 — 2026-10-13
-
-새 RCA는 회차별 근거 평가에서 제한·다음 조회·종료 이유를 함께 표시한다. 개발용
-원본 기록은 접힌 영역에 보존하며 과거 결과를 새 판단으로 다시 쓰지 않는다.
-진입 경로는 **개발측 → 사건·RCA → RCA 조사 결과 → 워크플로우 디버깅**이다. RCA 작업 상세 상단에도 같은 버튼이 있다. 팝업에서 조사 시도와 기록을 선택하면 수행 내용·저장된 이유·처리 기준·입력과 결과를 읽고 근거 ID로 이동할 수 있다. 저장 순서와 실제 호출 시작 순서를 구분하며, 없는 사유나 시간은 추정하지 않는다. 기존 근거 탭도 유지한다.
-
-팝업은 ‘무엇을 확인하려 했나 → 무엇을 했나 → 무엇을 알아냈나 → 남은 한계’ 순서로 읽는다. 자료 수집·코드 판단·LLM 처리와 원문 보존을 구분한다. 예를 들어 `runbook`은 선택 지침을 저장한 기록이며 재실행을 뜻하지 않는다. 지침 후보·제외, 조회 배정·예산은 한국어로 먼저 설명하고 원문은 펼쳐서 확인한다. 분석 상세에서는 실제 호출 여부와 검토 예약 조정 사유를 따로 확인한다. 같은 분석본의 관련 기록은 연결하되 기록 순서만으로 근거 사용 관계를 만들지 않는다.
-
-RCA 실패 요약과 워크플로우 상세는 저장된 상세 오류 코드를 우선 표시한다. 최종 초안의 미검토 상태와 모델 호출 이력은 별도이며, 호출 횟수가 없는 구 기록은 미확인이다. 관측 근거는 오류 이벤트와 상태 보고를 나누고 각각의 시각 기준·원문 시각·근거 ID를 표시한다. 저장된 이벤트의 재고 연결 후보와 상태 보고의 GPU 재고를 보여주되 독립적인 신원·현재 상태·원인 확정으로 승격하지 않는다. 근거 ID를 누르면 기존 근거 상세를 연다.
-
-증거 해석·품질 검토는 입력 크기 초과와 토큰 예산 부족, 두 조건 동시 발생을 구분한다. 요청 크기·예산 사전 검사에서 한도, 보수적 필요량, 최초 출력 상한, 실제 요청 여부를 확인한다. 과거 기록에 상세 진단이 없으면 기록 없음으로 표시한다. 단계별 모델 보고 토큰과 보수적 차감/추정량도 분리한다. 계약과 검수 범위는 [프런트엔드 명세](../docs/specs/frontend/07_프론트엔드_개발명세서.md)와 [QA](QA.md)를 따른다.
-
-주요 보고서 제목과 참고 안내 제목은 18px, 세부 출처 제목과 설명은 15px로 맞춘다.
-
-RCA final-report typography uses 18px section headings, a 16px emphasized problem summary, and consistent 15px paragraphs, list items and reference definitions. RCA-scoped selectors prevent generic panel paragraph rules from shrinking the body to 12px; Report/Ops styling is unchanged.
-
-## Report GPU memory / 보고서 GPU 메모리
-
-`AggregateReport`는 `namespace_usage.rows[].gpu_memory`가 있는 새 결과에만 기존 Namespace 비교 표에 메모리 사용 비율(사용량 ÷ 사용·여유 합계 × 100)을 추가합니다. GPU당 평균 사용량 / 전체 용량(사용량과 여유량의 합계) GiB를 작은 보조 수치로 남깁니다. 여러 모델은 평균 범위를 표시하며 시간대 상세도 같은 형식입니다. 클러스터별로 활동률과 메모리 비율 그래프를 분리하고 시간축·색상을 공유합니다. 대주제는 굵은 구분선과 번호, 소주제는 얇은 구분선과 하위 번호로 구분합니다. AI 운영 해석에는 번호를 붙이지 않으며 이후 분석 항목부터 번호를 매깁니다. 고정 해석 기준·산식·알림 기준 안내는 옅은 회색으로 AI 해석의 녹색 배경과 구분합니다. 각 클러스터의 활동률·메모리 그래프 아래에 작은 독립 범례를 두며, Namespace 선택·전체 해제는 해당 그래프에만 적용됩니다. 메모리 사용/여유 전환도 해당 클러스터에만 적용됩니다. 자료 부재는 확인 불가, 실제 0은 0.0%로 구분합니다. 기존 활동 계산·RCA 화면은 유지합니다. AI 설명은 저장된 narrative를 표시하며 프런트엔드가 새 해석을 생성하지 않습니다.
-
-메모리 근거를 사용한 설명은 대상·시간·수치를 코드가 확정하고(`observation_source=calculated`), AI는 의미와 확인할 점을 작성합니다. 화면에서도 둘을 구분합니다. 검증을 통과하지 못한 AI 문장은 계산 요약으로 대체하며 기존 활동률·이전 기간 비교·사건 계산은 유지합니다.
-
-작업 보조 관측은 같은 Namespace 주제의 `workloads`를 표시합니다. 대기·미배치·실행은 관측 최대 Pod 수, 완료는 확인된 Job 표본이며 결측은 `자료 없음`으로 구분합니다. 과거 결과에 이 필드가 없으면 추가 표를 표시하지 않습니다. 사건 종류 표에서 이번 기간 0건인 비교 행은 `이번 기간 발생 없음`으로 표시하며, 실제 사건은 있으나 노드가 없는 경우와 구분합니다. 중복 표 제목은 시각적으로 숨기고 접근성 caption은 유지합니다.
-
-작업 보조 관측은 기존 Namespace 분석 안에서 시간 구간별 최대 대기 Pod 수와 완료 Job별 시작·완료·경과시간을 표시합니다. 대기는 구간 최대값 막대이며 순간 상태를 연결한 선이 아닙니다. 보고 기간에 완료된 이전 실행 Job도 포함하고, 대기·준비 포함 경과시간을 순수 실행시간과 구분합니다.
-
-작업 대기·완료 UI는 기존 그래프와 같은 클러스터 헤더(18px), 지표 제목(16px), Namespace 제목/본문(14px)을 사용합니다. 같은 클러스터의 Namespace별 대기 막대를 함께 배치하고, 완료 Job은 한 표로 묶어 Namespace와 작은 Job 이름, 시작·완료 날짜/시간, 경과시간을 표시합니다. 좁은 화면은 표 안에서만 가로 스크롤하며 집계값·AI 원문은 변경하지 않습니다.
-
-
-Namespace 제안의 `selection.criteria`가 있는 새 결과는 접힌 근거에서 선별 기준과 전체/전달/요약 후보 수를 표시합니다. AI 요약 문장은 그대로 렌더링하고 완료 표본·시간대별 대기·Job 경과시간의 산식이나 후보를 화면에서 만들지 않습니다. 구 결과에 없는 기준은 추정하지 않습니다. 기준의 의미는 [Ops 운영 제안](../ops-agent/README.md#namespace별-조건부-운영-제안)을 따릅니다.
-
-시간대 변경 제안은 첫 화면에 **작업 시작 시간 검토 · 과거 관측**으로 표시하고 저장된 비교 구간과 낮은 활동 구간을 해당 순서로 보여줍니다. 날짜는 같은 날이면 한 번만 표시하고 시간 범위를 괄호로 묶습니다. 분 단위가 아닌 원본 시각의 초·날짜 경계와 종료 시각 제외 의미를 보존합니다. 상대적 저활동 또는 낮은 활동 관측이라는 제안 기준을 설명하며 빈 GPU가 확인됐다는 뜻으로 표시하지 않습니다. 이미 지난 관측 구간이며 이후 같은 시간대의 반복성과 가용 GPU를 추가로 확인해야 작업 시간 변경을 검토할 수 있다고 안내합니다. 누락·잘못된 시간 범위는 미확인으로 남기고, LLM 원문과 기존 수치·그래프는 그대로 표시합니다. 제안·안내문은 패널 폭에 맞춰 자연스럽게 줄바꿈하고, 날짜 범위는 화면 폭 안에서 묶어 표시합니다.
-
-작업 라벨·GPU 요청·노드 상태를 연결한 보충 자료는 Ops 보고서의 접힌 **작업 유형·GPU 요청·노드 배정 근거** 표에 표시합니다. 연결 범위와 제외 조건은 [Ops 집계 명세](../docs/specs/ops-agent/aggregate-report-v1.md#저장된-작업-유형gpu-요청-연결)를 따릅니다. 구 보고서는 이 표 없이 그대로 표시합니다.
-
-RCA의 `quality.triage_observations`가 있는 보고서는 고정 6단 구성이다: 1) 한눈에 보기(무엇·대상·언제·누구에게 영향(파드가 함께 쓰는 GPU 번호, 같은 노드의 다른 GPU 작업)·처음인가·우선 대응. 지표 판정은 3장 표와 Q3에만 둔다. 파드 라벨을 저장한 결과에서 사건 시각 파드가 없으면 그 사실을 표시), 2) 대응 순서([NVIDIA GPU Node Triage](https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html) 순서: 대상 확정 → 발행 런북 `operator_guidance.next_checks`(SXID 11001의 패브릭 점검·재발 시 진단도 런북 내용) → 런북에 없을 때만 공통 조치 후 확인·에스컬레이션, 공급사 전달 자료 체크리스트(✅ 보고서에 있음·⬜ 미수집·✍ 운영자 작성 범례, 드라이버 버전은 DCGM 라벨)·리셋 방식 표), 3) 관련 로그·메트릭(육하원칙 표, 사건 타임라인, 로그 표, GPU 한 장이면 지표별 `사건 전 · 사건 후 · 한 줄 해석` 표, 여러 GPU면 판정이 같은 GPU를 한 줄로 묶은 GPU별 `직전 → 사건 후` 표와 접힌 원자료, DCGM 지표 라벨의 사용 작업), 4) 분석 및 해석(장치 일치·시작/지속·지표 변화·반복/확산·미확인 항목의 5개 질문), 5) 이전 사건 이력(장치별 막대와 사건 표), 6) 참고 자료. 4장의 판정은 `src/lib/rcaOperatorView.ts`가 저장된 결과 필드만으로 결정적으로 계산하며 LLM 문장을 쓰지 않는다. 표본 부재는 수집 주기(`max_sample_gap_seconds`)를 넘을 때만 끊김으로 표시하고, 정정 불가 ECC(D40·D42) 누적값 증가는 즉시 확인, 그 밖의 누적값 증가는 주의로 표시하며 비트마스크·열거형 코드는 크기를 비교하지 않고, 여러 장치 반복·XID/SXID 동반은 `추정` 표시를 붙인 점검 방향으로만 제시한다. GPU UUID와 PCI 주소는 줄이지 않고 배경색 없이 고정폭 글꼴로 구분해 표시하며, PCI는 exporter 라벨(`gpus`)을 먼저, 없으면 노드 인벤토리(미검증 매핑)를 쓴다. GPU 번호는 exporter `gpu` 라벨만 쓰고 임의 번호를 붙이지 않는다. 같은 GPU가 파드 라벨별로 나뉜 지표는 한 줄로 합치고(저장된 과거 결과 포함), Q3는 `멈춤·급감·끊김·증가·판단 보류·유지·사건 전부터 0·변화 없음` 판정을 쓰고, 판정 문장은 변화와 사건 전부터 0만 요약하며 여러 GPU는 GPU 번호로 묶는다. GPU별 Fabric Manager 상태 코드는 DCGM 정의(0 미지원·1 시작 전·2 시작 중·3 성공·4 실패·5 인식 불가·6 NVML 버전 낮음)를 함께 쓰고, 0은 이 지표로 FM 상태를 판단할 수 없음을 알린다. NVSwitch 보고서도 노드 GPU 라벨의 모델·드라이버를 머리글과 체크리스트에 쓴다. 파드 라벨이 없는 지표만 있으면 파드 없음으로 쓰지 않고 확인하지 못했다고 표시한다. AI 해석 실패에는 HTTP 상태와 게이트웨이 오류 클래스·한도 종류를 함께 표시한다. 사건 직전 값보다 90% 이상 줄면 표본이 1회여도 급감(표본 1회 표시), 1회 표본이 직전 값 ±20% 안이면 유지로 쓴다. 바이트 속도는 KB/MB/GB 단위로 표시한다. 4장 끝 `AI 해석`은 LLM이 쓴 문장만 보이며, 코드가 만든 고정 문장은 Q1~Q5와 겹쳐 표시하지 않는다. 사건 직전 표본이 이미 0이면 오류로 멈췄다고 쓰지 않는다. LLM 해석이 실패하면 헤더에 `AI 해석 실패 · HTTP 상태`와 표·판정이 코드 계산이라는 설명을 둔다. 시작 시각은 커널 이벤트가 없으면 `onset`(마지막 정상 보고~첫 오류 보고)으로 표시한다. 기본·운영 모드의 RCA 결과 화면은 알림 식별 정보와 6단 보고서만 보여 주고, 수집·판단 근거·LLM 실행 기록·검토·조치 기록은 개발자 모드에서만 표시한다. 생산자 발생 시각과 로그 보고 구간을 구분하며 사건 이전에 끝난 메트릭은 이를 명시한다. SXID의 Grafana PCI 조회 결과는 GPU 식별자와 분리한다. 분석과 공식 참고 자료는 펼친 본문이며 단순 수집 원문·처리 진단만 접는다. 관련 로그와 GPU 지표를 표로 표시한다. `quality.host_incident_history`는 호스트 등록 사건의 7일/14일·코드 필터와 사건 링크, 발행된 이전 RCA 링크를 제공한다. 스위치 이력은 PCI 전체 주소로 묶으며 이전 partial 결과를 명시한다. 표의 관측 구간은 알림 기록 구간이며 장애 지속 시간이 아니다. 이 확장 필드가 없는 결과는 표를 만들지 않고, 6단 제목을 유지한 채 1·3장에 사유와 사용 Runbook revision을 표시한다(XID/SXID는 이전 revision 실행 안내, 그 밖의 컴포넌트 알림은 비교 자료 대상이 아님을 안내). 수집·판정 상세는 접어서 보존한다. Ops 보고서에는 적용하지 않는다.
-
-RCA 호스트 이력은 선택 기간의 코드·대상별 사건 수와 최근 등록 간격·간격 범위를 요약 표로 표시하고, 개별 사건 표를 이어서 제공한다. GPU가 없는 기록은 호스트 단위로 묶는다. 간격은 Incident 등록 시각 기준이며 고장 주기 예측이 아니다. 조회 종료 이후까지 이어진 기록은 마지막 시각에 `조회 종료`를 붙인다.
+신규·운영 콘솔의 **현재 화면 HTML 저장**은 렌더링된 범위·기간·제한을 저장한다. 전체 원본 내보내기가 아니며 폼·버튼·링크를 제거하고 CSP를 포함한다. 기존 서버 HTML/CSV 출력은 보존한다. 출력과 화면 조회는 LLM을 다시 호출하지 않는다.

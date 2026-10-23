@@ -7,6 +7,7 @@ import {
   jobRelation,
   knowledgeRelation,
   returnPath,
+  selectedAttempt,
 } from '../lib/debug';
 import { obj, rows, str, useResource, type Row } from '../lib/live';
 import { ReportOrigin, ReportTimeNote, ReportScope } from './ReportMeta';
@@ -16,13 +17,22 @@ import { Reviews, ReportExports } from '../pages/Results';
 import { AlarmIdentity, DataView, QueryState } from './live';
 import { Badge, Notice } from './ui';
 import { RcaResult } from './RcaDebug';
-import { InputTrace, StoredEvidence, JobComparison, RawRecord } from './TraceView';
+import {
+  InputTrace,
+  StoredEvidence,
+  JobComparison,
+  RawRecord,
+  AttemptComparison,
+} from './TraceView';
 import { ReportContent } from './ReportContent';
 import { ReportDeletionNotice } from './ReportDeletion';
 import { RecordInspector } from './RecordInspector';
 import { WorkflowGuide } from './WorkflowGuide';
+import { useApp } from '../lib/store';
+import { rcaReasons } from '../lib/rcaLabels';
 
 export function JobDebug({ job, onAction }: { job: Row; onAction: (action: string) => void }) {
+  const app = useApp();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const contextParams = new URLSearchParams(params);
@@ -31,36 +41,51 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
   const tab = debugTab(params.get('tab'));
   const attempts = rows(job.attempts);
   const requestedAttempt = params.get('attempt');
-  const attempt = requestedAttempt === null ? job.attempt_no : Number(requestedAttempt);
+  const attempt = selectedAttempt(job, requestedAttempt);
   const selected = attempts.find((a) => a.attempt_no === attempt);
+  const failure = str(
+    selected
+      ? selected.termination_reason
+      : requestedAttempt === null
+        ? job.termination_reason
+        : undefined,
+  );
   const [relationKey, setRelationKey] = useState('');
-  const [evidenceId, setEvidenceId] = useState('');
-  const [inspectedAttempt, setInspectedAttempt] = useState(0);
+  const evidenceId = params.get('evidence') || '';
   const [knowledgeIndex, setKnowledgeIndex] = useState<number | null>(null);
   const result = job.result_ref != null ? obj(job.result) : {};
   const traceQuery = useResource(`/jobs/${encodeURIComponent(str(job.id))}/trace`);
-  const trace = traceQuery.data;
-  const evidenceAttempt =
-    typeof attempt === 'number' && Number.isInteger(attempt) && attempt >= 0 ? attempt : 0;
-  const knowledge = rows(obj(result.versions).knowledge);
+  const trace = traceQuery.data?.job_id === job.id ? traceQuery.data : undefined;
+  const versions = obj(trace?.versions ?? result.versions);
+  const knowledge = rows(versions.knowledge);
+  const evidenceAttempt = attempt;
+  const updateEvidence = (id: string, nextAttempt = attempt) => {
+    const next = new URLSearchParams(contextParams);
+    if (id) next.set('evidence', id);
+    else next.delete('evidence');
+    if (nextAttempt !== null) next.set('attempt', String(nextAttempt));
+    setParams(next, { state: location.state });
+  };
   const relation =
-    knowledgeIndex !== null && knowledge[knowledgeIndex]
-      ? knowledgeRelation(knowledge[knowledgeIndex])
-      : evidenceId
-        ? evidenceRelation({ ...job, attempt_no: inspectedAttempt }, evidenceId, true)
+    evidenceId && evidenceAttempt !== null
+      ? evidenceRelation({ ...job, attempt_no: evidenceAttempt }, evidenceId, true)
+      : knowledgeIndex !== null && knowledge[knowledgeIndex]
+        ? knowledgeRelation(
+            knowledge[knowledgeIndex],
+            trace ? 'jobs.versions.knowledge[]' : undefined,
+          )
         : relationKey
           ? jobRelation(job, relationKey, typeof attempt === 'number' ? attempt : undefined, trace)
           : null;
   const inspect = (key: string) => {
     setKnowledgeIndex(null);
-    setEvidenceId('');
+    updateEvidence('');
     setRelationKey(key);
   };
   const onEvidence = (id: string) => {
-    setInspectedAttempt(tab === 'result' ? Number(job.attempt_no ?? 0) : evidenceAttempt);
     setKnowledgeIndex(null);
     setRelationKey('');
-    setEvidenceId(id);
+    updateEvidence(id, tab === 'result' ? selectedAttempt(job, null) : evidenceAttempt);
   };
   const keyButton = (key: string, label: string) => (
     <button className="button" onClick={() => inspect(key)} aria-expanded={relationKey === key}>
@@ -69,6 +94,31 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
   );
   return (
     <>
+      {app.mode === 'workbench' && failure && (
+        <aside className="console-failure" role="note">
+          <div>
+            <strong>{selected ? '선택한 시도의 종료 사유' : '작업 종료 사유'}</strong>
+            <p>{rcaReasons[failure] || failure}</p>
+            <code>{failure}</code>
+          </div>
+          <div className="head-actions">
+            <Link
+              className="button"
+              to="/settings/backend"
+              state={{ from: location.pathname + location.search }}
+            >
+              현재 서비스 상태
+            </Link>
+            <Link
+              className="button"
+              to="/settings/models"
+              state={{ from: location.pathname + location.search }}
+            >
+              현재 모델 설정
+            </Link>
+          </div>
+        </aside>
+      )}
       <section className="debug-summary stack">
         {job.kind === 'rca' ? (
           <AlarmIdentity record={job} />
@@ -107,6 +157,107 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
         <small>
           작업 {str(job.id)} · 접수 {formatDate(str(job.created_at))}
         </small>
+        <label className="field">
+          <span>확인할 실행 시도</span>
+          <select
+            value={selected ? String(selected.attempt_no) : ''}
+            onChange={(e) => {
+              setRelationKey('');
+              setKnowledgeIndex(null);
+              updateEvidence('', Number(e.target.value));
+            }}
+          >
+            {!selected && (
+              <option value="">
+                {requestedAttempt !== null ? '요청한 시도가 응답에 없음' : '실행 시도 없음'}
+              </option>
+            )}
+            {attempts.map((a) => (
+              <option key={String(a.attempt_no)} value={String(a.attempt_no)}>
+                {String(a.attempt_no)}회차{a.attempt_no === job.attempt_no ? ' · 현재' : ' · 과거'}{' '}
+                · {str(a.stage, '단계 미확인')} · {formatDate(str(a.started_at))}
+              </option>
+            ))}
+          </select>
+        </label>
+        <details className="debug-pinned" open={tab === 'input'}>
+          <summary>
+            접수 시 고정된 입력·설정
+            {trace
+              ? ` · 사건 revision ${trace.evidence_version ?? '해당 없음'} · 모델 revision ${obj(versions.model).model_revision ?? '미기록'} · 지식 ${Array.isArray(versions.knowledge) ? `${knowledge.length}건` : '미기록'}`
+              : ''}
+          </summary>
+          <QueryState query={traceQuery}>
+            {traceQuery.data && !trace ? (
+              <Notice tone="warning">
+                작업 연결 불일치: 다른 작업의 고정 설정은 표시하지 않습니다.
+              </Notice>
+            ) : (
+              <>
+                <p>
+                  작업 접수 당시 고정된 값입니다. 현재 서비스 설정과 다를 수 있으며, 모델 키는 실제
+                  호출 성공을 뜻하지 않습니다. 지식은 선택 전 후보를 포함합니다.
+                </p>
+                <div className="head-actions">
+                  {keyButton(
+                    job.kind === 'rca' ? 'snapshot' : 'request',
+                    job.kind === 'rca' ? '사건 입력 원본' : '보고서 요청 원본',
+                  )}
+                  {keyButton('model', '고정 모델 버전')}
+                </div>
+                <DataView
+                  value={{
+                    model: versions.model ?? '미기록',
+                    execution_profile_revision: versions.execution_profile_revision ?? '미기록',
+                  }}
+                />
+                {knowledge.length > 0 && (
+                  <details>
+                    <summary>고정된 지식 후보 {knowledge.length}건</summary>
+                    <div className="head-actions">
+                      {knowledge.map((k, index) => (
+                        <button
+                          className="button"
+                          key={`${str(k.knowledge_id)}-${String(k.revision)}`}
+                          onClick={() => {
+                            setRelationKey('');
+                            updateEvidence('');
+                            setKnowledgeIndex(index);
+                          }}
+                        >
+                          지식 {index + 1} · revision {String(k.revision ?? '미기록')}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                {!knowledge.length && (
+                  <p>
+                    고정된 지식 버전 기록이 없습니다. 사용 여부는 선택한 시도의 Runbook 기록에서
+                    확인하세요.
+                  </p>
+                )}
+                <RawRecord value={versions} label="고정된 버전·계산 기준 원본" />
+                <div className="head-actions">
+                  <Link
+                    className="button"
+                    to="/settings/models"
+                    state={{ from: location.pathname + location.search }}
+                  >
+                    현재 모델 설정
+                  </Link>
+                  <Link
+                    className="button"
+                    to="/knowledge"
+                    state={{ from: location.pathname + location.search }}
+                  >
+                    현재 Runbook 목록
+                  </Link>
+                </div>
+              </>
+            )}
+          </QueryState>
+        </details>
       </section>
       <nav className="debug-tabs" aria-label="작업 상세 구분">
         {debugTabs.map(([key, label, question]) => {
@@ -188,32 +339,13 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                 <code>job_attempts(job_id, attempt_no)</code>로 구분합니다. 과거 시도를 선택해도
                 근거·데이터 탭도 선택한 시도의 기록을 표시합니다. 공개 결과는 바뀌지 않습니다.
               </p>
-              <label className="field">
-                <span>확인할 실행 시도</span>
-                <select
-                  value={selected ? String(selected.attempt_no) : ''}
-                  onChange={(e) => {
-                    const next = new URLSearchParams(contextParams);
-                    next.set('attempt', e.target.value);
-                    setParams(next, { state: location.state });
-                  }}
-                >
-                  {!selected && (
-                    <option value="">
-                      {requestedAttempt ? '요청한 시도가 응답에 없음' : '실행 시도 없음'}
-                    </option>
-                  )}
-                  {attempts.map((a) => (
-                    <option key={String(a.attempt_no)} value={String(a.attempt_no)}>
-                      {String(a.attempt_no)}회차 · {formatDate(str(a.started_at))} ·{' '}
-                      {str(a.stage, '단계 미확인')}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {attempt !== null && <AttemptComparison attempts={attempts} attempt={attempt} />}
               {selected ? (
                 <>
-                  <DataView value={selected} fieldNames={{ ended_at: '실행 종료' }} />
+                  <details>
+                    <summary>선택한 시도 상세</summary>
+                    <DataView value={selected} fieldNames={{ ended_at: '실행 종료' }} />
+                  </details>
                   <RawRecord value={selected} />
                 </>
               ) : (
@@ -257,17 +389,23 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
           {tab === 'evidence' && (
             <>
               <h2>조회 요청·응답과 판단 근거</h2>
-              <Notice>
-                선택한 시도 {evidenceAttempt}의 저장 기록입니다. 실행·시도 탭에서 시도를 변경할 수
-                있습니다. 조회 이름을 누르면 요청 인자와 응답 snapshot을 확인합니다. 수집 성공과
-                분석 근거 충분성은 별개입니다.
-              </Notice>
-              <StoredEvidence
-                key={`${str(job.id)}-${evidenceAttempt}`}
-                job={job}
-                attempt={evidenceAttempt}
-                onEvidence={onEvidence}
-              />
+              {evidenceAttempt !== null && (
+                <Notice>
+                  선택한 시도 {evidenceAttempt}의 저장 기록입니다. 화면 위에서 시도를 변경할 수
+                  있습니다. 조회 이름을 누르면 요청 인자와 응답 snapshot을 확인합니다. 수집 성공과
+                  분석 근거 충분성은 별개입니다.
+                </Notice>
+              )}
+              {evidenceAttempt !== null ? (
+                <StoredEvidence
+                  key={`${str(job.id)}-${evidenceAttempt}`}
+                  job={job}
+                  attempt={evidenceAttempt}
+                  onEvidence={onEvidence}
+                />
+              ) : (
+                <Notice>유효한 시도를 선택해야 근거를 조회할 수 있습니다.</Notice>
+              )}
             </>
           )}
           {tab === 'result' && (
@@ -282,25 +420,8 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
                 </Notice>
               ) : (
                 <>
-                  <h3>실행에 고정된 설정·지식</h3>
-                  <div className="head-actions">
-                    {keyButton('model', '모델 설정 버전')}
-                    {knowledge.map((k, index) => (
-                      <button
-                        className="button"
-                        key={`${str(k.knowledge_id)}-${String(k.revision)}`}
-                        onClick={() => {
-                          setRelationKey('');
-                          setEvidenceId('');
-                          setKnowledgeIndex(index);
-                        }}
-                      >
-                        지식 {index + 1} · revision {String(k.revision ?? '미제공')} 연결 정보
-                      </button>
-                    ))}
-                  </div>
                   <details>
-                    <summary>적용된 버전·계산 기준 원본</summary>
+                    <summary>발행 결과가 기록한 버전·계산 기준 원본</summary>
                     <DataView value={result.versions} />
                   </details>
                   {job.kind === 'report' ? (
@@ -342,7 +463,7 @@ export function JobDebug({ job, onAction }: { job: Row; onAction: (action: strin
             onClose={() => {
               setKnowledgeIndex(null);
               setRelationKey('');
-              setEvidenceId('');
+              updateEvidence('');
             }}
           />
         )}

@@ -68,7 +68,6 @@ class Settings:
             "max_rows",
             "max_bytes",
             "max_range_seconds",
-            "max_followups",
             "deadline_seconds",
         ):
             if profile["limits"][key] <= 0:

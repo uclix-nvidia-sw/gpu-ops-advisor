@@ -30,7 +30,7 @@ import { groupLabel, topicName } from '../lib/report';
 import { reportScopeClusters, reportTitle, reportTopics } from '../lib/workflow';
 import { JobDebug } from '../components/JobDebug';
 import { ReportDeletionNotice } from '../components/ReportDeletion';
-import { debugPath, returnPath } from '../lib/debug';
+import { debugPath, returnPath, selectedAttempt } from '../lib/debug';
 import { RcaWorkflowButton } from '../components/RcaWorkflow';
 export function Jobs() {
   const app = useApp();
@@ -55,10 +55,10 @@ export function Jobs() {
     <div className="page jobs-workspace">
       <PageHead
         eyebrow=""
-        title={app.mode === 'developer' ? '작업 디버깅' : '작업 이력'}
+        title={app.mode === 'developer' || app.mode === 'workbench' ? '작업 디버깅' : '작업 이력'}
         description="작업의 진행 상태와 결과 품질을 확인하세요. 보고서 제목은 보고서 화면으로 연결됩니다. 실행 기록은 작업 상태·시도 이력에서 확인하세요."
       />
-      {app.mode === 'developer' && (
+      {(app.mode === 'developer' || app.mode === 'workbench') && (
         <form
           className="live-toolbar"
           onSubmit={(e) => {
@@ -289,6 +289,7 @@ export function JobHistoryTable({ items }: { items: Row[] }) {
 
 export function JobDetail() {
   const location = useLocation();
+  const [params, setParams] = useSearchParams();
   const from = returnPath(
     new URLSearchParams(location.search).get('from') || location.state?.from,
     obj(location.state).reportList ? reportReturnPath(location.state) : '/jobs',
@@ -318,7 +319,7 @@ export function JobDetail() {
       );
     }
   };
-  const reportView = j.kind === 'report' && app.mode !== 'developer';
+  const reportView = j.kind === 'report' && app.mode !== 'developer' && app.mode !== 'workbench';
   const unresolved = rows(j.attempts).filter(
     (attempt) =>
       attempt.ended_at != null &&
@@ -329,11 +330,31 @@ export function JobDetail() {
     <div className={reportView ? 'page report-job-detail' : 'page'}>
       <PageHead
         eyebrow={reportView ? '운영 분석 보고서 · 작업 상세' : 'JOB DETAIL'}
-        title={app.mode === 'developer' ? '작업 디버깅' : reportView ? reportTitle(j) : '작업 상세'}
+        title={
+          app.mode === 'developer' || app.mode === 'workbench'
+            ? '작업 디버깅'
+            : reportView
+              ? reportTitle(j)
+              : '작업 상세'
+        }
         description={reportView ? `작업 ID · ${id || '미확인'}` : id || ''}
         actions={
           <>
-            {app.mode === 'developer' && j.kind === 'rca' && id && <RcaWorkflowButton jobId={id} />}
+            {(app.mode === 'developer' || app.mode === 'workbench') && j.kind === 'rca' && id && (
+              <RcaWorkflowButton
+                jobId={id}
+                attempt={selectedAttempt(j, params.get('attempt'))}
+                recordId={params.get('evidence') || ''}
+                onSelect={(attempt, recordId) => {
+                  const next = new URLSearchParams(params);
+                  next.set('from', from);
+                  next.set('attempt', String(attempt));
+                  if (recordId) next.set('evidence', recordId);
+                  else next.delete('evidence');
+                  setParams(next, { state: location.state });
+                }}
+              />
+            )}
             <Link className="button" to={from} state={{ reportRow: obj(location.state).reportRow }}>
               {from === '/jobs' ? '작업 목록' : '이전 목록·기록으로'}
             </Link>
@@ -355,7 +376,7 @@ export function JobDetail() {
             결과는 발행하지 않습니다.
           </Notice>
         )}
-        {app.mode === 'developer' ? (
+        {app.mode === 'developer' || app.mode === 'workbench' ? (
           <JobDebug
             key={id}
             job={j}

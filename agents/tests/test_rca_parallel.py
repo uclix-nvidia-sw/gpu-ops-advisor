@@ -113,3 +113,24 @@ async def test_zero_reservation_cannot_issue_request():
     results = await collect_round(obs, ["D01", "D02"], budget, round_no=0)
     assert calls == 1 and budget["queries"] == 0
     assert results["D02"][0]["quality"]["reason"] == "budget_exhausted"
+
+
+@pytest.mark.asyncio
+async def test_single_collection_can_use_the_entire_query_budget():
+    calls = []
+
+    async def tool(args):
+        calls.append(args["expr"])
+        return {"data": {"result": []}}
+
+    obs = parent(tool)
+    obs.profile["queries"].update(
+        {
+            "D03": {**obs.profile["queries"]["D01"], "metric": "metric_c"},
+            "D04": {**obs.profile["queries"]["D01"], "metric": "metric_d"},
+        }
+    )
+    budget = {"queries": 4, "discovery": 0}
+    results = await collect_round(obs, ["D01", "D02", "D03", "D04"], budget, round_no=0)
+    assert len(calls) == 4 and budget["queries"] == 0
+    assert all(entries[0]["tool_status"] == "empty" for entries in results.values())

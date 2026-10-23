@@ -545,7 +545,7 @@ export function LegacyReportForm() {
   );
 }
 
-export function ReportFilters() {
+export function ReportFilters({ resetLabel = '필터 해제' }: { resetLabel?: string } = {}) {
   const [params, setParams] = useSearchParams();
   const filter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -606,7 +606,7 @@ export function ReportFilters() {
             setParams(next);
           }}
         >
-          필터 해제
+          {resetLabel}
         </button>
       </div>
       <details

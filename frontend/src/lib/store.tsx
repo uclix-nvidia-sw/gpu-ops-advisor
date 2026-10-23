@@ -3,9 +3,10 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import { apiRequest } from './api';
 import { currentRange } from './live';
 import type { Scope, TimeRange } from './types';
+export type ViewMode = 'classic' | 'operations' | 'developer' | 'new' | 'workbench' | 'control';
 type AppState = {
-  mode: 'classic' | 'operations' | 'developer' | 'new';
-  setMode: (mode: 'classic' | 'operations' | 'developer' | 'new') => void;
+  mode: ViewMode;
+  setMode: (mode: ViewMode) => void;
   scope: Scope;
   registeredScope: Scope;
   setScope: (s: Scope) => void;
@@ -26,7 +27,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mode, updateMode] = useState<AppState['mode']>(() => {
     try {
       const saved = localStorage.getItem('gpu-advisor-view');
-      return saved === 'operations' || saved === 'developer' || saved === 'new' ? saved : 'classic';
+      return saved === 'operations' ||
+        saved === 'developer' ||
+        saved === 'new' ||
+        saved === 'workbench' ||
+        saved === 'control'
+        ? saved
+        : 'classic';
     } catch {
       return 'classic';
     }

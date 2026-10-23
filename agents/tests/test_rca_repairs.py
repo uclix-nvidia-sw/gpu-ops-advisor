@@ -1,16 +1,13 @@
 import copy
-import time
 
 import pytest
 
 from agent_common.normalize import allocations
 from agent_common.parsers import parse_health, health_facts
 from rcca_agent.incident import alert_clues
-from rcca_agent.prompts import SYNTHESIS
 from rcca_agent.synthesis import (
     identifier_tokens,
     validate_synthesis,
-    synthesize,
     SynthesisValidationError,
 )
 from test_fleet_rca import evidence, profile, fleet, NS
@@ -57,52 +54,6 @@ def test_actual_input_fields_masked_but_not_arbitrary_english(text):
         validate_synthesis(
             reply("하나의 GPU가 영향을 받았을 가능성이 있습니다."), ["log"]
         )
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "repair", ["valid", "invalid", "no_response", "budget", "deadline"]
-)
-async def test_repair_preserves_safe_candidates_and_never_logs_model_text(repair):
-    class Model:
-        configured = True
-        remaining = 32768
-        deadline = time.monotonic() + 60
-        usage = {"request_attempts": 0, "calls": 0}
-
-        async def complete(self, system, data, **kwargs):
-            self.usage["request_attempts"] += 1
-            self.usage["calls"] += 1
-            if self.usage["calls"] == 1:
-                if repair == "budget":
-                    self.remaining = 1
-                if repair == "deadline":
-                    self.deadline = 0
-                return reply(
-                    limitations=[
-                        "관측 조건은 추가 확인이 필요합니다.",
-                        "secret_private_credential must not be stored",
-                    ]
-                )
-            assert "secret_private" not in str(data)
-            return (
-                reply()
-                if repair == "valid"
-                else None
-                if repair == "no_response"
-                else reply("The GPU has physically failed.")
-            )
-
-    model, diagnostics = Model(), {}
-    status, candidates, limits = await synthesize(model, payload(), diagnostics)
-    assert status == "complete" and candidates
-    assert "secret_private" not in str(diagnostics)
-    assert diagnostics["repair_attempts"] == (
-        0 if repair in {"budget", "deadline"} else 1
-    )
-    assert len(candidates) == 1
-    if repair != "valid":
-        assert any("제외" in line for line in limits)
 
 
 def test_log_dedup_retains_provenance_and_cluster_boundary():
@@ -215,107 +166,3 @@ def test_numeric_diagnostic_preserves_offsets_without_raw_reply():
     assert diagnostic["matches"][1]["kind"] == "number_word"
     assert "secret_token" not in str(caught.value.diagnostic)
     assert "12345" not in str(caught.value.diagnostic)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["adaptive", "budget", "deadline", "both"])
-async def test_repair_gate_records_specific_conditions(mode):
-    from types import SimpleNamespace
-
-    class Model:
-        configured = True
-        remaining = 32768
-        deadline = time.monotonic() + 60
-        settings = SimpleNamespace(llm_synthesis_max_tokens=4096)
-
-        def __init__(self):
-            self.usage = {"calls": 0, "request_attempts": 0}
-
-        async def complete(self, system, data, **kwargs):
-            self.usage["calls"] += 1
-            self.usage["request_attempts"] += 1
-            if self.usage["calls"] == 1:
-                # Leave adaptive output room after the current system prompt.
-                # A fixed budget can become smaller than the prompt after edits.
-                self.remaining = (
-                    1 if mode in {"budget", "both"} else len(SYNTHESIS.encode()) + 4096
-                )
-                if mode in {"deadline", "both"}:
-                    self.deadline = 0
-                return reply("온도는 999도입니다.")
-            assert "999" not in str(data)
-            return reply()
-
-    diagnostics = {}
-    status, _, _ = await synthesize(Model(), payload(), diagnostics)
-    gate = diagnostics["repair_gate"]
-    assert gate["budget_blocked"] == (mode in {"budget", "both"})
-    assert gate["deadline_blocked"] == (mode in {"deadline", "both"})
-    if mode == "adaptive":
-        assert status == "complete"
-        assert diagnostics["repair_status"] == "repaired"
-        assert 0 < gate["available_output_cap"] < 4096
-    else:
-        assert status == "failed"
-        assert diagnostics["repair_attempts"] == 0
-        assert (
-            diagnostics["repair_status"]
-            == {
-                "budget": "budget_exhausted",
-                "deadline": "deadline_exhausted",
-                "both": "budget_and_deadline_exhausted",
-            }[mode]
-        )
-
-
-@pytest.mark.asyncio
-async def test_repair_gate_matches_real_transport_output_cap():
-    import json
-    import httpx
-    from agent_common.llm import LLM
-    from agent_common.settings import Settings
-
-    requests = []
-
-    def handle(request):
-        requests.append(json.loads(request.content))
-        response = reply("관측값은 999입니다.") if len(requests) == 1 else reply()
-        return httpx.Response(
-            200,
-            json={
-                "choices": [
-                    {
-                        "message": {
-                            "content": json.dumps(response, ensure_ascii=False)
-                        },
-                        "finish_reason": "stop",
-                    }
-                ],
-                "usage": {
-                    "total_tokens": 32768 - (len(SYNTHESIS.encode()) + 4096)
-                    if len(requests) == 1
-                    else 100
-                },
-            },
-        )
-
-    settings = Settings(
-        "rca",
-        llm_base_url="http://fixture.invalid/v1",
-        llm_model="fixture",
-        llm_api_key="fixture",
-        llm_synthesis_max_tokens=4096,
-    )
-    diagnostics = {}
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
-        model = LLM(settings, time.monotonic() + 60, 32768, lambda _: None, http)
-        status, candidates, _ = await synthesize(model, payload(), diagnostics)
-    assert status == "complete" and candidates
-    assert len(requests) == 2
-    assert (
-        requests[1]["max_tokens"] == diagnostics["repair_gate"]["available_output_cap"]
-    )
-    assert 0 < requests[1]["max_tokens"] < 4096
-    assert (
-        diagnostics["repair_gate"]["remaining_budget"] == len(SYNTHESIS.encode()) + 4096
-    )

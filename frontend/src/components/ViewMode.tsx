@@ -9,6 +9,8 @@ export function ViewMode() {
           ['operations', '운영'],
           ['developer', '개발자'],
           ['new', '신규'],
+          ['workbench', '개발 콘솔'],
+          ['control', '운영 콘솔'],
         ] as const
       ).map(([mode, label]) => (
         <button

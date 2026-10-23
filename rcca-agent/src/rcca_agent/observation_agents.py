@@ -24,10 +24,7 @@ async def collect_round(
         raise ValueError("positive observation concurrency required")
     # Reserve before spawning. Unspent reservations become available only after
     # every sibling is reaped; issued calls (including failures) are never refunded.
-    reserve = {
-        key: (value + 1) // 2 if round_no == 0 else value
-        for key, value in budget.items()
-    }
+    reserve = dict(budget)
     assignments = []
     for index, query in enumerate(queries):
         allocation = {

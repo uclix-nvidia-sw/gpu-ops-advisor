@@ -83,11 +83,13 @@ export function RcaNarrative({
   result,
   consolidateChecks = false,
   reader = false,
+  decisionSummary = false,
   onEvidence,
 }: {
   result: Row;
   consolidateChecks?: boolean;
   reader?: boolean;
+  decisionSummary?: boolean;
   evaluationExpanded?: boolean;
   onEvidence?: (id: string) => void;
 }) {
@@ -95,7 +97,13 @@ export function RcaNarrative({
     obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1' ||
     obj(obj(result.quality).analysis).workflow === 'single_collection'
   ) {
-    return <RcaOperatorReport result={result} onEvidence={onEvidence} />;
+    return (
+      <RcaOperatorReport
+        result={result}
+        decisionSummary={decisionSummary}
+        onEvidence={onEvidence}
+      />
+    );
   }
   const presentation = str(obj(obj(result.quality).report).presentation);
   const materialReport = presentation === 'rca-material/1';

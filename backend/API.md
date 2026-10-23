@@ -93,6 +93,30 @@ Backend 프로세스마다 `/knowledge`와 `/knowledge/…`의 변경 요청을 
 
 한도 초과는 접수 전에 HTTP 429, `error.code=rate_limited`, `retryable=true`, `Retry-After: 60`으로 거절한다. 대기열이나 자동 접수는 만들지 않으며, 클라이언트는 같은 멱등키와 본문으로 재시도한다. 이미 JC에 접수된 작업과 GET/HEAD 조회는 이 제한 때문에 중단되지 않는다. 분당 카운터는 각 그룹의 1분 창이 끝나면 초기화하고 동시 요청 슬롯은 해당 요청 종료 시 반환한다. 사용자별 제한이나 복제본 간 공통 한도는 아니다. 내부 스케줄러의 정기 보고서 접수는 이 HTTP 한도 검사를 거치지 않으며, LLM 호출 실패나 응답 검증 실패는 이 변경의 대상이 아니다.
 
+### 콘솔 목록 검색과 보고서 미리보기
+
+- `GET /incidents?status=unclosed`는 저장된 사건 상태가 `open` 또는 `acknowledged`인 사건을 함께 조회한다. `state`가 없는 과거 사건은 `status`를 사용한다. `from/to`를 생략하면 발생일과 무관하게 미종결 사건을 페이지로 읽는다. 명시한 `from/to`와 기존 단일 상태 필터는 그대로 적용한다.
+- `GET /jobs?node=...`는 저장된 `input_snapshot.target.node` 또는 `node_uid`의 정확한 일치로 찾는다. 최대 253자이며 기존 scope·접수일·작업 종류·사건 필터와 조합한다. 현재 자산 신원 검증 없이 저장 작업을 검색하며, 기존 `target` 필터의 관측 검증 의미는 바꾸지 않는다. 새 필터는 `/jobs` 전용이다.
+- `GET /reports?analysis_from=...&analysis_to=...`는 저장된 보고서 분석 기간과 검색 기간이 겹치는 보고서를 찾는다. RFC3339 timestamp를 쓰고 한쪽 경계만 지정할 수도 있다. `[start,end)` 기준으로 보고서 `end > analysis_from`, `start < analysis_to`이며 두 검색 경계가 있으면 from < to여야 한다. 누락·잘못된 과거 기간은 날짜 검색에 포함하지 않는다. 기존 `from/to`는 **요청 접수일**이고 분석 기간과 함께 지정하면 두 조건을 모두 적용한다. 이 새 필터는 `/reports` 전용이며 cursor에 결합된다.
+- `/reports`의 발행된 `quality.report_format=report-aggregate-v1` 결과에는 선택적 `report_preview`를 제공한다. 해당 작업의 `published_result_id`가 가리키는 같은 종류·작업의 저장 결과만 읽는다. 과거 형식·미발행 결과에는 필드를 추가하지 않으며 삭제된 보고서는 기존처럼 목록에서 제외한다.
+
+```json
+{
+  "report_preview": {
+    "summaries": [{"topic_id": "namespace_usage", "text": "저장된 관측 요약"}],
+    "limitations": ["저장된 해석 한계"],
+    "missing_inputs": ["partial_source_error"],
+    "method": "llm_interpreted",
+    "narrative_status": "complete",
+    "truncated": false
+  }
+}
+```
+
+`summaries`는 저장 narrative의 `summary_text`, `text`, `observation` 순으로 있는 문자열을 선택한다(최대 3개, 각 400자, topic_id 최대 80자/없으면 null). `limitations`는 narrative의 `interpretation_limit` 뒤에 최상위 `limitations`를 이어 저장 순서로 최대 3개·각 400자를 반환한다. `missing_inputs`는 topic 순서의 저장 사유 코드 최대 6개·각 120자다. `method`는 저장 `quality.report.method` 최대 120자, `narrative_status`는 저장 설명 상태 최대 80자이며 없으면 null이다. AI 해석·선택 여부는 `narrative_status=complete`일 때만 method와 함께 판단하며 실패·생략 상태를 성공으로 표시하지 않는다. 배열은 자료가 없으면 빈 배열이고 잘못된 형식의 본문을 문자열로 변환하지 않는다. 문자열·항목 한도를 넘으면 `truncated=true`로 표시하며 화면은 전문 확인을 안내해야 한다.
+
+미리보기는 새 요약 생성이나 수치·원인·조치 판단이 아니다. 목록 페이지를 먼저 선정한 뒤 동일 SQL에서 제한된 필드만 Backend로 전송한다. 전체 결과·원시 관측은 목록에 포함하지 않고 저장 본문·해시를 수정하지 않는다. PostgreSQL 내부 JSON 읽기·압축 해제 비용은 남는다.
+
 ## 경로
 
 | 경로 | 처리 |
