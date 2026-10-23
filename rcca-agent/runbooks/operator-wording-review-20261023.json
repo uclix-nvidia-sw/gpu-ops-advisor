@@ -1174,8 +1174,8 @@
     },
     {
       "file": "sxid/RB-SXID-11001.json",
-      "before_content_sha256": "d0896c6d57f5489e2e7c946c48cf5ace8e2847197e16750e135e746f228f1115",
-      "after_content_sha256": "5f94b03182e64228b2adcaee248a15e5b1cbe7abb50b760b64e77b53a7d17bfb",
+      "before_content_sha256": "734708859e39a48b7abc662d706a47b40c503dcf95ab9608c07a4af4de9a98ba",
+      "after_content_sha256": "a752506824b1cc69a8f70a028c38b8c51ed589847e3a17ee5c4adaf282305a79",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -1202,7 +1202,7 @@
             },
             {
               "title": "복구",
-              "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200·B300에는 이 지침을 적용하지 않습니다. bare metal: access 포트 치명 오류는 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. trunk 포트 치명 오류는 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 진단 자료 보존·작업 배출·유지보수 승인 후 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트는 해당 guest VM을, trunk 포트는 그 연결을 쓰는 VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200·B300에는 이 지침을 적용하지 않습니다. bare metal: access 포트 치명 오류는 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. trunk 포트 치명 오류는 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 진단 자료 보존·작업 배출·유지보수 승인 후 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트는 해당 guest VM을, trunk 포트는 그 연결을 쓰는 VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "복구 확인",
@@ -1452,8 +1452,8 @@
     },
     {
       "file": "sxid/RB-SXID-11009.json",
-      "before_content_sha256": "7d894b5b7c221f210770039074736109924fb3863a7611b6bace6121a0c2e03f",
-      "after_content_sha256": "a25519a38f36de22c124cf0c8c9e0efeefad98ff1812b3f3e1ecaf6795c3c3ce",
+      "before_content_sha256": "9e48baaad106c5456fa538f51a4b91c30f71905506564a6790b563f7f21a9908",
+      "after_content_sha256": "80071e5fe1a69c22b09667e00fa08152ea2c1405b49a24553bddd37114ef45e3",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -1476,7 +1476,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -1489,7 +1489,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -1580,14 +1580,14 @@
     },
     {
       "file": "sxid/RB-SXID-11012.json",
-      "before_content_sha256": "bc71940d205b54242b642d0eb4f04fddfb3132ac11f7a5b93e8082a0fb5d660d",
-      "after_content_sha256": "d9e3088be8ca0bf3680d21e7a666c881a41d0bff526f7213117a287866bb51bb",
+      "before_content_sha256": "b3dd3c21c0d9807682cf1996edd5e021b72309fe7f7219bdf0e1187091e161e3",
+      "after_content_sha256": "79c8cd92a1e8059e5f895ca598e438efd464a319e49fb298fd7c2753d9ec972d",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 11012(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 11012(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -1600,7 +1600,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -1708,8 +1708,8 @@
     },
     {
       "file": "sxid/RB-SXID-11013.json",
-      "before_content_sha256": "4bda63f06f130cd5a4191a9f9769c79eb041b836530ad865583075bf41a33977",
-      "after_content_sha256": "9f2016e8d453583917485ebd0366fb064f9287bf6fd72447720ced70f6d6a46f",
+      "before_content_sha256": "c63c698c0af29a275f05f2b775c89802a34b65690d1d77714edcd8eede411a98",
+      "after_content_sha256": "b059e6bbb3d63405135e8edf823750814c528878b5b30d70243a53db9489b61a",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -1732,7 +1732,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -1745,7 +1745,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -1836,8 +1836,8 @@
     },
     {
       "file": "sxid/RB-SXID-11018.json",
-      "before_content_sha256": "5ae07349c2b3d3fa357b070cbf0b6574f9dbf68ceacb9046413ac499f601ba13",
-      "after_content_sha256": "dcdbedd34c5e7eb1ff9c14fa2d6c123153dadc7e89cf7dee7b6520408691d7f0",
+      "before_content_sha256": "69ccbe058486fff1c4f465aa4d305a83257e2837835fdb6141623bcc9fb1a000",
+      "after_content_sha256": "0a43d9bd1dee0db1b2222f125acce0e57d05ed1d469f05d90f88a936e2962856",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -1860,7 +1860,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -1873,7 +1873,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -1964,8 +1964,8 @@
     },
     {
       "file": "sxid/RB-SXID-11019.json",
-      "before_content_sha256": "84121cafa40b2c91f2878408fc2da37c63ddf79583291fa1b6885ec66a1e922b",
-      "after_content_sha256": "3bddf31270d129dd8fd47073b3d738d2331c0dc842765cfd80e451ddf3c6b38c",
+      "before_content_sha256": "1a484e679b6f41032106434aa31ed90d87a0872fba921608f790fb2f68d4a414",
+      "after_content_sha256": "70a7611c574e2f8664d063403026a408dd16189e61a3532c8ea01049ba3fe1df",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -1988,7 +1988,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -2001,7 +2001,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -2092,8 +2092,8 @@
     },
     {
       "file": "sxid/RB-SXID-11020.json",
-      "before_content_sha256": "c5491ab8f1b11d9993d1acf9c6389c4d8760b109d8a1d2432fb9f88fe06cb1b2",
-      "after_content_sha256": "3a77399fc29ca59f640a97c8f229a5b3a29fb90ffc7a4ea8253659f4d0c96562",
+      "before_content_sha256": "9f423601aa992e7edbb391c8ea2240508af63705eb4b2ac27aa4bdcebc4710b4",
+      "after_content_sha256": "7a697d423ece965075848bfcfc88b15dfbcfdc1fb0d28996b552bb17098e31a1",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -2116,7 +2116,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -2129,7 +2129,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -2220,14 +2220,14 @@
     },
     {
       "file": "sxid/RB-SXID-11021.json",
-      "before_content_sha256": "51173cdb8aeb32cfcd0658192199ad7a284c0ff1133403fd8499a2ce25c612ac",
-      "after_content_sha256": "7d7b1390da869671c1ac6d98001181c9d7064d5af59314faaa859d0557b64f63",
+      "before_content_sha256": "6f7e568a2186da9d6921613ec37bfbf27559c54798583cc829a8b21f7fc8ab33",
+      "after_content_sha256": "e4b5139dc220028e6ac845f23d2aef8aedee6f345be315ba8979882672ef83e1",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 11021(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 11021(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -2240,7 +2240,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -2348,14 +2348,14 @@
     },
     {
       "file": "sxid/RB-SXID-11022.json",
-      "before_content_sha256": "428d4eda6c7d288e963f906dbb4430b32f5c18e00aacec5f29fbf79a7b7deaac",
-      "after_content_sha256": "be1239ba0c238c3ccaf3543d585239811a580893caf6466797494b1d26f7bd11",
+      "before_content_sha256": "c1408cb3add2f77d97ed52418ce69f3349743dfcbe8d005242fd826c3f2e8945",
+      "after_content_sha256": "303bfe46570be11234498e26e2786ba946edf7eddda63ff030bbb38ed61262c0",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 11022(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 11022(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -2368,7 +2368,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -2476,14 +2476,14 @@
     },
     {
       "file": "sxid/RB-SXID-11023.json",
-      "before_content_sha256": "a4adaa1c2d3b3f28a85aa98ec0b14b82f33ca117e09da269c012dce54b4669aa",
-      "after_content_sha256": "9a77477064fe5201a3be48bd9019d542f7f7097d053976c891d98bad5e638d62",
+      "before_content_sha256": "d4e093c2f56e89689ccdfda08452eb5b4ce955c2ea21d16d2fbc2849811340ff",
+      "after_content_sha256": "6b8b559951209f0229ce3328ad7f1dbeee258bfa5bd68168abe99e9fdfda934f",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 11023(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 11023(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -2496,7 +2496,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -2604,8 +2604,8 @@
     },
     {
       "file": "sxid/RB-SXID-12001.json",
-      "before_content_sha256": "312f3a8db19e117497c0ca9bec254711803c6bf7149b9a889d107a51aad5b60b",
-      "after_content_sha256": "890240e18a1389ee73a9f5b5d11c5a7ea331f147b5a42d48a0ed2917fd64c0e7",
+      "before_content_sha256": "3d01c6382b7a9943202278539d9e34763018d5ce8b0f7798a3d20e0395cc4d84",
+      "after_content_sha256": "e880f2a75475529813c98ed86c540bd0526ca38e4c4642e535aaca9311f78ec8",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -2628,7 +2628,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -2641,7 +2641,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -2732,8 +2732,8 @@
     },
     {
       "file": "sxid/RB-SXID-12002.json",
-      "before_content_sha256": "d1fe764376bfdbcb2814ac5b40c220c93ab177fc0bf94038416b7d0b1f3adc30",
-      "after_content_sha256": "d47c3daa591eed844d46a3275f149545154099e9b59e4abbd8b9791e3151638a",
+      "before_content_sha256": "05b06e18c9740c0029b05f8fc350d047378747fa250c2fa69af6e969464508c7",
+      "after_content_sha256": "769f9b443b3cc93a43df92ff71e2ef656850ee554f704f209ec6ca1524519408",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -2756,7 +2756,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -2769,7 +2769,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -2988,14 +2988,14 @@
     },
     {
       "file": "sxid/RB-SXID-12021.json",
-      "before_content_sha256": "0f2653f0494b78055e633a77ab930973663af2861d97bc4099d933070c4f29b6",
-      "after_content_sha256": "c700971fb06c7c1e730befca5019704ca805995bc4bf6f946773b7c7f034bae5",
+      "before_content_sha256": "5dc7fd3fdfa5ebed5642f93e0097d1bea843e98c855b3acd34b32117ab0a6d0f",
+      "after_content_sha256": "e2ecb9ef6423818092602f8868d153334c30befb999ab89a61c809967b78cd8e",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 12021(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 12021(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -3008,7 +3008,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -3116,8 +3116,8 @@
     },
     {
       "file": "sxid/RB-SXID-12022.json",
-      "before_content_sha256": "039be9a4dd047b06985a4e3d0b7a3a5a981ac520be5f40fd5b89a06e602de83b",
-      "after_content_sha256": "e0f48637dc99b86033054780bd74dd01da0cefe5b93b9f30745107fab8bba9e2",
+      "before_content_sha256": "4643eb1d7ec87fda6446836a4039d7fbf81b28439a191065284c236081a44f84",
+      "after_content_sha256": "51811ce179e2f05e4b3f39196ad8417b237a0596a802b67f510886aa95424d0e",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -3140,7 +3140,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -3153,7 +3153,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -3244,14 +3244,14 @@
     },
     {
       "file": "sxid/RB-SXID-12023.json",
-      "before_content_sha256": "930f583b433f1b10910c5ff0f5fe5d40130d01fa0db8c16897cce9ee9d2cbd3e",
-      "after_content_sha256": "8ed8c531baff9ad10a9feec48a958f8fe99fbaed4a12b741c6ff92ea7f32fb1e",
+      "before_content_sha256": "33f83920604ebf8307a6fb3ed0deb9e212fe37465cf4b53131191dbeef31e5b9",
+      "after_content_sha256": "4970afe0ee1773c848352abd8854c38c285241f61f8a68978cdd4e9c9f76b985",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 12023(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 12023(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -3264,7 +3264,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -3372,8 +3372,8 @@
     },
     {
       "file": "sxid/RB-SXID-12024.json",
-      "before_content_sha256": "fa2ff2998ee7dc5c654586d4f494eb291e4e9d5ab1c5376b76099c0253661b01",
-      "after_content_sha256": "96751e8b5f4bdcf9627af4fb5d9f4915d5db65a5748008967ea5079ecc213c37",
+      "before_content_sha256": "15120cc660e404ed89aa8145449be32d8da14dc70f777cc43a59c0fef59fe674",
+      "after_content_sha256": "ab439636dc44acc6f1fa64570d7d6962199f5569af1eb897d52d3cd9cb2cf715",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -3396,7 +3396,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -3409,7 +3409,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -3500,8 +3500,8 @@
     },
     {
       "file": "sxid/RB-SXID-12025.json",
-      "before_content_sha256": "0bbfbb92624763ce77c13d07318898c8b068c4258b93c8d9e3a5feacadc1c5c4",
-      "after_content_sha256": "d017e3654cb2072aa57fe602a18d52814408820fad3a5b2e3d75a9575aee4e00",
+      "before_content_sha256": "a302d4bf82c967464676f345ba6cbdc7670cd94df5fe3e86f52f905cb14d15ee",
+      "after_content_sha256": "49317cf5309111d06f6004e8b077af966312ec7d7d09d6510dfdde733c94fb53",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -3524,7 +3524,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -3537,7 +3537,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -3628,8 +3628,8 @@
     },
     {
       "file": "sxid/RB-SXID-12026.json",
-      "before_content_sha256": "68d8861f3d8551a82936ff48c0db33cbed63684f84936db2ff898dfb6b8d1790",
-      "after_content_sha256": "5c7f76c40735cff7bd5311fc205ee4e3fba9693515ae0fc5cc7a58a6012e05e9",
+      "before_content_sha256": "9595cee9fbff2ab3ad92fdab682c2f49f2f99c9c4215dcbc9bd85eb9ee9d392e",
+      "after_content_sha256": "73eb506d739306de6315df33a50ecd900d6d3e4d396580d89abc5b07633dd5ff",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -3652,7 +3652,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -3665,7 +3665,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -3756,8 +3756,8 @@
     },
     {
       "file": "sxid/RB-SXID-12027.json",
-      "before_content_sha256": "02a0255de132a63b71ed7d55f567b43e87ae9b7abd15539671c5da14592b50c3",
-      "after_content_sha256": "3c45ccdf6bbb87554cf0a32b9a350dd67c13bbe5eb64284884032431902e81ef",
+      "before_content_sha256": "96f02f721988ee30088b391fcdcb87ce69a179266f8bdb09db01dd561a2dc1ec",
+      "after_content_sha256": "c7a9624de9a535b044afc868ef183e47304346a5269351579f2600c7fd7a6456",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -3780,7 +3780,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -3793,7 +3793,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4012,8 +4012,8 @@
     },
     {
       "file": "sxid/RB-SXID-12030.json",
-      "before_content_sha256": "1f6232613a4d714373aaebf2f1118413eb424b48f78310f8c83d2bd180baf626",
-      "after_content_sha256": "785c9b0f969eb87734404e2721a0a51f98815edfbe0f7a30e9c2ab2e4812249f",
+      "before_content_sha256": "caa8cc79c347bdd6443c1ae491db5d817aedfe3fca2ef15e4e0f1456792aec0a",
+      "after_content_sha256": "17107ab5e3de0caac37697e4fbe1362f09ce9505317c9e44c321a3ef306bc46f",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4036,7 +4036,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4049,7 +4049,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4140,8 +4140,8 @@
     },
     {
       "file": "sxid/RB-SXID-12031.json",
-      "before_content_sha256": "c51a5d9a575cb3ad456300c255b0496a1c187af17db41d6d3dcaa374dc975298",
-      "after_content_sha256": "485a08f9d5e92074cbe9d1a3144a79265850207733ff94d51a387d5d7eec0e3d",
+      "before_content_sha256": "8f6d6cb840596944bafd7540ebce084f032ebb65092eaf25398287ba23da88dd",
+      "after_content_sha256": "d0f9f50f292177bc363edf0af902705d236a55d2861ac29e8c40913ee8a620ec",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4164,7 +4164,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4177,7 +4177,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4268,8 +4268,8 @@
     },
     {
       "file": "sxid/RB-SXID-12032.json",
-      "before_content_sha256": "08c13fa02b0ce397f6c9723fc9c31d5dfbb70b93c97ce65d223a1d5a25136d58",
-      "after_content_sha256": "2f68e12e78d99bf0258b4035d2b8befe5a1fdc0f2ea47583c2374be3bea296c0",
+      "before_content_sha256": "1759963871da4174fe76870f104a19f13c44aa4eb39c50c5b80e9cf4f0f94011",
+      "after_content_sha256": "0b06e3c233f66af9806137c891cbe8717a6e28c8a05204654462a7809f065c0c",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4292,7 +4292,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4305,7 +4305,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4396,8 +4396,8 @@
     },
     {
       "file": "sxid/RB-SXID-14017.json",
-      "before_content_sha256": "3b6cad6103c454b7ffe53b82c393eb13e326284d25087c4da9d3683abde20d3b",
-      "after_content_sha256": "ea1d96f51991232269afe7c3bdb2a115f9417f00a8c8ff8ae74056f2a7d207a3",
+      "before_content_sha256": "1243c17ceb652f4d32d345d302465c93498fda4047b1a7ea1b4ab399947bcd5c",
+      "after_content_sha256": "d2d2d1a550fe9410329305a25b33b31f9aff71af2025f98082a6c72bb56cf74a",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4420,7 +4420,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4433,7 +4433,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4524,8 +4524,8 @@
     },
     {
       "file": "sxid/RB-SXID-15001.json",
-      "before_content_sha256": "fb92877c9678aea14c47411ba3c0315dc335cd32421f30e3d7342545d8692610",
-      "after_content_sha256": "40af4131e4d60ca3afd64daf20c4540860e24c229ec7e4ffeff38f0df0545040",
+      "before_content_sha256": "9a0ee413d2cf66b363c62a0e2ae195a96912e7fceaff1ba3ed6011e9050243f5",
+      "after_content_sha256": "70dd8cc43d20d3fa3fb8a53990bdc10565e2382dfdbc2900e6548de356ebeccf",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4548,7 +4548,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4561,7 +4561,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4652,8 +4652,8 @@
     },
     {
       "file": "sxid/RB-SXID-15006.json",
-      "before_content_sha256": "9f03b5b578df335e14e60dcbe9cd9e70845ed9dd36d12e36456b5419e46583c7",
-      "after_content_sha256": "084c154a21c0c3f1ff338e21610f78d2816017f22f128b786588ffc4b376d226",
+      "before_content_sha256": "3ddcc6d99714ff56556494f89280094da820c541836e5c490668d8c42a62577e",
+      "after_content_sha256": "60fe30f0fceca41a8a4a25acdd49c843c9555ddef4966d80e6d5370c7470d182",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4676,7 +4676,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4689,7 +4689,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -4780,14 +4780,14 @@
     },
     {
       "file": "sxid/RB-SXID-15008.json",
-      "before_content_sha256": "422ffcc50c1ee492e51f2e11e476247f33fc62a3d2516ba14463266b9c96221f",
-      "after_content_sha256": "3cde88a7e3af69b3b7fe94fc7515cbc218021ffdac31831b17e3375d5e5a1d3f",
+      "before_content_sha256": "06843ffab7444dbdbf9d9848253adb99fb696b0e726bffe9ce6ef05c994527d9",
+      "after_content_sha256": "0a836e1c289d4830b6ed709e4f29f2d8856aa333d1d553c64771d619b9a2a47b",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 15008(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 15008(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -4800,7 +4800,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -4908,8 +4908,8 @@
     },
     {
       "file": "sxid/RB-SXID-15009.json",
-      "before_content_sha256": "f098a7e6b9482c8f53f1671d8173480eb4b26fe03a8d43571f2dc9db96fb7a53",
-      "after_content_sha256": "fe114a92fc569e691a6f0ff6983c98bb2292d639eaadb403ae77f2e34563e9c3",
+      "before_content_sha256": "50860fbe88c85ef5fb2bdcdcb345f54b3560615aa8267c046b5daef70d84df69",
+      "after_content_sha256": "252a7d10ad7e33efbcda056f1c536302d67718a447d2f90d4864fdd4555b6ad8",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -4932,7 +4932,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -4945,7 +4945,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5036,8 +5036,8 @@
     },
     {
       "file": "sxid/RB-SXID-15010.json",
-      "before_content_sha256": "0735cb96bdecb52702f3214fc61d0c317bd925ceeaa80214f92834287fc73641",
-      "after_content_sha256": "b804fd4c1a4f1759937f49c76663896d604e6440ef857ee3589e17cde2caf6d7",
+      "before_content_sha256": "f3bedbd17d5a85489a3b069822e20e9298932566a1c340df2b962fa653f7be27",
+      "after_content_sha256": "bb7d50a395361812a29501d9206e954ad19c66ffae244e40e4c758fef0fe0ff7",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5060,7 +5060,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5073,7 +5073,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5164,14 +5164,14 @@
     },
     {
       "file": "sxid/RB-SXID-15011.json",
-      "before_content_sha256": "f98c5b1d7cf9589d3ddf997b756b4303d7a556c393e69b9bb8720b3690dd9dec",
-      "after_content_sha256": "f302823955b3e43f95b922cdc42b473dc1340b8683cec4e73bde92ccb6af5ced",
+      "before_content_sha256": "057c956b85da8cc771c7c007fd51d145ad2651c1624e411f7d54dfc1bfbab3af",
+      "after_content_sha256": "ac44b283947c0567cbb8a4a3aa9ff017b039e1cd9c21c77a0750ea0fc6578a5e",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 15011(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 15011(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -5184,7 +5184,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -5292,8 +5292,8 @@
     },
     {
       "file": "sxid/RB-SXID-15012.json",
-      "before_content_sha256": "c9dd76ebb2fe620ddb451783268a2bb87c00bfaec056fc44e9a93252a8ac49e7",
-      "after_content_sha256": "892b8ce01cbfec64a5cce0d40386d2f89c5d075d84b325295e7478608608fc91",
+      "before_content_sha256": "df4165933568f55382b5e7adfee5f535e548622a999b755c44fb9d06fed68485",
+      "after_content_sha256": "cc57ad2714b0b38837e7152e80385154d3e0bdeb3643ab17046a9389dfe73c9e",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5316,7 +5316,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5329,7 +5329,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5420,8 +5420,8 @@
     },
     {
       "file": "sxid/RB-SXID-15013.json",
-      "before_content_sha256": "a4adc1b76dd54ab8244255c01d03cc6eb03113425fbe5c86c3d13afd8be75841",
-      "after_content_sha256": "50de1928367ba2d1a4d32985dcb5760071ca92b43008d6f533d64b24e1d3d345",
+      "before_content_sha256": "01043464221a6ce6c286c7b113fbcba7ffd4e9361f614853440134c6d718addc",
+      "after_content_sha256": "7059b65acfbc30a5505609c84e8d6099a54d2e80a1d8fac8a07312aa113fa616",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5444,7 +5444,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5457,7 +5457,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5548,8 +5548,8 @@
     },
     {
       "file": "sxid/RB-SXID-19047.json",
-      "before_content_sha256": "5e39bac4d243cca56f520f118d18c98e8c7f9f8bc6fba83383c1c25f7839e931",
-      "after_content_sha256": "388457ac837ed4627803b48616c83d12d546fdbcf3fdb8bf09ea1d24a31373b8",
+      "before_content_sha256": "a8d75eec5c42410735f8a96ca4d1d3af0c52e3d6080270b6aa556470738707e7",
+      "after_content_sha256": "847b0d520b590f3ef3f8fac1bf4f6fd898dd94ea692414dbd7ac02f4450d9fc9",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5572,7 +5572,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5585,7 +5585,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5676,8 +5676,8 @@
     },
     {
       "file": "sxid/RB-SXID-19048.json",
-      "before_content_sha256": "178a62e5ba499b827637d6bf5743a06209a91806b9801da9a30c00c0a41ca5da",
-      "after_content_sha256": "ed8440daadc5f3d0f3a27793059de75a9ffdc820361249a3d4a75544c4eac8a3",
+      "before_content_sha256": "f25a126156d11deb7fc5ac2135d582f81925c02ae6000278e081e930c2a0ccb7",
+      "after_content_sha256": "8e9a36a74af95587a18f20d2e9b3a7d080ed4a45a5dfefe44f8969f2764f0eac",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5700,7 +5700,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5713,7 +5713,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -5804,14 +5804,14 @@
     },
     {
       "file": "sxid/RB-SXID-19049.json",
-      "before_content_sha256": "0b020f341a64ad972da4be56d1a0492ac338e5f95434388c6caeaa9315a981a0",
-      "after_content_sha256": "b62b3bf67435877c9cbba85da3701555221eb128e7e308249efb2578ff038eb1",
+      "before_content_sha256": "b929d837817fbe1cf5e01190a8fd9df2987ff6a4b6d674abc96b4cd971456850",
+      "after_content_sha256": "3f0792be3e56645d942df94ecb83fde8fc9bfd99475f443fbcbe6c20351dfc7d",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19049(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19049(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -5824,7 +5824,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -5932,8 +5932,8 @@
     },
     {
       "file": "sxid/RB-SXID-19054.json",
-      "before_content_sha256": "1bc0dae47b81b849a0787650371f55d2e1c88307c028c12f8bef13420f2ae06a",
-      "after_content_sha256": "7c9d474358fcabd3d69f532e2e117d5c4d3864dd0d2938e35fbf1033cd2eb33b",
+      "before_content_sha256": "a1531db665680509b155fb3e7b180117e18cd8cc45221bcf27556c4e9c9c37d2",
+      "after_content_sha256": "1d37eaba602fc2c4ad0c1689d1921263dddd93fa59281b07db38afcf2b07ce0b",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -5956,7 +5956,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -5969,7 +5969,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -6060,14 +6060,14 @@
     },
     {
       "file": "sxid/RB-SXID-19055.json",
-      "before_content_sha256": "78175a423bc83baf98abe8c737df899f0db692073071a62cb15527e7ebd325a4",
-      "after_content_sha256": "1c0372affb16949394fca982d1eb63f7cdc0589302bc11aece6abe52e182407f",
+      "before_content_sha256": "519dbd17418e1b66d75499b8560f4b05c4d48a52c025affb64a73843d77acbdf",
+      "after_content_sha256": "37d2b035160f32a77153de2ee39b257ce20fc76e4477e3b7bc5cf6901db9c8bc",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19055(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19055(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -6080,7 +6080,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -6188,8 +6188,8 @@
     },
     {
       "file": "sxid/RB-SXID-19056.json",
-      "before_content_sha256": "be2b9a0a32dfa59182c9b4b41d637451b843b3ab291832f2b72a59648a57eb05",
-      "after_content_sha256": "8e8478db74302633677abbdab5869e5b7c1968b1abf66964b7fa280dcf66aa8b",
+      "before_content_sha256": "6ef4b423304434bd30901fab65a1ef44d7d9abdd0a144b9a3a64ce5ff738fa16",
+      "after_content_sha256": "65625a174c50478a1b6a9dadec60c4846e86817f39ff80773d7ad87fb29395e7",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -6212,7 +6212,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -6225,7 +6225,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -6316,14 +6316,14 @@
     },
     {
       "file": "sxid/RB-SXID-19057.json",
-      "before_content_sha256": "1e15e49fd86e62683dc52de75c4f080c95353492f8afe98d3ce6c643737050ad",
-      "after_content_sha256": "a6a742175605d63dce7f0915ad082db336630455ac6058edf263dbecd8907746",
+      "before_content_sha256": "ec85a262900b73c2c9c2af243633cb67dbb114bd70121756dcf52fb4455bbd85",
+      "after_content_sha256": "8268711c9c8f8c84d31dc0b6649bd5d3c3365436061fbaa66ceb2a279d107f28",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19057(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19057(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -6336,7 +6336,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -6444,8 +6444,8 @@
     },
     {
       "file": "sxid/RB-SXID-19058.json",
-      "before_content_sha256": "8dd9c145d3233114cb471915508e036fd09b726db20dbfcc665e10b036e2ea0e",
-      "after_content_sha256": "fef1e94fca03d509b2cec222f32c88550b3d7e71cb3200fa3c19feacd2bf02e4",
+      "before_content_sha256": "b8d268cf3f65288c4b2c94b86b675ad2febe063c52daf37a86055e684b13ec06",
+      "after_content_sha256": "0e3f173262c95b417fc439fe216c945ab360d262a08cf561a5ec52de4ba2eb5f",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -6468,7 +6468,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -6481,7 +6481,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -6572,14 +6572,14 @@
     },
     {
       "file": "sxid/RB-SXID-19059.json",
-      "before_content_sha256": "718a8108575c5e235e14b7119cebb858e190a62863b19473495d7c5b55f81b5e",
-      "after_content_sha256": "bd75a75ff4f4a6e959b111850c10caa6dfe0df3f7b51698841843a0865756964",
+      "before_content_sha256": "171f359d482b53a04a613a8b4a7f7206bdb8be388dd066cf72762f1e64fb47a7",
+      "after_content_sha256": "a58ad8fac763df1b80576e2b419c8d90912dbe75ca0dc68425e410b77f3da3af",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19059(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19059(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -6592,7 +6592,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -6700,8 +6700,8 @@
     },
     {
       "file": "sxid/RB-SXID-19060.json",
-      "before_content_sha256": "64d0928782cbb54039943dfe9a547195e0c28d4acf34b49333d3271516da2936",
-      "after_content_sha256": "37b287ab32db6d26f8683f45535c686672a3bb0414fd6f40712a9b2d77e0d28b",
+      "before_content_sha256": "7b78e26e0281096df894322e4ddd80c21ab82ecbce77ca4b2497320f69f0937d",
+      "after_content_sha256": "d6f9a13152e445a1dcf261e8f134a7d604b99c9c372dbaaff5a39eb0856230a0",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -6724,7 +6724,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -6737,7 +6737,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -6828,8 +6828,8 @@
     },
     {
       "file": "sxid/RB-SXID-19061.json",
-      "before_content_sha256": "c210a661c8e5484a64ae6440ebc82173eb5250eb24929230d6e01a21d1bea8dd",
-      "after_content_sha256": "484d42b829212cfb5a514ff6ea25cf8caec911db65774320fec4b272d2d04386",
+      "before_content_sha256": "c039af53f705e85e03d692a04f7f4cab783410171af9cf4cff7315a970b7dac8",
+      "after_content_sha256": "80818a15ed69074c9080332cde276beac58b36b77342d03a5c18c9b7164a8787",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -6852,7 +6852,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -6865,7 +6865,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -6956,14 +6956,14 @@
     },
     {
       "file": "sxid/RB-SXID-19062.json",
-      "before_content_sha256": "8192678ac0f700915b136519bca175cf19f6061d8574d7e99e8f45e17e050f8f",
-      "after_content_sha256": "0cbd2d812c4d5aa13b4972a8f22da4389cfe49488e09dd1403489e06975818c9",
+      "before_content_sha256": "ee8f716acd5ab52f65d9793557bab77917e9b577c18f46cab10f492ce1b8faaa",
+      "after_content_sha256": "a7e7d60bae18f9f97d5a3951393a79f12eccc6401eddd25e1458174aefe40823",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19062(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19062(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -6976,7 +6976,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -7084,8 +7084,8 @@
     },
     {
       "file": "sxid/RB-SXID-19063.json",
-      "before_content_sha256": "b650ad20e0435a65c121d718e56fe1422f55747282bfc8feac673968ba86c1e2",
-      "after_content_sha256": "4ef5d3de85d65b5c88a36ca496a1bd78e6691e356b4a1257c25a4c4b957d46ad",
+      "before_content_sha256": "510cd3929bcedb82638bdf5d6607bf6d20f19d98f77a3976ee8af366cd968f16",
+      "after_content_sha256": "1a28bc4e146668554a6d8e1a164e5fa616033f57b0b743d7f2be0cdca5679e8d",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -7108,7 +7108,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -7121,7 +7121,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -7212,8 +7212,8 @@
     },
     {
       "file": "sxid/RB-SXID-19064.json",
-      "before_content_sha256": "619ef4fd638186311f65135a7466713c0f86d8aabbc1127e9c8ff839d81c222c",
-      "after_content_sha256": "c8cda8057a9078a04ee741873def3cc2a14848d178ff879a19acf6e10a93bb0f",
+      "before_content_sha256": "6501dd51fdd9e4ced259f05092a6bf891f306860881978ede24ad6f4d841a77e",
+      "after_content_sha256": "b89d49e328dbffe66d373dba07cfd269d728f06e4c2810924cf1840df513dfb8",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -7236,7 +7236,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -7249,7 +7249,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -7340,14 +7340,14 @@
     },
     {
       "file": "sxid/RB-SXID-19065.json",
-      "before_content_sha256": "a92d66ae7d02d92ca8335e8cb592762f4a91fcca3c4fe0e203cbbfcc94ead5d7",
-      "after_content_sha256": "609371fa4d9bf31ce478a1474a861d04fadad76e9a6aa693b6cb94f0dddba921",
+      "before_content_sha256": "335234cf6278f45c11289a118aaf240157721df2cc4d4df143eebab79d94c742",
+      "after_content_sha256": "497c575826231f605cb707d165a38c640d272967118e81473c3268e285e6b458",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19065(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19065(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -7360,7 +7360,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -7468,8 +7468,8 @@
     },
     {
       "file": "sxid/RB-SXID-19066.json",
-      "before_content_sha256": "65b78f52fc5d0a9fe08f6381940a8ccb7380d03c53e6e6d91718d6de6f8c96f6",
-      "after_content_sha256": "4a5379fc8513398e30cad3b63d354c78ff902102668b987ef8b9372948e23f46",
+      "before_content_sha256": "2a07edd5efd89baca7557363ab63b195a0c2d4886deadd17a33ac810bada2714",
+      "after_content_sha256": "5de822569a96079aaf4e865315b574e38ae2e864932b7d757c04a9ed7c744dfc",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -7492,7 +7492,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -7505,7 +7505,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -7596,8 +7596,8 @@
     },
     {
       "file": "sxid/RB-SXID-19067.json",
-      "before_content_sha256": "bea8d24304b57e7039f37ba41be1ad7ae45b266e3ec0bd549d2811a28f5ecd39",
-      "after_content_sha256": "f8eea4ab8303cbcb671845f1f1d1d13b750b5dbac650667d0fd3aedf621e627f",
+      "before_content_sha256": "c963c430b773719780e3c079dc0a1ee1cd4579cc4fdd0c500203577b913e84a6",
+      "after_content_sha256": "b503eb2df0b6452ae43189e6a3740098dd6a36fcebb27bebebc27d7b9ea0d98a",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -7620,7 +7620,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -7633,7 +7633,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -7724,14 +7724,14 @@
     },
     {
       "file": "sxid/RB-SXID-19068.json",
-      "before_content_sha256": "2c8bb7165c9c76c66b99d5f36c5bd4628962cb1e6793eafcb6adbd392d0f2a28",
-      "after_content_sha256": "1fba5c9bc10c7e831dd00dbcabee6d27fa25824a3da5aa2cc21a1d1d39d7960b",
+      "before_content_sha256": "1942aebf34623d1171a6597ddb9cec9c4780cac0b976bbbb50a2ac3a07815115",
+      "after_content_sha256": "1b65364d59d7d4eda4988590f394c634c38efce9735ffa82ffb2cb1f6b579bb9",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19068(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19068(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -7744,7 +7744,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -7852,8 +7852,8 @@
     },
     {
       "file": "sxid/RB-SXID-19069.json",
-      "before_content_sha256": "c7fa17f3d689121e6227c74efa2e7eda2a5e4d90f8a0e985501cf838d7d753df",
-      "after_content_sha256": "7bd0d595cadc4a5a4ca0c72cf67001492b9c77476317b62df1754de5d6b9d9bc",
+      "before_content_sha256": "f5e1203176b3e17c8b92514aa0da3d08397bc4f37dc7c15c1d6d1d79191ac899",
+      "after_content_sha256": "930efee2ed7eec7224e5c0100d3f34a6a72f0cb26a9226fb65970b22d87b65c4",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -7876,7 +7876,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -7889,7 +7889,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -7980,8 +7980,8 @@
     },
     {
       "file": "sxid/RB-SXID-19070.json",
-      "before_content_sha256": "33181c66d7af0566bc2f3d20616c2a89ebd4d09df4fe8d1c9fdf209741cd637b",
-      "after_content_sha256": "6d6eff8783738fda6c1472a674fab2be36af3615b8538d78f508f633a42d35bf",
+      "before_content_sha256": "bd1f378c9305f6bd5db244915b6081bc0deea47f6a1cf3cef37561e74e56a1f7",
+      "after_content_sha256": "737ab1a79f98a1e76fcc89a45fa9940e7c135ad3d6c41763d23f4f8eae0f954f",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -8004,7 +8004,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -8017,7 +8017,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -8108,14 +8108,14 @@
     },
     {
       "file": "sxid/RB-SXID-19071.json",
-      "before_content_sha256": "b881b431b6bb0e5fa30a0257482eedd532816f8cf37ba6d0cc88cdc22ad462ad",
-      "after_content_sha256": "7b4ac9a112f6eaac3fc83cdb7b5a51a8c3b8be84ea889d752293bcd47d96ed12",
+      "before_content_sha256": "5e8cc47b5ae995cc07078d974194b238e490f19e31395c7306444b903cef1bc7",
+      "after_content_sha256": "7d1e3c2b1b29d0e5b9312489b712436ea65c153b52ea34a07957c6769661228c",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 19071(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 19071(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -8128,7 +8128,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -8748,8 +8748,8 @@
     },
     {
       "file": "sxid/RB-SXID-20034.json",
-      "before_content_sha256": "68bb4d40ed96152158c82253c907794ddf6d622b6c50cf3ad8dd4029d732ea9b",
-      "after_content_sha256": "6ecbe2def1e3e8afee4c77545b62360642fe8859db8df970cdfe3f6c4870eb2a",
+      "before_content_sha256": "ae61ff70e6ad5d4f6c187d4e95f14b1c6362780aa8cd0211736c6ed346f20824",
+      "after_content_sha256": "044968b10c57d79cdbc53759940111a41370066d28008951c9b5749ba0be46dd",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -8772,7 +8772,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -8785,7 +8785,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -9132,8 +9132,8 @@
     },
     {
       "file": "sxid/RB-SXID-22012.json",
-      "before_content_sha256": "4c6df191ee161615685c700e2ae636c9b76fa3cd03bf0fb44be3a04c9d777be0",
-      "after_content_sha256": "bc63b2667772542d3e5b1795f972ad4837a98e084d64dc98d751c5f4021d98f5",
+      "before_content_sha256": "db2aedc9f0c1cf103b3c9d2fa5ec80e21cae8ec1378fd6dd0e869894bd9c5528",
+      "after_content_sha256": "500ec9001316eb33da69fa9749d34f933c45c6c65ad929831ce1d050cfefbb65",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -9156,7 +9156,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -9169,7 +9169,7 @@
               "source_indices": [
                 1
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -11563,14 +11563,14 @@
     },
     {
       "file": "sxid/RB-SXID-24001.json",
-      "before_content_sha256": "76dec97cf4285c0b9d8f4ad070af0f73be6a85cdc77afa95af19cc8ae30d9ebc",
-      "after_content_sha256": "00dc92f18e3e4e5d6a86d67c9bb07f2f0ac74ed66e6847e2d52201065dc892db",
+      "before_content_sha256": "43e7edd7d1ef1e6ff9684122f9ed3cc0e7681a6f9c31fd8c5b3b4e6f079c2bb0",
+      "after_content_sha256": "19b1b7f0ebfae71620b9614495f7fdd1d5c8087c18b026155decf493541b2c6e",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 24001(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 24001(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -11583,7 +11583,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -11691,14 +11691,14 @@
     },
     {
       "file": "sxid/RB-SXID-24002.json",
-      "before_content_sha256": "ccc63e74b6e8997c943ba5912870218883025bba2c91305bcc8c5a158a240bf9",
-      "after_content_sha256": "43ae94e12e4091c1f4bb7daa16c38a5dd12545418382a2735c5405a2579ff8bb",
+      "before_content_sha256": "a3e8ae215d5aabbb81e503454c0c58d554b47277a0bc2dd8c13b222855c79ce0",
+      "after_content_sha256": "253e72a4bcdab28dc9a8015129cc3cfff1015913b8410a87ba665654c86b746d",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 24002(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 24002(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -11711,7 +11711,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -11819,14 +11819,14 @@
     },
     {
       "file": "sxid/RB-SXID-24003.json",
-      "before_content_sha256": "e2bcc6a3d5dcb8cebfdfa69fd2ea444d6408d6dddba2bdea51f3763592170903",
-      "after_content_sha256": "a830cd144058a85911dec55aeefddfd8ae26531032f44d56eeaada8a93d18d16",
+      "before_content_sha256": "fd28ea572fb3972751b05ba7e562be6616efe0fe09c0d876cd907c11579d31be",
+      "after_content_sha256": "d7078e72d3e1f6658bb522c1e6b96098bb9e7507c1069f06ac39b81487798f8f",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
         "operator_guidance": {
           "schema": "gpu-rca-guidance/1.0",
-          "meaning": "SXID 24003(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+          "meaning": "SXID 24003(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
           "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
           "next_checks": [
             {
@@ -11839,7 +11839,7 @@
             },
             {
               "title": "영향 범위",
-              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+              "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
             },
             {
               "title": "복구 조치",
@@ -11947,8 +11947,8 @@
     },
     {
       "file": "sxid/RB-SXID-24004.json",
-      "before_content_sha256": "5e3cf6f7826f4eadd4e756c6e4562d49cf425906fec63abd568c429b188bd76f",
-      "after_content_sha256": "ae259eb8d6f6b2e866f35fac446a4ec671dc0c8f936d8af1c3c66a7b72ffd952",
+      "before_content_sha256": "5f580df6056e6e17442107cc79be5142f132f9701d45eb1b93491c2d6bdd3b87",
+      "after_content_sha256": "b79151e2cbff656d5fc10eceb4398aea50616ff1fc38290d8c53857198d9667c",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -11971,7 +11971,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -11984,7 +11984,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -12075,8 +12075,8 @@
     },
     {
       "file": "sxid/RB-SXID-24005.json",
-      "before_content_sha256": "6cfeb98e5f500b608ca6db8477231798616d9820e114acabeac6310c3e0507d2",
-      "after_content_sha256": "a01bce71a067d3f533a57212742a67ceea6408cf726f62b38c170e0f7584657f",
+      "before_content_sha256": "e31515577d7747dbfe06e634d7eac1add25e7712d7611815469074a4b5bac2a4",
+      "after_content_sha256": "ea1e973ddb8f00ee5149c322a665969f6009f2ae11128008efcaab106e073f7a",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -12099,7 +12099,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -12112,7 +12112,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -12203,8 +12203,8 @@
     },
     {
       "file": "sxid/RB-SXID-24006.json",
-      "before_content_sha256": "e79438985a60298df27f219d73df392067bf33faf69328ad90b12524fecf8d77",
-      "after_content_sha256": "fd6e2e6a350c1a13ecc0171f5683b311a6688ddb18cd19842920d930b3b9f035",
+      "before_content_sha256": "89cbd5b93c89e71917ac1e869d5b5352520b402602dc07f591e27fdbbb316b15",
+      "after_content_sha256": "e5ebd7c2c7c46a339ef8527e8c3980643e1020bf84619d5d33ad4b3cf61531de",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -12227,7 +12227,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -12240,7 +12240,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
@@ -12331,8 +12331,8 @@
     },
     {
       "file": "sxid/RB-SXID-24007.json",
-      "before_content_sha256": "d4a4b487f7aa871b7ecd2c3ede24b0433aa894b02fde825be42d9f298c8b2964",
-      "after_content_sha256": "43bb682141635bbedae0a7a0e05d2123b87a5853a93993b3ec8a20a0a63dc682",
+      "before_content_sha256": "4a4fe982a6d559e7816d29797336d96213ee47d55f4d637e295193d7f7d167ab",
+      "after_content_sha256": "a6dca2ffa2364b72e601517b9672263cfd7408503766e20a79dbfc465fe36da2",
       "change": "plan: optional D02 (GPU model/driver/pod labels)+guidance: internal query IDs replaced with plain names",
       "added_fields": [],
       "previous_values": {
@@ -12355,7 +12355,7 @@
             },
             {
               "title": "복구 조치",
-              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+              "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
             },
             {
               "title": "재발 시 진단·공급사 전달",
@@ -12368,7 +12368,7 @@
               "source_indices": [
                 2
               ],
-              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
+              "text": "잠재적 치명(Potential Fatal). 영향: bare metal에서 치명으로 처리되면 access 포트(GPU 쪽) 오류는 그 GPU의 CUDA 작업을 중단시키고, trunk 포트(NVSwitch 사이) 오류는 Fabric Manager가 모든 작업을 중단하고 새 작업 시작을 막습니다. 공유 NVSwitch 가상화에서는 access 포트면 해당 guest VM, trunk 포트면 그 trunk를 지나는 guest VM 파티션이 영향받습니다. 해당되면 치명적 SXID가 GPU 쪽에 XID 74로 전파됩니다. 복구: bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다."
             },
             {
               "title": "Fleet·GPUd 분류",
