@@ -243,12 +243,7 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
         {onEvidence ? (
           <div className="aggregate-evidence-links">
             {strings(item.evidence_refs).map((id, i) => (
-              <button
-                type="button"
-                className="button secondary"
-                key={id}
-                onClick={() => onEvidence(id)}
-              >
+              <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
                 원본 근거 {i + 1}
               </button>
             ))}
@@ -382,12 +377,7 @@ function TopicInterpretation({
         <div className="aggregate-evidence-links">
           {onEvidence &&
             strings(section.evidence_refs).map((id, i) => (
-              <button
-                type="button"
-                className="button secondary"
-                key={id}
-                onClick={() => onEvidence(id)}
-              >
+              <button type="button" className="text-link" key={id} onClick={() => onEvidence(id)}>
                 근거 {i + 1} 확인
               </button>
             ))}
@@ -444,16 +434,22 @@ export function AggregateReport({
       ? '계산 결과 요약'
       : '저장된 주요 변화';
   return (
-    <section id="final-report" className="aggregate-report" aria-label="운영 분석 보고서">
-      <header className="aggregate-heading">
+    <section
+      id="final-report"
+      className="aggregate-report rca-narrative"
+      aria-label="운영 분석 보고서"
+    >
+      {/* Same card frame as the RCA report: a fixed heading above the stored sections. */}
+      <header className="rca-narrative-header">
+        <h3>운영 분석 보고서</h3>
         <ReportPeriod value={value.time_range} />
         <p>직전 같은 길이의 기간과 비교합니다. 모든 시각은 한국 시간 기준입니다.</p>
       </header>
-      <p className="aggregate-static-note">
-        <strong>해석 기준</strong>
-        활동률은 연결 GPU의 관측 표본 평균입니다. 부서의 독점 사용량·할당 효율이나 GPU 회수 가능량을
-        뜻하지 않습니다.
-      </p>
+      <nav className="rca-narrative-nav" aria-label="보고서 목차">
+        {usage && <a href="#namespace-summary-title">1. Namespace별 GPU 활동 현황</a>}
+        {incident && <a href="#incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</a>}
+        <a href="#report-evidence">집계 기준과 근거</a>
+      </nav>
       {!aiInterpreted && rows(value.narrative).length > 0 && (
         <section
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
@@ -467,15 +463,20 @@ export function AggregateReport({
                 ? 'AI 응답을 사용하지 않은 기본 요약입니다. 계산된 관측 결과를 표시합니다.'
                 : '요약의 AI 선택 여부가 기록되지 않았습니다. 저장된 문장을 그대로 표시합니다.'}
           </p>
-          <div className="aggregate-summary-findings">
+          <ul className="rca-points aggregate-summary-findings">
             {rows(value.narrative)
               .slice(0, 3)
               .map((finding) => (
-                <p key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</p>
+                <li key={str(finding.id)}>{str(finding.summary_text, str(finding.text))}</li>
               ))}
-          </div>
+          </ul>
         </section>
       )}
+      <p className="aggregate-static-note">
+        <strong>해석 기준</strong>
+        활동률은 연결 GPU의 관측 표본 평균입니다. 부서의 독점 사용량·할당 효율이나 GPU 회수 가능량을
+        뜻하지 않습니다.
+      </p>
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
           <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
@@ -486,64 +487,7 @@ export function AggregateReport({
               onEvidence={onEvidence}
             />
           )}
-          <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />
           <h3 className="aggregate-subheading">1.1. Namespace별 비교</h3>
-          {str(usage.workload_unavailable_reason) && (
-            <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
-          )}
-          {rows(usage.workloads).length > 0 && (
-            <section aria-label="GPU 작업 보조 관측">
-              <h4>GPU 작업 대기·완료 관측</h4>
-              <p className="aggregate-static-note">
-                GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
-                완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
-                아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며
-                수집 공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로
-                다를 수 있습니다.
-              </p>
-              <div className="aggregate-table-scroll">
-                <table>
-                  <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
-                  <thead>
-                    <tr>
-                      <th>클러스터 / Namespace</th>
-                      <th>관측 최대 대기 Pod</th>
-                      <th>관측 최대 미배치 Pod</th>
-                      <th>관측 최대 실행 Pod</th>
-                      <th>확인된 완료 Job</th>
-                      <th>평균 Job 경과시간</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows(usage.workloads).map((w) => (
-                      <tr key={`${w.cluster_id}/${w.namespace}`}>
-                        <th>
-                          {str(w.cluster_id)}
-                          <br />
-                          {str(w.namespace)}
-                        </th>
-                        {[
-                          w.pending_peak,
-                          w.unscheduled_peak,
-                          w.running_peak,
-                          w.completed_observed,
-                        ].map((v, i) => (
-                          <td key={i}>{typeof v === 'number' ? v : '자료 없음'}</td>
-                        ))}
-                        <td>
-                          {typeof w.mean_elapsed_seconds === 'number'
-                            ? `${(w.mean_elapsed_seconds / 60).toFixed(1)}분`
-                            : '자료 없음'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <WorkloadCharts workloads={rows(usage.workloads)} />
-            </section>
-          )}
-
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
             있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
@@ -787,6 +731,64 @@ export function AggregateReport({
               </details>
             </>
           )}
+          <h3 className="aggregate-subheading">1.4. GPU 작업 대기·완료 (보조 관측)</h3>
+          <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />
+          {str(usage.workload_unavailable_reason) && (
+            <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
+          )}
+          {rows(usage.workloads).length > 0 && (
+            <section aria-label="GPU 작업 보조 관측">
+              <h4>GPU 작업 대기·완료 관측</h4>
+              <p className="aggregate-static-note">
+                GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
+                완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
+                아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며
+                수집 공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로
+                다를 수 있습니다.
+              </p>
+              <div className="aggregate-table-scroll">
+                <table>
+                  <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
+                  <thead>
+                    <tr>
+                      <th>클러스터 / Namespace</th>
+                      <th>관측 최대 대기 Pod</th>
+                      <th>관측 최대 미배치 Pod</th>
+                      <th>관측 최대 실행 Pod</th>
+                      <th>확인된 완료 Job</th>
+                      <th>평균 Job 경과시간</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows(usage.workloads).map((w) => (
+                      <tr key={`${w.cluster_id}/${w.namespace}`}>
+                        <th>
+                          {str(w.cluster_id)}
+                          <br />
+                          {str(w.namespace)}
+                        </th>
+                        {[
+                          w.pending_peak,
+                          w.unscheduled_peak,
+                          w.running_peak,
+                          w.completed_observed,
+                        ].map((v, i) => (
+                          <td key={i}>{typeof v === 'number' ? v : '자료 없음'}</td>
+                        ))}
+                        <td>
+                          {typeof w.mean_elapsed_seconds === 'number'
+                            ? `${(w.mean_elapsed_seconds / 60).toFixed(1)}분`
+                            : '자료 없음'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <WorkloadCharts workloads={rows(usage.workloads)} />
+            </section>
+          )}
+
           {unattributed.length > 0 && (
             <details className="aggregate-unattributed">
               <summary>Namespace에 연결하지 못한 관측 · {unattributed.length}개 모델 묶음</summary>
@@ -991,7 +993,7 @@ export function AggregateReport({
           )}
         </section>
       )}
-      <details className="aggregate-evidence">
+      <details className="aggregate-evidence" id="report-evidence">
         <summary>집계 기준과 근거</summary>
         <p>
           일평균끼리 평균내지 않고 활동률 합계와 표본 수를 합산합니다. 이전 보고서의 시간가중 평균과
@@ -1003,7 +1005,7 @@ export function AggregateReport({
         <div className="aggregate-evidence-buttons">
           {onEvidence &&
             strings(value.evidence_refs).map((id, i) => (
-              <button key={id} className="button" onClick={() => onEvidence(id)}>
+              <button key={id} className="text-link" onClick={() => onEvidence(id)}>
                 집계 근거 {i + 1}
               </button>
             ))}

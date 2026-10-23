@@ -155,18 +155,20 @@ export function reportMetrics(result: Row) {
   const fromTopics = rows(result.topics).flatMap((topic) => rows(topic.metrics));
   return fromTopics.length ? fromTopics : rows(result.measurements);
 }
-export function reportTitle(job: Row) {
+export function reportPurpose(job: Row) {
   const ids = strings(job.topic_ids);
-  const purpose =
-    ids.length === 3 && ['O01', 'O08', 'O11'].every((id) => ids.includes(id))
-      ? 'GPU 운영 기본 종합보고서'
-      : ids.length === 11 && Object.keys(obj(job.topic_group_by)).length === 11
-        ? 'GPU 운영 종합보고서'
-        : ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace')
-          ? 'Namespace별 GPU 사용 분석'
-          : ids.length > 1
-            ? `GPU 운영 보고서 · ${ids.length}개 주제`
-            : reportTopics(job);
+  return ids.length === 3 && ['O01', 'O08', 'O11'].every((id) => ids.includes(id))
+    ? 'GPU 운영 기본 종합보고서'
+    : ids.length === 11 && Object.keys(obj(job.topic_group_by)).length === 11
+      ? 'GPU 운영 종합보고서'
+      : ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace')
+        ? 'Namespace별 GPU 사용 분석'
+        : ids.length > 1
+          ? `GPU 운영 보고서 · ${ids.length}개 주제`
+          : reportTopics(job);
+}
+export function reportTitle(job: Row) {
+  const purpose = reportPurpose(job);
   const start = Date.parse(str(obj(job.time_range).start));
   const end = Date.parse(str(obj(job.time_range).end));
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return purpose;

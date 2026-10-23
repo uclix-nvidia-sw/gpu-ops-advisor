@@ -95,49 +95,33 @@ export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
                       {!hours.length ? (
                         <p>대기 자료 없음</p>
                       ) : (
-                        <div
-                          className="aggregate-workload-bars"
-                          role="list"
+                        <figure
+                          className="rca-bars"
                           aria-label={`${w.namespace} 시간대별 최대 대기 Pod 수`}
                         >
                           {hours.map((h) => (
-                            <div role="listitem" key={str(h.start)}>
-                              <div className="aggregate-workload-period">
+                            <div
+                              className="rca-bar"
+                              key={str(h.start)}
+                              aria-label={`최대 대기 ${h.pending_peak}개`}
+                              title={`${reportRequestTime(str(h.start))} ~ ${reportRequestTime(str(h.end))}`}
+                            >
+                              <span className="aggregate-workload-period">
                                 <span>{reportRequestTime(str(h.start)).slice(0, -9)}</span>
                                 <strong>
                                   {reportRequestTime(str(h.start)).slice(-8, -3)}–
                                   {reportRequestTime(str(h.end)).slice(-8, -3)}
                                 </strong>
-                              </div>
-                              <svg
-                                viewBox="0 0 400 24"
-                                role="img"
-                                aria-label={`최대 대기 ${h.pending_peak}개`}
-                              >
-                                <title>
-                                  {`${reportRequestTime(str(h.start))} ~ ${reportRequestTime(str(h.end))}`}
-                                </title>
-                                <rect
-                                  x="0"
-                                  y="6"
-                                  width="360"
-                                  height="12"
-                                  className="aggregate-workload-track"
+                              </span>
+                              <span className="rca-bar-track">
+                                <span
+                                  style={{ width: `${(Number(h.pending_peak) / maximum) * 100}%` }}
                                 />
-                                <rect
-                                  x="0"
-                                  y="6"
-                                  width={(Number(h.pending_peak) / maximum) * 360}
-                                  height="12"
-                                  className="aggregate-workload-bar"
-                                />
-                                <text x="370" y="17">
-                                  {Number(h.pending_peak)}개
-                                </text>
-                              </svg>
+                              </span>
+                              <strong>{Number(h.pending_peak)}개</strong>
                             </div>
                           ))}
-                        </div>
+                        </figure>
                       )}
                     </div>
                   );
@@ -184,26 +168,17 @@ export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
                               {Math.floor(Number(j.elapsed_seconds) / 60)}분{' '}
                               {Number(j.elapsed_seconds) % 60}초
                             </strong>
-                            <svg
-                              viewBox="0 0 240 20"
+                            <span
+                              className="rca-bar-track"
                               role="img"
                               aria-label={`${j.job_name} 경과시간 ${j.elapsed_seconds}초`}
                             >
-                              <rect
-                                x="0"
-                                y="5"
-                                width="240"
-                                height="10"
-                                className="aggregate-workload-track"
+                              <span
+                                style={{
+                                  width: `${(Number(j.elapsed_seconds) / maxElapsed) * 100}%`,
+                                }}
                               />
-                              <rect
-                                x="0"
-                                y="5"
-                                width={(Number(j.elapsed_seconds) / maxElapsed) * 240}
-                                height="10"
-                                className="aggregate-workload-bar"
-                              />
-                            </svg>
+                            </span>
                           </td>
                         </tr>
                       ))}

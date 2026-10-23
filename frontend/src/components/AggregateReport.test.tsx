@@ -836,3 +836,13 @@ it.each([
   }
   expect(JSON.stringify(value)).toBe(before);
 });
+
+it('frames the stored report like the RCA report card with a fixed heading', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={{ topics: [], narrative: [] }} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('<section id="final-report" class="aggregate-report rca-narrative"');
+  expect(html).toContain('<header class="rca-narrative-header"><h3>운영 분석 보고서</h3>');
+});

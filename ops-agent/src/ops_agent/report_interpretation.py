@@ -729,7 +729,7 @@ def writing_context(fact):
             "GPU 부족 여부·실제 할당·보장량·가용 자원·운영정책 확인 뒤 추가 할당 검토"
         ],
         "schedule_candidate": [
-            "예약·대기·가용 GPU 확인 후/뒤 일부 작업 시범 실행 검토"
+            "예약·대기·가용 GPU를 확인한 뒤에만 일부 작업의 시범 실행을 검토; 확인하고 바로 실행하는 제안은 금지"
         ],
         "queue_review": ["queue_context 단계에 맞는 Pod 상태·스케줄러 이벤트 점검"],
         "resident_memory": [
@@ -752,6 +752,8 @@ def writing_context(fact):
             "확인",
             "뒤",
         ]
+    elif fact["kind"] == "schedule_candidate":
+        context["required_prose_terms"] = ["확인", "뒤", "검토"]
     return context
 
 

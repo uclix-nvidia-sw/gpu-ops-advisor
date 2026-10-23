@@ -49,26 +49,26 @@ export function Reports() {
   );
   useReportListPosition(q.items);
   return (
-    <div className="page report-workspace report-list-page">
+    <div className="page">
       <PageHead
         eyebrow=""
         title="운영 분석·보고서"
-        description="기간과 대상을 확인하고 보고서를 읽으세요. 작성 중인 보고서도 여기에서 확인할 수 있습니다."
+        description="진행 중인 요청과 완료된 보고서를 한 목록에서 확인합니다. 제목을 선택하면 보고서 화면으로 이동하며, 결과가 없으면 작성 현황을 표시합니다."
         actions={
           <Link className="button primary" to="/reports/new">
-            새 보고서 만들기
+            보고서 요청
           </Link>
         }
       />
       <NavTabs items={reportTabs} />
-      <Panel>
-        {finalOnly && <h2 className="live-padding">공개된 Ops 최종 보고서</h2>}
-        {finalOnly && (
-          <p>
-            완료된 보고서를 바로 읽을 수 있습니다. 자료 부족·부분 분석 여부는 결과 품질에서
-            확인하세요.
-          </p>
-        )}
+      <Panel
+        title={finalOnly ? '공개된 Ops 최종 보고서' : '보고서 목록'}
+        description={
+          finalOnly
+            ? '완료된 보고서를 바로 읽을 수 있습니다. 자료 부족·부분 분석 여부는 요건 충족 상태에서 확인하세요.'
+            : undefined
+        }
+      >
         <ReportFilters />
         {received.error ? (
           <p className="live-padding" role="alert">
@@ -76,14 +76,6 @@ export function Reports() {
           </p>
         ) : (
           <>
-            {!q.isPending && !q.isError && (
-              <div className="report-list-info">
-                <span>
-                  불러온 보고서 {q.items.length}건{q.hasNextPage ? ' · 더 보기 가능' : ''}
-                </span>
-                <span>접수 시각 최신순 · 모든 시각은 한국 시간 기준</span>
-              </div>
-            )}
             <QueryState
               query={q}
               empty={!q.items.length}
@@ -93,9 +85,13 @@ export function Reports() {
               emptyDescription={
                 filtered
                   ? '위의 필터 해제로 다른 보고서를 확인하세요.'
-                  : '새 보고서 만들기에서 분석을 요청하세요.'
+                  : '보고서 요청에서 분석을 요청하세요.'
               }
             >
+              <p className="muted">
+                접수 시각 최신순 · 모든 시각은 한국 시간 기준입니다. 실행 완료는 자료 충족을 뜻하지
+                않으니 요건 충족 상태와 보고서의 제한을 함께 확인하세요.
+              </p>
               <JobRows items={q.items} />
             </QueryState>
             <More query={q} />
@@ -231,7 +227,7 @@ export function LegacyReportForm() {
   return (
     <div className="page report-workspace">
       <PageHead
-        eyebrow="NEW REPORT"
+        eyebrow=""
         title="새 운영 보고서"
         description="사용 패턴·장비 점검·장애 현황과 자료 신뢰도를 보고 확인할 일을 정하세요."
       />

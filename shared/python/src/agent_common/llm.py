@@ -98,6 +98,11 @@ class LLM:
             temperature=0.2,
             max_tokens=cap,
         )
+        if self.settings.kind == "report" and self.settings.ops_llm_medium_effort:
+            payload["chat_template_kwargs"] = {
+                "enable_thinking": True,
+                "medium_effort": True,
+            }
         url = self.settings.llm_base_url + "/chat/completions"
         headers = {}
         extensions = {}

@@ -87,6 +87,12 @@ Runbook content에 선택 필드 `unexpected_evidence`를 지원한다. `on`은 
 - 오류: `{error:{code,message,retryable,details},request_id}`. 미등록 404, 충돌 409, 잘못된 입력 422, 의존성 장애 503. 일반 HTTP 형식/속도 제한에는 400/413/415/429도 사용한다.
 - 목록 `items,next_cursor`, 기본 50/최대 200, created_at DESC/id DESC. cursor는 경로·필터·정렬과 결합한다.
 
+### 변경 요청 한도
+
+Backend 프로세스마다 `/knowledge`와 `/knowledge/…`의 변경 요청을 보고서 생성 등 나머지 변경 요청과 별도로 집계한다. 지식 등록·revision 생성·발행은 같은 지식 한도를 공유하며, ID별로 한도가 늘어나지 않는다. 두 그룹에 각각 기존 C07의 `max_requests_per_minute`와 `max_inflight_requests`를 적용한다. 기본값은 그룹별 분당 120회·동시 16개이며 DB 설정·schema는 변경하지 않는다. 두 그룹이 동시에 처리되면 프로세스 전체 허용량은 합계 분당 240회·동시 32개까지 커질 수 있다.
+
+한도 초과는 접수 전에 HTTP 429, `error.code=rate_limited`, `retryable=true`, `Retry-After: 60`으로 거절한다. 대기열이나 자동 접수는 만들지 않으며, 클라이언트는 같은 멱등키와 본문으로 재시도한다. 이미 JC에 접수된 작업과 GET/HEAD 조회는 이 제한 때문에 중단되지 않는다. 분당 카운터는 각 그룹의 1분 창이 끝나면 초기화하고 동시 요청 슬롯은 해당 요청 종료 시 반환한다. 사용자별 제한이나 복제본 간 공통 한도는 아니다. 내부 스케줄러의 정기 보고서 접수는 이 HTTP 한도 검사를 거치지 않으며, LLM 호출 실패나 응답 검증 실패는 이 변경의 대상이 아니다.
+
 ## 경로
 
 | 경로 | 처리 |

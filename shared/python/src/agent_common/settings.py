@@ -19,6 +19,11 @@ class Settings:
     llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", ""))
     llm_api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", ""))
     llm_routed: bool = False
+    ops_llm_medium_effort: bool = field(
+        default_factory=lambda: json.loads(
+            os.getenv("OPS_LLM_MEDIUM_EFFORT", "false") or "false"
+        )
+    )
     llm_request_timeout_seconds: int = field(
         default_factory=lambda: int(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "300"))
     )
@@ -45,6 +50,10 @@ class Settings:
     nat_config_file: str = field(
         default_factory=lambda: os.getenv("NAT_CONFIG_FILE", "")
     )
+
+    def __post_init__(self):
+        if type(self.ops_llm_medium_effort) is not bool:
+            raise ValueError("OPS_LLM_MEDIUM_EFFORT must be true, false or unset")
 
     def model_for(self, stage):
         if self.llm_routed:

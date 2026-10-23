@@ -1,26 +1,27 @@
 import type { ReactNode } from 'react';
 import { reportRequestTime } from '../lib/reportPeriod';
-import { ReportExecution, ReportOrigin, ReportPeriod, ReportScope } from './ReportMeta';
+import { ReportIdentity, ReportOrigin } from './ReportMeta';
 import { ReportDeleteButton } from './ReportDeletion';
 import { Link, useLocation } from 'react-router-dom';
 import { errorText, obj, rows, str, strings, useResource, type Row } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { Badge, Empty, Modal } from './ui';
 import { ObservationSnapshot, RawJson } from './ObservationSnapshot';
-import { reportScopeClusters, reportTitle, reportTopics } from '../lib/workflow';
 import { topicDisplayBases } from '../lib/reportKinds';
-import { groupLabel, reportReason } from '../lib/report';
+import { groupLabel } from '../lib/report';
 export function QueryState({
   query,
   empty = false,
   emptyTitle = '저장된 결과가 없습니다.',
   emptyDescription = '선택한 범위에서 서버에 등록된 기록이 없습니다.',
+  emptyAction,
   children,
 }: {
   query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown };
   empty?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyAction?: ReactNode;
   children: ReactNode;
 }) {
   if (query.isPending)
@@ -39,7 +40,8 @@ export function QueryState({
         </button>
       </div>
     );
-  if (empty) return <Empty title={emptyTitle} description={emptyDescription} />;
+  if (empty)
+    return <Empty title={emptyTitle} description={emptyDescription} action={emptyAction} />;
   return <>{children}</>;
 }
 export function More({
@@ -508,308 +510,103 @@ export function EvidenceDialog({ id, onClose }: { id: string; onClose: () => voi
 }
 export function JobRows({ items }: { items: Row[] }) {
   const location = useLocation();
-  const reportsOnly = location.pathname === '/reports';
+  const reportList = location.pathname === '/reports';
   const rcaList = location.pathname === '/cases';
+  // The RCA and report lists share one table; only the generic job table keeps the kind column.
+  const dedicated = reportList || rcaList;
   const from = location.pathname + location.search;
-  if (reportsOnly) return <ReportHistory items={items} from={from} />;
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>분석 · 대상</th>
-            {!rcaList && <th>종류</th>}
+            <th>{reportList ? '보고서 · 대상' : '분석 · 대상'}</th>
+            {!dedicated && <th>종류</th>}
             <th>접수 시각</th>
             <th className="job-state-cell">실행 상태</th>
             <th className="job-state-cell">요건 충족 상태</th>
-            <th>{rcaList ? '실행 기록' : '최종 보고서'}</th>
+            <th>{dedicated ? '실행 기록' : '최종 보고서'}</th>
           </tr>
         </thead>
         <tbody>
-          {items.map((j) => (
-            <tr key={str(j.id)} id={`report-row-${str(j.id)}`}>
-              <td>
-                <div className={j.kind === 'report' ? 'job-report-heading' : undefined}>
-                  <Link
-                    className="text-link"
-                    state={{ from }}
-                    to={
-                      j.deletion == null && (j.kind === 'report' || j.result_ref != null)
-                        ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`
-                        : `/jobs/${str(j.id)}`
-                    }
-                  >
-                    {j.kind === 'rca' ? (
-                      <AlarmIdentity record={j} rcaView={location.pathname === '/cases'} />
-                    ) : j.kind === 'report' ? (
-                      <strong>{reportTitle(j)}</strong>
-                    ) : (
-                      str(j.title, str(j.id))
-                    )}
-                  </Link>
-                  {j.kind === 'report' && <ReportOrigin value={j.report_origin} />}
-                </div>
-                {j.kind === 'rca' && location.pathname !== '/cases' && (
-                  <small className="cell-sub">작업 ID · {str(j.id)}</small>
-                )}
-                {j.kind === 'report' ? (
-                  <>
-                    <details>
-                      <summary>분석 주제 · 작업 ID</summary>
-                      <p>{reportTopics(j)}</p>
-                      <small>{str(j.id)}</small>
-                    </details>
-                    <ReportScope job={j} />
-                    <div className="cell-sub">
-                      분석 대상 기간: <ReportPeriod value={j.time_range} />
-                    </div>
-                    <div className="cell-sub">
-                      요청 집계: {groupLabel(j.group_by, j.topic_group_by)}
-                    </div>
-                  </>
-                ) : (
-                  !rcaList && <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
-                )}
-              </td>
-              {!reportsOnly && !rcaList && (
+          {items.map((j) => {
+            const id = str(j.id);
+            const isReport = j.kind === 'report';
+            // Report titles always open the report screen, which explains unpublished and deleted states.
+            const to = isReport
+              ? `/reports/${id}#final-report`
+              : j.deletion == null && j.result_ref != null
+                ? `/${j.kind === 'rca' ? 'analyses' : 'reports'}/${id}#final-report`
+                : `/jobs/${id}`;
+            const state = isReport ? { from, reportList: from, reportRow: id } : { from };
+            return (
+              <tr key={id} id={`report-row-${id}`}>
                 <td>
-                  {str(j.kind) === 'rca'
-                    ? 'RCA 조사'
-                    : str(j.kind) === 'report'
-                      ? '운영 분석 보고서'
-                      : str(j.kind)}
-                </td>
-              )}
-              <td className="job-received-time">
-                {(j.kind === 'report'
-                  ? reportRequestTime(str(j.created_at))
-                  : formatDate(str(j.created_at))
-                ).replace(/ (?=\d{2}:)/, '\n')}
-              </td>
-              <td className="job-state-cell">
-                <Badge status={str(j.status)} />
-              </td>
-              <td className="job-state-cell">
-                <Badge status={str(j.result_status) || null} />
-              </td>
-              {!reportsOnly && (
-                <td>
-                  {rcaList ? null : j.deletion == null && j.result_ref != null ? (
+                  <div className={isReport ? 'job-report-heading' : undefined}>
                     <Link
-                      className="text-link"
-                      state={{ from }}
-                      to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${str(j.id)}#final-report`}
+                      className={isReport ? 'text-link report-history-title' : 'text-link'}
+                      state={state}
+                      to={to}
                     >
-                      최종 보고서 보기
+                      {j.kind === 'rca' ? (
+                        <AlarmIdentity record={j} rcaView={rcaList} />
+                      ) : isReport ? (
+                        <ReportIdentity job={j} />
+                      ) : (
+                        str(j.title, id)
+                      )}
                     </Link>
-                  ) : j.deletion != null ? (
-                    '보고서 삭제'
-                  ) : (
-                    '결과 미발행'
+                    {isReport && <ReportOrigin value={j.report_origin} />}
+                  </div>
+                  {!dedicated && <small className="cell-sub">작업 ID · {id}</small>}
+                  {!dedicated && !isReport && (
+                    <small className="cell-sub">{str(j.stage, '단계 미확인')}</small>
                   )}
+                </td>
+                {!dedicated && (
+                  <td>
+                    {j.kind === 'rca' ? 'RCA 조사' : isReport ? '운영 분석 보고서' : str(j.kind)}
+                  </td>
+                )}
+                <td className="job-received-time">
+                  {(isReport
+                    ? reportRequestTime(str(j.created_at))
+                    : formatDate(str(j.created_at))
+                  ).replace(/ (?=\d{2}:)/, '\n')}
+                </td>
+                <td className="job-state-cell">
+                  <Badge status={str(j.status)} />
+                </td>
+                <td className="job-state-cell">
+                  <Badge status={str(j.result_status) || null} />
+                </td>
+                <td>
+                  {!dedicated &&
+                    (j.deletion == null && j.result_ref != null ? (
+                      <Link
+                        className="text-link"
+                        state={{ from }}
+                        to={`/${j.kind === 'rca' ? 'analyses' : 'reports'}/${id}#final-report`}
+                      >
+                        최종 보고서 보기
+                      </Link>
+                    ) : j.deletion != null ? (
+                      '보고서 삭제'
+                    ) : (
+                      '결과 미발행'
+                    ))}
                   <div>
-                    <Link className="text-link" state={{ from }} to={`/jobs/${str(j.id)}`}>
+                    <Link className="text-link" state={{ from }} to={`/jobs/${id}`}>
                       작업 상태·시도 이력
                     </Link>
                   </div>
+                  {reportList && <ReportDeleteButton job={j} />}
                 </td>
-              )}
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
-  );
-}
-
-function ReportHistory({ items, from }: { items: Row[]; from: string }) {
-  // Keep the API's request order, including an unpublished newest request.
-  return (
-    <div className="report-history-cards">
-      {items.map((job, index) => {
-        const large = index === 0;
-        const clusters = reportScopeClusters(job);
-        const target = clusters.length
-          ? `${clusters
-              .slice(0, 2)
-              .map((c) => c.cluster)
-              .join(
-                ' · ',
-              )}${clusters.length > 2 ? ` 외 ${clusters.length - 2}개 클러스터` : ''} / ${clusters.every((c) => c.namespaces === '전체 Namespace') ? '전체 Namespace' : clusters.length === 1 ? clusters[0].namespaces : '클러스터별 Namespace 범위'}`
-          : '분석 대상 미확인';
-        const reportPath = `/reports/${str(job.id)}#final-report`;
-        const returnState = { from, reportList: from, reportRow: str(job.id) };
-        return (
-          <article
-            className={`report-history-card ${large ? 'report-history-featured' : 'report-history-compact'}`}
-            key={str(job.id)}
-            id={`report-row-${str(job.id)}`}
-          >
-            <header>
-              <div className="report-card-origin">
-                {large && <span className="report-featured-label">현재 목록의 최근 요청</span>}
-                <ReportOrigin value={job.report_origin} />
-              </div>
-              <div className="report-history-status">
-                <span>
-                  실행 상태 <Badge status={str(job.status) || null} />
-                </span>
-                <span>
-                  요건 충족 상태 <Badge status={str(job.result_status) || null} />
-                </span>
-              </div>
-            </header>
-            <h3>
-              <Link className="text-link report-history-title" state={returnState} to={reportPath}>
-                {reportTitle(job)}
-              </Link>
-            </h3>
-            <p className="report-card-scope">{target}</p>
-            {large &&
-              (str(job.result_ref) ? (
-                <ReportPreview job={job} />
-              ) : (
-                <div className="report-preview" aria-label="보고서 작성 상태">
-                  <strong>{labels[str(job.status)] || '실행 상태 미확인'}</strong>
-                  <p>
-                    {job.queue_reason != null
-                      ? labels[str(job.queue_reason)] || str(job.queue_reason)
-                      : job.termination_reason != null
-                        ? labels[str(job.termination_reason)] || str(job.termination_reason)
-                        : '아직 발행된 결과가 없습니다. 보고서 화면에서 작성 상태를 확인하세요.'}
-                  </p>
-                </div>
-              ))}
-            <div className="report-card-actions">
-              <Link
-                className={`button${large ? ' primary' : ''}`}
-                state={returnState}
-                to={reportPath}
-              >
-                {str(job.result_ref) ? '보고서 읽기' : '작성 현황 보기'}
-              </Link>
-              <Link className="text-link" to={`/jobs/${str(job.id)}`} state={{ from }}>
-                작업 상태·시도 이력
-              </Link>
-              <ReportDeleteButton job={job} />
-            </div>
-            <details className="report-history-details">
-              <summary>기간·대상·요청 상세</summary>
-              <dl className="report-history-meta">
-                <div>
-                  <dt>분석 대상 기간</dt>
-                  <dd>
-                    <ReportPeriod value={job.time_range} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>분석 대상</dt>
-                  <dd>
-                    <ReportScope job={job} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>분석 주제</dt>
-                  <dd>{reportTopics(job)}</dd>
-                </div>
-                <div>
-                  <dt>집계 기준</dt>
-                  <dd>{groupLabel(job.group_by, job.topic_group_by)}</dd>
-                </div>
-                <div>
-                  <dt>요청 접수 시각</dt>
-                  <dd>{reportRequestTime(str(job.created_at))}</dd>
-                </div>
-                <div>
-                  <dt>실행 시작</dt>
-                  <dd>
-                    {job.started_at
-                      ? reportRequestTime(str(job.started_at))
-                      : '아직 실행 시작 기록이 없습니다.'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>작업 ID</dt>
-                  <dd>
-                    <code>{str(job.id)}</code>
-                  </dd>
-                </div>
-              </dl>
-            </details>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function ReportPreview({ job }: { job: Row }) {
-  const query = useResource(`/reports/${encodeURIComponent(str(job.id))}`);
-  if (query.isPending) return <p role="status">저장된 요약을 불러오는 중…</p>;
-  if (query.isError)
-    return (
-      <div className="report-preview" role="alert">
-        <p>요약을 불러오지 못했습니다. 보고서 본문은 아래 버튼으로 열 수 있습니다.</p>
-        <button className="text-link" onClick={() => query.refetch()}>
-          요약 다시 불러오기
-        </button>
-      </div>
-    );
-  const detail = obj(query.data);
-  if (detail.id !== job.id || detail.result_ref !== job.result_ref)
-    return <p className="muted">목록과 요약의 결과 참조가 다릅니다. 목록을 새로고침해 주세요.</p>;
-  const result = obj(detail.result),
-    topics = rows(result.topics);
-  const available = topics.filter((topic) => ['ready', 'partial'].includes(str(topic.status)));
-  const metrics = topics.flatMap((topic) => rows(topic.metrics));
-  const reasons = [
-    ...new Set(
-      [
-        ...topics.flatMap((topic) => strings(topic.missing_inputs)),
-        ...metrics.flatMap((metric) => [
-          ...strings(obj(metric.quality).excluded_reasons),
-          ...(metric.value == null ? [str(obj(metric.quality).reason)] : []),
-        ]),
-      ].filter(Boolean),
-    ),
-  ];
-  return (
-    <section className="report-preview" aria-label="저장된 결과 요약">
-      <h4>보고서 요약</h4>
-      {str(result.summary) ? (
-        <p className="report-preview-summary">{str(result.summary)}</p>
-      ) : topics.length ? (
-        <p>
-          확인 가능한 분석:{' '}
-          {available
-            .slice(0, 3)
-            .map(
-              (topic) =>
-                `${reportTopics({ topic_ids: [topic.topic_id] })} (${labels[str(topic.status)] || str(topic.status)})`,
-            )
-            .join(' · ') || '판단 가능한 주제 없음'}
-          {available.length > 3 && ` 외 ${available.length - 3}개 분석`}
-        </p>
-      ) : (
-        <p>요약에 사용할 주제별 기록이 없습니다. 본문을 확인하세요.</p>
-      )}
-      {!!topics.length && (
-        <p className="report-preview-counts">
-          산출 완료 {topics.filter((t) => t.status === 'ready').length}개 · 부분 산출{' '}
-          {topics.filter((t) => t.status === 'partial').length}개 · 판단 보류{' '}
-          {topics.filter((t) => t.status === 'blocked').length}개 주제
-        </p>
-      )}
-      {!!reasons.length && (
-        <p className="report-preview-limit">
-          <strong>해석 시 주의</strong> {reportReason(reasons[0])}
-          {reasons.length > 1 && ` 외 ${reasons.length - 1}개 제한은 본문에서 확인하세요.`}
-        </p>
-      )}
-      <details className="report-preview-execution">
-        <summary>보고서 실행시간</summary>
-        <ReportExecution job={detail} />
-      </details>
-    </section>
   );
 }
