@@ -66,7 +66,7 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 
 ### Xid 카탈로그 즉시 조치 대조 (2026-10-23)
 
-XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)(Sep 09, 2026)의 행(니모닉·적용 제품·즉시/조사 조치·Xid 154 연계)과 GPU Node Triage 표 1에 하나씩 대조했다. 172개 코드의 카탈로그 필드는 모두 일치했고, 복구 단계가 즉시 조치 분류와 어긋난 63건만 고쳤다. SXID 93건은 Fabric Manager User Guide v2.6 표 22~25의 분류·오류 문자열과 모두 일치해 바꾸지 않았다. 이전 값과 해시는 [검토 기록](xid-catalog-action-review-20261023.json)에 있다.
+XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)(Sep 09, 2026)의 행(니모닉·적용 제품·즉시/조사 조치·Xid 154 연계)과 GPU Node Triage 표 1에 하나씩 대조했다. 172개 코드의 카탈로그 필드는 모두 일치했고, 복구 단계가 즉시 조치 분류와 어긋난 63건을 고쳤고, 재검수에서 XID 154와 문장 끝맺음 8건을 더 고쳤다. SXID 93건은 Fabric Manager User Guide v2.6 표 22~25의 분류·오류 문자열과 모두 일치했고, 분류별 대응(비치명: 정보성, 잠재적 치명: access/trunk 포트별 리셋, 항상 치명: 호스트 재시작)도 모두 들어 있어 단일 비트 ECC 19건의 영향 문장만 고쳤다. 이전 값과 해시는 [검토 기록](xid-catalog-action-review-20261023.json)에 있다.
 
 | 대상 | 고친 내용 |
 |---|---|
@@ -75,7 +75,11 @@ XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/dep
 | XID 108 | 즉시 조치 IGNORE, 조사는 XID_137_FLOW(원격 MMU fault 애플리케이션 점검) |
 | XID 31 | Triage 표 1의 "하드웨어 공급사 연락"을 "의심되면"으로 약하게 적은 문장을 원문대로 정정 |
 | XID 79 | 10-22 재작성에서 빠진 Xid 카탈로그 참고 항목 복원 |
+| XID 154 | 복구 단계가 "XID 154의 복구 조치 문구를 따릅니다"로 자기 자신을 가리키던 것을 nvidia-smi GPU Recovery Action 값별 조치(None, Reset, Reboot, Drain P2P, Drain and Reset)로 교체 |
+| XID 106·107·142·162~165·173 | 판단 단계의 "~한다." 끝맺음을 다른 단계와 같은 "~합니다."로 통일 |
+| SXID 단일 비트 ECC 19건 | "guest VM 영향이 없습니다"만 있던 영향 문장 앞에 FM 가이드의 bare metal 동작(실행 중인 작업을 중단하지 않고 새 작업도 막지 않음)을 추가 |
 
+- 남은 범위: open-gpu-kernel-modules의 NVSwitch 드라이버는 SXID를 약 420개 정의하고, A100용 LR10 인터럽트 코드가 보고하는 164개 중 80개, H100용 LS10이 보고하는 221개 중 137개에는 전용 Runbook이 없다. 이 코드는 일반 GPU 노드 조사 Runbook으로 처리된다. FM 가이드는 이 코드들의 코드별 조치를 따로 싣지 않으며, 로그 줄의 Fatal/Non-fatal 표시와 포트 종류에 따른 일반 절차만 제공한다.
 - XID 162~172는 카탈로그의 즉시 조치가 비어 있고, XID 173은 카탈로그(172번까지)에 없어 Fleet 고정 정의만 있다. 두 경우는 현재 서술을 유지한다.
 
 ## 출처 간 차이와 판정 제한
