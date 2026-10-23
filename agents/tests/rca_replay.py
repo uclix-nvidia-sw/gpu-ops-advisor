@@ -48,7 +48,7 @@ class FixtureSettings(Settings):
 
 
 class ReplayLLM(LLM):
-    async def complete(self, system, data, stage="synthesis"):
+    async def complete(self, system, data, stage="synthesis", max_tokens=None):
         # The existing editor uses the synthesis stage; keep its costs separate.
         role = (
             "report_writing"
@@ -70,7 +70,7 @@ class ReplayLLM(LLM):
         self.trace.append(record)
         self.current = record
         before = dict(self.usage)
-        response = await super().complete(system, data, stage)
+        response = await super().complete(system, data, stage, max_tokens)
         record.update(
             failure=self.last_failure,
             budget_remaining=self.remaining,

@@ -123,6 +123,16 @@ export const sentences = (text: string) =>
 
 const t = (v: unknown) => Date.parse(str(v));
 const IDLE = '사건 전부터 0';
+// DCGM dcgmFabricManagerStatus_t, as quoted in the published SXID Runbook references.
+const FM_STATUS: Record<number, string> = {
+  0: '미지원',
+  1: '시작 전',
+  2: '시작 중',
+  3: '성공',
+  4: '실패',
+  5: '인식 불가',
+  6: 'NVML 버전 낮음',
+};
 // Lower rank reads first: alert, caution, hold, steady, idle, unchanged codes.
 const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
   m.tone === 'alert'
@@ -181,8 +191,16 @@ export function aiFailure(result: Row) {
   const code = str(synthesis.error_code) || str(writer.reason);
   const raw = synthesis.http_status ?? writer.http_status;
   const status = typeof raw === 'number' ? raw : undefined;
+  // Gateway error class and limit hint recorded by the worker, never message text.
+  const [errorClass, ...rest] = (str(synthesis.error_type) || str(writer.error_type)).split(':');
+  const hint = rest.includes('output_tokens')
+    ? '출력 토큰 한도 초과'
+    : rest.includes('context_window')
+      ? '입력 길이 초과'
+      : '';
+  const detail = [`HTTP ${status ?? '상태 미기록'}`, errorClass, hint].filter(Boolean).join(' · ');
   const reason = code
-    ? `${aiReasons[code] || code}${code === 'llm_http_error' ? ` (HTTP ${status ?? '상태 미기록'})` : ''}`
+    ? `${aiReasons[code] || code}${code === 'llm_http_error' ? ` (${detail})` : ''}`
     : '';
   return { status, reason };
 }
@@ -422,15 +440,34 @@ export function operatorView(result: Row) {
     let tone: Tone = 'unknown';
     let tag: string;
     let short: string;
+    let enumChange = '';
     if (!before && !after && !whole) {
       [tag, short] = ['자료 없음', '수치 표본이 없습니다'];
     } else if (enumKind) {
       const all = [before, after, whole].filter(Boolean) as Window[];
       const changed = all.some((w) => w.min !== w.max) || new Set(all.map((w) => w.min)).size > 1;
-      [tag, short] = changed
-        ? ['변화', '코드가 바뀌었습니다 — 원문에서 전환 시각을 확인하세요']
-        : ['변화 없음', `상태 코드 ${fmtNum(all[0].min)} 유지 (코드 의미는 원문 기준)`];
-      tone = changed ? 'warn' : 'unknown';
+      const fm = q === 'D47';
+      const code = (c: number) => `${fmtNum(c)}${fm && FM_STATUS[c] ? ` (${FM_STATUS[c]})` : ''}`;
+      const c = all[0].min;
+      if (changed) {
+        enumChange =
+          before && after
+            ? `상태 코드 ${code(before.last)} → ${code(after.last)}`
+            : '상태 코드가 바뀜';
+        [tag, short] = ['변화', `${enumChange} — 원문에서 전환 시각을 확인하세요`];
+        tone = 'warn';
+      } else {
+        enumChange = `상태 코드 ${code(c)} 유지`;
+        [tag, short] = [
+          '변화 없음',
+          fm
+            ? c === 0
+              ? `${enumChange} — 이 GPU에서는 이 지표로 Fabric Manager 상태를 판단할 수 없어 FM 서비스·로그로 확인합니다`
+              : enumChange
+            : `${enumChange} (코드 의미는 원문 기준)`,
+        ];
+        tone = fm && c === 3 ? 'ok' : fm && c === 4 ? 'warn' : 'unknown';
+      }
     } else if (whole) {
       [tag, short] = [
         '구분 불가',
@@ -495,7 +532,7 @@ export function operatorView(result: Row) {
     }
     const reading = `${short}.`;
     const change = enumKind
-      ? short.replace(/\s*\([^()]*\)$/, '')
+      ? enumChange
       : before && after
         ? `${val(before.last)} → ${val(after.last)}`
         : whole
@@ -746,7 +783,12 @@ export function operatorView(result: Row) {
   gapPoints.push(
     `근본 원인은 확정되지 않았습니다${str(g0.cause_note) ? ` — 원인 후보: ${str(g0.cause_note)}` : '.'}`,
   );
-  const alertInfo = obj(gpuInfo.get(alertUuid) || [...gpuInfo.values()][0]);
+  // NVSwitch alerts name no GPU: take model/driver from any node GPU that reports them.
+  const alertInfo = obj(
+    gpuInfo.get(alertUuid) ||
+      [...gpuInfo.values()].find((g) => str(g.model) || str(g.driver)) ||
+      [...gpuInfo.values()][0],
+  );
   gapPoints.push(
     `이 보고서에 없는 자료: ${str(alertInfo.driver) ? '' : 'OS·드라이버 버전, '}nvidia-bug-report.sh, ${family === 'nvswitch' ? 'Fabric Manager 로그, ' : ''}DCGM 진단(dcgmi diag) 결과.`,
   );
@@ -864,7 +906,7 @@ export function operatorView(result: Row) {
     metrics,
     multiGpu: multi,
     /** Results from before pod labels were stored cannot say "no pods". */
-    podsKnown: Array.isArray(view.workloads),
+    podsKnown: view.workload_label_source === 'dcgm_exporter_labels' || podRows.length > 0,
     gpuRows,
     gpuCommon,
     /** Headline of what changed, for the 5W "어떻게" row; empty when nothing stands out. */

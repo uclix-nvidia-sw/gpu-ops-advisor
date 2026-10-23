@@ -305,24 +305,55 @@ def validate_interpretation(response, refs, criteria=None, observation_refs=None
 # Gateway overload/unavailability; one delayed retry inside the stage deadline.
 # Same set as the shared transport retry; gateways report upstream faults as 500.
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
+# Gateways reject an output cap above the routed model's limit with 400/500; RCA
+# answers fit well under this, so one call with this cap separates that case.
+REDUCED_OUTPUT_TOKENS = 8192
 
 
 async def complete_once(llm, prompt, payload, stage, diagnostics):
-    """One model call; retry once only for a transient HTTP status and record it."""
+    """One model call; retry once for a transient status, then once with a lower
+    output cap after a 400/500, and record what happened."""
+
+    def http_failed(response):
+        return (
+            response is None and getattr(llm, "last_failure", None) == "llm_http_error"
+        )
+
+    def time_left():
+        return time.monotonic() + 2 < getattr(llm, "deadline", float("inf"))
+
     response = await llm.complete(prompt, payload, stage=stage)
     status = getattr(llm, "last_http_status", None)
-    if (
-        response is None
-        and getattr(llm, "last_failure", None) == "llm_http_error"
-        and status in TRANSIENT_HTTP
-        and time.monotonic() + 2 < getattr(llm, "deadline", float("inf"))
-    ):
+    if http_failed(response) and status in TRANSIENT_HTTP and time_left():
         diagnostics["transient_retry_status"] = status
         await asyncio.sleep(1)
         response = await llm.complete(prompt, payload, stage=stage)
         status = getattr(llm, "last_http_status", None)
-    if response is None and getattr(llm, "last_failure", None) == "llm_http_error":
+    budget = (
+        llm.request_budget(prompt, payload, stage)
+        if hasattr(llm, "request_budget")
+        else {}
+    )
+    if (
+        http_failed(response)
+        and status in (400, 500)
+        and budget.get("configured_output_tokens", 0) > REDUCED_OUTPUT_TOKENS
+        and time_left()
+    ):
+        diagnostics["reduced_output_retry"] = {
+            "after_status": status,
+            "after_error_type": getattr(llm, "last_error_type", None),
+            "max_tokens": REDUCED_OUTPUT_TOKENS,
+        }
+        response = await llm.complete(
+            prompt, payload, stage=stage, max_tokens=REDUCED_OUTPUT_TOKENS
+        )
+        status = getattr(llm, "last_http_status", None)
+        diagnostics["reduced_output_retry"]["succeeded"] = response is not None
+    if http_failed(response):
         diagnostics["http_status"] = status
+        if getattr(llm, "last_error_type", None):
+            diagnostics["error_type"] = llm.last_error_type
     return response
 
 
