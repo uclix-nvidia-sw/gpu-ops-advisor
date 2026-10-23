@@ -691,7 +691,7 @@ def partial_repair(reply, payload, result):
                     {
                         "fact_id": fact["fact_id"],
                         "kind": fact["kind"],
-                        **writing_context(fact),
+                        **writing_context(fact, topic["findings"]),
                         "previous_summary": item.get("summary"),
                         "validation_error": str(exc),
                     }
@@ -703,12 +703,38 @@ def partial_repair(reply, payload, result):
     return (items, topics, reply) if items or topics else None
 
 
-def writing_context(fact):
+def writing_context(fact, findings=()):
     """Keep evidence and decision bounds without supplying finished advice prose."""
     context = summary_context(fact)
     context["decision"] = {
         key: value for key, value in context["decision"].items() if key != "option"
     }
+    # Related choices inform the explanation, never expand this item's references or scope.
+    related = []
+    target = fact.get("target", {})
+    if target.get("cluster_id") and target.get("namespace"):
+        for other in findings:
+            if other["fact_id"] == fact["fact_id"] or any(
+                other.get("target", {}).get(key) != target[key]
+                for key in ("cluster_id", "namespace")
+            ):
+                continue
+            decision = decision_context(other)
+            related.append(
+                {
+                    "fact_id": other["fact_id"],
+                    "kind": other["kind"],
+                    "period": other["period"],
+                    "gpu_models": other.get("gpu_models", []),
+                    "decision": {
+                        key: decision[key] for key in ("choice", "scope", "reason")
+                    },
+                }
+            )
+    if related:
+        context["related_observations"] = sorted(
+            related, key=lambda item: item["fact_id"]
+        )
     # Account for the evidence suffix inside the unchanged 360/220-character guards.
     evidence = context["summary_start"]
     context["prose_max_chars"] = min(
@@ -736,7 +762,7 @@ def writing_context(fact):
             "새 작업 배치 판단에 필요한 메모리 점유 주체·상주 목적 확인; 서빙·캐시는 가능한 예시"
         ],
         "batch_progress": [
-            "성공 완료 Job 일부의 기록; 대기 단계에 맞는 기록·작업 유형 확인"
+            "성공 완료 Job 일부와 남은 대기의 해당 단계 기록 대조; 연결된 작업 유형은 활용하고 미확인 유형만 확인"
         ],
     }[fact["kind"]]
     if fact["kind"] == "relative_activity":
@@ -917,7 +943,11 @@ async def interpret_report(result, llm):
                                     else ("fact_id", "target", "values", "text")
                                 )
                             },
-                            **(writing_context(f) if t.get("advice_mode") else {}),
+                            **(
+                                writing_context(f, t["findings"])
+                                if t.get("advice_mode")
+                                else {}
+                            ),
                         }
                         for f in t["findings"]
                     ],

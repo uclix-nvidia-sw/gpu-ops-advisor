@@ -17,7 +17,11 @@ from ops_agent.namespace_advice import (
     WRITING_FOCUS,
     VALUE_MEANINGS,
 )
-from ops_agent.report_interpretation import interpret_report, payload_for
+from ops_agent.report_interpretation import (
+    interpret_report,
+    payload_for,
+    writing_context,
+)
 from agent_common.llm import LLM
 from agent_common.settings import Settings
 
@@ -2267,3 +2271,109 @@ async def test_repeated_scheduling_condition_failure_keeps_calculated_report(pro
     assert "'확인한 뒤'" in repair["validation_error"]
     assert "'검토'" in repair["validation_error"]
     assert "summary" not in diagnostic["failures"][0]
+
+
+def test_related_observations_keep_target_period_and_choice_boundaries():
+    fact = candidates(topic(activity=90, pending=2))[0]
+    peer = candidates(topic(pending=2))[0]
+    peer["period"] = {"start": "2026-10-15T00:00:00Z", "end": "2026-10-15T03:00:00Z"}
+    peer["fact_id"] = "later-queue"
+    other_cluster = deepcopy(peer)
+    other_cluster["fact_id"] = "other-cluster"
+    other_cluster["target"]["cluster_id"] = "cpc-2"
+    other_namespace = deepcopy(peer)
+    other_namespace["fact_id"] = "other-namespace"
+    other_namespace["target"]["namespace"] = "another"
+    facts = [fact, peer, other_cluster, other_namespace]
+    before = deepcopy(facts)
+    context = writing_context(fact, facts)
+    related = context.pop("related_observations")
+    assert context == writing_context(fact)
+    assert [item["fact_id"] for item in related] == ["later-queue"]
+    assert related[0]["period"] == peer["period"] != fact["period"]
+    assert related[0]["decision"]["choice"] == "pending_stage_review"
+    assert context["decision"]["choice"] == "allocation_review"
+    assert "option" not in related[0]["decision"]
+    assert "summary_tokens" not in related[0]
+    assert facts == before
+    assert writing_context(fact, reversed(facts)) == writing_context(fact, facts)
+
+
+@pytest.mark.parametrize("missing", ["cluster_id", "namespace"])
+def test_missing_target_does_not_link_related_observations(missing):
+    fact = candidates(topic(pending=2))[0]
+    peer = deepcopy(fact)
+    peer["fact_id"] = "peer"
+    fact["target"][missing] = ""
+    assert "related_observations" not in writing_context(fact, [peer])
+
+
+@pytest.mark.parametrize(
+    "peak,samples,choice",
+    [
+        (2, 240, "placement_review"),
+        (0, 240, "startup_review"),
+        (0, 238, "pending_stage_review"),
+    ],
+)
+def test_related_context_does_not_override_evidence_sensitive_queue_choice(
+    peak, samples, choice
+):
+    current = topic(pending=2)
+    for hour in current["workloads"][0]["hours"]:
+        hour.update(unscheduled_peak=peak, unscheduled_samples=samples)
+    fact = candidates(current)[0]
+    peer = candidates(topic(activity=90, pending=2))[0]
+    peer["fact_id"] = "capacity-peer"
+    context = writing_context(fact, [fact, peer])
+    assert context["decision"]["choice"] == choice
+    assert (
+        context["related_observations"][0]["decision"]["choice"] == "allocation_review"
+    )
+    assert (
+        context["required_summary_tokens"]
+        == summary_context(fact)["required_summary_tokens"]
+    )
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_related_evidence_survives_partial_repair_without_rewriting_valid_item(
+    origin,
+):
+    combined = topic(activity=90, pending=2)
+    combined["workloads"][0]["completed_jobs"] = completed_topic()["workloads"][0][
+        "completed_jobs"
+    ]
+    result = dict(topics=[combined], quality={}, time_range={}, report_origin=origin)
+    before = deepcopy(result)
+    facts = payload_for(result)["topics"][0]["findings"]
+    assert len(facts) == 2
+    good = section(facts)
+    batch = next(f for f in facts if f["kind"] == "batch_progress")
+    good["advice"][0]["summary"] = (
+        "완료 기록이 있어도 마지막 시간대에 대기가 있어 Pod 상태·이벤트와 작업 유형을 대조하세요. "
+    ) + summary_context(batch)["summary_start"]
+    invalid = deepcopy(good)
+    invalid["advice"][0]["summary"] = invalid["advice"][0]["summary"].replace(
+        "{{period}}", ""
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [invalid]},
+        {"advice": [good["advice"][0]]},
+    ]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    repaired = repair["summary_repair"][0]
+    initial = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == repaired["fact_id"]
+    )
+    assert repaired["related_observations"] == initial["related_observations"]
+    assert len(repaired["related_observations"]) == 1
+    assert result["quality"]["report"]["reason"] == "repaired"
+    expected = validate_advice(good, {"findings": facts})["advice"]
+    assert [a["summary"] for a in result["narrative"][0]["advice"]] == [
+        a["summary"] for a in expected
+    ]
+    assert result["topics"] == before["topics"]
+    assert "related_observations" not in json.dumps(result)
