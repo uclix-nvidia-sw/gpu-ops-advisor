@@ -1,5 +1,5 @@
-import { obj, rows, str, strings, type Row } from '../lib/live';
-import { operatorView, sentences } from '../lib/rcaOperatorView';
+import { num, obj, rows, str, strings, type Row } from '../lib/live';
+import { aiFailure, operatorView, sentences } from '../lib/rcaOperatorView';
 import { formatRcaTime } from '../lib/rcaTime';
 import { RcaPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
@@ -44,8 +44,12 @@ export function RcaOperatorReport({
       .filter((s) => s.id === id)
       .flatMap((s) => str(s.text).split(/\n\s*\n/))
       .filter(Boolean);
+  // Fixed code sentences repeat Q1-Q5; only model-written analysis is shown here.
   const notes = sources.filter(
-    (r) => r.section === 'cause' && !str(r.text).startsWith('발행 Runbook의 오류 설명:'),
+    (r) =>
+      r.section === 'cause' &&
+      r.fixed !== true &&
+      !str(r.text).startsWith('발행 Runbook의 오류 설명:'),
   );
   // Older results without source items keep their stored cause prose.
   const noteTexts = sources.length ? notes.map((r) => str(r.text)) : paragraphs('cause');
@@ -59,9 +63,23 @@ export function RcaOperatorReport({
       ) : null,
     );
   const missing = strings(result.missing_inputs);
-  const [identity, timing, telemetry, repeat] = v?.findings || [];
+  const ai = aiFailure(result);
+  const [identity, timing, , repeat] = v?.findings || [];
   const first = v?.actionChecks[0];
   const maxCount = Math.max(1, ...(v?.devices || []).map((d) => d.count));
+  // Sections 1 and 3 need the triage observations; say why they are empty.
+  const books = rows(result.runbook_revisions).filter(
+    (b) => !str(b.knowledge_key).includes('GENERAL'),
+  );
+  const used = books.length
+    ? ` (사용 Runbook: ${books.map((b) => `${str(b.knowledge_key)} rev ${num(b.revision)}`).join(', ')})`
+    : '';
+  // The 30-minute comparison exists only for XID/SXID plans; component alerts never get one.
+  const noSummary = books.some((b) => /^RB-S?XID-/.test(str(b.knowledge_key)))
+    ? `이 결과에는 1·3장을 채우는 요약 자료가 저장되지 않았습니다${used}. 대개 지표 조회 계획이 없는 이전 Runbook revision으로 실행된 경우이며, 최신 revision으로 다시 분석하면 채워집니다.`
+    : `1·3장의 요약과 30분 로그·지표 비교는 XID/SXID 오류에만 만듭니다${used}. 2·4·5·6장을 확인하세요.`;
+  const podText = (w: { name: string; gpus: string; gpuCount: number }) =>
+    `${w.name} (${w.gpus}${w.gpuCount > 1 ? ` · ${w.gpuCount}개 함께 사용` : ''})`;
   return (
     <section
       id="final-report"
@@ -95,14 +113,20 @@ export function RcaOperatorReport({
             <ToneBadge tone="warn" label="일부 자료로 작성" />
           )}
           {missing.includes('synthesis_failed') && (
-            <span title={v?.aiReason}>
-              <ToneBadge tone="unknown" label="AI 해석 없음 · 표·판정은 코드 산출" />
-            </span>
+            <ToneBadge
+              tone="unknown"
+              label={`AI 해석 실패${ai.status ? ` · HTTP ${ai.status}` : ''}`}
+            />
           )}
           {missing.includes('event_not_found') && !v?.onsetText && (
             <ToneBadge tone="unknown" label="시작 시각 미확인" />
           )}
         </div>
+        {missing.includes('synthesis_failed') && (
+          <p className="rca-muted">
+            {`AI가 쓰는 해석 문장만 빠졌습니다${ai.reason ? ` — ${ai.reason}` : ''}. 아래 표와 판정은 수집한 로그·지표를 코드로 계산한 결과입니다.`}
+          </p>
+        )}
       </header>
 
       {v && (
@@ -119,17 +143,33 @@ export function RcaOperatorReport({
                 ? [
                     `누구에게 영향: ${v.workloads
                       .filter((w) => w.atIncident)
-                      .map((w) => w.name)
-                      .join(', ')} 작업이 사용 중 (DCGM 지표 라벨 기준)`,
+                      .map(podText)
+                      .join(
+                        ', ',
+                      )}${v.family === 'nvswitch' ? ' — NVSwitch가 연결하는 노드 GPU의 작업' : ''} (DCGM 지표 라벨 기준)`,
+                  ]
+                : v.podsKnown && v.metrics.length
+                  ? [
+                      `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`,
+                    ]
+                  : []),
+              ...(v.neighbours.length
+                ? [
+                    `같은 노드 다른 GPU 작업: ${v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}`,
                   ]
                 : []),
               `처음인가: ${repeat.verdict}`,
-              `지표: ${telemetry.verdict}`,
               ...(first
                 ? [`우선 대응: ${str(first.title)} — ${sentences(str(first.text))[0]}`]
                 : []),
             ]}
           />
+        </section>
+      )}
+      {!v && (
+        <section className="rca-glance" aria-label="사건 핵심 요약">
+          <h4>1. 한눈에 보기</h4>
+          <p className="rca-muted">{noSummary}</p>
         </section>
       )}
 
@@ -182,7 +222,10 @@ export function RcaOperatorReport({
             ))}
             <div className="rca-history-table">
               <table>
-                <caption>공급사 전달 자료 체크리스트 (NVIDIA GPU Node Triage)</caption>
+                <caption>
+                  공급사 전달 자료 체크리스트 (NVIDIA GPU Node Triage) · ✅ 이 보고서에 있음 · ⬜
+                  미수집(운영자가 확보) · ✍ 운영자가 작성
+                </caption>
                 <thead>
                   <tr>
                     <th>전달 자료</th>
@@ -208,13 +251,30 @@ export function RcaOperatorReport({
                   </tr>
                   <tr>
                     <td>수행한 조치 단계</td>
-                    <td>⬜</td>
-                    <td>수행한 조치와 시각을 티켓에 기록</td>
+                    <td>
+                      ✍ 운영자 작성
+                      <br />
+                      <small>이 보고서는 조치를 수행하지 않습니다</small>
+                    </td>
+                    <td>수행한 조치·시각·결과를 티켓에 기록</td>
                   </tr>
                   <tr>
                     <td>OS·드라이버 버전</td>
-                    <td>⬜ 미수집</td>
-                    <td>nvidia-smi 출력으로 확인</td>
+                    <td>
+                      {v.driver ? (
+                        <>
+                          {`✅ 드라이버 ${v.driver} (DCGM 라벨)`}
+                          <br />⬜ OS 미수집
+                        </>
+                      ) : (
+                        '⬜ 미수집'
+                      )}
+                    </td>
+                    <td>
+                      {v.driver
+                        ? 'OS는 /etc/os-release·uname -r로 확인'
+                        : 'nvidia-smi와 /etc/os-release로 확인'}
+                    </td>
                   </tr>
                   <tr>
                     <td>nvidia-bug-report.sh</td>
@@ -277,7 +337,14 @@ export function RcaOperatorReport({
         )}
       </section>
 
-      <RcaTriageObservations result={result} onEvidence={onEvidence} />
+      {v ? (
+        <RcaTriageObservations result={result} onEvidence={onEvidence} />
+      ) : (
+        <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
+          <h4>3. 관련 로그·메트릭</h4>
+          <p className="rca-muted">{noSummary}</p>
+        </section>
+      )}
 
       <section className="rca-narrative-section">
         <h4>4. 분석 및 해석</h4>
@@ -302,7 +369,7 @@ export function RcaOperatorReport({
             {noteTexts.length > 0 && (
               <article className="rca-finding tone-unknown">
                 <header>
-                  <h5>보고서 작성기 분석 메모</h5>
+                  <h5>AI 해석</h5>
                 </header>
                 <RcaPoints items={noteTexts} />
                 {links(notes.flatMap((r) => strings(r.evidence_refs)))}

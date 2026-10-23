@@ -1,9 +1,12 @@
 import { obj, rows, str, num, strings, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
-import { intervalLabel, operatorView, type Window } from '../lib/rcaOperatorView';
+import { intervalLabel, operatorView, valueText, type Window } from '../lib/rcaOperatorView';
 import { Ids, ToneBadge } from './RcaReportParts';
 
-const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
+const rangeText = (w: Window, unit: string) =>
+  w.min === w.max
+    ? valueText(w.min, unit)
+    : `${valueText(w.min, unit)} ~ ${valueText(w.max, unit)}`;
 
 export function RcaTriageObservations({
   result,
@@ -28,9 +31,7 @@ export function RcaTriageObservations({
       <span className="rca-muted">표본 없음</span>
     ) : (
       <>
-        {w.min === w.max
-          ? `${fmtNum(w.min)} ${unit}`
-          : `${fmtNum(w.min)} ~ ${fmtNum(w.max)} ${unit}`}
+        {rangeText(w, unit)}
         <br />
         <small>
           {w.samples}개 · 마지막 {formatDate(w.end)}
@@ -40,7 +41,6 @@ export function RcaTriageObservations({
   const start = Date.parse(v.timeline[0]?.at || '');
   const end = Date.parse(v.timeline[v.timeline.length - 1]?.at || '');
   const origin = Date.parse(v.eventTime || v.firstReport);
-  const multiGpu = new Set(v.metrics.flatMap((m) => m.gpus)).size > 1;
   return (
     <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
       <h4>3. 관련 로그·메트릭 · {v.node}</h4>
@@ -103,18 +103,31 @@ export function RcaTriageObservations({
               <mark>{v.codes.join(', ')}</mark> <Ids text={v.message} />
             </td>
           </tr>
-          {v.workloads.length > 0 && (
+          {(v.workloads.length > 0 || (v.podsKnown && v.metrics.length > 0)) && (
             <tr>
               <th>누구에게</th>
               <td>
+                {!v.workloads.some((w) => w.atIncident) && (
+                  <div>
+                    사건 시각에 {v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가
+                    없습니다 (작업 영향 미관측)
+                  </div>
+                )}
                 {v.workloads
                   .filter((w) => w.atIncident)
                   .map((w) => (
                     <div key={w.name}>
                       <strong>{w.name}</strong> 작업이 이{' '}
-                      {v.family === 'nvswitch' ? '노드 GPU' : 'GPU'}를 사용 중
+                      {v.family === 'nvswitch' ? '노드 GPU' : 'GPU'}를 사용 중 · {w.gpus}
+                      {w.gpuCount > 1 && ` (${w.gpuCount}개 함께 사용 — 파드 단위로 영향 확인)`}
                     </div>
                   ))}
+                {v.neighbours.length > 0 && (
+                  <div>
+                    같은 노드 다른 GPU 작업:{' '}
+                    {v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}
+                  </div>
+                )}
                 <small>DCGM 지표에 기록된 파드 라벨 기준(관측) · 할당 정보가 아닙니다</small>
               </td>
             </tr>
@@ -123,8 +136,9 @@ export function RcaTriageObservations({
             <th>어떻게</th>
             <td>
               보고 {v.reports}건 ·{' '}
-              {v.ongoing ? <mark>조회 종료까지 계속 보고됨</mark> : '마지막 보고 뒤 추가 보고 없음'}{' '}
-              · {v.findings[2].verdict}
+              {v.ongoing ? <mark>조회 종료까지 계속 보고됨</mark> : '마지막 보고 뒤 추가 보고 없음'}
+              {v.telemetryHeadline &&
+                ` · ${v.telemetryHeadline}${v.multiGpu ? ' (아래 GPU별 표)' : ''}`}
             </td>
           </tr>
           <tr>
@@ -224,16 +238,107 @@ export function RcaTriageObservations({
           </tbody>
         </table>
       </div>
-      {v.metrics.length > 0 && (
+      {v.metrics.length > 0 && v.multiGpu && (
         <div className="rca-history-table">
           <table>
             <caption>
-              관련 메트릭 ·{' '}
-              {view.metric_scope === 'node_gpu_context'
-                ? '같은 노드 GPU별 관측'
-                : '보고된 GPU와 대응한 관측'}{' '}
-              · 사건 기준 {v.boundary ? formatDate(v.boundary) : '시각 없음'}
+              GPU별 지표 · 사건 직전 → 사건 후 · 사건 기준{' '}
+              {v.boundary ? formatDate(v.boundary) : '시각 없음'} · 판정이 같은 GPU는 한 줄로 묶음
             </caption>
+            <thead>
+              <tr>
+                <th style={{ width: '22%' }}>GPU</th>
+                <th>지표 변화 (직전 → 사건 후)</th>
+                <th style={{ width: '24%' }}>판정</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v.gpuRows.map((r) => (
+                <tr key={r.gpus}>
+                  <td>
+                    <strong>{r.gpus}</strong>
+                    {r.pci && (
+                      <>
+                        <br />
+                        <small>
+                          <code className="rca-id">{r.pci}</code>
+                        </small>
+                      </>
+                    )}
+                  </td>
+                  <td>
+                    {r.lines.map((line) => (
+                      <div key={line}>{line}</div>
+                    ))}
+                  </td>
+                  <td>
+                    <ToneBadge tone={r.tone} label={r.tag} />
+                    {r.once && <small> 사건 뒤 표본 1회</small>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {v.gpuCommon.length > 0 && (
+            <p className="rca-muted">모든 GPU 공통: {v.gpuCommon.join(' · ')}</p>
+          )}
+        </div>
+      )}
+      {v.metrics.length > 0 && !v.multiGpu && (
+        <div className="rca-history-table">
+          <table>
+            <caption>
+              관련 메트릭 · 사건 기준 {v.boundary ? formatDate(v.boundary) : '시각 없음'}
+            </caption>
+            <thead>
+              <tr>
+                <th style={{ width: '20%' }}>지표</th>
+                <th style={{ width: '24%' }}>사건 전</th>
+                <th style={{ width: '18%' }}>사건 후</th>
+                <th>한 줄 해석</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v.metrics.map((m, i) => (
+                <tr key={i}>
+                  <td>{m.name}</td>
+                  {m.whole ? (
+                    <td colSpan={2}>조회 구간 전체: {windowText(m.whole, m.unit)}</td>
+                  ) : (
+                    <>
+                      <td>
+                        {m.before ? (
+                          <>
+                            {rangeText(m.before, m.unit)}
+                            <br />
+                            <small>직전 {valueText(m.before.last, m.unit)}</small>
+                          </>
+                        ) : (
+                          <span className="rca-muted">표본 없음</span>
+                        )}
+                      </td>
+                      <td>
+                        <ToneBadge
+                          tone={m.tone}
+                          label={m.after ? rangeText(m.after, m.unit) : '표본 없음'}
+                        />
+                      </td>
+                    </>
+                  )}
+                  <td>
+                    <strong>{m.tag}</strong> {m.short}
+                    <div>{links(m.refs)}</div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {v.metrics.length > 0 && v.multiGpu && (
+        <details className="rca-history-table">
+          <summary>GPU별 원자료 ({v.metrics.length}행)</summary>
+          <table>
             <thead>
               <tr>
                 <th>지표</th>
@@ -249,22 +354,21 @@ export function RcaTriageObservations({
                     <strong>{m.name}</strong>
                     <br />
                     <small>{m.unit}</small>
-                    {(view.metric_scope === 'node_gpu_context' || multiGpu) &&
-                      (m.gpus.length === 1 ? (
-                        <small>
-                          <br />
-                          <Ids text={m.gpus[0]} />
-                        </small>
-                      ) : (
-                        <details>
-                          <summary>GPU {m.gpus.length}개 · 동일 관측값</summary>
-                          {m.gpus.map((g) => (
-                            <p key={g}>
-                              <Ids text={g} />
-                            </p>
-                          ))}
-                        </details>
-                      ))}
+                    {m.gpus.length === 1 ? (
+                      <small>
+                        <br />
+                        <Ids text={m.gpus[0]} />
+                      </small>
+                    ) : (
+                      <details>
+                        <summary>GPU {m.gpus.length}개 · 동일 관측값</summary>
+                        {m.gpus.map((g) => (
+                          <p key={g}>
+                            <Ids text={g} />
+                          </p>
+                        ))}
+                      </details>
+                    )}
                   </td>
                   {m.whole ? (
                     <td colSpan={2}>조회 구간 전체: {windowText(m.whole, m.unit)}</td>
@@ -282,7 +386,7 @@ export function RcaTriageObservations({
               ))}
             </tbody>
           </table>
-        </div>
+        </details>
       )}
       {v.workloads.length > 0 && (
         <p className="rca-muted">

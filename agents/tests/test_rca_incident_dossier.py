@@ -450,6 +450,17 @@ def test_gpu_series_split_by_workload_labels_become_one_metric_with_workloads():
                         "metric": {**base, "namespace": "ns", "pod": "worker-b"},
                         "values": [[end - 120, "0"]],
                     },
+                    # The same pod also holds another GPU of the node.
+                    {
+                        "metric": {
+                            **base,
+                            "uuid": "GPU-OTHER",
+                            "gpu": "1",
+                            "namespace": "ns",
+                            "pod": "worker-a",
+                        },
+                        "values": [[end - 300, "100"]],
+                    },
                 ]
             }
         },
@@ -471,9 +482,16 @@ def test_gpu_series_split_by_workload_labels_become_one_metric_with_workloads():
     ]
     view = operator_view(data, [logs, metric], {"targets": [target]}, health)
     assert [m["query_id"] for m in view["metrics"]] == ["D02"]
+    assert view["metrics"][0]["gpu_uuid"] == target["gpu"]
     assert view["metrics"][0]["samples"] == 4 and view["metrics"][0]["max"] == 100
-    assert [w["pod"] for w in view["workloads"]] == ["worker-a", "worker-b"]
-    assert view["gpus"] == [{"gpu_uuid": target["gpu"], "model": "NVIDIA A100"}]
+    assert [(w["gpu_uuid"], w["pod"]) for w in view["workloads"]] == [
+        (target["gpu"], "worker-a"),
+        ("GPU-OTHER", "worker-a"),
+        (target["gpu"], "worker-b"),
+    ]
+    gpus = {g["gpu_uuid"]: g for g in view["gpus"]}
+    assert gpus[target["gpu"]] == {"gpu_uuid": target["gpu"], "model": "NVIDIA A100"}
+    assert gpus["GPU-OTHER"]["gpu_index"] == "1"
     assert view["onset"]["last_healthy_at"] == "2026-01-01T00:00:00Z"
     assert view["onset"]["first_unhealthy_at"] == "2026-01-01T00:01:00Z"
 
@@ -493,11 +511,12 @@ async def test_transient_gateway_error_is_retried_once_and_recorded():
             self.last_failure = "llm_http_error" if status else None
             return None if status else {"ok": True}
 
-    diagnostics = {}
-    assert await complete_once(Model([503, None]), "p", {}, "s", diagnostics) == {
-        "ok": True
-    }
-    assert diagnostics == {"transient_retry_status": 503}
+    for status in (500, 503):
+        diagnostics = {}
+        assert await complete_once(
+            Model([status, None]), "p", {}, "s", diagnostics
+        ) == {"ok": True}
+        assert diagnostics == {"transient_retry_status": status}
     diagnostics = {}
     model = Model([400])
     assert await complete_once(model, "p", {}, "s", diagnostics) is None

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from agent_common.contracts import content_hash
+from rcca_agent.retrieval import retrieve_runbooks
 from rcca_agent.runbook_audit import audit, main
 from rcca_agent.workflow import select_runbooks
 
@@ -172,3 +173,46 @@ def test_report_only_requirements_do_not_claim_current_health_approval():
     assert result["review"]["fleet_time_gated_facts"] == []
     assert result["review"]["operational_approval"] == "not_assessed"
     assert "error_specific_evidence_review_required" in result["review"]["findings"]
+
+
+class Selection:
+    data = {"time_range": {}}
+
+    def _evidence(self, *args):
+        self.diagnostics = args[3]
+
+
+def revision(row, number, **changes):
+    row = deepcopy(row)
+    row.update(id=f"fixture-revision-{number}", revision=number, **changes)
+    row.update(
+        content_hash=content_hash(row["content"]),
+        reviewed_content_hash=content_hash(row["content"]),
+    )
+    return row
+
+
+def selected_revisions(rows, source, profile):
+    selected, _ = select_runbooks(rows, source, profile, Selection())
+    key = rows[0]["knowledge_key"]
+    return sorted(b["revision"] for b in selected if b["knowledge_key"] == key)
+
+
+def test_newest_revision_wins_when_an_older_one_scores_higher():
+    profile, older = fixtures()
+    newer = deepcopy(older)
+    newer["content"]["title"] += " · 운영자 대응 순서 보강"
+    newer = revision(newer, 3)
+    source = {"summary": "XID 79 GPU has fallen off the bus"}
+    ranked = retrieve_runbooks([older, newer], source)
+    # A longer title lowers the newer revision's length-normalized score.
+    assert ranked[0]["runbook"]["revision"] == 2
+    assert ranked[0]["total_score"] > ranked[1]["total_score"]
+    assert selected_revisions([older, newer], source, profile) == [3]
+
+
+def test_newer_revision_of_another_contract_keeps_this_contract_revision():
+    profile, older = fixtures()
+    other = revision(older, 3, compatibility={"producer_contract": "other-v1"})
+    source = {"summary": "XID 79 GPU has fallen off the bus"}
+    assert selected_revisions([older, other], source, profile) == [2, 3]

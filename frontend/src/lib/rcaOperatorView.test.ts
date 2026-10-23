@@ -57,7 +57,7 @@ const result = {
           last: '2026-10-22T03:28:43Z',
           max_sample_gap_seconds: 15,
           incident_windows: {
-            before: before(100),
+            before: { ...before(100), last_value: 100 },
             at_or_after: { ...before(0, '2026-10-22T03:28:43Z'), samples: 3 },
           },
         },
@@ -162,6 +162,27 @@ it('flags uncorrectable ECC growth and treats bitmasks as codes', () => {
   expect(view.findings[2].tone).toBe('alert');
 });
 
+it('does not blame the error for a GPU that was already idle before it', () => {
+  const metrics = result.quality.triage_observations.metrics.map((m) =>
+    m.query_id === 'D02'
+      ? { ...m, incident_windows: { ...m.incident_windows, before: before(100) } }
+      : m,
+  );
+  const v = operatorView({
+    ...result,
+    quality: {
+      ...result.quality,
+      triage_observations: { ...result.quality.triage_observations, metrics },
+    },
+  })!;
+  const util = v.metrics.find((m) => m.name === 'GPU 사용률')!;
+  expect([util.tag, util.tone]).toEqual(['사건 전부터 0', 'unknown']);
+  expect(v.findings[2].verdict).toContain(
+    '사건 전부터 0: GPU 사용률 — GPU가 사건 전에 이미 쉬고 있었습니다 (직전 값 0 %',
+  );
+  expect(v.findings[2].verdict).not.toContain('작업이 멈췄습니다');
+});
+
 it('bounds the onset by state reports and names workloads on the GPU', () => {
   const view = operatorView({
     ...result,
@@ -181,6 +202,8 @@ it('bounds the onset by state reports and names workloads on the GPU', () => {
             driver: '580.1',
             gpu_index: '3',
           },
+          { gpu_uuid: other, gpu_index: '7' },
+          { gpu_uuid: 'GPU-C', gpu_index: '0' },
         ],
         workloads: [
           {
@@ -190,14 +213,96 @@ it('bounds the onset by state reports and names workloads on the GPU', () => {
             first: '2026-10-22T03:20:00Z',
             last: '2026-10-22T03:28:40Z',
           },
+          // The same pod also holds GPU 7; worker-c runs alone on GPU 0.
+          {
+            gpu_uuid: other,
+            namespace: 'ns',
+            pod: 'worker-b',
+            first: '2026-10-22T03:20:00Z',
+            last: '2026-10-22T03:28:40Z',
+          },
+          {
+            gpu_uuid: 'GPU-C',
+            namespace: 'ns',
+            pod: 'worker-c',
+            first: '2026-10-22T03:00:00Z',
+            last: '2026-10-22T03:28:40Z',
+          },
         ],
       },
     },
   })!;
   expect(view.onsetText).toContain('사이에 시작');
   expect(view.findings[1].points[0]).toContain('상태 보고로');
-  expect(view.workloads).toMatchObject([{ name: 'ns / worker-b', atIncident: true }]);
+  expect(view.workloads).toMatchObject([
+    { name: 'ns / worker-b', atIncident: true, gpus: 'GPU 3·7번', gpuCount: 2 },
+  ]);
+  expect(view.neighbours).toMatchObject([{ name: 'ns / worker-c', gpus: 'GPU 0번' }]);
   expect([view.gpuModel, view.driver, view.gpuIndex]).toEqual(['NVIDIA A100', '580.1', '3']);
   expect(view.findings[4].points.join()).not.toContain('드라이버 버전');
   expect(view.metrics[0].gpus[0]).toBe(`PCI 0000:4e:00.0 · ${gpu}`);
+});
+
+it('names GPUs that share a verdict instead of listing every series', () => {
+  const nvlink = (name: string, query: string, uuid: string, last: number, after: number) => ({
+    name,
+    query_id: query,
+    unit: 'bytes_per_second',
+    kind: 'gauge',
+    gpu_uuid: uuid,
+    max_sample_gap_seconds: 60,
+    incident_windows: {
+      before: { ...before(Math.max(last, 273775903)), last_value: last },
+      at_or_after: {
+        ...before(after, '2026-10-22T03:28:40Z'),
+        min: after,
+        last_value: after,
+        samples: 1,
+      },
+    },
+  });
+  const gpus = [
+    ['GPU-7', '7', 272737481, 0],
+    ['GPU-5', '5', 273064763, 4024947],
+    ['GPU-4', '4', 279084193, 262456706],
+    ['GPU-0', '0', 0, 0],
+  ] as const;
+  const v = operatorView({
+    ...result,
+    quality: {
+      ...result.quality,
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metric_scope: 'node_gpu_context',
+        gpus: gpus.map(([uuid, index]) => ({ gpu_uuid: uuid, gpu_index: index })),
+        metrics: gpus.flatMap(([uuid, , last, after]) => [
+          nvlink('NVLink 수신량', 'D33', uuid, last, after),
+          nvlink('NVLink 송신량', 'D34', uuid, last, after),
+          {
+            name: 'Fabric Manager 상태',
+            query_id: 'D47',
+            unit: 'enum',
+            kind: 'enum',
+            gpu_uuid: uuid,
+            incident_windows: { before: before(0), at_or_after: { ...before(0), samples: 1 } },
+          },
+        ]),
+      },
+    },
+  })!;
+  expect(v.gpuRows.map((r) => [r.gpus, r.tag])).toEqual([
+    ['GPU 7번', '멈춤'],
+    ['GPU 5번', '급감'],
+    ['GPU 4번', '유지'],
+    ['GPU 0번', '사건 전부터 0'],
+  ]);
+  expect(v.gpuRows[0].lines).toContain('NVLink 수신량·송신량: 272.7 MB/s → 0 B/s');
+  expect(v.gpuCommon).toEqual(['Fabric Manager 상태: 상태 코드 0 유지']);
+  expect(v.findings[2].verdict).toBe(
+    '사건 직후 GPU 7번 NVLink 수신량·송신량 멈춤, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
+  );
+  expect(v.findings[2].points).toContain(
+    '변화 없음: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 유지',
+  );
+  expect(v.findings[2].points.join('\n')).not.toMatch(/\d{7,} B\/s/);
 });

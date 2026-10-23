@@ -110,16 +110,28 @@ def select_runbooks(rows, source, profile, obs):
                     "reason": contract_reason(exc),
                 }
             )
+
     # Store already restricts visibility/state and pins revisions at the JC claim.
+    # The claim pins every published revision. Keep the newest one per
+    # compatibility contract before ranking, so a lexical score cannot pick an
+    # older revision of the same knowledge.
+    def contract(row):
+        return row["knowledge_key"], json.dumps(row["compatibility"], sort_keys=True)
+
+    newest = {}
+    for row in current:
+        if row["revision"] > newest.get(contract(row), {"revision": -1})["revision"]:
+            newest[contract(row)] = row
+    current = list(newest.values())
     general = [r for r in current if r["knowledge_key"] == general_key]
     ranked = retrieve_runbooks([r for r in current if r not in general], source)
     selected = compatible_runbooks(legacy, source)
     keys = set()
     for entry in ranked:
         row = entry["runbook"]
-        if row["knowledge_key"] in keys:
+        if contract(row) in keys:
             continue
-        keys.add(row["knowledge_key"])
+        keys.add(contract(row))
         selected.append(row)
         diagnostics.append(
             {

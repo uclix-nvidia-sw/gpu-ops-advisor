@@ -35,8 +35,10 @@ const result = {
 };
 it('groups identical summaries without hiding different measurements or GPU identities', () => {
   const html = renderToStaticMarkup(<RcaTriageObservations result={result} />);
-  expect(html.match(/NVLink RX/g)).toHaveLength(2);
-  expect(html).toContain('GPU 2개');
+  // One summary line for the shared verdict, two raw rows (identical A·B, different C).
+  expect(html.match(/NVLink RX/g)).toHaveLength(3);
+  expect(html).toContain('GPU 3개');
+  expect(html).toContain('GPU 2개 · 동일 관측값');
   for (const gpu of ['GPU-A', 'GPU-B', 'GPU-C']) expect(html).toContain(gpu);
 });
 it('shows guidance, observations, analysis and references in operator order', () => {
@@ -201,4 +203,91 @@ it('takes fabric checks from the published Runbook and avoids a duplicate escala
   expect(withEscalation).toContain('패브릭 상태 확인');
   expect(withEscalation).not.toContain('조치 후 확인·에스컬레이션');
   expect(report('nvidia-smi nvlink -s로 확인합니다.')).toContain('조치 후 확인·에스컬레이션');
+});
+
+it('explains a missing AI narrative, operator-written checklist rows and pods by GPU', () => {
+  const gpu = 'GPU-11111111-2222-3333-4444-555555555555';
+  const span = { first: '2026-10-22T07:30:13Z', last: '2026-10-22T07:56:43Z' };
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        missing_inputs: ['synthesis_failed'],
+        quality: {
+          analysis: { synthesis: { error_code: 'llm_http_error', http_status: 500 } },
+          report: {
+            source_items: [
+              { section: 'cause', fixed: true, text: '고정 문장: GPU 목록과 대조했습니다.' },
+              { section: 'cause', text: 'LLM 해석 문장입니다.', evidence_refs: ['e1'] },
+            ],
+          },
+          runbook_guidance: [{ guidance: { meaning: 'XID 79 의미입니다.', next_checks: [] } }],
+          triage_observations: {
+            schema: 'rca-triage-observations/1',
+            target: { node: 'dgx01', title: `XID 79 detected on GPU PCI:0000:bd:00 UUID:${gpu}` },
+            event_boundary: '2026-10-22T07:55:24Z',
+            logs: [{ code: 'xid:79', device: 'PCI:0000:bd:00', ...span, reports: 2 }],
+            gpus: [
+              { gpu_uuid: gpu, gpu_index: '7', driver: '580.173.02' },
+              { gpu_uuid: 'GPU-B', gpu_index: '4' },
+              { gpu_uuid: 'GPU-C', gpu_index: '0' },
+            ],
+            workloads: [
+              { gpu_uuid: gpu, namespace: 'ns', pod: 'worker-a', ...span },
+              { gpu_uuid: 'GPU-B', namespace: 'ns', pod: 'worker-a', ...span },
+              { gpu_uuid: 'GPU-C', namespace: 'ns', pod: 'worker-c', ...span },
+            ],
+          },
+        },
+      }}
+    />,
+  );
+  expect(html).toContain('AI 해석 실패 · HTTP 500');
+  expect(html).toContain('AI가 쓰는 해석 문장만 빠졌습니다 — LLM 호출 실패 (HTTP 500)');
+  expect(html).not.toContain('표·판정은 코드 산출');
+  expect(html).toContain('✍ 운영자 작성');
+  expect(html).toContain('이 보고서는 조치를 수행하지 않습니다');
+  expect(html).toContain('✅ 드라이버 580.173.02 (DCGM 라벨)');
+  expect(html).toContain('ns / worker-a (GPU 4·7번 · 2개 함께 사용)');
+  expect(html).toContain('ns / worker-c (GPU 0번)');
+  expect(html).not.toContain('<strong>지표</strong>');
+  expect(html).toContain('<h5>AI 해석</h5>');
+  expect(html).toContain('LLM 해석 문장입니다.');
+  expect(html).not.toContain('고정 문장');
+});
+
+it('keeps the six-section frame when a result has no triage observations', () => {
+  const html = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        runbook_revisions: [
+          { knowledge_key: 'RB-SXID-11001', revision: 13 },
+          { knowledge_key: 'RB-GENERAL-GPU-NODE', revision: 3 },
+        ],
+        quality: { analysis: { workflow: 'single_collection' } },
+        narrative: [{ id: 'action', title: '권고 조치', text: '진단 자료 보존' }],
+      }}
+    />,
+  );
+  for (const heading of [
+    '1. 한눈에 보기',
+    '2. 대응 순서',
+    '3. 관련 로그·메트릭',
+    '4. 분석 및 해석',
+    '5. 이전 사건 이력',
+    '6. 참고 자료',
+  ])
+    expect(html).toContain(heading);
+  expect(html).toContain('(사용 Runbook: RB-SXID-11001 rev 13)');
+  expect(html).not.toContain('RB-GENERAL-GPU-NODE rev');
+  // Component alerts never get the comparison, so no "older revision" advice.
+  const component = renderToStaticMarkup(
+    <RcaNarrative
+      result={{
+        runbook_revisions: [{ knowledge_key: 'RB-COMPONENT-DISK', revision: 1 }],
+        quality: { analysis: { workflow: 'single_collection' } },
+      }}
+    />,
+  );
+  expect(component).toContain('XID/SXID 오류에만 만듭니다 (사용 Runbook: RB-COMPONENT-DISK rev 1)');
+  expect(component).not.toContain('이전 Runbook revision');
 });

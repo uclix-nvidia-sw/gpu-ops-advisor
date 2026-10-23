@@ -327,8 +327,6 @@ def operator_view(data, evidence, comparison, health=()):
                 continue
             if not metric_host_matches(data["target"], labels):
                 continue
-            if not switch and not any(t["gpu"] and t["gpu"] == gpu for t in targets):
-                continue
             values = set()
             for at, value in metric["samples"]:
                 try:
@@ -339,12 +337,8 @@ def operator_view(data, evidence, comparison, health=()):
                     pass
             if not values:
                 continue
-            row = merged.setdefault(
-                (entry["query_id"], gpu),
-                {"values": set(), "unit": metric.get("unit"), "refs": set()},
-            )
-            row["values"] |= values
-            row["refs"].add(entry["id"])
+            # GPU and pod labels cover the whole node: a pod may span the alert GPU
+            # and others, and neighbours give context. Metrics stay per alert GPU.
             if gpu:
                 info = gpus.setdefault(gpu, {})
                 for key, label in GPU_LABELS.items():
@@ -355,6 +349,14 @@ def operator_view(data, evidence, comparison, health=()):
                 times = [t for t, _ in values]
                 seen = workloads.setdefault((gpu, work), [min(times), max(times)])
                 seen[0], seen[1] = min(seen[0], *times), max(seen[1], *times)
+            if not switch and not any(t["gpu"] and t["gpu"] == gpu for t in targets):
+                continue
+            row = merged.setdefault(
+                (entry["query_id"], gpu),
+                {"values": set(), "unit": metric.get("unit"), "refs": set()},
+            )
+            row["values"] |= values
+            row["refs"].add(entry["id"])
     boundary = timestamp(event_boundary(data, targets)[0])
     metrics = []
     for (query_id, gpu), row in merged.items():
