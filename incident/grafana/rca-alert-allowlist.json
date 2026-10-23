@@ -1,5 +1,5 @@
 {
-  "purpose": "Fleet event types that do not trigger RCA by themselves but whose NVIDIA guidance requires an operator action. The GPUAlert event rule adds these codes to every Fatal/Critical Fleet event.",
+  "purpose": "Warning codes whose NVIDIA guidance requires an operator action. Fleet keeps their component state Healthy, so the GPUAlert event rule (gpuops-xid-sxid-rca) raises them from Fleet event lines; Fatal/Critical codes come from the state rule (gpuops-xid-sxid-state).",
   "basis": {
     "fleet": "Pinned Fleet SDK 84f99bee catalog event_type (rcca-agent/runbooks/catalog-manifest.json fleet_event_type)",
     "xid": "NVIDIA Xid catalog (Xid-Catalog.xlsx, Sep 09, 2026) immediate-action bucket and GPU Node Triage table 1 (Oct 04, 2026)",

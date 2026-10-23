@@ -92,16 +92,18 @@ GPU UUID는 입력 라벨에 있을 때만 보존합니다. node/pod/namespace �
 
 | uid | 알림 이름 | 입력 | Incident 처리 |
 |---|---|---|---|
-| `gpuops-xid-sxid-rca` | `GPUAlert` | Fleet 이벤트 줄(`log_type=event`, `error_xid`/`error_sxid`) 중 Fleet 분류 Fatal·Critical이거나 [허용 목록](grafana/rca-alert-allowlist.json)의 코드 | 사건 + RCA |
+| `gpuops-xid-sxid-state` | `GPUAlert` | XID·SXID 상태 줄(`log_type=component_data`) 중 `health=Unhealthy`/`Degraded` | 사건 + RCA |
+| `gpuops-xid-sxid-rca` | `GPUAlert` | Fleet 이벤트 줄(`log_type=event`, `error_xid`/`error_sxid`) 중 Fatal·Critical이 아니고 [허용 목록](grafana/rca-alert-allowlist.json)에 있는 코드 | 사건 + RCA |
 | `gpuops-xid-sxid-notice` | `GPUErrorNotice` | 나머지 XID·SXID 이벤트(Warning 등) | 사건만 저장. 분석 정책이 없어 `analysis_policy_unconfigured` |
 | `gpuops-component-rca` | `GPUAlert` | 컴포넌트 Runbook이 있는 17개 컴포넌트의 상태 줄 중 `health=Unhealthy` | 사건 + RCA |
 
-- 이벤트 줄은 오류 1건에 한 번 기록되고 `code`(`xid:79`, `sxid:11001`)·`device`·`event_type`·`reason`(본문) 라벨을 만든다. Fleet은 카탈로그 event_type이 Fatal인 코드만 Unhealthy 상태로 바꾸므로, 상태 줄만 보는 규칙은 Warning 코드를 놓친다.
-- 허용 목록은 Fleet이 Fatal·Critical로 보지 않지만 NVIDIA 문서가 장치 조치를 요구하는 코드다(Xid 카탈로그 즉시 조치·GPU Node Triage 표 1, FM 가이드 v2.6 표 23·24와 표 25의 SXID 10003). XID 13·31·45는 애플리케이션 오류가 많아 기본은 `GPUErrorNotice`이며 `opt_in`으로 기록했다. `tools/ci/tests/test_alert_rules.py`가 허용 목록·컴포넌트 목록을 [Runbook 매니페스트](../rcca-agent/runbooks/catalog-manifest.json)와 대조한다.
-- 적용: `${GRAFANA_ORG_ID}`, `${GRAFANA_FOLDER}`, `${LOKI_DATASOURCE_UID}`, `${GPU_OPS_CONTACT_POINT}`(Incident Webhook 연락 지점 이름)를 채운 뒤 Grafana 파일 provisioning(`provisioning/alerting/`)으로 읽힌다. 예: `envsubst < incident/grafana/alert-rules.yaml > gpu-ops-alert-rules.yaml`.
-- 전환 순서: 각 쿼리를 Explore에서 미리 실행 → 기존 상태 줄 기반 `GPUAlert` 규칙을 멈추고 새 규칙 적용(동시에 켜면 사건이 두 번 생긴다) → 실제 이벤트 1건으로 사건·RCA 생성 확인 → 컴포넌트 Runbook 발행.
-- 이벤트 알림은 2분 창이 지나면 해제된다. 창은 평가 주기(1m)의 2배 이상이며 알림 정책 group_wait(기본 30s)보다 길어야 firing 알림이 먼저 전달된다. 1.4 에피소드 경로로 바꾸면 alertname 등록과 무관하게 전달되므로 `GPUErrorNotice`를 denylist에 넣어야 한다.
-- 한계: Fleet·GPUd 카탈로그 밖 코드(XID 133, SXID 93개 외)는 Fleet이 버려 알림이 생기지 않는다. 컴포넌트의 Degraded는 받지 않는다(예: 상시 Degraded인 전력 컴포넌트). 2026-10-23 운영 Loki에 읽기 전용으로 실행해 이벤트 규칙(72시간, `xid:79`·`sxid:11001` 15개 인스턴스)과 컴포넌트 규칙(30일, disk·cpu)이 결과를 내는 것만 확인했고, Grafana에는 적용하지 않았다.
+- Fleet은 카탈로그 event_type이 Fatal인 코드를 Unhealthy, Critical을 Degraded로 바꾸고, 상태 줄을 1분마다 다시 기록한다. 이벤트 줄은 오류 1건에 한 번만 기록되며, 내보내기 전에 SetHealthy가 실행되면 지워지고(`eventBucket.Purge`) 내보내기에서 빠질 수도 있다. 그래서 상태를 바꾸는 코드는 반드시 상태 규칙으로 받는다. 2026-10-23 운영에서 이벤트 줄만 보던 규칙이 dgx01 SXID 11001(상태는 Unhealthy)을 25분간 놓쳐 이 구성으로 바꿨다.
+- 이벤트 규칙은 상태를 바꾸지 않는 Warning 코드만 맡는다. Fatal·Critical을 이벤트로도 받으면 라벨이 달라 같은 오류에 사건과 RCA가 두 번 생긴다. 이벤트 줄은 `code`(`xid:79`, `sxid:11001`)·`device`·`event_type`·`reason`(본문) 라벨을 만든다.
+- 허용 목록은 Fleet이 Warning으로 두지만 NVIDIA 문서가 장치 조치를 요구하는 코드다(Xid 카탈로그 즉시 조치·GPU Node Triage 표 1, FM 가이드 v2.6 표 23·24와 표 25의 SXID 10003). XID 13·31·45는 애플리케이션 오류가 많아 기본은 `GPUErrorNotice`이며 `opt_in`으로 기록했다. `tools/ci/tests/test_alert_rules.py`가 허용 목록·컴포넌트 목록을 [Runbook 매니페스트](../rcca-agent/runbooks/catalog-manifest.json)와 대조하고 규칙 간 역할 분리를 검사한다.
+- 적용: `${GRAFANA_ORG_ID}`, `${GRAFANA_FOLDER}`, `${LOKI_DATASOURCE_UID}`, `${GPU_OPS_CONTACT_POINT}`(Incident Webhook 연락 지점 이름)를 채운 뒤 Grafana 파일 provisioning(`provisioning/alerting/`)이나 provisioning API로 만든다. 예: `envsubst < incident/grafana/alert-rules.yaml > gpu-ops-alert-rules.yaml`.
+- 이벤트 규칙의 창은 10분이다. Fleet이 이벤트를 주기적으로 내보내 Loki 도착이 늦을 수 있고, 창이 평가 주기(1m)와 알림 정책 group_wait(기본 30s)보다 길어야 firing 알림이 먼저 전달된다. 이벤트 알림은 창이 지나면 해제되지만 RCA는 firing 수신 시점에 만들어진다. 1.4 에피소드 경로로 바꾸면 alertname 등록과 무관하게 전달되므로 `GPUErrorNotice`를 denylist에 넣어야 한다.
+- 남은 위험: 허용 목록 Warning 코드는 이벤트 줄로만 받을 수 있어 이벤트가 지워지거나 내보내지지 않으면 놓친다. 이전의 상태 줄 규칙만으로는 이 코드들을 전혀 받지 못했으므로 그보다 나빠지지는 않는다. 같은 장치의 같은 오류가 Unhealthy 동안 반복되면 상태 줄 사유가 같아 새 사건 없이 기존 알림이 이어진다.
+- 한계: Fleet·GPUd 카탈로그 밖 코드(XID 133, SXID 93개 외)는 Fleet이 버려 알림이 생기지 않는다. row remapping을 지원하는 GPU(A100 이후)에서 Fleet은 kmsg의 XID 63·64를 버리고 `accelerator-nvidia-remapped-rows` 컴포넌트에 맡기며, 이 컴포넌트는 아직 규칙·Runbook에 없다. 컴포넌트의 Degraded는 받지 않는다(예: 상시 Degraded인 전력 컴포넌트). 2026-10-23 운영 Grafana 적용 뒤 kmsg 주입으로 XID 79·48(이벤트 줄), disk(컴포넌트 상태), SXID 11001(상태 규칙)이 사건·RCA까지 이어지는 것을 확인했다.
 
 ## 수신·증거·전달 정책
 
