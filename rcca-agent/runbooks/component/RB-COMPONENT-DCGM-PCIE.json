@@ -109,7 +109,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -i <번호>의 PCI 항목에서 Link Gen·Width의 Current·Max와 Replays Since Reset 값을 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). dmesg -T에서 같은 시각의 PCIe AER 메시지와 XID 79·32를 찾습니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -i <번호>의 PCI 항목에서 Link Gen·Width의 Current·Max와 Replays Since Reset 값을 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). dmesg -T에서 같은 시각의 PCIe AER 메시지와 XID 79·32를 찾습니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",

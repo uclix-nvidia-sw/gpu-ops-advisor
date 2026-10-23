@@ -248,9 +248,11 @@ export function RcaOperatorReport({
                         ', ',
                       )}${v.family === 'nvswitch' ? ' — NVSwitch가 연결하는 노드 GPU의 작업' : ''} (DCGM 지표 라벨 기준)`,
                   ]
-                : v.podsKnown && v.metrics.length
+                : v.metrics.length
                   ? [
-                      `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`,
+                      v.podsKnown
+                        ? `누구에게 영향: 사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`
+                        : '누구에게 영향: 수집한 지표에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 노드의 작업을 확인하세요',
                     ]
                   : []),
               ...(v.neighbours.length

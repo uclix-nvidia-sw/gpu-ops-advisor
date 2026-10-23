@@ -70,6 +70,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D02",
+        "fact_names": [
+          "observations"
+        ],
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract",
+        "required": false,
+        "purpose": "같은 노드 GPU의 사용률과 GPU 모델·드라이버·파드 라벨을 분석 전에 수집하여 NVLink 변화와 작업 영향을 대조한다. 빈 결과와 공백을 0·정상으로 대체하지 않는다.",
+        "priority": 5
       }
     ],
     "sources": [
@@ -158,7 +170,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "영향 범위: NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다.",
+        "text": "영향 범위: NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -187,7 +199,7 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "SXID 24003(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다.",
+      "meaning": "SXID 24003(Single bit ECC errors)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 잠재적 비치명(Potential Non-Fatal) · 단일 비트 ECC입니다. NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다.",
       "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
       "next_checks": [
         {
@@ -200,7 +212,7 @@
         },
         {
           "title": "영향 범위",
-          "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류로 guest VM 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+          "text": "NVSwitch 하드웨어가 자동으로 정정하는 단일 비트 ECC 오류입니다. Fabric Manager는 비치명 SXID로 실행 중인 CUDA 작업을 중단하지 않고 새 작업 실행도 막지 않습니다. 공유 NVSwitch 가상화의 guest VM에도 영향이 없습니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
         },
         {
           "title": "복구 조치",
@@ -242,8 +254,8 @@
           "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋 대신 VM을 재시작합니다."
         },
         {
-          "title": "D47 상태 코드 읽는 법",
-          "text": "보고서의 'GPU별 Fabric Manager 상태 코드'(D47)는 DCGM 값입니다: 0 미지원, 1 시작 전, 2 시작 중, 3 성공, 4 실패, 5 인식 불가, 6 NVML 버전 낮음. 0이면 그 GPU에서는 이 지표로 Fabric Manager 상태를 판단할 수 없으므로 서비스 상태와 Fabric Manager 로그로 확인합니다.",
+          "title": "Fabric Manager 상태 코드 읽는 법",
+          "text": "보고서의 'GPU별 Fabric Manager 상태 코드'는 DCGM이 GPU마다 보고하는 Fabric Manager 상태 값입니다: 0 미지원, 1 시작 전, 2 시작 중, 3 성공, 4 실패, 5 인식 불가, 6 NVML 버전 낮음. 0이면 그 GPU에서는 이 지표로 Fabric Manager 상태를 판단할 수 없으므로 서비스 상태와 Fabric Manager 로그로 확인합니다.",
           "source_indices": [
             5
           ]

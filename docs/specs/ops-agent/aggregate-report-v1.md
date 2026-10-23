@@ -189,6 +189,14 @@ A count of two identities during an hour does not prove simultaneous duplication
 
 실제 CPC-1·CPC-2의 2026-10-13 세 시간대, GPU·시간대 조합 13건에서 확인한 연결 변경은 모두 시각상 비중복이었다. 조회 성공·표본 수만으로 추정하지 않고 실제 처음/마지막 시각과 Pod UID를 대조했다. 이 결과로 ‘모든 연결 변경은 정상’이라고 일반화하지 않는다. 상세 로컬 검사 범위는 [Agent QA](../../../agents/QA.md)를 따른다.
 
+### Verified KSM collector handoffs / 검증된 KSM 수집기 교체
+
+`collector_identity.py` separates collector transport labels (`instance`, `exporter_pod`) from Pod/Job identity. A single source in disjoint hourly buckets may change collectors without creating a new Job. When multiple collectors occur in the **same hour**, their counts are never blindly summed: `report_queries.py` reads the original samples for that hour and requires disjoint, continuous source intervals, identical retained identity labels, and an exact match to each saved aggregate. Concurrent sources, gaps, duplicate timestamps/fields, contradictory values and unverified metadata changes remain excluded.
+
+Pod 연결에는 동일 UID·노드, 값 1, 기존 238–242개 표본·시간 경계·표본 간격 조건을 유지한다. Job은 각 원천에 생성 시각 근거가 있어야 하며, 기존 생성/시작/완료 시각 안정성·순서·보고기간·이름 재사용 검사를 그대로 적용한다. 다른 원천의 불완전한 시각 필드를 조합해 완료를 만들지 않는다. 원본 snapshot은 변경하지 않고, 검증된 보기만 기존 집계에 전달한다. 평균 활동률·경과시간 산식과 LLM 검증 조건은 바꾸지 않는다.
+
+Optional collector verification runs after existing aggregate, GPU-transition, memory, workload and context reads: at most **4 raw calls, 64 target names per call and 20 seconds per report**, with the existing 80-call / 8 MiB / per-response point limits and at least 30 seconds before the collection deadline. It does not expand or consume the separate 32-call GPU-transition allowance. Exhaustion, unavailable raw retention or failed proof preserves conservative exclusion. `quality.collector_handoffs` stores compact source/time/value bounds; `quality.collector_verification` records checked hours, verified group counts and a safe failure code. Raw sample arrays and upstream error text are not stored. Existing saved reports are not rewritten; without proof, same-hour ambiguity remains excluded.
+
 ## 저장된 작업 유형·GPU 요청 연결
 
 `workload_context.py`는 기존 저장 지표를 현재 보고기간에만 조회하고 `namespace_usage.workload_context`에 보충 근거를 저장한다. 자동·수동 보고서는 같은 경로를 사용한다. 기존 활동률·메모리·대기·완료 수치, CSV, 후보 선별 및 LLM 검증 조건은 유지한다. 수집 설정을 바꾸거나 과거 보고서를 덮어쓰지 않는다.

@@ -6,6 +6,7 @@ import math
 from agent_common.contracts import metric, timestamp
 from .report_contract import MAX_NAMESPACES, iso
 from .workload_queries import QUERY_IDS
+from .collector_identity import series_for
 
 
 def enrich_workloads(topic, evidence, data):
@@ -31,7 +32,7 @@ def enrich_workloads(topic, evidence, data):
             namespaces.update((e["cluster_id"], n) for n in allowed)
         if e["tool_status"] != "ok":
             continue
-        for series in e["snapshot"]["series"]:
+        for series in series_for(e):
             labels = series["metric"]
             cluster, ns = labels.get("cluster_id"), labels.get("namespace")
             if (

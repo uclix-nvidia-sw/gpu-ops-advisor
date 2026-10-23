@@ -282,12 +282,15 @@ def state_onset(health, target, codes):
 
 # DCGM exporter labels; recorded as observed, never as allocation or ownership.
 WORKLOAD_LABELS = ("namespace", "pod", "container")
+# DCGM exporter and Fleet exporters name the same facts differently.
 GPU_LABELS = {
-    "model": "modelName",
-    "driver": "DCGM_FI_DRIVER_VERSION",
-    "pci_bus_id": "pci_bus_id",
-    "gpu_index": "gpu",
+    "model": ("modelName", "model_name"),
+    "driver": ("DCGM_FI_DRIVER_VERSION",),
+    "pci_bus_id": ("pci_bus_id",),
+    "gpu_index": ("gpu",),
 }
+# Only DCGM exporter series carry the Kubernetes pod mapping.
+POD_LABEL_SOURCE = "DCGM_FI_DRIVER_VERSION"
 
 
 def operator_view(data, evidence, comparison, health=()):
@@ -315,6 +318,7 @@ def operator_view(data, evidence, comparison, health=()):
     )
     # One row per (query, GPU): exporters split a GPU's series by workload labels.
     merged, workloads, gpus = {}, {}, {}
+    pod_labels = False
     for entry in evidence:
         if entry["query_id"] not in METRICS or not usable_observation(entry):
             continue
@@ -341,10 +345,12 @@ def operator_view(data, evidence, comparison, health=()):
             # and others, and neighbours give context. Metrics stay per alert GPU.
             if gpu:
                 info = gpus.setdefault(gpu, {})
-                for key, label in GPU_LABELS.items():
-                    if isinstance(labels.get(label), str) and labels[label]:
-                        info.setdefault(key, labels[label])
+                for key, names in GPU_LABELS.items():
+                    for label in names:
+                        if isinstance(labels.get(label), str) and labels[label]:
+                            info.setdefault(key, labels[label])
             work = tuple(labels.get(k) for k in WORKLOAD_LABELS)
+            pod_labels = pod_labels or POD_LABEL_SOURCE in labels or bool(work[1])
             if gpu and work[1]:
                 times = [t for t, _ in values]
                 seen = workloads.setdefault((gpu, work), [min(times), max(times)])
@@ -430,6 +436,8 @@ def operator_view(data, evidence, comparison, health=()):
             }
             for (gpu, work), seen in sorted(workloads.items(), key=lambda x: x[1][0])
         ],
+        # None: no series could show pods, so an empty list does not mean "no pods".
+        "workload_label_source": "dcgm_exporter_labels" if pod_labels else None,
     }
 
 

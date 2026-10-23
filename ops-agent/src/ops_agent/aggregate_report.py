@@ -326,6 +326,21 @@ async def run(tools):
                     )
                 finally:
                     collector.deadline = ctx["deadline"]
+    if "namespace_usage" in data["topic_ids"]:
+        for cluster, period, collected in pending:
+            uid = collected[0]["input"]["datasourceUid"]
+            if uid:
+                await collector.check_collectors(
+                    cluster,
+                    period,
+                    uid,
+                    [
+                        e
+                        for e in evidence
+                        if e.get("cluster_id") == cluster["cluster_id"]
+                        and e["time_range"] == period
+                    ],
+                )
     if "incident_summary" in data["topic_ids"]:
         evidence.append(
             dict(

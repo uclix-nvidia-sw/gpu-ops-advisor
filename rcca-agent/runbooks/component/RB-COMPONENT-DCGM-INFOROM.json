@@ -102,7 +102,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -i <번호>의 Inforom Version 항목과 nvidia-smi --query-gpu=inforom.checksum_validation --format=csv로 InfoROM 검증 결과를 확인합니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -i <번호>의 Inforom Version 항목과 nvidia-smi --query-gpu=inforom.checksum_validation --format=csv로 InfoROM 검증 결과를 확인합니다."
         },
         {
           "title": "판단",

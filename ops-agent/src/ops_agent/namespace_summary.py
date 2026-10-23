@@ -7,6 +7,7 @@ from agent_common.contracts import timestamp
 
 from .report_contract import MAX_GPU_SERIES, MAX_NAMESPACES, iso
 from .identity_transitions import identity
+from .collector_identity import series_for
 
 MEASURES = {"activity_sum", "sample_count", "minimum", "maximum"}
 
@@ -46,7 +47,7 @@ def summarize(evidence, period):
                 e["quality"].get("reason") or "query_unavailable"
             )
             continue
-        for series in e["snapshot"]["series"]:
+        for series in series_for(e):
             labels = series["metric"]
             if labels.get("cluster_id") != e["cluster_id"]:
                 raise ValueError("aggregate_cluster_mismatch")

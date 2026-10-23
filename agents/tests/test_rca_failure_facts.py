@@ -17,7 +17,8 @@ from test_rca_component_guidance import component_case
 async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
     case = component_case() if kind == "disk" else policy_case(kind)
     if failure == "http":
-        case["responses"]["synthesis"] = [{"http_status": 400}]
+        # A gateway rejection gets exactly one more call, with a lower output cap.
+        case["responses"]["synthesis"] = [{"http_status": 400}, {"http_status": 400}]
     elif failure == "invalid":
         case["responses"]["synthesis"] = [{"raw_text": "{broken"}]
     else:
@@ -25,12 +26,15 @@ async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
     outcome = await replay(case)
     assert not outcome["missing_inputs"]
     assert sum(c["matched"] for c in outcome["query_calls"]) == 1
+    retry = ["synthesis"] if failure == "http" else []
     assert [c["stage"] for c in outcome["model_calls"]] == [
         "synthesis",
+        *retry,
         "report_writing",
     ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
-    assert len(outcome["model_calls"][0]["requests"]) == 1
+    if retry:
+        assert outcome["model_calls"][1]["requests"][0]["output_cap"] == 8192
     output = outcome["output"]["result"]
     problem = next(r for r in output["narrative"] if r["id"] == "problem")
     assert "node-1" in problem["text"]
@@ -109,13 +113,19 @@ def test_event_summary_never_promotes_inventory_or_current_health():
 @pytest.mark.parametrize("kind", ["xid", "sxid", "disk"])
 async def test_author_and_writer_failure_keep_facts_and_conditional_guidance(kind):
     case = component_case() if kind == "disk" else policy_case(kind)
-    case["responses"]["synthesis"] = [{"http_status": 400}]
-    case["responses"]["report_writing"] = [{"http_status": 400}]
+    # Each rejected stage gets one lower-cap retry and no other call.
+    case["responses"]["synthesis"] = [{"http_status": 400}] * 2
+    case["responses"]["report_writing"] = [{"http_status": 400}] * 2
     outcome = await replay(case)
     result = outcome["output"]["result"]
     assert not outcome["missing_inputs"]
     assert sum(c["matched"] for c in outcome["query_calls"]) == 1
-    assert len(outcome["model_calls"]) == 2
+    assert [c["stage"] for c in outcome["model_calls"]] == [
+        "synthesis",
+        "synthesis",
+        "report_writing",
+        "report_writing",
+    ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
     assert result["quality"]["report"]["method"] == "deterministic_fallback"
     problem = next(r for r in result["narrative"] if r["id"] == "problem")

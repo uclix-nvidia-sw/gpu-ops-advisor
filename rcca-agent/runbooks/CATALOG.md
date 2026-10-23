@@ -39,7 +39,7 @@ JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등�
 | GPU 응답 정지 | XID 46·109·158 | 메모리 사용량 D03, D11, D04, D02 |
 | 애플리케이션·엔진 | 그 밖의 app 그룹 XID·137 | D03, D11, D02 |
 | 가상화·정보성·미사용 | virtual·info·reserved 그룹 | D02 |
-| NVSwitch | SXID 92건 | FM 상태 D47, NVLink D33·D34 (열 이벤트 10004·10005는 온도 D04 추가) |
+| NVSwitch | SXID 92건 | FM 상태 D47, NVLink D33·D34, 선택 D02(GPU 모델·드라이버·파드 라벨) (열 이벤트 10004·10005는 온도 D04 추가) |
 
 - 조회는 배포 프로필에서 verified binding인 D만 쓴다(D46 등 candidate 제외). 검사: `test_every_code_has_operator_report_material_from_verified_queries`.
 - `operator_guidance`는 오류 의미(NVIDIA 발생 조건 요약) → 진단 자료 보존 → 오류별 판단 기준(NVIDIA 조사 분기·GPU Node Triage) → 복구 조치(NVIDIA 즉시 조치 분류) → 재발 시 진단·공급사 전달의 고정 순서다. SXID는 FM 가이드 표 22~25의 분류별 영향·복구와 패브릭 상태 확인을 쓴다. 문헌 문장을 복사하지 않고 요약했으며 문헌에 없는 임계값·조치는 추가하지 않았다.
@@ -57,12 +57,31 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | XID 95 | A100에서 MIG가 꺼져 있으면 노드 즉시 재부팅, 켜져 있으면 다른 인스턴스 배출 뒤 GPU 리셋(Triage). XID 94·95의 "2차 오류" 문장을 원인 조사 방향(동반 메모리 오류 우선)으로 정정 |
 | XID 61·123 | 카탈로그상 Unused이지만 Triage 표 1이 보고와 GPU 리셋을 안내하므로 "복구 조치를 정하지 않습니다"를 CONTACT_SUPPORT·GPU 리셋 단계로 교체 |
 | XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |
-| SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가 |
+| SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가. 2026-10-23 운영자 문장의 내부 조회 ID를 의미 이름으로 바꾸고 선택 D02를 추가([검토 기록](operator-wording-review-20261023.json)) |
 | SXID 잠재적 치명 41건·11001 | 영향·복구를 bare metal 절차(access 포트: 해당 GPU와 같은 작업 GPU 리셋, trunk 포트: FM 정지 후 전체 리셋) 먼저, 공유 NVSwitch 가상화(guest VM) 절차를 다음에 적음 |
 | SXID 11004·12028 | 비치명 SXID는 bare metal에서 정보성이고 FM이 작업을 중단하지 않음을 명시, guest VM 재시작은 가상화 절차로 분리 |
 | SXID 19084·10003 | 전체 GPU·NVSwitch 리셋에 bare metal 절차(FM 정지 → `-i` 없는 `nvidia-smi -r` → FM 재시작) 추가 |
 | SXID 항상 치명 20건·10003 | LLM 지침의 guest partition 전제를 bare metal(작업 배출 후 호스트 재시작) 우선으로 정정 |
 | SXID 20034 | 의미 문장에 섞여 있던 FM 표 영어 원문을 정리 |
+
+### Xid 카탈로그 즉시 조치 대조 (2026-10-23)
+
+XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)(Sep 09, 2026)의 행(니모닉·적용 제품·즉시/조사 조치·Xid 154 연계)과 GPU Node Triage 표 1에 하나씩 대조했다. 172개 코드의 카탈로그 필드는 모두 일치했고, 복구 단계가 즉시 조치 분류와 어긋난 63건을 고쳤고, 재검수에서 XID 154와 문장 끝맺음 8건을 더 고쳤다. SXID 93건은 Fabric Manager User Guide v2.6 표 22~25의 분류·오류 문자열과 모두 일치했고, 분류별 대응(비치명: 정보성, 잠재적 치명: access/trunk 포트별 리셋, 항상 치명: 호스트 재시작)도 모두 들어 있어 단일 비트 ECC 19건의 영향 문장만 고쳤다. 이전 값과 해시는 [검토 기록](xid-catalog-action-review-20261023.json)에 있다.
+
+| 대상 | 고친 내용 |
+|---|---|
+| 미사용 코드 59건(즉시 조치 CONTACT_SUPPORT) | "정의가 확인되기 전에는 복구 조치를 정하지 않습니다"를 카탈로그대로 공급사 문의로 교체. 함께 보고된 다른 XID의 지침을 먼저 따르도록 명시 |
+| XID 14 | 카탈로그 발생 조건이 "사용자 공간에서 주입한 가짜 오류"이므로 의미·원인·판단을 주입 시험 기준으로 다시 쓰고 즉시 조치 IGNORE 적용 |
+| XID 108 | 즉시 조치 IGNORE, 조사는 XID_137_FLOW(원격 MMU fault 애플리케이션 점검) |
+| XID 31 | Triage 표 1의 "하드웨어 공급사 연락"을 "의심되면"으로 약하게 적은 문장을 원문대로 정정 |
+| XID 79 | 10-22 재작성에서 빠진 Xid 카탈로그 참고 항목 복원 |
+| XID 154 | 복구 단계가 "XID 154의 복구 조치 문구를 따릅니다"로 자기 자신을 가리키던 것을 nvidia-smi GPU Recovery Action 값별 조치(None, Reset, Reboot, Drain P2P, Drain and Reset)로 교체 |
+| XID 106·107·142·162~165·173 | 판단 단계의 "~한다." 끝맺음을 다른 단계와 같은 "~합니다."로 통일 |
+| SXID 리셋 문장 42건·XID 79·XID 63 | 특정 서버(A100) 기준 문장을 모든 세대로 확장: Hopper 이후는 FM과 관계없이 개별 리셋(Triage 표 2), "DGX A100은 8개" 대신 장착된 GPU 전체, Triage의 A100 행을 row remapping을 쓰는 GPU에 적용 |
+| SXID 단일 비트 ECC 19건 | "guest VM 영향이 없습니다"만 있던 영향 문장 앞에 FM 가이드의 bare metal 동작(실행 중인 작업을 중단하지 않고 새 작업도 막지 않음)을 추가 |
+
+- 남은 범위: open-gpu-kernel-modules의 NVSwitch 드라이버는 SXID를 약 420개 정의하고, A100용 LR10 인터럽트 코드가 보고하는 164개 중 80개, H100용 LS10이 보고하는 221개 중 137개에는 전용 Runbook이 없다. 그러나 고정 Fleet SDK(`84f99bee`)와 최신 Fleet·GPUd의 SXID 매처는 자체 카탈로그 93개(이 저장소의 SXID Runbook과 같은 집합)에 없는 코드를 버리므로(`kmsg.go`의 `Match`가 `nil` 반환) 이 코드들은 D09 보고·알림·RCA로 들어오지 않는다. 전용 Runbook을 써도 생산자가 해당 코드를 내보내기 전에는 선택되지 않는다. FM 가이드는 이 코드들의 코드별 조치를 따로 싣지 않으며, 로그 줄의 Fatal/Non-fatal 표시와 포트 종류에 따른 일반 절차만 제공한다.
+- XID 162~172는 카탈로그의 즉시 조치가 비어 있고, XID 173은 카탈로그(172번까지)에 없어 Fleet 고정 정의만 있다. 두 경우는 현재 서술을 유지한다.
 
 ## 출처 간 차이와 판정 제한
 

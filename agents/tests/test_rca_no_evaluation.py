@@ -28,7 +28,8 @@ async def test_every_published_plan_uses_author_and_writer_only(
     case["attempt"]["profile"]["rca"]["generation_mode"] = mode
     books = deepcopy(case["attempt"]["context"]["runbooks"])
     if failure == "http":
-        case["responses"]["synthesis"] = [{"http_status": 400}]
+        # One more author call with a lower output cap is the only allowed retry.
+        case["responses"]["synthesis"] = [{"http_status": 400}, {"http_status": 400}]
     elif failure == "length":
         case["responses"]["synthesis"][0]["finish_reason"] = "length"
     elif failure == "budget":
@@ -42,7 +43,11 @@ async def test_every_published_plan_uses_author_and_writer_only(
     assert not result["missing_inputs"]
     calls = result["model_calls"]
     assert [c["stage"] for c in calls] == (
-        [] if failure == "budget" else ["synthesis", "report_writing"]
+        []
+        if failure == "budget"
+        else ["synthesis", "synthesis", "report_writing"]
+        if failure == "http"
+        else ["synthesis", "report_writing"]
     )
     assert all(len(c["requests"]) == 1 for c in calls)
     for call in calls:
