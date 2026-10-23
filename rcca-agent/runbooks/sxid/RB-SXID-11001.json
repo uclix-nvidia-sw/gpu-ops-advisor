@@ -124,7 +124,7 @@
       {
         "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_structs.h",
         "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
-        "section": "dcgmFabricManagerStatus_t (DCGM_FI_DEV_FABRIC_MANAGER_STATUS values)",
+        "section": "DCGM Fabric Manager 상태 값 정의",
         "checked_at": "2026-10-22"
       }
     ],
