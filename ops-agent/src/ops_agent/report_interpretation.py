@@ -27,6 +27,22 @@ TOPICS = {
 }
 VERSION = "ops-interpretation-workload-v2"
 log = logging.getLogger(__name__)
+PREREQUISITES = {
+    "capacity_review": {
+        "스케줄러 사유": r"스케줄러|스케줄링",
+        "GPU 요청": r"요청",
+        "실제 할당": r"실제[^.!?]{0,12}할당",
+        "보장량": r"보장",
+        "가용 GPU": r"가용\s*GPU|사용\s*가능한\s*GPU",
+        "운영정책": r"운영\s*정책",
+    },
+    "schedule_candidate": {
+        "작업 마감": r"마감",
+        "예약": r"예약",
+        "대기 상태": r"대기",
+        "가용 GPU": r"가용\s*GPU|사용\s*가능한\s*GPU",
+    },
+}
 FIELDS = ("observation", "meaning", "next_check")
 LABELS = ("눈에 띄는 변화", "의미와 한계", "확인할 점")
 TOKEN = re.compile(
@@ -324,6 +340,131 @@ def validate_workload_wording(text, field, values):
         )
 
 
+def advice_with_evidence(section, topic):
+    """Compose a copy so validation/repair never appends evidence to raw model prose."""
+    section = deepcopy(section)
+    facts = {f["fact_id"]: f for f in topic["findings"]}
+    advice = section.get("advice")
+    if isinstance(advice, list):
+        for item in advice:
+            if (
+                isinstance(item, dict)
+                and isinstance(item.get("fact_id"), str)
+                and item["fact_id"] in facts
+                and isinstance(item.get("summary"), str)
+            ):
+                item["summary"] += (
+                    " " + summary_context(facts[item["fact_id"]])["summary_start"]
+                )
+    return section
+
+
+def checked_prerequisites(text, requirements):
+    """Count explicit checks before the final review/judgment, not observed words."""
+    decisions = list(re.finditer(r"검토|판단", text))
+    before = text[: decisions[-1].start()] if decisions else ""
+    checked = set()
+    for sentence in re.split(r"[.!?。]", before):
+        start = 0
+        for check in re.finditer(r"확인|대조|점검", sentence):
+            clause = sentence[start : check.start()]
+            # shortcut: bounded Korean clause cues; unseen phrasing still needs review.
+            clause = re.split(
+                r"(?:으?므로|지만|(?:없|있|높|낮|많|적)(?:았|었)?고)\s*,?\s*",
+                clause,
+            )[-1]
+            checked.update(
+                label
+                for label, pattern in requirements.items()
+                if re.search(pattern, clause)
+            )
+            start = check.end()
+    ordered = bool(re.search(r"(?:확인|대조|점검)[^.!?。]*?(?:후|뒤)", before))
+    return checked, ordered
+
+
+def validate_written_advice(section, topic):
+    """Retain evidence guards, then check prose against this candidate's bounds."""
+    output = validate_advice(advice_with_evidence(section, topic), topic)
+    facts = {f["fact_id"]: f for f in topic["findings"]}
+    for item in section["advice"]:
+        if item["fact_id"] not in output["source_fact_ids"]:
+            continue
+        fact = facts[item["fact_id"]]
+        text = item["summary"]
+        context = summary_context(fact)
+        # shortcut: conservative Korean claim patterns; new phrasings still need review.
+        if not context["queue_context"]["unscheduled_complete"] and re.search(
+            r"(?:(?:노드\s*)?미배정|미배치)(?:\s*(?:Pod|파드))?(?:이|가|은|는|도)?\s*"
+            r"(?:없(?:었습니다|었으므로|었고|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았습니다|습니다))|"
+            r"노드(?:를)?\s*(?:배정받지\s*못한|기다리는)\s*(?:Pod|파드)(?:가|는|도)?\s*"
+            r"(?:없(?:었습니다|었으므로|었고|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았습니다|습니다))|"
+            r"(?:모든|전체|모두)[^.!?]{0,25}노드[^.!?]{0,15}배정(?:됐|되었|받았)|"
+            r"배정(?:이|은)?\s*완료(?:됐|되었|입니다)",
+            text,
+            re.I,
+        ):
+            raise ValueError(
+                "partial_placement_is_not_absence: 미배치 관측이 불완전합니다. "
+                "미배정 없음이나 전체 배정 완료를 단정하지 말고, Pod 상태·이벤트를 점검해 대기 단계를 구분하세요"
+            )
+        if (
+            fact["source_hours"]
+            and all(
+                h.get("pending_samples") == 240 and h.get("pending") == 0
+                for h in fact["source_hours"]
+            )
+            and re.search(
+                r"(?:대기|Pending)\s*(?:Pod|파드|작업)(?:\s*일부|에\s*대해|"
+                r"(?:이|가|은|는|도)\s*(?:있|남|관측됐|관측되었))|남은\s*대기",
+                text,
+                re.I,
+            )
+        ):
+            raise ValueError(
+                "unobserved_pending_target: 이 후보 시간에는 대기 Pod가 관측되지 않았습니다. "
+                "현재 대기 Pod를 지목하지 말고 시작 시각을 조정할 수 있는 작업 일부를 검토 대상으로 쓰세요. "
+                "향후 대기 상태 확인 조건은 유지하세요"
+            )
+        if re.search(
+            r"(?:작업|Pod)(?:은|는|이|가)\s*(?:"
+            r"(?:(?:연산|GPU)\s*)?활동(?:률)?(?:이|가|은|는|을)?\s*(?:낮|높)(?:았|습|다)|"
+            r"(?:낮은|높은)\s*활동(?:률)?(?:을|를)\s*(?:보|나타))",
+            text,
+            re.I,
+        ):
+            raise ValueError(
+                "unsupported_workload_activity_attribution: 활동률은 Namespace에 연결된 GPU의 관측입니다. "
+                "개별 Pod·작업의 활동률로 단정하지 말고 연결 GPU의 관측과 확인된 작업 맥락을 구분하세요"
+            )
+        kind = fact["kind"]
+        requirements = PREREQUISITES.get(kind)
+        if requirements:
+            checked, ordered = checked_prerequisites(text, requirements)
+            missing = [label for label in requirements if label not in checked]
+            if missing or not ordered:
+                raise ValueError(
+                    "namespace_prerequisites_required: 필수 조건은 "
+                    + "·".join(requirements)
+                    + "입니다. "
+                    + (
+                        "확인 부분에서 누락된 조건: " + "·".join(missing) + ". "
+                        if missing
+                        else ""
+                    )
+                    + "기존 조건을 옮기거나 삭제하지 말고, 목록 전체를 확인·대조·점검한 뒤 최종 변경 여부를 검토·판단하세요. "
+                    "관측 설명은 확인 조건으로 세지 않으며 검토 목적과 판단 이유를 유지하세요"
+                )
+        if kind in {"schedule_candidate", "relative_activity"} and re.search(
+            r"(?:조정|변경)(?:해(?:서)?|하고|한\s*(?:뒤|후))[^.!?]*검토", text
+        ):
+            raise ValueError(
+                "review_before_schedule_change: 조정해·변경하고처럼 먼저 바꾼 뒤 검토하는 표현을 쓰지 마세요. "
+                "필수 조건을 확인한 뒤 시작 시각 조정이 가능한 작업 일부를 시범 실행할지 검토하세요"
+            )
+    return output
+
+
 def validate_sections(reply, payload, result):
     sections = reply.get("sections") if isinstance(reply, dict) else None
     expected = [t["topic_id"] for t in payload["topics"]]
@@ -339,7 +480,7 @@ def validate_sections(reply, payload, result):
         ):
             raise ValueError("topic_mismatch")
         if topic.get("advice_mode"):
-            output.append(validate_advice(section, topic))
+            output.append(validate_written_advice(section, topic))
             continue
         facts = {f["fact_id"]: f for f in topic["findings"]}
         ids = section.get("fact_ids")
@@ -681,11 +822,19 @@ def partial_repair(reply, payload, result):
             or len({a["fact_id"] for a in advice}) != len(advice)
         ):
             return None
+        try:
+            retained = validate_advice(advice_with_evidence(section, topic), topic)[
+                "source_fact_ids"
+            ]
+        except (ValueError, TypeError, KeyError):
+            retained = facts
         invalid = []
         for item in advice:
+            if item["fact_id"] not in retained:
+                continue
             fact = facts[item["fact_id"]]
             try:
-                validate_advice({"advice": [item]}, {"findings": [fact]})
+                validate_written_advice({"advice": [item]}, {"findings": [fact]})
             except (ValueError, TypeError, KeyError) as exc:
                 invalid.append(
                     {
@@ -706,6 +855,7 @@ def partial_repair(reply, payload, result):
 def writing_context(fact, findings=()):
     """Keep evidence and decision bounds without supplying finished advice prose."""
     context = summary_context(fact)
+    context.pop("writing_focus")
     context["decision"] = {
         key: value for key, value in context["decision"].items() if key != "option"
     }
@@ -736,7 +886,11 @@ def writing_context(fact, findings=()):
             related, key=lambda item: item["fact_id"]
         )
     # Account for the evidence suffix inside the unchanged 360/220-character guards.
-    evidence = context["summary_start"]
+    evidence = context.pop("summary_start")
+    context.pop("required_summary_tokens")
+    context["observed_values"] = {
+        key[2:-2]: value for key, value in context.pop("summary_tokens").items()
+    }
     context["prose_max_chars"] = min(
         360 - len(evidence) - 1,
         220 - len(re.sub(r"\{\{[a-z_]+\}\}", "", evidence)) - 1,
@@ -752,19 +906,47 @@ def writing_context(fact, findings=()):
             "관측 시점별 노드 배정 조건과 대기 작업의 실행 제약 확인",
         ],
         "capacity_review": [
-            "GPU 부족 여부·실제 할당·보장량·가용 자원·운영정책 확인 뒤 추가 할당 검토"
+            "대기 이유를 좁힐 스케줄러 사유와 GPU 요청·실제 할당·보장량·가용 GPU·운영정책을 확인한 뒤에만 추가 할당 검토"
         ],
         "schedule_candidate": [
-            "예약·대기·가용 GPU를 확인한 뒤에만 일부 작업의 시범 실행을 검토; 확인하고 바로 실행하는 제안은 금지"
+            "현재 대기 Pod가 아니라 앞으로 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
         ],
-        "queue_review": ["queue_context 단계에 맞는 Pod 상태·스케줄러 이벤트 점검"],
+        "queue_review": [
+            "해당 queue_context 단계의 Pod 기록을 점검해 다음 확인 대상을 구분"
+        ],
         "resident_memory": [
             "새 작업 배치 판단에 필요한 메모리 점유 주체·상주 목적 확인; 서빙·캐시는 가능한 예시"
         ],
         "batch_progress": [
-            "성공 완료 Job 일부와 남은 대기의 해당 단계 기록 대조; 연결된 작업 유형은 활용하고 미확인 유형만 확인"
+            "완료 Job 일부를 설명하고 허용된 판단 목적에 필요한 기록만 점검; 이미 연결된 작업 유형은 현상 설명에 활용"
         ],
     }[fact["kind"]]
+    context["writing_checks"].append(
+        "설명에 확인·대조·검토·점검 중 하나 이상을 직접 포함; 구분하세요만으로 끝내지 않음"
+    )
+    if fact["kind"] in PREREQUISITES:
+        context["required_checks"] = list(PREREQUISITES[fact["kind"]])
+        context["writing_checks"].append(
+            "required_checks 전체를 최종 변경 판단 전에 확인·대조·점검; 여러 단계로 확인해도 기존 조건을 생략하거나 검토 뒤로 옮기지 않음"
+        )
+    if fact["kind"] in {"queue_review", "batch_progress"}:
+        phase = context["queue_context"]["check_first"]
+        context["writing_checks"].append(
+            {
+                "placement": "노드 미배정 대기 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 확인해 배정되지 않은 사유 구분",
+                "preparation": "대기 Pod의 이미지 다운로드·초기화 이벤트를 확인해 시작 준비 상태 구분; GPU 부족이나 준비 지연 단정 금지",
+                "unknown": "Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분; 일부 미배치 영을 배정 완료로 바꾸지 않음",
+            }[phase]
+            if context["decision"]["scope"] != "observation_only"
+            else "완료 Job의 실제 Pod 시작·완료 기록을 대조해 같은 유형 작업 일정에 참고할 수 있는지 확인"
+        )
+        if (
+            fact.get("workload_context", {}).get("completed_type_status")
+            == "declared_test"
+        ):
+            context["writing_checks"].append(
+                "완료 Job 유형은 이미 연결됨: 유형 확인·재수집 요청 대신 확인된 테스트 작업으로 현상을 설명"
+            )
     if fact["kind"] == "relative_activity":
         context["required_prose_terms"] = [
             "마감",
@@ -818,7 +1000,7 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "운영 선택·이유와 대상·시간·필수 참조는 보존하고 정상 항목은 바꾸지 마세요. 살펴보라는 표현만으로는 점검이 되지 않습니다. 이전 오류 문장을 그대로 반환하지 마세요. 길이 오류는 현상과 확인할 대상·행동을 짧게 고치고, 설명을 전부 삭제하거나 summary_start만 반환하지 마세요. 설명은 prose_max_chars 이내이며 필요한 조건을 보존해 팔십 자 안팎을 목표로 쓰세요. 각 항목의 writing_checks와 decision에 해당하는 기록·확인/대조/검토/점검을 명시하고, 시간 조정 조건은 해당 후보에만 쓰세요. 빈 summary는 최종 문장을 채울 자리입니다. 마지막에 summary_start를 붙여 필수 참조를 보존하고 실제 값으로 풀지 마세요. section_repair는 지정 주제와 참조를 보존하세요. response_shape만 JSON으로 반환하세요.",
+                "instruction": "이전 summary의 판단 설명만 보완하고 정상 항목은 바꾸지 마세요. 오류의 참조·수치가 설명에 있으면 제거하되 운영 선택·이유·대상·행동·필수 확인 조건은 보존하세요. summary는 수치·대상명·시간·참조 토큰·근거 문장 없이 prose_max_chars 이내로 작성합니다. 확인·대조·검토·점검 중 행동 동사를 직접 쓰고, 구분하세요만으로 끝내지 마세요. 시간 변경 항목은 조건을 모두 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 여부를 검토하도록 쓰세요. 조정해·변경하고처럼 이미 변경하는 표현을 쓰지 마세요. 이미 연결된 작업 유형은 재확인하지 마세요. 근거는 코드가 붙이며 설명을 비워서는 안 됩니다. section_repair의 다른 주제는 기존 참조 규칙을 유지하세요. response_shape만 JSON으로 반환하세요.",
                 "response_shape": {
                     **(
                         {
@@ -895,7 +1077,7 @@ async def interpret_report(result, llm):
                         else [
                             {
                                 "fact_id": "선택한 후보의 fact_id",
-                                "summary": "근거 토큰을 사용한 짧은 최종 운영 문장",
+                                "summary": "수치·참조 없는 판단 이유와 확인 목적",
                             }
                         ],
                     }
@@ -986,7 +1168,7 @@ async def interpret_report(result, llm):
             system = ADVICE_SYSTEM if advice_mode else SYSTEM
             if repair is not None:
                 system += "\n이번 요청은 부분 보완입니다. summary_repair 항목은 advice 배열, section_repair 주제는 sections 배열로 반환하세요. response_shape에 지정된 키와 항목만 JSON으로 반환하고 정상 항목은 다시 작성하지 마세요."
-            reply = await llm.complete(system, request_payload())
+            reply = await llm.complete(system, request_payload(), json_object=True)
             if reply is None:
                 failure = getattr(llm, "last_failure", None)
                 status = getattr(llm, "last_http_status", None)
@@ -1071,24 +1253,7 @@ async def interpret_report(result, llm):
                 **payload,
                 "validation_feedback": {
                     "error": error,
-                    "instruction": (
-                        error.partition(":")[2].strip()
-                        + ". previous_response에서 지적된 summary만 보완하고 올바른 항목·대상·시간·필수 토큰은 보존하세요. 허용된 참조 토큰과 response_shape를 유지하고 요청된 주제의 전체 sections JSON을 다시 반환하세요."
-                        if error.partition(":")[0]
-                        in {
-                            "namespace_summary_tokens_required",
-                            "actionable_namespace_summary_required",
-                            "batch_job_elapsed_required",
-                            "batch_elapsed_is_not_execution_time",
-                            "batch_samples_do_not_prove_throughput_or_queue_resolution",
-                            "observed_zero_is_not_proof_of_nonuse",
-                            "conditional_scheduling_review_required",
-                            "duplicate_summary_unit",
-                            "unsupported_queue_cause",
-                        }
-                        else "response_shape의 구조와 사건 토큰 형식을 따르세요. namespace advice_mode는 advice 배열의 fact_id와 summary만 반환하세요. summary는 허용된 후보 summary_tokens의 토큰을 써서 대상·시간·관측과 제안을 짧게 결합하고, Namespace 항목에 meaning/next_check는 반환하지 마세요. 허용된 제안 종류의 구체적 확인을 쓰세요. "
-                        "다른 주제는 fact_ids와 target에는 findings의 fact_id만 쓰세요. metric_id를 fact_ids에 넣지 마세요. value/period는 metric_id입니다. 한국어로 작성하세요. 숫자·대상·시간은 토큰만 사용하세요. Namespace에 hourly_pair가 있으면 observation에 같은 대상+양쪽 시간+양쪽 값을, next_check에 같은 대상+after 시간을 반드시 참조하세요. 단위는 추가하지 마세요."
-                    ),
+                    "instruction": "오류가 난 항목만 보완하세요. namespace_usage의 summary는 수치·대상명·시간·참조 토큰·근거 문장 없는 판단 설명입니다. 근거는 코드가 조립합니다. 지적된 숫자·참조를 반복하지 말고 현상·운영 선택·구체적 확인 목적·필수 조건을 보존하세요. 다른 주제는 기존 fact_ids와 참조 규칙을 유지하세요. response_shape의 JSON만 반환하세요.",
                 },
             }
             if advice_mode and repair is None:

@@ -119,6 +119,8 @@ Grafana MCP 1.4.2의 Prometheus·Loki 시간 파서는 마이크로초 시각(�
 
 LLM 통신 실패는 `LLM transport failed` 로그에서 `error_type`, `cause_type`, `stage`, 시도 번호, 경과 시간과 timeout을 확인합니다. HTTP 오류는 `LLM HTTP failed`와 상태 코드를 남깁니다. 공통 LLM 객체의 `last_http_status`는 매 호출 시작에 초기화하며, 최종 HTTP 오류의 상태 코드만 보존합니다. Ops는 이를 보고서 실패 상세에 저장합니다([Ops 해석](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation)). 전송 재시도·timeout·예산과 RCA 판단은 바꾸지 않습니다. 이 진단 로그에는 API 키·프롬프트·응답 본문·원본 예외 메시지를 넣지 않습니다. 이후 연결 검사 성공은 이전 원격 추론의 종료 증거가 아닙니다. [Job Controller 실행 정책](../job-controller/README.md#추론-격리와-취소)에 따라 실패한 실행 슬롯을 반환하고 종료 미확인 이력을 보존합니다.
 
+공통 `LLM.complete`의 `json_object` 선택 인자는 기본 `false`입니다. 호출자가 명시하고 Worker 종류가 `report`일 때만 `response_format={"type":"json_object"}`를 전송합니다. 현재 사용자는 [Ops 집계 해석](../ops-agent/README.md#주제별-ai-운영-해석--topic-level-ai-interpretation)이며, RCA·기존 O계열 호출은 기본 요청을 유지합니다. 서버가 지원하지 않아 HTTP 400을 반환하면 기존 HTTP 실패로 처리하고 일반 텍스트로 바꿔 재호출하지 않습니다. 응답은 기존 엄격한 JSON 파싱과 소비자별 검증을 그대로 거칩니다. JSON 모드가 서버에서 실제 적용되는지와 모델 문장의 의미 품질은 별도 검증 대상입니다.
+
 이 처리는 공유 Python 모듈에 있으므로 배포할 때 `rcca-agent`와 `ops-agent` 이미지를 함께 다시 빌드합니다.
 
 ## 모델 호출 timeout 조정

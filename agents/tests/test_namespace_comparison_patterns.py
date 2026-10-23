@@ -197,10 +197,12 @@ async def test_new_evidence_reaches_initial_repair_and_saved_narrative(
     result = dict(topics=[t], quality={}, time_range={}, report_origin=origin)
     original = deepcopy(result)
     facts = payload_for(result)["topics"][0]["findings"]
-    valid = [reply(f) for f in facts]
+    from test_namespace_advice import writer_section
+
+    valid = writer_section(facts)["advice"]
     bad = deepcopy(valid)
     selected = next(i for i, f in enumerate(facts) if f["kind"] == kind)
-    bad[selected]["summary"] = bad[selected]["summary"].replace("{{activity}}", "")
+    bad[selected]["summary"] += " {{activity}}"
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [
         {"sections": [{"topic_id": "namespace_usage", "advice": bad}]},
