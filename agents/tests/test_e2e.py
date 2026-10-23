@@ -3490,7 +3490,14 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
                 (jid,),
             ).fetchall()
         )
-    assert stored["rca_synthesis"]["diagnostics"]["request_attempts"] == 1
+    diagnostics = stored["rca_synthesis"]["diagnostics"]
+    if invalid_interpretation == "http":
+        # A gateway 400 gets exactly one more call with the lower output cap.
+        assert diagnostics["request_attempts"] == 2
+        assert diagnostics["reduced_output_retry"]["after_status"] == 400
+        assert diagnostics["reduced_output_retry"]["succeeded"] is False
+    else:
+        assert diagnostics["request_attempts"] == 1
     assert (
         stored["rca_result_frozen"]["material_hash"]
         == stored["report_assembly"]["material_hash"]

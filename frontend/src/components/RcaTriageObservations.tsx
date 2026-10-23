@@ -103,14 +103,15 @@ export function RcaTriageObservations({
               <mark>{v.codes.join(', ')}</mark> <Ids text={v.message} />
             </td>
           </tr>
-          {(v.workloads.length > 0 || (v.podsKnown && v.metrics.length > 0)) && (
+          {(v.workloads.length > 0 || v.metrics.length > 0) && (
             <tr>
               <th>누구에게</th>
               <td>
                 {!v.workloads.some((w) => w.atIncident) && (
                   <div>
-                    사건 시각에 {v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가
-                    없습니다 (작업 영향 미관측)
+                    {v.podsKnown
+                      ? `사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 없습니다 (작업 영향 미관측)`
+                      : '수집한 지표에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 확인'}
                   </div>
                 )}
                 {v.workloads

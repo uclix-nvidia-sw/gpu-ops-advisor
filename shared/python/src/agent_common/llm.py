@@ -23,6 +23,32 @@ def strip_reasoning(text):
     return re.split(r"<think(?:ing)?>", text, flags=re.I)[0].strip()
 
 
+def error_type(response):
+    """Upstream error class and a limit hint only; never message text, inputs or keys."""
+    try:
+        error = response.json().get("error")
+    except (ValueError, AttributeError):
+        return None
+    if not isinstance(error, dict):
+        return None
+    message = error.get("message") if isinstance(error.get("message"), str) else ""
+    kind = error.get("type") if isinstance(error.get("type"), str) else ""
+    names = re.findall(r"\b([A-Z][A-Za-z]{2,40}(?:Error|Exception))\b", message)
+    hint = (
+        "output_tokens"
+        if re.search(r"max_(?:completion_)?tokens|output tokens", message, re.I)
+        else "context_window"
+        if re.search(r"context (?:length|window)|maximum context", message, re.I)
+        else ""
+    )
+    parts = [
+        names[0] if names else "",
+        kind if re.fullmatch(r"[A-Za-z_]{1,40}", kind) else "",
+        hint,
+    ]
+    return ":".join(p for p in parts if p) or None
+
+
 class LLM:
     def __init__(self, settings, deadline, token_budget, state, http=None):
         self.settings, self.deadline, self.remaining, self.state = (
@@ -34,6 +60,7 @@ class LLM:
         self.http = http
         self.last_failure = None
         self.last_http_status = None
+        self.last_error_type = None
         self.reserved_tokens = 0
         self.request_attempt_limit = 3
         self.usage = {
@@ -74,14 +101,18 @@ class LLM:
             ),
         }
 
-    async def complete(self, system, data, stage="synthesis"):
+    async def complete(self, system, data, stage="synthesis", max_tokens=None):
+        """`max_tokens` only lowers the configured output cap for this call."""
         self.last_failure = None
+        self.last_error_type = None
         self.last_http_status = None
         if not self.configured:
             self.last_failure = "model_not_configured"
             return None
         budget = self.request_budget(system, data, stage)
         prompt_bound, cap = budget["prompt_token_bound"], budget["output_token_cap"]
+        if max_tokens:
+            cap = min(cap, max_tokens)
         if cap <= 0:
             self.last_failure = "llm_token_budget_exhausted"
             return None
@@ -173,6 +204,7 @@ class LLM:
                 if response.is_error:
                     self.last_failure = "llm_http_error"
                     self.last_http_status = response.status_code
+                    self.last_error_type = error_type(response)
                     return None
                 body = response.json()
                 usage = body.get("usage", {})

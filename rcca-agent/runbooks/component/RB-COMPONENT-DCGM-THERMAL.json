@@ -139,11 +139,11 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d TEMPERATURE,PERFORMANCE로 GPU·메모리 현재 온도, Slowdown·Shutdown 온도, Clocks Event Reasons의 HW Thermal Slowdown·SW Thermal Slowdown 활성 여부를 확인합니다. 같은 노드의 여러 GPU가 함께 뜨거우면 노드·랙 냉각 문제로 보고 시설 담당자에게 흡기 온도와 공기 흐름 확인을 요청합니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d TEMPERATURE,PERFORMANCE로 GPU·메모리 현재 온도, Slowdown·Shutdown 온도, Clocks Event Reasons의 HW Thermal Slowdown·SW Thermal Slowdown 활성 여부를 확인합니다. 같은 노드의 여러 GPU가 함께 뜨거우면 노드·랙 냉각 문제로 보고 시설 담당자에게 흡기 온도와 공기 흐름 확인을 요청합니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
-          "text": "10 열 때문의 클록 제한, 40·41 열 위반 누적: 이 장비의 냉각(외부 냉각, 방열 재료, 팬 등)이 정상인지 확인합니다. 42 사용자 지정 최고 온도 초과: 설정한 최고 온도 값이 맞는지 먼저 보고, 맞다면 GPU와 노드의 냉각을 점검합니다. 보고서의 클록 제한 사유(D45) 값에 0x40(HW 열 제한)이나 0x20(SW 열 제한) 비트가 있는지도 확인합니다."
+          "text": "10 열 때문의 클록 제한, 40·41 열 위반 누적: 이 장비의 냉각(외부 냉각, 방열 재료, 팬 등)이 정상인지 확인합니다. 42 사용자 지정 최고 온도 초과: 설정한 최고 온도 값이 맞는지 먼저 보고, 맞다면 GPU와 노드의 냉각을 점검합니다. 보고서의 클록 제한 사유 값에 0x40(HW 열 제한)이나 0x20(SW 열 제한) 비트가 있는지도 확인합니다."
         },
         {
           "title": "복구",

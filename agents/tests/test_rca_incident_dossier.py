@@ -492,6 +492,26 @@ def test_gpu_series_split_by_workload_labels_become_one_metric_with_workloads():
     gpus = {g["gpu_uuid"]: g for g in view["gpus"]}
     assert gpus[target["gpu"]] == {"gpu_uuid": target["gpu"], "model": "NVIDIA A100"}
     assert gpus["GPU-OTHER"]["gpu_index"] == "1"
+    assert view["workload_label_source"] == "dcgm_exporter_labels"
+    # Fleet exporter series: model under another label name and no pod mapping at all.
+    fleet = dict(metric, id="nvlink", query_id="D33")
+    fleet["snapshot"] = {
+        "data": {
+            "result": [
+                {
+                    "metric": {
+                        "node": "node-1",
+                        "uuid": target["gpu"],
+                        "model_name": "H100",
+                    },
+                    "values": [[end - 300, "1"]],
+                }
+            ]
+        }
+    }
+    other = operator_view(data, [logs, fleet], {"targets": [target]}, health)
+    assert other["gpus"] == [{"gpu_uuid": target["gpu"], "model": "H100"}]
+    assert other["workloads"] == [] and other["workload_label_source"] is None
     assert view["onset"]["last_healthy_at"] == "2026-01-01T00:00:00Z"
     assert view["onset"]["first_unhealthy_at"] == "2026-01-01T00:01:00Z"
 
@@ -521,6 +541,73 @@ async def test_transient_gateway_error_is_retried_once_and_recorded():
     model = Model([400])
     assert await complete_once(model, "p", {}, "s", diagnostics) is None
     assert diagnostics == {"http_status": 400} and model.statuses == []
+
+
+async def test_gateway_rejection_is_retried_once_with_a_lower_output_cap():
+    from rcca_agent.evidence_interpretation import complete_once
+
+    class Model:
+        deadline = float("inf")
+
+        def __init__(self, statuses):
+            self.statuses, self.caps = list(statuses), []
+
+        def request_budget(self, prompt, payload, stage):
+            return {"configured_output_tokens": 65536}
+
+        async def complete(self, prompt, payload, stage, max_tokens=None):
+            self.caps.append(max_tokens)
+            status = self.statuses.pop(0)
+            self.last_http_status = status
+            self.last_failure = "llm_http_error" if status else None
+            self.last_error_type = "BadRequestError:output_tokens" if status else None
+            return None if status else {"ok": True}
+
+    model, diagnostics = Model([400, None]), {}
+    assert await complete_once(model, "p", {}, "s", diagnostics) == {"ok": True}
+    assert model.caps == [None, 8192]
+    assert diagnostics == {
+        "reduced_output_retry": {
+            "after_status": 400,
+            "after_error_type": "BadRequestError:output_tokens",
+            "max_tokens": 8192,
+            "succeeded": True,
+        }
+    }
+    # A 500 is retried as transient first, then once with the lower cap.
+    model, diagnostics = Model([500, 500, 500]), {}
+    assert await complete_once(model, "p", {}, "s", diagnostics) is None
+    assert model.caps == [None, None, 8192]
+    assert diagnostics["http_status"] == 500
+    assert diagnostics["error_type"] == "BadRequestError:output_tokens"
+
+
+def test_error_type_keeps_class_and_limit_hint_only():
+    from agent_common.llm import error_type
+
+    class Response:
+        def __init__(self, body):
+            self.body = body
+
+        def json(self):
+            if self.body is None:
+                raise ValueError
+            return self.body
+
+    secret = "prompt text sk-secret"
+    body = {
+        "error": {
+            "message": f"litellm.BadRequestError: max_tokens is too large {secret}",
+            "type": "invalid_request_error",
+        }
+    }
+    assert (
+        error_type(Response(body))
+        == "BadRequestError:invalid_request_error:output_tokens"
+    )
+    assert secret not in (error_type(Response(body)) or "")
+    assert error_type(Response(None)) is None
+    assert error_type(Response({"error": "plain"})) is None
 
 
 async def test_numeric_findings_get_one_repair_request_in_combined_author():

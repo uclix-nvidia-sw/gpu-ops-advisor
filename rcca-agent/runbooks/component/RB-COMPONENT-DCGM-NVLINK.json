@@ -127,7 +127,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID), DCGM_FR 코드, 링크 번호를 확인합니다. nvidia-smi nvlink -s로 링크 상태(Active·Inactive)를, nvidia-smi nvlink -e로 오류 카운터를 확인합니다. NVSwitch 시스템은 systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log를 함께 확인하고, 같은 시각 XID 74·SXID를 dmesg에서 찾습니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID), DCGM_FR 코드, 링크 번호를 확인합니다. nvidia-smi nvlink -s로 링크 상태(Active·Inactive)를, nvidia-smi nvlink -e로 오류 카운터를 확인합니다. NVSwitch 시스템은 systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log를 함께 확인하고, 같은 시각 XID 74·SXID를 dmesg에서 찾습니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { fullPci, operatorView, sentences } from './rcaOperatorView';
+import { aiFailure, fullPci, operatorView, sentences } from './rcaOperatorView';
 
 const gpu = 'GPU-81ec1404-9d04-9bdf-0bdc-c852d61759a9';
 const other = 'GPU-7608a7b1-ec78-22f7-d932-8c629aed27b1';
@@ -297,12 +297,28 @@ it('names GPUs that share a verdict instead of listing every series', () => {
     ['GPU 0번', '사건 전부터 0'],
   ]);
   expect(v.gpuRows[0].lines).toContain('NVLink 수신량·송신량: 272.7 MB/s → 0 B/s');
-  expect(v.gpuCommon).toEqual(['Fabric Manager 상태: 상태 코드 0 유지']);
+  // D47 codes are read with the DCGM Fabric Manager status names.
+  expect(v.gpuCommon).toEqual(['Fabric Manager 상태: 상태 코드 0 (미지원) 유지']);
   expect(v.findings[2].verdict).toBe(
     '사건 직후 GPU 7번 NVLink 수신량·송신량 멈춤, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
   );
   expect(v.findings[2].points).toContain(
-    '변화 없음: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 유지',
+    '변화 없음: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 (미지원) 유지',
   );
   expect(v.findings[2].points.join('\n')).not.toMatch(/\d{7,} B\/s/);
+  // Fleet NVLink series carry no pod labels: the report must not claim "no pods".
+  expect(v.podsKnown).toBe(false);
+});
+
+it('names the gateway error class and limit recorded by the worker', () => {
+  const failed = (error_type?: string) =>
+    aiFailure({
+      quality: {
+        analysis: { synthesis: { error_code: 'llm_http_error', http_status: 400, error_type } },
+      },
+    }).reason;
+  expect(failed('BadRequestError:invalid_request_error:output_tokens')).toBe(
+    'LLM 호출 실패 (HTTP 400 · BadRequestError · 출력 토큰 한도 초과)',
+  );
+  expect(failed()).toBe('LLM 호출 실패 (HTTP 400)');
 });

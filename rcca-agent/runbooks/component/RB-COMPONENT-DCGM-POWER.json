@@ -139,11 +139,11 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d POWER,PERFORMANCE로 전력 사용량, 현재·기본 전력 한도, Clocks Event Reasons의 SW Power Cap·HW Power Brake 활성 여부를 확인합니다. 같은 노드의 여러 GPU에서 HW Power Brake가 함께 켜지면 노드 전원(PSU·PDU) 문제로 보고 BMC 이벤트 로그의 전원 항목을 확인합니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d POWER,PERFORMANCE로 전력 사용량, 현재·기본 전력 한도, Clocks Event Reasons의 SW Power Cap·HW Power Brake 활성 여부를 확인합니다. 같은 노드의 여러 GPU에서 HW Power Brake가 함께 켜지면 노드 전원(PSU·PDU) 문제로 보고 BMC 이벤트 로그의 전원 항목을 확인합니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
-          "text": "12 전력 때문의 클록 제한: 전력 상태를 감시하며 GPU는 계속 작업할 수 있습니다. 11 전력 값을 읽을 수 없음: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다. 적용 전력 한도(D48)가 기본 한도보다 낮게 설정돼 있으면 의도한 설정인지 확인합니다."
+          "text": "12 전력 때문의 클록 제한: 전력 상태를 감시하며 GPU는 계속 작업할 수 있습니다. 11 전력 값을 읽을 수 없음: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다. 적용 전력 한도가 기본 한도보다 낮게 설정돼 있으면 의도한 설정인지 확인합니다."
         },
         {
           "title": "복구",

@@ -123,7 +123,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 DCGM_FR 코드와 스위치·링크 정보를 확인합니다. systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log에서 같은 시각의 SXID·오류 줄을 확인합니다. dmesg -T에서 같은 시각의 SXID와 GPU 쪽 XID 74·45를 찾고, nvidia-smi nvlink -s로 GPU 쪽 링크 상태를 봅니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 DCGM_FR 코드와 스위치·링크 정보를 확인합니다. systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log에서 같은 시각의 SXID·오류 줄을 확인합니다. dmesg -T에서 같은 시각의 SXID와 GPU 쪽 XID 74·45를 찾고, nvidia-smi nvlink -s로 GPU 쪽 링크 상태를 봅니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",

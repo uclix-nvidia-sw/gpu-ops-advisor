@@ -141,7 +141,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "D09 원문 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -d ECC,ROW_REMAPPER로 해당 GPU의 Pending·Remapping Failure Occurred와 정정 불가 오류 수를 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). 같은 시각 dmesg의 XID 48·63·64·94·95 줄도 함께 기록합니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -d ECC,ROW_REMAPPER로 해당 GPU의 Pending·Remapping Failure Occurred와 정정 불가 오류 수를 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). 같은 시각 dmesg의 XID 48·63·64·94·95 줄도 함께 기록합니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
