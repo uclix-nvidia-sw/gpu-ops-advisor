@@ -222,7 +222,7 @@
         },
         {
           "title": "복구 확인",
-          "text": "nvidia-smi -L에 노드의 GPU가 모두 다시 보이는지(DGX A100은 8개) 확인합니다. dmesg에 새 XID가 없고, NVSwitch 시스템이면 systemctl status nvidia-fabricmanager가 active인지 확인합니다. dcgmi diag -r 2로 빠르게 점검하고, 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+          "text": "nvidia-smi -L에 노드에 장착된 GPU가 모두 다시 보이는지 확인합니다. dmesg에 새 XID가 없고, NVSwitch 시스템이면 systemctl status nvidia-fabricmanager가 active인지 확인합니다. dcgmi diag -r 2로 빠르게 점검하고, 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
         },
         {
           "title": "공급사 전달 (재발·미복구)",
