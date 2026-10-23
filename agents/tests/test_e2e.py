@@ -3101,6 +3101,7 @@ def test_aggregate_report_transition_verification_is_published(
         ("namespace_refs", None),
         ("json", "repeated_activity"),
         ("json", "relative_activity"),
+        ("schedule_condition", "schedule_candidate"),
     ],
 )
 def test_scheduled_and_manual_reports_repair_same_data(
@@ -3128,6 +3129,9 @@ def test_scheduled_and_manual_reports_repair_same_data(
     wait_http(backend + "/health/ready", process)
     send = Upstream.send
     corrupted = []
+    before = len(Upstream.requests)
+    if failure == "schedule_condition":
+        monkeypatch.setitem(stack["env"], "OPS_LLM_MEDIUM_EFFORT", "true")
 
     def send_with_one_malformed_reply(self, body, status=200):
         if pattern and urlparse(self.path).path.endswith("/api/v1/query_range"):
@@ -3141,7 +3145,9 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     for point in row["values"]:
                         hour = int((point[0] - start) / 3600)
                         activity = (
-                            (85 if hour in (1, 3) else 20)
+                            1
+                            if pattern == "schedule_candidate"
+                            else (85 if hour in (1, 3) else 20)
                             if pattern == "repeated_activity"
                             else (80 if hour < 2 else 20)
                         )
@@ -3171,7 +3177,12 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     if item["topic_id"] == "namespace_usage":
                         item["advice"][0]["summary"] = item["advice"][0][
                             "summary"
-                        ].replace("{{period}}", "")
+                        ].replace(
+                            "확인한 뒤"
+                            if failure == "schedule_condition"
+                            else "{{period}}",
+                            "확인하고" if failure == "schedule_condition" else "",
+                        )
                     elif failure == "mixed_topics":
                         item["observation"] = "알림은 3건입니다."
                 content = json.dumps(reply)
@@ -3251,6 +3262,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
         assert failures[0]["reason"] in (
             {"llm_invalid_output"}
             if failure == "json"
+            else {"conditional_scheduling_review_required"}
+            if failure == "schedule_condition"
             else {"namespace_summary_tokens_required", "unsupported_prose"}
         )
         if failure == "namespace_refs":
@@ -3270,12 +3283,16 @@ def test_scheduled_and_manual_reports_repair_same_data(
         if pattern:
             item = next(a for a in namespace["advice"] if a["kind"] == pattern)
             assert item["source_hours"] and item["evidence_refs"]
-            assert item["observed_periods"]
+            if pattern != "schedule_candidate":
+                assert item["observed_periods"]
             if pattern == "relative_activity":
                 assert item["reference_period"] != item["period"]
                 assert item["reference_hours"]
             html = render(result)["html"].decode()
-            assert item["summary_parts"]["evidence"] in html
+            if pattern == "schedule_candidate":
+                assert item["summary"] in html
+            else:
+                assert item["summary_parts"]["evidence"] in html
         assert all(
             a["decision"]["option"] and a["decision"]["needed"]
             for a in namespace["advice"]
@@ -3285,6 +3302,22 @@ def test_scheduled_and_manual_reports_repair_same_data(
         )
     assert scheduled["time_range"] == manual["time_range"]
     assert render(scheduled)["csv"] == render(manual)["csv"]
+    if failure == "schedule_condition":
+        calls = [
+            b
+            for path, b in Upstream.requests[before:]
+            if path == "/v1/chat/completions"
+        ]
+        assert len(calls) == 4  # Initial and repair for each report origin.
+        for call in calls:
+            assert call["chat_template_kwargs"] == {
+                "enable_thinking": True,
+                "medium_effort": True,
+            }
+        for call in calls[1::2]:
+            item = json.loads(call["messages"][1]["content"])["summary_repair"][0]
+            assert "'확인한 뒤'" in item["validation_error"]
+            assert item["required_prose_terms"] == ["확인", "뒤", "검토"]
 
 
 @pytest.mark.e2e

@@ -1548,7 +1548,8 @@ def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, c
         {"findings": [fact]},
     )["advice"]
     assert "시간대별 관측 최대 대기" not in SYSTEM
-    assert "첫 문장은 관측 구간에 어떤 현상이 있었는지" in SYSTEM
+    assert "관측한 현상·운영 선택·필수 확인 조건을 한 문장으로" in SYSTEM
+    assert "같은 조건을 다시 설명하는 문장을 덧붙이지" in SYSTEM
     assert '"배치 조건", "메모리 유지 필요성"만으로 끝내지 말고' in SYSTEM
     if unscheduled == 2:
         focus = summary_context(fact)["writing_focus"]
@@ -1731,6 +1732,13 @@ async def test_existing_condition_and_unit_errors_use_one_targeted_repair(kind, 
     repair = llm.complete.call_args_list[1].args[1]
     assert len(repair["summary_repair"]) == 1 and "topics" not in repair
     assert repair["summary_repair"][0]["validation_error"].startswith(error)
+    if kind == "schedule_candidate":
+        first = llm.complete.call_args_list[0].args[1]["topics"][0]["findings"][0]
+        for context in (first, repair["summary_repair"][0]):
+            assert context["required_prose_terms"] == ["확인", "뒤", "검토"]
+            assert "확인한 뒤에만" in context["writing_checks"][0]
+        assert "'확인한 뒤'" in repair["summary_repair"][0]["validation_error"]
+        assert "'검토'" in repair["summary_repair"][0]["validation_error"]
     if kind == "queue_review":
         assert (
             repair["summary_repair"][0]["writing_focus"]
@@ -2222,3 +2230,40 @@ def test_partial_queue_writing_example_starts_with_the_missing_evidence():
         {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},
         {"findings": [fact]},
     )["advice"]
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "예약·대기·가용 GPU를 확인하고 일부 작업의 시범 실행을 검토하세요.",
+        "예약·대기·가용 GPU를 확인한 뒤 일부 작업을 시범 실행하세요.",
+    ],
+)
+async def test_repeated_scheduling_condition_failure_keeps_calculated_report(prose):
+    result = dict(topics=[topic()], quality={}, time_range={})
+    original = deepcopy(result["topics"])
+    fact = payload_for(result)["topics"][0]["findings"][0]
+    item = {
+        "fact_id": fact["fact_id"],
+        "summary": prose + " " + summary_context(fact)["summary_start"],
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        {"sections": [{"topic_id": "namespace_usage", "advice": [item]}]},
+        {"advice": [item]},
+    ]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    assert result["topics"] == original
+    assert result["narrative_status"] == "failed"
+    diagnostic = result["quality"]["report"]
+    assert diagnostic["method"] == "deterministic_fallback"
+    assert diagnostic["failures"] == [
+        {"attempt": n, "reason": "conditional_scheduling_review_required"}
+        for n in (1, 2)
+    ]
+    repair = llm.complete.call_args_list[1].args[1]["summary_repair"][0]
+    assert repair["fact_id"] == fact["fact_id"]
+    assert "'확인한 뒤'" in repair["validation_error"]
+    assert "'검토'" in repair["validation_error"]
+    assert "summary" not in diagnostic["failures"][0]
