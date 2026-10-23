@@ -2,6 +2,7 @@
 // evidence; wording marks estimates and never turns missing data into health.
 import { obj, rows, str, num, strings, type Row } from './live';
 import { formatRcaTime as fmt } from './rcaTime';
+import { rcaReasons } from './rcaLabels';
 
 export type Tone = 'alert' | 'warn' | 'ok' | 'unknown';
 export const toneLabels: Record<Tone, string> = {
@@ -51,6 +52,8 @@ export interface MetricRow {
   wholeText: string;
   samples: number;
   lastSample: string;
+  /** D query behind the row, for rules tied to one metric (e.g. ECC counters). */
+  query: string;
   tone: Tone;
   reading: string;
   refs: string[];
@@ -256,10 +259,75 @@ function mergeSeries(metricRows: Row[]) {
   return [...merged.values()];
 }
 
+/** Fleet event-log alerts prefix the reason with "[Fatal] <component>: " (and SXID with
+ * "[Potential Fatal]"); operators read the reason without those tags. */
+export const plainReason = (text: string) =>
+  text.replace(/^(?:\s*\[[^\]]+\]\s*(?:[\w.-]+:)?)+\s*/, '').trim();
+
+/** Component alerts have no stored triage summary; build one from the Fleet state reports
+ * the RCA stored, so the report keeps the same sections as XID/SXID. */
+function componentTriage(result: Row): Row | null {
+  if (!rows(result.runbook_revisions).some((b) => str(b.knowledge_key).startsWith('RB-COMPONENT-')))
+    return null;
+  const current = rows(obj(obj(result.quality).host_incident_history).rows).find(
+    (r) => r.current === true,
+  );
+  const reports = rows(result.device_observations)
+    .filter((o) => str(o.component) && !isNaN(t(o.observed_at)))
+    .sort((a, b) => t(a.observed_at) - t(b.observed_at));
+  const bad = reports.filter((o) => o.raw_health === 'Unhealthy');
+  const alert = bad.find((o) => str(o.reason) === str(current?.reason)) || bad[0];
+  if (!alert) return null;
+  const component = str(alert.component);
+  const unhealthy = bad.filter((o) => o.component === component);
+  const first = t(unhealthy[0].observed_at);
+  const healthy = reports.filter(
+    (o) =>
+      o.component === component &&
+      str(o.raw_health).toLowerCase() === 'healthy' &&
+      t(o.observed_at) < first,
+  );
+  const byReason = new Map<string, Row[]>();
+  unhealthy.forEach((o) =>
+    byReason.set(str(o.reason), [...(byReason.get(str(o.reason)) || []), o]),
+  );
+  const target = obj(alert.target);
+  return {
+    schema: 'rca-triage-observations/1',
+    component,
+    target: {
+      node: str(target.node),
+      machine_id: str(target.machine_id),
+      cluster_id: str(alert.cluster_id) || str(obj(rows(obj(result.scope).clusters)[0]).cluster_id),
+      title: str(current?.reason) || str(alert.reason),
+    },
+    period: obj(result.time_range),
+    alert_time: str(result.incident_time),
+    onset: {
+      code: component,
+      last_healthy_at: str(healthy[healthy.length - 1]?.observed_at),
+      first_unhealthy_at: str(unhealthy[0].observed_at),
+    },
+    logs: [...byReason].map(([reason, items]) => ({
+      code: component,
+      device: '',
+      event_times: [],
+      first: str(items[0].observed_at),
+      last: str(items[items.length - 1].observed_at),
+      reports: items.length,
+      message: reason,
+      evidence_refs: [...new Set(items.flatMap((o) => strings(o.evidence_refs)))],
+    })),
+    metrics: [],
+  };
+}
+
 export function operatorView(result: Row) {
   const quality = obj(result.quality);
-  const view = obj(quality.triage_observations);
-  if (view.schema !== 'rca-triage-observations/1') return null;
+  const stored = obj(quality.triage_observations);
+  const view = stored.schema === 'rca-triage-observations/1' ? stored : componentTriage(result);
+  if (!view) return null;
+  const component = str(view.component);
   const target = obj(view.target);
   const period = obj(view.period);
   const allLogs = rows(view.logs);
@@ -289,7 +357,12 @@ export function operatorView(result: Row) {
   const codes = alertCode
     ? [alertCode]
     : [...new Set(logs.map((r) => str(r.code).toLowerCase()).filter(Boolean))];
-  const family = codes.some((c) => c.startsWith('sxid')) ? 'nvswitch' : 'gpu';
+  const family = component
+    ? 'component'
+    : codes.some((c) => c.startsWith('sxid'))
+      ? 'nvswitch'
+      : 'gpu';
+  const node = str(target.node) || str(target.k8s_node_name) || str(target.machine_id);
   const guidance = rows(quality.runbook_guidance).filter(
     (g) => g.report_applicability !== 'reference_only',
   );
@@ -415,6 +488,21 @@ export function operatorView(result: Row) {
     points: idPoints,
     refs: refsOf(logs),
   };
+
+  // Component reports name the component and node, not a device.
+  if (family === 'component')
+    Object.assign(identity, {
+      tone: logs.length ? 'ok' : 'unknown',
+      label: logs.length ? '일치' : '확인 필요',
+      verdict: logs.length
+        ? `알림과 Fleet 상태 보고가 같은 컴포넌트(${component})·노드(${node})를 가리킵니다. 보고에 장치 정보가 없어 대상 장치는 대응 순서의 명령으로 직접 확인합니다.`
+        : `Fleet 상태 보고에서 ${component} 오류 보고를 찾지 못했습니다. 알림 원문으로 직접 확인하세요.`,
+      points: [
+        `알림 컴포넌트: ${component} · 노드 ${node}`,
+        `Fleet 상태 보고: ${component} · ${node} 오류 보고 ${reports}건 → ${logs.length ? '알림과 일치' : '없음'}`,
+        '장치: Fleet 보고에 장치 정보가 없습니다 — 대응 순서의 즉시 확인 단계로 대상 장치를 찾으세요.',
+      ],
+    } satisfies Partial<Finding>);
 
   // 2. Timing and persistence. Healthy→Unhealthy reports bound the onset without kmsg.
   const onset = obj(view.onset);
@@ -629,6 +717,7 @@ export function operatorView(result: Row) {
       wholeText: cell(whole),
       samples: num(m.samples),
       lastSample: str(m.last),
+      query: q,
       tone,
       reading,
       refs: refsOf(group),
@@ -731,6 +820,18 @@ export function operatorView(result: Row) {
     ...r,
     lines: r.lines.filter((line) => !gpuCommon.includes(line)),
   }));
+  // Every metric except idle ones still waits for its first post-incident sample.
+  const waiting =
+    !!metrics.length &&
+    metrics.every((m) => m.tag === IDLE || (!m.after && !m.whole)) &&
+    metrics.some((m) => !m.after && !m.whole);
+  const maxGap = Math.max(0, ...metricRows.map((m) => num(m.max_sample_gap_seconds))) * 1000;
+  const dbe = metrics.find((m) => ['D40', 'D42'].includes(m.query) && m.before);
+  const waitingText = `사건 뒤 지표 표본이 아직 없습니다(수집 간격 최대 ${intervalLabel(maxGap)}). ${
+    dbe
+      ? `사건 전 ${dbe.name}은 ${valueText(dbe.before!.last, dbe.unit)}라 이번 오류가 반영됐는지는 nvidia-smi -q -d ECC로 직접 확인하세요.`
+      : '사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
+  }`;
   const telemetry: Finding = {
     key: 'telemetry',
     question: '사건 전후로 장치 지표는 어떻게 달라졌나요?',
@@ -742,14 +843,20 @@ export function operatorView(result: Row) {
           ? 'warn'
           : 'unknown',
     verdict: !metrics.length
-      ? '관련 지표를 수집하지 못했습니다.'
-      : headline.length
-        ? `${headline.join('. ')}.`
-        : metrics.every((m) => m.whole)
-          ? '사건 전후 구분 없이 조회 구간 요약만 있습니다. 사건 이후 장치 상태는 판단할 수 없습니다.'
-          : noAfter.length === metrics.length
-            ? '모든 지표가 사건 이전 표본뿐입니다. 사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
-            : '사건 전후 값을 아래에서 비교할 수 있습니다. 관측값만으로 장치 정상 여부를 확정할 수 없습니다.',
+      ? family === 'component'
+        ? '이 알림 유형은 지표 대신 오류·상태 로그로 판단합니다. 장치 상태는 대응 순서의 명령으로 직접 확인하세요.'
+        : '관련 지표를 수집하지 못했습니다.'
+      : waiting && !warnGroups.length
+        ? [waitingText, ...idleGroups.map((g) => `${IDLE}: ${withShort(g, describe(g))}.`)].join(
+            ' ',
+          )
+        : headline.length
+          ? `${headline.join('. ')}.`
+          : metrics.every((m) => m.whole)
+            ? '사건 전후 구분 없이 조회 구간 요약만 있습니다. 사건 이후 장치 상태는 판단할 수 없습니다.'
+            : noAfter.length === metrics.length
+              ? '모든 지표가 사건 이전 표본뿐입니다. 사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
+              : '사건 전후 값을 아래에서 비교할 수 있습니다. 관측값만으로 장치 정상 여부를 확정할 수 없습니다.',
     // One line per verdict; several GPUs are named by number, per-GPU values stay in section 3.
     points: multi
       ? tagGroups.map((g) => {
@@ -760,7 +867,7 @@ export function operatorView(result: Row) {
             : '';
           return `${g[0].tag}: ${describe(g)}${detail}${once}`;
         })
-      : metrics.map((m) => `${m.tag}: ${m.name} — ${m.short}`),
+      : [], // one GPU: the per-metric table under the verdict carries the values
     refs: refsOf(metricRows),
   };
 
@@ -771,8 +878,11 @@ export function operatorView(result: Row) {
   const devOf = (r: Row) => str(r.device) || str(r.gpu_uuid);
   const curDev = current ? devOf(current) : '';
   const curCodes = current ? strings(current.codes) : codes;
-  const sameCode = hrows.filter((r) => strings(r.codes).some((c) => curCodes.includes(c)));
-  const same = sameCode.filter((r) => curDev && devOf(r) === curDev);
+  const sameCode = component
+    ? hrows.filter((r) => !strings(r.codes).length && str(r.reason) === str(current?.reason))
+    : hrows.filter((r) => strings(r.codes).some((c) => curCodes.includes(c)));
+  const same = component ? sameCode : sameCode.filter((r) => curDev && devOf(r) === curDev);
+  const place = component ? '같은 노드' : '같은 장치';
   const byDevice = new Map<string, number>();
   sameCode.forEach((r) => devOf(r) && byDevice.set(devOf(r), (byDevice.get(devOf(r)) || 0) + 1));
   const devices: DeviceCount[] = [...byDevice]
@@ -788,25 +898,26 @@ export function operatorView(result: Row) {
   const lastGap =
     sameTimes.length > 1 ? sameTimes[sameTimes.length - 1] - sameTimes[sameTimes.length - 2] : 0;
   const days = Math.round((t(obj(history.period).end) - t(obj(history.period).start)) / 86400000);
-  const codeText = curCodes.map((c) => c.toUpperCase()).join(', ');
+  const codeText = component || curCodes.map((c) => c.toUpperCase()).join(', ');
   // History counts distinct NVSwitch addresses, which need not match the switch count.
   const spread = (n: number) => (family === 'nvswitch' ? `NVSwitch 주소 ${n}곳` : `GPU ${n}개`);
   const repeatPoints: string[] = [];
   if (hrows.length) {
     repeatPoints.push(
-      `같은 장치·같은 오류: ${same.length}건 (이번 포함, 최근 ${days}일)${lastGap ? ` · 직전 사건과 ${intervalLabel(lastGap)} 간격` : ''}`,
+      `${place}·같은 ${component ? '사유' : '오류'}: ${same.length}건 (이번 포함, 최근 ${days}일)${lastGap ? ` · 직전 사건과 ${intervalLabel(lastGap)} 간격` : ''}`,
     );
-    repeatPoints.push(
-      `같은 호스트에서 ${codeText} 오류가 난 장치: ${spread(byDevice.size)}, 사건 ${sameCode.length}건`,
-    );
+    if (!component)
+      repeatPoints.push(
+        `같은 호스트에서 ${codeText} 오류가 난 장치: ${spread(byDevice.size)}, 사건 ${sameCode.length}건`,
+      );
     if (otherCodes.size)
       repeatPoints.push(
-        `같은 호스트의 다른 오류: ${[...otherCodes].map(([c, n]) => `${c.toUpperCase()} ${n}건`).join(', ')}`,
+        `같은 호스트의 다른 오류${component ? '(참고)' : ''}: ${[...otherCodes].map(([c, n]) => `${c.toUpperCase()} ${n}건`).join(', ')}`,
       );
     const prior = same.filter((r) => str(obj(r.prior_rca).job_id)).length;
     if (prior)
-      repeatPoints.push(`같은 장치의 이전 RCA ${prior}건 — 이전 조치와 결과를 함께 비교하세요.`);
-    if (same.length > 1)
+      repeatPoints.push(`${place}의 이전 RCA ${prior}건 — 이전 조치와 결과를 함께 비교하세요.`);
+    if (same.length > 1 && !component)
       repeatPoints.push(
         '같은 장치에서 재발했습니다 — NVIDIA GPU Node Triage 기준 재발·미복구는 진단 자료를 갖춰 공급사 지원(RMA 검토)으로 넘기는 경로입니다.',
       );
@@ -816,7 +927,10 @@ export function operatorView(result: Row) {
           ? `(추정) 여러 NVSwitch에서 같은 오류가 반복됩니다 — 스위치 한 개의 결함보다 Fabric Manager·베이스보드·펌웨어 같은 공통 요인을 함께 점검하세요.`
           : `(추정) 여러 GPU에서 같은 오류가 반복됩니다 — GPU 한 개의 결함보다 호스트 공통 경로(PCIe 스위치·메인보드·전원·드라이버/펌웨어)를 함께 점검하세요.`,
       );
-    if ([...otherCodes.keys()].some((c) => c.split(':')[0] !== curCodes[0]?.split(':')[0]))
+    if (
+      !component &&
+      [...otherCodes.keys()].some((c) => c.split(':')[0] !== curCodes[0]?.split(':')[0])
+    )
       repeatPoints.push(
         '(추정) GPU 오류(XID)와 NVSwitch 오류(SXID)가 같은 호스트에서 함께 반복됩니다 — 같은 시각 기준으로 연관 여부를 대조하세요. 동시 발생만으로 원인 관계를 확정하지 않습니다.',
       );
@@ -828,10 +942,10 @@ export function operatorView(result: Row) {
     verdict: !hrows.length
       ? '호스트 사건 이력을 조회하지 못했습니다.'
       : same.length > 1
-        ? `같은 장치에서 최근 ${days}일 동안 ${same.length}번째 같은 오류입니다${lastGap ? ` (직전 ${intervalLabel(lastGap)} 전)` : ''}.${byDevice.size > 1 ? ` 같은 호스트의 다른 ${spread(byDevice.size - 1)}에서도 발생했습니다.` : ''}`
+        ? `${place}에서 최근 ${days}일 동안 ${same.length}번째 같은 ${component ? `${component} 보고` : '오류'}입니다${lastGap ? ` (직전 ${intervalLabel(lastGap)} 전)` : ''}.${byDevice.size > 1 ? ` 같은 호스트의 다른 ${spread(byDevice.size - 1)}에서도 발생했습니다.` : ''}`
         : byDevice.size > 1
           ? `이 장치는 처음이지만 같은 호스트의 다른 ${spread(byDevice.size - 1)}에서 같은 오류가 있었습니다.`
-          : `최근 ${days}일 동안 이 호스트에서 처음 등록된 ${codeText} 사건입니다.`,
+          : `최근 ${days}일 동안 이 ${component ? '노드' : '호스트'}에서 처음 등록된 ${codeText} 사건입니다.`,
     points: repeatPoints,
     refs: strings(history.evidence_refs),
   };
@@ -841,7 +955,7 @@ export function operatorView(result: Row) {
   const gapPoints = strings(result.missing_inputs).map((c) =>
     c === 'synthesis_failed' && aiReason
       ? `${missingLabels[c]} 사유: ${aiReason}.`
-      : missingLabels[c] || `미확보 자료: ${c}`,
+      : missingLabels[c] || rcaReasons[c] || `미확보 자료: ${c}`,
   );
   rows(quality.collection_checks)
     .filter((c) => str(c.status) && c.status !== 'collected')
@@ -864,7 +978,9 @@ export function operatorView(result: Row) {
       [...gpuInfo.values()][0],
   );
   gapPoints.push(
-    `이 보고서에 없는 자료: ${str(alertInfo.driver) ? '' : 'OS·드라이버 버전, '}nvidia-bug-report.sh, ${family === 'nvswitch' ? 'Fabric Manager 로그, ' : ''}DCGM 진단(dcgmi diag) 결과.`,
+    family === 'component'
+      ? '이 보고서에 없는 자료: 장치 식별 정보, 커널 로그 원문(dmesg·journalctl -k), 작업(파드) 정보.'
+      : `이 보고서에 없는 자료: ${str(alertInfo.driver) ? '' : 'OS·드라이버 버전, '}nvidia-bug-report.sh, ${family === 'nvswitch' ? 'Fabric Manager 로그, ' : ''}DCGM 진단(dcgmi diag) 결과.`,
   );
   const gaps: Finding = {
     key: 'gaps',
@@ -964,11 +1080,11 @@ export function operatorView(result: Row) {
     historyDays: days,
     node: str(target.node) || str(target.k8s_node_name) || str(target.machine_id),
     cluster: str(target.cluster_id),
-    codes: codes.map((c) => c.toUpperCase()),
+    codes: component ? codes : codes.map((c) => c.toUpperCase()),
     alertPci,
     alertUuid,
     alertGpu: alertUuid ? gpuLabel(alertUuid) : '',
-    message: str(logs[0]?.message) || title,
+    message: str(logs[0]?.message) || plainReason(title),
     meaning: str(g0.meaning),
     causeNote: str(g0.cause_note),
     targetCheck,
@@ -989,7 +1105,10 @@ export function operatorView(result: Row) {
     gpuRows,
     gpuCommon,
     /** Headline of what changed, for the 5W "어떻게" row; empty when nothing stands out. */
-    telemetryHeadline: headline.join('. '),
+    telemetryHeadline:
+      waiting && !warnGroups.length
+        ? `사건 뒤 지표 표본 수집 전(수집 간격 최대 ${intervalLabel(maxGap)})`
+        : headline.join('. '),
     timeline,
     devices,
     deviceLabel,

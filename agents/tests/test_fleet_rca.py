@@ -531,6 +531,8 @@ def test_missing_kmsg_with_in_window_state_change_is_not_a_prior_event():
         ("xid", "healthy_report", "alert_report_not_found"),
         ("xid", "other_machine", "alert_report_not_found"),
         ("xid", "reason", "report_reason_changed"),
+        ("xid", "event_body_reason", "match"),
+        ("sxid", "event_body_reason", "match"),
         ("xid", "no_event", "event_not_found"),
         ("xid", "pci", "pci_mismatch"),
         ("sxid", "sxid_function", "pci_mismatch"),
@@ -557,6 +559,11 @@ def test_alert_match_compares_report_and_event_by_error_family(kind, change, sta
         reports = [state_report(raw_health="Healthy")]
     elif change == "other_machine":
         reports = [state_report(target={"machine_id": "machine-2", "node": "node-1"})]
+    elif change == "event_body_reason":
+        # Event-log alert rules send the log body with severity/component tags.
+        tags = "[Fatal] accelerator-nvidia-error-%s: " % kind
+        clues["reason"] = tags + ("[Potential Fatal] " if kind == "sxid" else "")
+        clues["reason"] += REASONS[kind]
     elif change == "reason":
         reports = [state_report(reason="XID 48 detected on GPU PCI:0000:01:00")]
     elif change == "no_event":

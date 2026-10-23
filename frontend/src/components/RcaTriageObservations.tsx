@@ -115,12 +115,18 @@ export function RcaTriageObservations({
           <tr>
             <th>무엇이</th>
             <td>
-              <strong>
-                {v.family === 'nvswitch'
-                  ? 'NVSwitch '
-                  : `GPU ${v.gpuIndex ? `${v.gpuIndex} ` : ''}`}
-                PCI <code className="rca-id">{v.alertPci || '—'}</code>
-              </strong>
+              {v.family === 'component' ? (
+                <strong>
+                  {v.codes[0]} 컴포넌트 · 노드 {v.node} (장치 정보 없음)
+                </strong>
+              ) : (
+                <strong>
+                  {v.family === 'nvswitch'
+                    ? 'NVSwitch '
+                    : `GPU ${v.gpuIndex ? `${v.gpuIndex} ` : ''}`}
+                  PCI <code className="rca-id">{v.alertPci || '—'}</code>
+                </strong>
+              )}
               {v.alertUuid && (
                 <>
                   {' '}
@@ -143,7 +149,7 @@ export function RcaTriageObservations({
               <mark>{v.codes.join(', ')}</mark> <Ids text={v.message} />
             </td>
           </tr>
-          {(v.workloads.length > 0 || v.metrics.length > 0) && (
+          {(v.workloads.length > 0 || v.metrics.length > 0 || v.family === 'component') && (
             <tr>
               <th>누구에게</th>
               <td>
@@ -151,7 +157,7 @@ export function RcaTriageObservations({
                   <div>
                     {v.podsKnown
                       ? `사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 없습니다 (작업 영향 미관측)`
-                      : '수집한 지표에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 확인'}
+                      : `수집한 ${v.family === 'component' ? '자료' : '지표'}에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 확인`}
                   </div>
                 )}
                 {v.workloads
@@ -169,7 +175,9 @@ export function RcaTriageObservations({
                     {v.neighbours.map((w) => `${w.name} (${w.gpus})`).join(', ')}
                   </div>
                 )}
-                <small>DCGM 지표에 기록된 파드 라벨 기준(관측) · 할당 정보가 아닙니다</small>
+                {v.family !== 'component' && (
+                  <small>DCGM 지표에 기록된 파드 라벨 기준(관측) · 할당 정보가 아닙니다</small>
+                )}
               </td>
             </tr>
           )}
@@ -257,7 +265,9 @@ export function RcaTriageObservations({
                 )}
                 <tr className={i >= v.logs.length ? 'rca-muted' : undefined}>
                   <td>
-                    <mark>{str(r.code).toUpperCase()}</mark>
+                    <mark>
+                      {v.family === 'component' ? str(r.code) : str(r.code).toUpperCase()}
+                    </mark>
                     <br />
                     {str(r.device)}
                   </td>

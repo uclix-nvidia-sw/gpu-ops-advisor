@@ -11,6 +11,16 @@ from agent_common.parsers import ERROR_CODE, log_entries
 
 PCI_TEXT = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 STATUS_UUID = re.compile(r"UUID:(GPU-[0-9a-f-]{36})", re.I)
+# Alerts built from Fleet event logs carry the log body: "[Fatal] <component>: " and,
+# for SXID, "[Potential Fatal]" precede the reason a state report carries.
+EVENT_TAGS = re.compile(r"^(?:\s*\[[^\]]+\]\s*(?:[\w.-]+:)?)+\s*")
+
+
+def report_reason(text):
+    """Reason text without event-log severity and component tags."""
+    return EVENT_TAGS.sub("", str(text or "")).strip()
+
+
 # Fleet XID/SXID health_state.go: the component state an event type leaves behind.
 # The single source for expected state; later alert stages extend only this table.
 EXPECTED_HEALTH = {
@@ -269,7 +279,9 @@ def match_alert(clues, health, events):
     ]
     if not reports:
         return result("alert_report_not_found")
-    same = [h for h in reports if h.get("reason") == reason]
+    same = [
+        h for h in reports if report_reason(h.get("reason")) == report_reason(reason)
+    ]
     if not same:
         # Fleet rewrites the reason when a later Fatal error becomes the summary.
         return result(
