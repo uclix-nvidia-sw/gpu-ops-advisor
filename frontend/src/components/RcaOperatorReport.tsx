@@ -1,5 +1,7 @@
 import { num, obj, rows, str, strings, type Row } from '../lib/live';
 import { aiFailure, operatorView, sentences } from '../lib/rcaOperatorView';
+import { gapMeaning } from '../lib/rcaGuidance';
+import { rcaReasons } from '../lib/rcaLabels';
 import { formatRcaTime } from '../lib/rcaTime';
 import { RcaPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
@@ -12,9 +14,11 @@ const FM_URL = 'https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-gui
 // 5 history, 6 references. Every section is filled from stored result fields.
 export function RcaOperatorReport({
   result,
+  decisionSummary = false,
   onEvidence,
 }: {
   result: Row;
+  decisionSummary?: boolean;
   onEvidence?: (id: string) => void;
 }) {
   const quality = obj(result.quality);
@@ -64,7 +68,29 @@ export function RcaOperatorReport({
     );
   const missing = strings(result.missing_inputs);
   const ai = aiFailure(result);
-  const [identity, timing, , repeat] = v?.findings || [];
+  const [identity, timing, telemetry, repeat] = v?.findings || [];
+  const facts = paragraphs('problem').length
+    ? paragraphs('problem')
+    : rows(result.facts).length
+      ? rows(result.facts)
+          .map((f) => str(f.text))
+          .filter(Boolean)
+      : v
+        ? [identity.verdict, timing.verdict, telemetry.verdict, repeat.verdict]
+        : [];
+  const gaps = [
+    ...new Set([
+      ...missing.map(
+        (code) => gapMeaning(code, result) || rcaReasons[code] || `미확인 조건: ${code}`,
+      ),
+      ...paragraphs('limits'),
+      ...strings(result.limitations),
+    ]),
+  ];
+  const savedChecks = [...paragraphs('action'), ...paragraphs('next')];
+  const nextChecks = savedChecks.length
+    ? savedChecks
+    : (v?.actionChecks || []).map((c) => `${str(c.title)} — ${str(c.text)}`);
   const first = v?.actionChecks[0];
   const maxCount = Math.max(1, ...(v?.devices || []).map((d) => d.count));
   // Sections 1 and 3 need the triage observations; say why they are empty.
@@ -129,6 +155,80 @@ export function RcaOperatorReport({
         )}
       </header>
 
+      {decisionSummary && (
+        <section className="rca-decision-summary" aria-label="사건 판단 요약">
+          <h4>사건 판단</h4>
+          <div className="rca-decision-grid">
+            <article>
+              <h5>확인한 사실</h5>
+              <RcaPoints
+                items={
+                  facts.length ? facts.slice(0, 2) : ['저장된 관측 사실을 확인할 수 없습니다.']
+                }
+              />
+              {facts.length > 2 && (
+                <details>
+                  <summary>나머지 관측 사실 {facts.length - 2}건</summary>
+                  <RcaPoints items={facts.slice(2)} />
+                </details>
+              )}
+              <a href="#rca-observation-detail">로그·지표 확인</a>
+            </article>
+            <article>
+              <h5>원인 후보</h5>
+              <p className="rca-muted">후보는 확정 원인이 아닙니다.</p>
+              <RcaPoints
+                items={
+                  noteTexts.length
+                    ? noteTexts.slice(0, 2)
+                    : [
+                        v?.causeNote
+                          ? `발행 Runbook의 일반 조사 방향: ${v.causeNote}`
+                          : '저장된 원인 후보가 없습니다.',
+                      ]
+                }
+              />
+              <a href="#rca-analysis-detail">분석과 근거 확인</a>
+            </article>
+            <article>
+              <h5>확인하지 못한 사항</h5>
+              <RcaPoints
+                items={
+                  gaps.length
+                    ? gaps.slice(0, 3)
+                    : [
+                        '저장된 제한 사항이 없습니다. 원인 확정이나 현재 정상 상태를 뜻하지 않습니다.',
+                      ]
+                }
+              />
+              {gaps.length > 3 && (
+                <details>
+                  <summary>나머지 제한 {gaps.length - 3}건</summary>
+                  <RcaPoints items={gaps.slice(3)} />
+                </details>
+              )}
+            </article>
+            <article>
+              <h5>다음 확인</h5>
+              <RcaPoints
+                items={
+                  nextChecks.length
+                    ? nextChecks.slice(0, 2)
+                    : ['저장된 확인 제안이 없습니다. 수집된 근거와 미확인 사항부터 검토하세요.']
+                }
+              />
+              {nextChecks.length > 2 && (
+                <details>
+                  <summary>나머지 확인 제안 {nextChecks.length - 2}건</summary>
+                  <RcaPoints items={nextChecks.slice(2)} />
+                </details>
+              )}
+              <a href="#rca-response-reference">전체 확인 순서·공통 절차</a>
+            </article>
+          </div>
+        </section>
+      )}
+
       {v && (
         <section className="rca-glance" aria-label="사건 핵심 요약">
           <h4>
@@ -173,7 +273,7 @@ export function RcaOperatorReport({
         </section>
       )}
 
-      <section className="rca-narrative-section">
+      <section id="rca-response-reference" className="rca-narrative-section">
         <h4>2. 대응 순서</h4>
         <p className="rca-muted">
           <a href={TRIAGE_URL} target="_blank" rel="noreferrer">
@@ -337,16 +437,18 @@ export function RcaOperatorReport({
         )}
       </section>
 
-      {v ? (
-        <RcaTriageObservations result={result} onEvidence={onEvidence} />
-      ) : (
-        <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
-          <h4>3. 관련 로그·메트릭</h4>
-          <p className="rca-muted">{noSummary}</p>
-        </section>
-      )}
+      <section id="rca-observation-detail">
+        {v ? (
+          <RcaTriageObservations result={result} onEvidence={onEvidence} />
+        ) : (
+          <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
+            <h4>3. 관련 로그·메트릭</h4>
+            <p className="rca-muted">{noSummary}</p>
+          </section>
+        )}
+      </section>
 
-      <section className="rca-narrative-section">
+      <section id="rca-analysis-detail" className="rca-narrative-section">
         <h4>4. 분석 및 해석</h4>
         {v ? (
           <>

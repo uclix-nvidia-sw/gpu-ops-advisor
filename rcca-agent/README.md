@@ -8,9 +8,9 @@ RCA의 출발점은 Fleet Intelligence가 판단한 장애다. 수집 목적은 
 
 1. JC claim의 사건 snapshot·대상·기간·예산·지식 revision을 고정한다. [workflow.py](src/rcca_agent/workflow.py)가 실행 경로를 소유한다.
 2. [retrieval.py](src/rcca_agent/retrieval.py)에서 발행 Runbook을 선택하고 [runbook_contract.py](src/rcca_agent/runbook_contract.py)로 내용 hash·조회 ID·대상 적용 조건을 검사한다.
-3. 선택한 observation plan을 한 번의 수집 단계에서 실행한다. 과거 발행본의 `required_queries`는 계획이 없는 경우의 입력 호환 필드이며 필수/선택 평가나 두 번째 수집 라운드로 이어지지 않는다. 실제 쿼리는 기존 binding·scope·query budget·deadline·동시성 제한을 따른다. 대상 식별이 충돌하면 조회 범위를 넓히지 않고 수집을 중단한다.
+3. 선택한 observation plan을 한 번의 수집 단계에서 실행한다. 과거 발행본의 `required_queries`는 계획이 없는 경우의 입력 호환 필드이며 필수/선택 평가나 두 번째 수집 라운드로 이어지지 않는다. 단일 수집에 남은 query/discovery 예산을 배분하며 사용하지 않는 다음 라운드를 위해 절반을 예약하지 않는다. 실제 쿼리는 기존 binding·scope·query budget·deadline·동시성 제한을 따른다. 대상 식별이 충돌하면 조회 범위를 넓히지 않고 수집을 중단한다.
 4. 대상 host가 식별되면 저장된 Incident 이력을 읽어 원본 evidence로 고정한다. 알람과 로그의 코드·PCI·UUID 대조 결과는 작성 자료다. 일치한다고 분석을 건너뛰거나 불일치한다고 새 조회를 선택하지 않는다.
-5. [통합 작성](src/rcca_agent/combined_synthesis.py)에서 증거 해석과 분석·권고 자료를 한 번의 LLM 요청으로 작성한다. 과거 profile의 `generation_mode=separate`도 별도 해석 호출을 추가하지 않는다. 구조·근거 참조·식별자·숫자 표현은 코드로 검증하며, 잘못된 항목과 이에 의존하는 가설을 제외한다. HTTP 오류·출력 잘림에도 재전송하지 않는다.
+5. [통합 작성](src/rcca_agent/combined_synthesis.py)에서 증거 해석과 분석·권고 자료를 한 번의 LLM 요청으로 작성한다. 과거 profile의 `generation_mode=separate`도 별도 해석 호출을 추가하지 않는다. 구조·근거 참조·식별자·숫자 표현은 코드로 검증하며, 잘못된 항목과 이에 의존하는 가설을 제외한다. 일시적 HTTP 오류와 수치 표현 보정은 아래의 제한된 재시도 정책을 따른다. 출력 잘림을 별도 검토·추가 수집으로 우회하지 않는다.
 6. [analysis_material.py](src/rcca_agent/analysis_material.py)와 `rca_result_frozen`에서 자료와 hash를 고정한다. [report_writer.py](src/rcca_agent/report_writer.py)는 이 자료만 사용해 보고서 LLM을 한 번 호출한다. 원본을 다시 조회하거나 새 원인을 추가하지 않는다. 작성 실패 시 같은 관측·런북 지침의 기본 보고서를 제공한다. Worker가 후보를 제출하고 JC가 기존 완료 검증 후 공개한다.
 
 이 흐름은 **모든 RCA Runbook 발행본**에 적용한다. Xid 79/D44 또는 SXid 11001/D47 존재 여부가 평가 활성화 조건이 아니다. `analysis_review` 호출·평가 토큰 예약·평가 피드백 재작성·goal 판정·보완 조회 선택·런북 확장·별도 해석 LLM은 Worker에서 제거했다. 조회·작성·공개 실패와 원문 참조 검증은 유지한다. 정상적인 모델 실행은 작성 1회와 보고서 1회이며, 모델 미설정·예산 부족이면 실제 호출 수는 줄 수 있다.

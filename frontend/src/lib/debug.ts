@@ -10,6 +10,11 @@ export type DebugTab = (typeof debugTabs)[number][0];
 export function debugTab(value: string | null): DebugTab {
   return debugTabs.find(([key]) => key === value)?.[0] || 'input';
 }
+export function selectedAttempt(job: Row, requested: string | null): number | null {
+  const value =
+    requested === null ? job.attempt_no : /^\d+$/.test(requested) ? Number(requested) : null;
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
 // Only app-local list/detail destinations are accepted as return locations.
 export function returnPath(value: unknown, fallback = '/jobs'): string {
   return typeof value === 'string' &&
@@ -162,11 +167,11 @@ export function jobRelation(job: Row, key: string, attempt?: number, trace?: Row
         href: '/schedules',
       };
     case 'model': {
-      const model = obj(obj(result.versions).model);
+      const model = obj(obj(trace?.versions ?? result.versions).model);
       return {
         title: '실행에 고정된 모델 설정',
         value: `${str(model.model_id, '모델 미제공')} / revision ${model.model_revision ?? '미제공'}`,
-        source: 'result.versions.model.model_id + model_revision',
+        source: `${trace ? 'jobs' : 'result'}.versions.model.model_id + model_revision`,
         join: 'model_id = profile_revisions.profile_id AND model_revision = profile_revisions.revision',
         purpose:
           'Worker가 실행할 때 읽은 모델 설정 스냅샷을 식별합니다. 현재 서비스 프로필과 다를 수 있습니다.',
@@ -195,13 +200,16 @@ export function jobRelation(job: Row, key: string, attempt?: number, trace?: Row
   }
 }
 
-export function knowledgeRelation(knowledge: Row): Relation {
+export function knowledgeRelation(
+  knowledge: Row,
+  source = 'result.versions.knowledge[]',
+): Relation {
   const id = str(knowledge.knowledge_id);
   const revision = knowledge.revision;
   return {
     title: '실행에 고정된 지식 버전',
     value: `${id || 'ID 미제공'} / revision ${revision ?? '미제공'}`,
-    source: 'result.versions.knowledge[]',
+    source,
     join: '(knowledge_id, revision) = knowledge_revisions.(knowledge_id, revision); content_hash 일치 확인',
     purpose:
       'RCA 입력에 고정된 Runbook 후보의 본문을 읽습니다. 실제 선택·사용 여부는 수집 근거의 runbook_selection 기록과 대조하세요.',

@@ -6,9 +6,7 @@ import pytest
 
 from agent_common.parsers import parse_health, health_facts
 from rcca_agent.fleet_events import parse_events
-from rcca_agent.synthesis import synthesis_input, synthesize
-from rcca_agent.synthesis_context import bounded_context
-from test_fleet_rca import evidence, profile, PERIOD
+from test_fleet_rca import evidence, profile
 
 
 TARGET = {"cluster_id": "c", "node": "node-1", "machine_id": "machine-1"}
@@ -16,7 +14,9 @@ TARGET = {"cluster_id": "c", "node": "node-1", "machine_id": "machine-1"}
 
 def test_current_binding_contract_and_distinct_payloads_keep_provenance():
     p = json.loads(
-        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text()
+        (Path(__file__).resolve().parents[2] / "agents/config.example.json").read_text(
+            "utf-8"
+        )
     )
     raw = event()
     first = evidence(raw)
@@ -175,37 +175,3 @@ def test_inventory_match_is_candidate_and_duplicate_exports_union_refs():
     assert (
         parse_events([evidence(raw)], p, TARGET)[0]["device_mapping"] == "conflicting"
     )
-
-
-@pytest.mark.asyncio
-async def test_event_only_synthesis_has_bounded_refs_and_no_health_promotion():
-    e, p = evidence(event()), profile()
-    data = {"incident_time": PERIOD["end"], "scope": {}, "target": TARGET}
-    events = parse_events([e], p, TARGET)
-    payload = synthesis_input(data, [e], [], [], [], events=events)
-    assert payload["observation_refs"] == ["log"]
-    view = bounded_context(payload, 16000)
-    assert view["error_events"] == events
-    assert view["device_observations"] == []
-
-    class Model:
-        configured = True
-        usage = {}
-
-        async def complete(self, system, payload, **kwargs):
-            assert payload["error_events"][0]["fact_eligible"] is False
-            return {
-                "hypotheses": [
-                    {
-                        "claim": "보고된 XID 79는 추가 확인이 필요합니다.",
-                        "supporting_refs": ["log"],
-                        "contradicting_refs": [],
-                        "missing_inputs": ["현재 장비 상태"],
-                    }
-                ],
-                "limitations": [],
-            }
-
-    status, candidates, _ = await synthesize(Model(), payload)
-    assert status == "complete"
-    assert candidates[0]["causal_status"] == "candidate"

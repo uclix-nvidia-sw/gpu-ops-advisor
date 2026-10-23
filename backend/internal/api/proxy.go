@@ -181,7 +181,7 @@ func (s *Server) incidents(w http.ResponseWriter, q *Request, parts []string) er
 				return e
 			}
 			v := q.R.URL.Query()
-			return s.page(w, q, "incidents", "dsx_scope_contains($1,scope) AND ($2='' OR COALESCE(state,status)=$2) AND ($3='' OR COALESCE(occurred_at,first_seen)>=NULLIF($3,'')::timestamptz) AND ($4='' OR COALESCE(occurred_at,first_seen)<NULLIF($4,'')::timestamptz)", []any{sc, v.Get("status"), v.Get("from"), v.Get("to")}, nil, func(items []Object) error { return s.incidentSummaries(q, items) })
+			return s.page(w, q, "incidents", "dsx_scope_contains($1,scope) AND ($2='' OR COALESCE(state,status)=$2 OR ($2='unclosed' AND COALESCE(state,status) IN ('open','acknowledged'))) AND ($3='' OR COALESCE(occurred_at,first_seen)>=NULLIF($3,'')::timestamptz) AND ($4='' OR COALESCE(occurred_at,first_seen)<NULLIF($4,'')::timestamptz)", []any{sc, v.Get("status"), v.Get("from"), v.Get("to")}, nil, func(items []Object) error { return s.incidentSummaries(q, items) })
 		}
 		if len(parts) == 2 {
 			v, e := s.resource(q, "incidents", parts[1], false)

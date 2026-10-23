@@ -1,23 +1,5 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/noto-sans-kr';
-.assistant-dialog {
-  width: 100vw;
-  height: 100dvh;
-  max-width: none;
-  max-height: none;
-  padding: 0;
-  border: 0;
-  margin: 0;
-  background: white;
-}
-.assistant-dialog::backdrop {
-  background: #203d2e66;
-}
-.assistant-dialog .assistant-panel {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
 :root {
   font-family:
     'Inter Variable',
@@ -464,18 +446,6 @@ hr {
   color: #7b8a7c;
   padding: 4px 6px;
   border-radius: 4px;
-}
-.assistant-toggle {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 10px;
-  border: 1px solid #d8e5dc;
-  border-radius: 6px;
-  color: #2f7052;
-  background: #f6faf7;
-  font-size: 11px;
-  font-weight: 600;
 }
 .key-hint {
   font-size: 8px;
@@ -2307,37 +2277,6 @@ summary {
 .connection-path > span {
   color: #bbcaab;
 }
-.assistant-panel {
-  position: fixed;
-  right: 0;
-  top: 65px;
-  bottom: 0;
-  width: 390px;
-  background: #fff;
-  border-left: 1px solid var(--border);
-  box-shadow: -10px 0 40px #23492b10;
-  z-index: 40;
-  display: flex;
-  flex-direction: column;
-  max-width: 100vw;
-}
-.assistant-header {
-  padding: 18px 16px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border-bottom: 1px solid var(--border);
-  flex: none;
-}
-.assistant-header > div {
-  flex: 1;
-}
-.assistant-header h2 {
-  font-size: 13px;
-}
-.assistant-header small {
-  font-size: 8px;
-}
 .ai-icon {
   display: grid;
   place-items: center;
@@ -2346,33 +2285,6 @@ summary {
   border-radius: 8px;
   height: 33px;
   width: 33px;
-}
-.assistant-context {
-  background: #f9fcf5;
-  padding: 12px 17px;
-  border-bottom: 1px solid var(--border);
-  flex: none;
-}
-.assistant-context select {
-  font-size: 10px;
-  min-height: 29px;
-  padding: 5px 7px;
-}
-.assistant-context p {
-  font-size: 9px;
-  color: #98a88a;
-  margin-top: 6px;
-}
-.assistant-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  min-height: 0;
-  overscroll-behavior: contain;
-}
-.assistant-welcome {
-  padding-top: 35px;
-  text-align: center;
 }
 .welcome-icon {
   display: grid;
@@ -2383,82 +2295,6 @@ summary {
   height: 59px;
   border-radius: 17px;
   margin: 0 auto 24px;
-}
-.assistant-welcome .eyebrow {
-  font-size: 7px;
-  color: #a3b692;
-}
-.assistant-welcome h3 {
-  font-size: 22px;
-  letter-spacing: -0.5px;
-  margin: 10px 0 12px;
-}
-.assistant-welcome p {
-  color: #6f815f;
-  font-size: 12px;
-  margin-bottom: 26px;
-}
-.assistant-welcome > button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  text-align: left;
-  gap: 9px;
-  border: 1px solid #e3edda;
-  background: #fcfef9;
-  border-radius: 6px;
-  padding: 13px 12px;
-  margin-bottom: 9px;
-  color: #88a075;
-  font-size: 10px;
-}
-.assistant-welcome > button:hover {
-  background: #f0f7e8;
-}
-.assistant-compose {
-  padding: 14px 17px 15px;
-  background: #fff;
-  border-top: 1px solid var(--border);
-  flex: none;
-  padding-bottom: max(15px, env(safe-area-inset-bottom));
-}
-.assistant-shortcuts {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 11px;
-}
-.assistant-shortcuts a {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  color: #8aa076;
-  border: 1px solid #e6efdd;
-  border-radius: 4px;
-  padding: 5px 7px;
-}
-.assistant-compose form {
-  border: 1px solid #d7e6cb;
-  border-radius: 8px;
-  background: #fbfdf8;
-  position: relative;
-}
-.assistant-compose textarea {
-  width: 100%;
-  border: 0;
-  background: none;
-  resize: none;
-  min-height: 85px;
-  padding: 12px 12px 34px;
-  font-size: 11px;
-}
-.assistant-compose > small {
-  display: block;
-  text-align: center;
-  font-size: 8px;
-  color: #b0bca2;
-  padding-top: 8px;
 }
 .send-button {
   position: absolute;
@@ -2495,40 +2331,6 @@ summary {
   margin: 6px 0 20px;
   overflow-wrap: anywhere;
 }
-.assistant-message {
-  display: flex;
-  gap: 9px;
-  color: #84a36e;
-}
-.assistant-message > svg {
-  flex: none;
-  margin-top: 3px;
-}
-.assistant-message > div {
-  min-width: 0;
-  flex: 1;
-}
-.assistant-message b {
-  font-size: 10px;
-  color: #6c8b57;
-}
-.assistant-message b span {
-  font-size: 8px;
-  font-weight: 400;
-  color: #b1bf9f;
-  margin-left: 7px;
-}
-.assistant-message p {
-  font-size: 12px;
-  line-height: 1.9;
-  color: #7d936d;
-  white-space: pre-wrap;
-  margin: 10px 0;
-  overflow-wrap: anywhere;
-}
-.assistant-message small {
-  font-size: 8px;
-}
 .message-links {
   display: flex;
   gap: 10px;
@@ -2558,28 +2360,6 @@ summary {
   height: calc(100dvh - 170px);
   min-height: 500px;
   padding-top: 22px;
-}
-.assistant-full {
-  position: relative;
-  inset: auto;
-  height: 100%;
-  width: 100%;
-  max-width: 1000px;
-  margin: auto;
-  box-shadow: none;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  overflow: hidden;
-}
-.assistant-full .assistant-messages {
-  padding: 20px max(20px, 8%);
-}
-.assistant-full .assistant-welcome {
-  max-width: 400px;
-  margin: auto;
-}
-.assistant-full .assistant-compose {
-  padding: 16px max(20px, 8%);
 }
 .error-boundary {
   padding: 80px 30px;
@@ -2895,10 +2675,6 @@ pre {
   .environment-tag {
     display: none;
   }
-  .assistant-toggle {
-    font-size: 10px;
-    padding: 7px 8px;
-  }
   .key-hint {
     display: none;
   }
@@ -3057,21 +2833,6 @@ pre {
   }
   .connection-path > span:nth-of-type(2) {
     display: none;
-  }
-  .assistant-panel {
-    top: 58px;
-  }
-  .assistant-full {
-    top: auto;
-  }
-  .assistant-header {
-    padding: 15px;
-  }
-  .assistant-full .assistant-messages {
-    padding: 17px;
-  }
-  .assistant-full .assistant-compose {
-    padding: 14px 17px;
   }
   .conversation-page {
     height: calc(100dvh - 125px);
@@ -3324,29 +3085,10 @@ pre {
   .readiness-grid {
     padding: 0 15px;
   }
-  .assistant-panel {
-    width: 100%;
-    height: calc(100dvh - 58px);
-  }
-  .assistant-full {
-    height: 100%;
-  }
-  .assistant-context p {
-    font-size: 8px;
-  }
-  .assistant-welcome {
-    padding-top: 10px;
-  }
-  .assistant-welcome h3 {
-    font-size: 20px;
-  }
   .welcome-icon {
     width: 45px;
     height: 45px;
     margin-bottom: 17px;
-  }
-  .assistant-welcome p {
-    margin-bottom: 20px;
   }
   .form-actions {
     gap: 8px;
@@ -3408,8 +3150,7 @@ small {
 .topic-check,
 .check,
 .finding p,
-.next-steps,
-.assistant-message p {
+.next-steps {
   color: #4f6757;
 }
 .notice {
@@ -3479,17 +3220,6 @@ td small {
   font-size: 12px;
 }
 .topic-list label {
-  font-size: 11px;
-}
-.assistant-context p {
-  font-size: 10px;
-}
-.assistant-compose > small {
-  color: #6e7f6e;
-  font-size: 9px;
-}
-.assistant-welcome > button {
-  color: #506e51;
   font-size: 11px;
 }
 .knowledge-card p,
@@ -3829,34 +3559,6 @@ td small {
 .knowledge-live-card small {
   color: var(--muted);
 }
-.assistant-live-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-height: 0;
-}
-.assistant-live-compose {
-  padding: 18px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.assistant-live-message {
-  padding: 18px;
-  background: #f6f8f7;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-}
-.assistant-live-message.user {
-  background: #edf6f0;
-}
-.assistant-live-compose .button {
-  align-self: flex-end;
-}
 .page > .panel + .panel {
   margin-top: 24px;
 }
@@ -3909,13 +3611,6 @@ td small {
     flex: 1;
     min-width: 120px;
   }
-  .assistant-panel:not(.assistant-full) {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100dvh;
-    z-index: 100;
-  }
   .topbar .breadcrumb > span {
     display: none;
   }
@@ -3931,9 +3626,6 @@ td small {
   margin-top: 0;
 }
 body:has(dialog[open]) {
-  overflow: hidden;
-}
-.assistant-dialog {
   overflow: hidden;
 }
 

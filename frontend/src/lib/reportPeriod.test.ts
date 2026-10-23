@@ -67,3 +67,18 @@ it('allows long request-date history while validating inclusive boundaries and m
   ])
     expect(reportReceivedRange(new URLSearchParams(query)).error).not.toBe('');
 });
+it('uses independent analysis and incident date parameters without a report creation length limit', () => {
+  const range = reportReceivedRange(
+    new URLSearchParams('analysis_from=2026-01-01&analysis_to=2026-10-01'),
+    'analysis',
+    '분석',
+  );
+  expect(range).toEqual({
+    from: '2025-12-31T15:00:00.000Z',
+    to: '2026-10-01T15:00:00.000Z',
+    error: '',
+  });
+  expect(
+    reportReceivedRange(new URLSearchParams('occurred_from=2026-02-30'), 'occurred', '발생').error,
+  ).toContain('발생일');
+});

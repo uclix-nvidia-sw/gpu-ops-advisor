@@ -49,7 +49,7 @@ export const incidentTitle = (i: Row) =>
   str(i.title) ||
   str(i.symptom) ||
   '사건 이름 미확인';
-const targetLabel = (i: Row) =>
+export const targetLabel = (i: Row) =>
   [
     str(i.cluster_id) || str(obj(i.target).cluster_id),
     str(obj(i.target).namespace),
@@ -400,6 +400,7 @@ function Cases() {
   );
 }
 function Incident({ id }: { id: string }) {
+  const location = useLocation();
   const q = useResource(`/incidents/${id}`, undefined, true),
     incident = obj(q.data),
     summary = obj(incident.rca_summary),
@@ -410,7 +411,14 @@ function Incident({ id }: { id: string }) {
     historyOpen ? queryPath('/analyses', { incident_id: id, limit: 10 }) : null,
     true,
   );
-  const [selected, setSelected] = useState('');
+  const [params, setParams] = useSearchParams();
+  const selected = params.get('analysis') || '';
+  const setSelected = (value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set('analysis', value);
+    else next.delete('analysis');
+    setParams(next, { preventScrollReset: true, state: location.state });
+  };
   const analysis = selected || str(published.job_id);
   const cmd = useCommand(),
     app = useApp();
@@ -452,10 +460,15 @@ function Incident({ id }: { id: string }) {
             <span>최근 조사</span>
             <strong>{summaryState(incident)}</strong>
           </div>
+          <div>
+            <span>사건 검토</span>
+            <strong>{labels[str(incident.review_status)] || '미확인'}</strong>
+            <a href="#new-review-records">이 사건의 검토·조치 기록</a>
+          </div>
         </div>
         <Notice>
           {selected && selected !== published.job_id
-            ? '선택한 과거 조사 결과를 읽고 있습니다. 아래에서 마지막 공개 결과로 돌아갈 수 있습니다.'
+            ? '지정한 조사 결과를 읽고 있습니다. 마지막 공개 결과와 다를 수 있습니다. 사건 기록과 처리 상태는 같은 사건에 연결됩니다.'
             : !incident.rca_summary
               ? '분석 요약을 제공하지 않는 서버입니다. 최신 결과 여부는 미확인입니다.'
               : published.job_id
@@ -464,7 +477,7 @@ function Incident({ id }: { id: string }) {
         </Notice>
         <section id="new-analysis-result" tabIndex={-1} aria-label="사건 분석 결과">
           {analysis ? (
-            <AnalysisContent key={analysis} id={analysis} />
+            <AnalysisContent key={analysis} id={analysis} incidentId={id} />
           ) : (
             <Empty
               title={summaryState(incident)}
@@ -521,7 +534,8 @@ function Incident({ id }: { id: string }) {
         <section id="new-incident-state" tabIndex={-1} aria-label="사건 처리 상태 변경">
           <Panel title="사건 처리 상태">
             <p className="live-padding">
-              알림 해제와 사건 처리는 별개입니다. 검토 후 처리 상태를 기록하세요.
+              알림 해제, 검토 완료, 사건 종결은 별개입니다. 기록을 저장해도 아래 상태는 바뀌지
+              않습니다. <a href="#new-review-records">이 사건에 남긴 기록 확인</a>
             </p>
             <div className="live-padding head-actions">
               {['open', 'acknowledged', 'closed'].map((state) => (
@@ -574,12 +588,18 @@ function Incident({ id }: { id: string }) {
             <CommandError error={cmd.error} />
           </Panel>
         </section>
-        <NewReviews id={id} subject="incident" scope={obj(incident.scope)} />
+        <NewReviews
+          id={id}
+          subject="incident"
+          scope={obj(incident.scope)}
+          reviewStatus={str(incident.review_status)}
+        />
       </QueryState>
     </>
   );
 }
-function AnalysisContent({ id }: { id: string }) {
+function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }) {
+  const app = useApp();
   const [evidence, setEvidence] = useState<string | null>(null);
   const q = useResource(`/analyses/${id}`, undefined, true),
     job = obj(q.data),
@@ -588,142 +608,190 @@ function AnalysisContent({ id }: { id: string }) {
   const observations = rows(result.device_observations);
   return (
     <QueryState query={q}>
-      <div className="new-reader">
-        <p className="muted">선택한 조사 접수 {formatDate(str(job.created_at))} · 한국 시간</p>
-        <ReportScope job={job} />
-        {job.time_range != null && <ReportPeriod value={job.time_range} />}
-        <Status job={{ ...job, result_status: result.result_status }} />
-        {job.result_ref && Object.keys(result).length ? (
-          <>
-            <RcaNarrative result={result} reader onEvidence={setEvidence} />
-            {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
-            {!rows(result.narrative).length && (
+      {incidentId && str(job.incident_id) !== incidentId ? (
+        <Notice>
+          선택한 분석과 이 사건의 연결을 확인할 수 없습니다. 조사 이력에서 이 사건의 결과를
+          선택하세요.
+        </Notice>
+      ) : (
+        <>
+          <div className="new-reader">
+            <p className="muted">선택한 조사 접수 {formatDate(str(job.created_at))} · 한국 시간</p>
+            <ReportScope job={job} />
+            {job.time_range != null && <ReportPeriod value={job.time_range} />}
+            <Status job={{ ...job, result_status: result.result_status }} />
+            {job.result_ref && Object.keys(result).length ? (
               <>
-                <Notice>
-                  공개된 결과에 설명 본문이 없습니다. 과거 구조화 기록을 표시하며 원인 후보는 확정된
-                  원인이 아닙니다.
-                </Notice>
-                <p>{str(result.summary)}</p>
-                <ReportStatements
-                  title="저장된 관측 사실"
-                  items={rows(result.facts)}
-                  metrics={[]}
+                <RcaNarrative
+                  result={result}
+                  reader
+                  decisionSummary={app.mode === 'control'}
+                  onEvidence={setEvidence}
                 />
-                <ReportStatements
-                  title="원인 후보 · 확정 아님"
-                  items={rows(result.cause_candidates)}
-                  metrics={[]}
-                />
-                <ReportStatements
-                  title="권장 확인 · 적용 조건"
-                  items={rows(result.recommendations)}
-                  metrics={[]}
-                  recommendation
-                />
-              </>
-            )}
-            {strings(result.missing_inputs).length > 0 && (
-              <details>
-                <summary>수집·판정 상세</summary>
-                <strong>충족되지 않은 판단 조건</strong>
-                <ul>
-                  {strings(result.missing_inputs).map((code) => (
-                    <li key={code}>
-                      {gapMeaning(code, result) ||
-                        rcaReasons[code] ||
-                        '설명되지 않은 조건이 남아 있습니다. 개발자 화면에서 상세 사유를 확인하세요.'}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            <details className="new-observations">
-              <summary>관측 원문·처리 상세</summary>
-              {events.length ? (
-                events.map((event, i) => (
-                  <article key={i}>
-                    <strong>
-                      {str(event.error_code, '오류 코드 미기록')} ·{' '}
-                      {str(obj(event.target).node, '대상 미확인')}
-                    </strong>
+                {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
+                {!rows(result.narrative).length && (
+                  <>
+                    <Notice>
+                      공개된 결과에 설명 본문이 없습니다. 과거 구조화 기록을 표시하며 원인 후보는
+                      확정된 원인이 아닙니다.
+                    </Notice>
+                    <p>{str(result.summary)}</p>
+                    <ReportStatements
+                      title="저장된 관측 사실"
+                      items={rows(result.facts)}
+                      metrics={[]}
+                    />
+                    <ReportStatements
+                      title="원인 후보 · 확정 아님"
+                      items={rows(result.cause_candidates)}
+                      metrics={[]}
+                    />
+                    <ReportStatements
+                      title="권장 확인 · 적용 조건"
+                      items={rows(result.recommendations)}
+                      metrics={[]}
+                      recommendation
+                    />
+                  </>
+                )}
+                {strings(result.missing_inputs).length > 0 && (
+                  <details>
+                    <summary>수집·판정 상세</summary>
+                    <strong>충족되지 않은 판단 조건</strong>
+                    <ul>
+                      {strings(result.missing_inputs).map((code) => (
+                        <li key={code}>
+                          {gapMeaning(code, result) ||
+                            rcaReasons[code] ||
+                            '설명되지 않은 조건이 남아 있습니다. 개발자 화면에서 상세 사유를 확인하세요.'}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                <details className="new-observations">
+                  <summary>관측 원문·처리 상세</summary>
+                  {events.length ? (
+                    events.map((event, i) => (
+                      <article key={i}>
+                        <strong>
+                          {str(event.error_code, '오류 코드 미기록')} ·{' '}
+                          {str(obj(event.target).node, '대상 미확인')}
+                        </strong>
+                        <p>
+                          {formatDate(str(event.event_time))} ·{' '}
+                          {event.device_mapping === 'inventory_match'
+                            ? '보고된 장치 목록과 연결됨'
+                            : '오류 장치 연결 미확정'}
+                        </p>
+                        <p>
+                          목록 연결은 물리적 원인 확정이 아닙니다. 현재 상태와 업무 영향은 별도
+                          확인이 필요합니다.
+                        </p>
+                      </article>
+                    ))
+                  ) : (
+                    <p>별도로 정리된 오류 이벤트가 없습니다. 오류가 없다는 의미는 아닙니다.</p>
+                  )}
+                  {observations.length > 0 && (
                     <p>
-                      {formatDate(str(event.event_time))} ·{' '}
-                      {event.device_mapping === 'inventory_match'
-                        ? '보고된 장치 목록과 연결됨'
-                        : '오류 장치 연결 미확정'}
+                      상태 보고 {observations.length}건 · 사실 판단에 사용할 수 없는 기록{' '}
+                      {observations.filter((o) => o.fact_eligible === false).length}건 · 생산자 시각
+                      미확인{' '}
+                      {
+                        observations.filter((o) => o.producer_time_status === 'missing_or_zero')
+                          .length
+                      }
+                      건. 상태 보고는 오류 이벤트와 별개이며 현재 정상 여부를 뜻하지 않습니다.
                     </p>
-                    <p>
-                      목록 연결은 물리적 원인 확정이 아닙니다. 현재 상태와 업무 영향은 별도 확인이
-                      필요합니다.
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <p>별도로 정리된 오류 이벤트가 없습니다. 오류가 없다는 의미는 아닙니다.</p>
-              )}
-              {observations.length > 0 && (
-                <p>
-                  상태 보고 {observations.length}건 · 사실 판단에 사용할 수 없는 기록{' '}
-                  {observations.filter((o) => o.fact_eligible === false).length}건 · 생산자 시각
-                  미확인{' '}
-                  {observations.filter((o) => o.producer_time_status === 'missing_or_zero').length}
-                  건. 상태 보고는 오류 이벤트와 별개이며 현재 정상 여부를 뜻하지 않습니다.
-                </p>
-              )}
-              {observations.length > 0 && (
-                <details>
-                  <summary>상태 보고의 의미와 제한</summary>
-                  {observations.map((o, i) => (
-                    <article key={i}>
-                      <strong>{str(o.error_code, '오류 코드 미확인')}</strong>
-                      <p>
-                        {formatDate(str(o.observed_at))} ·{' '}
-                        {o.normalized_health === 'unhealthy'
-                          ? '이상 상태로 보고됨'
-                          : o.normalized_health === 'healthy'
-                            ? '정상 상태로 보고됨'
-                            : '상태 의미 미확인'}
-                      </p>
-                      <p>
-                        {o.pci_inventory_relation === 'not_in_reported_inventory'
-                          ? '오류 장치와 수집 장치 목록이 일치하지 않습니다.'
-                          : o.pci_inventory_relation === 'switch_inventory_required'
-                            ? '스위치 정보를 별도로 대조해야 합니다.'
-                            : '수집 목록 연결만으로 장치 신원과 현재 상태를 확정할 수 없습니다.'}{' '}
-                        {o.fact_eligible === false
-                          ? '현재 상태 판단에 사용할 조건이 충족되지 않았습니다.'
-                          : '관측의 시각과 대상을 함께 확인하세요.'}
-                      </p>
-                    </article>
+                  )}
+                  {observations.length > 0 && (
+                    <details>
+                      <summary>상태 보고의 의미와 제한</summary>
+                      {observations.map((o, i) => (
+                        <article key={i}>
+                          <strong>{str(o.error_code, '오류 코드 미확인')}</strong>
+                          <p>
+                            {formatDate(str(o.observed_at))} ·{' '}
+                            {o.normalized_health === 'unhealthy'
+                              ? '이상 상태로 보고됨'
+                              : o.normalized_health === 'healthy'
+                                ? '정상 상태로 보고됨'
+                                : '상태 의미 미확인'}
+                          </p>
+                          <p>
+                            {o.pci_inventory_relation === 'not_in_reported_inventory'
+                              ? '오류 장치와 수집 장치 목록이 일치하지 않습니다.'
+                              : o.pci_inventory_relation === 'switch_inventory_required'
+                                ? '스위치 정보를 별도로 대조해야 합니다.'
+                                : '수집 목록 연결만으로 장치 신원과 현재 상태를 확정할 수 없습니다.'}{' '}
+                            {o.fact_eligible === false
+                              ? '현재 상태 판단에 사용할 조건이 충족되지 않았습니다.'
+                              : '관측의 시각과 대상을 함께 확인하세요.'}
+                          </p>
+                        </article>
+                      ))}
+                    </details>
+                  )}
+                  {strings(result.limitations).map((v, i) => (
+                    <p key={i}>{reportReason(v)}</p>
                   ))}
                 </details>
-              )}
-              {strings(result.limitations).map((v, i) => (
-                <p key={i}>{reportReason(v)}</p>
-              ))}
+              </>
+            ) : (
+              <Empty
+                title="공개 결과가 없습니다."
+                description="이 조사의 실행 상태와 공개 결과 여부를 구분해 확인하세요."
+              />
+            )}
+          </div>
+          {incidentId && (
+            <details className="new-observations">
+              <summary>이 분석에 남긴 이전 기록 · 사건 기록과 별도</summary>
+              <NewReviews id={id} subject="job" scope={obj(job.scope)} readOnly />
             </details>
-          </>
-        ) : (
-          <Empty
-            title="공개 결과가 없습니다."
-            description="이 조사의 실행 상태와 공개 결과 여부를 구분해 확인하세요."
-          />
-        )}
-      </div>
+          )}
+        </>
+      )}
     </QueryState>
   );
 }
 function Analysis({ id }: { id: string }) {
+  const q = useResource(`/analyses/${id}`, undefined, true),
+    job = obj(q.data),
+    incidentId = str(job.incident_id);
+  const back = useReturn();
   return (
     <>
       <Back />
       <PageHead
         eyebrow="RCA REPORT"
         title="저장된 사건 분석"
-        description="선택한 조사의 공개 결과입니다. 최신 조사 결과와 다를 수 있습니다."
+        description="선택한 조사의 저장 결과와 당시 범위입니다. 최신 조사 결과나 상단의 현재 선택 범위와 다를 수 있습니다."
       />
+      <QueryState query={q}>
+        {incidentId ? (
+          <Notice>
+            사건 검토와 수행한 조치는 원래 사건에 기록합니다.{' '}
+            <Link
+              to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-review-records`}
+              state={back}
+            >
+              이 RCA를 읽은 사건에서 검토·처리하기
+            </Link>
+          </Notice>
+        ) : (
+          <Notice>
+            원래 사건의 연결 정보가 없어 사건 기록을 열 수 없습니다. 아래는 이 분석에 남긴 이전
+            기록입니다.
+          </Notice>
+        )}
+      </QueryState>
       <AnalysisContent id={id} />
-      <NewReviews id={id} subject="job" />
+      <details className="new-observations">
+        <summary>분석별 이전 기록 보기</summary>
+        <NewReviews id={id} subject="job" scope={obj(job.scope)} readOnly />
+      </details>
     </>
   );
 }
@@ -909,6 +977,10 @@ function Report({ id }: { id: string }) {
   const q = useResource(`/reports/${id}`, undefined, true),
     job = obj(q.data),
     result = obj(job.result);
+  const aggregatePublished =
+    !!job.result_ref &&
+    !job.deletion &&
+    obj(result.quality).report_format === 'report-aggregate-v1';
   const location = useLocation(),
     navigate = useNavigate();
   const [exportError, setExportError] = useState('');
@@ -921,12 +993,12 @@ function Report({ id }: { id: string }) {
         description="저장된 기간과 범위의 결과입니다. 이후의 현재 상태와 구분해 읽으세요."
       />
       <QueryState query={q}>
-        <div id="new-report-document">
-          <ReportOrigin value={job.report_origin} />
+        <div id="new-report-document" className="report-workspace new-report-document">
           <div className="new-detail-meta">
             <ReportScope job={result.scope ? result : job} />
-            <ReportPeriod value={result.time_range || job.time_range} />
+            {!aggregatePublished && <ReportPeriod value={result.time_range || job.time_range} />}
             <Status job={{ ...job, result_status: result.result_status }} />
+            <ReportOrigin value={job.report_origin} />
           </div>
           <ReportActions job={job} />
           {job.deletion ? (
@@ -954,7 +1026,7 @@ function Report({ id }: { id: string }) {
                 <CommandError error={exportError} />
               </div>
               <div
-                className="report-workspace"
+                className={`report-workspace${aggregatePublished ? ' new-report-body' : ''}`}
                 onClickCapture={(e) => {
                   const a = (e.target as HTMLElement).closest('a');
                   if (

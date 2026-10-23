@@ -34,7 +34,6 @@
     "max_bytes": 2097152,
     "max_range_seconds": 2678400,
     "chunk_seconds": 3600,
-    "max_followups": 2,
     "max_concurrency": 3,
     "deadline_seconds": 900,
     "query_timeout_seconds": 30,

@@ -97,26 +97,36 @@ const stepFor = (id: string) =>
         purpose: '이 기록의 처리 방식에 대한 화면 설명이 없습니다. 저장 원문을 확인하세요.',
       });
 
-export function RcaWorkflowButton({ jobId }: { jobId: string }) {
+type WorkflowSelection = {
+  attempt?: number | null;
+  recordId?: string;
+  onSelect?: (attempt: number, recordId: string) => void;
+};
+
+export function RcaWorkflowButton({ jobId, ...selection }: { jobId: string } & WorkflowSelection) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button className="button primary" onClick={() => setOpen(true)} disabled={!jobId}>
         워크플로우 디버깅
       </button>
-      {open && <WorkflowDialog jobId={jobId} onClose={() => setOpen(false)} />}
+      {open && <WorkflowDialog jobId={jobId} {...selection} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function WorkflowDialog({ jobId, onClose }: { jobId: string; onClose: () => void }) {
+function WorkflowDialog({
+  jobId,
+  onClose,
+  ...selection
+}: { jobId: string; onClose: () => void } & WorkflowSelection) {
   const q = useResource(`/jobs/${encodeURIComponent(jobId)}`);
   return (
     <Modal title="RCA 워크플로우 디버깅" wide onClose={onClose}>
       <QueryState query={q}>
         {q.data &&
           (q.data.id === jobId && q.data.kind === 'rca' ? (
-            <WorkflowAttempts job={q.data} />
+            <WorkflowAttempts job={q.data} {...selection} />
           ) : (
             <Notice tone="warning">작업 연결 불일치: 요청한 RCA 작업의 기록이 아닙니다.</Notice>
           ))}
@@ -125,11 +135,18 @@ function WorkflowDialog({ jobId, onClose }: { jobId: string; onClose: () => void
   );
 }
 
-function WorkflowAttempts({ job }: { job: Row }) {
-  const [attempt, setAttempt] = useState(job.attempt_no);
+export function WorkflowAttempts({
+  job,
+  attempt: requested,
+  recordId,
+  onSelect,
+}: { job: Row } & WorkflowSelection) {
+  const [localAttempt, setAttempt] = useState(job.attempt_no);
+  const attempt = requested === undefined ? localAttempt : requested;
   const attempts = [...new Set([job.attempt_no, ...rows(job.attempts).map((a) => a.attempt_no)])]
     .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0)
     .sort((a, b) => b - a);
+  const valid = typeof attempt === 'number' && attempts.includes(attempt);
   return (
     <div className="stack">
       <p>
@@ -138,10 +155,14 @@ function WorkflowAttempts({ job }: { job: Row }) {
       </p>
       <Field label="조사 시도">
         <select
-          value={typeof attempt === 'number' ? attempt : ''}
-          onChange={(e) => setAttempt(Number(e.target.value))}
+          value={valid ? attempt : ''}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            setAttempt(next);
+            onSelect?.(next, '');
+          }}
         >
-          {!attempts.length && <option value="">시도 기록 없음</option>}
+          {!valid && <option value="">요청한 시도 기록 없음</option>}
           {attempts.map((n) => (
             <option key={n} value={n}>
               시도 {n}
@@ -156,17 +177,34 @@ function WorkflowAttempts({ job }: { job: Row }) {
         있을 수 있습니다. 원문·중간 결과 보존 기록은 새로운 조회나 LLM 실행 단계가 아닙니다. LLM
         담당 표시와 실제 모델 호출 여부도 구분해서 확인하세요.
       </Notice>
-      {typeof attempt === 'number' && (
-        <WorkflowRecords key={attempt} jobId={str(job.id)} attempt={attempt} />
+      {valid ? (
+        <WorkflowRecords
+          key={attempt}
+          jobId={str(job.id)}
+          attempt={attempt}
+          recordId={recordId}
+          onSelect={onSelect}
+        />
+      ) : (
+        <Notice>선택한 시도의 기록이 없어 최신 시도로 대체하지 않습니다.</Notice>
       )}
     </div>
   );
 }
 
-function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number }) {
+function WorkflowRecords({
+  jobId,
+  attempt,
+  recordId,
+  onSelect,
+}: { jobId: string; attempt: number } & WorkflowSelection) {
   const q = useList(`/jobs/${encodeURIComponent(jobId)}/evidence?attempt=${attempt}&limit=50`);
   const [selected, setSelected] = useState('');
-  const id = selected || str(q.items[0]?.id);
+  const select = (id: string) => {
+    setSelected(id);
+    onSelect?.(attempt, id);
+  };
+  const id = (recordId === undefined ? selected : recordId) || str(q.items[0]?.id);
   const detail = useResource(
     id
       ? `/jobs/${encodeURIComponent(jobId)}/evidence/${encodeURIComponent(id)}?attempt=${attempt}`
@@ -204,7 +242,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                 key={str(record.id)}
                 className={`button ${record.id === id ? 'primary' : ''}`}
                 aria-current={record.id === id ? 'step' : undefined}
-                onClick={() => setSelected(str(record.id))}
+                onClick={() => select(str(record.id))}
               >
                 기록 {i + 1} ·{' '}
                 {(stageForRecord(record, q.items) || stepFor(str(record.query_id))).title}
@@ -226,14 +264,14 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
               <button
                 className="button"
                 disabled={index <= 0}
-                onClick={() => setSelected(str(q.items[index - 1]?.id))}
+                onClick={() => select(str(q.items[index - 1]?.id))}
               >
                 이전 기록
               </button>
               <button
                 className="button"
                 disabled={index < 0 || index + 1 >= q.items.length}
-                onClick={() => setSelected(str(q.items[index + 1]?.id))}
+                onClick={() => select(str(q.items[index + 1]?.id))}
               >
                 다음 기록
               </button>
@@ -249,7 +287,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                     record={detail.data}
                     investigationPlan={validPlan}
                     relatedRecords={q.items}
-                    onEvidence={setSelected}
+                    onEvidence={select}
                   />
                 )
               )}
@@ -266,11 +304,7 @@ function WorkflowRecords({ jobId, attempt }: { jobId: string; attempt: number })
                   ].includes(str(r.query_id)),
                 )
                 .map((r) => (
-                  <button
-                    key={str(r.id)}
-                    className="text-link"
-                    onClick={() => setSelected(str(r.id))}
-                  >
+                  <button key={str(r.id)} className="text-link" onClick={() => select(str(r.id))}>
                     {(stageForRecord(r) || stepFor(str(r.query_id))).title} · {str(r.id)}
                   </button>
                 ))}

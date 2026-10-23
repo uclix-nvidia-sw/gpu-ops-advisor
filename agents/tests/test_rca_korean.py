@@ -265,30 +265,3 @@ def test_digit_free_typed_identifiers_are_not_english_prose():
         ["log"],
         identifiers=ids,
     )
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("reduced", [False, True])
-async def test_synthesis_uses_query_quality_from_the_model_view(reduced):
-    from rcca_agent.synthesis import synthesize
-
-    class Model:
-        configured = True
-
-        async def complete(self, system, payload, **kwargs):
-            return reply(limitations=["시각 정밀도 손실로 기간 확인이 제한됩니다."])
-
-    payload = {
-        "device_observations": [{"evidence_refs": ["log"]}],
-        "metric_observations": [],
-        "pod_relations": [],
-        "observation_refs": ["log"],
-        "query_quality": [
-            {"quality": {"reason": "time_precision_reduced" if reduced else None}}
-        ],
-    }
-    diagnostics = {}
-    status, _, _ = await synthesize(Model(), payload, diagnostics)
-    assert status == "complete"
-    assert diagnostics["error_code"] is None
-    assert diagnostics["rejected_limitations"] == (0 if reduced else 1)

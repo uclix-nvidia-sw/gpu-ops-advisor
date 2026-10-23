@@ -100,7 +100,7 @@ it('answers the operator questions from collected evidence only', () => {
   expect(timing.tone).toBe('alert');
   expect(timing.points[0]).toContain('정상→오류 전환도 없습니다');
   expect(telemetry.tone).toBe('warn');
-  expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.short).toContain('작업이 멈췄습니다');
+  expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.short).toContain('사건 뒤 0 % 관측');
   // 83 s of silence is within a 300 s collection gap, so absence is not called an outage.
   expect(v.metrics.find((m) => m.name === 'GPU 전력')!.tag).toBe('판단 보류');
   expect(repeat.tone).toBe('alert');
@@ -178,7 +178,7 @@ it('does not blame the error for a GPU that was already idle before it', () => {
   const util = v.metrics.find((m) => m.name === 'GPU 사용률')!;
   expect([util.tag, util.tone]).toEqual(['사건 전부터 0', 'unknown']);
   expect(v.findings[2].verdict).toContain(
-    '사건 전부터 0: GPU 사용률 — GPU가 사건 전에 이미 쉬고 있었습니다 (직전 값 0 %',
+    '사건 전부터 0: GPU 사용률 — 사건 전에 이미 0이 관측됐습니다 (직전 값 0 %',
   );
   expect(v.findings[2].verdict).not.toContain('작업이 멈췄습니다');
 });
@@ -291,7 +291,7 @@ it('names GPUs that share a verdict instead of listing every series', () => {
     },
   })!;
   expect(v.gpuRows.map((r) => [r.gpus, r.tag])).toEqual([
-    ['GPU 7번', '멈춤'],
+    ['GPU 7번', '0 관측'],
     ['GPU 5번', '급감'],
     ['GPU 4번', '유지'],
     ['GPU 0번', '사건 전부터 0'],
@@ -299,10 +299,63 @@ it('names GPUs that share a verdict instead of listing every series', () => {
   expect(v.gpuRows[0].lines).toContain('NVLink 수신량·송신량: 272.7 MB/s → 0 B/s');
   expect(v.gpuCommon).toEqual(['Fabric Manager 상태: 상태 코드 0 유지']);
   expect(v.findings[2].verdict).toBe(
-    '사건 직후 GPU 7번 NVLink 수신량·송신량 멈춤, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
+    '사건 직후 GPU 7번 NVLink 수신량·송신량 0 관측, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
   );
   expect(v.findings[2].points).toContain(
     '변화 없음: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 유지',
   );
   expect(v.findings[2].points.join('\n')).not.toMatch(/\d{7,} B\/s/);
+});
+
+it('keeps gauge changes and counter resets distinct from health judgments', () => {
+  const metric = (kind: string, a: number, b: number) => ({
+    name: `${kind}-${a}-${b}`,
+    kind,
+    unit: kind === 'counter' ? 'count' : 'celsius',
+    gpu_uuid: gpu,
+    incident_windows: {
+      before: { ...before(a), min: a, last_value: a },
+      at_or_after: { ...before(b, '2026-10-22T03:28:43Z'), min: b, last_value: b, samples: 3 },
+    },
+  });
+  const v = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metrics: [
+          metric('gauge', 40, 95),
+          metric('gauge', 100, 1),
+          metric('counter', 100, 2),
+          metric('counter', 100, 0),
+        ],
+      },
+    },
+  })!;
+  expect(v.metrics.slice(0, 2).map((m) => m.tag)).toEqual(['값 비교', '급감']);
+  expect(v.metrics.every((m) => m.tone !== 'ok')).toBe(true);
+  expect(v.findings.find((f) => f.key === 'telemetry')!.tone).toBe('warn');
+  expect(v.findings.find((f) => f.key === 'telemetry')!.verdict).not.toContain(
+    '변화는 보이지 않습니다',
+  );
+  expect(v.metrics.slice(2).map((m) => m.tag)).toEqual(['누적값 감소', '누적값 감소']);
+  expect(v.timeline.some((t) => t.label === '알림 시작')).toBe(true);
+  expect(JSON.stringify(v)).not.toContain('알림 수신');
+});
+
+it('requires workload observations to bracket the incident time', () => {
+  const w = { gpu_uuid: gpu, namespace: 'training', pod: 'worker', last: '2026-10-22T03:28:43Z' };
+  const v = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        workloads: [
+          { ...w, pod: 'later', first: '2026-10-22T03:28:20Z' },
+          { ...w, pod: 'unknown', first: '' },
+          { ...w, first: '2026-10-22T03:20:00Z' },
+          { ...w, pod: 'earlier', first: '2026-10-22T03:20:00Z', last: '2026-10-22T03:27:59Z' },
+        ],
+      },
+    },
+  })!;
+  expect(v.workloads.map((w) => w.atIncident)).toEqual([false, false, true, false]);
 });

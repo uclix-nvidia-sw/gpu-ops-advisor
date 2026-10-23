@@ -61,16 +61,14 @@ def collection_status(planned, collected, fast_path=False):
 
 
 async def evaluate_analysis(
-    obs, data, profile, health, payload, assemble, llm, state, round_no, allowed
+    obs, data, profile, health, payload, assemble, llm, round_no
 ):
     """Keep model judgments separate from recorded observations and publishable guidance."""
-    combined = True
 
     def record(kind, body, status="ok"):
         metadata = {"round": round_no, "stage": kind}
         metadata["workflow"] = body["workflow"] = "single_collection"
-        if combined:
-            metadata["generation_mode"] = body["generation_mode"] = "combined"
+        metadata["generation_mode"] = body["generation_mode"] = "combined"
         metadata.update(
             {
                 k: body[k]
@@ -124,8 +122,6 @@ async def evaluate_analysis(
     validation_id = record(
         "evidence_validation", {"checks": payload["evidence_checks"]}
     )
-    interpretation = None
-    interpretation_diag = {}
     # Retain the bounded source view with the draft for report traceability.
     view = bounded_context(payload, 6000)
     rule_sources = [
@@ -171,10 +167,6 @@ async def evaluate_analysis(
             view["input_evidence_refs"] = previous_refs
             view["context_selection"]["omitted_rule_sources"] += 1
             view["context_selection"]["complete"] = False
-    if combined:
-        for key in tuple(view):
-            if key.startswith("interpretation_"):
-                view[key] = []
     synthesis_diag = {}
     started_at, started = now(), time.monotonic()
     before = dict(getattr(llm, "usage", {}))
@@ -208,15 +200,9 @@ async def evaluate_analysis(
         "rca_synthesis",
         {
             "status": status,
-            **(
-                {
-                    "generation_mode": "combined",
-                    "interpretation": interpretation,
-                    "interpretation_status": interpretation_diag["execution_status"],
-                }
-                if combined
-                else {}
-            ),
+            "generation_mode": "combined",
+            "interpretation": interpretation,
+            "interpretation_status": interpretation_diag["execution_status"],
             "diagnostics": synthesis_diag,
             "started_at": started_at,
             "completed_at": now(),

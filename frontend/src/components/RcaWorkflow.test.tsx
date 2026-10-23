@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { RcaWorkflowButton, RcaWorkflowRecord } from './RcaWorkflow';
+import { RcaWorkflowButton, RcaWorkflowRecord, WorkflowAttempts } from './RcaWorkflow';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 describe('developer RCA workflow entry and evidence', () => {
   it('shows the actual goal decision with collected and omitted queries in workflow details', () => {
@@ -256,6 +257,43 @@ describe('developer RCA workflow entry and evidence', () => {
     const html = renderToStaticMarkup(<RcaWorkflowButton jobId="job" />);
     expect(html).toContain('워크플로우 디버깅');
     expect(html).not.toContain('<dialog');
+  });
+  it('opens the selected past attempt and record without substituting the newest attempt', () => {
+    const client = new QueryClient();
+    const record = {
+      id: 'past-evidence',
+      job_id: 'job',
+      attempt_no: 1,
+      query_id: 'D09',
+      snapshot: { text: 'PAST_ATTEMPT_RECORD' },
+    };
+    client.setQueryData(['api', '/jobs/job/evidence?attempt=1&limit=50', 'list'], {
+      pages: [{ items: [record], next_cursor: null }],
+      pageParams: [null],
+    });
+    client.setQueryData(['api', '/jobs/job/evidence/past-evidence?attempt=1', undefined], record);
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <WorkflowAttempts
+          job={{ id: 'job', attempt_no: 2, attempts: [{ attempt_no: 1 }, { attempt_no: 2 }] }}
+          attempt={1}
+          recordId="past-evidence"
+        />
+      </QueryClientProvider>,
+    );
+    expect(html).toContain('<option value="1" selected="">');
+    expect(html).not.toContain('<option value="2" selected="">');
+    expect(html).toContain('PAST_ATTEMPT_RECORD');
+    const missing = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <WorkflowAttempts
+          job={{ id: 'job', attempt_no: 2, attempts: [{ attempt_no: 2 }] }}
+          attempt={1}
+        />
+      </QueryClientProvider>,
+    );
+    expect(missing).toContain('최신 시도로 대체하지 않습니다');
+    expect(missing).not.toContain('PAST_ATTEMPT_RECORD');
   });
 
   it('explains a query using the saved plan without claiming execution order', () => {

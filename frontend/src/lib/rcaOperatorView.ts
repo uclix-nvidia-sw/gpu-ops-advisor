@@ -128,7 +128,7 @@ const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
   m.tone === 'alert'
     ? 0
     : m.tone === 'warn'
-      ? m.tag === '멈춤'
+      ? m.tag === '0 관측'
         ? 1
         : 1.5
       : m.tag === IDLE
@@ -363,9 +363,7 @@ export function operatorView(result: Row) {
       `보고 ${reports}건 — 같은 상태의 반복 보고이며 장애 횟수가 아닙니다${reports > 1 ? ` (약 ${intervalLabel(cadence)} 간격)` : ''}.`,
     );
   if (str(view.alert_time) && (eventTimes[0] || firstReport))
-    timePoints.push(
-      `알림 수신: ${fmt(str(view.alert_time))} (${eventTimes[0] ? '오류 발생' : '첫 보고'} 후 ${intervalLabel(Math.max(0, t(view.alert_time) - t(eventTimes[0] || firstReport)))})`,
-    );
+    timePoints.push(`알림 시작: ${fmt(str(view.alert_time))} (Incident에 저장된 startsAt)`);
   const timing: Finding = {
     key: 'timing',
     question: '언제 시작됐고, 지금도 계속되나요?',
@@ -437,18 +435,18 @@ export function operatorView(result: Row) {
         `조회 구간 ${range(whole)}${!isNaN(boundary) && t(whole.end) < boundary ? ' · 사건 발생 이전의 측정 기록' : ''}`,
       ];
     } else if (after && before) {
-      if (after.max === 0 && before.max > 0 && before.last === 0) {
+      if (m.kind !== 'counter' && after.max === 0 && before.max > 0 && before.last === 0) {
         // Already zero at the last pre-incident sample: the error did not stop it.
         tag = IDLE;
-        short = `${q === 'D02' ? 'GPU가 사건 전에 이미 쉬고 있었습니다' : '사건 전에 이미 0이었습니다'} (직전 값 ${val(0)}, 사건 전 최대 ${val(before.max)})`;
-      } else if (after.max === 0 && before.max > 0) {
-        tag = '멈춤';
-        short = `${q === 'D02' ? '작업이 멈췄습니다' : ['D33', 'D34'].includes(q) ? 'NVLink 트래픽이 멈췄습니다' : '0으로 떨어졌습니다'} (사건 전 최대 ${val(before.max)}${once})`;
+        short = `사건 전에 이미 0이 관측됐습니다 (직전 값 ${val(0)}, 사건 전 최대 ${val(before.max)})`;
+      } else if (m.kind !== 'counter' && after.max === 0 && before.max > 0) {
+        tag = '0 관측';
+        short = `사건 뒤 0 ${u} 관측 (사건 전 최대 ${val(before.max)}${once}) · 작업 중단이나 장치 상태는 이 값만으로 확인할 수 없습니다`;
         tone = 'warn';
       } else if (m.kind !== 'counter' && before.last > 0 && after.max <= before.last * 0.1) {
         // A ≥90% fall from the last pre-incident value is shown even from one sample.
         tag = '급감';
-        short = `${Math.round((1 - after.max / before.last) * 100)}% 감소 (${val(before.last)} → ${val(after.last)}${once})`;
+        short = `${Math.round((1 - after.last / before.last) * 100)}% 감소 (${val(before.last)} → ${val(after.last)}${once})`;
         tone = 'warn';
       } else if (
         m.kind !== 'counter' &&
@@ -469,15 +467,24 @@ export function operatorView(result: Row) {
           '판단 보류',
           `사건 뒤 1회만 수집 (${range(after)}) — 장치가 응답한다는 증거가 아닙니다`,
         ];
+      } else if (m.kind === 'counter' && after.max < before.max) {
+        [tag, short] = [
+          '누적값 감소',
+          `${range(before)} → ${range(after)} · 카운터 재설정·대상 변경 여부 확인 필요`,
+        ];
+        tone = 'unknown';
       } else if (m.kind === 'counter') {
         [tag, short] = ['변화 없음', `증가 없음 (${range(after)})`];
-        tone = 'ok';
+        tone = 'unknown';
       } else if (before.max === 0 && after.max === 0) {
         [tag, short] = ['변화 없음', `사건 전후 모두 0 ${u}`];
-        tone = 'ok';
+        tone = 'unknown';
       } else {
-        [tag, short] = ['큰 변화 없음', `${range(before)} → ${range(after)}`];
-        tone = 'ok';
+        [tag, short] = [
+          '값 비교',
+          `${range(before)} → ${range(after)} · 정상 여부를 판정할 기준은 미확인`,
+        ];
+        tone = 'unknown';
       }
     } else if (before) {
       const quiet = periodEnd - t(before.end);
@@ -628,9 +635,7 @@ export function operatorView(result: Row) {
         ? 'alert'
         : changed.length
           ? 'warn'
-          : metrics.every((m) => m.after)
-            ? 'ok'
-            : 'unknown',
+          : 'unknown',
     verdict: !metrics.length
       ? '관련 지표를 수집하지 못했습니다.'
       : headline.length
@@ -639,7 +644,7 @@ export function operatorView(result: Row) {
           ? '사건 전후 구분 없이 조회 구간 요약만 있습니다. 사건 이후 장치 상태는 판단할 수 없습니다.'
           : noAfter.length === metrics.length
             ? '모든 지표가 사건 이전 표본뿐입니다. 사건 이후 장치 상태는 이 지표로 판단할 수 없습니다.'
-            : '사건 전후 지표에서 뚜렷한 변화는 보이지 않습니다. 장치가 괜찮다는 판정은 아닙니다.',
+            : '사건 전후 값을 아래에서 비교할 수 있습니다. 관측값만으로 장치 정상 여부를 확정할 수 없습니다.',
     // One line per verdict; several GPUs are named by number, per-GPU values stay in section 3.
     points: multi
       ? tagGroups.map((g) => {
@@ -774,7 +779,7 @@ export function operatorView(result: Row) {
       ? [{ at: lastReport, label: `마지막 오류 보고 (총 ${reports}건)`, tone: 'warn' as Tone }]
       : []),
     ...(str(view.alert_time)
-      ? [{ at: str(view.alert_time), label: '알림 수신', tone: 'unknown' as Tone }]
+      ? [{ at: str(view.alert_time), label: '알림 시작', tone: 'unknown' as Tone }]
       : []),
     ...metrics
       .filter((m) => m.before && !m.after && m.lastSample)
@@ -792,7 +797,7 @@ export function operatorView(result: Row) {
     container: str(w.container),
     first: str(w.first),
     last: str(w.last),
-    atIncident: !isNaN(boundary) && t(w.last) >= boundary - 120000,
+    atIncident: !isNaN(boundary) && t(w.first) <= boundary && t(w.last) >= boundary,
   }));
   type PodRow = (typeof podRows)[number];
   const byPod = (list: PodRow[]) =>

@@ -22,6 +22,8 @@ backend/backend
 node_modules/
 dist/
 coverage/
+.playwright-cli/
+output/playwright/
 
 # Personal coding-assistant settings
 .claude/settings.local.json

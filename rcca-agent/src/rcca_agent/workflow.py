@@ -476,7 +476,6 @@ async def run(tools):
                 **history,
                 "evidence_refs": [history_id["id"]],
             }
-    fast_path = False
 
     def steps(book):
         return plans.get(
@@ -541,7 +540,6 @@ async def run(tools):
     stop_reason = None
     max_rounds = 1  # One planned collection phase for new RCA reports.
 
-    evaluation_state = {"revisions": 0, "authored_sources": set()}
     evaluation = None
     synthesis_diagnostics = {}
     error_events = []
@@ -625,22 +623,20 @@ async def run(tools):
                 gaps.append("mapping_source_unavailable")
         if data["identity_conflicts"]:
             gaps.append("target_identity_conflict")
-        alert_match = None
-        if not fast_path:
-            alert_match = match_alert(
-                clues,
-                health,
-                []
-                if data.get("identity_conflicts")
-                else parse_events(obs.evidence, profile, data.get("target", {})),
-            )
-            d09 = collected.get("D09")
-            if alert_match["status"] != "error_code_unparsed" and not (
-                d09 and all(usable_observation(e) for e in d09)
-            ):
-                alert_match = {**alert_match, "status": "collection_failed"}
-            if alert_match["status"] in MISMATCH_CODES:
-                gaps.append(alert_match["status"])
+        alert_match = match_alert(
+            clues,
+            health,
+            []
+            if data.get("identity_conflicts")
+            else parse_events(obs.evidence, profile, data.get("target", {})),
+        )
+        d09 = collected.get("D09")
+        if alert_match["status"] != "error_code_unparsed" and not (
+            d09 and all(usable_observation(e) for e in d09)
+        ):
+            alert_match = {**alert_match, "status": "collection_failed"}
+        if alert_match["status"] in MISMATCH_CODES:
+            gaps.append(alert_match["status"])
         degraded = any(
             e["tool_status"] in ("unavailable", "partial")
             for es in collected.values()
@@ -692,7 +688,6 @@ async def run(tools):
         verified = state["verified"]
         relations = state["relations"]
         applicable = state["applicable"]
-        remaining = state["remaining"]
         error_events = (
             []
             if data.get("identity_conflicts")
@@ -727,7 +722,6 @@ async def run(tools):
         if history_findings:
             payload.setdefault("incident_comparison", []).extend(history_findings)
         source_hashes = observation_hashes(collected)
-        evaluation_state["authored_sources"].update(source_hashes)
         payload["source_version"] = content_hash(sorted(source_hashes))
         payload.update(generation_mode="combined")
         if (state["alert_match"] or {}).get("status") in MISMATCH_CODES:
@@ -742,9 +736,7 @@ async def run(tools):
                 model, health, facts, verified, applicable
             ),
             ctx["llm"],
-            evaluation_state,
             round_no,
-            remaining,
         )
         synthesis_diagnostics = evaluation["synthesis"]
         analysis_status = evaluation["synthesis_status"]
@@ -755,7 +747,7 @@ async def run(tools):
             raise TimeoutError("RCA evaluation deadline exhausted")
 
     round_no = 0
-    if not fast_path and queries:
+    if queries:
         collected.update(
             await collect_round(
                 obs, queries, budget, round_no=round_no, concurrency=concurrency
@@ -787,7 +779,7 @@ async def run(tools):
     gaps, gate, stop_reason = state["gaps"], state["gate"], state["stop_reason"]
     remaining, approved = state["remaining"], state["approved"]
     analysis_missing = []
-    if not fast_path and analysis_status not in {"complete", "skipped_alert_match"}:
+    if analysis_status not in {"complete", "skipped_alert_match"}:
         analysis_missing.append("synthesis_" + analysis_status)
     if not selected:
         analysis_missing.append("approved_runbook")
@@ -882,7 +874,7 @@ async def run(tools):
         "requirement_diagnostics": unmet_requirements(
             missing, health, error_events, data
         ),
-        "fast_path": fast_path,
+        "fast_path": False,
         "alert_match": state["alert_match"],
         "resolved_scope_gaps": state.get("resolved_scope_gaps", []),
         "followups": followups,
@@ -943,18 +935,14 @@ async def run(tools):
         for e in obs.evidence
         if e["query_id"].startswith("D")
     ]
-    result["quality"]["collection_checks"] = (
-        []
-        if fast_path
-        else collection_checks(
-            profile,
-            approved,
-            collected,
-            relations,
-            [h["error_code"] for h in health if h.get("error_code")]
-            + [event["error_code"] for event in error_events]
-            + clues.get("error_codes", []),
-        )
+    result["quality"]["collection_checks"] = collection_checks(
+        profile,
+        approved,
+        collected,
+        relations,
+        [h["error_code"] for h in health if h.get("error_code")]
+        + [event["error_code"] for event in error_events]
+        + clues.get("error_codes", []),
     )
     final_stop = {
         "sufficient": "analysis_unresolved",
@@ -963,7 +951,7 @@ async def run(tools):
     result["quality"]["rca_evaluation"] = {
         "schema_version": "2",
         "generation_mode": evaluation.get("generation_mode", "separate"),
-        "collection": collection_status(planned_queries, collected, fast_path),
+        "collection": collection_status(planned_queries, collected),
         "evidence": evaluation["evidence"],
         "analysis_id": evaluation["draft"]["analysis_id"],
         "review": evaluation["review"],

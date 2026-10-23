@@ -57,6 +57,8 @@ beforeEach(() => {
   data.items = [];
   data.incident = {
     id: 'i1',
+    scope: { clusters: [{ cluster_id: 'stored-cluster', namespaces: ['training'] }] },
+    review_status: 'unreviewed',
     symptom: 'GPU 오류',
     rca_summary: {
       latest_job: { job_id: 'new', status: 'running' },
@@ -65,6 +67,8 @@ beforeEach(() => {
   };
   data.job = {
     id: 'published',
+    incident_id: 'i1',
+    scope: { clusters: [{ cluster_id: 'stored-cluster', namespaces: ['training'] }] },
     status: 'succeeded',
     result_ref: 'candidate',
     result: {
@@ -78,9 +82,11 @@ beforeEach(() => {
     },
   };
 });
-it('renders four comparison modes in order', () => {
+it('retains four comparison modes and appends two consoles', () => {
   const html = renderToStaticMarkup(<ViewMode />);
-  expect(html.match(/<button/g)).toHaveLength(4);
+  expect(html.match(/<button/g)).toHaveLength(6);
+  expect(html.indexOf('신규')).toBeLessThan(html.indexOf('개발 콘솔'));
+  expect(html.indexOf('개발 콘솔')).toBeLessThan(html.indexOf('운영 콘솔'));
   expect(html.indexOf('기존')).toBeLessThan(html.indexOf('운영'));
   expect(html).toContain('개발자');
   expect(html).toContain('신규');
@@ -110,6 +116,34 @@ it('never reads a candidate without a publication', () => {
   expect(html).toContain('공개된 분석 결과가 없습니다');
   expect(data.paths).not.toContain('/analyses/private');
 });
+it('opens the requested historical RCA inside its incident and keeps records incident-scoped', () => {
+  data.job.id = 'older-published';
+  const html = render('/incidents/i1?analysis=older-published');
+  expect(data.paths).toContain('/analyses/older-published');
+  expect(data.paths).not.toContain('/analyses/published');
+  expect(html).toContain('지정한 조사 결과');
+  expect(html).toContain('사건 검토·조치 기록');
+  expect(html).toContain('기록을 저장해도 아래 상태는 바뀌지 않습니다');
+  expect(html.match(/<form/g)).toHaveLength(1);
+  expect(data.paths).toContain('/reviews?subject_type=incident&subject_id=i1&limit=30');
+  expect(data.paths).toContain('/reviews?subject_type=job&subject_id=older-published&limit=30');
+});
+it('rejects an analysis URL belonging to another incident', () => {
+  data.job.incident_id = 'different-incident';
+  const html = render('/incidents/i1?analysis=other-job');
+  expect(html).toContain('선택한 분석과 이 사건의 연결을 확인할 수 없습니다');
+  expect(html).not.toContain('메모리 오류가 보고되었습니다.');
+  expect(data.paths.some((p) => p.includes('subject_id=other-job'))).toBe(false);
+});
+it('routes standalone RCA review to its original incident and preserves old job records read-only', () => {
+  const html = render('/analyses/published');
+  expect(html).toContain('/incidents/i1?analysis=published#new-review-records');
+  expect(html).toContain('분석별 이전 기록 보기');
+  expect(html).toContain('stored-cluster');
+  expect(html).not.toContain('<form');
+  expect(html).not.toContain('정정 기록 작성');
+  expect(data.paths).toContain('/reviews?subject_type=job&subject_id=published&limit=30');
+});
 it('lists incidents without per-row analysis calls', () => {
   data.items = [data.incident, { ...data.incident, id: 'i2' }];
   const html = render('/cases?status=open');
@@ -134,6 +168,48 @@ it('keeps unpublished reports in the new reader', () => {
   expect(html).toContain('실행 실패');
   expect(html).not.toContain('HTML');
   expect(html).not.toContain('/jobs/');
+});
+it('uses the shared aggregate reader styles and shows its analysis period once with interpretation and limits intact', () => {
+  data.job = {
+    id: 'report-aggregate',
+    kind: 'report',
+    status: 'succeeded',
+    result_ref: 'published',
+    scope: { clusters: [{ cluster_id: 'saved-cluster', namespaces: ['training'] }] },
+    result: {
+      result_status: 'partial',
+      narrative_status: 'complete',
+      time_range: { start: '2026-10-20T15:00:00Z', end: '2026-10-21T15:00:00Z' },
+      quality: { report_format: 'report-aggregate-v1', report: { method: 'llm_interpreted' } },
+      topics: [
+        {
+          topic_id: 'namespace_usage',
+          findings: [{ id: 'saved-fact', text: '저장된 계산 근거' }],
+          rows: [],
+        },
+      ],
+      narrative: [
+        {
+          topic_id: 'namespace_usage',
+          observation: '저장된 활동 변화',
+          meaning: '관측 범위에서 해석',
+          next_check: '기록 대조',
+          interpretation_limit: '일부 시간대 미관측',
+          source_fact_ids: ['saved-fact'],
+        },
+      ],
+    },
+  };
+  const html = render('/reports/report-aggregate');
+  expect(html).toContain('id="new-report-document" class="report-workspace new-report-document"');
+  expect(html.match(/class="report-period"/g)).toHaveLength(1);
+  expect(html).toContain('class="report-workspace new-report-body"');
+  expect(html).toContain('saved-cluster');
+  expect(html).toContain('직전 같은 길이의 기간과 비교');
+  expect(html).toContain('저장된 활동 변화');
+  expect(html).toContain('일부 시간대 미관측');
+  expect(html).toContain('저장된 계산 근거');
+  expect(html).toContain('해석 근거와 계산 결과');
 });
 it('uses an explicit developer switch on direct diagnostic routes', () => {
   for (const path of ['/jobs', '/knowledge', '/settings/models', '/fleet/assets'])
