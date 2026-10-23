@@ -20,10 +20,13 @@ import (
 )
 
 type Server struct {
-	DB              *store.Store
-	Config          config.Config
-	Client          *http.Client
-	mu              sync.Mutex
+	DB          *store.Store
+	Config      config.Config
+	Client      *http.Client
+	mu          sync.Mutex
+	writeLimits [2]writeLimit
+}
+type writeLimit struct {
 	window          time.Time
 	count, inflight int
 }
@@ -105,15 +108,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		s.mu.Lock()
-		if time.Since(s.window) >= time.Minute {
-			s.window = time.Now()
-			s.count = 0
+		limit := &s.writeLimits[0]
+		// Bulk knowledge imports must not consume report and other interactive write capacity.
+		if path == "/knowledge" || strings.HasPrefix(path, "/knowledge/") {
+			limit = &s.writeLimits[1]
 		}
-		limited := s.count >= Number(req.Limits, "max_requests_per_minute") || s.inflight >= Number(req.Limits, "max_inflight_requests")
+		s.mu.Lock()
+		if time.Since(limit.window) >= time.Minute {
+			limit.window = time.Now()
+			limit.count = 0
+		}
+		limited := limit.count >= Number(req.Limits, "max_requests_per_minute") || limit.inflight >= Number(req.Limits, "max_inflight_requests")
 		if !limited {
-			s.count++
-			s.inflight++
+			limit.count++
+			limit.inflight++
 		}
 		s.mu.Unlock()
 		if limited {
@@ -121,7 +129,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.writeError(w, id, Fail(429, "RATE_LIMITED", "요청 한도를 초과했습니다."))
 			return
 		}
-		defer func() { s.mu.Lock(); s.inflight--; s.mu.Unlock() }()
+		defer func() { s.mu.Lock(); limit.inflight--; s.mu.Unlock() }()
 		if !strings.HasPrefix(path, "/webhooks/") {
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 				s.writeError(w, id, Fail(415, "UNSUPPORTED_MEDIA_TYPE", "application/json 본문이 필요합니다."))
