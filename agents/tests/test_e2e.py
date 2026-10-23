@@ -3663,3 +3663,132 @@ def test_planned_incident_report_publishes_without_review_or_decision(
         for row in result["narrative"]
         if row["id"] == "cause"
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("job", [False, True])
+@pytest.mark.parametrize("overlap", [False, True])
+def test_collector_handoff_is_verified_before_report_publication(
+    stack, monkeypatch, job, overlap
+):
+    import test_aggregate_report
+    import test_workload_summary
+    from ops_agent.report_contract import VERSION
+
+    from copy import deepcopy
+
+    original_fixture = test_aggregate_report.fixture
+    original_jobs = test_workload_summary.jobs
+    original_get = Upstream.do_GET
+
+    def split(e):
+        originals = deepcopy(e["snapshot"]["series"])
+        e["snapshot"]["series"] = []
+        at = originals[0]["values"][0][0]
+        for source in ("old", "new"):
+            for row in originals:
+                values = [
+                    [t, "120" if not job and t == at else v]
+                    for t, v in row["values"]
+                    if job or source == "old" or t == at
+                ]
+                e["snapshot"]["series"].append(
+                    {
+                        "metric": {
+                            **row["metric"],
+                            "instance": source,
+                            "exporter_pod": "ksm-" + source,
+                        },
+                        "values": values,
+                    }
+                )
+        return e
+
+    def fixture(*args, **kwargs):
+        evidence = original_fixture(*args, **kwargs)
+        if not job:
+            split(evidence[1])
+        return evidence
+
+    def get(self):
+        u = urlparse(self.path)
+        args = parse_qs(u.query)
+        expr = args.get("query", [""])[0]
+        if u.path.endswith("/api/v1/query") and "[1h] offset 1ms" in expr:
+            self.requests.append((u.path, args))
+            at = float(args["time"][0])
+            evidence = (
+                original_jobs()
+                if job
+                else original_fixture(cluster="cpc-2", namespace="dev")[1]
+            )
+            fields = {"created": 10, "started": 30, "completed": 330}
+            rows = []
+            for source, first, last in (("old", 0, 120), ("new", 120, 240)):
+                for row in evidence["snapshot"]["series"]:
+                    labels = row["metric"]
+                    if job and not labels["measure"].endswith("_min"):
+                        continue
+                    field = labels.get("measure", "").removesuffix("_min")
+                    metric = (
+                        (
+                            "kube_job_created"
+                            if field == "created"
+                            else "kube_job_status_"
+                            + (
+                                "start_time"
+                                if field == "started"
+                                else "completion_time"
+                            )
+                        )
+                        if job
+                        else "kube_pod_info"
+                    )
+                    rows.append(
+                        {
+                            "metric": {
+                                **{k: v for k, v in labels.items() if k != "measure"},
+                                "cluster_id": "cpc-2",
+                                "namespace": "dev",
+                                "instance": source,
+                                "exporter_pod": "ksm-" + source,
+                                "__name__": metric,
+                            },
+                            "values": [
+                                [
+                                    at - 3600 + i * 15 + 2,
+                                    str(at - 3600 + fields[field] if job else 1),
+                                ]
+                                for i in range(first, last)
+                            ],
+                        }
+                    )
+                    if overlap and source == "new":
+                        rows[-1]["values"][0][0] -= 15
+            return self.send(
+                {"status": "success", "data": {"resultType": "matrix", "result": rows}}
+            )
+        return original_get(self)
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", fixture)
+    if job:
+        monkeypatch.setattr(
+            test_workload_summary, "jobs", lambda: split(original_jobs())
+        )
+    monkeypatch.setattr(Upstream, "do_GET", get)
+    jid = submit(
+        stack,
+        "report",
+        {**test_aggregate_report.DATA, "scope": SCOPE},
+        execution_profile=VERSION,
+    )
+    body, _ = worker_result(stack, "report", jid, "-collector-handoff")
+    topic = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
+    if job:
+        row = next(r for r in topic["workloads"] if r["namespace"] == "dev")
+        assert row["completed_observed"] == (None if overlap else 1)
+        assert row["mean_elapsed_seconds"] == (None if overlap else 300)
+    else:
+        row = next(r for r in topic["rows"] if r["namespace"] == "dev")
+        assert row["valid_hours"] == (23 if overlap else 24)
+        assert row["activity_percent"] == 60

@@ -8,7 +8,7 @@ Job Controller(JC)에서 보고서 작업을 인수해 관측·사건을 집계�
 
 | 단계 | 구현과 역할 |
 |---|---|
-| 수집 | [report_queries.py](src/ops_agent/report_queries.py): 공통 D registry와 별개인 Ops PromQL로 활동·Pod/GPU 신원을 조회합니다. [identity_transitions.py](src/ops_agent/identity_transitions.py)는 모호한 연결 변경 시간대만 추가 검증합니다. |
+| 수집 | [report_queries.py](src/ops_agent/report_queries.py): 공통 D registry와 별개인 Ops PromQL로 활동·Pod/GPU 신원을 조회합니다. [identity_transitions.py](src/ops_agent/identity_transitions.py)는 모호한 연결 변경 시간대만 추가 검증합니다. [collector_identity.py](src/ops_agent/collector_identity.py)는 동일 Pod·Job의 수집기 교체를 구분하며, 같은 시간에 나뉜 자료는 원본 시각의 비중복을 확인한 경우에만 연결합니다. |
 | 계산·근거 | [namespace_usage.py](src/ops_agent/namespace_usage.py)의 유효 표본 합계/개수로 평균을 계산합니다. [report_store.py](src/ops_agent/report_store.py)는 같은 읽기 전용 DB snapshot에서 사건과 공개 RCA ID/hash를 읽으며 새 RCA를 실행하지 않습니다. |
 | 보조 관측 | 기본 활동/신원 검증 후 [gpu_memory.py](src/ops_agent/gpu_memory.py)의 GPU당 메모리와 [workload_summary.py](src/ops_agent/workload_summary.py)의 GPU 요청 Pod·완료 Job 근거를 연결합니다. |
 | AI 해석 | [report_interpretation.py](src/ops_agent/report_interpretation.py)가 계산된 근거로 두 주제의 설명을 요청하고 검증합니다. 모델이 수치·품질을 계산하지 않습니다. |
