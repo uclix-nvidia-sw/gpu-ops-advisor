@@ -247,3 +247,11 @@ Go 단위 테스트, vet, 서버 빌드 및 Backend E2E 전체(`TestFreshBackend
 기존 로컬 DB에 보존 migration을 적용하고 새 Backend로 readiness 성공을 확인했습니다. frontend Vitest 3개·TypeScript/Vite build도 통과했습니다.
 
 한계: JC/Incident/두 Agent는 실제 서비스가 연결되지 않았습니다. E2E의 JC는 PostgreSQL 커밋을 수행하는 계약 fixture이며 제품 JC 구현이나 실제 RCA/보고서 계산·LLM 실행 검수가 아닙니다. 실시간 관측, 운영 부하·배포·백업복원·원격 LLM 장애 시험은 NOT RUN입니다.
+
+## 변경 요청 한도 격리
+
+2026-10-23, main `54aeef0` 기반 `fix/backend-write-limit-isolation`. macOS arm64·Go 1.26.2·새 임시 디렉터리의 전용 loopback PostgreSQL 16.9에서 Backend `go vet ./...`, `go test -race ./...`, `go build -o <temporary-backend> ./cmd/server`, `go test -race -tags=e2e ./... -json -count=1 -timeout=10m` 통과. 전체 태그 실행은 하위 테스트 포함 438개 pass, fail·skip 0개다. `python3 tools/check_links.py`도 통과했다.
+
+[한도 회귀](internal/api/limits_e2e_test.go)는 지식 등록·revision·발행의 공통 카운터, 지식 한도 소진 후 보고서의 JC 계약 fixture 접수(202), 보고서 자체 429, 양방향 동시 요청 격리, 그룹별 창 초기화, GET 조회와 `Retry-After` 보존을 검사한다. 이 검사의 DB·Backend는 실제 구현이며 JC는 계약 fixture다. 전체 Backend E2E에는 실제 Backend·JC 접수/명령/발행과 정기 일정 outbox 복구 검사가 포함된다.
+
+운영 배포·실제 모델 추론·운영 부하는 미검증이다. 한도는 프로세스별 두 그룹이며, 그룹별 제한을 모두 사용하면 전체 허용량은 커진다. 사용자별·복제본 공통 제한이나 내부 정기 접수·LLM 해석 실패를 해결하는 변경은 아니다.
