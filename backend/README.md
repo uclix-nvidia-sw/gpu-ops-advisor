@@ -18,7 +18,7 @@ Runbook 1.2 also accepts the non-code report goal identified by `reported_produc
 
 운영 콘솔은 발생일 제한 없이 미종결 사건을 조회하고, 보고서는 요청 접수일과 별개로 분석 대상 기간을 검색한다. 개발 콘솔의 노드 이름·UID 검색은 현재 신원 검증 대신 저장 작업의 대상을 정확히 비교한다. 새 필터·미리보기의 크기·과거 결과 fallback은 [목록 API 계약](API.md#콘솔-목록-검색과-보고서-미리보기)을 따른다.
 
-상세·HTML/CSV는 기존 공개 본문 조회와 비밀 제거를 유지한다. DB schema와 Agent·JC 정책은 변경하지 않는다. PostgreSQL 내부의 큰 JSON 읽기/압축 해제 비용까지 제거하는 것은 아니며, 로컬 전후 측정과 운영 검증의 경계는 [검증 기록](QA.md#2026-10-12-작업보고서-목록-조회-경량화)을 따른다.
+상세·HTML/CSV는 기존 공개 본문 조회와 비밀 제거를 유지한다. 집계 보고서 HTML 다운로드는 저장된 Namespace 제안을 클러스터·Namespace 이름순으로 묶고 내부 제안은 저장된 순서를 유지한다. 대상 라벨·콜론·값의 열을 맞추며 소제목과 유형별 시간을 표시한다. 저장 결과·CSV·선별은 바꾸지 않으며 상세 표시 규칙은 [Ops 집계 명세](../docs/specs/ops-agent/aggregate-report-v1.md#운영-해석-표시와-html)를 따른다. DB schema와 Agent·JC 정책은 변경하지 않는다. PostgreSQL 내부의 큰 JSON 읽기/압축 해제 비용까지 제거하는 것은 아니며, 로컬 전후 측정과 운영 검증의 경계는 [검증 기록](QA.md#2026-10-12-작업보고서-목록-조회-경량화)을 따른다.
 
 
 

@@ -2833,6 +2833,20 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
         exported = client.get("/reports/" + jid + "/export", params={"format": "html"})
         assert exported.status_code == 200, exported.text
         assert "눈에 띄는 변화" in exported.text and "확인할 점" in exported.text
+        advice = next(
+            n for n in body["narrative"] if n["topic_id"] == "namespace_usage"
+        )["advice"]
+        assert advice, (
+            "Exercise structured advice through actual Backend artifact download"
+        )
+        assert exported.text.count("<article data-advice-id=") == len(advice)
+        assert 'class="ops-advice-cluster"' in exported.text
+        assert 'class="ops-advice-namespace"' in exported.text
+        assert "관측 구간" in exported.text
+        from html import escape
+
+        for item in advice:
+            assert escape(item["summary"]) in exported.text
         spec = {k: v for k, v in data.items() if k not in ("time_range", "timezone")}
         for frequency, period, extras in (
             ("daily", "previous_complete_day", {}),

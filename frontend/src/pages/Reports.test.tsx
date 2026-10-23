@@ -91,7 +91,7 @@ describe('Ops report landing', () => {
       expect(html).toContain('전체 이력');
       expect(html.match(/href="\/reports\/new"/g)).toHaveLength(1);
       expect(html).not.toContain('Namespace GPU 현황');
-      expect(html).toContain('GPU 운영 보고서 · 2개 주제');
+      expect(html).toContain('GPU 클러스터 운영 분석 보고서');
       if (Page === Reports) {
         expect(html).not.toContain('<th>종류</th>');
         expect(html).not.toContain('<th>최종 보고서</th>');

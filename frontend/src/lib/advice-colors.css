@@ -1,0 +1,25 @@
+.advice-kind {
+  display: inline-block;
+  color: var(--advice-ink, inherit);
+}
+.advice-kind[data-kind='capacity_review'] {
+  --advice-ink: #245b87;
+}
+.advice-kind[data-kind='schedule_candidate'] {
+  --advice-ink: #1b665b;
+}
+.advice-kind[data-kind='relative_activity'] {
+  --advice-ink: #514583;
+}
+.advice-kind[data-kind='queue_review'] {
+  --advice-ink: #8c4a22;
+}
+.advice-kind[data-kind='batch_progress'] {
+  --advice-ink: #526326;
+}
+.advice-kind[data-kind='resident_memory'] {
+  --advice-ink: #7a3f68;
+}
+.advice-kind[data-kind='repeated_activity'] {
+  --advice-ink: #236373;
+}

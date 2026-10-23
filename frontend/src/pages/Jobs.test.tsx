@@ -79,7 +79,7 @@ function render() {
 it('places recorded attempts beside execution context before named analysis topics', () => {
   const html = render();
   expect(html).toContain('실행 상태와 시도 이력');
-  expect(html).toContain('GPU 운영 보고서 · 2개 주제</h1>');
+  expect(html).toContain('GPU 클러스터 운영 분석 보고서</h1>');
   expect(html).toContain('작업 ID · j1');
   expect(html).toContain('재시도 대기');
   expect(html.indexOf('2차<small>')).toBeLessThan(html.indexOf('1차</th>'));

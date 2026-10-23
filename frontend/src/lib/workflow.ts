@@ -164,24 +164,27 @@ export function reportPurpose(job: Row) {
       : ids.length === 1 && ids[0] === 'O08' && strings(job.group_by).includes('namespace')
         ? 'Namespace별 GPU 사용 분석'
         : ids.length > 1
-          ? `GPU 운영 보고서 · ${ids.length}개 주제`
+          ? 'GPU 클러스터 운영 분석 보고서'
           : reportTopics(job);
 }
 export function reportTitle(job: Row) {
   const purpose = reportPurpose(job);
+  const aggregate = strings(job.topic_ids).some((id) =>
+    ['namespace_usage', 'incident_summary'].includes(id),
+  );
   const start = Date.parse(str(obj(job.time_range).start));
   const end = Date.parse(str(obj(job.time_range).end));
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return purpose;
   const date = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    month: aggregate ? 'long' : '2-digit',
+    day: aggregate ? 'numeric' : '2-digit',
   });
   // A period ending at midnight covers the preceding day; keep exact times in the detail.
   const first = date.format(start);
   const last = date.format(end - 1);
-  return `${first === last ? first : `${first} ~ ${last}`} · ${purpose}`;
+  return `${first === last ? first : `${first} ~ ${last}`}${aggregate ? ' ' : ' · '}${purpose}`;
 }
 export function reportTopics(job: Row) {
   return (
