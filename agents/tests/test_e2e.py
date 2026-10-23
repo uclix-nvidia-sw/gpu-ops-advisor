@@ -3395,6 +3395,8 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     monkeypatch.setattr(sys.modules[__name__], "review_reply", critic)
     if invalid_interpretation == "http":
         monkeypatch.setattr(Upstream, "author_http_fail", True)
+        # The lower-cap retry needs a configured cap above it, as in production.
+        monkeypatch.setitem(stack["env"], "LLM_SYNTHESIS_MAX_TOKENS", "32768")
     elif invalid_interpretation is True:
         original_reply = combined_reply
 

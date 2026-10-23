@@ -17,7 +17,9 @@ from test_rca_component_guidance import component_case
 async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
     case = component_case() if kind == "disk" else policy_case(kind)
     if failure == "http":
-        # A gateway rejection gets exactly one more call, with a lower output cap.
+        # A gateway rejection gets exactly one more call, with a lower output cap;
+        # the configured cap is above it, as in production (32768).
+        case["output_caps"] = {**case["output_caps"], "synthesis": 32768}
         case["responses"]["synthesis"] = [{"http_status": 400}, {"http_status": 400}]
     elif failure == "invalid":
         case["responses"]["synthesis"] = [{"raw_text": "{broken"}]
@@ -34,7 +36,7 @@ async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
     ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
     if retry:
-        assert outcome["model_calls"][1]["requests"][0]["output_cap"] == 8192
+        assert outcome["model_calls"][1]["requests"][0]["output_cap"] == 16384
     output = outcome["output"]["result"]
     problem = next(r for r in output["narrative"] if r["id"] == "problem")
     assert "node-1" in problem["text"]
@@ -113,7 +115,9 @@ def test_event_summary_never_promotes_inventory_or_current_health():
 @pytest.mark.parametrize("kind", ["xid", "sxid", "disk"])
 async def test_author_and_writer_failure_keep_facts_and_conditional_guidance(kind):
     case = component_case() if kind == "disk" else policy_case(kind)
-    # Each rejected stage gets one lower-cap retry and no other call.
+    # Each rejected stage gets one lower-cap retry and no other call; the configured
+    # cap is above the lower cap, as in production (32768).
+    case["output_caps"] = {**case["output_caps"], "synthesis": 32768}
     case["responses"]["synthesis"] = [{"http_status": 400}] * 2
     case["responses"]["report_writing"] = [{"http_status": 400}] * 2
     outcome = await replay(case)
