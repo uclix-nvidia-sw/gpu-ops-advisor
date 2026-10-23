@@ -86,6 +86,23 @@ Grafana Contact point에서 Webhook, HTTP POST, URL을 **Incident의 `/webhooks/
 
 GPU UUID는 입력 라벨에 있을 때만 보존합니다. node/pod/namespace 등 확인된 대상만 사용하며 누락된 식별자를 생성하지 않습니다.
 
+### Grafana 알림 규칙
+
+[grafana/alert-rules.yaml](grafana/alert-rules.yaml)은 Fleet Intelligence 로그(`job="fleet-intelligence-agent"`)로 Incident에 알림을 보내는 Grafana 관리 규칙 정의다. 설치 환경의 Grafana에 직접 적용해야 하며, 차트 배포가 규칙을 만들지는 않는다.
+
+| uid | 알림 이름 | 입력 | Incident 처리 |
+|---|---|---|---|
+| `gpuops-xid-sxid-rca` | `GPUAlert` | Fleet 이벤트 줄(`log_type=event`, `error_xid`/`error_sxid`) 중 Fleet 분류 Fatal·Critical이거나 [허용 목록](grafana/rca-alert-allowlist.json)의 코드 | 사건 + RCA |
+| `gpuops-xid-sxid-notice` | `GPUErrorNotice` | 나머지 XID·SXID 이벤트(Warning 등) | 사건만 저장. 분석 정책이 없어 `analysis_policy_unconfigured` |
+| `gpuops-component-rca` | `GPUAlert` | 컴포넌트 Runbook이 있는 17개 컴포넌트의 상태 줄 중 `health=Unhealthy` | 사건 + RCA |
+
+- 이벤트 줄은 오류 1건에 한 번 기록되고 `code`(`xid:79`, `sxid:11001`)·`device`·`event_type`·`reason`(본문) 라벨을 만든다. Fleet은 카탈로그 event_type이 Fatal인 코드만 Unhealthy 상태로 바꾸므로, 상태 줄만 보는 규칙은 Warning 코드를 놓친다.
+- 허용 목록은 Fleet이 Fatal·Critical로 보지 않지만 NVIDIA 문서가 장치 조치를 요구하는 코드다(Xid 카탈로그 즉시 조치·GPU Node Triage 표 1, FM 가이드 v2.6 표 23·24와 표 25의 SXID 10003). XID 13·31·45는 애플리케이션 오류가 많아 기본은 `GPUErrorNotice`이며 `opt_in`으로 기록했다. `tools/ci/tests/test_alert_rules.py`가 허용 목록·컴포넌트 목록을 [Runbook 매니페스트](../rcca-agent/runbooks/catalog-manifest.json)와 대조한다.
+- 적용: `${GRAFANA_ORG_ID}`, `${GRAFANA_FOLDER}`, `${LOKI_DATASOURCE_UID}`, `${GPU_OPS_CONTACT_POINT}`(Incident Webhook 연락 지점 이름)를 채운 뒤 Grafana 파일 provisioning(`provisioning/alerting/`)으로 읽힌다. 예: `envsubst < incident/grafana/alert-rules.yaml > gpu-ops-alert-rules.yaml`.
+- 전환 순서: 각 쿼리를 Explore에서 미리 실행 → 기존 상태 줄 기반 `GPUAlert` 규칙을 멈추고 새 규칙 적용(동시에 켜면 사건이 두 번 생긴다) → 실제 이벤트 1건으로 사건·RCA 생성 확인 → 컴포넌트 Runbook 발행.
+- 이벤트 알림은 2분 창이 지나면 해제된다. 창은 평가 주기(1m)의 2배 이상이며 알림 정책 group_wait(기본 30s)보다 길어야 firing 알림이 먼저 전달된다. 1.4 에피소드 경로로 바꾸면 alertname 등록과 무관하게 전달되므로 `GPUErrorNotice`를 denylist에 넣어야 한다.
+- 한계: Fleet·GPUd 카탈로그 밖 코드(XID 133, SXID 93개 외)는 Fleet이 버려 알림이 생기지 않는다. 컴포넌트의 Degraded는 받지 않는다(예: 상시 Degraded인 전력 컴포넌트). 2026-10-23 운영 Loki에 읽기 전용으로 실행해 이벤트 규칙(72시간, `xid:79`·`sxid:11001` 15개 인스턴스)과 컴포넌트 규칙(30일, disk·cpu)이 결과를 내는 것만 확인했고, Grafana에는 적용하지 않았다.
+
 ## 수신·증거·전달 정책
 
 아래 정책의 alertname 매핑·새 증거 revision은 기본 1.3 경로입니다. 1.4는 위 에피소드 정책을 따릅니다.

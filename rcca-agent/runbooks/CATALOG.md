@@ -13,7 +13,7 @@ runbooks/
   catalog-manifest.json
 ```
 
-JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등록, 승인 정책, 런타임 역할, parser/query의 개발 상태 같은 공통 설명은 이 문서와 [DB-WORKFLOW](DB-WORKFLOW.md)에서 관리한다. 반복 설명 정리로 analysis_guidance와 limitations의 전체 글자 수를 약 61% 줄였다. 수집 품질·대상 일치, 문헌과 수행 증거의 구분, 자동 조치 금지는 기존 Worker 계약으로 유지한다.
+`catalog-manifest.json`의 `fleet_event_type`(고정 Fleet 카탈로그 분류, 없으면 Fleet이 내보내지 않음)과 `fm_sxid_table`(FM 가이드 v2.6 표 번호)은 [Grafana 알림 규칙](../../incident/README.md#grafana-알림-규칙)의 RCA 허용 목록을 계산하는 입력이다. JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등록, 승인 정책, 런타임 역할, parser/query의 개발 상태 같은 공통 설명은 이 문서와 [DB-WORKFLOW](DB-WORKFLOW.md)에서 관리한다. 반복 설명 정리로 analysis_guidance와 limitations의 전체 글자 수를 약 61% 줄였다. 수집 품질·대상 일치, 문헌과 수행 증거의 구분, 자동 조치 금지는 기존 Worker 계약으로 유지한다.
 
 ## 자료 범위와 작성 결과
 

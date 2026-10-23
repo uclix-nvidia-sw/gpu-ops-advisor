@@ -60,7 +60,7 @@ LLM 단계 실패 처리: 결합 분석과 보고서 작성은 요청 1회를 �
 
 XID/SXID가 없는 Fleet 컴포넌트 알림(disk, cpu, DCGM 건강 점검, InfiniBand 등)은 Runbook 1.2의 컴포넌트 목표로 처리한다. 검색은 `decision_policy.applies_when.reported_component`가 알림의 `component` 라벨과 정확히 같을 때만 허용한다. 사유 문자열은 여러 패턴이 쉼표로 묶이거나 같은 구간의 Healthy `ok` 보고와 섞이므로 컴포넌트 Runbook의 게이트로 쓰지 않는다. 보고 지침은 D09에서 같은 대상·컴포넌트의 Unhealthy 보고가 확인될 때 `matched`가 되어 보고서의 다음에 할 일에 실린다.
 
-D09 보고는 `health_contracts.fleet-component-log-v1.components`에 등록된 컴포넌트만 파싱한다. 저장소 기본 프로필(`agents/config.example.json`과 차트 사본)은 XID/SXID 외에 컴포넌트 Runbook이 있는 17개 컴포넌트를 `component`로 등록한다. 등록만으로 현재 상태·원인 fact가 생기지 않는다(Healthy는 매핑이 없어 unknown). 비코드 사건은 XID/SXID 전용 30분 비교 자료와 6단 운영자 화면을 만들지 않으며, 평가 호출·추가 조회 선택도 하지 않는다. 운영 반영에는 새 프로필 배포와 컴포넌트 Runbook의 검토·발행이 각각 필요하며, 발행은 Worker가 등록된 프로필로 실행되는 것을 확인한 뒤에 한다. 등록 전에 발행하면 컴포넌트 Runbook이 보류 상태로 선택돼 일반 조사 Runbook을 대신하고 지침도 표시되지 않는다. 목록은 [CATALOG](runbooks/CATALOG.md#fleet-컴포넌트-runbook)를 따른다.
+D09 보고는 `health_contracts.fleet-component-log-v1.components`에 등록된 컴포넌트만 파싱한다. 저장소 기본 프로필(`agents/config.example.json`과 차트 사본)은 XID/SXID 외에 컴포넌트 Runbook이 있는 17개 컴포넌트를 `component`로 등록한다. 등록만으로 현재 상태·원인 fact가 생기지 않는다(Healthy는 매핑이 없어 unknown). 비코드 사건은 XID/SXID 전용 30분 비교 자료와 6단 운영자 화면을 만들지 않으며, 평가 호출·추가 조회 선택도 하지 않는다. 운영 반영에는 새 프로필 배포와 컴포넌트 Runbook의 검토·발행이 각각 필요하며, 발행은 Worker가 등록된 프로필로 실행되고 [컴포넌트 알림 규칙](../incident/README.md#grafana-알림-규칙)이 켜진 것을 확인한 뒤에 한다. 등록 전에 발행하면 컴포넌트 Runbook이 보류 상태로 선택돼 일반 조사 Runbook을 대신하고 지침도 표시되지 않는다. 목록은 [CATALOG](runbooks/CATALOG.md#fleet-컴포넌트-runbook)를 따른다.
 
 ## 오프라인 RCA 재생
 
