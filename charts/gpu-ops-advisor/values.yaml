@@ -43,6 +43,9 @@ llm:
   requestTimeoutSeconds: 300
   defaultMaxTokens: 4096
   synthesisMaxTokens: 16384
+  # Model server limit on input + output per request (vLLM max_model_len, e.g. 65536).
+  # Output caps shrink to fit it; 0 keeps only the job token budget.
+  contextTokens: 0
   insightMaxTokens: 1024
 
 configuration:

@@ -41,6 +41,7 @@
 {{- $_ := set $env "LLM_REQUEST_TIMEOUT_SECONDS" $root.Values.llm.requestTimeoutSeconds }}
 {{- $_ := set $env "LLM_DEFAULT_MAX_TOKENS" $root.Values.llm.defaultMaxTokens }}
 {{- $_ := set $env "LLM_SYNTHESIS_MAX_TOKENS" $root.Values.llm.synthesisMaxTokens }}
+{{- $_ := set $env "LLM_CONTEXT_TOKENS" (default 0 $root.Values.llm.contextTokens) }}
 {{- $_ := set $env "LLM_INSIGHT_MAX_TOKENS" $root.Values.llm.insightMaxTokens }}
 {{- end }}
 {{- $_ := mergeOverwrite $env $component.env }}

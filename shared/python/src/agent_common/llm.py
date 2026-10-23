@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import math
 import re
 import time
 
@@ -15,6 +16,13 @@ log = logging.getLogger(__name__)
 
 class RemoteUncertain(RuntimeError):
     pass
+
+
+# Stored RCA prompts averaged 2.4 UTF-8 bytes per token (2026-10-23), so bytes / 2
+# over-counts input tokens by about 20% when fitting the server context limit.
+# ponytail: byte ratio, not the server tokenizer; use the server's token count if a
+# denser prompt still exceeds the limit (the server then rejects it with HTTP 400).
+CONTEXT_BYTES_PER_TOKEN = 2
 
 
 def strip_reasoning(text):
@@ -91,15 +99,28 @@ class LLM:
             if stage == "synthesis"
             else self.settings.llm_default_max_tokens
         )
-        return {
+        budget = {
             "remaining_tokens": self.remaining,
             "reserved_tokens": self.reserved_tokens,
             "prompt_token_bound": prompt_bound,
             "configured_output_tokens": cap,
-            "output_token_cap": max(
-                0, min(cap, self.remaining - self.reserved_tokens - prompt_bound)
-            ),
+            "output_token_cap": max(0, min(cap, self.output_room(prompt_bound))),
         }
+        context = getattr(self.settings, "llm_context_tokens", 0)
+        if context:
+            budget["context_tokens"] = context
+        return budget
+
+    def output_room(self, prompt_bound):
+        """Output tokens the job budget leaves and, when configured, the model
+        server's per-request limit on prompt + max_tokens."""
+        room = self.remaining - self.reserved_tokens - prompt_bound
+        context = getattr(self.settings, "llm_context_tokens", 0)
+        if context:
+            room = min(
+                room, context - math.ceil(prompt_bound / CONTEXT_BYTES_PER_TOKEN)
+            )
+        return room
 
     async def complete(self, system, data, stage="synthesis", max_tokens=None):
         """`max_tokens` only lowers the configured output cap for this call."""
@@ -219,10 +240,9 @@ class LLM:
                     self.usage[key] += int(usage.get(key, 0))
                 choice = body.get("choices", [{}])[0]
                 if choice.get("finish_reason") == "length":
-                    # Same endpoint only; doubled output stays within the remaining JC budget.
-                    doubled = min(
-                        cap * 2, self.remaining - self.reserved_tokens - prompt_bound
-                    )
+                    # Same endpoint only; doubled output stays within the remaining JC
+                    # budget and the server's per-request limit.
+                    doubled = min(cap * 2, self.output_room(prompt_bound))
                     if (
                         attempt == 0
                         and self.request_attempt_limit > 1

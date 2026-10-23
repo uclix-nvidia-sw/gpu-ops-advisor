@@ -77,10 +77,16 @@ async def prioritize(editorial, llm):
                     if deadline is not None
                     else None
                 )
-                available = (
-                    min(cap, remaining - prompt_bound)
-                    if cap is not None and remaining is not None
+                # Same room the retry call gets, including the server context limit.
+                room = (
+                    llm.output_room(prompt_bound)
+                    if hasattr(llm, "output_room")
+                    else remaining - prompt_bound
+                    if remaining is not None
                     else None
+                )
+                available = (
+                    min(cap, room) if cap is not None and room is not None else None
                 )
                 details["truncation_retry_gate"] = {
                     "prompt_bound": prompt_bound,

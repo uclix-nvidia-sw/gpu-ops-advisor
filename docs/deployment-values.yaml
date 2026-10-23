@@ -42,6 +42,8 @@ llm:
   requestTimeoutSeconds: 300
   defaultMaxTokens: 4096
   synthesisMaxTokens: 16384
+  # 모델 서버의 요청당 입력+출력 한도(vLLM max_model_len). 출력 상한을 이 한도에 맞춰 줄입니다. 0은 미적용.
+  contextTokens: 0
   insightMaxTokens: 1024
 
 configuration:

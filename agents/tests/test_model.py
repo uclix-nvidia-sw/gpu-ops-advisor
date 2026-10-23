@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import time
 
 import httpx
@@ -163,3 +164,74 @@ def test_ops_medium_effort_rejects_ambiguous_values(monkeypatch, raw):
     monkeypatch.setenv("OPS_LLM_MEDIUM_EFFORT", raw)
     with pytest.raises(ValueError):
         Settings("report")
+
+
+def context_settings(kind, cap, context):
+    return Settings(
+        kind,
+        llm_base_url="http://test/v1",
+        llm_model="fixture-model",
+        llm_api_key="fixture",
+        llm_synthesis_max_tokens=cap,
+        llm_context_tokens=context,
+    )
+
+
+# A ~60KB prompt: the server limit (prompt + max_tokens <= 65536) leaves less output
+# room than the job budget (131072), so the context limit decides the cap.
+CONTEXT_DATA = {"evidence": "x" * 60000}
+
+
+@pytest.mark.parametrize("context", [0, 65536])
+def test_context_limit_trims_the_configured_output_cap(context):
+    llm = LLM(context_settings("rca", 41000, context), 0, 131072, lambda _: None)
+    budget = llm.request_budget("fixture", CONTEXT_DATA, "synthesis")
+    room = 65536 - math.ceil(budget["prompt_token_bound"] / 2)
+    assert budget["output_token_cap"] == (room if context else 41000)
+    assert budget.get("context_tokens") == (context or None)
+
+
+@pytest.mark.parametrize("kind", ["rca", "report"])
+async def test_length_retry_doubles_within_the_context_limit(kind):
+    caps = []
+
+    def handler(request):
+        caps.append(json.loads(request.content)["max_tokens"])
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "finish_reason": "length" if len(caps) == 1 else "stop",
+                        "message": {"content": '{"ok":true}'},
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                    "total_tokens": 2,
+                },
+            },
+        )
+
+    settings = context_settings(kind, 20000, 65536)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 131072, lambda _: None, http)
+        bound = llm.request_budget("fixture", CONTEXT_DATA, "synthesis")[
+            "prompt_token_bound"
+        ]
+        assert await llm.complete("fixture", CONTEXT_DATA) == {"ok": True}
+    room = 65536 - math.ceil(bound / 2)
+    assert room < 40000 and caps == [20000, room]
+
+
+@pytest.mark.parametrize("raw,expected", [("0", 0), ("65536", 65536)])
+def test_context_limit_environment(monkeypatch, raw, expected):
+    monkeypatch.setenv("LLM_CONTEXT_TOKENS", raw)
+    assert Settings("rca").llm_context_tokens == expected
+
+
+def test_context_limit_rejects_negative_values(monkeypatch):
+    monkeypatch.setenv("LLM_CONTEXT_TOKENS", "-1")
+    with pytest.raises(ValueError):
+        Settings("rca")

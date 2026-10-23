@@ -33,6 +33,11 @@ class Settings:
     llm_synthesis_max_tokens: int = field(
         default_factory=lambda: int(os.getenv("LLM_SYNTHESIS_MAX_TOKENS", "16384"))
     )
+    # Model server limit per request (prompt + max_tokens, e.g. vLLM max_model_len);
+    # 0 leaves output caps to the job budget only.
+    llm_context_tokens: int = field(
+        default_factory=lambda: int(os.getenv("LLM_CONTEXT_TOKENS", "0"))
+    )
     llm_insight_max_tokens: int = field(
         default_factory=lambda: int(os.getenv("LLM_INSIGHT_MAX_TOKENS", "1024"))
     )
@@ -54,6 +59,8 @@ class Settings:
     def __post_init__(self):
         if type(self.ops_llm_medium_effort) is not bool:
             raise ValueError("OPS_LLM_MEDIUM_EFFORT must be true, false or unset")
+        if self.llm_context_tokens < 0:
+            raise ValueError("LLM_CONTEXT_TOKENS must be 0 or a positive token count")
 
     def model_for(self, stage):
         if self.llm_routed:
