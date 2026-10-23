@@ -565,19 +565,19 @@ async def test_gateway_rejection_is_retried_once_with_a_lower_output_cap():
 
     model, diagnostics = Model([400, None]), {}
     assert await complete_once(model, "p", {}, "s", diagnostics) == {"ok": True}
-    assert model.caps == [None, 8192]
+    assert model.caps == [None, 16384]
     assert diagnostics == {
         "reduced_output_retry": {
             "after_status": 400,
             "after_error_type": "BadRequestError:output_tokens",
-            "max_tokens": 8192,
+            "max_tokens": 16384,
             "succeeded": True,
         }
     }
     # A 500 is retried as transient first, then once with the lower cap.
     model, diagnostics = Model([500, 500, 500]), {}
     assert await complete_once(model, "p", {}, "s", diagnostics) is None
-    assert model.caps == [None, None, 8192]
+    assert model.caps == [None, None, 16384]
     assert diagnostics["http_status"] == 500
     assert diagnostics["error_type"] == "BadRequestError:output_tokens"
 

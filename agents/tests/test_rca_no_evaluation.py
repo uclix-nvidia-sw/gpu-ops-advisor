@@ -28,7 +28,9 @@ async def test_every_published_plan_uses_author_and_writer_only(
     case["attempt"]["profile"]["rca"]["generation_mode"] = mode
     books = deepcopy(case["attempt"]["context"]["runbooks"])
     if failure == "http":
-        # One more author call with a lower output cap is the only allowed retry.
+        # One more author call with a lower output cap is the only allowed retry;
+        # the configured cap is above it, as in production (32768).
+        case["output_caps"] = {**case["output_caps"], "synthesis": 32768}
         case["responses"]["synthesis"] = [{"http_status": 400}, {"http_status": 400}]
     elif failure == "length":
         case["responses"]["synthesis"][0]["finish_reason"] = "length"

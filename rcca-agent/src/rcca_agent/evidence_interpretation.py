@@ -298,9 +298,10 @@ def validate_interpretation(response, refs, criteria=None, observation_refs=None
 # Gateway overload/unavailability; one delayed retry inside the stage deadline.
 # Same set as the shared transport retry; gateways report upstream faults as 500.
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
-# Gateways reject an output cap above the routed model's limit with 400/500; RCA
-# answers fit well under this, so one call with this cap separates that case.
-REDUCED_OUTPUT_TOKENS = 8192
+# Gateways reject an output cap above the routed model's limit with 400/500; one
+# call with this cap separates that case. Reasoning models count thinking tokens
+# here: RCA author calls used 12-14.5K output tokens (2026-10-23), so 8192 truncated.
+REDUCED_OUTPUT_TOKENS = 16384
 
 
 async def complete_once(llm, prompt, payload, stage, diagnostics):
