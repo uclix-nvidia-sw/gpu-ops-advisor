@@ -28,6 +28,12 @@ REPORT_REVIEW = {
         (CATALOG / "operator-report-review-20261022.json").read_text("utf-8")
     )["entries"]
 }
+XID_ACTION_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "xid-catalog-action-review-20261023.json").read_text("utf-8")
+    )["entries"]
+}
 TRIAGE_REVIEW = {
     e["file"]: e
     for e in json.loads(
@@ -84,8 +90,8 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        # Newest review first: the triage review sits on top of the report review.
-        for review in (TRIAGE_REVIEW, REPORT_REVIEW):
+        # Newest review first: catalog actions, then triage, then the report review.
+        for review in (XID_ACTION_REVIEW, TRIAGE_REVIEW, REPORT_REVIEW):
             report = review.get(e["file"])
             if not report:
                 continue

@@ -231,6 +231,13 @@
       ],
       "references": [
         {
+          "title": "NVIDIA Xid 카탈로그",
+          "source_indices": [
+            3
+          ],
+          "text": "ROBUST_CHANNEL_GPU_HAS_FALLEN_OFF_THE_BUS · GPU has fallen off the bus. 적용 제품: A100, H100, B100, GB200. 즉시 조치 RESTART_BM, 조사 조치 CONTACT_SUPPORT, Xid 154 연계 CUDA 12.7; GPU driver R565."
+        },
+        {
           "title": "NVIDIA 조치 분류",
           "text": "NVIDIA Xid 카탈로그는 XID 79의 즉시 조치를 RESTART_BM(호스트 재시작), 조사 조치를 CONTACT_SUPPORT(지원 요청)로 분류합니다. 적용 제품은 A100·H100·B100·GB200이며 그 밖의 제품은 해당 세대 문헌을 따릅니다. 카탈로그는 시스템 이벤트 로그와 커널 PCI 이벤트 로그가 원인 위치를 찾는 데 도움이 된다고 안내합니다.",
           "source_indices": [

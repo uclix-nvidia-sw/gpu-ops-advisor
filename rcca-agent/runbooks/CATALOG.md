@@ -64,6 +64,20 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | SXID 항상 치명 20건·10003 | LLM 지침의 guest partition 전제를 bare metal(작업 배출 후 호스트 재시작) 우선으로 정정 |
 | SXID 20034 | 의미 문장에 섞여 있던 FM 표 영어 원문을 정리 |
 
+### Xid 카탈로그 즉시 조치 대조 (2026-10-23)
+
+XID 173건을 NVIDIA가 배포한 [Xid-Catalog.xlsx](https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html)(Sep 09, 2026)의 행(니모닉·적용 제품·즉시/조사 조치·Xid 154 연계)과 GPU Node Triage 표 1에 하나씩 대조했다. 172개 코드의 카탈로그 필드는 모두 일치했고, 복구 단계가 즉시 조치 분류와 어긋난 63건만 고쳤다. SXID 93건은 Fabric Manager User Guide v2.6 표 22~25의 분류·오류 문자열과 모두 일치해 바꾸지 않았다. 이전 값과 해시는 [검토 기록](xid-catalog-action-review-20261023.json)에 있다.
+
+| 대상 | 고친 내용 |
+|---|---|
+| 미사용 코드 59건(즉시 조치 CONTACT_SUPPORT) | "정의가 확인되기 전에는 복구 조치를 정하지 않습니다"를 카탈로그대로 공급사 문의로 교체. 함께 보고된 다른 XID의 지침을 먼저 따르도록 명시 |
+| XID 14 | 카탈로그 발생 조건이 "사용자 공간에서 주입한 가짜 오류"이므로 의미·원인·판단을 주입 시험 기준으로 다시 쓰고 즉시 조치 IGNORE 적용 |
+| XID 108 | 즉시 조치 IGNORE, 조사는 XID_137_FLOW(원격 MMU fault 애플리케이션 점검) |
+| XID 31 | Triage 표 1의 "하드웨어 공급사 연락"을 "의심되면"으로 약하게 적은 문장을 원문대로 정정 |
+| XID 79 | 10-22 재작성에서 빠진 Xid 카탈로그 참고 항목 복원 |
+
+- XID 162~172는 카탈로그의 즉시 조치가 비어 있고, XID 173은 카탈로그(172번까지)에 없어 Fleet 고정 정의만 있다. 두 경우는 현재 서술을 유지한다.
+
 ## 출처 간 차이와 판정 제한
 
 | 자료 상태 | 건수 | 의미 |
