@@ -79,12 +79,24 @@ const units: Record<string, string> = {
   MiB: 'MiB',
   celsius: '°C',
   bitmask: '비트마스크',
+  bytes: 'B',
 };
 export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
 
 const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
 /** Value with its unit label; byte rates scale to KB/MB/GB per second. */
 export function valueText(v: number, unit: string) {
+  if (unit === 'B') {
+    const step = (
+      [
+        [1e12, 'TB'],
+        [1e9, 'GB'],
+        [1e6, 'MB'],
+        [1e3, 'KB'],
+      ] as const
+    ).find(([size]) => Math.abs(v) >= size);
+    if (step) return `${(v / step[0]).toFixed(1)} ${step[1]}`;
+  }
   if (unit === 'B/s') {
     const step = (
       [
@@ -139,6 +151,29 @@ const FM_STATUS: Record<number, string> = {
   4: '실패',
   5: '인식 불가',
   6: 'NVML 버전 낮음',
+};
+// Status codes the published Runbooks define (NVIDIA/DCGM meanings); others stay raw.
+const STATE_CODES: Record<string, Record<number, string>> = {
+  D47: FM_STATUS,
+  D50: { 0: '대기 없음', 1: '대기' },
+  D51: { 0: '실패 없음', 1: '실패' },
+  D58: { 0: '무효', 1: '유효' },
+};
+// The one value of a status code that needs action, with its tag, tone and reading.
+const STATE_FLAGS: Record<string, [number, string, Tone, string]> = {
+  D50: [1, '리셋 필요', 'warn', '행 재매핑이 대기 중이며 GPU 리셋 뒤에 적용됩니다'],
+  D51: [
+    1,
+    'RMA 검토',
+    'alert',
+    '행 재매핑 실패 플래그가 섰습니다 — Field Diagnostics로 확인한 뒤 RMA를 검토합니다',
+  ],
+  D58: [
+    0,
+    'InfoROM 무효',
+    'warn',
+    'InfoROM 설정 체크섬이 무효입니다 — nvidia-smi -q로 InfoROM 상태를 확인합니다',
+  ],
 };
 // Lower rank reads first: alert, caution, hold, steady, idle, unchanged codes.
 const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
@@ -292,6 +327,10 @@ function componentTriage(result: Row): Row | null {
     byReason.set(str(o.reason), [...(byReason.get(str(o.reason)) || []), o]),
   );
   const target = obj(alert.target);
+  // The worker stores metric rows for component Runbooks that plan metrics.
+  const observed = obj(obj(result.quality).component_observations);
+  const stored = observed.schema === 'rca-component-observations/1' ? observed : {};
+  const metrics = rows(stored.metrics);
   return {
     schema: 'rca-triage-observations/1',
     component,
@@ -318,7 +357,13 @@ function componentTriage(result: Row): Row | null {
       message: reason,
       evidence_refs: [...new Set(items.flatMap((o) => strings(o.evidence_refs)))],
     })),
-    metrics: [],
+    metrics,
+    // Disk rows are per mount, not per GPU.
+    metric_scope: metrics.some((m) => str(m.gpu_uuid)) ? 'node_gpu_context' : 'node',
+    event_boundary: str(stored.event_boundary) || str(unhealthy[0].observed_at),
+    gpus: rows(stored.gpus),
+    workloads: rows(stored.workloads),
+    workload_label_source: stored.workload_label_source ?? null,
   };
 }
 
@@ -501,6 +546,11 @@ export function operatorView(result: Row) {
         `알림 컴포넌트: ${component} · 노드 ${node}`,
         `Fleet 상태 보고: ${component} · ${node} 오류 보고 ${reports}건 → ${logs.length ? '알림과 일치' : '없음'}`,
         '장치: Fleet 보고에 장치 정보가 없습니다 — 대응 순서의 즉시 확인 단계로 대상 장치를 찾으세요.',
+        ...(metricGpus.length
+          ? [
+              `지표 범위: 같은 노드 GPU ${metricGpus.length}개 전체 — 컴포넌트 보고는 장치를 지정하지 않습니다.`,
+            ]
+          : []),
       ],
     } satisfies Partial<Finding>);
 
@@ -586,10 +636,17 @@ export function operatorView(result: Row) {
           : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
     const once = after?.samples === 1 ? ', 사건 뒤 표본 1회' : '';
     const fm = q === 'D47';
-    const code = (c: number) => `${fmtNum(c)}${fm && FM_STATUS[c] ? ` (${FM_STATUS[c]})` : ''}`;
+    const labels = STATE_CODES[q];
+    const code = (c: number) => `${fmtNum(c)}${labels?.[c] ? ` (${labels[c]})` : ''}`;
     // One-line cell values for the per-GPU raw table.
     const cell = (w: Window | null) =>
-      !w ? '' : fm ? (w.min === w.max ? code(w.min) : `${code(w.min)} ~ ${code(w.max)}`) : range(w);
+      !w
+        ? ''
+        : labels
+          ? w.min === w.max
+            ? code(w.min)
+            : `${code(w.min)} ~ ${code(w.max)}`
+          : range(w);
     let tone: Tone = 'unknown';
     let tag: string;
     let short: string;
@@ -618,6 +675,12 @@ export function operatorView(result: Row) {
             : `${enumChange} (코드 의미는 원문 기준)`,
         ];
         tone = fm && c === 3 ? 'ok' : fm && c === 4 ? 'warn' : 'unknown';
+      }
+      const flag = STATE_FLAGS[q];
+      const latest = (after || whole || before)!.last;
+      if (flag && latest === flag[0]) {
+        [tag, tone, short] = [flag[1], flag[2], `${code(latest)} — ${flag[3]}`];
+        enumChange = changed ? enumChange : `상태 코드 ${code(latest)}`;
       }
     } else if (whole) {
       [tag, short] = [

@@ -35,6 +35,8 @@ from .incident_dossier import (
     dossier_summary,
     error_tools,
     operator_view,
+    component_metrics,
+    component_view,
     incident_brief,
 )
 from .operator_guidance import project_guidance
@@ -766,6 +768,13 @@ async def run(tools):
             [e for values in collected.values() for e in values],
             comparison,
             state["health"],
+        )
+    elif round_no == 0 and component_metrics(selected):
+        result["quality"]["component_observations"] = component_view(
+            data,
+            [e for values in collected.values() for e in values],
+            state["health"],
+            clues.get("component"),
         )
     await analyze_round(state, round_no)
     state.update(

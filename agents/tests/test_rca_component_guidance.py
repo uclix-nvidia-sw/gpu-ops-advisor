@@ -123,6 +123,18 @@ async def test_shipped_component_guidance_survives_healthy_reports_before_failur
         content_hash=content_hash(book["content"]),
         reviewed_content_hash=content_hash(book["content"]),
     )
+    # The shipped plan names optional disk queries newer than this legacy fixture
+    # profile; unvalidated there, they are skipped like an unavailable binding.
+    for query, metric in (("D59", "disk_used_bytes"), ("D60", "disk_free_bytes")):
+        case["attempt"]["profile"]["queries"][query] = {
+            "source": "mimir",
+            "metric": metric,
+            "unit": "bytes",
+            "max_hold_seconds": 0,
+            "revision": "fixture",
+            "validated": False,
+            "target_labels": {"node": "node", "mount_point": "mount_point"},
+        }
     values = case["queries"][0]["response"]["data"]["result"][0]["values"]
     start, line = int(values[0][0]), values[0][1]
     values[0][0] = str(start + 40 * 10**9)

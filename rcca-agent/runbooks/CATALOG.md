@@ -56,6 +56,7 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | XID 64 | A100은 기록 실패 시 노드 즉시 재부팅(Triage A100 행). 기존 "노드 재시작까지는 필요하지 않습니다"는 A100에서 틀린 안내였다 |
 | XID 95 | A100에서 MIG가 꺼져 있으면 노드 즉시 재부팅, 켜져 있으면 다른 인스턴스 배출 뒤 GPU 리셋(Triage). XID 94·95의 "2차 오류" 문장을 원인 조사 방향(동반 메모리 오류 우선)으로 정정 |
 | XID 61·123 | 카탈로그상 Unused이지만 Triage 표 1이 보고와 GPU 리셋을 안내하므로 "복구 조치를 정하지 않습니다"를 CONTACT_SUPPORT·GPU 리셋 단계로 교체 |
+| 수집 계획 125건 | 장애와 직접 관련된 지표를 선택 단계로 추가: 메모리 XID 12건·DCGM 메모리는 행 재매핑(D50~D54), NVLink XID 12건·SXID 93건·DCGM NVLink/NVSwitch는 NVLink 오류 누적값(D55~D57), DCGM InfoROM은 체크섬 유효(D58), disk는 마운트별 사용·여유(D59·D60). XID 13·31은 카탈로그대로 DCGM EUD → Field Diagnostics, XID 45는 DBE 동반 확인, XID 74는 적용 범위와 NVLink 오류 카운터 비교, 메모리 XID는 행 재매핑 값으로 리셋·RMA 판단을 연결([검토 기록](metric-coverage-review-20261024.json)). 새 조회가 든 프로필을 배포한 뒤에 발행한다 |
 | XID 48 | 메시지의 `framebuffer` 여부로 DRAM·SRAM 분기, 행 재매핑 Pending(리셋 뒤 적용)·Remapping Failure(Field Diagnostics 확인 뒤 RMA), 구세대 GPU의 페이지 폐기, RMA 기준(뱅크당 UCE 재매핑 8개·재매핑 행 재시도·합계 512, Blackwell HBM 채널 수리), 함께 보는 Xid 63·64·94·95·160·171·172 추가. 카탈로그 요약의 'Xid 154 연계' 오표기를 적용 버전 문구로 정정([검토 기록](xid48-memory-review-20261023.json)) |
 | XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |
 | SXID 93건 | `nvidia-smi -q`의 Fabric State·Status는 R580에서 폐기됐으므로 Hopper 이후 Fabric Health 확인으로 교체. D47 값(0 미지원 ~ 6 NVML 버전 낮음) 읽는 법 추가. 2026-10-23 운영자 문장의 내부 조회 ID와 출처 제목의 DCGM 열거형 이름을 의미 이름으로 바꾸고 선택 D02를 추가([검토 기록](operator-wording-review-20261023.json)) |

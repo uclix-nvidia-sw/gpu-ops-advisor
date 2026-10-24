@@ -31,10 +31,21 @@ METRICS = {
     "D48": "적용 전력 한도",
     "D33": "NVLink 수신량",
     "D34": "NVLink 송신량",
+    "D50": "행 재매핑 대기",
+    "D51": "행 재매핑 실패",
+    "D52": "정정 불가 재매핑 행 수",
+    "D53": "정정 가능 재매핑 행 수",
+    "D54": "예비 행 없는 메모리 뱅크 수",
+    "D55": "NVLink CRC 오류 누적값",
+    "D56": "NVLink 복구 오류 누적값",
+    "D57": "NVLink 재전송 오류 누적값",
+    "D58": "InfoROM 설정 유효",
+    "D59": "디스크 사용량",
+    "D60": "디스크 여유 공간",
 }
-COUNTERS = {"D36", "D38", "D40", "D42", "D44"}
+COUNTERS = {"D36", "D38", "D40", "D42", "D44", "D52", "D53", "D55", "D56", "D57"}
 # Coded values: compare equality only, never magnitude or health.
-ENUMS = {"D45", "D47"}
+ENUMS = {"D45", "D47", "D50", "D51", "D58"}
 ADDRESSES = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 ERROR_FILTER = (
     ' | json rca_component="attributes[\\"component\\"]"'
@@ -293,25 +304,12 @@ GPU_LABELS = {
 POD_LABEL_SOURCE = "DCGM_FI_DRIVER_VERSION"
 
 
-def operator_view(data, evidence, comparison, health=()):
-    groups = defaultdict(list)
-    for row in log_records(evidence, data):
-        groups[(row["code"], row["device"], row["message"])].append(row)
-    logs = [
-        {
-            "code": code,
-            "device": device,
-            "message": message,
-            "first": group[0]["recorded_at"],
-            "last": group[-1]["recorded_at"],
-            "reports": len(group),
-            "event_times": sorted({r["event_time"] for r in group if r["event_time"]}),
-            "evidence_refs": sorted({ref for row in group for ref in row["refs"]}),
-        }
-        for (code, device, message), group in groups.items()
-    ]
-    targets = comparison.get("targets", [])
-    switch = any(t["code"].startswith("sxid:") for t in targets)
+def metric_rows(data, evidence, boundary, keep):
+    """Per (query, GPU or mount) before/after rows, node GPU labels and observed pods.
+
+    `keep(gpu)` limits rows to the devices the report covers; labels and pods always
+    cover the whole node.
+    """
     start, end = (
         timestamp(data["time_range"]["start"]),
         timestamp(data["time_range"]["end"]),
@@ -355,17 +353,18 @@ def operator_view(data, evidence, comparison, health=()):
                 times = [t for t, _ in values]
                 seen = workloads.setdefault((gpu, work), [min(times), max(times)])
                 seen[0], seen[1] = min(seen[0], *times), max(seen[1], *times)
-            if not switch and not any(t["gpu"] and t["gpu"] == gpu for t in targets):
+            if not keep(gpu):
                 continue
+            # Node-level series (disk) are told apart by mount, not by GPU.
+            mount = None if gpu else labels.get("mount_point")
             row = merged.setdefault(
-                (entry["query_id"], gpu),
+                (entry["query_id"], gpu, mount),
                 {"values": set(), "unit": metric.get("unit"), "refs": set()},
             )
             row["values"] |= values
             row["refs"].add(entry["id"])
-    boundary = timestamp(event_boundary(data, targets)[0])
     metrics = []
-    for (query_id, gpu), row in merged.items():
+    for (query_id, gpu, mount), row in merged.items():
         values = sorted(row["values"])
         windows = {}
         for label, selected in (
@@ -388,8 +387,9 @@ def operator_view(data, evidence, comparison, health=()):
         metrics.append(
             {
                 "query_id": query_id,
-                "name": METRICS[query_id],
+                "name": METRICS[query_id] + (f" ({mount})" if mount else ""),
                 "gpu_uuid": gpu,
+                **({"mount_point": mount} if mount else {}),
                 "unit": row["unit"],
                 "min": min(v for _, v in values),
                 "max": max(v for _, v in values),
@@ -411,6 +411,50 @@ def operator_view(data, evidence, comparison, health=()):
                 "evidence_refs": sorted(row["refs"]),
             }
         )
+    observed = {
+        "gpus": [{"gpu_uuid": g, **info} for g, info in sorted(gpus.items())],
+        "workloads": [
+            {
+                "gpu_uuid": gpu,
+                **dict(zip(WORKLOAD_LABELS, work)),
+                "first": iso(seen[0]),
+                "last": iso(seen[1]),
+                "label_basis": "dcgm_exporter_labels",
+            }
+            for (gpu, work), seen in sorted(workloads.items(), key=lambda x: x[1][0])
+        ],
+        # None: no series could show pods, so an empty list does not mean "no pods".
+        "workload_label_source": "dcgm_exporter_labels" if pod_labels else None,
+    }
+    return metrics, observed
+
+
+def operator_view(data, evidence, comparison, health=()):
+    groups = defaultdict(list)
+    for row in log_records(evidence, data):
+        groups[(row["code"], row["device"], row["message"])].append(row)
+    logs = [
+        {
+            "code": code,
+            "device": device,
+            "message": message,
+            "first": group[0]["recorded_at"],
+            "last": group[-1]["recorded_at"],
+            "reports": len(group),
+            "event_times": sorted({r["event_time"] for r in group if r["event_time"]}),
+            "evidence_refs": sorted({ref for row in group for ref in row["refs"]}),
+        }
+        for (code, device, message), group in groups.items()
+    ]
+    targets = comparison.get("targets", [])
+    switch = any(t["code"].startswith("sxid:") for t in targets)
+    boundary = timestamp(event_boundary(data, targets)[0])
+    metrics, observed = metric_rows(
+        data,
+        evidence,
+        boundary,
+        lambda gpu: switch or any(t["gpu"] and t["gpu"] == gpu for t in targets),
+    )
     return {
         "schema": "rca-triage-observations/1",
         "target": data["target"],
@@ -425,19 +469,56 @@ def operator_view(data, evidence, comparison, health=()):
         "onset": state_onset(
             health, data["target"], sorted({row["code"] for row in logs})
         ),
-        "gpus": [{"gpu_uuid": g, **info} for g, info in sorted(gpus.items())],
-        "workloads": [
-            {
-                "gpu_uuid": gpu,
-                **dict(zip(WORKLOAD_LABELS, work)),
-                "first": iso(seen[0]),
-                "last": iso(seen[1]),
-                "label_basis": "dcgm_exporter_labels",
-            }
-            for (gpu, work), seen in sorted(workloads.items(), key=lambda x: x[1][0])
-        ],
-        # None: no series could show pods, so an empty list does not mean "no pods".
-        "workload_label_source": "dcgm_exporter_labels" if pod_labels else None,
+        **observed,
+    }
+
+
+def component_metrics(books):
+    """Component Runbooks whose plan names a report metric get stored metric rows."""
+    return any(
+        book.get("knowledge_key", "").startswith("RB-COMPONENT-")
+        and any(
+            s.get("query_id") in METRICS
+            for s in book["content"].get("observation_plan", [])
+        )
+        for book in books
+    )
+
+
+def component_view(data, evidence, health, component):
+    """Metric rows for a component alert, split at its first Unhealthy report.
+
+    Component reports name a component and node, not a device, so rows cover every
+    GPU (or mount) on the node; the Fleet reports themselves stay in the result.
+    """
+    node = data["target"].get("node") or data["target"].get("k8s_node_name")
+    bad = sorted(
+        (
+            h
+            for h in health
+            if h.get("component") == component
+            and h.get("observed_at")
+            and str(h.get("raw_health")).lower() == "unhealthy"
+            and (not node or h.get("target", {}).get("node") == node)
+        ),
+        key=lambda h: timestamp(h["observed_at"]),
+    )
+    boundary, basis = (
+        (bad[0]["observed_at"], "loki_recorded_at")
+        if bad
+        else (data["incident_time"], "alert_time")
+    )
+    metrics, observed = metric_rows(
+        data, evidence, timestamp(boundary), lambda gpu: True
+    )
+    return {
+        "schema": "rca-component-observations/1",
+        "component": component,
+        "event_boundary": boundary,
+        "boundary_basis": basis,
+        "metrics": metrics,
+        "metric_scope": "node_gpu_context",
+        **observed,
     }
 
 

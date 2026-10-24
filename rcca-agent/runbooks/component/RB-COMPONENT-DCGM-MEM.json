@@ -88,6 +88,66 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D50",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 행 재매핑 대기(0/1)를 사건 전후로 본다. 1이면 재매핑이 GPU 리셋 뒤 적용된다는 뜻이며 고장 확정이 아니다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D51",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 행 재매핑 실패(0/1)를 사건 전후로 본다. 1은 Field Diagnostics 확인 뒤 RMA 검토 대상이며 이 값만으로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D52",
+        "priority": 7,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 정정 불가 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D53",
+        "priority": 8,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 정정 가능 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D54",
+        "priority": 9,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 예비 행이 남지 않은 메모리 뱅크 수(이력 표지)를 본다. 현재 여유량이나 고장 확정으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -279,6 +339,46 @@
           ],
           "required": false,
           "expected_effect": "사건 전후 같은 노드 GPU의 GPU 메모리 온도을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D50",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 행 재매핑 대기(0/1)를 사건 전후로 본다. 1이면 재매핑이 GPU 리셋 뒤 적용된다는 뜻이며 고장 확정이 아니다."
+        },
+        {
+          "query_id": "D51",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 행 재매핑 실패(0/1)를 사건 전후로 본다. 1은 Field Diagnostics 확인 뒤 RMA 검토 대상이며 이 값만으로 판정하지 않는다."
+        },
+        {
+          "query_id": "D52",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 정정 불가 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다."
+        },
+        {
+          "query_id": "D53",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 정정 가능 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다."
+        },
+        {
+          "query_id": "D54",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 예비 행이 남지 않은 메모리 뱅크 수(이력 표지)를 본다. 현재 여유량이나 고장 확정으로 해석하지 않는다."
         }
       ]
     }

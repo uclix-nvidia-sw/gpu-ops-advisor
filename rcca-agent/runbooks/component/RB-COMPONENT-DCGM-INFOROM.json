@@ -50,6 +50,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D58",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 InfoROM 설정 체크섬 유효 여부(1=유효)를 본다. 0이면 InfoROM 손상 가능성이며 이 값만으로 교체를 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -216,6 +228,14 @@
           ],
           "required": true,
           "expected_effect": "같은 노드·기간의 Fleet accelerator-nvidia-dcgm-inforom 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D58",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 InfoROM 설정 체크섬 유효 여부(1=유효)를 본다. 0이면 InfoROM 손상 가능성이며 이 값만으로 교체를 판정하지 않는다."
         }
       ]
     }

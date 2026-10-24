@@ -77,6 +77,42 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D55",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 NVLink CRC 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D56",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 NVLink 복구 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D57",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 NVLink 재전송 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -246,6 +282,30 @@
           ],
           "required": false,
           "expected_effect": "사건 전후 같은 노드 GPU의 NVLink 송신량을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D55",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 NVLink CRC 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다."
+        },
+        {
+          "query_id": "D56",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 NVLink 복구 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다."
+        },
+        {
+          "query_id": "D57",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 NVLink 재전송 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다."
         }
       ]
     }

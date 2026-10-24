@@ -105,6 +105,17 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | D47 | dcgm_fi_dev_fabric_manager_status | Fleet·G | 상태 enum; 코드표/대상 grain 확인 | fabric 상태 조사, RCA·O05 | Fleet 과거 표본 이름 |
 | D48 | dcgm_fi_dev_enforced_power_limit | Fleet·G | 적용 전력 한도; W 확인 | D11 실제 소비와 비교, RCA·O09. 소비량 아님 | Fleet 과거 표본 이름 |
 | D49 | DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION | Exporter·G | 누적 에너지; 단위/reset 확인 | D11 적분의 대안/교차 확인, O09/O10 | 소스/설정 후보 |
+| D50 | dcgm_fi_dev_row_remap_pending | Fleet·G | 행 재매핑 대기 0/1 enum | 메모리 XID·DCGM 메모리 RCA. 1=GPU 리셋 뒤 적용 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D51 | dcgm_fi_dev_row_remap_failure | Fleet·G | 행 재매핑 실패 0/1 enum | 메모리 XID RCA, RMA 검토(Field Diagnostics 확인 필요) | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D52 | dcgm_fi_dev_uncorrectable_remapped_rows | Fleet·G | 정정 불가 재매핑 행 수; counter | 메모리 XID RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D53 | dcgm_fi_dev_correctable_remapped_rows | Fleet·G | 정정 가능 재매핑 행 수; counter | 메모리 XID RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D54 | dcgm_fi_dev_banks_remap_rows_avail_none | Fleet·G | 예비 행 없는 뱅크 수(이력); gauge | 메모리 XID RCA, RMA 검토 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D55 | dcgm_fi_dev_nvlink_error_dl_crc | Fleet·G | NVLink CRC 오류; counter, 링크 합계 | NVLink XID·SXID·DCGM NVLink RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D56 | dcgm_fi_dev_nvlink_error_dl_recovery | Fleet·G | NVLink 복구 오류; counter, 링크 합계 | NVLink XID·SXID·DCGM NVLink RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D57 | dcgm_fi_dev_nvlink_error_dl_replay | Fleet·G | NVLink 재전송 오류; counter, 링크 합계 | NVLink XID·SXID·DCGM NVLink RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D58 | dcgm_fi_dev_inforom_config_valid | Fleet·G | InfoROM 체크섬 유효 0/1 enum | DCGM InfoROM RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D59 | disk_used_bytes | Fleet·N | 마운트별 사용량; bytes, mount_point | disk RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D60 | disk_free_bytes | Fleet·N | 마운트별 여유; bytes, mount_point | disk RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 
 메모리/ECC의 device/total 또는 volatile/aggregate 값을 무조건 합산하지 않는다. 각각 의미가 다른 조회다. 같은 의미의 두 생산자나 D11 적분과 D49 누적 증가량도 소비량에 이중 합산하지 않는다.
 
