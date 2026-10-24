@@ -118,6 +118,16 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | D60 | disk_free_bytes | Fleet·N | 마운트별 여유; bytes, mount_point | disk RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 | D61 | dcgm_fi_dev_thermal_violation | Fleet·G | 열 제한 누적 시간; counter, ns | 열 관련 XID·DCGM 열 RCA. 사건 전후 증가량만 읽음 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 | D62 | dcgm_fi_dev_power_violation | Fleet·G | 전력 제한 누적 시간; counter, ns | 전력 관련 XID·DCGM 전력 RCA. 사건 전후 증가량만 읽음 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D63 | memory_used_percent | Fleet·N | 노드 메모리 사용률; percent | memory RCA | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D64 | memory_available_bytes | Fleet·N | 노드 사용 가능 메모리; bytes(MemAvailable 기반) | memory RCA | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D65 | network_ethernet_link_up | Fleet·N | 인터페이스별 링크 상태; enum 1=up 0=down, interface | ethernet RCA. 모든 링크 다운 중에는 표본이 도착하지 않을 수 있음 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D66 | network_ethernet_rx_errors | Fleet·N | 인터페이스별 수신 오류; counter, packets, interface | ethernet RCA. 사건 전후 증가량만 읽음 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D67 | network_ethernet_tx_errors | Fleet·N | 인터페이스별 송신 오류; counter, packets, interface | ethernet RCA. 사건 전후 증가량만 읽음 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D68 | network_ethernet_rx_dropped | Fleet·N | 인터페이스별 수신 폐기; counter, packets, interface | ethernet RCA. 사건 전후 증가량만 읽음 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D69 | network_ethernet_tx_dropped | Fleet·N | 인터페이스별 송신 폐기; counter, packets, interface | ethernet RCA. 사건 전후 증가량만 읽음 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D70 | os_zombie_processes | Fleet·N | 좀비 프로세스 수; gauge, processes | OS RCA | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D71 | os_threshold_running_pids_percent | Fleet·N | Fleet 기준(기본 900,000) 대비 실행 중 PID; percent | OS RCA. pid_max 대비 아님 | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
+| D72 | os_threshold_allocated_file_handles_percent | Fleet·N | Fleet 기준(file-max와 1,000만 중 작은 값) 대비 파일 핸들; percent | OS RCA | [2026-10-25 관측](../../evidence/d-observation-expansion-20261025.md) |
 
 메모리/ECC의 device/total 또는 volatile/aggregate 값을 무조건 합산하지 않는다. 각각 의미가 다른 조회다. 같은 의미의 두 생산자나 D11 적분과 D49 누적 증가량도 소비량에 이중 합산하지 않는다.
 

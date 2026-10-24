@@ -50,6 +50,66 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D65",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 인터페이스별 이더넷 링크 상태(1=연결, 0=끊김)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D66",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 인터페이스별 이더넷 수신 오류 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D67",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 인터페이스별 이더넷 송신 오류 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D68",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 인터페이스별 이더넷 수신 폐기 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D69",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 인터페이스별 이더넷 송신 폐기 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -71,6 +131,12 @@
         "revision": "Last updated on Oct 04, 2026; mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "Figure 1 GPU Triage Flowchart: System Issue branch"
+      },
+      {
+        "url": "https://docs.kernel.org/networking/statistics.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "struct rtnl_link_stats64: rx/tx errors and dropped; sysfs statistics",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -84,7 +150,11 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "노드에 원격 접속이 안 되면 BMC 콘솔로 접근합니다. ip -br link로 각 인터페이스 상태를, cat /sys/class/net/<인터페이스>/operstate로 운영 상태(UP·DOWN)를 확인합니다. 모든 링크가 다운이면 kubelet과 로그 전송도 끊기므로 이 노드의 작업 상태를 쿠버네티스 쪽에서 확인합니다."
+          "text": "노드에 원격 접속이 안 되면 BMC 콘솔로 접근합니다. ip -br link로 각 인터페이스 상태를, cat /sys/class/net/<인터페이스>/operstate로 운영 상태(UP·DOWN)를 확인합니다. 모든 링크가 다운이면 kubelet과 로그 전송도 끊기므로 이 노드의 작업 상태를 쿠버네티스 쪽에서 확인합니다. 3장 표에서 인터페이스별 링크 상태와 수신·송신 오류·폐기의 증가량을 확인합니다. 모든 링크가 끊긴 동안에는 지표가 수집 저장소에 도착하지 못해 '자료 없음'으로 보일 수 있으며 이는 0이 아닙니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "재부팅 전에 BMC 콘솔에서 ip -s link 출력(인터페이스별 상태와 오류·폐기 수)과 journalctl -k의 링크·네트워크 드라이버 줄을 저장합니다. 네트워크가 끊겨 원격으로 옮길 수 없으면 노드의 로컬 파일로 남깁니다."
         },
         {
           "title": "판단",
@@ -123,6 +193,13 @@
           "text": "GPU가 관련되지 않은 시스템 문제는 시스템 공급사 티켓으로 처리합니다.",
           "source_indices": [
             2
+          ]
+        },
+        {
+          "title": "인터페이스 통계 (커널 문서)",
+          "text": "rx_errors는 수신한 불량 패킷 수, tx_errors는 송신 문제 수, rx_dropped는 수신했지만 처리하지 못한 패킷 수(자원 부족·미지원 프로토콜 등), tx_dropped는 송신 중 버린 패킷 수입니다. 이 통계는 인터페이스를 내렸다 올려도 유지됩니다.",
+          "source_indices": [
+            3
           ]
         }
       ]
@@ -183,6 +260,46 @@
           ],
           "required": true,
           "expected_effect": "같은 노드·기간의 Fleet network-ethernet 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D65",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 인터페이스별 이더넷 링크 상태(1=연결, 0=끊김)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D66",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 인터페이스별 이더넷 수신 오류 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D67",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 인터페이스별 이더넷 송신 오류 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D68",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 인터페이스별 이더넷 수신 폐기 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D69",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 인터페이스별 이더넷 송신 폐기 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
         }
       ]
     }

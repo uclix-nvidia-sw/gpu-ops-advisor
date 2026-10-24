@@ -96,6 +96,18 @@
         "revision": "Undated page; change log through v610 Update; mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "-q PCI section: Link Gen/Width, Replays Since Reset"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "section": "nvidia-bug-report.sh: root, up to one hour, --safe-mode --extra-system-data",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -110,6 +122,10 @@
         {
           "title": "즉시 확인",
           "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -i <번호>의 PCI 항목에서 Link Gen·Width의 Current·Max와 Replays Since Reset 값을 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). dmesg -T에서 같은 시각의 PCIe AER 메시지와 XID 79·32를 찾습니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "리셋·재부팅하면 휘발성 오류 카운터와 커널 로그가 사라지므로 먼저 보관합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. journalctl -k(또는 dmesg -T)에서 사건 전후 줄을 저장하고, 오류 로그 원문의 extra_info.dcgm_incidents와 dcgmi health -g <그룹 ID> -c 결과도 함께 저장합니다. nvidia-smi -q 출력의 PCI 항목(Replays Since Reset, Replay Number Rollovers)과 커널 로그의 PCIe AER 줄을 남깁니다. 이 replay 값은 리셋 뒤 0부터 다시 셉니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
@@ -156,6 +172,15 @@
           "text": "nvidia-smi -q의 PCI 항목은 Link Gen·Width의 Current·Max, Replays Since Reset, Replay Number Rollovers를 보여 줍니다.",
           "source_indices": [
             4
+          ]
+        },
+        {
+          "title": "리셋 전 자료 보존",
+          "text": "nvidia-smi의 휘발성 ECC 오류 수는 드라이버를 마지막으로 올린 뒤의 값이고, PCIe Replays도 리셋 뒤부터 다시 셉니다. nvidia-bug-report.sh는 root로 실행하며 최대 1시간이 걸릴 수 있고 멈추면 --safe-mode --extra-system-data로 실행합니다. GPU Node Triage는 공급사 전달 자료로 nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그를 요구합니다.",
+          "source_indices": [
+            4,
+            5,
+            6
           ]
         }
       ]

@@ -700,6 +700,8 @@ def stack():
         # Current Runbook drafts include auxiliary queries absent from v7.
         # These synthetic definitions test lifecycle/consumption, not live bindings.
         for query_id, unit in (
+            ("D18", "percent"),
+            ("D19", "load"),
             ("D23", "celsius"),
             ("D33", "bytes/s"),
             ("D34", "bytes/s"),
@@ -723,6 +725,16 @@ def stack():
             ("D60", "bytes"),
             ("D61", "ns"),
             ("D62", "ns"),
+            ("D63", "percent"),
+            ("D64", "bytes"),
+            ("D65", "enum"),
+            ("D66", "packets"),
+            ("D67", "packets"),
+            ("D68", "packets"),
+            ("D69", "packets"),
+            ("D70", "processes"),
+            ("D71", "percent"),
+            ("D72", "percent"),
         ):
             profile["queries"][query_id] = dict(
                 source="mimir",

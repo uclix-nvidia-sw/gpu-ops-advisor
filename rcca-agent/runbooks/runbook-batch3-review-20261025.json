@@ -1,0 +1,1564 @@
+{
+  "status": "local_review_not_published",
+  "checked_at": "2026-10-25",
+  "scope": "DCGM 7개(메모리·NVLink·NVSwitch·PCIe·전력·열·InfoROM)와 라이브러리·이더넷·peermem·NCCL에 '진단 자료 보존' 단계를 넣고 NCCL에 복구 단계를 더한다. CPU·메모리·OS를 즉시 확인→보존→판단→복구→복구 확인→공급사 전달로 넓히고 커널 문서(lockup watchdog, sysctl kernel, RAS, proc)와 Fleet 커널 로그 이벤트를 출처로 더하며, OS의 PID·파일 핸들 비율 분모와 좀비 임계를 Fleet 원본대로 바로잡는다. CPU(D18·D19), 메모리(D63·D64), 이더넷(D65~D69), OS(D70~D72) 지표를 선택 단계로 수집한다. 일반 런북에 GPU Node Triage 순서의 운영자 안내와 노드 요약 지표(D04·D11·D40·D18·D63)를 더한다. required_queries는 바뀌지 않는다.",
+  "method": "Fleet source v1.5.0-rc.1 (cpu/memory/os/network ethernet metrics, component and kmsg matchers) and live Mimir values retrieved 2026-10-24; docs.kernel.org lockup-watchdogs, sysctl/kernel, RAS, proc, networking/statistics; docs.nvidia.com nvidia-smi, Working with Xid Errors, GPU Node Triage, DCGM Diagnostics. before/after sha256 over canonical content JSON with previous_values for exact restoration.",
+  "entries": [
+    {
+      "file": "RB-GENERAL-GPU-NODE.json",
+      "before_content_sha256": "57859528632061925ae45d499cbbb741ee2737cdc36c02826d53b89097e7c25d",
+      "after_content_sha256": "0bcdb422ba94248584b944001729bd937f1b6aa9bc13e44675d0d25845cafce3",
+      "change": "guidance+plan: optional D04,D11,D40,D18,D63",
+      "added_fields": [
+        "operator_guidance"
+      ],
+      "previous_values": {
+        "sources": [
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Page last updated 2026-09-09; mutable upstream document",
+            "section": "GPU Node Triage / Reporting a GPU Issue",
+            "checked_at": "2026-09-28"
+          }
+        ],
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "동일 대상·기간의 Fleet 원문 관측을 확보한다. 보고된 내용과 현재 장치 상태를 구분하며 상태 의미가 검증되지 않았다는 이유만으로 원문 수집을 실패로 처리하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          },
+          {
+            "query_id": "D02",
+            "priority": 3,
+            "required": false,
+            "fact_names": [
+              "observations"
+            ],
+            "purpose": "사건 전후 GPU 사용률 비교.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-CPU.json",
+      "before_content_sha256": "a650e8acdc48171262e7e0906b668f298aba6a28850799313d8df86f5aa60be7",
+      "after_content_sha256": "e0de45962973722a73ad143286efd95df1c8a0c18e3cda8fe0005346dea5c0c9",
+      "change": "guidance+plan: optional D18,D19",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet cpu 점검이 CPU 사용률이나 load average를 계산하지 못해 Unhealthy로 보고한 것입니다. CPU 하드웨어 오류 보고가 아니라 모니터링 에이전트가 운영체제의 CPU 통계를 읽지 못했다는 뜻이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다.",
+          "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. top과 cat /proc/loadavg로 노드 CPU 상태를 직접 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "노드 CPU가 정상이면 하드웨어 조치는 필요 없습니다. Fleet 에이전트 파드 로그에서 같은 시각의 오류 메시지를 확인하고, 오류가 계속되면 에이전트 파드를 다시 시작합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "Fleet cpu 컴포넌트 보고가 Healthy로 돌아왔는지 확인합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 CPU 시간 통계나 load average 계산에 실패하면 Unhealthy로 보고합니다. 시험용 CPU 장애 주입도 같은 계산 오류 경로로 보고됩니다.",
+              "source_indices": [
+                0
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/cpu/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): CPU usage and load average errors; injected CPU fault",
+            "checked_at": "2026-10-22"
+          }
+        ],
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_component",
+              "reported_normalized_health",
+              "reported_producer_contract"
+            ],
+            "purpose": "같은 노드·기간의 Fleet cpu 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          }
+        ],
+        "decision_policy": {
+          "goal": {
+            "id": "identify_error_report",
+            "question": "사건 대상·기간에서 Fleet cpu Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+            "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+          },
+          "applies_when": {
+            "reported_component": "cpu",
+            "reported_normalized_health": "unhealthy",
+            "reported_producer_contract": "fleet-component-log-v1"
+          },
+          "completion_criteria": [
+            {
+              "id": "reported_error",
+              "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "scoped_source",
+              "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "bounded_conclusion",
+              "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+              "method": "llm",
+              "required": true
+            }
+          ],
+          "blocking_conditions": [
+            "scope_unverified",
+            "identity_conflict",
+            "required_query_incomplete",
+            "conflicting_reports"
+          ],
+          "non_blocking_unknowns": [
+            "causal_confirmation_evidence",
+            "current_health",
+            "physical_or_synthetic_origin"
+          ],
+          "followup_links": [
+            {
+              "query_id": "D09",
+              "criterion_ids": [
+                "reported_error",
+                "scoped_source"
+              ],
+              "required": true,
+              "expected_effect": "같은 노드·기간의 Fleet cpu 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-INFOROM.json",
+      "before_content_sha256": "990c08719ad534694101397a9de542ee1846da42856e2f61bc3ce2690f262a41",
+      "after_content_sha256": "ffe48577a5023338ce899842a2e00733d36ba49e8e2f580e6ea348594583ff48",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM InfoROM 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다. InfoROM은 GPU의 설정·상태 데이터를 담는 작은 영구 저장 영역입니다.",
+          "cause_note": "InfoROM 데이터 손상(DCGM 코드 9)이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -i <번호>의 Inforom Version 항목과 nvidia-smi --query-gpu=inforom.checksum_validation --format=csv로 InfoROM 검증 결과를 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "9 InfoROM 손상: DCGM은 InfoROM을 다시 기록(flash)해 손상을 지우라고 권고합니다. GPU Operator 환경에서 InfoROM 손상은 검증 파드(driver-validation) 로그에도 나타나며, GPU Operator 문서는 이 경우 GPU 교체를 안내합니다. InfoROM에는 메모리 오류 기록도 저장되므로 같은 GPU의 XID 63·64 기록을 함께 확인합니다."
+            },
+            {
+              "title": "복구",
+              "text": "InfoROM 재기록은 GPU 펌웨어 작업이므로 운영자가 임의로 하지 말고 시스템 공급사(또는 NVIDIA 지원)의 도구와 절차로 진행합니다. 작업 전에 해당 GPU의 작업을 배출합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "재기록이나 교체 뒤 InfoROM 건강 점검 보고가 사라졌는지, inforom.checksum_validation 결과가 정상인지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "nvidia-bug-report.sh 결과, Inforom Version 출력, DCGM 진단 로그를 갖춰 시스템 공급사에 InfoROM 재기록이나 보드 교체를 요청합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM InfoROM 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "9 InfoROM 손상: InfoROM을 다시 기록(flash)해 손상을 지웁니다.",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "InfoROM (nvidia-smi)",
+              "text": "InfoROM은 GPU의 설정·상태 데이터를 담는 작은 영구 저장소이며 일부 기능은 특정 InfoROM 버전 이상에서만 동작합니다. --query-gpu의 inforom.checksum_validation으로 검증 결과를 조회합니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "GPU Operator 문제 해결",
+              "text": "InfoROM 손상은 검증 파드의 driver-validation 로그에 나타나며 nvidia-smi가 오류 코드 14를 반환합니다. 문서는 GPU 교체를 안내합니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/inforom/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 9: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+            "revision": "Undated page; change log through v610 Update; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Inforom Version; --query-gpu inforom.checksum_validation"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/troubleshooting.html",
+            "revision": "Undated page (GPU Operator latest); mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "infoROM is corrupted"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-MEM.json",
+      "before_content_sha256": "0a4fa7e514b76e7c9df33ca9a374ed11893cd58b7e37f6bea5369bdacca4fba6",
+      "after_content_sha256": "1867c330fcdf39f3e54b8bedb9fdb137a9904b5ca71aee39cf80e9a54e408795",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM 메모리 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+          "cause_note": "GPU 메모리의 정정 불가(DBE) 오류, row remapping 대기·실패, 격리되지 않은 오류, SRAM 오류 임계 초과가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -d ECC,ROW_REMAPPER로 해당 GPU의 Pending·Remapping Failure Occurred와 정정 불가 오류 수를 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). 같은 시각 dmesg의 XID 48·63·64·94·95 줄도 함께 기록합니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "4 정정 불가 ECC 검출: 작업을 배출하고 GPU를 리셋하거나 노드를 재부팅합니다. 81 격리되지 않은 오류(XID 95): 작업을 배출하고 GPU를 리셋하거나 노드를 재부팅합니다. 131 격리된 오류(XID 94): 오류를 겪은 애플리케이션만 재시작하고 GPU 리셋은 편한 시점으로 미룰 수 있습니다. 85 row remapping 대기: 로그를 확인하고 GPU 리셋으로 remap을 적용한 뒤 DCGM을 재시작하고 진단을 다시 실행합니다. 80 row remapping 실패: 복구할 수 없는 메모리 하드웨어 손상이므로 즉시 GPU를 리셋하거나 노드를 재부팅하고 Field Diagnostics로 RMA 대상 여부를 판정합니다. 132 정정 불가 remap 한도 초과: Field Diagnostics 대상입니다. 118 SRAM 임계 초과: 메모리를 점검합니다. 5 정정 가능 ECC 증가: 감시만 하며 GPU는 계속 운용할 수 있습니다."
+            },
+            {
+              "title": "복구",
+              "text": "A100에서 MIG가 꺼진 상태로 격리되지 않은 오류가 났다면 GPU Node Triage는 노드 즉시 재부팅을 안내합니다. GPU 리셋은 그 GPU를 쓰는 프로세스를 모두 끝낸 뒤 root로 nvidia-smi -r -i <번호>로 하며, Ampere+NVSwitch는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. 리셋·재부팅은 작업 배출과 유지보수 승인 뒤 수행합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "nvidia-smi -q -d ROW_REMAPPER에서 Pending이 No로 바뀌었는지, Remapping Failure Occurred가 No인지 확인합니다. dcgmi diag -r 2로 빠르게 점검하고, 메모리 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "Remapping Failure Occurred가 Yes이거나 SRAM 임계를 넘었으면 Field Diagnostics 결과로 RMA를 요청합니다. 전달 자료는 nvidia-smi -q -d ECC,ROW_REMAPPER 출력, nvidia-bug-report.sh 결과, DCGM 진단 로그, 수행한 조치입니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM 메모리 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "4 정정 불가 ECC(작업 배출 후 GPU 리셋 또는 노드 재부팅), 5 정정 가능 ECC 증가(감시, 계속 운용 가능), 80 row remapping 실패(즉시 GPU 리셋 또는 노드 재부팅), 81 격리되지 않은 오류(작업 배출 후 GPU 리셋 또는 노드 재부팅), 83 DBE와 함께 대기 중인 page retirement(작업 배출 후 GPU 리셋 또는 노드 재부팅), 85 row remapping 대기(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행), 118 SRAM 임계 초과(메모리 점검), 131 격리된 오류(앱 재시작, 리셋은 나중에), 132 remap 한도 초과(Field Diagnostics).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "row remapping과 RMA 기준",
+              "text": "row remapping은 GPU 리셋 뒤에 적용됩니다. Pending은 다음 리셋 때 적용될 remap이 있다는 뜻이며 그동안 작업은 계속할 수 있습니다. Remapping Failure Occurred가 설정되고 Field Diagnostics가 확인하면 DRAM RMA 대상입니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "GPU Node Triage",
+              "text": "XID 95(격리되지 않은 오류)는 A100에서 MIG가 꺼져 있으면 노드를 즉시 재부팅하고, MIG가 켜져 있으면 다른 인스턴스 작업을 배출한 뒤 GPU를 리셋합니다. XID 94(격리된 오류)는 해당 애플리케이션만 재시작합니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/mem/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 4, 5, 80, 81, 83, 85, 118, 131, 132: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/a100-gpu-mem-error-mgmt/index.html",
+            "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Row Remapping; Error Recovery and Response Flags; RMA Policy Thresholds for Row Remapping; SRAM Uncorrectable Errors"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Table 1 rows 48, 63, 64, 94, 95; Table 2; Running DCGM Diagnostics; Running Field Diagnostics"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-NVLINK.json",
+      "before_content_sha256": "a35aa0ab7299121bdb4c18bf92d30e80ace53306be03ec45d500c00a7c45f48b",
+      "after_content_sha256": "e950464157ef04bb8bb135c0ba8baa6a34f78140e067da8d736d25b972bb64d9",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM NVLink 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+          "cause_note": "NVLink 링크 다운, 오류 카운터(CRC·replay·recovery) 임계 초과, NVSwitch·Fabric Manager 문제, 커넥터·보드 불량이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID), DCGM_FR 코드, 링크 번호를 확인합니다. nvidia-smi nvlink -s로 링크 상태(Active·Inactive)를, nvidia-smi nvlink -e로 오류 카운터를 확인합니다. NVSwitch 시스템은 systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log를 함께 확인하고, 같은 시각 XID 74·SXID를 dmesg에서 찾습니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "13 NVLink 오류 임계 초과: 감시하며 링크는 계속 쓸 수 있습니다. 14 NVLink 다운: DCGM·시스템 로그를 확인하고 GPU를 리셋한 뒤 DCGM을 재시작하고 진단을 다시 실행합니다. 99 기대보다 적은 링크 활성: Fabric Manager가 실행 중인지 확인하고 시스템·dmesg·Fabric Manager 로그를 봅니다. 70 CRC 오류율 초과·71 치명 오류·119·121 BER 초과: Field Diagnostics 대상입니다."
+            },
+            {
+              "title": "복구",
+              "text": "링크가 내려간 GPU는 작업을 배출한 뒤 리셋합니다. Ampere+NVSwitch는 Fabric Manager가 실행 중일 때 GPU 개별 리셋이 되고 FM이 NVSwitch 쪽 링크도 리셋하며, FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. 리셋 뒤에도 링크가 돌아오지 않으면 유지보수 승인 뒤 노드를 재부팅합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "nvidia-smi nvlink -s에서 모든 링크가 Active인지, -e 오류 카운터가 더 늘지 않는지 확인합니다. dcgmi diag -r 2로 점검하고, 링크 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "재부팅 뒤에도 같은 링크에서 반복되면 nvidia-bug-report.sh 결과, Fabric Manager 로그, DCGM 진단 로그, NVLink 오류 카운터, 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM NVLink 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "13 NVLink 오류 임계 초과(감시, 계속 사용 가능), 14 NVLink 다운(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행), 70 CRC 오류율 초과·71 치명 오류·119·121 BER 초과(Field Diagnostics), 99 기대보다 적은 링크 활성(Fabric Manager 실행 확인, 시스템·dmesg·FM 로그 확인).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "리셋 방식 (GPU Node Triage 표 2)",
+              "text": "Ampere(A100)+NVSwitch는 Fabric Manager가 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 NVSwitch 쪽 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 FM과 무관하게 개별 리셋할 수 있습니다. VM 안에서는 GPU 리셋 대신 VM을 재시작합니다. 리셋은 root 권한이 필요하고 그 GPU를 쓰는 프로세스가 없어야 합니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "NVLink 상태 명령",
+              "text": "nvidia-smi nvlink -s는 링크 상태, -e는 오류 카운터를 보여 줍니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/nvlink/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 13, 14, 70, 71, 99, 119, 121: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Table 2 System Reset Capabilities"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+            "revision": "Undated page; change log through v610 Update; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "nvlink subcommand: -s/--status, -e/--errorcounters"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-NVSWITCH.json",
+      "before_content_sha256": "9467b0e08957b72c79056fae28346716d6f2c4109fc34c4415d210c3c9f416b5",
+      "after_content_sha256": "7ce0bc09dbf09a74b2fece62c07130ff708a67d61a92850f773881a08800f3cf",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM NVSwitch(치명·비치명) 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+          "cause_note": "NVSwitch 링크·포트의 치명 오류(SXID), NVSwitch 포트 다운, Fabric Manager 미실행·초기화 실패가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 DCGM_FR 코드와 스위치·링크 정보를 확인합니다. systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log에서 같은 시각의 SXID·오류 줄을 확인합니다. dmesg -T에서 같은 시각의 SXID와 GPU 쪽 XID 74·45를 찾고, nvidia-smi nvlink -s로 GPU 쪽 링크 상태를 봅니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "15 NVSwitch 치명 오류: Field Diagnostics 대상이며 아래 치명 SXID 복구를 따릅니다. 16 비치명 오류: 감시하며 계속 운용할 수 있습니다. 17 NVSwitch 포트 다운: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다. 88 NVSwitch NVLink 다운: Fabric Manager와 초기화 로그로 원인을 확인하고, 필요하면 Field Diagnostics를 실행합니다. 100 기대보다 적은 링크 활성: Fabric Manager가 실행 중인지와 시스템·dmesg·Fabric Manager 로그를 확인합니다. 109 치명 SXID: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다."
+            },
+            {
+              "title": "복구",
+              "text": "bare metal에서 치명 SXID가 GPU 쪽 access 포트에서 났으면 그 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 작업 배출과 유지보수 승인 뒤 노드를 재부팅하거나 전원 사이클합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "systemctl status nvidia-fabricmanager가 active이고 Fabric Manager 로그에 새 오류가 없는지, nvidia-smi nvlink -s에서 모든 링크가 Active인지 확인합니다. dcgmi diag -r 2로 점검하고 필요하면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "재부팅 뒤에도 같은 스위치·포트에서 반복되면 nvidia-bug-report.sh 결과, Fabric Manager 로그, DCGM 진단 로그, 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM NVSwitch 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "15 NVSwitch 치명 오류(Field Diagnostics), 16 비치명 오류(감시, 계속 운용 가능), 17 NVSwitch 포트 다운(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행), 88 NVSwitch NVLink 다운(Fabric Manager·초기화 로그 확인, 필요하면 Field Diagnostics), 100 기대보다 적은 링크 활성(Fabric Manager 실행 확인), 109 치명 SXID(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "Fabric Manager 가이드 (bare metal)",
+              "text": "비치명 SXID는 정보성이며 Fabric Manager가 작업을 중단하지 않습니다. 치명 SXID가 access 포트에서 나면 그 GPU의 작업이 중단되고 해당 GPU와 같은 작업의 GPU를 리셋하며, trunk 포트에서 나면 Fabric Manager가 모든 작업을 중단하므로 Fabric Manager를 멈춘 상태에서 모든 GPU·NVSwitch를 리셋합니다.",
+              "source_indices": [
+                4
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/nvswitch/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 15, 16, 17, 88, 100, 109: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html",
+            "revision": "Document History v2.6 (Sep 21, 2026); mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Bare Metal Mode: Non-Fatal and Fatal SXid Errors; Managing the Fabric Manager Service"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-PCIE.json",
+      "before_content_sha256": "a4960bbb8b34a7bc79866fcdf2673d371725ecce101666ecf5e9d63fc3a1577d",
+      "after_content_sha256": "49d53dc317e72632c8396add5dbb78953c5bfb281fba4a01e6c5410e63b797e0",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM PCIe 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다. 주로 PCIe 재전송(replay) 비율 초과를 뜻합니다.",
+          "cause_note": "GPU와 호스트 사이 PCIe 경로(슬롯·라이저·케이블·PCIe 스위치)의 신호 품질 저하나 장치 불량이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드, 메시지를 확인합니다. nvidia-smi -q -i <번호>의 PCI 항목에서 Link Gen·Width의 Current·Max와 Replays Since Reset 값을 확인합니다. DCGM 호스트 엔진이 있으면 dcgmi health -g <그룹 ID> -c로 현재 건강 점검 결과를 다시 봅니다(그룹 ID는 dcgmi group -l로 확인). dmesg -T에서 같은 시각의 PCIe AER 메시지와 XID 79·32를 찾습니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "3 PCIe replay 비율 초과: PCIe 카드를 다시 연결하고 시스템 쪽 PCIe 진단으로 GPU 보드 밖 경로를 확인한 뒤, 보드 문제면 Field Diagnostics를 실행합니다. 98 호스트 쪽 PCIe replay 위반: dmesg의 상세 메시지를 확인합니다. 104·107 replay 위반·임계 초과: Field Diagnostics 대상입니다. 45·46 링크 세대·폭 저하: DCGM·시스템 설정을 확인합니다."
+            },
+            {
+              "title": "복구",
+              "text": "replay 증가가 계속되면 작업을 배출하고 유지보수 승인 뒤 GPU 재장착·연결 점검을 진행합니다. 같은 GPU에서 XID 79가 함께 나면 XID 79 지침(호스트 재시작)을 따릅니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "nvidia-smi -q의 Link Gen·Width가 Max와 같은지, Replays Since Reset이 더 늘지 않는지 확인합니다. dcgmi diag -r 2로 점검하고 PCIe 문제가 계속 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "재장착 뒤에도 같은 GPU에서 계속되면 nvidia-bug-report.sh 결과, DCGM 진단 로그, PCIe AER 로그, 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM PCIe 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "3 PCIe replay 비율 초과(PCIe 카드 재연결, 시스템 쪽 PCIe 진단, 보드 문제면 Field Diagnostics), 45·46 링크 세대·폭 저하(설정 확인), 98 호스트 쪽 replay 위반(dmesg 확인), 104·107 replay 위반·임계 초과(Field Diagnostics).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "nvidia-smi PCI 항목",
+              "text": "nvidia-smi -q의 PCI 항목은 Link Gen·Width의 Current·Max, Replays Since Reset, Replay Number Rollovers를 보여 줍니다.",
+              "source_indices": [
+                4
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/pcie/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 3, 45, 46, 98, 104, 107: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+            "revision": "Undated page; change log through v610 Update; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "-q PCI section: Link Gen/Width, Replays Since Reset"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-POWER.json",
+      "before_content_sha256": "d123710145980ab9afc64842fac7843ff70339b2b4afe5297cb89a367e7bae3d",
+      "after_content_sha256": "7f91744c661189d72c681e8e9626d8c5697c24128e64dcedca1bb88be49d4e35",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM 전력(power) 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다.",
+          "cause_note": "전력 한도 도달에 따른 클록 제한, 전원 장치(PSU)의 외부 전력 브레이크 신호, 전력 값을 읽지 못하는 상태가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d POWER,PERFORMANCE로 전력 사용량, 현재·기본 전력 한도, Clocks Event Reasons의 SW Power Cap·HW Power Brake 활성 여부를 확인합니다. 같은 노드의 여러 GPU에서 HW Power Brake가 함께 켜지면 노드 전원(PSU·PDU) 문제로 보고 BMC 이벤트 로그의 전원 항목을 확인합니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "12 전력 때문의 클록 제한: 전력 상태를 감시하며 GPU는 계속 작업할 수 있습니다. 11 전력 값을 읽을 수 없음: DCGM·시스템 로그를 확인하고 GPU 리셋, DCGM 재시작, 진단 재실행 순서로 진행합니다. 적용 전력 한도가 기본 한도보다 낮게 설정돼 있으면 의도한 설정인지 확인합니다."
+            },
+            {
+              "title": "복구",
+              "text": "SW 전력 한도 제한만 있으면 즉시 조치는 필요 없습니다. HW Power Brake가 반복되거나 전력 값을 읽을 수 없으면 작업을 배출하고 유지보수 승인 뒤 전원 연결·PSU 상태를 점검합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "부하 상태에서 Clocks Event Reasons의 HW Power Brake가 Not Active이고 전력 값이 정상적으로 읽히는지 확인합니다. dcgmi diag -r 2로 점검합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "전원 점검 뒤에도 반복되면 nvidia-bug-report.sh 결과, BMC 전원 이벤트, 전력·클록 기록, DCGM 진단 로그를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM 전력 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "12 전력 때문의 클록 제한(전력 상태 감시, 계속 작업 가능), 11 전력 값 읽기 불가(로그 확인·GPU 리셋·DCGM 재시작·진단 재실행).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "클록 제한 사유 비트",
+              "text": "0x4 SW 전력 한도, 0x8 HW 감속(코어 클록 2배 이상 감속), 0x80 HW 전력 브레이크(시스템 전원 장치 등 외부 브레이크 신호)입니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "nvidia-smi 전력 항목",
+              "text": "nvidia-smi -q의 전력 항목은 평균·순간 전력 사용량과 현재·요청·기본 전력 한도를 보여 줍니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/power/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 11, 12: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvml-api/latest/api/group__nvmlClocksEventReasons.html",
+            "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "nvmlClocksEventReasons"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+            "revision": "Undated page; change log through v610 Update; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "-q -d POWER,PERFORMANCE: power limits and Clocks Event Reasons"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-THERMAL.json",
+      "before_content_sha256": "74903bf6a3bece7b90b7b43f1df13ad1bc84ff605f58e7590c56fbbde7948017",
+      "after_content_sha256": "6fccbda1dbf5f331748ef742c32ff621ac100de7b344bd688382d6269da66524",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet가 DCGM 열(thermal) 건강 점검(health watch)에서 FAIL을 받아 Unhealthy로 보고한 것입니다. 보고 사유의 'N incident(s) across M device(s)'는 DCGM 사건 수와 관련 장치 수이며, 원문 extra_info.dcgm_incidents에 장치(UUID), DCGM_FR 오류 코드(code), 메시지가 있습니다. 주로 열 때문에 GPU 클록이 제한된 사건입니다.",
+          "cause_note": "냉각 이상(흡기 온도 상승, 팬·공기 흐름 막힘, 방열 재료 열화)이나 높은 부하에 따른 열 제한이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d TEMPERATURE,PERFORMANCE로 GPU·메모리 현재 온도, Slowdown·Shutdown 온도, Clocks Event Reasons의 HW Thermal Slowdown·SW Thermal Slowdown 활성 여부를 확인합니다. 같은 노드의 여러 GPU가 함께 뜨거우면 노드·랙 냉각 문제로 보고 시설 담당자에게 흡기 온도와 공기 흐름 확인을 요청합니다."
+            },
+            {
+              "title": "판단: DCGM 코드별 조치",
+              "text": "10 열 때문의 클록 제한, 40·41 열 위반 누적: 이 장비의 냉각(외부 냉각, 방열 재료, 팬 등)이 정상인지 확인합니다. 42 사용자 지정 최고 온도 초과: 설정한 최고 온도 값이 맞는지 먼저 보고, 맞다면 GPU와 노드의 냉각을 점검합니다. 보고서의 클록 제한 사유 값에 0x40(HW 열 제한)이나 0x20(SW 열 제한) 비트가 있는지도 확인합니다."
+            },
+            {
+              "title": "복구",
+              "text": "열 제한은 작업을 바로 멈추지는 않지만 클록을 낮춰 성능을 떨어뜨리므로, 냉각을 복구하기 전에는 같은 노드에 고부하 작업을 늘리지 않습니다. 온도가 Shutdown 온도에 가까우면 즉시 부하를 줄입니다. 팬·방열 부품 교체가 필요하면 작업을 배출하고 유지보수 승인 뒤 진행합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "부하가 있는 상태에서 온도가 Slowdown 온도 아래로 유지되고 Clocks Event Reasons의 열 관련 항목이 Not Active인지 확인합니다. dcgmi diag -r 2로 점검합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "냉각을 확인한 뒤에도 같은 GPU만 계속 뜨거우면 GPU 방열 결함일 수 있으므로 nvidia-bug-report.sh 결과, 온도·클록 기록, DCGM 진단 로그를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 DCGM 열 건강 점검 결과가 FAIL이면 Unhealthy, WARN이면 Degraded로 보고하고, DCGM 조회 자체가 실패해도 Unhealthy로 보고할 수 있습니다. 사건별 장치·DCGM_FR 코드·메시지는 extra_info.dcgm_incidents에 담깁니다.",
+              "source_indices": [
+                0,
+                1
+              ]
+            },
+            {
+              "title": "DCGM 코드와 권고",
+              "text": "10 열 때문의 클록 제한, 40·41 열 위반(외부 냉각·방열 재료·팬 등 냉각 점검), 42 사용자 지정 최고 온도 초과(설정 값 확인 후 냉각 점검).",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "DCGM 건강 점검",
+              "text": "DCGM 백그라운드 건강 점검은 작업 중에도 안전하게 실행되는 수동 점검입니다. 경고는 작업을 마칠 수 있으나 나중에 조사할 대상이고, 오류는 작업이 손상됐을 가능성이 높아 보통 작업을 끝내고 GPU를 분석합니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "클록 제한 사유 비트",
+              "text": "HW Thermal Slowdown·HW Slowdown·HW Power Brake Slowdown은 코어 클록을 2배 이상 낮추는 제한입니다. DCGM 비트 값은 0x1 유휴, 0x2 클록 설정, 0x4 SW 전력 한도, 0x8 HW 감속, 0x10 동기 부스트, 0x20 SW 열 제한, 0x40 HW 열 제한, 0x80 HW 전력 브레이크, 0x100 디스플레이 클록입니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "nvidia-smi 온도 항목",
+              "text": "nvidia-smi -q의 온도 항목은 GPU 현재 온도와 Slowdown·Shutdown·최대 동작 온도, 메모리 현재 온도를 보여 주고, Clocks Event Reasons는 각 제한의 활성 여부를 보여 줍니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/thermal/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): DCGM health result to Healthy/Degraded/Unhealthy",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/dcgm/common/utils.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "EnrichedIncident, FormatIncidents (extra_info.dcgm_incidents)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://github.com/NVIDIA/DCGM/blob/9fae2867e6e5264fa0fca22a07dc898d591baa21/dcgmlib/dcgm_errors.h",
+            "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
+            "section": "DCGM_FR codes 10, 40, 41, 42: messages and next steps",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/feature-overview.html",
+            "revision": "Last updated 2026-06-17; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Background Health Checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvml-api/latest/api/group__nvmlClocksEventReasons.html",
+            "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "nvmlClocksEventReasons"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+            "revision": "Undated page; change log through v610 Update; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "-q -d TEMPERATURE,PERFORMANCE: temperatures and Clocks Event Reasons"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-LIBRARY.json",
+      "before_content_sha256": "de11f3443ee6b793b40641692a9e8cd691ffef6f380714f016fe9a863335c2ab",
+      "after_content_sha256": "2ea4e262568fbcae8c12c35e1e8d0fb081a47382a339fcd7056d510758515ec9",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet library 점검이 GPU가 있는 노드에서 NVIDIA 드라이버 사용자 공간 라이브러리(libnvidia-ml.so, libcuda.so)를 찾지 못해 Unhealthy로 보고한 것입니다. 이 라이브러리가 없으면 nvidia-smi, DCGM, CUDA 작업이 GPU를 쓰지 못합니다.",
+          "cause_note": "드라이버 설치·업그레이드 실패나 파일 누락, GPU Operator 드라이버 컨테이너 문제, 라이브러리 경로 설정 문제가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "nvidia-smi가 실행되는지 확인합니다. ldconfig -p | grep -E 'libnvidia-ml|libcuda'로 라이브러리가 등록돼 있는지 확인합니다. 드라이버 업그레이드가 진행 중이었는지 변경 기록을 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "GPU Operator로 드라이버를 설치한 노드는 kubectl logs -n gpu-operator <nvidia-driver-daemonset 파드> -c nvidia-driver-ctr로 드라이버 컨테이너 로그를 확인합니다. 파드가 Init:Error이면 -c k8s-driver-manager 로그를 확인합니다. 호스트에 직접 설치한 드라이버는 패키지 상태와 버전 일치를 확인합니다."
+            },
+            {
+              "title": "복구",
+              "text": "작업을 배출한 뒤 드라이버를 다시 설치하거나 GPU Operator 드라이버 파드를 다시 시작합니다. 드라이버 변경은 유지보수 승인 뒤 수행합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "nvidia-smi가 모든 GPU를 보여 주고 kubectl get pods -n gpu-operator의 모든 파드가 Running 또는 Completed인지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "재설치 뒤에도 반복되면 GPU Operator must-gather 결과나 설치 로그, nvidia-bug-report.sh 결과를 갖춰 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 GPU가 감지된 노드에서 libnvidia-ml.so와 libcuda.so를 찾지 못하면 Unhealthy로 보고합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "GPU Operator 문제 해결",
+              "text": "드라이버 파드 문제는 nvidia-driver-ctr 컨테이너 로그로, Init:Error는 k8s-driver-manager 로그로 확인합니다. 변경 뒤에는 gpu-operator 네임스페이스의 모든 파드가 Running 또는 Completed여야 합니다.",
+              "source_indices": [
+                1
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/library/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): libnvidia-ml.so and libcuda.so lookup",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/troubleshooting.html",
+            "revision": "Undated page (GPU Operator latest); mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Driver daemonset logs; validator; device plugin"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-MEMORY.json",
+      "before_content_sha256": "1e845d4c561a1810514867938314822573929c9ccef79d130a20dc77a2ba0dc2",
+      "after_content_sha256": "fb320a8535cfc442f3b3931872f23aeb63da1c230f10c36224d6d929e33e3161",
+      "change": "guidance+plan: optional D63,D64",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet memory 점검이 가상 메모리나 BPF JIT 버퍼 정보를 읽지 못해 Unhealthy로 보고한 것입니다. 메모리 하드웨어 오류 보고가 아니라 모니터링 에이전트의 수집 오류이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다.",
+          "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. free -h와 cat /proc/meminfo로 노드 메모리 상태를 직접 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "노드 메모리가 정상이면 하드웨어 조치는 필요 없습니다. Fleet 에이전트 파드 로그에서 같은 시각의 오류 메시지를 확인하고, 오류가 계속되면 에이전트 파드를 다시 시작합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "Fleet memory 컴포넌트 보고가 Healthy로 돌아왔는지 확인합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 가상 메모리 정보나 BPF JIT 버퍼 크기를 읽지 못하면 Unhealthy로 보고합니다. 시험용 메모리 장애 주입도 같은 경로로 보고됩니다.",
+              "source_indices": [
+                0
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/memory/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): virtual memory and BPF JIT errors; injected memory fault",
+            "checked_at": "2026-10-22"
+          }
+        ],
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_component",
+              "reported_normalized_health",
+              "reported_producer_contract"
+            ],
+            "purpose": "같은 노드·기간의 Fleet memory 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          }
+        ],
+        "decision_policy": {
+          "goal": {
+            "id": "identify_error_report",
+            "question": "사건 대상·기간에서 Fleet memory Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+            "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+          },
+          "applies_when": {
+            "reported_component": "memory",
+            "reported_normalized_health": "unhealthy",
+            "reported_producer_contract": "fleet-component-log-v1"
+          },
+          "completion_criteria": [
+            {
+              "id": "reported_error",
+              "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "scoped_source",
+              "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "bounded_conclusion",
+              "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+              "method": "llm",
+              "required": true
+            }
+          ],
+          "blocking_conditions": [
+            "scope_unverified",
+            "identity_conflict",
+            "required_query_incomplete",
+            "conflicting_reports"
+          ],
+          "non_blocking_unknowns": [
+            "causal_confirmation_evidence",
+            "current_health",
+            "physical_or_synthetic_origin"
+          ],
+          "followup_links": [
+            {
+              "query_id": "D09",
+              "criterion_ids": [
+                "reported_error",
+                "scoped_source"
+              ],
+              "required": true,
+              "expected_effect": "같은 노드·기간의 Fleet memory 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-NCCL.json",
+      "before_content_sha256": "f26b36904b4933d186922455adbd63bec1aa2f6279521bff153da08cbb87a3d2",
+      "after_content_sha256": "21ab486926a90a6821aacad36bcaca54660def21479ae4f1b29cac68a9b2221c",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet nccl 점검이 커널 로그에서 libnccl.so 안의 segfault(프로세스 비정상 종료)를 찾아 Unhealthy로 보고한 것입니다. GPU 간 통신 라이브러리(NCCL)를 쓰던 프로세스가 죽었다는 뜻이며 하드웨어 고장 보고는 아닙니다.",
+          "cause_note": "애플리케이션·NCCL 버전 문제나 버그, 네트워크(IB/RoCE)·GPU 오류에 따른 통신 실패가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "dmesg -T의 segfault 줄에서 프로세스 이름과 PID, 시각을 확인해 어느 작업인지 찾습니다. 같은 시각 GPU XID나 IB 포트 오류가 있으면 그쪽을 먼저 조사합니다."
+            },
+            {
+              "title": "판단",
+              "text": "같은 작업이 여러 노드에서 함께 실패하면 애플리케이션·NCCL 쪽, 이 노드에서만 반복되면 노드(네트워크·GPU) 쪽으로 점검 방향을 잡습니다. 작업 소유자에게 NCCL_DEBUG=INFO와 NCCL_DEBUG_FILE=/tmp/nccl_%h_%p.log로 다시 실행해 프로세스별 로그를 받도록 요청합니다. 초기화 단계에서 멈추면 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET으로 범위를 좁힙니다."
+            },
+            {
+              "title": "노드 점검",
+              "text": "GPUDirect RDMA를 쓰면 lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인합니다. nvidia-smi topo -p2p n으로 GPU 쌍의 NVLink P2P가 모두 OK인지 확인합니다. 노드 하드웨어 조치는 같은 노드에서 반복되고 다른 오류가 함께 있을 때만 검토합니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "같은 노드에서 반복되고 NCCL 로그가 NVIDIA 소프트웨어 문제를 가리키면 NCCL 로그, nvidia-bug-report.sh 결과, 재현 방법을 갖춰 NVIDIA 또는 공급사에 보고합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 커널 로그의 'segfault at ... in libnccl.so' 패턴을 NCCL 통신 오류로 보고합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "NCCL 로그",
+              "text": "문제 분석에는 NCCL_DEBUG=INFO를 쓰고, 초기화 멈춤은 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET, 네트워크 문제는 NET으로 범위를 좁힙니다. NCCL_DEBUG_FILE로 프로세스별 로그 파일을 남깁니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "NCCL GPU 점검",
+              "text": "GPUDirect RDMA에는 nvidia-peermem 모듈이 필요하고, nvidia-smi topo -p2p n에서 사용하는 GPU 쌍이 모두 OK여야 합니다.",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "GPU Node Triage 애플리케이션 디버깅",
+              "text": "모든 노드에서 나면 최근 애플리케이션·시스템 변경을, 일부 노드에서만 나면 노드 간 시스템 소프트웨어 차이와 로그를 비교합니다.",
+              "source_indices": [
+                3
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/nccl/kmsg_matcher.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "segfault in libnccl.so pattern",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/logging.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS, NCCL_DEBUG_FILE"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/gpu_troubleshooting.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "GPU Direct (nvidia-peermem), ACS and IOMMU, P2P checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Figure 3 Debug Application; Debugging Applications"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-NETWORK-ETHERNET.json",
+      "before_content_sha256": "a7da6f0fd503e9d41c6c97cb8490a0fdabb46a80648b4708faeb5409ff2be443",
+      "after_content_sha256": "ed930ee7436e0e2316e7eb29c584ecf9436c9958a6753dce21ce7a867d828618",
+      "change": "guidance+plan: optional D65,D66,D67,D68,D69",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet network-ethernet 점검이 노드의 모든 물리 이더넷 링크가 내려갔다고 Unhealthy로 보고한 것입니다. 보고 사유 괄호 안에 다운된 인터페이스 목록이 있습니다.",
+          "cause_note": "케이블·스위치 포트 문제, 네트워크 어댑터·드라이버 문제, 인터페이스 설정 변경이 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "노드에 원격 접속이 안 되면 BMC 콘솔로 접근합니다. ip -br link로 각 인터페이스 상태를, cat /sys/class/net/<인터페이스>/operstate로 운영 상태(UP·DOWN)를 확인합니다. 모든 링크가 다운이면 kubelet과 로그 전송도 끊기므로 이 노드의 작업 상태를 쿠버네티스 쪽에서 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "operstate가 DOWN이면 케이블이 빠졌거나 인터페이스가 관리자 설정으로 내려간 상태입니다. 같은 스위치에 연결된 다른 노드도 함께 내려갔으면 스위치·상위 네트워크 문제로, 이 노드만이면 노드의 케이블·어댑터 문제로 봅니다."
+            },
+            {
+              "title": "복구",
+              "text": "케이블·스위치 포트를 점검하고 인터페이스를 다시 올립니다(ip link set <인터페이스> up). 어댑터·드라이버 문제가 의심되면 유지보수 승인 뒤 노드를 재부팅합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "ip -br link에서 링크가 UP인지, 노드가 쿠버네티스에서 Ready로 돌아왔는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "같은 어댑터에서 반복되면 dmesg의 네트워크 드라이버 메시지와 수행한 조치를 갖춰 시스템 공급사에 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 물리 이더넷 인터페이스가 하나도 링크 업이 아닐 때 Unhealthy로 보고합니다. 일부 인터페이스만 다운이면 Healthy로 두고 사유에 다운된 인터페이스를 적습니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "operstate",
+              "text": "operstate는 인터페이스가 실제로 데이터를 보낼 수 있는지(RFC 2863 운영 상태)를 뜻합니다. DOWN은 케이블 분리나 관리자 다운처럼 물리 계층에서 전송할 수 없는 상태입니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "GPU Node Triage 흐름도",
+              "text": "GPU가 관련되지 않은 시스템 문제는 시스템 공급사 티켓으로 처리합니다.",
+              "source_indices": [
+                2
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/network/ethernet/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "computeHealth(): all links down, partial stats",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.kernel.org/networking/operstates.html",
+            "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+            "section": "Operational states (operstate)",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Figure 1 GPU Triage Flowchart: System Issue branch"
+          }
+        ],
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_component",
+              "reported_normalized_health",
+              "reported_producer_contract"
+            ],
+            "purpose": "같은 노드·기간의 Fleet network-ethernet 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          }
+        ],
+        "decision_policy": {
+          "goal": {
+            "id": "identify_error_report",
+            "question": "사건 대상·기간에서 Fleet network-ethernet Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+            "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+          },
+          "applies_when": {
+            "reported_component": "network-ethernet",
+            "reported_normalized_health": "unhealthy",
+            "reported_producer_contract": "fleet-component-log-v1"
+          },
+          "completion_criteria": [
+            {
+              "id": "reported_error",
+              "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "scoped_source",
+              "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "bounded_conclusion",
+              "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+              "method": "llm",
+              "required": true
+            }
+          ],
+          "blocking_conditions": [
+            "scope_unverified",
+            "identity_conflict",
+            "required_query_incomplete",
+            "conflicting_reports"
+          ],
+          "non_blocking_unknowns": [
+            "causal_confirmation_evidence",
+            "current_health",
+            "physical_or_synthetic_origin"
+          ],
+          "followup_links": [
+            {
+              "query_id": "D09",
+              "criterion_ids": [
+                "reported_error",
+                "scoped_source"
+              ],
+              "required": true,
+              "expected_effect": "같은 노드·기간의 Fleet network-ethernet 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-OS.json",
+      "before_content_sha256": "8bfeaa8cbb6ee61487697bdb16884b1d49834b321f365089a990e586bb036bd7",
+      "after_content_sha256": "0d0e459b3920e4867a2a0fd5a94347d344180c7e752f8013c3cc8e5255edff94",
+      "change": "guidance+plan: optional D70,D71,D72",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet os 점검이 좀비 프로세스 수, 실행 중 PID 비율, 할당된 파일 핸들 비율이 Unhealthy 임계를 넘었거나 OS 정보를 읽지 못했다고 보고한 것입니다. 기본 Unhealthy 임계는 PID·파일 핸들 모두 95%입니다.",
+          "cause_note": "자식 프로세스를 회수하지 않는 프로세스(좀비 누적), 프로세스·스레드 폭증, 파일 핸들 누수가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/'로 좀비 프로세스와 그 부모(PPID)를 찾습니다. cat /proc/sys/kernel/pid_max와 ps -e --no-headers | wc -l로 PID 사용량을, cat /proc/sys/fs/file-nr로 파일 핸들 사용량(할당 수, 미사용 수, 최대값)을 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "좀비는 부모 프로세스가 회수하지 않아 남으므로 부모 프로세스(또는 그 컨테이너)가 원인입니다. PID·파일 핸들이 고갈되면 새 프로세스 생성과 파일 열기가 실패해 컨테이너 생성과 작업이 실패하므로 kubectl cordon <노드>로 새 배치를 막습니다. 파일 핸들 한도에 닿으면 커널 로그에 'VFS: file-max limit ... reached'가 남습니다."
+            },
+            {
+              "title": "복구",
+              "text": "원인 프로세스나 컨테이너를 재시작합니다. 원인을 정리할 수 없으면 작업을 배출하고 유지보수 승인 뒤 노드를 재부팅합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "좀비 수와 PID·파일 핸들 사용량이 임계 아래로 내려갔는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 실행 중 PID와 할당 파일 핸들이 기본 80%를 넘으면 Degraded, 95%를 넘으면 Unhealthy로 보고하고, 좀비 프로세스 수도 설정 임계로 판정합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "file-nr",
+              "text": "file-nr의 세 값은 할당된 파일 핸들 수, 할당됐지만 쓰지 않는 수(2.6 이후 항상 0), 최대 파일 핸들 수입니다. 한도를 넘는 할당은 'VFS: file-max limit <number> reached'로 기록됩니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "pid_max",
+              "text": "pid_max는 PID 할당이 되돌아가는 값이며 그 이상의 PID는 할당되지 않습니다.",
+              "source_indices": [
+                2
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/os/component.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "Check(): zombie, running PID and file handle thresholds",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.kernel.org/admin-guide/sysctl/fs.html",
+            "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+            "section": "file-max and file-nr",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.kernel.org/admin-guide/sysctl/kernel.html",
+            "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+            "section": "pid_max",
+            "checked_at": "2026-10-22"
+          }
+        ],
+        "observation_plan": [
+          {
+            "query_id": "D09",
+            "priority": 1,
+            "required": true,
+            "fact_names": [
+              "reported_component",
+              "reported_normalized_health",
+              "reported_producer_contract"
+            ],
+            "purpose": "같은 노드·기간의 Fleet os 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다.",
+            "binding": "execution_profile",
+            "time_range": "incident",
+            "freshness": "query_contract"
+          }
+        ],
+        "decision_policy": {
+          "goal": {
+            "id": "identify_error_report",
+            "question": "사건 대상·기간에서 Fleet os Unhealthy 보고를 식별하고 근거에 맞는 판단 범위를 설명했는가?",
+            "conclusion_scope": "오류 보고 식별·조건부 대응 안내. 원인·현재 상태·복구·조치 수행은 각각의 관측 근거로 구분."
+          },
+          "applies_when": {
+            "reported_component": "os",
+            "reported_normalized_health": "unhealthy",
+            "reported_producer_contract": "fleet-component-log-v1"
+          },
+          "completion_criteria": [
+            {
+              "id": "reported_error",
+              "question": "등록된 생산자의 해당 컴포넌트 Unhealthy 보고가 확인되는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "scoped_source",
+              "question": "사건 대상·기간에 연결된 원본 근거를 확보했는가?",
+              "method": "code",
+              "required": true
+            },
+            {
+              "id": "bounded_conclusion",
+              "question": "보고 사유·대상·시각을 근거에 맞게 설명하고 원인·현재 상태·시험 여부는 관측 범위 안에서 판단했는가?",
+              "method": "llm",
+              "required": true
+            }
+          ],
+          "blocking_conditions": [
+            "scope_unverified",
+            "identity_conflict",
+            "required_query_incomplete",
+            "conflicting_reports"
+          ],
+          "non_blocking_unknowns": [
+            "causal_confirmation_evidence",
+            "current_health",
+            "physical_or_synthetic_origin"
+          ],
+          "followup_links": [
+            {
+              "query_id": "D09",
+              "criterion_ids": [
+                "reported_error",
+                "scoped_source"
+              ],
+              "required": true,
+              "expected_effect": "같은 노드·기간의 Fleet os 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-PEERMEM.json",
+      "before_content_sha256": "01f452103ce76b7e146c77ea810e7b810228f43acde4126e96d2d2f2eb7ce004",
+      "after_content_sha256": "c0e30bdd942b5628c3e72e29143506f612100419960a1a2b3a35b04caa229c0a",
+      "change": "guidance",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet peermem 점검이 커널 로그에서 nvidia-peermem의 'ERROR detected invalid context' 메시지를 찾아 Unhealthy로 보고한 것입니다. GPU 메모리를 네트워크 어댑터가 직접 읽고 쓰는 GPUDirect RDMA 경로에서 오류가 있었을 수 있다는 뜻입니다.",
+          "cause_note": "GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "dmesg -T에서 같은 시각 nvidia-peermem 메시지와 그 전후 프로세스 종료·mlx5 메시지를 확인합니다. 같은 시각 NCCL을 쓰던 작업이 실패했는지 작업 소유자에게 확인합니다."
+            },
+            {
+              "title": "판단",
+              "text": "lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
+            },
+            {
+              "title": "복구",
+              "text": "작업이 반복해서 실패하면 작업을 배출한 뒤 nvidia-peermem 모듈과 네트워크 드라이버 구성을 점검하고, 필요하면 유지보수 승인 뒤 노드를 재부팅합니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "같은 노드에서 반복되면 dmesg의 peermem·mlx5 메시지, NCCL 로그, nvidia-bug-report.sh 결과를 갖춰 NVIDIA 또는 공급사에 보고합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 커널 로그의 'ERROR detected invalid context, skipping further processing' 패턴을 peermem 오류로 보고합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "NCCL GPU Direct 점검",
+              "text": "GPUDirect RDMA에는 nvidia-peermem 모듈이 필요하며 lsmod로 확인하고 부팅마다 modprobe로 올립니다. 최근 커널과 open 드라이버에서는 DMA-BUF가 자동으로 쓰일 수 있습니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "NCCL 로그",
+              "text": "NCCL_DEBUG=INFO 로그에서 사용한 전송 경로(예: DMA-BUF 사용 가능 여부, 네트워크 종류)를 확인합니다.",
+              "source_indices": [
+                2
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/kmsg_matcher.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "invalid context pattern",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/gpu_troubleshooting.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "GPU Direct (nvidia-peermem, DMA-BUF), ACS and IOMMU"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/logging.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS"
+          }
+        ]
+      }
+    }
+  ]
+}

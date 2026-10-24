@@ -138,6 +138,18 @@
         "revision": "Undated page; change log through v610 Update; mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "-q -d POWER,PERFORMANCE: power limits and Clocks Event Reasons"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "section": "nvidia-bug-report.sh: root, up to one hour, --safe-mode --extra-system-data",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -152,6 +164,10 @@
         {
           "title": "즉시 확인",
           "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d POWER,PERFORMANCE로 전력 사용량, 현재·기본 전력 한도, Clocks Event Reasons의 SW Power Cap·HW Power Brake 활성 여부를 확인합니다. 같은 노드의 여러 GPU에서 HW Power Brake가 함께 켜지면 노드 전원(PSU·PDU) 문제로 보고 BMC 이벤트 로그의 전원 항목을 확인합니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "리셋·재부팅하면 휘발성 오류 카운터와 커널 로그가 사라지므로 먼저 보관합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. journalctl -k(또는 dmesg -T)에서 사건 전후 줄을 저장하고, 오류 로그 원문의 extra_info.dcgm_incidents와 dcgmi health -g <그룹 ID> -c 결과도 함께 저장합니다. nvidia-smi -q -d POWER,PERFORMANCE 출력(전력 한도와 클록 제한 사유)과 BMC 시스템 이벤트 로그(ipmitool sel elist)의 같은 시각 전원 공급 장치 이벤트를 남깁니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
@@ -205,6 +221,15 @@
           "text": "nvidia-smi -q의 전력 항목은 평균·순간 전력 사용량과 현재·요청·기본 전력 한도를 보여 줍니다.",
           "source_indices": [
             5
+          ]
+        },
+        {
+          "title": "리셋 전 자료 보존",
+          "text": "nvidia-smi의 휘발성 ECC 오류 수는 드라이버를 마지막으로 올린 뒤의 값이고, PCIe Replays도 리셋 뒤부터 다시 셉니다. nvidia-bug-report.sh는 root로 실행하며 최대 1시간이 걸릴 수 있고 멈추면 --safe-mode --extra-system-data로 실행합니다. GPU Node Triage는 공급사 전달 자료로 nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그를 요구합니다.",
+          "source_indices": [
+            5,
+            6,
+            7
           ]
         }
       ]

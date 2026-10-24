@@ -720,3 +720,66 @@ def test_component_alert_metrics_are_split_at_the_first_unhealthy_report():
     assert not component_metrics(
         [{"knowledge_key": "RB-XID-79", "content": {"observation_plan": plan}}]
     )
+    # Selection keeps the general Runbook only when nothing dedicated applies.
+    assert component_metrics(
+        [
+            {
+                "knowledge_key": "RB-GENERAL-GPU-NODE",
+                "general_investigation": True,
+                "content": {"observation_plan": plan},
+            }
+        ]
+    )
+
+
+def test_host_rows_are_named_by_interface_and_load_window():
+    from rcca_agent.incident_dossier import component_view
+
+    t0 = 1792742400  # 2026-10-23T08:00:00Z
+
+    def evidence(query, labels, points, unit, target_labels=None):
+        quality = {"complete": True, "original_samples": True, "unit": unit}
+        if target_labels:
+            quality.update(
+                binding_id="fleet_intelligence." + query, target_labels=target_labels
+            )
+        return {
+            "id": "ev-" + query,
+            "query_id": query,
+            "cluster_id": "cpc-1",
+            "tool_status": "ok",
+            "quality": quality,
+            "snapshot": {"data": {"result": [{"metric": labels, "values": points}]}},
+        }
+
+    data = {
+        "scope": {"clusters": [{"cluster_id": "cpc-1"}]},
+        "target": {"node": "dgx01"},
+        "time_range": {"start": "2026-10-23T08:00:00Z", "end": "2026-10-23T08:30:00Z"},
+        "incident_time": "2026-10-23T08:19:00Z",
+    }
+    eth = {"node": "dgx01", "interface": "eth0"}
+    rows = [
+        evidence("D65", eth, [[t0 + 60, "1"], [t0 + 1500, "0"]], "enum"),
+        evidence("D66", eth, [[t0 + 60, "5"], [t0 + 1500, "9"]], "packets"),
+        evidence(
+            "D19",
+            {"node": "dgx01", "load_duration": "1m0s"},
+            [[t0 + 60, "2.5"]],
+            "load",
+            {"node": "node", "window": "load_duration"},
+        ),
+        evidence("D63", {"node": "dgx01"}, [[t0 + 60, "40"]], "percent"),
+    ]
+    by_name = {m["name"]: m for m in component_view(data, rows, [], "cpu")["metrics"]}
+    assert set(by_name) == {
+        "이더넷 링크 상태 (eth0)",
+        "이더넷 수신 오류 누적값 (eth0)",
+        "CPU 평균 부하 (1분)",
+        "메모리 사용률",
+    }
+    assert by_name["이더넷 링크 상태 (eth0)"]["kind"] == "enum"
+    assert by_name["이더넷 링크 상태 (eth0)"]["interface"] == "eth0"
+    assert by_name["이더넷 수신 오류 누적값 (eth0)"]["kind"] == "counter"
+    assert by_name["CPU 평균 부하 (1분)"]["window"] == "1m0s"
+    assert by_name["메모리 사용률"]["kind"] == "gauge"

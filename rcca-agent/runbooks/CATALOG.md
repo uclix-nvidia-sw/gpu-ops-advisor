@@ -57,6 +57,7 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | XID 95 | A100에서 MIG가 꺼져 있으면 노드 즉시 재부팅, 켜져 있으면 다른 인스턴스 배출 뒤 GPU 리셋(Triage). XID 94·95의 "2차 오류" 문장을 원인 조사 방향(동반 메모리 오류 우선)으로 정정 |
 | XID 61·123 | 카탈로그상 Unused이지만 Triage 표 1이 보고와 GPU 리셋을 안내하므로 "복구 조치를 정하지 않습니다"를 CONTACT_SUPPORT·GPU 리셋 단계로 교체 |
 | 묶음 2 (60건) | GPU 사용률만 수집하던 XID 중 38건에 의미별 밀접 지표: 푸시 버퍼·드라이버·비디오 엔진 25건은 GPU 메모리 사용량, 메모리 인터페이스 26·57·58은 ECC·메모리 온도·행 재매핑, 마이크로컨트롤러·펌웨어 33·59·61·122~124는 온도·전력·클록 제한 사유, InfoROM 93·125는 InfoROM 유효, PCIe 18은 replay, 45는 DBE. 전력·열 계획(XID 54·162~165, DCGM 열·전력)에 열·전력 제한 누적 시간(D61·D62). 항상 치명 SXID 15건(12020·22003·22011·23001~23012)의 복구를 Fabric Manager 가이드대로 bare metal access/trunk 포트와 가상화 절차로 나눔([검토 기록](runbook-batch2-review-20261024.json)). 디스플레이·미사용·예약·시험·가상화 33건은 데이터센터에서 드물거나 정보성이라 사용률만 유지 |
+| 묶음 3 (15건) | DCGM 7건(메모리·NVLink·NVSwitch·PCIe·전력·열·InfoROM)과 라이브러리·이더넷·peermem·NCCL에 리셋·재부팅 전 진단 자료 보존 단계, NCCL에 복구 단계. CPU·메모리·OS를 즉시 확인→보존→판단→복구→복구 확인→공급사 전달로 넓히고 커널 문서(lockup watchdog·sysctl kernel·RAS·proc)와 Fleet 커널 로그 이벤트(soft lockup·hung task·OOM·VFS file-max·kernel panic)를 출처로 더함. OS의 PID 비율 분모(Fleet 기준 900,000)·파일 핸들 분모·좀비 임계(파일 핸들 한도의 20%·80%)를 Fleet 원본대로 정정. 지표: CPU D18·D19, 메모리 D63·D64, 이더넷 D65~D69, OS D70~D72([근거](../../docs/evidence/d-observation-expansion-20261025.md)). 일반 조사 Runbook에 운영자 지침과 노드 요약 지표([검토 기록](runbook-batch3-review-20261025.json)) |
 | 수집 계획 125건 | 장애와 직접 관련된 지표를 선택 단계로 추가: 메모리 XID 12건·DCGM 메모리는 행 재매핑(D50~D54), NVLink XID 12건·SXID 93건·DCGM NVLink/NVSwitch는 NVLink 오류 누적값(D55~D57), DCGM InfoROM은 체크섬 유효(D58), disk는 마운트별 사용·여유(D59·D60). XID 13·31은 카탈로그대로 DCGM EUD → Field Diagnostics, XID 45는 DBE 동반 확인, XID 74는 적용 범위와 NVLink 오류 카운터 비교, 메모리 XID는 행 재매핑 값으로 리셋·RMA 판단을 연결([검토 기록](metric-coverage-review-20261024.json)). 새 조회가 든 프로필을 배포한 뒤에 발행한다 |
 | XID 48 | 메시지의 `framebuffer` 여부로 DRAM·SRAM 분기, 행 재매핑 Pending(리셋 뒤 적용)·Remapping Failure(Field Diagnostics 확인 뒤 RMA), 구세대 GPU의 페이지 폐기, RMA 기준(뱅크당 UCE 재매핑 8개·재매핑 행 재시도·합계 512, Blackwell HBM 채널 수리), 함께 보는 Xid 63·64·94·95·160·171·172 추가. 카탈로그 요약의 'Xid 154 연계' 오표기를 적용 버전 문구로 정정([검토 기록](xid48-memory-review-20261023.json)) |
 | XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |
@@ -126,29 +127,29 @@ Backend 검증기도 전체 284개 JSON(컴포넌트 17개 포함)을 검사한�
 
 ## Fleet 컴포넌트 Runbook
 
-코드 없는 Fleet 알림은 컴포넌트 이름으로만 선택된다(`decision_policy.applies_when.reported_component`). 보고 사유는 쉼표로 묶이거나 Healthy `ok` 보고와 섞이므로 게이트로 쓰지 않고, 사유별 분기는 운영자 지침 안에 둔다. "무엇이 알림을 냈는가"는 고정 Fleet SDK 소스(`84f99bee`)를, 의미와 다음 단계는 NVIDIA 문서·DCGM `dcgm_errors.h`(`9fae2867`)·커널 문서를 근거로 했다. 화면은 XID/SXID 6단 형식이 아니라 보고서의 다음에 할 일 문단으로 나온다.
+코드 없는 Fleet 알림은 컴포넌트 이름으로만 선택된다(`decision_policy.applies_when.reported_component`). 보고 사유는 쉼표로 묶이거나 Healthy `ok` 보고와 섞이므로 게이트로 쓰지 않고, 사유별 분기는 운영자 지침 안에 둔다. "무엇이 알림을 냈는가"는 고정 Fleet SDK 소스(`84f99bee`)를, 의미와 다음 단계는 NVIDIA 문서·DCGM `dcgm_errors.h`(`9fae2867`)·커널 문서를 근거로 했다. 화면은 XID/SXID와 같은 6단 운영자 형식이며, 모든 컴포넌트가 즉시 확인 다음에 리셋·재부팅 전 진단 자료 보존 단계를 둔다.
 
 | 컴포넌트 | Runbook | Unhealthy 보고 사유 | 조회 계획(D09 외) |
 |---|---|---|---|
 | `accelerator-nvidia-persistence-mode` | [RB-COMPONENT-PERSISTENCE-MODE](component/RB-COMPONENT-PERSISTENCE-MODE.json) | GPU lost, GPU requires reset, DCGM 조회 실패 | D02, D11 |
-| `disk` | [RB-COMPONENT-DISK](component/RB-COMPONENT-DISK.json) | 읽기 전용 재마운트, RAID 실패, NVMe 경로·타임아웃·비활성화, 범위 밖 접근, 버퍼 I/O·superblock 오류 | 없음 |
-| `accelerator-nvidia-dcgm-mem` | [RB-COMPONENT-DCGM-MEM](component/RB-COMPONENT-DCGM-MEM.json) | DCGM 메모리 건강 점검 FAIL(DBE, row remap 대기·실패, 격리 여부, SRAM) | D40, D36, D23 |
+| `disk` | [RB-COMPONENT-DISK](component/RB-COMPONENT-DISK.json) | 읽기 전용 재마운트, RAID 실패, NVMe 경로·타임아웃·비활성화, 범위 밖 접근, 버퍼 I/O·superblock 오류 | D59, D60 |
+| `accelerator-nvidia-dcgm-mem` | [RB-COMPONENT-DCGM-MEM](component/RB-COMPONENT-DCGM-MEM.json) | DCGM 메모리 건강 점검 FAIL(DBE, row remap 대기·실패, 격리 여부, SRAM) | D40, D36, D23, D50, D51, D52, D53, D54 |
 | `accelerator-nvidia-dcgm-pcie` | [RB-COMPONENT-DCGM-PCIE](component/RB-COMPONENT-DCGM-PCIE.json) | DCGM PCIe 건강 점검 FAIL(replay 비율 등) | D44 |
-| `accelerator-nvidia-dcgm-nvlink` | [RB-COMPONENT-DCGM-NVLINK](component/RB-COMPONENT-DCGM-NVLINK.json) | DCGM NVLink 건강 점검 FAIL(링크 다운, 오류율, BER) | D33, D34 |
-| `accelerator-nvidia-dcgm-nvswitch` | [RB-COMPONENT-DCGM-NVSWITCH](component/RB-COMPONENT-DCGM-NVSWITCH.json) | DCGM NVSwitch 치명·비치명 점검 FAIL | D33, D34 |
-| `accelerator-nvidia-dcgm-thermal` | [RB-COMPONENT-DCGM-THERMAL](component/RB-COMPONENT-DCGM-THERMAL.json) | DCGM 열 점검 FAIL(열 클록 제한, 온도 위반) | D04, D23, D45 |
-| `accelerator-nvidia-dcgm-power` | [RB-COMPONENT-DCGM-POWER](component/RB-COMPONENT-DCGM-POWER.json) | DCGM 전력 점검 FAIL(전력 클록 제한, 전력 값 읽기 실패) | D11, D48, D45 |
-| `accelerator-nvidia-dcgm-inforom` | [RB-COMPONENT-DCGM-INFOROM](component/RB-COMPONENT-DCGM-INFOROM.json) | DCGM InfoROM 점검 FAIL(InfoROM 손상) | 없음 |
+| `accelerator-nvidia-dcgm-nvlink` | [RB-COMPONENT-DCGM-NVLINK](component/RB-COMPONENT-DCGM-NVLINK.json) | DCGM NVLink 건강 점검 FAIL(링크 다운, 오류율, BER) | D33, D34, D55, D56, D57 |
+| `accelerator-nvidia-dcgm-nvswitch` | [RB-COMPONENT-DCGM-NVSWITCH](component/RB-COMPONENT-DCGM-NVSWITCH.json) | DCGM NVSwitch 치명·비치명 점검 FAIL | D33, D34, D55, D56, D57 |
+| `accelerator-nvidia-dcgm-thermal` | [RB-COMPONENT-DCGM-THERMAL](component/RB-COMPONENT-DCGM-THERMAL.json) | DCGM 열 점검 FAIL(열 클록 제한, 온도 위반) | D04, D23, D45, D61 |
+| `accelerator-nvidia-dcgm-power` | [RB-COMPONENT-DCGM-POWER](component/RB-COMPONENT-DCGM-POWER.json) | DCGM 전력 점검 FAIL(전력 클록 제한, 전력 값 읽기 실패) | D11, D48, D45, D62 |
+| `accelerator-nvidia-dcgm-inforom` | [RB-COMPONENT-DCGM-INFOROM](component/RB-COMPONENT-DCGM-INFOROM.json) | DCGM InfoROM 점검 FAIL(InfoROM 손상) | D58 |
 | `accelerator-nvidia-infiniband` | [RB-COMPONENT-INFINIBAND](component/RB-COMPONENT-INFINIBAND.json) | 활성 포트·속도 부족, 장시간 다운, flapping | 없음 |
 | `accelerator-nvidia-nccl` | [RB-COMPONENT-NCCL](component/RB-COMPONENT-NCCL.json) | libnccl.so segfault | 없음 |
 | `accelerator-nvidia-peermem` | [RB-COMPONENT-PEERMEM](component/RB-COMPONENT-PEERMEM.json) | nvidia-peermem invalid context | 없음 |
-| `network-ethernet` | [RB-COMPONENT-NETWORK-ETHERNET](component/RB-COMPONENT-NETWORK-ETHERNET.json) | 모든 물리 이더넷 링크 다운 | 없음 |
+| `network-ethernet` | [RB-COMPONENT-NETWORK-ETHERNET](component/RB-COMPONENT-NETWORK-ETHERNET.json) | 모든 물리 이더넷 링크 다운 | D65, D66, D67, D68, D69 |
 | `library` | [RB-COMPONENT-LIBRARY](component/RB-COMPONENT-LIBRARY.json) | libnvidia-ml.so·libcuda.so 없음 | 없음 |
-| `os` | [RB-COMPONENT-OS](component/RB-COMPONENT-OS.json) | 좀비·PID·파일 핸들 임계 초과, OS 정보 조회 실패 | 없음 |
-| `cpu` | [RB-COMPONENT-CPU](component/RB-COMPONENT-CPU.json) | CPU 사용률·load 계산 실패(에이전트 수집 오류·장애 주입) | 없음 |
-| `memory` | [RB-COMPONENT-MEMORY](component/RB-COMPONENT-MEMORY.json) | 가상 메모리·BPF JIT 정보 조회 실패(에이전트 수집 오류·장애 주입) | 없음 |
+| `os` | [RB-COMPONENT-OS](component/RB-COMPONENT-OS.json) | 좀비·PID·파일 핸들 임계 초과, OS 정보 조회 실패 | D70, D71, D72 |
+| `cpu` | [RB-COMPONENT-CPU](component/RB-COMPONENT-CPU.json) | CPU 사용률·load 계산 실패(에이전트 수집 오류·장애 주입). soft lockup·hung task는 별도 커널 로그 이벤트 | D18, D19 |
+| `memory` | [RB-COMPONENT-MEMORY](component/RB-COMPONENT-MEMORY.json) | 가상 메모리·BPF JIT 정보 조회 실패(에이전트 수집 오류·장애 주입). OOM은 별도 커널 로그 이벤트 | D63, D64 |
 
-- Fleet 등록 컴포넌트 중 `accelerator-nvidia-dcgm-clock`·`-cpu`·`-prof`·`-utilization`은 수집 실패 외의 Unhealthy 판정이 없어 제외했다. 이 컴포넌트와 새 컴포넌트는 기존 일반 조사로 처리된다.
+- Fleet 등록 컴포넌트 중 `accelerator-nvidia-dcgm-clock`·`-cpu`·`-prof`·`-utilization`은 수집 실패 외의 Unhealthy 판정이 없어 제외했다. 이 컴포넌트와 새 컴포넌트는 기존 일반 조사로 처리된다. 일반 조사 Runbook(RB-GENERAL-GPU-NODE)은 GPU Node Triage 순서의 운영자 지침(분류→보존→표 1 조치→표 2 리셋→DCGM 진단→공급사 전달 9항목)과 노드 요약 지표(D04·D11·D40·D18·D63)를 가지며, 전용 Runbook이 선택되지 않을 때만 `general_fallback`으로 표시된다. 패키지 기본 일반 조사(`general_runbook.json`)는 어떤 프로필에서도 검증되도록 이 지침·지표가 없는 이전 내용을 유지한다.
 - 검사: `test_component_runbooks_are_registered_and_select_only_their_component`(등록·선택 범위), `test_shipped_component_guidance_survives_healthy_reports_before_failure`(Healthy 보고가 앞서는 실제 disk 구간에서 지침 표시).
 
 ## 코드별 파일

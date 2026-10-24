@@ -197,10 +197,24 @@ def test_unregistered_fallback_queries_are_rejected():
 
 
 def test_packaged_fallback_matches_authored_general_runbook():
+    # The packaged fallback must validate against any profile and is never shown as
+    # guidance, so it stays at the authored content before batch 3 added operator
+    # guidance and node metrics.
     root = Path(__file__).resolve().parents[2] / "rcca-agent"
+    content = json.loads(
+        (root / "runbooks/RB-GENERAL-GPU-NODE.json").read_text("utf-8")
+    )["content"]
+    review = next(
+        e
+        for e in json.loads(
+            (root / "runbooks/runbook-batch3-review-20261025.json").read_text("utf-8")
+        )["entries"]
+        if e["file"] == "RB-GENERAL-GPU-NODE.json"
+    )
+    for field in review["added_fields"]:
+        content.pop(field)
+    content.update(review["previous_values"])
     assert (
         json.loads((root / "src/rcca_agent/general_runbook.json").read_text("utf-8"))
-        == json.loads((root / "runbooks/RB-GENERAL-GPU-NODE.json").read_text("utf-8"))[
-            "content"
-        ]
+        == content
     )

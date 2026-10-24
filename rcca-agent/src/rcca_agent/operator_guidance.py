@@ -51,7 +51,10 @@ def project_guidance(evidence, reported=None):
             continue
         validate_operator_guidance(guidance, content.get("sources", []))
         applicability = {}
-        if reported is not None:
+        if content.get("classification", {}).get("category") == "general_investigation":
+            # Selection keeps the general Runbook only when nothing dedicated applies.
+            applicability = {"report_applicability": "general_fallback"}
+        elif reported is not None:
             applies = content.get("decision_policy", {}).get("applies_when", {})
             codes = content.get("search", {}).get("codes", [])
             matched = (

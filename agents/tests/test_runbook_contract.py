@@ -41,7 +41,8 @@ class RunbookContractTests(unittest.TestCase):
                 )
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(
-                        [step["query_id"] for step in plan], ["D09", "D02"]
+                        [step["query_id"] for step in plan],
+                        ["D09", "D02", "D04", "D11", "D40", "D18", "D63"],
                     )
                 elif row["knowledge_key"] == "RB-XID-48-63-64":
                     self.assertLessEqual({"D40", "D36"}, {s["query_id"] for s in plan})

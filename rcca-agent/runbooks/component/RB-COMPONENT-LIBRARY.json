@@ -82,6 +82,10 @@
           "text": "nvidia-smi가 실행되는지 확인합니다. ldconfig -p | grep -E 'libnvidia-ml|libcuda'로 라이브러리가 등록돼 있는지 확인합니다. 드라이버 업그레이드가 진행 중이었는지 변경 기록을 확인합니다."
         },
         {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "드라이버를 다시 설치하거나 파드를 재시작하기 전에 드라이버 컨테이너 로그(kubectl logs -n gpu-operator <nvidia-driver-daemonset 파드> -c nvidia-driver-ctr, -c k8s-driver-manager), ldconfig -p | grep -E 'libnvidia-ml|libcuda' 출력, 설치된 드라이버 버전을 저장합니다. nvidia-smi가 동작하면 root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다."
+        },
+        {
           "title": "판단",
           "text": "GPU Operator로 드라이버를 설치한 노드는 kubectl logs -n gpu-operator <nvidia-driver-daemonset 파드> -c nvidia-driver-ctr로 드라이버 컨테이너 로그를 확인합니다. 파드가 Init:Error이면 -c k8s-driver-manager 로그를 확인합니다. 호스트에 직접 설치한 드라이버는 패키지 상태와 버전 일치를 확인합니다."
         },

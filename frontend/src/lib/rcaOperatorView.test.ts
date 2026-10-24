@@ -598,6 +598,71 @@ it('reads stored component metrics, row-remap flags and disk bytes', () => {
   expect(valueText(1.888e12, 'B')).toBe('1.9 TB');
 });
 
+it('builds a report from the general Runbook and flags a down ethernet link', () => {
+  const window = (value: number, at: string) => ({
+    min: value,
+    max: value,
+    last_value: value,
+    samples: 2,
+    first: at,
+    last: at,
+  });
+  const v = operatorView({
+    runbook_revisions: [{ knowledge_key: 'RB-GENERAL-GPU-NODE', revision: 2 }],
+    time_range: { start: '2026-10-23T07:50:00Z', end: '2026-10-23T08:30:00Z' },
+    incident_time: '2026-10-23T08:19:00Z',
+    device_observations: [
+      {
+        component: 'kubelet',
+        raw_health: 'Unhealthy',
+        reason: 'kubelet is not running',
+        observed_at: '2026-10-23T08:18:00Z',
+        target: { node: 'dgx01' },
+      },
+    ],
+    quality: {
+      runbook_guidance: [
+        {
+          report_applicability: 'general_fallback',
+          guidance: {
+            meaning: '전용 런북이 없어 GPU Node Triage 순서로 조사합니다.',
+            next_checks: [],
+          },
+        },
+      ],
+      component_observations: {
+        schema: 'rca-component-observations/1',
+        event_boundary: '2026-10-23T08:18:00Z',
+        metrics: [
+          {
+            query_id: 'D65',
+            name: '이더넷 링크 상태 (eth0)',
+            interface: 'eth0',
+            unit: 'enum',
+            kind: 'enum',
+            last: '2026-10-23T08:25:00Z',
+            max_sample_gap_seconds: 150,
+            incident_windows: {
+              before: window(1, '2026-10-23T08:10:00Z'),
+              at_or_after: window(0, '2026-10-23T08:25:00Z'),
+            },
+          },
+        ],
+      },
+    },
+  })!;
+  expect([v.family, v.codes, v.meaning]).toEqual([
+    'component',
+    ['kubelet'],
+    '전용 런북이 없어 GPU Node Triage 순서로 조사합니다.',
+  ]);
+  expect(v.metrics[0]).toMatchObject({ tag: '링크 끊김', tone: 'alert' });
+  expect(v.metrics[0].beforeText).toBe('1 (연결)');
+  expect(v.metrics[0].afterText).toBe('0 (끊김)');
+  expect(valueText(3, '개')).toBe('3 개');
+  expect(valueText(2.5, '')).toBe('2.5');
+});
+
 it('shows how much cumulative counters grew and reads violation time as elapsed time', () => {
   const counter = (query: string, name: string, unit: string, from: number, to: number) => ({
     name,
