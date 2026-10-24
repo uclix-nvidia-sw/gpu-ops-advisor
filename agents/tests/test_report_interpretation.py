@@ -695,3 +695,53 @@ async def test_http_failure_keeps_only_numeric_status(result, status):
     assert result["topics"] == before
     assert result["narrative_status"] == "failed"
     assert llm.complete.await_count == 1
+
+
+@pytest.mark.parametrize("structure", ["duplicate", "order"])
+@pytest.mark.parametrize("repeat_error", [False, True])
+async def test_topic_structure_repair_uses_one_complete_shape(
+    result, structure, repeat_error
+):
+    from test_namespace_advice import topic
+
+    result["topics"][0] = topic()
+    result["topics"].reverse()
+    before = deepcopy(result["topics"])
+    valid = reply_for(payload_for(result))
+    invalid = deepcopy(valid)
+    if structure == "duplicate":
+        invalid["sections"].append(deepcopy(invalid["sections"][0]))
+        code = "topic_sections_required"
+    else:
+        invalid["sections"].reverse()
+        code = "topic_mismatch"
+    original = deepcopy(invalid)
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, invalid if repeat_error else valid]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    expected = [t["topic_id"] for t in first["topics"]]
+    assert expected == ["incident_summary", "namespace_usage"]
+    assert [t["topic_id"] for t in repair["response_shape"]["sections"]] == expected
+    assert first["topics"] == repair["topics"]
+    assert "summary_repair" not in repair
+    assert repair["validation_feedback"]["error"].startswith(code)
+    assert (
+        "topic_id를 입력 순서대로 각 한 번만"
+        in repair["validation_feedback"]["instruction"]
+    )
+    assert (
+        "response_shape.sections만 전체 반환"
+        in repair["validation_feedback"]["instruction"]
+    )
+    for call in llm.complete.call_args_list:
+        system = call.args[0]
+        assert "아래 주제 설명은 추가 section이 아닙니다" in system
+        assert 'namespace_usage: {"topic_id"' not in system
+        assert 'incident_summary: {"topic_id"' not in system
+    assert result["quality"]["report"]["attempts"] == 2
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": i, "reason": code} for i in range(1, 3 if repeat_error else 2)
+    ]
+    assert result["narrative_status"] == ("failed" if repeat_error else "complete")
+    assert result["topics"] == before and invalid == original

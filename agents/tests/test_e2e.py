@@ -3126,6 +3126,7 @@ def test_aggregate_report_transition_verification_is_published(
         ("schedule_order", "relative_activity"),
         ("observed_prerequisite", "schedule_candidate"),
         ("judgment_repair", "schedule_candidate"),
+        ("possessive_activity", "schedule_candidate"),
     ],
 )
 def test_scheduled_and_manual_reports_repair_same_data(
@@ -3232,6 +3233,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "schedule_condition"
                             else "대기 Pod 일부의 작업에 대해 " + summary
                             if failure == "pending_target"
+                            else "작업 일부의 GPU 활동률이 낮았습니다. " + summary
+                            if failure == "possessive_activity"
                             else summary.replace("마감·", "")
                             if failure in {"missing_prerequisite", "judgment_repair"}
                             else "대기 관측도 완전했습니다. "
@@ -3335,6 +3338,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
             if failure in {"partial_placement", "partial_placement_causal"}
             else {"review_before_schedule_change"}
             if failure == "schedule_order"
+            else {"unsupported_workload_activity_attribution"}
+            if failure == "possessive_activity"
             else {"namespace_summary_tokens_required", "unsupported_prose"}
         )
         if failure == "namespace_refs":

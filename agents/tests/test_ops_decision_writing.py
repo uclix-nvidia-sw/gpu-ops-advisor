@@ -139,6 +139,13 @@ async def test_initial_and_repair_input_supply_bounds_without_finished_advice(
     assert len(requests) == 2
     first = requests[0]["topics"][0]["findings"][0]
     repaired = requests[1]["summary_repair"][0]
+    assert first["writing_checks"] == repaired["writing_checks"]
+    assert "낮은 활동 구간을 앞으로 활용할 수 있을지 판단" in " ".join(
+        first["writing_checks"]
+    )
+    assert "현상 설명과 점검·제안은 짧게 나누고" in requests[1]["instruction"]
+    assert "동의어를 나열하거나" in requests[1]["instruction"]
+    assert "필수 조건을 확인한 뒤 최종 검토로 끝내세요" in requests[1]["instruction"]
     for item in (first, repaired):
         assert "option" not in item["decision"]
         assert item["decision"] == {
@@ -550,7 +557,7 @@ async def test_all_prerequisites_reach_initial_and_repair_input(origin):
     assert all(
         word in repair["summary_repair"][0]["validation_error"] for word in required
     )
-    assert "모든 항목을 확인·대조·점검한 뒤" in SYSTEM
+    assert "모든 항목을 확인한 뒤" in SYSTEM
     assert "활동률 문장의 주어는 연결 GPU" in SYSTEM
     assert "정상 항목은 바꾸지 말고" in SYSTEM
     assert result["narrative_status"] == "complete"
@@ -661,3 +668,444 @@ def test_time_change_is_reviewed_before_action_in_both_candidate_kinds(kind, act
         + "시작 시각을 조정할 수 있는 작업 일부의 시범 실행 여부를 검토하세요."
     )
     assert validate_written_advice(raw, offered)
+
+
+@pytest.mark.parametrize(
+    "kind,source,summary",
+    [
+        (
+            "relative_activity",
+            lambda: pattern_topic([70, 80, 20, 25]),
+            "비교 구간보다 연결 GPU의 활동률이 낮았습니다. 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+        ),
+        (
+            "capacity_review",
+            lambda: topic(activity=90, pending=2),
+            "높은 GPU 활동률과 대기가 같은 구간에 관측됐습니다. 스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
+        ),
+        (
+            "batch_progress",
+            completed_topic,
+            "일부 Job이 끝났습니다. 같은 작업 유형의 일정에 참고할 수 있을지, 완료 Job의 실제 Pod 시작·완료 기록을 대조해 확인하세요.",
+        ),
+    ],
+)
+def test_short_observation_and_purposeful_check_keep_existing_guards(
+    kind, source, summary
+):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(f for f in candidates(source()) if f["kind"] == kind)
+    raw = {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]}
+    before = deepcopy(raw)
+    output = validate_written_advice(raw, {"findings": [fact]})
+    assert output["advice"][0]["summary"].startswith(summary + " ")
+    assert raw == before
+    if kind == "capacity_review":
+        raw["advice"][0]["summary"] = summary.replace("·운영정책", "")
+        with pytest.raises(ValueError, match="namespace_prerequisites_required"):
+            validate_written_advice(raw, {"findings": [fact]})
+    if kind == "relative_activity":
+        raw["advice"][0]["summary"] = summary.replace("·예약", "")
+        with pytest.raises(
+            ValueError, match="conditional_relative_window_trial_required"
+        ):
+            validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize("repair_shortage", [False, True])
+async def test_repeated_observation_repair_identifies_forbidden_question(
+    repair_shortage,
+):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_namespace_advice import writer_section
+
+    result = dict(topics=[pattern_topic([85, 20, 90], 2)], quality={}, time_range={})
+    before = deepcopy(result["topics"])
+    facts = payload_for(result)["topics"][0]["findings"]
+    original = writer_section(facts)
+    invalid = deepcopy(original)
+    item = next(
+        a
+        for a in invalid["advice"]
+        if next(f for f in facts if f["fact_id"] == a["fact_id"])["kind"]
+        == "repeated_activity"
+    )
+    item["summary"] = (
+        "서로 떨어진 시점에 높은 GPU 활동과 대기가 관측됐습니다. 스케줄러 기록에서 노드 부족 여부를 확인하세요."
+    )
+    patch = deepcopy(item)
+    if not repair_shortage:
+        patch["summary"] = (
+            "서로 떨어진 시점에 높은 GPU 활동과 대기가 관측됐습니다. 대기 Pod의 GPU 요청·실제 할당·스케줄러 기록을 대조해 요청을 충족할 노드가 있었는지 확인하세요."
+        )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    context = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == item["fact_id"]
+    )
+    fixed = repair["summary_repair"][0]
+    assert context["writing_checks"] == fixed["writing_checks"]
+    question = context["writing_checks"][1]
+    assert "요청을 충족할 노드가 있었는지" in question
+    assert "노드 부족으로" not in question
+    assert "질문·부정문에도 쓰지 않음" in question
+    assert fixed["validation_error"].startswith(
+        "separate_observations_do_not_prove_continuity:"
+    )
+    assert "포화·부족·때문" in fixed["validation_error"]
+    assert result["narrative_status"] == ("failed" if repair_shortage else "complete")
+    assert result["topics"] == before
+    assert original != invalid
+
+
+@pytest.mark.parametrize("samples", [1, 240])
+@pytest.mark.parametrize("repeat_absence", [False, True])
+async def test_number_repair_retains_partial_placement_bound(samples, repeat_absence):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_namespace_advice import writer_section
+
+    source = topic(pending=2)
+    for hour in source["workloads"][0]["hours"]:
+        hour.update(unscheduled_peak=0, unscheduled_samples=samples)
+    result = dict(topics=[source], quality={}, time_range={})
+    before = deepcopy(result["topics"])
+    facts = payload_for(result)["topics"][0]["findings"]
+    section = writer_section(facts)
+    section["advice"][0]["summary"] = (
+        "대기 Pod가 2개 있었지만 노드 미배정은 없었습니다. Pod 상태·이벤트를 점검하세요."
+    )
+    patch = deepcopy(section["advice"][0])
+    patch["summary"] = (
+        "노드 미배정은 없었습니다. Pod 상태·이벤트를 점검해 대기 단계를 구분하세요."
+        if repeat_absence
+        else "노드 미배정 관측은 일부입니다. 대기 Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분하세요."
+        if samples == 1
+        else "노드 미배정은 관측되지 않았습니다. 대기 Pod의 이미지 다운로드·초기화 이벤트를 점검해 준비 단계를 확인하세요."
+    )
+    # A complete-zero candidate requires preparation events in its repaired prose.
+    if samples == 240 and repeat_absence:
+        patch["summary"] = (
+            "노드 미배정은 없었습니다. 대기 Pod의 이미지 다운로드·초기화 이벤트를 점검해 준비 단계를 확인하세요."
+        )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [section]}, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    original = first["topics"][0]["findings"][0]
+    fixed = repair["summary_repair"][0]
+    assert fixed["validation_error"].startswith("namespace_summary_tokens_required:")
+    assert original["writing_checks"] == fixed["writing_checks"]
+    for context in (original, fixed):
+        assert context["queue_context"]["unscheduled_complete"] == (samples == 240)
+    for call in llm.complete.call_args_list:
+        assert (
+            "queue_context.unscheduled_complete=false면 미배정 영은 부재·전체 배정 완료가 아닙니다"
+            in call.args[0]
+        )
+        assert "수치·참조 오류 보완에도 유지하세요" in call.args[0]
+    assert "관측 범위와 금지 표현을 모두 유지" in repair["instruction"]
+    assert result["narrative_status"] == (
+        "failed" if samples == 1 and repeat_absence else "complete"
+    )
+    assert result["topics"] == before
+
+
+@pytest.mark.parametrize(
+    "kind", ["relative_activity", "capacity_review", "batch_progress"]
+)
+async def test_length_repair_preserves_every_prerequisite_and_guard(kind):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import (
+        interpret_report,
+        payload_for,
+        validate_written_advice,
+    )
+    from test_namespace_advice import writer_section
+
+    source = {
+        "relative_activity": lambda: pattern_topic([70, 80, 20, 25]),
+        "capacity_review": lambda: topic(activity=90, pending=2),
+        "batch_progress": completed_topic,
+    }[kind]()
+    result = dict(topics=[source], quality={}, time_range={})
+    before = deepcopy(result["topics"])
+    facts = payload_for(result)["topics"][0]["findings"]
+    section = writer_section(facts)
+    item = next(
+        a
+        for a in section["advice"]
+        if next(f for f in facts if f["fact_id"] == a["fact_id"])["kind"] == kind
+    )
+    prose = {
+        "relative_activity": "비교 구간보다 GPU 활동률이 낮았습니다. 마감·예약·가용 GPU·메모리 요구를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+        "capacity_review": "높은 GPU 활동과 대기가 관측됐습니다. 스케줄러 사유와 GPU 요청·실제 할당을 대조하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
+        "batch_progress": "일부 Job이 끝났습니다. 같은 작업 유형의 일정에 참고할 수 있을지 완료 Job의 실제 Pod 시작·완료 기록을 대조해 확인하세요.",
+    }[kind]
+    patch = {"fact_id": item["fact_id"], "summary": prose}
+    item["summary"] = "관측 설명 " * 45 + prose
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [section]}, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    original = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == item["fact_id"]
+    )
+    fixed = next(f for f in repair["summary_repair"] if f["fact_id"] == item["fact_id"])
+    assert fixed["validation_error"].startswith("concise_namespace_summary_required:")
+    assert f"prose_max_chars={fixed['prose_max_chars']}자" in fixed["validation_error"]
+    assert "필수 조건·대상·행동·판단 목적은 남기고" in fixed["validation_error"]
+    for key in (
+        "writing_checks",
+        "required_checks",
+        "required_prose_terms",
+        "prose_max_chars",
+    ):
+        assert fixed.get(key) == original.get(key)
+    assert len(prose) <= fixed["prose_max_chars"]
+    assert (
+        "중복 현상·수집 상태·작성 지시·군더더기를 먼저 빼세요" in repair["instruction"]
+    )
+    assert result["narrative_status"] == "complete"
+    assert result["topics"] == before
+    fact = next(f for f in facts if f["fact_id"] == item["fact_id"])
+    if kind in ("relative_activity", "capacity_review"):
+        missing = deepcopy(patch)
+        missing["summary"] = (
+            prose.replace("·예약", "")
+            if kind == "relative_activity"
+            else prose.replace("·운영정책", "")
+        )
+        with pytest.raises(ValueError):
+            validate_written_advice({"advice": [missing]}, {"findings": [fact]})
+
+
+async def test_workload_activity_repair_keeps_the_gpu_as_measurement_subject():
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_namespace_advice import writer_section
+
+    result = dict(topics=[topic()], quality={}, time_range={})
+    before = deepcopy(result["topics"])
+    facts = payload_for(result)["topics"][0]["findings"]
+    section = writer_section(facts)
+    item = section["advice"][0]
+    item["summary"] = (
+        "작업은 활동률이 낮았습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+    )
+    fixed = {
+        **item,
+        "summary": "연결 GPU의 활동률이 낮았습니다. 작업 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+    }
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [section]}, {"advice": [fixed]}]
+    await interpret_report(result, llm)
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    for call in llm.complete.call_args_list:
+        system = call.args[0]
+        assert "작업 일부의 GPU 활동률·Pod의 GPU 활동률처럼 소유격으로도" in system
+        assert "작업 유형은 활동률의 주어가 아닌 별도 맥락" in system
+        assert "작업 유형은 현상의 주어로 활용" not in system
+        assert "활동률 현상은 '연결 GPU'" in system
+        assert "관측 완료 같은 수집 상태는 현상으로 복사하지 말고" in system
+        assert "다음 확인 대상 같은 추상어로 끝내지 마세요" in system
+        assert "검토하되·검토하려면으로 시작해 다시 판단하라고 끝내지 말고" in system
+        assert "미배정 관측만으로 배정 실패·지연을 뜻하지 않습니다" in system
+    original_context = first["topics"][0]["findings"][0]
+    patched_context = repair["summary_repair"][0]
+    for key in (
+        "decision",
+        "queue_context",
+        "required_checks",
+        "required_prose_terms",
+        "writing_checks",
+    ):
+        assert original_context.get(key) == patched_context.get(key)
+    assert result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "unsupported_workload_activity_attribution"}
+    ]
+    assert result["narrative_status"] == "complete" and result["topics"] == before
+
+
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_queue_purpose_names_the_evidence_question_without_failure_presupposition(
+    phase,
+):
+    from ops_agent.report_interpretation import writing_context
+
+    source = topic(pending=2)
+    for hour in source["workloads"][0]["hours"]:
+        hour.update(
+            unscheduled_peak=2 if phase == "placement" else 0,
+            unscheduled_samples=1 if phase == "unknown" else 240,
+        )
+    fact = next(f for f in candidates(source) if f["kind"] == "queue_review")
+    before = deepcopy(fact)
+    context = writing_context(fact)
+    checks = " ".join(context["writing_checks"])
+    assert "알아낼 내용을 명시" in checks
+    if phase == "placement":
+        assert "요청을 충족할 노드가 있었는지·선택 조건이 맞는지" in checks
+        assert "단계 재구분·실패/지연 단정 대신 배정 제약을 찾는 목적" in checks
+    elif phase == "preparation":
+        assert "이미지 다운로드·초기화 이벤트에서 어느 준비 단계" in checks
+    else:
+        assert "노드 배정 대기인지 이미지 다운로드·초기화 등 시작 준비" in checks
+    assert fact == before
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "일부 작업의 낮은 GPU 활동률이 관측됐습니다.",
+        "해당 작업 일부의 GPU 활동률이 낮았습니다.",
+        "연결된 일부 Pod의 GPU 활동률이 낮았고 대기 Pod는 관측되지 않았습니다.",
+        "작업의 높은 GPU 활동률이 관측됐습니다.",
+        "Pod들의 GPU 활동률이 높았습니다.",
+        "파드의 연산 활동이 높게 관측됐습니다.",
+        "작업 일부의 GPU 활동률이 상대적으로 낮았습니다.",
+        "작업의 GPU 활동률이 측정되었습니다.",
+        "Pod의 활동률이 높게 관측됐습니다.",
+        "작업의 GPU 활동률은 낮습니다.",
+        "작업들의 높은 연산 활동이 관측되었습니다.",
+    ],
+)
+def test_possessive_workload_activity_claim_uses_existing_rejection(prose):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(f for f in candidates(topic()) if f["kind"] == "schedule_candidate")
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": prose
+                + " 마감·예약·대기·가용 GPU를 확인한 뒤 작업 일부의 시범 실행을 검토하세요.",
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    with pytest.raises(
+        ValueError, match="unsupported_workload_activity_attribution:.*"
+    ) as exc:
+        validate_written_advice(raw, {"findings": [fact]})
+    assert "소유격 포함" in str(exc.value)
+    assert raw == before
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "작업이 연결된 GPU의 활동률은 낮게 관측됐습니다.",
+        "일부 Pod가 연결된 GPU의 활동률이 낮았습니다.",
+        "작업의 GPU 요청과 연결 GPU의 활동률을 구분해 확인하세요.",
+        "Pod의 상태와 연결 GPU의 활동률을 대조하세요.",
+        "연결 GPU의 낮은 활동률이 관측됐습니다.",
+        "작업의 GPU 활동률은 측정되지 않았습니다.",
+        "작업 일부의 GPU 활동률은 확인되지 않았습니다.",
+        "Pod의 GPU 활동률은 알 수 없습니다.",
+        "작업의 연결 GPU 활동률이 낮게 관측됐습니다.",
+        "작업에 연결된 GPU 활동률이 낮았습니다.",
+        "일부 작업의 낮은 GPU 활동률로 단정할 수 없습니다.",
+        "개별 Pod의 GPU 활동률을 추정하지 않습니다.",
+        "Pod가 낮은 활동률의 GPU에 연결됐습니다.",
+    ],
+)
+def test_connected_gpu_and_unknown_workload_measurements_are_not_rejected(prose):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(f for f in candidates(topic()) if f["kind"] == "schedule_candidate")
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": prose
+                + " 마감·예약·대기·가용 GPU를 확인한 뒤 작업 일부의 시범 실행을 검토하세요.",
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})["advice"]
+    assert raw == before
+
+
+@pytest.mark.parametrize("repeat_bad_claim", [False, True])
+async def test_possessive_activity_repairs_only_bad_prose_once(repeat_bad_claim):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_report_interpretation import reply_for
+
+    source = topic()
+    source["workloads"][0]["completed_jobs"] = completed_topic()["workloads"][0][
+        "completed_jobs"
+    ]
+    result = dict(topics=[source], time_range={}, quality={})
+    before = deepcopy(result["topics"])
+    offered = payload_for(result)
+    valid = reply_for(offered)
+    invalid = deepcopy(valid)
+    bad = next(
+        a
+        for a in invalid["sections"][0]["advice"]
+        if next(
+            f for f in offered["topics"][0]["findings"] if f["fact_id"] == a["fact_id"]
+        )["kind"]
+        == "schedule_candidate"
+    )
+    bad["summary"] = (
+        "작업 일부의 GPU 활동률이 낮았습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+    )
+    original_reply = deepcopy(invalid)
+    patch = deepcopy(bad)
+    if not repeat_bad_claim:
+        patch["summary"] = (
+            "연결 GPU의 활동률이 낮았습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+        )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    assert "topics" not in repair and len(repair["summary_repair"]) == 1
+    requested = repair["summary_repair"][0]
+    context = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == bad["fact_id"]
+    )
+    assert requested["fact_id"] == bad["fact_id"]
+    assert requested["previous_summary"] == bad["summary"]
+    assert requested["validation_error"].startswith(
+        "unsupported_workload_activity_attribution:"
+    )
+    assert "소유격 포함" in requested["validation_error"]
+    for key in (
+        "decision",
+        "observed_values",
+        "queue_context",
+        "required_checks",
+        "required_prose_terms",
+        "prose_max_chars",
+    ):
+        assert requested.get(key) == context.get(key)
+    assert invalid == original_reply and result["topics"] == before
+    if repeat_bad_claim:
+        assert result["narrative_status"] == "failed"
+        assert [f["reason"] for f in result["quality"]["report"]["failures"]] == [
+            "unsupported_workload_activity_attribution"
+        ] * 2
+    else:
+        assert result["narrative_status"] == "complete"
+        output = result["narrative"][0]["advice"]
+        for item in output:
+            expected = (
+                patch["summary"]
+                if item["fact_id"] == bad["fact_id"]
+                else next(
+                    a["summary"]
+                    for a in invalid["sections"][0]["advice"]
+                    if a["fact_id"] == item["fact_id"]
+                )
+            )
+            assert item["summary_parts"]["decision"] == expected
