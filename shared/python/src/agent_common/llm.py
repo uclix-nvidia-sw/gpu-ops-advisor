@@ -122,7 +122,9 @@ class LLM:
             )
         return room
 
-    async def complete(self, system, data, stage="synthesis", max_tokens=None):
+    async def complete(
+        self, system, data, stage="synthesis", max_tokens=None, *, json_object=False
+    ):
         """`max_tokens` only lowers the configured output cap for this call."""
         self.last_failure = None
         self.last_error_type = None
@@ -150,6 +152,8 @@ class LLM:
             temperature=0.2,
             max_tokens=cap,
         )
+        if json_object and self.settings.kind == "report":
+            payload["response_format"] = {"type": "json_object"}
         if self.settings.kind == "report" and self.settings.ops_llm_medium_effort:
             payload["chat_template_kwargs"] = {
                 "enable_thinking": True,

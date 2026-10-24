@@ -235,3 +235,70 @@ def test_context_limit_rejects_negative_values(monkeypatch):
     monkeypatch.setenv("LLM_CONTEXT_TOKENS", "-1")
     with pytest.raises(ValueError):
         Settings("rca")
+
+
+@pytest.mark.parametrize("kind", ["report", "rca"])
+@pytest.mark.parametrize("requested", [False, True])
+async def test_json_object_is_opt_in_and_does_not_change_rca(kind, requested):
+    seen = []
+
+    def respond(request):
+        wire = json.loads(request.content)
+        seen.append(wire)
+        if kind == "report" and requested:
+            assert wire["response_format"] == {"type": "json_object"}
+        else:
+            assert "response_format" not in wire
+        assert wire["temperature"] == 0.2
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": '{"ok":true}'}}
+                ],
+                "usage": {"total_tokens": 10},
+            },
+        )
+
+    settings = Settings(
+        kind,
+        llm_base_url="http://fixture.invalid/v1",
+        llm_model="fixture",
+        llm_api_key="fixture",
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 10000, lambda _: None, http)
+        assert await llm.complete(
+            "Return JSON.", {}, **({"json_object": True} if requested else {})
+        ) == {"ok": True}
+    assert len(seen) == 1
+
+
+async def test_unsupported_json_mode_stays_an_http_failure_without_plain_text_retry():
+    seen = []
+
+    def respond(request):
+        wire = json.loads(request.content)
+        assert wire["response_format"] == {"type": "json_object"}
+        seen.append(wire)
+        return httpx.Response(
+            400,
+            json={
+                "error": {
+                    "type": "BadRequestError",
+                    "message": "response format unsupported",
+                }
+            },
+        )
+
+    settings = Settings(
+        "report",
+        llm_base_url="http://fixture.invalid/v1",
+        llm_model="fixture",
+        llm_api_key="fixture",
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+        llm = LLM(settings, time.monotonic() + 10, 10000, lambda _: None, http)
+        assert await llm.complete("Return JSON.", {}, json_object=True) is None
+        assert llm.last_failure == "llm_http_error" and llm.last_http_status == 400
+    assert len(seen) == 1

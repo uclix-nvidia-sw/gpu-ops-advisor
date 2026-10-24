@@ -53,14 +53,15 @@ def port():
 
 def interpretation_reply(data):
     from test_report_interpretation import reply_for
-    from test_namespace_advice import section
+    from test_namespace_advice import writer_section
 
     if "summary_repair" in data or "section_repair" in data:
         return {
             **(
                 {
                     "advice": [
-                        section([item])["advice"][0] for item in data["summary_repair"]
+                        writer_section([item])["advice"][0]
+                        for item in data["summary_repair"]
                     ]
                 }
                 if data.get("summary_repair")
@@ -3118,6 +3119,13 @@ def test_aggregate_report_transition_verification_is_published(
         ("json", "repeated_activity"),
         ("json", "relative_activity"),
         ("schedule_condition", "schedule_candidate"),
+        ("pending_target", "schedule_candidate"),
+        ("missing_prerequisite", "schedule_candidate"),
+        ("partial_placement", "queue_review"),
+        ("partial_placement_causal", "queue_review"),
+        ("schedule_order", "relative_activity"),
+        ("observed_prerequisite", "schedule_candidate"),
+        ("judgment_repair", "schedule_candidate"),
     ],
 )
 def test_scheduled_and_manual_reports_repair_same_data(
@@ -3163,6 +3171,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
                         activity = (
                             1
                             if pattern == "schedule_candidate"
+                            else 20
+                            if pattern == "queue_review"
                             else (85 if hour in (1, 3) else 20)
                             if pattern == "repeated_activity"
                             else (80 if hour < 2 else 20)
@@ -3172,13 +3182,38 @@ def test_scheduled_and_manual_reports_repair_same_data(
                         )
                 elif measure.startswith(("pending_", "unscheduled_", "running_")):
                     value = (
-                        240
+                        1
+                        if pattern == "queue_review"
+                        and measure == "unscheduled_samples"
+                        else 240
                         if measure.endswith("samples")
-                        else (2 if pattern == "repeated_activity" else 0)
+                        else 2
+                        if pattern in {"repeated_activity", "queue_review"}
+                        and not (
+                            pattern == "queue_review"
+                            and measure.startswith("unscheduled_")
+                        )
+                        else 0
                     )
                     row["values"] = [
                         [at, str(value)] for at in range(int(start), int(end) + 1, 3600)
                     ]
+        if (
+            self.path == "/v1/chat/completions"
+            and body.get("choices")
+            and corrupted
+            and failure == "judgment_repair"
+        ):
+            reply = json.loads(body["choices"][0]["message"]["content"])
+            reply["advice"][0]["summary"] = (
+                "작업 일부의 시범 실행을 검토하려면 마감·예약·대기·가용 GPU를 확인한 뒤에만 변경 여부를 판단하세요."
+            )
+            body = {
+                **body,
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": json.dumps(reply)}}
+                ],
+            }
         if (
             self.path == "/v1/chat/completions"
             and body.get("choices")
@@ -3191,13 +3226,24 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 reply = json.loads(body["choices"][0]["message"]["content"])
                 for item in reply["sections"]:
                     if item["topic_id"] == "namespace_usage":
-                        item["advice"][0]["summary"] = item["advice"][0][
-                            "summary"
-                        ].replace(
-                            "확인한 뒤"
+                        summary = item["advice"][0]["summary"]
+                        item["advice"][0]["summary"] = (
+                            summary.replace("확인한 뒤", "확인하고")
                             if failure == "schedule_condition"
-                            else "{{period}}",
-                            "확인하고" if failure == "schedule_condition" else "",
+                            else "대기 Pod 일부의 작업에 대해 " + summary
+                            if failure == "pending_target"
+                            else summary.replace("마감·", "")
+                            if failure in {"missing_prerequisite", "judgment_repair"}
+                            else "대기 관측도 완전했습니다. "
+                            + summary.replace("대기·", "")
+                            if failure == "observed_prerequisite"
+                            else "노드 미배정은 없었으므로, " + summary
+                            if failure == "partial_placement_causal"
+                            else "마감·예약·가용 GPU·메모리 요구를 확인한 뒤 일부 작업의 시작 시각을 조정해 시범 실행을 검토하세요."
+                            if failure == "schedule_order"
+                            else "노드 미배정은 없었습니다. " + summary
+                            if failure == "partial_placement"
+                            else summary + " {{period}}"
                         )
                     elif failure == "mixed_topics":
                         item["observation"] = "알림은 3건입니다."
@@ -3280,12 +3326,21 @@ def test_scheduled_and_manual_reports_repair_same_data(
             if failure == "json"
             else {"conditional_scheduling_review_required"}
             if failure == "schedule_condition"
+            else {"unobserved_pending_target"}
+            if failure == "pending_target"
+            else {"namespace_prerequisites_required"}
+            if failure
+            in {"missing_prerequisite", "judgment_repair", "observed_prerequisite"}
+            else {"partial_placement_is_not_absence"}
+            if failure in {"partial_placement", "partial_placement_causal"}
+            else {"review_before_schedule_change"}
+            if failure == "schedule_order"
             else {"namespace_summary_tokens_required", "unsupported_prose"}
         )
         if failure == "namespace_refs":
             assert failures[0]["reference_errors"] == {
-                "missing": ["period"],
-                "duplicate": [],
+                "missing": [],
+                "duplicate": ["period"],
                 "unavailable_count": 0,
             }
         assert {n["topic_id"] for n in result["narrative"]} == {
@@ -3299,7 +3354,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
         if pattern:
             item = next(a for a in namespace["advice"] if a["kind"] == pattern)
             assert item["source_hours"] and item["evidence_refs"]
-            if pattern != "schedule_candidate":
+            if pattern in {"repeated_activity", "relative_activity"}:
                 assert item["observed_periods"]
             if pattern == "relative_activity":
                 assert item["reference_period"] != item["period"]
