@@ -106,6 +106,66 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D50",
+        "priority": 8,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 행 재매핑 대기(0/1)를 사건 전후로 본다. 1이면 재매핑이 GPU 리셋 뒤 적용된다는 뜻이며 고장 확정이 아니다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D51",
+        "priority": 9,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 행 재매핑 실패(0/1)를 사건 전후로 본다. 1은 Field Diagnostics 확인 뒤 RMA 검토 대상이며 이 값만으로 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D52",
+        "priority": 10,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 정정 불가 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D53",
+        "priority": 11,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 정정 가능 오류 재매핑 행 수(InfoROM 기록 누적값)를 사건 전후로 비교한다. 감소는 증가량으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D54",
+        "priority": 12,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 예비 행이 남지 않은 메모리 뱅크 수(이력 표지)를 본다. 현재 여유량이나 고장 확정으로 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
@@ -222,7 +282,7 @@
         },
         {
           "title": "오류별 판단 기준",
-          "text": "XID 94 자체는 격리된 메모리 오류의 결과 보고이므로, 원인 조사는 함께 기록된 메모리 오류(XID 48 등)와 row remapping 상태로 합니다. 카탈로그의 조사 조치 분류 IGNORE (sympathetic)가 이 뜻입니다. 단독으로 보이거나 그것으로 해결되지 않으면 NVIDIA에 보고합니다. GPU Node Triage: 해당 애플리케이션만 재시작하고, 편한 시점에 GPU를 리셋하거나 재부팅해 row remapping을 적용합니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다."
+          "text": "XID 94 자체는 격리된 메모리 오류의 결과 보고이므로, 원인 조사는 함께 기록된 메모리 오류(XID 48 등)와 row remapping 상태로 합니다. 카탈로그의 조사 조치 분류 IGNORE (sympathetic)가 이 뜻입니다. 단독으로 보이거나 그것으로 해결되지 않으면 NVIDIA에 보고합니다. GPU Node Triage: 해당 애플리케이션만 재시작하고, 편한 시점에 GPU를 리셋하거나 재부팅해 row remapping을 적용합니다. 이 보고서의 이전 사건 이력에서 같은 GPU 반복인지 여러 GPU에 걸친 반복인지 확인합니다. 같은 GPU 반복은 하드웨어, 여러 GPU 반복은 애플리케이션·호스트 공통 요인 쪽으로 점검 방향을 잡습니다. 보고서의 행 재매핑 값으로 먼저 판단합니다: 대기가 1이면 GPU 리셋이 필요하고, 실패가 1이면 Field Diagnostics로 확인한 뒤 RMA를 검토합니다."
         },
         {
           "title": "복구 조치",

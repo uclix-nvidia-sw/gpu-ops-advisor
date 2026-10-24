@@ -1,5 +1,12 @@
 import { expect, it } from 'vitest';
-import { aiFailure, fullPci, operatorView, plainReason, sentences } from './rcaOperatorView';
+import {
+  aiFailure,
+  fullPci,
+  operatorView,
+  plainReason,
+  sentences,
+  valueText,
+} from './rcaOperatorView';
 
 const gpu = 'GPU-81ec1404-9d04-9bdf-0bdc-c852d61759a9';
 const other = 'GPU-7608a7b1-ec78-22f7-d932-8c629aed27b1';
@@ -521,4 +528,72 @@ it('says when no post-incident sample exists yet instead of leading with an idle
     '사건 뒤 지표 표본이 아직 없습니다(수집 간격 최대 4분). 사건 전 정정 불가 ECC(DBE) 휘발성 누적값은 0 회라 이번 오류가 반영됐는지는 nvidia-smi -q -d ECC로 직접 확인하세요.',
   );
   expect(v.findings[2].points).toEqual([]);
+});
+
+it('reads stored component metrics, row-remap flags and disk bytes', () => {
+  const window = (value: number, at: string) => ({
+    min: value,
+    max: value,
+    last_value: value,
+    samples: 2,
+    first: at,
+    last: at,
+  });
+  const metric = (query: string, name: string, unit: string, kind: string, extra: object) => ({
+    query_id: query,
+    name,
+    unit,
+    kind,
+    last: '2026-10-23T08:25:00Z',
+    max_sample_gap_seconds: 150,
+    ...extra,
+  });
+  const ro = 'filesystem remounted as read-only due to errors';
+  const base = (key: string, metrics: object[]) =>
+    operatorView({
+      runbook_revisions: [{ knowledge_key: key, revision: 2 }],
+      time_range: { start: '2026-10-23T07:50:00Z', end: '2026-10-23T08:30:00Z' },
+      incident_time: '2026-10-23T08:19:00Z',
+      device_observations: [
+        {
+          component: key === 'RB-COMPONENT-DISK' ? 'disk' : 'accelerator-nvidia-dcgm-mem',
+          raw_health: 'Unhealthy',
+          reason: ro,
+          observed_at: '2026-10-23T08:18:00Z',
+          target: { node: 'dgx01' },
+        },
+      ],
+      quality: {
+        component_observations: {
+          schema: 'rca-component-observations/1',
+          event_boundary: '2026-10-23T08:18:00Z',
+          metrics,
+        },
+      },
+    })!;
+  const mem = base('RB-COMPONENT-DCGM-MEM', [
+    metric('D50', '행 재매핑 대기', 'enum', 'enum', {
+      gpu_uuid: gpu,
+      incident_windows: {
+        before: window(0, '2026-10-23T08:10:00Z'),
+        at_or_after: window(1, '2026-10-23T08:25:00Z'),
+      },
+    }),
+  ]);
+  expect(mem.metrics[0]).toMatchObject({ tag: '리셋 필요', tone: 'warn' });
+  expect(mem.metrics[0].afterText).toBe('1 (대기)');
+  expect(mem.findings[0].points.join()).toContain('지표 범위: 같은 노드 GPU 1개 전체');
+  const disk = base('RB-COMPONENT-DISK', [
+    metric('D59', '디스크 사용량 (/)', 'bytes', 'gauge', {
+      mount_point: '/',
+      incident_windows: {
+        before: window(872180035584, '2026-10-23T08:10:00Z'),
+        at_or_after: window(872180035584, '2026-10-23T08:25:00Z'),
+      },
+    }),
+  ]);
+  // Per-mount rows are not GPU rows: one table, no "GPU 1개" grouping.
+  expect(disk.multiGpu).toBe(false);
+  expect(disk.metrics[0].beforeText).toBe('872.2 GB');
+  expect(valueText(1.888e12, 'B')).toBe('1.9 TB');
 });

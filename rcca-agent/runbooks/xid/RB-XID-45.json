@@ -159,7 +159,7 @@
         },
         {
           "title": "오류별 판단 기준",
-          "text": "단독이면 Fabric Manager 재시작을 검토하고, 다른 XID와 함께라면 그 XID의 지침을 따릅니다. GPU Node Triage: 정보성 메시지로 조치가 필요 없습니다. 다른 장애에 영향받은 채널을 뜻하며, A100에서 같은 OS의 Fabric Manager가 예기치 않게 종료되면 단독으로 보일 수 있습니다."
+          "text": "단독이면 Fabric Manager 재시작을 검토하고, 다른 XID와 함께라면 그 XID의 지침을 따릅니다. GPU Node Triage: 정보성 메시지로 조치가 필요 없습니다. 다른 장애에 영향받은 채널을 뜻하며, A100에서 같은 OS의 Fabric Manager가 예기치 않게 종료되면 단독으로 보일 수 있습니다. 여러 CUDA 애플리케이션이 돌다가 DBE를 만난 경우가 가장 흔하므로 같은 GPU의 메모리 오류(XID 48·94·95)와 ECC 값을 먼저 확인합니다."
         },
         {
           "title": "복구 조치",

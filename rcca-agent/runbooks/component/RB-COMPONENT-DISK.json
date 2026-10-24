@@ -59,6 +59,30 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D59",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 마운트별 디스크 사용량을 사건 전후로 본다. Fleet은 루트(/)만 보고하며 다른 마운트가 없다고 해서 비어 있다고 보지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D60",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 마운트별 디스크 여유 공간을 사건 전후로 본다. 여유가 있다고 해서 파일시스템 오류가 없다고 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -243,6 +267,22 @@
           ],
           "required": true,
           "expected_effect": "같은 노드·기간의 Fleet disk 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D59",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 마운트별 디스크 사용량을 사건 전후로 본다. Fleet은 루트(/)만 보고하며 다른 마운트가 없다고 해서 비어 있다고 보지 않는다."
+        },
+        {
+          "query_id": "D60",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 마운트별 디스크 여유 공간을 사건 전후로 본다. 여유가 있다고 해서 파일시스템 오류가 없다고 판정하지 않는다."
         }
       ]
     }
