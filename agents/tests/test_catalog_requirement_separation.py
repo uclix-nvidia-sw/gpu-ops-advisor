@@ -40,6 +40,12 @@ TRIAGE_REVIEW = {
         (CATALOG / "triage-guidance-review-20261022.json").read_text("utf-8")
     )["entries"]
 }
+BATCH2_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "runbook-batch2-review-20261024.json").read_text("utf-8")
+    )["entries"]
+}
 COVERAGE_REVIEW = {
     e["file"]: e
     for e in json.loads(
@@ -108,9 +114,10 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        # Newest review first: metric coverage, memory guidance, wording, catalog
-        # actions, triage, then the report review.
+        # Newest review first: batch 2, metric coverage, memory guidance, wording,
+        # catalog actions, triage, then the report review.
         for review in (
+            BATCH2_REVIEW,
             COVERAGE_REVIEW,
             MEMORY_REVIEW,
             WORDING_REVIEW,

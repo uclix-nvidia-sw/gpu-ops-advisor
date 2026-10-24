@@ -940,6 +940,30 @@
       "selected_binding": null,
       "purpose": "디스크·파일시스템 오류 조사, RCA",
       "spec_ref": "d-query-mapping §4"
+    },
+    "D61": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "열 제한(thermal violation) 누적 시간; DCGM 정의 나노초",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D61"
+      ],
+      "selected_binding": null,
+      "purpose": "열·클록 제한 조사, RCA",
+      "spec_ref": "d-query-mapping §4"
+    },
+    "D62": {
+      "revision": "draft-1",
+      "kind": "metric",
+      "meaning": "전력 제한(power violation) 누적 시간; DCGM 정의 나노초",
+      "scope_kind": "G",
+      "binding_candidates": [
+        "fleet_intelligence.D62"
+      ],
+      "selected_binding": null,
+      "purpose": "전력·클록 제한 조사, RCA",
+      "spec_ref": "d-query-mapping §4"
     }
   },
   "bindings": {
@@ -5700,6 +5724,154 @@
         "health_fact_eligible": false,
         "note": "Recorded producer observations only; no causal, allocation or hardware health assertion. Fleet may retain a value after a failed check."
       }
+    },
+    "fleet_intelligence.D61": {
+      "query_id": "D61",
+      "revision": "violation-time-20261024-r1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_thermal_violation",
+      "environment": {
+        "datasource_uid": null,
+        "scope_labels": {
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
+        },
+        "selector": {
+          "job": "fleet-intelligence-agent"
+        },
+        "datasource_mode": "discover"
+      },
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "json_target_fields": null,
+      "sample_type": "counter",
+      "unit": "ns",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 60
+      },
+      "max_hold": {
+        "seconds": 0,
+        "policy": "Fleet gather time is not hardware measurement time; no forward fill."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "reject_decrease"
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-17T07:20:00Z",
+          "end": "2026-10-24T07:20:00Z"
+        },
+        "retention_evidence": "docs/evidence/d-observation-expansion-20261024.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-observation-expansion-20261024.md"
+        ],
+        "applicability": "Shared source contract for the reviewed versions and selectors, matched with live stored names, target labels and source definitions. Arbitrary request cluster_id via MCP discovery. Observation availability is not hardware measurement freshness or full analysis support.",
+        "limitation": "Live Worker acceptance after deployment remains unverified; unsupported devices may produce no series. No inter-source arithmetic or automatic health promotion."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "measurement_time_verified": false,
+        "forward_fill_allowed": false,
+        "health_fact_eligible": false,
+        "note": "Recorded producer observations only; no causal, allocation or hardware health assertion. Fleet may retain a value after a failed check."
+      }
+    },
+    "fleet_intelligence.D62": {
+      "query_id": "D62",
+      "revision": "violation-time-20261024-r1",
+      "producer": "fleet_intelligence",
+      "producer_version": "1.5.0-rc.1",
+      "source": "mimir",
+      "metric": "dcgm_fi_dev_power_violation",
+      "environment": {
+        "datasource_uid": null,
+        "scope_labels": {
+          "cluster_id": [
+            "cluster_id",
+            "cluster",
+            "k8s_cluster_name",
+            "kubernetes_cluster",
+            "k8s_cluster"
+          ]
+        },
+        "selector": {
+          "job": "fleet-intelligence-agent"
+        },
+        "datasource_mode": "discover"
+      },
+      "target_labels": {
+        "gpu_uuid": "uuid",
+        "node": "node"
+      },
+      "json_target_fields": null,
+      "sample_type": "counter",
+      "unit": "ns",
+      "timestamp_basis": "prometheus_sample",
+      "event_timestamp_rule": null,
+      "sample_interval": {
+        "seconds": 60
+      },
+      "max_hold": {
+        "seconds": 0,
+        "policy": "Fleet gather time is not hardware measurement time; no forward fill."
+      },
+      "invalid_values": {
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "sentinels": []
+      },
+      "counter_reset": {
+        "mode": "reject_decrease"
+      },
+      "health_contract": null,
+      "verification": {
+        "status": "verified",
+        "observed_window": {
+          "start": "2026-10-17T07:20:00Z",
+          "end": "2026-10-24T07:20:00Z"
+        },
+        "retention_evidence": "docs/evidence/d-observation-expansion-20261024.md#availability-and-time",
+        "evidence_refs": [
+          "docs/evidence/d-observation-expansion-20261024.md"
+        ],
+        "applicability": "Shared source contract for the reviewed versions and selectors, matched with live stored names, target labels and source definitions. Arbitrary request cluster_id via MCP discovery. Observation availability is not hardware measurement freshness or full analysis support.",
+        "limitation": "Live Worker acceptance after deployment remains unverified; unsupported devices may produce no series. No inter-source arithmetic or automatic health promotion."
+      },
+      "reference": {
+        "evidence_level": "Fleet 과거 표본 이름",
+        "legacy_definition": null,
+        "legacy_definition_url": null,
+        "note": "Reference values, including legacy validated=true, are not execution authorization for this binding."
+      },
+      "observation_semantics": {
+        "measurement_time_verified": false,
+        "forward_fill_allowed": false,
+        "health_fact_eligible": false,
+        "note": "Recorded producer observations only; no causal, allocation or hardware health assertion. Fleet may retain a value after a failed check."
+      }
     }
   },
   "transition": {
@@ -6247,9 +6419,11 @@
         "executable_metric_name": false
       },
       "DCGM_FI_DEV_POWER_VIOLATION": {
-        "status": "deferred",
-        "query_ids": [],
-        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "status": "mapped",
+        "query_ids": [
+          "D62"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
         "executable_metric_name": false
       },
       "DCGM_FI_DEV_RELIABILITY_VIOLATION": {
@@ -6319,9 +6493,11 @@
         "executable_metric_name": false
       },
       "DCGM_FI_DEV_THERMAL_VIOLATION": {
-        "status": "deferred",
-        "query_ids": [],
-        "reason": "1차 선택 밖. 생산자/장비 지원·조회 목적·단위/해석 계약 확인 후 별도 D 배정",
+        "status": "mapped",
+        "query_ids": [
+          "D61"
+        ],
+        "reason": "실행 source·이름·가용성은 위 매핑 표 참조",
         "executable_metric_name": false
       },
       "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION": {

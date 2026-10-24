@@ -87,6 +87,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D62",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU의 전력 제한 누적 시간(나노초 누적값, 사건 전후 증가량만 읽음)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -277,6 +289,14 @@
           ],
           "required": false,
           "expected_effect": "사건 전후 같은 노드 GPU의 클록 제한 사유 비트마스크을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D62",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU의 전력 제한 누적 시간(나노초 누적값, 사건 전후 증가량만 읽음)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
         }
       ]
     }
