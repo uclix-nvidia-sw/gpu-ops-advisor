@@ -253,7 +253,7 @@
         },
         {
           "title": "복구 조치",
-          "text": "호스트를 재시작해 fabric 전체를 리셋합니다. 공유 NVSwitch 가상화 모드는 관련 guest 파티션을 모두 종료한 뒤 service VM 복구 경로를 따릅니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+          "text": "bare metal: 오류 포트가 GPU 연결 포트(access)면 오류가 GPU로 전파돼 그 GPU의 CUDA 작업이 끝나고 XID 74·45가 함께 보일 수 있으며, Fabric Manager는 다른 작업을 중단하지 않습니다. 해당 GPU와 같은 작업의 GPU를 nvidia-smi -r로 리셋합니다. 베이스보드 사이 포트(trunk)면 Fabric Manager가 모든 CUDA 작업을 중단하고 새 실행을 막습니다. Fabric Manager를 정지하고 GPU를 쓰는 프로그램을 모두 멈춘 뒤 모든 GPU·NVSwitch를 nvidia-smi -r(-i 옵션 없이)로 리셋하고 Fabric Manager를 다시 시작합니다. 계속되면 재부팅하거나 전원을 다시 넣습니다. 공유 NVSwitch 가상화: guest VM 파티션을 모두 종료한 뒤 호스트를 재시작하거나, GPU·NVSwitch를 SBR로 리셋한 뒤 service VM을 재시작합니다. 포트 종류(access·trunk)는 Fabric Manager 로그의 같은 시각 SXID 줄로 확인합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

@@ -116,6 +116,8 @@ Prometheus 쿼리는 현행 원본 range-vector 방식으로 metric 하나를 �
 | D58 | dcgm_fi_dev_inforom_config_valid | Fleet·G | InfoROM 체크섬 유효 0/1 enum | DCGM InfoROM RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 | D59 | disk_used_bytes | Fleet·N | 마운트별 사용량; bytes, mount_point | disk RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 | D60 | disk_free_bytes | Fleet·N | 마운트별 여유; bytes, mount_point | disk RCA | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D61 | dcgm_fi_dev_thermal_violation | Fleet·G | 열 제한 누적 시간; counter, ns | 열 관련 XID·DCGM 열 RCA. 사건 전후 증가량만 읽음 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
+| D62 | dcgm_fi_dev_power_violation | Fleet·G | 전력 제한 누적 시간; counter, ns | 전력 관련 XID·DCGM 전력 RCA. 사건 전후 증가량만 읽음 | [2026-10-24 관측](../../evidence/d-observation-expansion-20261024.md) |
 
 메모리/ECC의 device/total 또는 volatile/aggregate 값을 무조건 합산하지 않는다. 각각 의미가 다른 조회다. 같은 의미의 두 생산자나 D11 적분과 D49 누적 증가량도 소비량에 이중 합산하지 않는다.
 

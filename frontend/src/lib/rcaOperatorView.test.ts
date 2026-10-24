@@ -597,3 +597,36 @@ it('reads stored component metrics, row-remap flags and disk bytes', () => {
   expect(disk.metrics[0].beforeText).toBe('872.2 GB');
   expect(valueText(1.888e12, 'B')).toBe('1.9 TB');
 });
+
+it('shows how much cumulative counters grew and reads violation time as elapsed time', () => {
+  const counter = (query: string, name: string, unit: string, from: number, to: number) => ({
+    name,
+    query_id: query,
+    unit,
+    kind: 'counter',
+    gpu_uuid: gpu,
+    last: '2026-10-22T03:28:40Z',
+    max_sample_gap_seconds: 60,
+    incident_windows: {
+      before: { ...before(from), min: from, last_value: from },
+      at_or_after: { ...before(to, '2026-10-22T03:28:40Z'), min: to, last_value: to, samples: 3 },
+    },
+  });
+  const v = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metrics: [
+          counter('D55', 'NVLink CRC 오류 누적값', 'count', 120, 132),
+          counter('D62', '전력 제한 누적 시간', 'ns', 3.6e15, 3.6e15 + 1.6e9),
+        ],
+      },
+    },
+  })!;
+  const crc = v.metrics.find((m) => m.query === 'D55')!;
+  expect(crc.afterText).toBe('132 회 (+12 회)');
+  expect(crc.short).toBe('사건 뒤 +12 회');
+  const power = v.metrics.find((m) => m.query === 'D62')!;
+  expect(power.afterText).toBe('41.7일 (+1.6초)');
+  expect(valueText(42e9, 'ns')).toBe('42.0초');
+});

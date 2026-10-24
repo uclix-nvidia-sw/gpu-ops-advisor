@@ -78,8 +78,8 @@ def verified(
 def test_same_uploaded_schema_and_worker_loader_and_chart():
     a = Settings("rca").profile()
     assert a == Settings("report").profile() == profile(active_defaults=True)
-    assert len(a["queries"]) == 56
-    assert len(a["bindings"]) == 68
+    assert len(a["queries"]) == 58
+    assert len(a["bindings"]) == 70
     assert not {"D01", "D05", "D08", "D14"} & a["queries"].keys()
     assert (ROOT / "agents/config.example.json").read_bytes() == (
         ROOT / "charts/gpu-ops-advisor/files/agents.json"
@@ -87,7 +87,7 @@ def test_same_uploaded_schema_and_worker_loader_and_chart():
 
 
 @pytest.mark.parametrize(
-    "query", [f"D{i:02}" for i in range(2, 61) if i not in (5, 8, 14)]
+    "query", [f"D{i:02}" for i in range(2, 63) if i not in (5, 8, 14)]
 )
 async def test_unselected_never_calls_any_remote_tool(query):
     async def forbidden(args):

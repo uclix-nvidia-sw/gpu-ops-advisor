@@ -80,12 +80,24 @@ const units: Record<string, string> = {
   celsius: '°C',
   bitmask: '비트마스크',
   bytes: 'B',
+  ns: 'ns',
 };
 export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
 
 const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
 /** Value with its unit label; byte rates scale to KB/MB/GB per second. */
 export function valueText(v: number, unit: string) {
+  if (unit === 'ns') {
+    // DCGM violation counters accumulate nanoseconds; read them as elapsed time.
+    const s = v / 1e9;
+    return Math.abs(s) >= 86400
+      ? `${(s / 86400).toFixed(1)}일`
+      : Math.abs(s) >= 3600
+        ? `${(s / 3600).toFixed(1)}시간`
+        : Math.abs(s) >= 60
+          ? `${(s / 60).toFixed(1)}분`
+          : `${s.toFixed(1)}초`;
+  }
   if (unit === 'B') {
     const step = (
       [
@@ -713,7 +725,7 @@ export function operatorView(result: Row) {
         // Uncorrectable ECC growth is the decisive memory signal; other counters stay a caution.
         const dbe = ['D40', 'D42'].includes(q);
         tag = '증가';
-        short = `사건 뒤 +${fmtNum(after.max - before.max)}${dbe ? ' · 정정 불가 ECC 증가 → 메모리 오류 대상' : ''}`;
+        short = `사건 뒤 +${val(after.max - before.max)}${dbe ? ' · 정정 불가 ECC 증가 → 메모리 오류 대상' : ''}`;
         tone = dbe ? 'alert' : 'warn';
       } else if (m.kind !== 'counter' && after.samples === 1) {
         [tag, short] = [
@@ -776,7 +788,14 @@ export function operatorView(result: Row) {
       after,
       whole,
       beforeText: cell(before),
-      afterText: after ? `${cell(after)}${after.samples === 1 ? ' · 1회' : ''}` : '',
+      afterText: after
+        ? `${cell(after)}${
+            // Cumulative counters: show how much they grew, not only the new total.
+            m.kind === 'counter' && before && after.last > before.last
+              ? ` (+${val(after.last - before.last)})`
+              : ''
+          }${after.samples === 1 ? ' · 1회' : ''}`
+        : '',
       wholeText: cell(whole),
       samples: num(m.samples),
       lastSample: str(m.last),

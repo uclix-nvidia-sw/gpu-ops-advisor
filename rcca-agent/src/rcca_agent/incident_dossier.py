@@ -42,8 +42,23 @@ METRICS = {
     "D58": "InfoROM 설정 유효",
     "D59": "디스크 사용량",
     "D60": "디스크 여유 공간",
+    "D61": "열 제한 누적 시간",
+    "D62": "전력 제한 누적 시간",
 }
-COUNTERS = {"D36", "D38", "D40", "D42", "D44", "D52", "D53", "D55", "D56", "D57"}
+COUNTERS = {
+    "D36",
+    "D38",
+    "D40",
+    "D42",
+    "D44",
+    "D52",
+    "D53",
+    "D55",
+    "D56",
+    "D57",
+    "D61",
+    "D62",
+}
 # Coded values: compare equality only, never magnitude or health.
 ENUMS = {"D45", "D47", "D50", "D51", "D58"}
 ADDRESSES = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)

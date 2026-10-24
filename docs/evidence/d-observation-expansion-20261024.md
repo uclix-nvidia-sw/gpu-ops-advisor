@@ -31,6 +31,7 @@ and NVIDIA [GPU memory error management](https://docs.nvidia.com/deploy/a100-gpu
 | D55–D57 | `dcgm_fi_dev_nvlink_error_dl_{crc,recovery,replay}` | counter | count | 16 series, all 0 | Sum over the GPU's links; no per-link attribution or BER |
 | D58 | `dcgm_fi_dev_inforom_config_valid` | gauge 0/1 | enum | 18 series incl. two workers, all 1 | Checksum validity only; not InfoROM version or ECC health |
 | D59, D60 | `disk_used_bytes`, `disk_free_bytes` | gauge | bytes | 4 node series, `mount_point="/"` only | Fleet reports the root mount; other mounts are absent, not empty |
+| D61, D62 | `dcgm_fi_dev_thermal_violation`, `dcgm_fi_dev_power_violation` | counter | ns | 18 series; thermal all 0, power up to 1.6 s per 7 days (checked 2026-10-24 07:20Z) | DCGM field reference: "Thermal/Power Violation time in ns"; Fleet `Set(fieldValue.Int64())` without scaling. Lifetime totals, so only the before/after increase is read |
 
 All bindings use `job="fleet-intelligence-agent"`, GPU targets `uuid`/`node`
 (D59/D60: `node`/`mount_point`), Fleet gather time and zero forward hold, as in
@@ -46,5 +47,5 @@ time is not hardware measurement time; observations stay
 
 | Metric | Reason |
 |---|---|
-| `dcgm_fi_dev_thermal_violation`, `dcgm_fi_dev_power_violation`, `dcgm_fi_dev_reliability_violation` | Cumulative violation time; the deployed unit is not confirmed (same open question as D46) |
+| `dcgm_fi_dev_reliability_violation`, `dcgm_fi_dev_board_limit_violation` | The DCGM field reference gives no unit ("violation limit"); D46 stays unverified |
 | `dcgm_fi_dev_nvlink_count_*` | Present in Fleet source but not in this datasource's metric list |

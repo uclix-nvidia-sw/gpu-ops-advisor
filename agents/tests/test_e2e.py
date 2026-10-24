@@ -721,6 +721,8 @@ def stack():
             ("D58", "enum"),
             ("D59", "bytes"),
             ("D60", "bytes"),
+            ("D61", "ns"),
+            ("D62", "ns"),
         ):
             profile["queries"][query_id] = dict(
                 source="mimir",

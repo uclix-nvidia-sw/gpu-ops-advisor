@@ -32,6 +32,7 @@ from test_discovery import Grafana
         ("D52", "count", 2, 2),
         ("D55", "count", 7, 7),
         ("D59", "bytes", 872180035584, 872180035584),
+        ("D62", "ns", 1597348309, 1597348309),
     ],
 )
 async def test_fleet_contract_reaches_rca_with_units_and_time_limit(
