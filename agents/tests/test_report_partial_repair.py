@@ -8,7 +8,8 @@ from ops_agent.report_interpretation import (
     payload_for,
     validate_sections,
 )
-from test_namespace_advice import section, topic
+from test_namespace_advice import writer_section, topic
+from ops_agent.namespace_advice import present_advice
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def repair_case():
         + target
         + "}}의 {{period:incident.count}} 알림과 기존 점검 기록을 대조하세요.",
     )
-    valid = {"sections": [section(wire["topics"][0]["findings"]), inc]}
+    valid = {"sections": [writer_section(wire["topics"][0]["findings"]), inc]}
     validate_sections(valid, wire, result)
     return result, valid
 
@@ -77,7 +78,8 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
     patches = {}
     if broken in {"namespace", "both"}:
         queue["summary"] = queue["summary"].replace(
-            "스케줄러 이벤트와 배치 제약을 먼저 대조하세요.", "관측된 범위입니다."
+            "대기 Pod의 상태·스케줄러 이벤트를 대조해 노드 배정 전인지 준비 단계인지 확인하세요.",
+            "관측된 범위입니다.",
         )
         patches["advice"] = [
             next(
@@ -95,6 +97,7 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
         valid["sections"].reverse()
     original, first = deepcopy(result), deepcopy(invalid)
     expected = validate_sections(valid, payload_for(result), result)
+    present_advice(expected)
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [invalid, patches]
     await interpret_report(result, llm)

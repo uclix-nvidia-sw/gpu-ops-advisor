@@ -217,19 +217,21 @@ async def test_workload_context_reaches_actual_llm_initial_and_repair_inputs(
     assert summary_context(fact)["workload_context"] == fact["workload_context"]
     llm = AsyncMock()
 
-    async def complete(system, data):
+    async def complete(system, data, **kwargs):
         if repair_mode == "full":
             return {"sections": []}
         if "summary_repair" in data:
             example = data["response_shape"]["advice"][0]["summary"]
             assert "option" not in data["summary_repair"][0]["decision"]
             assert example == ""
-            assert "{{target}}" in data["summary_repair"][0]["summary_start"]
+            assert "target" in data["summary_repair"][0]["observed_values"]
+            assert "summary_start" not in data["summary_repair"][0]
             response = deepcopy(data["response_shape"])
-            context = summary_context(fact)
-            response["advice"][0]["summary"] = (
-                context["decision"]["option"] + " " + context["summary_start"]
-            )
+            from test_namespace_advice import writer_section
+
+            response["advice"][0]["summary"] = writer_section([fact])["advice"][0][
+                "summary"
+            ]
             return response
         response = deepcopy(data["response_shape"])
         response["sections"][0]["advice"][0]["summary"] += " {{activity}}"

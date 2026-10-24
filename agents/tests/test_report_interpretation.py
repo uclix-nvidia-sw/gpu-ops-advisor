@@ -55,9 +55,9 @@ def reply_for(payload):
     sections = []
     for t in payload["topics"]:
         if t.get("advice_mode"):
-            from test_namespace_advice import section
+            from test_namespace_advice import writer_section
 
-            sections.append(section(t["findings"]))
+            sections.append(writer_section(t["findings"]))
             continue
         f = t["findings"][0]
         pair = f.get("hourly_pair", [])
@@ -577,7 +577,9 @@ async def test_malformed_json_gets_one_bounded_repair_in_both_origins(
     valid = reply_for(payload_for(result))
 
     def respond(request):
-        data = json.loads(request.content)["messages"][1]["content"]
+        wire = json.loads(request.content)
+        assert wire["response_format"] == {"type": "json_object"}
+        data = wire["messages"][1]["content"]
         requests.append(json.loads(data))
         return httpx.Response(
             200,
