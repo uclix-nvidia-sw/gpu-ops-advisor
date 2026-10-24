@@ -429,13 +429,18 @@ def validate_written_advice(section, topic):
         if re.search(
             r"(?:작업|Pod)(?:은|는|이|가)\s*(?:"
             r"(?:(?:연산|GPU)\s*)?활동(?:률)?(?:이|가|은|는|을)?\s*(?:낮|높)(?:았|습|다)|"
-            r"(?:낮은|높은)\s*활동(?:률)?(?:을|를)\s*(?:보|나타))",
+            r"(?:낮은|높은)\s*활동(?:률)?(?:을|를)\s*(?:보|나타))|"
+            r"(?:작업|Pod|파드)(?:들)?(?:\s*일부)?\s*의\s*"
+            r"(?:(?:낮은|높은)\s*)?(?:(?:연산|GPU)\s*)?활동(?:률)?"
+            r"(?:이|가|은|는|을)?\s*(?:"
+            r"(?:(?:매우|상대적으로)\s*)?(?:낮|높)(?:았|습|다|게)|"
+            r"(?:관측|측정)(?:됐|되었|됩니다)|보였|나타났)",
             text,
             re.I,
         ):
             raise ValueError(
                 "unsupported_workload_activity_attribution: 활동률은 Namespace에 연결된 GPU의 관측입니다. "
-                "개별 Pod·작업의 활동률로 단정하지 말고 연결 GPU의 관측과 확인된 작업 맥락을 구분하세요"
+                "개별 Pod·작업의 활동률(소유격 포함)로 단정하지 말고 연결 GPU의 관측과 확인된 작업 맥락을 구분하세요"
             )
         kind = fact["kind"]
         requirements = PREREQUISITES.get(kind)
@@ -836,13 +841,22 @@ def partial_repair(reply, payload, result):
             try:
                 validate_written_advice({"advice": [item]}, {"findings": [fact]})
             except (ValueError, TypeError, KeyError) as exc:
+                context = writing_context(fact, topic["findings"])
+                error = str(exc)
+                if error == "separate_observations_do_not_prove_continuity":
+                    error += ": 불연속 관측의 연속성 단정뿐 아니라 포화·부족·때문 표현도 거절됩니다. 질문·부정문에서도 빼고 요청을 충족할 노드가 있었는지 기록에서 확인하도록 쓰세요"
+                elif error in {
+                    "invalid_namespace_advice_text",
+                    "concise_namespace_summary_required",
+                }:
+                    error += f": 설명은 prose_max_chars={context['prose_max_chars']}자 이내여야 합니다. 필수 조건·대상·행동·판단 목적은 남기고 중복 현상·수집 상태·작성 지시·군더더기를 줄이세요"
                 invalid.append(
                     {
                         "fact_id": fact["fact_id"],
                         "kind": fact["kind"],
-                        **writing_context(fact, topic["findings"]),
+                        **context,
                         "previous_summary": item.get("summary"),
-                        "validation_error": str(exc),
+                        "validation_error": error,
                     }
                 )
         if not invalid:
@@ -897,45 +911,45 @@ def writing_context(fact, findings=()):
     )
     context["writing_checks"] = {
         "relative_activity": [
-            "일부 작업의 시작 시각 조정·시범 실행 검토",
+            "낮은 활동 구간을 앞으로 활용할 수 있을지 판단; 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 검토",
             "마감·예약·가용 GPU·메모리 요구 확인 후/뒤에만 검토",
             "비교 구간보다 낮았던 GPU 활동률 관측",
         ],
         "repeated_activity": [
-            "대기 작업 실행을 위한 요청·실제 할당·스케줄러 기록 대조",
-            "관측 시점별 노드 배정 조건과 대기 작업의 실행 제약 확인",
+            "대기 Pod의 요청·실제 할당·스케줄러 기록을 대조해 요청을 충족할 노드 유무와 노드 선택 조건을 구분",
+            "관측 시점별 대기 Pod의 GPU 요청을 충족할 노드가 있었는지, 노드 선택 조건이 맞지 않았는지 기록에서 확인; 점검 질문이지 확인된 원인이 아님; 연속·지속·재상승·포화·부족·때문·시간대 실행/배치·시범 표현은 질문·부정문에도 쓰지 않음",
         ],
         "capacity_review": [
-            "대기 이유를 좁힐 스케줄러 사유와 GPU 요청·실제 할당·보장량·가용 GPU·운영정책을 확인한 뒤에만 추가 할당 검토"
+            "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책까지 확인한 뒤에만 추가 할당 검토; 자원 부족은 미확인"
         ],
         "schedule_candidate": [
-            "현재 대기 Pod가 아니라 앞으로 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
+            "낮은 활동 구간을 앞으로 활용할 수 있을지 판단; 현재 대기 Pod가 아니라 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
         ],
         "queue_review": [
-            "해당 queue_context 단계의 Pod 기록을 점검해 다음 확인 대상을 구분"
+            "check_first 단계의 기록에서 알아낼 내용을 명시; 이미 연결된 단계는 재확인하지 않음"
         ],
         "resident_memory": [
-            "새 작업 배치 판단에 필요한 메모리 점유 주체·상주 목적 확인; 서빙·캐시는 가능한 예시"
+            "새 작업 배치를 검토하기 전에 어떤 작업이 메모리를 차지하고 계속 유지해야 하는지 확인; 낮은 활동만으로 메모리 점유가 불필요하다고 판단하지 않음; 서빙·캐시는 가능한 예시"
         ],
         "batch_progress": [
             "완료 Job 일부를 설명하고 허용된 판단 목적에 필요한 기록만 점검; 이미 연결된 작업 유형은 현상 설명에 활용"
         ],
     }[fact["kind"]]
     context["writing_checks"].append(
-        "설명에 확인·대조·검토·점검 중 하나 이상을 직접 포함; 구분하세요만으로 끝내지 않음"
+        "기록·확인할 내용·판단 목적을 연결; 확인·대조·검토·점검 동사를 직접 쓰고 구분하세요만으로 끝내지 않음"
     )
     if fact["kind"] in PREREQUISITES:
         context["required_checks"] = list(PREREQUISITES[fact["kind"]])
         context["writing_checks"].append(
-            "required_checks 전체를 최종 변경 판단 전에 확인·대조·점검; 여러 단계로 확인해도 기존 조건을 생략하거나 검토 뒤로 옮기지 않음"
+            "required_checks 전체를 확인한 뒤 최종 변경 여부를 검토; 여러 단계로 확인해도 기존 조건을 생략하거나 검토 뒤로 옮기지 않음"
         )
     if fact["kind"] in {"queue_review", "batch_progress"}:
         phase = context["queue_context"]["check_first"]
         context["writing_checks"].append(
             {
-                "placement": "노드 미배정 대기 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 확인해 배정되지 않은 사유 구분",
-                "preparation": "대기 Pod의 이미지 다운로드·초기화 이벤트를 확인해 시작 준비 상태 구분; GPU 부족이나 준비 지연 단정 금지",
-                "unknown": "Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분; 일부 미배치 영을 배정 완료로 바꾸지 않음",
+                "placement": "노드 미배정 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 대조해 요청을 충족할 노드가 있었는지·선택 조건이 맞는지 확인; 이미 미배정이 연결됐으므로 단계 재구분·실패/지연 단정 대신 배정 제약을 찾는 목적",
+                "preparation": "대기 Pod의 이미지 다운로드·초기화 이벤트에서 어느 준비 단계에 있는지 확인; GPU 부족이나 준비 지연 단정 금지",
+                "unknown": "Pod 상태·이벤트를 점검해 노드 배정 대기인지 이미지 다운로드·초기화 등 시작 준비 중인지 구분; 일부 미배치 영을 배정 완료로 바꾸지 않음",
             }[phase]
             if context["decision"]["scope"] != "observation_only"
             else "완료 Job의 실제 Pod 시작·완료 기록을 대조해 같은 유형 작업 일정에 참고할 수 있는지 확인"
@@ -1000,7 +1014,7 @@ async def interpret_report(result, llm):
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "이전 summary의 판단 설명만 보완하고 정상 항목은 바꾸지 마세요. 오류의 참조·수치가 설명에 있으면 제거하되 운영 선택·이유·대상·행동·필수 확인 조건은 보존하세요. summary는 수치·대상명·시간·참조 토큰·근거 문장 없이 prose_max_chars 이내로 작성합니다. 확인·대조·검토·점검 중 행동 동사를 직접 쓰고, 구분하세요만으로 끝내지 마세요. 시간 변경 항목은 조건을 모두 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 여부를 검토하도록 쓰세요. 조정해·변경하고처럼 이미 변경하는 표현을 쓰지 마세요. 이미 연결된 작업 유형은 재확인하지 마세요. 근거는 코드가 붙이며 설명을 비워서는 안 됩니다. section_repair의 다른 주제는 기존 참조 규칙을 유지하세요. response_shape만 JSON으로 반환하세요.",
+                "instruction": "이전 summary의 판단 설명만 보완하고 정상 항목은 바꾸지 마세요. 오류의 참조·수치가 설명에 있으면 제거하되 운영 선택·이유·대상·행동·필수 확인 조건은 보존하세요. summary는 수치·대상명·시간·참조 토큰·근거 문장 없이 prose_max_chars 이내로 작성합니다. 길이를 줄일 때 필수 조건·대상·행동·판단 목적을 남기고 중복 현상·수집 상태·작성 지시·군더더기를 먼저 빼세요. 같은 조건과 검토·판단을 되풀이하지 마세요. 지적된 오류 외에도 writing_checks의 관측 범위와 금지 표현을 모두 유지하세요. 현상 설명과 점검·제안은 짧게 나누고, 확인·대조·검토·점검 중 목적에 맞는 행동 동사를 직접 쓰세요. 동의어를 나열하거나 구분하세요만으로 끝내지 말고 어떤 기록에서 무엇을 알아낼지 연결하세요. 시간 변경 항목은 조건을 모두 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 여부를 검토하도록 쓰세요. 조정해·변경하고처럼 이미 변경하는 표현을 쓰지 마세요. 검토하되 뒤에 조건을 덧붙이지 말고 필수 조건을 확인한 뒤 최종 검토로 끝내세요. 이미 연결된 작업 유형은 재확인하지 마세요. 근거는 코드가 붙이며 설명을 비워서는 안 됩니다. section_repair의 다른 주제는 기존 참조 규칙을 유지하세요. response_shape만 JSON으로 반환하세요.",
                 "response_shape": {
                     **(
                         {
@@ -1253,7 +1267,13 @@ async def interpret_report(result, llm):
                 **payload,
                 "validation_feedback": {
                     "error": error,
-                    "instruction": "오류가 난 항목만 보완하세요. namespace_usage의 summary는 수치·대상명·시간·참조 토큰·근거 문장 없는 판단 설명입니다. 근거는 코드가 조립합니다. 지적된 숫자·참조를 반복하지 말고 현상·운영 선택·구체적 확인 목적·필수 조건을 보존하세요. 다른 주제는 기존 fact_ids와 참조 규칙을 유지하세요. response_shape의 JSON만 반환하세요.",
+                    "instruction": (
+                        "주제 개수·중복·순서 오류입니다. response_shape.sections만 전체 반환하고 topic_id를 입력 순서대로 각 한 번만 쓰세요. incident_summary를 앞뒤에 덧붙이거나 Namespace별 section을 만들지 마세요. 기존 참조·판단·확인 조건은 유지하세요."
+                        if advice_mode
+                        and error.partition(":")[0]
+                        in {"topic_sections_required", "topic_mismatch"}
+                        else "오류가 난 항목만 보완하세요. namespace_usage의 summary는 수치·대상명·시간·참조 토큰·근거 문장 없는 판단 설명입니다. 근거는 코드가 조립합니다. 지적된 숫자·참조를 반복하지 말고 현상·운영 선택·구체적 확인 목적·필수 조건을 보존하세요. 다른 주제는 기존 fact_ids와 참조 규칙을 유지하세요. response_shape의 JSON만 반환하세요."
+                    ),
                 },
             }
             if advice_mode and repair is None:
