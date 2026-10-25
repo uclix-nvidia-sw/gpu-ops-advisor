@@ -3129,6 +3129,8 @@ def test_aggregate_report_transition_verification_is_published(
         ("json", None),
         ("mixed_topics", None),
         ("namespace_refs", None),
+        ("topic_wrapper", None),
+        ("topic_wrapper_valid", None),
         ("json", "repeated_activity"),
         ("json", "relative_activity"),
         ("schedule_condition", "schedule_candidate"),
@@ -3137,12 +3139,18 @@ def test_aggregate_report_transition_verification_is_published(
         ("partial_placement", "queue_review"),
         ("partial_placement_causal", "queue_review"),
         ("partial_placement_conjunction", "queue_review"),
+        ("partial_placement_nominal", "queue_review"),
+        ("empty_namespace_heading", "queue_review"),
         ("schedule_order", "relative_activity"),
         ("relative_memory", "relative_activity"),
         ("relative_observed_memory", "relative_activity"),
         ("observed_prerequisite", "schedule_candidate"),
         ("judgment_repair", "schedule_candidate"),
         ("possessive_activity", "schedule_candidate"),
+        ("internal_field", "queue_review"),
+        ("weak_capacity_purpose", "capacity_review"),
+        ("presumed_capacity", "capacity_review"),
+        ("repeated_trial", "schedule_candidate"),
     ],
 )
 def test_scheduled_and_manual_reports_repair_same_data(
@@ -3205,7 +3213,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
                         else 240
                         if measure.endswith("samples")
                         else 2
-                        if pattern in {"repeated_activity", "queue_review"}
+                        if pattern
+                        in {"repeated_activity", "queue_review", "capacity_review"}
                         and not (
                             pattern == "queue_review"
                             and measure.startswith("unscheduled_")
@@ -3251,6 +3260,14 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "pending_target"
                             else "작업 일부의 GPU 활동률이 낮았습니다. " + summary
                             if failure == "possessive_activity"
+                            else "target의 period에 " + summary
+                            if failure == "internal_field"
+                            else summary.replace("자원 부족 여부를 확인하고 ", "")
+                            if failure == "weak_capacity_purpose"
+                            else summary.replace("자원 부족 여부를", "자원 부족을")
+                            if failure == "presumed_capacity"
+                            else "시작 시각 조정을 검토하되, " + summary
+                            if failure == "repeated_trial"
                             else summary.replace("마감·", "")
                             if failure in {"missing_prerequisite", "judgment_repair"}
                             else "대기 관측도 완전했습니다. "
@@ -3264,6 +3281,8 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             + "마감·예약·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
                             if failure
                             in {"relative_memory", "relative_observed_memory"}
+                            else "노드 미배정이 없음을 관측했으며, " + summary
+                            if failure == "partial_placement_nominal"
                             else "노드 미배정은 없었으며, " + summary
                             if failure == "partial_placement_conjunction"
                             else "노드 미배정은 없었으므로, " + summary
@@ -3271,11 +3290,20 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             else "마감·예약·가용 GPU·메모리 요구를 확인한 뒤 일부 작업의 시작 시각을 조정해 시범 실행을 검토하세요."
                             if failure == "schedule_order"
                             else "노드 미배정은 없었습니다. " + summary
-                            if failure == "partial_placement"
+                            if failure
+                            in {"partial_placement", "empty_namespace_heading"}
+                            else summary
+                            if failure == "topic_wrapper_valid"
                             else summary + " {{period}}"
                         )
                     elif failure == "mixed_topics":
                         item["observation"] = "알림은 3건입니다."
+                if failure == "empty_namespace_heading":
+                    reply["sections"].append(
+                        {"topic_id": "namespace_usage", "advice": []}
+                    )
+                if failure in {"topic_wrapper", "topic_wrapper_valid"}:
+                    reply = {item["topic_id"]: item for item in reply["sections"]}
                 content = json.dumps(reply)
             body = {
                 **body,
@@ -3353,6 +3381,9 @@ def test_scheduled_and_manual_reports_repair_same_data(
         assert failures[0]["reason"] in (
             {"llm_invalid_output"}
             if failure == "json"
+            else {"topic_sections_required"}
+            if failure
+            in {"topic_wrapper", "topic_wrapper_valid", "empty_namespace_heading"}
             else {"conditional_scheduling_review_required"}
             if failure == "schedule_condition"
             else {"unobserved_pending_target"}
@@ -3372,11 +3403,18 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 "partial_placement",
                 "partial_placement_causal",
                 "partial_placement_conjunction",
+                "partial_placement_nominal",
             }
             else {"review_before_schedule_change"}
             if failure == "schedule_order"
             else {"unsupported_workload_activity_attribution"}
             if failure == "possessive_activity"
+            else {"internal_context_leak"}
+            if failure == "internal_field"
+            else {"resource_shortage_question_required"}
+            if failure in {"weak_capacity_purpose", "presumed_capacity"}
+            else {"repeated_trial_review"}
+            if failure == "repeated_trial"
             else {"namespace_summary_tokens_required", "unsupported_prose"}
         )
         if failure == "namespace_refs":
@@ -3415,6 +3453,26 @@ def test_scheduled_and_manual_reports_repair_same_data(
         )
     assert scheduled["time_range"] == manual["time_range"]
     assert render(scheduled)["csv"] == render(manual)["csv"]
+    if failure in {"topic_wrapper", "empty_namespace_heading"}:
+        calls = [
+            b
+            for path, b in Upstream.requests[before:]
+            if path == "/v1/chat/completions"
+        ]
+        assert len(calls) == 4
+        for call in calls[1::2]:
+            repair = json.loads(call["messages"][1]["content"])
+            assert len(repair["summary_repair"]) == 1
+            assert "sections" not in repair["response_shape"]
+            assert "topics" not in repair
+    if failure == "topic_wrapper_valid":
+        calls = [
+            b
+            for path, b in Upstream.requests[before:]
+            if path == "/v1/chat/completions"
+        ]
+        assert len(calls) == 2  # One initial response per origin; no model rewrite.
+        assert all(r["quality"]["report"]["attempts"] == 1 for r in (scheduled, manual))
     if failure in {"relative_memory", "relative_observed_memory"}:
         calls = [
             b

@@ -329,7 +329,7 @@ def test_capacity_prerequisites_are_all_checked_before_review(removed):
         for f in candidates(topic(activity=90, pending=2))
         if f["kind"] == "capacity_review"
     )
-    text = "GPU 활동과 대기가 관측돼, 스케줄러 사유·GPU 요청·실제 할당·보장량·가용 GPU·운영정책·작업 기록을 확인한 뒤 추가 할당을 검토하세요."
+    text = "GPU 활동과 대기가 관측돼, 스케줄러 사유·GPU 요청·실제 할당·보장량·가용 GPU·운영정책·작업 기록에서 자원 부족 여부를 확인한 뒤 추가 할당을 검토하세요."
     section = {
         "advice": [{"fact_id": fact["fact_id"], "summary": text.replace(removed, "")}]
     }
@@ -455,9 +455,9 @@ def test_zero_pending_keeps_future_presence_checks_without_inventing_a_target():
 @pytest.mark.parametrize(
     "summary",
     [
-        "추가 할당을 검토하려면 GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유·운영정책을 확인·대조한 뒤에만 변경 여부를 판단하세요.",
-        "추가 할당을 조건부 검토하되 GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유·운영정책을 확인한 뒤에만 판단하세요.",
-        "GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유를 확인·대조한 뒤 운영정책을 점검하고 추가 할당을 검토하세요.",
+        "자원 부족 여부를 확인하고 추가 할당을 검토하려면 GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유·운영정책을 확인·대조한 뒤에만 변경 여부를 판단하세요.",
+        "자원 부족 여부를 확인하고 추가 할당을 조건부 검토하되 GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유·운영정책을 확인한 뒤에만 판단하세요.",
+        "GPU 요청·실제 할당·보장량·가용 GPU·스케줄러 사유를 확인·대조해 자원 부족 여부를 확인한 뒤 운영정책을 점검하고 추가 할당을 검토하세요.",
     ],
 )
 def test_valid_prerequisites_allow_conditional_judgment_and_sequential_checks(summary):
@@ -852,7 +852,7 @@ async def test_length_repair_preserves_every_prerequisite_and_guard(kind):
     )
     prose = {
         "relative_activity": "비교 구간보다 GPU 활동률이 낮았습니다. 마감·예약·가용 GPU·메모리 요구를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
-        "capacity_review": "높은 GPU 활동과 대기가 관측됐습니다. 스케줄러 사유와 GPU 요청·실제 할당을 대조하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
+        "capacity_review": "높은 GPU 활동과 대기가 관측됐습니다. 스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
         "batch_progress": "일부 Job이 끝났습니다. 같은 작업 유형의 일정에 참고할 수 있을지 완료 Job의 실제 Pod 시작·완료 기록을 대조해 확인하세요.",
     }[kind]
     patch = {"fact_id": item["fact_id"], "summary": prose}
