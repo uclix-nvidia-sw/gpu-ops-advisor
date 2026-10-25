@@ -406,20 +406,38 @@ def validate_written_advice(section, topic):
         fact = facts[item["fact_id"]]
         text = item["summary"]
         context = summary_context(fact)
-        # shortcut: conservative Korean claim patterns; new phrasings still need review.
-        if not context["queue_context"]["unscheduled_complete"] and re.search(
-            r"(?:(?:노드\s*)?미배정|미배치)(?:\s*(?:Pod|파드))?(?:이|가|은|는|도)?\s*"
-            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
-            r"노드(?:를)?\s*(?:배정받지\s*못한|기다리는)\s*(?:Pod|파드)(?:가|는|도)?\s*"
-            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
-            r"(?:모든|전체|모두)[^.!?]{0,25}노드[^.!?]{0,15}배정(?:됐|되었|받았)|"
-            r"배정(?:이|은)?\s*완료(?:됐|되었|입니다)",
+        if re.search(
+            r"(?<![a-zA-Z0-9_])(?:target|period|fact_id|observed_values|"
+            r"writing_checks|required_checks|prose_max_chars|summary_repair)"
+            r"(?![a-zA-Z0-9_])",
             text,
             re.I,
         ):
             raise ValueError(
+                "internal_context_leak: 내부 필드명을 운영 문장에 복사하지 마세요. "
+                "대상·기간은 코드가 붙이므로 해당 관측 구간의 Pod 상태·이벤트 등 확인할 기록과 목적을 쓰세요"
+            )
+        # Ignore only a direct denial of absence, not a denial of its consequences.
+        placement_claims = re.sub(
+            r"없음을\s*(?:단정|판단|확인)(?:할\s*수\s*없습니다|하지\s*않습니다)"
+            r"(?=\s*(?:[.!?。]|$))",
+            "",
+            text,
+        )
+        # shortcut: conservative Korean claim patterns; new phrasings still need review.
+        if not context["queue_context"]["unscheduled_complete"] and re.search(
+            r"(?:(?:노드\s*)?미배정|미배치)(?:\s*(?:Pod|파드))?(?:이|가|은|는|도)?\s*"
+            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?|음을)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
+            r"노드(?:를)?\s*(?:배정받지\s*못한|기다리는)\s*(?:Pod|파드)(?:가|는|도)?\s*"
+            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?|음을)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
+            r"(?:모든|전체|모두)[^.!?]{0,25}노드[^.!?]{0,15}배정(?:됐|되었|받았)|"
+            r"배정(?:이|은)?\s*완료(?:됐|되었|입니다)",
+            placement_claims,
+            re.I,
+        ):
+            raise ValueError(
                 "partial_placement_is_not_absence: 미배치 관측이 불완전합니다. "
-                "없었으며·없었지만 뒤에 관측 한계를 붙여도 부재 단정입니다. "
+                "없었으며·없었지만 또는 없음을 관측·확인했다는 표현은 뒤에 관측 한계를 붙여도 부재 단정입니다. "
                 "미배정 없음이나 전체 배정 완료를 단정하지 말고, Pod 상태·이벤트를 점검해 대기 단계를 구분하세요"
             )
         if (
@@ -475,7 +493,35 @@ def validate_written_advice(section, topic):
                     + "기존 조건을 옮기거나 삭제하지 말고, 목록 전체를 확인·대조·점검한 뒤 최종 변경 여부를 검토·판단하세요. "
                     "관측 설명은 확인 조건으로 세지 않으며 검토 목적과 판단 이유를 유지하세요"
                 )
+        if kind == "capacity_review":
+            decisions = list(re.finditer(r"검토|판단", text))
+            before_decision = text[: decisions[-1].start()] if decisions else ""
+            # shortcut: bounded Korean question/claim patterns; novel wording needs review.
+            if re.search(
+                r"(?:자원|GPU)\s*부족(?:을)?\s*확인(?:하고|한\s*(?:뒤|후)|해(?:서)?|했습니다|합니다)",
+                text,
+            ) or not re.search(
+                r"(?:자원|GPU)(?:이|가)?\s*부족(?:\s*여부|한지)|"
+                r"(?:GPU\s*)?요청(?:을|이)?\s*(?:충족(?:하는|했는|할\s*수\s*있는)지|"
+                r"충족할\s*노드가\s*있(?:었는|는)지)",
+                before_decision,
+            ):
+                raise ValueError(
+                    "resource_shortage_question_required: 부족은 확인된 사실이 아닙니다. "
+                    "부족을 확인한다는 전제나 조건 나열 대신, 스케줄러 사유와 GPU 요청·실제 할당을 대조해 "
+                    "자원 부족 여부를 알아내는 목적을 쓰세요. 보장량·가용 GPU·운영정책 확인 후에만 추가 할당을 검토하세요"
+                )
         if kind in {"schedule_candidate", "relative_activity"}:
+            if re.search(
+                r"(?:시범\s*실행|시작\s*(?:시각|시간)(?:을|의)?\s*조정)"
+                r"[^.!?。]{0,30}검토(?:하되|합니다|하세요|할\s*수\s*있습니다)"
+                r"[\s\S]*?(?:확인|대조|점검)[^.!?。]*?(?:후|뒤)[^.!?。]*검토",
+                text,
+            ):
+                raise ValueError(
+                    "repeated_trial_review: 같은 시간 조정·시범 실행 검토를 조건 앞뒤에 반복하지 마세요. "
+                    "관측 이유를 설명하고 필수 조건 전체를 확인한 뒤 작업 일부의 시범 실행 여부를 한 번만 검토하세요"
+                )
             for change in re.finditer(
                 r"(?:조정|변경)(?:해(?:서)?|하고|한\s*(?:뒤|후))(?=[^.!?]*검토)", text
             ):
@@ -797,7 +843,52 @@ def validate_sections(reply, payload, result):
 
 def partial_repair(reply, payload, result):
     """Find every invalid topic/item without rewriting validated model sentences."""
+    expected = [topic["topic_id"] for topic in payload["topics"]]
+    structure_repaired = False
+    if (
+        isinstance(reply, dict)
+        and set(reply) == set(expected)
+        and all(
+            isinstance(reply[topic_id], dict)
+            and reply[topic_id].get("topic_id", topic_id) == topic_id
+            for topic_id in expected
+        )
+    ):
+        # Repair an unambiguous wrapper only after the original shape was rejected.
+        reply = {
+            "sections": [
+                {**deepcopy(reply[topic_id]), "topic_id": topic_id}
+                for topic_id in expected
+            ]
+        }
+        structure_repaired = True
     sections = reply.get("sections") if isinstance(reply, dict) else None
+    if isinstance(sections, list):
+        # Empty repeated headings carry no prose; retain every nonempty section.
+        retained = [
+            section
+            for section in sections
+            if not (
+                isinstance(section, dict)
+                and section == {"topic_id": section.get("topic_id"), "advice": []}
+                and any(
+                    topic.get("advice_mode")
+                    and topic["topic_id"] == section["topic_id"]
+                    for topic in payload["topics"]
+                )
+                and any(
+                    isinstance(other, dict)
+                    and other.get("topic_id") == section["topic_id"]
+                    and isinstance(other.get("advice"), list)
+                    and other["advice"]
+                    for other in sections
+                )
+            )
+        ]
+        if len(retained) != len(sections):
+            reply = {**deepcopy(reply), "sections": deepcopy(retained)}
+            sections = reply["sections"]
+            structure_repaired = True
     if (
         not isinstance(sections, list)
         or len(sections) != len(payload["topics"])
@@ -884,7 +975,7 @@ def partial_repair(reply, payload, result):
             # Selection/shape errors still need the existing full-response repair.
             return None
         items.extend(invalid)
-    return (items, topics, reply) if items or topics else None
+    return (items, topics, reply) if items or topics or structure_repaired else None
 
 
 def writing_context(fact, findings=()):
@@ -941,7 +1032,7 @@ def writing_context(fact, findings=()):
             "관측 시점별 대기 Pod의 GPU 요청을 충족할 노드가 있었는지, 노드 선택 조건이 맞지 않았는지 기록에서 확인; 점검 질문이지 확인된 원인이 아님; 연속·지속·재상승·포화·부족·때문·시간대 실행/배치·시범 표현은 질문·부정문에도 쓰지 않음",
         ],
         "capacity_review": [
-            "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책까지 확인한 뒤에만 추가 할당 검토; 자원 부족은 미확인"
+            "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책까지 확인한 뒤에만 추가 할당 검토; 자원 부족은 미확인; 부족 확인 전제·조건 나열 대신 부족 여부 점검 목적 명시"
         ],
         "schedule_candidate": [
             "낮은 활동 구간 자체를 활용할 조건을 판단; 다른 구간보다 유리하다고 단정하지 않음; 현재 대기 Pod가 아니라 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
@@ -1306,7 +1397,13 @@ async def interpret_report(result, llm):
                 ):
                     diagnostic["reason"] = "interpretation_input_limit"
                     break
-            continue
+            if repair is None or repair[0] or repair[1]:
+                continue
+            # Recheck the complete result; structural repair never edits model prose.
+            try:
+                narrative = validate_sections(repair[2], payload, result)
+            except (ValueError, TypeError, KeyError):
+                break
         if advice_mode:
             present_advice(narrative)
         result["narrative"] = narrative
@@ -1314,7 +1411,8 @@ async def interpret_report(result, llm):
             diagnostic["namespace_advice_version"] = ADVICE_VERSION
         result["narrative_status"] = "complete"
         diagnostic.update(
-            method="llm_interpreted", reason="repaired" if attempt else "complete"
+            method="llm_interpreted",
+            reason="repaired" if diagnostic.get("failures") else "complete",
         )
         return
     result["narrative_status"] = "failed"

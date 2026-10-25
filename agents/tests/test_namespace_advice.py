@@ -131,7 +131,7 @@ def topic(activity=1, pending=0, memory=10, samples=240):
 
 def writer_section(facts):
     checks = {
-        "capacity_review": "스케줄러 사유와 GPU 요청·실제 할당·보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
+        "capacity_review": "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
         "schedule_candidate": "작업 마감·예약·대기·가용 GPU를 확인한 뒤 일부 작업의 시작 시각 조정과 시범 실행을 검토하세요.",
         "queue_review": "대기 Pod의 상태·스케줄러 이벤트를 대조해 노드 배정 전인지 준비 단계인지 확인하세요.",
         "resident_memory": "상주 서빙과 캐시 유지 목적을 확인하세요.",
