@@ -140,7 +140,7 @@ async def test_initial_and_repair_input_supply_bounds_without_finished_advice(
     first = requests[0]["topics"][0]["findings"][0]
     repaired = requests[1]["summary_repair"][0]
     assert first["writing_checks"] == repaired["writing_checks"]
-    assert "낮은 활동 구간을 앞으로 활용할 수 있을지 판단" in " ".join(
+    assert "비교 구간과 활동률 차이를 근거로 시작 시각 조정 가능성을 판단" in " ".join(
         first["writing_checks"]
     )
     assert "현상 설명과 점검·제안은 짧게 나누고" in requests[1]["instruction"]
@@ -599,6 +599,15 @@ def test_namespace_gpu_activity_is_not_a_per_workload_measurement(subject):
     [
         "노드 미배정은 없었으므로",
         "노드 미배정은 없었고",
+        "미배정은 없다고 판단됩니다",
+        "노드 미배정은 없었으며",
+        "노드 미배정은 없었지만",
+        "노드 미배정은 없었으나",
+        "미배치 Pod가 없었는데",
+        "노드를 기다리는 Pod는 없었으며",
+        "노드를 배정받지 못한 Pod가 없었지만",
+        "미배정 Pod는 관측되지 않았으며",
+        "미배치 Pod는 관측되지 않았지만",
         "미배정 Pod가 없어",
         "미배치 Pod가 없어서",
     ],
@@ -912,8 +921,11 @@ async def test_workload_activity_repair_keeps_the_gpu_as_measurement_subject():
         assert "작업 유형은 현상의 주어로 활용" not in system
         assert "활동률 현상은 '연결 GPU'" in system
         assert "관측 완료 같은 수집 상태는 현상으로 복사하지 말고" in system
-        assert "다음 확인 대상 같은 추상어로 끝내지 마세요" in system
-        assert "검토하되·검토하려면으로 시작해 다시 판단하라고 끝내지 말고" in system
+        assert "확인할 기록·알아낼 사실·그 결과로 판단할 일을 연결" in system
+        assert (
+            "검토할 수 있습니다·검토하려면을 앞에 붙이거나 검토하되 뒤에 조건을 나열하지 말고"
+            in system
+        )
         assert "미배정 관측만으로 배정 실패·지연을 뜻하지 않습니다" in system
     original_context = first["topics"][0]["findings"][0]
     patched_context = repair["summary_repair"][0]
@@ -1109,3 +1121,325 @@ async def test_possessive_activity_repairs_only_bad_prose_once(repeat_bad_claim)
                 )
             )
             assert item["summary_parts"]["decision"] == expected
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "미배정은 없다고 단정할 수 없습니다.",
+        "노드 미배정은 없었다고 판단할 수 없습니다.",
+        "미배정 Pod가 없는지는 확인되지 않았습니다.",
+        "미배정 관측은 일부여서 전체 배정 여부를 알 수 없습니다.",
+        "노드 미배정 Pod가 관측됐습니다.",
+    ],
+)
+def test_partial_placement_unknown_and_observed_presence_are_not_absence(prose):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    source = topic(pending=2)
+    for hour in source["workloads"][0]["hours"]:
+        hour.update(unscheduled_peak=0, unscheduled_samples=1)
+    if "관측됐습니다" in prose:
+        for hour in source["workloads"][0]["hours"]:
+            hour["unscheduled_peak"] = 1
+    fact = next(f for f in candidates(source) if f["kind"] == "queue_review")
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": prose + " Pod 상태·이벤트를 점검해 대기 단계를 확인하세요.",
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})
+    assert raw == before
+
+
+@pytest.mark.parametrize("kind", ["relative_activity", "schedule_candidate"])
+@pytest.mark.parametrize("action", ["조정해", "조정해서", "조정하고"])
+@pytest.mark.parametrize("question", ["할지", "할지를"])
+def test_trial_question_is_not_an_already_performed_time_change(kind, action, question):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    source = (
+        topic() if kind == "schedule_candidate" else pattern_topic([70, 80, 20, 25])
+    )
+    fact = next(f for f in candidates(source) if f["kind"] == kind)
+    prose = (
+        f"시작 시각을 조정할 수 있는 작업 일부를 {action} 시범 실행{question}, "
+        "마감·예약·대기·가용 GPU·메모리 요구를 확인한 뒤에 검토하세요."
+    )
+    raw = {"advice": [{"fact_id": fact["fact_id"], "summary": prose}]}
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})
+    assert raw == before
+    raw["advice"][0]["summary"] = prose.replace("·예약", "")
+    with pytest.raises(ValueError):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        "조정한 뒤",
+        "조정한 후",
+        "조정해 시범 실행할지 살펴보고 시작 시각을 변경한 뒤",
+    ],
+)
+def test_trial_question_does_not_excuse_an_explicit_prior_time_change(action):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(f for f in candidates(topic()) if f["kind"] == "schedule_candidate")
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": "마감·예약·대기·가용 GPU를 확인한 뒤 작업 일부의 시작 시각을 "
+                + action
+                + " 시범 실행할지 검토하세요.",
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="review_before_schedule_change"):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize("repeat_absence", [False, True])
+async def test_partial_absence_conjunction_repairs_only_bad_prose_once(repeat_absence):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_report_interpretation import reply_for
+
+    source = topic(pending=2)
+    for hour in source["workloads"][0]["hours"]:
+        hour.update(unscheduled_peak=0, unscheduled_samples=1)
+    result = dict(topics=[source], quality={}, time_range={})
+    before = deepcopy(result["topics"])
+    payload = payload_for(result)
+    initial = reply_for(payload)
+    bad = next(
+        a
+        for a in initial["sections"][0]["advice"]
+        if next(
+            f for f in payload["topics"][0]["findings"] if f["fact_id"] == a["fact_id"]
+        )["kind"]
+        == "queue_review"
+    )
+    bad["summary"] = (
+        "노드 미배정은 없었지만 관측이 일부여서 배정 완료를 단정할 수 없습니다. "
+        "Pod 상태·이벤트를 점검해 대기 단계를 구분하세요."
+    )
+    original = deepcopy(initial)
+    fixed = deepcopy(bad)
+    if not repeat_absence:
+        fixed["summary"] = (
+            "미배정 관측이 일부여서 대기 단계는 미확인입니다. "
+            "Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분하세요."
+        )
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [initial, {"advice": [fixed]}]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    repair = llm.complete.call_args_list[1].args[1]
+    assert [a["fact_id"] for a in repair["summary_repair"]] == [bad["fact_id"]]
+    assert repair["summary_repair"][0]["validation_error"].startswith(
+        "partial_placement_is_not_absence:"
+    )
+    assert initial == original and result["topics"] == before
+    assert result["narrative_status"] == ("failed" if repeat_absence else "complete")
+    if not repeat_absence:
+        for item in result["narrative"][0]["advice"]:
+            expected = (
+                fixed
+                if item["fact_id"] == bad["fact_id"]
+                else next(
+                    a
+                    for a in initial["sections"][0]["advice"]
+                    if a["fact_id"] == item["fact_id"]
+                )
+            )
+            assert item["summary_parts"]["decision"] == expected["summary"]
+
+
+@pytest.mark.parametrize(
+    "prefix,suffix",
+    [
+        ("", ""),
+        ("메모리 점유는 낮았습니다. ", ""),
+        ("메모리 점유는 낮았으며, ", ""),
+        ("메모리 점유가 낮게 관측됐으며, ", ""),
+        ("메모리 점유가 낮게 측정되었으나, ", ""),
+        ("메모리 요구는 미확인입니다. ", ""),
+        ("메모리 요구를 확인하지 않고 ", ""),
+        ("메모리 요구를 확인하지 못했지만 ", ""),
+        ("메모리 요구를 확인할 수 없지만 ", ""),
+        ("메모리 요구 확인은 생략하고 ", ""),
+        ("메모리 요구 확인 없이 ", ""),
+        ("", " 메모리 요구는 그 후 확인하세요."),
+    ],
+)
+def test_relative_memory_observation_is_not_a_prerequisite_check(prefix, suffix):
+    from ops_agent.report_interpretation import (
+        advice_with_evidence,
+        validate_written_advice,
+    )
+
+    fact = next(
+        f
+        for f in candidates(pattern_topic([70, 80, 20, 25]))
+        if f["kind"] == "relative_activity"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": prefix
+                + "마감·예약·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+                + suffix,
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    offered = {"findings": [fact]}
+    # Existing evidence checks still pass; their memory label is not a prose check.
+    assert validate_advice(advice_with_evidence(raw, offered), offered)
+    with pytest.raises(
+        ValueError, match="namespace_prerequisites_required:.*누락된 조건: 메모리 요구"
+    ):
+        validate_written_advice(raw, offered)
+    assert raw == before
+
+
+@pytest.mark.parametrize(
+    "checks",
+    [
+        "마감·예약·가용 GPU·메모리 요구를 확인한 뒤",
+        "마감·예약·가용 자원·메모리 요구를 확인한 뒤",
+        "마감·예약·가용 GPU·메모리 요구를 먼저 확인하세요. 그 뒤",
+        "메모리 요구를 확인하고 마감·예약·가용 GPU를 확인한 뒤",
+        "메모리 요구는 확인했지만, 마감·예약·가용 GPU를 확인한 뒤",
+        "메모리 요구는 이미 확인했습니다. 마감·예약·가용 GPU를 확인한 뒤",
+        "메모리 요구 확인은 생략하지 않고 마감·예약·가용 GPU를 확인한 뒤",
+        "메모리 요구 확인을 제외하지 않고 마감·예약·가용 GPU를 확인한 뒤",
+        "마감·예약·가용 GPU를 확인한 뒤 메모리 요구도 대조하고",
+        "메모리 점유는 낮았으며, 마감·예약·가용 GPU·메모리 요구를 확인한 뒤",
+        "마감·예약·가용 GPU를 확인한 뒤 메모리 요구가 작업에 맞는지 점검하고",
+    ],
+)
+def test_relative_memory_checks_accept_existing_sentence_forms(checks):
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(
+        f
+        for f in candidates(pattern_topic([70, 80, 20, 25]))
+        if f["kind"] == "relative_activity"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": checks
+                + " 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})
+    assert raw == before
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+@pytest.mark.parametrize("repeat_missing", [False, True])
+async def test_relative_memory_check_repairs_only_missing_condition_once(
+    origin, repeat_missing
+):
+    from unittest.mock import AsyncMock
+    from ops_agent.report_interpretation import interpret_report, payload_for
+    from test_report_interpretation import reply_for
+
+    result = dict(
+        topics=[pattern_topic([80, 80, 20, 20, 1, 1])],
+        quality={},
+        time_range={},
+        report_origin=origin,
+    )
+    before = deepcopy(result["topics"])
+    payload = payload_for(result)
+    fact = next(
+        f for f in payload["topics"][0]["findings"] if f["kind"] == "relative_activity"
+    )
+    initial = reply_for(payload)
+    bad = next(
+        a for a in initial["sections"][0]["advice"] if a["fact_id"] == fact["fact_id"]
+    )
+    bad["summary"] = (
+        "마감·예약·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+    )
+    original = deepcopy(initial)
+    patch = deepcopy(bad)
+    if not repeat_missing:
+        patch["summary"] = patch["summary"].replace("가용 GPU", "가용 GPU·메모리 요구")
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [initial, {"advice": [patch]}]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    first, repair = [c.args[1] for c in llm.complete.call_args_list]
+    sent = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == fact["fact_id"]
+    )
+    assert [f["fact_id"] for f in repair["summary_repair"]] == [fact["fact_id"]]
+    fixed = repair["summary_repair"][0]
+    assert (
+        fixed["required_checks"]
+        == sent["required_checks"]
+        == ["작업 마감", "예약", "가용 GPU", "메모리 요구"]
+    )
+    assert "누락된 조건: 메모리 요구" in fixed["validation_error"]
+    assert fixed["previous_summary"] == bad["summary"]
+    for key in [
+        "required_prose_terms",
+        "observed_values",
+        "decision",
+        "queue_context",
+        "prose_max_chars",
+    ]:
+        assert fixed[key] == sent[key]
+    assert initial == original and result["topics"] == before
+    assert result["narrative_status"] == ("failed" if repeat_missing else "complete")
+    if repeat_missing:
+        assert [f["reason"] for f in result["quality"]["report"]["failures"]] == [
+            "namespace_prerequisites_required"
+        ] * 2
+    else:
+        for a in result["narrative"][0]["advice"]:
+            expected = (
+                patch
+                if a["fact_id"] == fact["fact_id"]
+                else next(
+                    item
+                    for item in initial["sections"][0]["advice"]
+                    if item["fact_id"] == a["fact_id"]
+                )
+            )
+            assert a["summary_parts"]["decision"] == expected["summary"]
+
+
+def test_relative_memory_check_does_not_bypass_existing_reference_validation():
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(
+        f
+        for f in candidates(pattern_topic([70, 80, 20, 25]))
+        if f["kind"] == "relative_activity"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": "마감·예약·가용 GPU를 확인한 뒤 작업 일부의 시작 시각 조정 시범 실행을 검토하세요. {{memory}}",
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="namespace_summary_tokens_required"):
+        validate_written_advice(raw, {"findings": [fact]})

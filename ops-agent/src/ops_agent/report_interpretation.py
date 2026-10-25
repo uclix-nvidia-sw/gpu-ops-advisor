@@ -13,6 +13,7 @@ from .namespace_advice import (
     decision_context,
     MAX_ADVICE,
     writing_candidates,
+    writing_decision,
     validate_advice,
     SummaryTokenError,
     summary_context,
@@ -28,6 +29,12 @@ TOPICS = {
 VERSION = "ops-interpretation-workload-v2"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
+    "relative_activity": {
+        "작업 마감": r"마감",
+        "예약": r"예약",
+        "가용 GPU": r"가용",
+        "메모리 요구": r"메모리",
+    },
     "capacity_review": {
         "스케줄러 사유": r"스케줄러|스케줄링",
         "GPU 요청": r"요청",
@@ -368,9 +375,16 @@ def checked_prerequisites(text, requirements):
         start = 0
         for check in re.finditer(r"확인|대조|점검", sentence):
             clause = sentence[start : check.start()]
+            start = check.end()
+            if re.search(r"(?:^|\s)미\s*$", clause) or re.match(
+                r"(?:하지\s*(?:않|못)|할\s*수\s*없|(?:은|을)?\s*(?:생략|제외)(?!하지\s*(?:않|못))|\s*없이)",
+                sentence[start:],
+            ):
+                continue
             # shortcut: bounded Korean clause cues; unseen phrasing still needs review.
             clause = re.split(
-                r"(?:으?므로|지만|(?:없|있|높|낮|많|적)(?:았|었)?고)\s*,?\s*",
+                r"(?:으?므로|지만|(?:없|있|높|낮|많|적)(?:았|었)?(?:고|으며|으나|는데)|"
+                r"(?:관측|측정)(?:됐|되었)(?:고|으며|으나|는데))\s*,?\s*",
                 clause,
             )[-1]
             checked.update(
@@ -378,7 +392,6 @@ def checked_prerequisites(text, requirements):
                 for label, pattern in requirements.items()
                 if re.search(pattern, clause)
             )
-            start = check.end()
     ordered = bool(re.search(r"(?:확인|대조|점검)[^.!?。]*?(?:후|뒤)", before))
     return checked, ordered
 
@@ -396,9 +409,9 @@ def validate_written_advice(section, topic):
         # shortcut: conservative Korean claim patterns; new phrasings still need review.
         if not context["queue_context"]["unscheduled_complete"] and re.search(
             r"(?:(?:노드\s*)?미배정|미배치)(?:\s*(?:Pod|파드))?(?:이|가|은|는|도)?\s*"
-            r"(?:없(?:었습니다|었으므로|었고|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았습니다|습니다))|"
+            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
             r"노드(?:를)?\s*(?:배정받지\s*못한|기다리는)\s*(?:Pod|파드)(?:가|는|도)?\s*"
-            r"(?:없(?:었습니다|었으므로|었고|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았습니다|습니다))|"
+            r"(?:없(?:었(?:습니다|으므로|고|으며|지만|으나|는데)|습니다|다|으므로|어(?:서)?)|관측되지\s*않(?:았(?:습니다|으며|지만|으나|고|는데)|습니다))(?!고\s*(?:단정|판단)할\s*수\s*없)|"
             r"(?:모든|전체|모두)[^.!?]{0,25}노드[^.!?]{0,15}배정(?:됐|되었|받았)|"
             r"배정(?:이|은)?\s*완료(?:됐|되었|입니다)",
             text,
@@ -406,6 +419,7 @@ def validate_written_advice(section, topic):
         ):
             raise ValueError(
                 "partial_placement_is_not_absence: 미배치 관측이 불완전합니다. "
+                "없었으며·없었지만 뒤에 관측 한계를 붙여도 부재 단정입니다. "
                 "미배정 없음이나 전체 배정 완료를 단정하지 말고, Pod 상태·이벤트를 점검해 대기 단계를 구분하세요"
             )
         if (
@@ -447,7 +461,8 @@ def validate_written_advice(section, topic):
         if requirements:
             checked, ordered = checked_prerequisites(text, requirements)
             missing = [label for label in requirements if label not in checked]
-            if missing or not ordered:
+            # Relative trials retain validate_advice's existing sentence-spanning order check.
+            if missing or (kind != "relative_activity" and not ordered):
                 raise ValueError(
                     "namespace_prerequisites_required: 필수 조건은 "
                     + "·".join(requirements)
@@ -460,13 +475,19 @@ def validate_written_advice(section, topic):
                     + "기존 조건을 옮기거나 삭제하지 말고, 목록 전체를 확인·대조·점검한 뒤 최종 변경 여부를 검토·판단하세요. "
                     "관측 설명은 확인 조건으로 세지 않으며 검토 목적과 판단 이유를 유지하세요"
                 )
-        if kind in {"schedule_candidate", "relative_activity"} and re.search(
-            r"(?:조정|변경)(?:해(?:서)?|하고|한\s*(?:뒤|후))[^.!?]*검토", text
-        ):
-            raise ValueError(
-                "review_before_schedule_change: 조정해·변경하고처럼 먼저 바꾼 뒤 검토하는 표현을 쓰지 마세요. "
-                "필수 조건을 확인한 뒤 시작 시각 조정이 가능한 작업 일부를 시범 실행할지 검토하세요"
-            )
+        if kind in {"schedule_candidate", "relative_activity"}:
+            for change in re.finditer(
+                r"(?:조정|변경)(?:해(?:서)?|하고|한\s*(?:뒤|후))(?=[^.!?]*검토)", text
+            ):
+                # A trial question is not an instruction to change the schedule first.
+                if change.group().endswith(("해", "해서", "하고")) and re.match(
+                    r"\s*시범\s*실행할지(?:를)?(?:\s|,)", text[change.end() :]
+                ):
+                    continue
+                raise ValueError(
+                    "review_before_schedule_change: 먼저 바꾼 뒤 검토하는 표현을 쓰지 마세요. "
+                    "필수 조건을 확인한 뒤 시작 시각 조정이 가능한 작업 일부를 시범 실행할지 검토하세요"
+                )
     return output
 
 
@@ -883,7 +904,7 @@ def writing_context(fact, findings=()):
                 for key in ("cluster_id", "namespace")
             ):
                 continue
-            decision = decision_context(other)
+            decision = writing_decision(other)
             related.append(
                 {
                     "fact_id": other["fact_id"],
@@ -911,7 +932,7 @@ def writing_context(fact, findings=()):
     )
     context["writing_checks"] = {
         "relative_activity": [
-            "낮은 활동 구간을 앞으로 활용할 수 있을지 판단; 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 검토",
+            "비교 구간과 활동률 차이를 근거로 시작 시각 조정 가능성을 판단; 낮은 활동을 가용 자원·개선 효과로 해석하지 않음; 시작 시각을 조정할 수 있는 작업 일부의 시범 실행 검토",
             "마감·예약·가용 GPU·메모리 요구 확인 후/뒤에만 검토",
             "비교 구간보다 낮았던 GPU 활동률 관측",
         ],
@@ -923,7 +944,7 @@ def writing_context(fact, findings=()):
             "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책까지 확인한 뒤에만 추가 할당 검토; 자원 부족은 미확인"
         ],
         "schedule_candidate": [
-            "낮은 활동 구간을 앞으로 활용할 수 있을지 판단; 현재 대기 Pod가 아니라 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
+            "낮은 활동 구간 자체를 활용할 조건을 판단; 다른 구간보다 유리하다고 단정하지 않음; 현재 대기 Pod가 아니라 시작 시각을 조정할 수 있는 작업 일부가 검토 대상; 마감·예약·대기·가용 GPU를 확인한 뒤에만 시범 실행할지 검토"
         ],
         "queue_review": [
             "check_first 단계의 기록에서 알아낼 내용을 명시; 이미 연결된 단계는 재확인하지 않음"
