@@ -255,6 +255,10 @@ def test_capacity_checklist_and_presumed_shortage_need_a_question(purpose):
     "purpose",
     [
         "자원 부족 여부를 확인하고 ",
+        "GPU 부족인지 확인하고 ",
+        "자원 부족이 있는지 점검하고 ",
+        "자원 부족 유무를 확인하고 ",
+        "GPU 요청 충족 여부를 점검하고 ",
         "자원이 부족한지 점검하고 ",
         "GPU 요청을 충족하는지 확인하고 ",
         "GPU 요청을 충족할 노드가 있었는지 확인하고 ",
