@@ -55,6 +55,42 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D70",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 좀비 프로세스 수을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D71",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 Fleet 기준 대비 실행 중 PID 비율을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D72",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 Fleet 기준 대비 파일 핸들 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -76,6 +112,18 @@
         "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
         "section": "pid_max",
         "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/os/kmsg_matcher.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "vfs_file_max_limit_reached and kernel_panic events",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -84,16 +132,20 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet os 점검이 좀비 프로세스 수, 실행 중 PID 비율, 할당된 파일 핸들 비율이 Unhealthy 임계를 넘었거나 OS 정보를 읽지 못했다고 보고한 것입니다. 기본 Unhealthy 임계는 PID·파일 핸들 모두 95%입니다.",
+      "meaning": "Fleet os 점검이 좀비 프로세스 수, 실행 중 PID 비율, 할당된 파일 핸들 비율이 Unhealthy 임계를 넘었거나 OS 정보를 읽지 못했다고 보고한 것입니다. PID 비율은 pid_max가 아니라 Fleet 기준값(기본 900,000개) 대비이고, 파일 핸들 비율은 file-max와 Fleet 기준값(기본 1,000만) 중 작은 값 대비이며, 기본 Unhealthy 임계는 둘 다 95%입니다.",
       "cause_note": "자식 프로세스를 회수하지 않는 프로세스(좀비 누적), 프로세스·스레드 폭증, 파일 핸들 누수가 주요 원인 후보입니다.",
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/'로 좀비 프로세스와 그 부모(PPID)를 찾습니다. cat /proc/sys/kernel/pid_max와 ps -e --no-headers | wc -l로 PID 사용량을, cat /proc/sys/fs/file-nr로 파일 핸들 사용량(할당 수, 미사용 수, 최대값)을 확인합니다."
+          "text": "ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/'로 좀비 프로세스와 그 부모(PPID)를 찾습니다. cat /proc/sys/kernel/pid_max와 ps -e --no-headers | wc -l로 PID 사용량을, cat /proc/sys/fs/file-nr로 파일 핸들 사용량(할당 수, 미사용 수, 최대값)을 확인합니다. 3장 표에서 좀비 프로세스 수, 실행 중 PID 비율, 파일 핸들 사용률의 사건 전후 값을 확인합니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "원인 프로세스나 컨테이너를 재시작하기 전에 ps -eo pid,ppid,stat,lstart,comm 출력, cat /proc/sys/fs/file-nr 결과, journalctl -k의 'VFS: file-max limit'·kernel panic 줄, 원인 컨테이너 로그를 저장합니다."
         },
         {
           "title": "판단",
-          "text": "좀비는 부모 프로세스가 회수하지 않아 남으므로 부모 프로세스(또는 그 컨테이너)가 원인입니다. PID·파일 핸들이 고갈되면 새 프로세스 생성과 파일 열기가 실패해 컨테이너 생성과 작업이 실패하므로 kubectl cordon <노드>로 새 배치를 막습니다. 파일 핸들 한도에 닿으면 커널 로그에 'VFS: file-max limit ... reached'가 남습니다."
+          "text": "좀비는 부모 프로세스가 회수하지 않아 남으므로 부모 프로세스(또는 그 컨테이너)가 원인입니다. PID·파일 핸들이 고갈되면 새 프로세스 생성과 파일 열기가 실패해 컨테이너 생성과 작업이 실패하므로 kubectl cordon <노드>로 새 배치를 막습니다. 파일 핸들 한도에 닿으면 커널 로그에 'VFS: file-max limit ... reached'가 남습니다. pid_max가 900,000보다 작으면 Fleet 비율이 낮아도 PID가 먼저 고갈될 수 있으므로 pid_max 대비 사용량을 직접 계산합니다."
         },
         {
           "title": "복구",
@@ -102,12 +154,16 @@
         {
           "title": "복구 확인",
           "text": "좀비 수와 PID·파일 핸들 사용량이 임계 아래로 내려갔는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "재부팅 뒤에도 반복되거나 커널 로그에 kernel panic이 남으면 OS·커널 버전, 커널 로그, 수행한 조치를 갖춰 OS 배포판 또는 시스템 공급사에 전달합니다."
         }
       ],
       "references": [
         {
           "title": "Fleet 판정 기준",
-          "text": "Fleet은 실행 중 PID와 할당 파일 핸들이 기본 80%를 넘으면 Degraded, 95%를 넘으면 Unhealthy로 보고하고, 좀비 프로세스 수도 설정 임계로 판정합니다.",
+          "text": "Fleet은 실행 중 PID 비율(기본 기준 900,000개 대비)과 할당 파일 핸들 비율(file-max와 1,000만 중 작은 값 대비)이 80%를 넘으면 Degraded, 95%를 넘으면 Unhealthy로 보고합니다. 좀비 프로세스 임계는 리눅스에서 시스템 파일 핸들 한도의 20%(Degraded)·80%(Unhealthy)이며, 한도를 읽지 못하면 1,000개·2,000개입니다.",
           "source_indices": [
             0
           ]
@@ -124,6 +180,20 @@
           "text": "pid_max는 PID 할당이 되돌아가는 값이며 그 이상의 PID는 할당되지 않습니다.",
           "source_indices": [
             2
+          ]
+        },
+        {
+          "title": "Fleet 커널 로그 이벤트",
+          "text": "Fleet은 커널 로그의 'VFS: file-max limit N reached'와 kernel panic 메시지를 이벤트로 기록합니다. 이 이벤트는 os 컴포넌트의 임계 판정과 별개입니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "GPU Node Triage",
+          "text": "공급사에 전달할 자료: OS·드라이버 등 시스템 구성, 핵심 로그를 포함한 문제 설명, 수행한 디버그 단계, 핵심 메시지가 담긴 로그 전체, nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그, 애플리케이션 관련이면 그 정보(ISV 코드·프레임워크·버전). 티켓은 시스템 공급사에 냅니다.",
+          "source_indices": [
+            4
           ]
         }
       ]
@@ -184,6 +254,30 @@
           ],
           "required": true,
           "expected_effect": "같은 노드·기간의 Fleet os 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D70",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 좀비 프로세스 수을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D71",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 Fleet 기준 대비 실행 중 PID 비율을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D72",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 Fleet 기준 대비 파일 핸들 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
         }
       ]
     }

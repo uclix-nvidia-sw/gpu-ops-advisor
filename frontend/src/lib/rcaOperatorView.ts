@@ -81,6 +81,9 @@ const units: Record<string, string> = {
   bitmask: '비트마스크',
   bytes: 'B',
   ns: 'ns',
+  packets: '개',
+  processes: '개',
+  load: '',
 };
 export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
 
@@ -119,7 +122,7 @@ export function valueText(v: number, unit: string) {
     ).find(([size]) => Math.abs(v) >= size);
     if (step) return `${(v / step[0]).toFixed(1)} ${step[1]}`;
   }
-  return `${fmtNum(v)} ${unit}`;
+  return unit ? `${fmtNum(v)} ${unit}` : fmtNum(v);
 }
 
 export function intervalLabel(ms: number) {
@@ -170,6 +173,7 @@ const STATE_CODES: Record<string, Record<number, string>> = {
   D50: { 0: '대기 없음', 1: '대기' },
   D51: { 0: '실패 없음', 1: '실패' },
   D58: { 0: '무효', 1: '유효' },
+  D65: { 0: '끊김', 1: '연결' },
 };
 // The one value of a status code that needs action, with its tag, tone and reading.
 const STATE_FLAGS: Record<string, [number, string, Tone, string]> = {
@@ -185,6 +189,12 @@ const STATE_FLAGS: Record<string, [number, string, Tone, string]> = {
     'InfoROM 무효',
     'warn',
     'InfoROM 설정 체크섬이 무효입니다 — nvidia-smi -q로 InfoROM 상태를 확인합니다',
+  ],
+  D65: [
+    0,
+    '링크 끊김',
+    'alert',
+    '이 인터페이스의 링크가 내려가 있습니다 — 케이블·스위치 포트와 ip -br link를 확인합니다',
   ],
 };
 // Lower rank reads first: alert, caution, hold, steady, idle, unchanged codes.
@@ -314,8 +324,9 @@ export const plainReason = (text: string) =>
 /** Component alerts have no stored triage summary; build one from the Fleet state reports
  * the RCA stored, so the report keeps the same sections as XID/SXID. */
 function componentTriage(result: Row): Row | null {
-  if (!rows(result.runbook_revisions).some((b) => str(b.knowledge_key).startsWith('RB-COMPONENT-')))
-    return null;
+  // The general Runbook is selected only when no dedicated one applies.
+  const keys = rows(result.runbook_revisions).map((b) => str(b.knowledge_key));
+  if (!keys.some((k) => k.startsWith('RB-COMPONENT-') || k === 'RB-GENERAL-GPU-NODE')) return null;
   const current = rows(obj(obj(result.quality).host_incident_history).rows).find(
     (r) => r.current === true,
   );

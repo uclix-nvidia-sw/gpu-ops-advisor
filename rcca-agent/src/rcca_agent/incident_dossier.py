@@ -44,6 +44,18 @@ METRICS = {
     "D60": "디스크 여유 공간",
     "D61": "열 제한 누적 시간",
     "D62": "전력 제한 누적 시간",
+    "D18": "CPU 사용률",
+    "D19": "CPU 평균 부하",
+    "D63": "메모리 사용률",
+    "D64": "사용 가능 메모리",
+    "D65": "이더넷 링크 상태",
+    "D66": "이더넷 수신 오류 누적값",
+    "D67": "이더넷 송신 오류 누적값",
+    "D68": "이더넷 수신 폐기 누적값",
+    "D69": "이더넷 송신 폐기 누적값",
+    "D70": "좀비 프로세스 수",
+    "D71": "실행 중 PID 비율(Fleet 판정값)",
+    "D72": "파일 핸들 사용률(Fleet 판정값)",
 }
 COUNTERS = {
     "D36",
@@ -58,9 +70,16 @@ COUNTERS = {
     "D57",
     "D61",
     "D62",
+    "D66",
+    "D67",
+    "D68",
+    "D69",
 }
 # Coded values: compare equality only, never magnitude or health.
-ENUMS = {"D45", "D47", "D50", "D51", "D58"}
+ENUMS = {"D45", "D47", "D50", "D51", "D58", "D65"}
+# Node-level series are told apart by mount, interface or load window, not by GPU.
+NODE_PARTS = ("mount_point", "interface", "window")
+WINDOWS = {"1m0s": "1분", "5m0s": "5분", "15m0s": "15분"}
 ADDRESSES = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 ERROR_FILTER = (
     ' | json rca_component="attributes[\\"component\\"]"'
@@ -370,16 +389,20 @@ def metric_rows(data, evidence, boundary, keep):
                 seen[0], seen[1] = min(seen[0], *times), max(seen[1], *times)
             if not keep(gpu):
                 continue
-            # Node-level series (disk) are told apart by mount, not by GPU.
-            mount = None if gpu else labels.get("mount_point")
+            part = (
+                None
+                if gpu
+                else next(((k, labels[k]) for k in NODE_PARTS if labels.get(k)), None)
+            )
             row = merged.setdefault(
-                (entry["query_id"], gpu, mount),
+                (entry["query_id"], gpu, part),
                 {"values": set(), "unit": metric.get("unit"), "refs": set()},
             )
             row["values"] |= values
             row["refs"].add(entry["id"])
     metrics = []
-    for (query_id, gpu, mount), row in merged.items():
+    for (query_id, gpu, part), row in merged.items():
+        key, value = part or (None, None)
         values = sorted(row["values"])
         windows = {}
         for label, selected in (
@@ -402,9 +425,10 @@ def metric_rows(data, evidence, boundary, keep):
         metrics.append(
             {
                 "query_id": query_id,
-                "name": METRICS[query_id] + (f" ({mount})" if mount else ""),
+                "name": METRICS[query_id]
+                + (f" ({WINDOWS.get(value, value)})" if value else ""),
                 "gpu_uuid": gpu,
-                **({"mount_point": mount} if mount else {}),
+                **({key: value} if value else {}),
                 "unit": row["unit"],
                 "min": min(v for _, v in values),
                 "max": max(v for _, v in values),
@@ -489,9 +513,16 @@ def operator_view(data, evidence, comparison, health=()):
 
 
 def component_metrics(books):
-    """Component Runbooks whose plan names a report metric get stored metric rows."""
+    """Component Runbooks whose plan names a report metric get stored metric rows.
+
+    Selection keeps the published general Runbook only when no dedicated one
+    applies, so an alert without its own Runbook still gets node rows.
+    """
     return any(
-        book.get("knowledge_key", "").startswith("RB-COMPONENT-")
+        (
+            book.get("knowledge_key", "").startswith("RB-COMPONENT-")
+            or book.get("knowledge_key") == "RB-GENERAL-GPU-NODE"
+        )
         and any(
             s.get("query_id") in METRICS
             for s in book["content"].get("observation_plan", [])

@@ -50,6 +50,30 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D18",
+        "priority": 2,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 CPU 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D19",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 CPU 평균 부하(1·5·15분)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -59,6 +83,30 @@
         "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
         "section": "Check(): CPU usage and load average errors; injected CPU fault",
         "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/cpu/kmsg_matcher.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "cpu_blocked_too_long and cpu_soft_lockup kernel message events",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.kernel.org/admin-guide/lockup-watchdogs.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "Softlockup and hardlockup detectors; watchdog_thresh; softlockup_panic",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.kernel.org/admin-guide/sysctl/kernel.html",
+        "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
+        "section": "hung_task_timeout_secs; hung_task_panic; pid_max",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -66,20 +114,32 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet cpu 점검이 CPU 사용률이나 load average를 계산하지 못해 Unhealthy로 보고한 것입니다. CPU 하드웨어 오류 보고가 아니라 모니터링 에이전트가 운영체제의 CPU 통계를 읽지 못했다는 뜻이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다.",
-      "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다.",
+      "meaning": "Fleet cpu 점검이 CPU 사용률이나 load average를 계산하지 못해 Unhealthy로 보고한 것입니다. CPU 하드웨어 오류 보고가 아니라 모니터링 에이전트가 운영체제의 CPU 통계를 읽지 못했다는 뜻이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다. Fleet은 이와 별도로 커널 로그의 CPU soft lockup과 'blocked for more than' 메시지를 이벤트로 기록하므로 같은 시각 커널 로그를 함께 봅니다.",
+      "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다. 같은 시각 soft lockup·hung task 메시지가 있으면 커널·작업·저장장치 문제를, 'Hardware Error' 메시지가 있으면 하드웨어 오류를 후보로 둡니다.",
       "next_checks": [
         {
-          "title": "즉시 확인",
-          "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. top과 cat /proc/loadavg로 노드 CPU 상태를 직접 확인합니다."
+          "title": "즉시 확인·영향",
+          "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. top과 cat /proc/loadavg로 노드 CPU 상태를, 3장 표에서 CPU 사용률과 평균 부하의 사건 전후 값을 확인합니다. journalctl -k(또는 dmesg -T)에서 같은 시각 'soft lockup', 'blocked for more than', 'Hardware Error' 줄이 있는지 확인합니다."
         },
         {
-          "title": "판단",
-          "text": "노드 CPU가 정상이면 하드웨어 조치는 필요 없습니다. Fleet 에이전트 파드 로그에서 같은 시각의 오류 메시지를 확인하고, 오류가 계속되면 에이전트 파드를 다시 시작합니다."
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "재시작 전에 journalctl -k의 사건 전후 줄과 Fleet 에이전트 파드 로그(kubectl logs)를 저장합니다. 'Hardware Error' 줄이 있으면 BMC 시스템 이벤트 로그(ipmitool sel elist)도 저장합니다."
+        },
+        {
+          "title": "판단: 커널 메시지별",
+          "text": "커널 메시지 없이 수집 오류만 있으면 모니터링 에이전트 문제이며 하드웨어 조치는 필요 없습니다. soft lockup은 커널이 한 CPU에서 20초 넘게(기본 watchdog_thresh 10초의 2배) 커널 모드로 돈 것이며, 메시지 괄호 안의 '<프로세스>:<PID>'로 해당 작업을 찾습니다. 'task <프로세스>:<PID> blocked for more than N seconds'는 D 상태(중단할 수 없는 대기) 작업이 hung_task_timeout_secs보다 오래 실행되지 못한 것으로, 보통 디스크·NFS I/O 대기이므로 저장장치 상태부터 확인합니다. 'Hardware Error' 줄은 하드웨어가 보고한 오류이므로 공급사 전달 대상입니다."
+        },
+        {
+          "title": "복구",
+          "text": "수집 오류만이면 Fleet 에이전트 파드를 다시 시작합니다. soft lockup·hung task가 반복되면 kubectl cordon <노드>로 새 배치를 막고 작업을 배출한 뒤 원인 프로세스를 정리하고, 계속되면 유지보수 승인 뒤 노드를 재부팅합니다."
         },
         {
           "title": "복구 확인",
-          "text": "Fleet cpu 컴포넌트 보고가 Healthy로 돌아왔는지 확인합니다."
+          "text": "Fleet cpu 컴포넌트 보고가 Healthy로 돌아왔는지, 3장 표의 CPU 사용률·평균 부하가 사건 전 수준인지, 커널 로그에 새 lockup·hung task 줄이 없는지 확인합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "'Hardware Error'가 있거나 재부팅 뒤에도 lockup이 반복되면 OS·커널 버전, 커널 로그, BMC 시스템 이벤트 로그, 수행한 조치, nvidia-bug-report.sh 결과를 갖춰 시스템 공급사에 전달합니다."
         }
       ],
       "references": [
@@ -88,6 +148,34 @@
           "text": "Fleet은 CPU 시간 통계나 load average 계산에 실패하면 Unhealthy로 보고합니다. 시험용 CPU 장애 주입도 같은 계산 오류 경로로 보고됩니다.",
           "source_indices": [
             0
+          ]
+        },
+        {
+          "title": "Fleet 커널 로그 이벤트",
+          "text": "Fleet은 커널 로그에서 'task <이름>:<PID> blocked for more than N seconds'(cpu_blocked_too_long)와 'soft lockup - CPU#N stuck for Ns! [<이름>:<PID>]'(cpu_soft_lockup)를 찾아 이벤트로 기록합니다. 이 이벤트는 cpu 컴포넌트의 Healthy·Unhealthy 판정에는 쓰이지 않습니다.",
+          "source_indices": [
+            1
+          ]
+        },
+        {
+          "title": "soft lockup (커널 문서)",
+          "text": "softlockup은 커널이 한 CPU에서 20초 넘게 커널 모드로 도는 버그로, 감지되면 스택 추적을 출력하고 기본적으로 시스템은 멈춘 채 남습니다. 감지 기준은 watchdog_thresh(기본 10초)의 2배이며 kernel.softlockup_panic으로 감지 때 패닉하게 할 수 있습니다.",
+          "source_indices": [
+            2
+          ]
+        },
+        {
+          "title": "hung task (sysctl kernel)",
+          "text": "D 상태 작업이 hung_task_timeout_secs보다 오래 스케줄되지 않으면 경고를 출력하며, 0이면 검사하지 않습니다. hung_task_panic이 0(기본)이면 경고만 하고 계속 동작합니다.",
+          "source_indices": [
+            3
+          ]
+        },
+        {
+          "title": "GPU Node Triage",
+          "text": "공급사에 전달할 자료: OS·드라이버 등 시스템 구성, 핵심 로그를 포함한 문제 설명, 수행한 디버그 단계, 핵심 메시지가 담긴 로그 전체, nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그, 애플리케이션 관련이면 그 정보(ISV 코드·프레임워크·버전). 티켓은 시스템 공급사에 냅니다.",
+          "source_indices": [
+            4
           ]
         }
       ]
@@ -147,6 +235,22 @@
           ],
           "required": true,
           "expected_effect": "같은 노드·기간의 Fleet cpu 컴포넌트 보고 사유와 상태를 확인한다. 보고를 현재 장치 상태나 원인 확정으로 승격하지 않는다."
+        },
+        {
+          "query_id": "D18",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 CPU 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D19",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드의 CPU 평균 부하(1·5·15분)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
         }
       ]
     }

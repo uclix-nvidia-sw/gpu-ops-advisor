@@ -150,6 +150,12 @@
         "revision": "Undated page; change log through v610 Update; mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "nvlink subcommand: -s/--status, -e/--errorcounters"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "section": "nvidia-bug-report.sh: root, up to one hour, --safe-mode --extra-system-data",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -164,6 +170,10 @@
         {
           "title": "즉시 확인",
           "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID), DCGM_FR 코드, 링크 번호를 확인합니다. nvidia-smi nvlink -s로 링크 상태(Active·Inactive)를, nvidia-smi nvlink -e로 오류 카운터를 확인합니다. NVSwitch 시스템은 systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log를 함께 확인하고, 같은 시각 XID 74·SXID를 dmesg에서 찾습니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "리셋·재부팅하면 휘발성 오류 카운터와 커널 로그가 사라지므로 먼저 보관합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. journalctl -k(또는 dmesg -T)에서 사건 전후 줄을 저장하고, 오류 로그 원문의 extra_info.dcgm_incidents와 dcgmi health -g <그룹 ID> -c 결과도 함께 저장합니다. nvidia-smi nvlink -s(링크 상태)와 nvidia-smi nvlink -e(오류 카운터) 출력을 남깁니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
@@ -217,6 +227,15 @@
           "text": "nvidia-smi nvlink -s는 링크 상태, -e는 오류 카운터를 보여 줍니다.",
           "source_indices": [
             5
+          ]
+        },
+        {
+          "title": "리셋 전 자료 보존",
+          "text": "nvidia-smi의 휘발성 ECC 오류 수는 드라이버를 마지막으로 올린 뒤의 값이고, PCIe Replays도 리셋 뒤부터 다시 셉니다. nvidia-bug-report.sh는 root로 실행하며 최대 1시간이 걸릴 수 있고 멈추면 --safe-mode --extra-system-data로 실행합니다. GPU Node Triage는 공급사 전달 자료로 nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그를 요구합니다.",
+          "source_indices": [
+            5,
+            6,
+            4
           ]
         }
       ]

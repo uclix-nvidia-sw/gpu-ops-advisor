@@ -146,6 +146,24 @@
         "revision": "Document History v2.6 (Sep 21, 2026); mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "Bare Metal Mode: Non-Fatal and Fatal SXid Errors; Managing the Fabric Manager Service"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/nvidia-smi/index.html",
+        "revision": "Undated page; change log through v610 Update; mutable upstream document",
+        "section": "Volatile ECC errors since the last driver load; PCIe Replays Since Reset",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "section": "nvidia-bug-report.sh: root, up to one hour, --safe-mode --extra-system-data",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
       }
     ],
     "analysis_guidance": [
@@ -160,6 +178,10 @@
         {
           "title": "즉시 확인",
           "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 DCGM_FR 코드와 스위치·링크 정보를 확인합니다. systemctl status nvidia-fabricmanager와 /var/log/fabricmanager.log에서 같은 시각의 SXID·오류 줄을 확인합니다. dmesg -T에서 같은 시각의 SXID와 GPU 쪽 XID 74·45를 찾고, nvidia-smi nvlink -s로 GPU 쪽 링크 상태를 봅니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "리셋·재부팅하면 휘발성 오류 카운터와 커널 로그가 사라지므로 먼저 보관합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. journalctl -k(또는 dmesg -T)에서 사건 전후 줄을 저장하고, 오류 로그 원문의 extra_info.dcgm_incidents와 dcgmi health -g <그룹 ID> -c 결과도 함께 저장합니다. nvidia-smi nvlink -s·-e 출력과 Fabric Manager 로그(/var/log/fabricmanager.log), journalctl -u nvidia-fabricmanager 출력을 남깁니다."
         },
         {
           "title": "판단: DCGM 코드별 조치",
@@ -206,6 +228,15 @@
           "text": "비치명 SXID는 정보성이며 Fabric Manager가 작업을 중단하지 않습니다. 치명 SXID가 access 포트에서 나면 그 GPU의 작업이 중단되고 해당 GPU와 같은 작업의 GPU를 리셋하며, trunk 포트에서 나면 Fabric Manager가 모든 작업을 중단하므로 Fabric Manager를 멈춘 상태에서 모든 GPU·NVSwitch를 리셋합니다.",
           "source_indices": [
             4
+          ]
+        },
+        {
+          "title": "리셋 전 자료 보존",
+          "text": "nvidia-smi의 휘발성 ECC 오류 수는 드라이버를 마지막으로 올린 뒤의 값이고, PCIe Replays도 리셋 뒤부터 다시 셉니다. nvidia-bug-report.sh는 root로 실행하며 최대 1시간이 걸릴 수 있고 멈추면 --safe-mode --extra-system-data로 실행합니다. GPU Node Triage는 공급사 전달 자료로 nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그를 요구합니다.",
+          "source_indices": [
+            5,
+            6,
+            7
           ]
         }
       ]

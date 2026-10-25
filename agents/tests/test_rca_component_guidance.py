@@ -256,6 +256,27 @@ def test_mismatched_published_guidance_stays_reference_only():
     assert "파일시스템 점검" not in str(report_sources(source))
 
 
+def test_general_guidance_is_shown_only_as_the_fallback():
+    from rcca_agent.operator_guidance import project_guidance
+
+    root = Path(__file__).resolve().parents[2] / "rcca-agent/runbooks"
+    content = json.loads((root / "RB-GENERAL-GPU-NODE.json").read_text("utf-8"))[
+        "content"
+    ]
+    entry = {
+        "id": "published",
+        "query_id": "runbook",
+        "quality": {"origin": "published"},
+        "snapshot": content,
+    }
+    # Selection keeps it only when no dedicated Runbook applies, so no code matches.
+    guidance = project_guidance([entry], {"reported_error_code": "xid:9999"})
+    assert guidance[0]["report_applicability"] == "general_fallback"
+    source = material()
+    source["runbook_guidance"] = guidance
+    assert content["operator_guidance"]["meaning"] in str(report_sources(source))
+
+
 def test_same_component_different_reason_cannot_select_specific_procedure():
     book = component_case()["attempt"]["context"]["runbooks"][0]
     assert (

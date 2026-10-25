@@ -87,6 +87,10 @@
           "text": "dmesg -T에서 같은 시각 nvidia-peermem 메시지와 그 전후 프로세스 종료·mlx5 메시지를 확인합니다. 같은 시각 NCCL을 쓰던 작업이 실패했는지 작업 소유자에게 확인합니다."
         },
         {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "모듈이나 노드를 다시 올리기 전에 journalctl -k의 nvidia-peermem·mlx5 줄, lsmod | grep nvidia_peermem 출력, 작업 NCCL 로그를 저장합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다."
+        },
+        {
           "title": "판단",
           "text": "lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
         },

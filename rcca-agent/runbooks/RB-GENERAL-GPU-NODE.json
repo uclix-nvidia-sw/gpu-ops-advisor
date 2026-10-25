@@ -38,14 +38,86 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 GPU 온도을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 GPU 전력을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D40",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 정정 불가 ECC(DBE) 휘발성 누적값을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D18",
+        "priority": 7,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 CPU 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D63",
+        "priority": 8,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드의 메모리 사용률을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
       {
         "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
-        "revision": "Page last updated 2026-09-09; mutable upstream document",
-        "section": "GPU Node Triage / Reporting a GPU Issue",
-        "checked_at": "2026-09-28"
+        "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+        "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html",
+        "revision": "Last updated on Sep 09, 2026; mutable upstream document",
+        "section": "nvidia-bug-report.sh: root, up to one hour, --safe-mode --extra-system-data",
+        "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://docs.nvidia.com/datacenter/dcgm/latest/user-guide/dcgm-diagnostics.html",
+        "revision": "Undated page (DCGM latest); mutable upstream document",
+        "section": "Run levels; diagnostics do not fix problems",
+        "checked_at": "2026-10-25"
       }
     ],
     "limitations": [
@@ -88,6 +160,67 @@
         "D02"
       ],
       "fallback": "stop"
+    },
+    "operator_guidance": {
+      "schema": "gpu-rca-guidance/1.0",
+      "meaning": "이 알림에 맞는 전용 런북이 없어 NVIDIA GPU Node Triage 순서로 조사합니다. 원인 판단은 수집한 원문 로그와 지표로만 하며, 등록되지 않은 코드나 상태는 원문 그대로 남깁니다.",
+      "cause_note": "전용 런북이 없어 원인 후보를 미리 정하지 않습니다. 원문 로그의 오류 코드와 같은 시각 GPU·노드 지표로 후보를 좁힙니다.",
+      "next_checks": [
+        {
+          "title": "즉시 확인·분류",
+          "text": "GPU Node Triage는 문제를 애플리케이션, ECC 메모리, 하드웨어·시스템, 기타로 나눠 시작합니다. journalctl -k(또는 dmesg -T)의 'NVRM: Xid' 줄, Fabric Manager 로그의 SXID 줄, nvidia-smi 결과로 분류하고, XID·SXID가 보이면 그 코드의 런북을 찾아 따릅니다. 작업 영향이 있으면 kubectl cordon <노드>로 새 배치를 막습니다."
+        },
+        {
+          "title": "진단 자료 보존 (리셋·재부팅 전)",
+          "text": "리셋·재부팅하면 휘발성 오류 카운터와 커널 로그가 사라지므로 먼저 보관합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. journalctl -k(또는 dmesg -T)에서 사건 전후 줄을 저장하고, NVSwitch가 있는 HGX·DGX 시스템은 Fabric Manager 로그(/var/log/fabricmanager.log)도 함께 보존합니다."
+        },
+        {
+          "title": "판단",
+          "text": "GPU Node Triage 표 1(XID 13·31·45·48·61·62·63·64·74·79·92·94·95·123)에 있는 코드는 표의 조치를 따릅니다. 표에 없고 전용 런북도 없는 코드·상태는 원문을 보존하고 원인을 미확정으로 둡니다. 3장 표에서 같은 시각 GPU 온도·전력·정정 불가 ECC와 CPU·메모리 사용률의 변화를 함께 봅니다."
+        },
+        {
+          "title": "복구",
+          "text": "작업을 배출한 뒤 GPU Node Triage 표 2(시스템별 리셋 가능 범위)에 따라 GPU를 리셋하거나 유지보수 승인 뒤 노드를 재부팅합니다. GPU 리셋은 그 GPU를 쓰는 프로세스를 모두 끝낸 뒤 root로 nvidia-smi -r -i <번호>로 합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "dcgmi diag -r 2로 빠르게 점검하고, 하드웨어가 의심되면 dcgmi diag -r 3을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+        },
+        {
+          "title": "공급사 전달",
+          "text": "해결되지 않으면 GPU Node Triage가 요구하는 자료를 갖춰 시스템 공급사에 티켓을 냅니다. 공급사에 전달할 자료: OS·드라이버 등 시스템 구성, 핵심 로그를 포함한 문제 설명, 수행한 디버그 단계, 핵심 메시지가 담긴 로그 전체, nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그, 애플리케이션 관련이면 그 정보(ISV 코드·프레임워크·버전). 티켓은 시스템 공급사에 냅니다."
+        }
+      ],
+      "references": [
+        {
+          "title": "GPU Node Triage 흐름",
+          "text": "흐름도는 애플리케이션·ECC 메모리·하드웨어/시스템·기타로 분류한 뒤 표 1의 조치, 해결 여부 확인, DCGM 진단, 공급사 보고 순서로 진행합니다. 표 2는 시스템별로 GPU 단위 리셋이 가능한지를 정리합니다.",
+          "source_indices": [
+            0
+          ]
+        },
+        {
+          "title": "공급사 전달 자료",
+          "text": "공급사에 전달할 자료: OS·드라이버 등 시스템 구성, 핵심 로그를 포함한 문제 설명, 수행한 디버그 단계, 핵심 메시지가 담긴 로그 전체, nvidia-bug-report.sh 결과, HGX 시스템의 Fabric Manager 로그, DCGM 진단 로그, 애플리케이션 관련이면 그 정보(ISV 코드·프레임워크·버전). 티켓은 시스템 공급사에 냅니다.",
+          "source_indices": [
+            0
+          ]
+        },
+        {
+          "title": "nvidia-bug-report.sh",
+          "text": "root로 실행하며 보통 빨리 끝나지만 드물게 느릴 수 있어 최대 1시간을 기다립니다. 멈추면 --safe-mode --extra-system-data로 실행하며, 결과는 nvidia-bug-report.log.gz 한 파일입니다.",
+          "source_indices": [
+            1
+          ]
+        },
+        {
+          "title": "DCGM 진단",
+          "text": "dcgmi diag는 실행 수준(-r)별로 GPU를 진단하며, 진단은 문제를 자동으로 고치지 않습니다.",
+          "source_indices": [
+            2
+          ]
+        }
+      ]
     }
   }
 }
