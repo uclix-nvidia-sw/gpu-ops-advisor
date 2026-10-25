@@ -307,9 +307,15 @@ def test_connected_writing_examples_pass_existing_guards_without_changing_choice
     }
     assert validate_advice({"advice": [item]}, {"findings": [fact]})["advice"]
     original = decision_context(fact)
+    expected = {k: v for k, v in original.items() if k not in {"option", "needed"}}
+    if kind == "schedule_candidate":
+        expected["reason"] = (
+            "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
+        )
     assert {
         k: v for k, v in c["decision"].items() if k not in {"option", "needed", "known"}
-    } == {k: v for k, v in original.items() if k not in {"option", "needed"}}
+    } == expected
+    assert decision_context(fact) == original
     assert fact == before
     if kind == "repeated_activity":
         assert "배치 테스트 Pod" in item["summary"] and "GPU 요청" in item["summary"]

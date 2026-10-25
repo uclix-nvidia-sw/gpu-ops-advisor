@@ -2182,7 +2182,10 @@ async def test_operating_choice_reaches_llm_and_stored_result_without_changing_t
     await interpret_report(result, llm)
     sent = llm.complete.call_args.args[1]["topics"][0]["findings"][0]["decision"]
     saved = result["narrative"][0]["advice"][0]["decision"]
-    assert sent == {key: value for key, value in saved.items() if key != "option"}
+    assert sent == {
+        **{key: value for key, value in saved.items() if key != "option"},
+        "reason": "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다.",
+    }
     assert saved == decision_context(fact)
     assert result["topics"] == [original]
     assert result["narrative_status"] == "complete"
@@ -2502,3 +2505,110 @@ async def test_prose_only_response_gets_exact_evidence_once_without_mutating_mod
         result["narrative"][0]["advice"][0]["summary_parts"]["decision"]
         == raw["sections"][0]["advice"][0]["summary"]
     )
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+async def test_trial_reasons_and_separate_conditions_survive_partial_repair(origin):
+    from test_namespace_comparison_patterns import pattern_topic
+
+    result = dict(
+        topics=[pattern_topic([80, 80, 20, 20, 1, 1])],
+        quality={},
+        time_range={},
+        report_origin=origin,
+    )
+    before = deepcopy(result["topics"])
+    payload = payload_for(result)
+    facts = payload["topics"][0]["findings"]
+    assert {f["kind"] for f in facts} == {"schedule_candidate", "relative_activity"}
+    prose = {
+        "schedule_candidate": "연결 GPU 활동률이 낮았던 구간입니다. 작업 마감·예약·대기·가용 GPU를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+        "relative_activity": "비교 구간보다 연결 GPU 활동률이 낮았습니다. 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
+    }
+    good = {
+        "topic_id": "namespace_usage",
+        "advice": [
+            {"fact_id": f["fact_id"], "summary": prose[f["kind"]]} for f in facts
+        ],
+    }
+    relative = next(f for f in facts if f["kind"] == "relative_activity")
+    repaired = next(a for a in good["advice"] if a["fact_id"] == relative["fact_id"])
+    invalid = deepcopy(good)
+    for item in invalid["advice"]:
+        if item["fact_id"] == relative["fact_id"]:
+            item["summary"] = item["summary"].replace("·예약", "")
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [repaired]}]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    first, repair = [call.args[1] for call in llm.complete.call_args_list]
+    patch = repair["summary_repair"]
+    assert [item["fact_id"] for item in patch] == [relative["fact_id"]]
+    initial = next(
+        f for f in first["topics"][0]["findings"] if f["fact_id"] == relative["fact_id"]
+    )
+    assert patch[0]["required_prose_terms"] == initial["required_prose_terms"]
+    assert patch[0]["writing_checks"] == initial["writing_checks"]
+    assert patch[0]["related_observations"] == initial["related_observations"]
+    assert "conditional_relative_window_trial_required" in patch[0]["validation_error"]
+    assert all(
+        "서로 다른 근거가 같은 선택을 뒷받침" in call.args[0]
+        for call in llm.complete.call_args_list
+    )
+    expected = validate_advice(
+        advice_with_evidence(good, {"findings": facts}), {"findings": facts}
+    )
+    assert [a["summary"] for a in result["narrative"][0]["advice"]] == [
+        a["summary"] for a in expected["advice"]
+    ]
+    assert payload_for(result) == payload
+    assert result["topics"] == before
+    assert result["narrative_status"] == "complete"
+
+
+def test_capacity_check_purpose_preserves_all_prerequisites_and_reference_guards():
+    from ops_agent.report_interpretation import validate_written_advice
+
+    fact = next(
+        f
+        for f in candidates(topic(activity=90, pending=2))
+        if f["kind"] == "capacity_review"
+    )
+    before = deepcopy(fact)
+    item = {
+        "fact_id": fact["fact_id"],
+        "summary": "스케줄러 사유에서 GPU 부족 여부를 확인하고, GPU 요청·실제 할당·보장량·가용 GPU·운영정책을 대조한 뒤 추가 할당을 검토하세요.",
+    }
+    assert validate_written_advice({"advice": [item]}, {"findings": [fact]})
+    item["summary"] = item["summary"].replace("·보장량", "")
+    with pytest.raises(ValueError, match="namespace_prerequisites_required"):
+        validate_written_advice({"advice": [item]}, {"findings": [fact]})
+    item["summary"] += " {{pending}}"
+    with pytest.raises(ValueError, match="namespace_summary_tokens_required"):
+        validate_written_advice({"advice": [item]}, {"findings": [fact]})
+    assert fact == before
+
+
+@pytest.mark.parametrize("samples", [240, 238])
+def test_schedule_writing_reason_preserves_partial_observation_and_stored_decision(
+    samples,
+):
+    fact = next(
+        f
+        for f in candidates(topic(samples=samples))
+        if f["kind"] == "schedule_candidate"
+    )
+    before = deepcopy(fact)
+    saved = decision_context(fact)
+    writing = summary_context(fact)["decision"]
+    if samples == 240:
+        assert writing == {
+            **saved,
+            "reason": "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다.",
+        }
+    else:
+        assert writing == saved
+        assert "미확인" in writing["reason"]
+        assert "관측되지 않았습니다" not in writing["reason"]
+    assert decision_context(fact) == saved
+    assert fact == before

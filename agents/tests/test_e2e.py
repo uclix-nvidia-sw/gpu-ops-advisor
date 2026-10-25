@@ -3136,7 +3136,10 @@ def test_aggregate_report_transition_verification_is_published(
         ("missing_prerequisite", "schedule_candidate"),
         ("partial_placement", "queue_review"),
         ("partial_placement_causal", "queue_review"),
+        ("partial_placement_conjunction", "queue_review"),
         ("schedule_order", "relative_activity"),
+        ("relative_memory", "relative_activity"),
+        ("relative_observed_memory", "relative_activity"),
         ("observed_prerequisite", "schedule_candidate"),
         ("judgment_repair", "schedule_candidate"),
         ("possessive_activity", "schedule_candidate"),
@@ -3253,6 +3256,16 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             else "대기 관측도 완전했습니다. "
                             + summary.replace("대기·", "")
                             if failure == "observed_prerequisite"
+                            else (
+                                "메모리 점유는 낮았으며, "
+                                if failure == "relative_observed_memory"
+                                else ""
+                            )
+                            + "마감·예약·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+                            if failure
+                            in {"relative_memory", "relative_observed_memory"}
+                            else "노드 미배정은 없었으며, " + summary
+                            if failure == "partial_placement_conjunction"
                             else "노드 미배정은 없었으므로, " + summary
                             if failure == "partial_placement_causal"
                             else "마감·예약·가용 GPU·메모리 요구를 확인한 뒤 일부 작업의 시작 시각을 조정해 시범 실행을 검토하세요."
@@ -3346,9 +3359,20 @@ def test_scheduled_and_manual_reports_repair_same_data(
             if failure == "pending_target"
             else {"namespace_prerequisites_required"}
             if failure
-            in {"missing_prerequisite", "judgment_repair", "observed_prerequisite"}
+            in {
+                "missing_prerequisite",
+                "judgment_repair",
+                "observed_prerequisite",
+                "relative_memory",
+                "relative_observed_memory",
+            }
             else {"partial_placement_is_not_absence"}
-            if failure in {"partial_placement", "partial_placement_causal"}
+            if failure
+            in {
+                "partial_placement",
+                "partial_placement_causal",
+                "partial_placement_conjunction",
+            }
             else {"review_before_schedule_change"}
             if failure == "schedule_order"
             else {"unsupported_workload_activity_attribution"}
@@ -3391,6 +3415,23 @@ def test_scheduled_and_manual_reports_repair_same_data(
         )
     assert scheduled["time_range"] == manual["time_range"]
     assert render(scheduled)["csv"] == render(manual)["csv"]
+    if failure in {"relative_memory", "relative_observed_memory"}:
+        calls = [
+            b
+            for path, b in Upstream.requests[before:]
+            if path == "/v1/chat/completions"
+        ]
+        assert len(calls) == 4
+        for call in calls[1::2]:
+            repair = json.loads(call["messages"][1]["content"])["summary_repair"]
+            assert len(repair) == 1
+            assert repair[0]["required_checks"] == [
+                "작업 마감",
+                "예약",
+                "가용 GPU",
+                "메모리 요구",
+            ]
+            assert "누락된 조건: 메모리 요구" in repair[0]["validation_error"]
     if failure == "schedule_condition":
         calls = [
             b
