@@ -19,7 +19,7 @@ def number(value):
     return value
 
 
-def summarize(evidence, period):
+def summarize(evidence, period, *, excluded=None):
     start, end = (timestamp(period[k]) for k in ("start", "end"))
     expected = set(range(int(start) + 3600, int(end) + 1, 3600))
     activity, identities, gpu_identities = {}, defaultdict(list), defaultdict(list)
@@ -206,6 +206,19 @@ def summarize(evidence, period):
                     reason = "shared_or_mig_attribution_unverified"
         if reason:
             bucket["reasons"].add(reason)
+            if excluded is not None:
+                excluded.append(
+                    dict(
+                        cluster_id=key[0],
+                        namespace=key[1],
+                        gpu_model=key[2],
+                        gpu_id=labels.get("UUID"),
+                        pod=labels.get("pod"),
+                        hour_end=iso(at),
+                        reason=reason,
+                        proof_mismatch=bool(checks) and not verified,
+                    )
+                )
             continue
         bucket["activity_sum"] += values["activity_sum"]
         if verified:

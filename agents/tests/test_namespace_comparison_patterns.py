@@ -340,8 +340,8 @@ def test_relative_trial_wording_preserves_candidates_and_validation():
     before = deepcopy(source)
     fact = new(source, "relative_activity")[0]
     choice = decision_context(fact)
-    assert "시험 후보" in SYSTEM
-    assert "확정 권고" in SYSTEM
+    assert "relative_activity는 비교 관측" in SYSTEM
+    assert "새 행동을 만들지 마세요" in SYSTEM
     assert "시범 실행을 검토" in choice["option"]
     assert "앞으로" in choice["option"]
     assert "시작 시간 조정" in choice["option"]

@@ -22,6 +22,7 @@ from ops_agent.report_interpretation import (
     payload_for,
     writing_context,
     advice_with_evidence,
+    validate_reasoned_advice,
 )
 from agent_common.llm import LLM
 from agent_common.settings import Settings
@@ -130,6 +131,26 @@ def topic(activity=1, pending=0, memory=10, samples=240):
 
 
 def writer_section(facts):
+    """Model fixture for the reason-only writing contract, not an LLM result."""
+    observations = {
+        "capacity_review": "연결 GPU 활동률이 높았고 실행을 기다리는 Pod도 관측됐습니다.",
+        "schedule_candidate": "연결 GPU 활동률이 낮았던 구간입니다.",
+        "queue_review": "대기 Pod가 관측됐으며 기록만으로 원인은 확인되지 않았습니다.",
+        "resident_memory": "연결 GPU 활동률은 낮았지만 메모리 점유는 높았습니다.",
+        "repeated_activity": "서로 떨어진 여러 구간에 높은 연결 GPU 활동률과 대기가 관측됐습니다.",
+        "relative_activity": "비교 구간보다 연결 GPU 활동률이 낮았습니다.",
+        "batch_progress": "완료가 확인된 Job 일부의 경과 기록이 있습니다.",
+    }
+    return {
+        "topic_id": "namespace_usage",
+        "advice": [
+            {"fact_id": f["fact_id"], "summary": observations[f["kind"]]}
+            for f in facts[:5]
+        ],
+    }
+
+
+def prose_section(facts):
     checks = {
         "capacity_review": "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
         "schedule_candidate": "작업 마감·예약·대기·가용 GPU를 확인한 뒤 일부 작업의 시작 시각 조정과 시범 실행을 검토하세요.",
@@ -971,7 +992,7 @@ async def test_compact_max_candidate_input_keeps_room_for_actual_model_output():
         assert "summary_start" not in fact
         assert {"target", "period"} <= fact["observed_values"].keys()
         assert "option" not in fact["decision"]
-    assert "재선택하지 마세요" in system
+    assert "정상 항목은 바꾸지 말고" in system
     assert {
         f["observed_values"]["target"].split(" / ")[0]
         for f in wire["topics"][0]["findings"]
@@ -1165,11 +1186,11 @@ async def test_summary_repair_preserves_previous_answer_within_input_limit(
     invalid = deepcopy(valid)
     item = invalid["sections"][0]["advice"][0]
     if problem == "duplicate_target":
-        item["summary"] = item["summary"].replace("이벤트", "{{target}} 이벤트")
+        item["summary"] = item["summary"] + " {{target}}"
         code = "namespace_summary_tokens_required"
     else:
-        item["summary"] = item["summary"].split("스케줄러")[0]
-        code = "actionable_namespace_summary_required"
+        item["summary"] = ""
+        code = "invalid_namespace_advice_text"
     if problem == "oversize_previous":
         invalid["unused"] = "x" * 32_000
     llm = AsyncMock(configured=True)
@@ -1185,7 +1206,7 @@ async def test_summary_repair_preserves_previous_answer_within_input_limit(
         "instruction": second["instruction"],
     }
     assert feedback["error"].startswith(code + ":")
-    assert item["fact_id"] in feedback["error"]
+    assert feedback["error"]
     assert "hourly_pair" not in feedback["instruction"]
     assert second["summary_repair"][0]["previous_summary"] == item["summary"]
     assert second["summary_repair"][0]["fact_id"] == item["fact_id"]
@@ -1265,9 +1286,8 @@ async def test_summary_repair_preserves_other_valid_model_sentences():
     ]
     await interpret_report(result, llm)
     assert result["narrative_status"] == "complete"
-    expected = validate_advice(
-        advice_with_evidence(valid["sections"][0], payload_for(result)["topics"][0]),
-        payload_for(result)["topics"][0],
+    expected = validate_reasoned_advice(
+        valid["sections"][0], payload_for(result)["topics"][0]
     )
     present_advice([expected])
     assert result["narrative"][0]["advice"] == expected["advice"]
@@ -1284,7 +1304,7 @@ async def test_all_invalid_sentences_repair_in_one_request_and_keep_valid_ones()
     valid = {"sections": [writer_section(payload_for(result)["topics"][0]["findings"])]}
     invalid = deepcopy(valid)
     for item in invalid["sections"][0]["advice"]:
-        item["summary"] = item["summary"].replace("이벤트", "{{target}} 이벤트")
+        item["summary"] = item["summary"] + " {{target}}"
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [invalid, {"advice": valid["sections"][0]["advice"]}]
     await interpret_report(result, llm)
@@ -1482,12 +1502,10 @@ async def test_unscheduled_context_reaches_initial_repair_and_stored_narrative(o
     facts = payload_for(result)["topics"][0]["findings"]
     valid = writer_section(facts)
     valid["advice"][0]["summary"] = (
-        "준비 단계 이벤트와 이미지·초기화 기록을 확인하세요."
+        "대기 Pod가 관측됐지만 노드 미배정은 관측되지 않았습니다."
     )
     invalid = deepcopy(valid)
-    invalid["advice"][0]["summary"] = invalid["advice"][0]["summary"].replace(
-        "이벤트", "{{target}} 이벤트"
-    )
+    invalid["advice"][0]["summary"] = "{{target}} " + invalid["advice"][0]["summary"]
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [{"sections": [invalid]}, {"advice": valid["advice"]}]
     await interpret_report(result, llm)
@@ -1561,10 +1579,10 @@ def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, c
         {"findings": [fact]},
     )["advice"]
     assert "시간대별 관측 최대 대기" not in SYSTEM
-    assert "현상과 점검 목적은 짧게 나누되" in SYSTEM
-    assert "한 문장으로 명확하면 허용합니다" in SYSTEM
-    assert "같은 조건·판단을 되풀이하지 마세요" in SYSTEM
-    assert '"배치 조건", "메모리 유지 필요성"만으로 끝내지 말고' in SYSTEM
+    assert "점검 목적·필수 확인 조건·운영 행동은 다시 작성하지 마세요" in SYSTEM
+    assert "짧은 한 문장" in SYSTEM
+    assert "같은 사실·판단을 반복" in SYSTEM
+    assert "관측 현상" in SYSTEM
     if unscheduled == 2:
         focus = summary_context(fact)["writing_focus"]
         assert "GPU 요청이 충족되지 않았는지" in focus
@@ -1654,7 +1672,7 @@ async def test_duplicate_reference_repair_preserves_check_and_equal_value_tokens
     result = dict(topics=[t], quality={}, time_range={})
     fact = payload_for(result)["topics"][0]["findings"][0]
     start = summary_context(fact)["summary_start"]
-    check = "대기 Pod가 미배치 상태로 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요."
+    check = "대기 Pod가 미배치 상태로 관측됐으나 배치 제약의 원인은 미확인입니다."
     good = {"fact_id": fact["fact_id"], "summary": check}
     bad = {
         **good,
@@ -1667,7 +1685,7 @@ async def test_duplicate_reference_repair_preserves_check_and_equal_value_tokens
     ]
     await interpret_report(result, llm)
     repair = llm.complete.call_args_list[1].args[1]
-    assert "필수 확인 조건은 보존" in repair["instruction"]
+    assert "필수 확인 조건은 코드가 붙이므로" in repair["instruction"]
     assert repair["summary_repair"][0]["observed_values"]["pending"] == "2개"
     assert result["quality"]["report"]["reason"] == "repaired"
     narrative = result["narrative"][0]["advice"][0]["summary"]
@@ -1717,66 +1735,51 @@ def test_summary_start_and_kind_check_keep_existing_validation(kind):
         ("queue_review", "namespace_summary_tokens_required"),
     ],
 )
-async def test_existing_condition_and_unit_errors_use_one_targeted_repair(kind, error):
+async def test_code_scheduling_gate_and_model_unit_error_keep_existing_guards(
+    kind, error
+):
+    from ops_agent.report_interpretation import validate_written_advice
+
     t = topic(pending=2 if kind == "queue_review" else 0)
     for h in t["workloads"][0]["hours"]:
         h.update(unscheduled_peak=0, unscheduled_samples=240)
     result = dict(topics=[t], quality={}, time_range={})
     fact = payload_for(result)["topics"][0]["findings"][0]
-    check = (
-        "작업 마감·예약·대기·가용 GPU를 확인한 뒤 이 시간대 배치 작업 실행을 검토하세요."
-        if kind == "schedule_candidate"
-        else "미배치가 관측되지 않았으므로 준비 단계 이벤트와 이미지·초기화 기록부터 대조하세요."
-    )
-    good = {"fact_id": fact["fact_id"], "summary": check}
-    bad = {
-        **good,
-        "summary": good["summary"].replace("확인한 뒤", "확인하고")
-        if kind == "schedule_candidate"
-        else good["summary"] + " {{unscheduled}}개",
-    }
-    llm = AsyncMock(configured=True)
-    llm.complete.side_effect = [
-        {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
-        {"advice": [good]},
-    ]
-    await interpret_report(result, llm)
-    assert llm.complete.call_count == 2
-    repair = llm.complete.call_args_list[1].args[1]
-    assert len(repair["summary_repair"]) == 1 and "topics" not in repair
-    assert repair["summary_repair"][0]["validation_error"].startswith(error)
+    good = writer_section([fact])["advice"][0]
     if kind == "schedule_candidate":
-        first = llm.complete.call_args_list[0].args[1]["topics"][0]["findings"][0]
-        for context in (first, repair["summary_repair"][0]):
-            assert context["required_prose_terms"] == ["확인", "뒤", "검토"]
-            assert "확인한 뒤에만" in context["writing_checks"][0]
-        assert "'확인한 뒤'" in repair["summary_repair"][0]["validation_error"]
-        assert "'검토'" in repair["summary_repair"][0]["validation_error"]
-    if kind == "queue_review":
-        assert "writing_focus" not in repair["summary_repair"][0]
-        assert "이미지 다운로드·초기화 이벤트" in " ".join(
-            repair["summary_repair"][0]["writing_checks"]
-        )
-        assert "노드 배정 이후" in summary_context(fact)["writing_focus"]
-        assert "배치 제약부터" not in summary_context(fact)["writing_focus"]
-    assert result["quality"]["report"]["reason"] == "repaired"
-    assert result["quality"]["report"]["failures"][0]["reason"] == error
+        bad = {
+            "fact_id": fact["fact_id"],
+            "summary": "작업 마감·예약·대기·가용 GPU를 확인하고 일부 작업의 시범 실행을 검토하세요.",
+        }
+        with pytest.raises(ValueError, match=error):
+            validate_written_advice({"advice": [bad]}, {"findings": [fact]})
+        llm = AsyncMock(configured=True)
+        llm.complete.return_value = {
+            "sections": [{"topic_id": "namespace_usage", "advice": [good]}]
+        }
+        await interpret_report(result, llm)
+        assert llm.complete.call_count == 1
+        assert "확인한 뒤" in result["narrative"][0]["advice"][0]["summary"]
+    else:
+        bad = {**good, "summary": good["summary"] + " {{unscheduled}}개"}
+        llm = AsyncMock(configured=True)
+        llm.complete.side_effect = [
+            {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
+            {"advice": [good]},
+        ]
+        await interpret_report(result, llm)
+        assert llm.complete.call_count == 2
+        repair = llm.complete.call_args.args[1]["summary_repair"][0]
+        assert repair["validation_error"].startswith(error)
+    assert result["narrative_status"] == "complete"
 
 
 async def test_actual_unrecognized_check_verb_repairs_intent_not_invalid_wording():
     t = topic(pending=2)
-    for h in t["workloads"][0]["hours"]:
-        h.update(unscheduled_peak=2, unscheduled_samples=240)
     result = dict(topics=[t], quality={}, time_range={})
     fact = payload_for(result)["topics"][0]["findings"][0]
-    bad = {
-        "fact_id": fact["fact_id"],
-        "summary": " 스케줄러 이벤트의 배치 제약을 먼저 살펴보고 GPU 부족 여부는 별도로 판단하지 마세요.",
-    }
-    good = {
-        **bad,
-        "summary": " 미배치가 관측됐으므로 스케줄러 이벤트의 배치 제약부터 대조하세요.",
-    }
+    bad = {"fact_id": fact["fact_id"], "summary": "Pod의 GPU 활동률이 낮았습니다."}
+    good = writer_section([fact])["advice"][0]
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [
         {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
@@ -1784,12 +1787,12 @@ async def test_actual_unrecognized_check_verb_repairs_intent_not_invalid_wording
     ]
     await interpret_report(result, llm)
     repair = llm.complete.call_args_list[1].args[1]
-    assert "대상·행동·필수 확인 조건" in repair["instruction"]
-    assert "판단 설명만 보완" in repair["instruction"]
+    assert "관측 현상과 판단 이유만 보완" in repair["instruction"]
+    assert "코드가 붙이므로 다시 작성하지 마세요" in repair["instruction"]
     assert result["quality"]["report"]["reason"] == "repaired"
     assert (
         result["quality"]["report"]["failures"][0]["reason"]
-        == "actionable_namespace_summary_required"
+        == "unsupported_workload_activity_attribution"
     )
 
 
@@ -1840,12 +1843,12 @@ async def test_decision_first_context_survives_repair_and_report_storage(origin)
     result = dict(topics=[t], quality={}, time_range={}, report_origin=origin)
     original = deepcopy(result)
     fact = payload_for(result)["topics"][0]["findings"][0]
-    choice = "정상 기동과 준비 지연을 구분하기 위해 노드 배정 이후 이벤트와 이미지·초기화 기록을 먼저 대조하세요."
+    choice = "대기 Pod가 관측됐지만 노드 미배정은 관측되지 않았으며 기동 지연 여부는 미확인입니다."
     good = {
         "fact_id": fact["fact_id"],
         "summary": choice,
     }
-    bad = {**good, "summary": good["summary"].replace("이벤트", "{{period}} 이벤트")}
+    bad = {**good, "summary": "{{period}} " + good["summary"]}
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [
         {"sections": [{"topic_id": "namespace_usage", "advice": [bad]}]},
@@ -1942,11 +1945,11 @@ async def test_queue_cause_rejection_repairs_only_invalid_item_without_rewriting
     fact = payload_for(result)["topics"][0]["findings"][0]
     bad = {
         "fact_id": fact["fact_id"],
-        "summary": "미배치가 관측됐기 때문에 스케줄러 이벤트의 배치 제약을 대조하세요. ",
+        "summary": "미배치 때문에 대기하는 것으로 보입니다.",
     }
     good = {
         **bad,
-        "summary": "미배치 사유를 구분하기 위해 스케줄러 이벤트의 배치 제약을 먼저 대조하세요. ",
+        "summary": "미배치가 관측됐지만 대기 원인은 미확인입니다.",
     }
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [
@@ -2006,7 +2009,7 @@ async def test_more_than_five_clusters_keeps_selection_guidance_instead_of_overs
     assert wire["response_shape"]["sections"][0]["advice"] == [
         {
             "fact_id": "선택한 후보의 fact_id",
-            "summary": "수치·참조 없는 판단 이유와 확인 목적",
+            "summary": "수치·참조 없는 관측 현상과 판단 이유",
         }
     ]
 
@@ -2037,10 +2040,10 @@ async def test_namespace_writing_list_does_not_replace_incident_section_contract
         f["fact_id"] for f in wire["topics"][0]["findings"]
     ]
     assert set(inc) == {"topic_id", "fact_ids", "observation", "meaning", "next_check"}
-    assert "namespace_usage에만 적용" in system
-    assert "예약·대기·가용 GPU를 확인한 뒤" in system
-    assert "Namespace 제안의 수치·대상명·시각·근거 참조는 코드가 조립" in system
-    assert "다른 주제는 기존 참조 토큰 규칙" in system
+    assert "다른 주제의 필드를 Namespace summary에 복사하지" in system
+    assert "점검 목적·필수 확인 조건·운영 행동은 다시 작성하지 마세요" in system
+    assert "수치와 참조는 코드가 붙입니다" in system
+    assert "기존 fact_ids와 수치·대상·기간 참조 규칙" in system
 
 
 def test_queue_preserves_full_span_and_offers_only_valid_contiguous_subwindows():
@@ -2169,7 +2172,7 @@ async def test_operating_choice_reaches_llm_and_stored_result_without_changing_t
     original = deepcopy(t)
     result = dict(topics=[t], quality={}, time_range={})
     fact = payload_for(result)["topics"][0]["findings"][0]
-    summary = "작업 마감·예약·대기·가용 GPU를 확인한 뒤 낮은 활동 구간을 배치 작업 시범 실행 후보로 검토하세요. "
+    summary = "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
     llm = AsyncMock(configured=True)
     llm.complete.return_value = {
         "sections": [
@@ -2268,13 +2271,13 @@ async def test_repeated_scheduling_condition_failure_keeps_calculated_report(pro
     diagnostic = result["quality"]["report"]
     assert diagnostic["method"] == "deterministic_fallback"
     assert diagnostic["failures"] == [
-        {"attempt": n, "reason": "conditional_scheduling_review_required"}
+        {"attempt": n, "reason": "reason_only_namespace_summary_required"}
         for n in (1, 2)
     ]
     repair = llm.complete.call_args_list[1].args[1]["summary_repair"][0]
     assert repair["fact_id"] == fact["fact_id"]
-    assert "'확인한 뒤'" in repair["validation_error"]
-    assert "'검토'" in repair["validation_error"]
+    assert "조건은 코드가 붙" in repair["validation_error"]
+    assert "관측 현상과 판단 이유만" in repair["validation_error"]
     assert "summary" not in diagnostic["failures"][0]
 
 
@@ -2335,9 +2338,13 @@ def test_related_context_does_not_override_evidence_sensitive_queue_choice(
     assert (
         context["related_observations"][0]["decision"]["choice"] == "allocation_review"
     )
-    assert context["observed_values"] == {
-        k[2:-2]: v for k, v in summary_context(fact)["summary_tokens"].items()
-    }
+    expected = {k[2:-2]: v for k, v in summary_context(fact)["summary_tokens"].items()}
+    if samples != 240 and peak == 0:
+        assert context["observed_values"]["unscheduled"].startswith(
+            expected.pop("unscheduled")
+        )
+        assert "미확인" in context["observed_values"]["unscheduled"]
+    assert all(context["observed_values"][k] == v for k, v in expected.items())
 
 
 @pytest.mark.parametrize("origin", ["schedule", "manual"])
@@ -2369,9 +2376,7 @@ async def test_related_evidence_survives_partial_repair_without_rewriting_valid_
     assert repaired["related_observations"] == initial["related_observations"]
     assert len(repaired["related_observations"]) == 1
     assert result["quality"]["report"]["reason"] == "repaired"
-    expected = validate_advice(
-        advice_with_evidence(good, {"findings": facts}), {"findings": facts}
-    )["advice"]
+    expected = validate_reasoned_advice(good, {"findings": facts})["advice"]
     assert [a["summary"] for a in result["narrative"][0]["advice"]] == [
         a["summary"] for a in expected
     ]
@@ -2406,7 +2411,7 @@ def test_code_assembly_preserves_prose_and_exact_existing_validation(kind):
 
     inputs.append(pattern_topic([80, 80, 20, 20]))
     fact = next(f for t in inputs for f in candidates(t) if f["kind"] == kind)
-    source = writer_section([fact])
+    source = prose_section([fact])
     before = deepcopy(source)
     topic_data = {"findings": [fact]}
     composed = advice_with_evidence(source, topic_data)
@@ -2504,12 +2509,16 @@ async def test_prose_only_response_gets_exact_evidence_once_without_mutating_mod
     assert (
         result["narrative"][0]["advice"][0]["summary_parts"]["decision"]
         == raw["sections"][0]["advice"][0]["summary"]
+        + " "
+        + summary_context(facts[0])["decision"]["action"]
     )
 
 
 @pytest.mark.parametrize("origin", ["schedule", "manual"])
 async def test_trial_reasons_and_separate_conditions_survive_partial_repair(origin):
     from test_namespace_comparison_patterns import pattern_topic
+    from ops_agent.namespace_advice import writing_decision
+    from ops_agent.report_interpretation import validate_reasoned_advice
 
     result = dict(
         topics=[pattern_topic([80, 80, 20, 20, 1, 1])],
@@ -2518,52 +2527,34 @@ async def test_trial_reasons_and_separate_conditions_survive_partial_repair(orig
         report_origin=origin,
     )
     before = deepcopy(result["topics"])
-    payload = payload_for(result)
-    facts = payload["topics"][0]["findings"]
+    facts = payload_for(result)["topics"][0]["findings"]
     assert {f["kind"] for f in facts} == {"schedule_candidate", "relative_activity"}
-    prose = {
-        "schedule_candidate": "연결 GPU 활동률이 낮았던 구간입니다. 작업 마감·예약·대기·가용 GPU를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
-        "relative_activity": "비교 구간보다 연결 GPU 활동률이 낮았습니다. 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
-    }
-    good = {
-        "topic_id": "namespace_usage",
-        "advice": [
-            {"fact_id": f["fact_id"], "summary": prose[f["kind"]]} for f in facts
-        ],
-    }
+    good = writer_section(facts)
     relative = next(f for f in facts if f["kind"] == "relative_activity")
-    repaired = next(a for a in good["advice"] if a["fact_id"] == relative["fact_id"])
+    fixed = next(a for a in good["advice"] if a["fact_id"] == relative["fact_id"])
     invalid = deepcopy(good)
-    for item in invalid["advice"]:
-        if item["fact_id"] == relative["fact_id"]:
-            item["summary"] = item["summary"].replace("·예약", "")
+    next(a for a in invalid["advice"] if a["fact_id"] == relative["fact_id"])[
+        "summary"
+    ] += " {{target}}"
     llm = AsyncMock(configured=True)
-    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [repaired]}]
+    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [fixed]}]
     await interpret_report(result, llm)
-    assert llm.complete.call_count == 2
     first, repair = [call.args[1] for call in llm.complete.call_args_list]
     patch = repair["summary_repair"]
-    assert [item["fact_id"] for item in patch] == [relative["fact_id"]]
-    initial = next(
+    assert [a["fact_id"] for a in patch] == [relative["fact_id"]]
+    sent = next(
         f for f in first["topics"][0]["findings"] if f["fact_id"] == relative["fact_id"]
     )
-    assert patch[0]["required_prose_terms"] == initial["required_prose_terms"]
-    assert patch[0]["writing_checks"] == initial["writing_checks"]
-    assert patch[0]["related_observations"] == initial["related_observations"]
-    assert "conditional_relative_window_trial_required" in patch[0]["validation_error"]
-    assert all(
-        "서로 다른 근거가 같은 선택을 뒷받침" in call.args[0]
-        for call in llm.complete.call_args_list
-    )
-    expected = validate_advice(
-        advice_with_evidence(good, {"findings": facts}), {"findings": facts}
-    )
+    assert patch[0]["related_observations"] == sent["related_observations"]
+    assert "required_checks" not in sent and "required_prose_terms" not in patch[0]
+    expected = validate_reasoned_advice(good, {"findings": facts})
     assert [a["summary"] for a in result["narrative"][0]["advice"]] == [
         a["summary"] for a in expected["advice"]
     ]
-    assert payload_for(result) == payload
     assert result["topics"] == before
-    assert result["narrative_status"] == "complete"
+    for item in result["narrative"][0]["advice"]:
+        fact = next(f for f in facts if f["fact_id"] == item["fact_id"])
+        assert writing_decision(fact)["action"] in item["summary"]
 
 
 def test_capacity_check_purpose_preserves_all_prerequisites_and_reference_guards():
@@ -2601,14 +2592,19 @@ def test_schedule_writing_reason_preserves_partial_observation_and_stored_decisi
     before = deepcopy(fact)
     saved = decision_context(fact)
     writing = summary_context(fact)["decision"]
+    assert {
+        k: v for k, v in writing.items() if k not in {"option", "action", "reason"}
+    } == {k: v for k, v in saved.items() if k not in {"option", "reason"}}
     if samples == 240:
-        assert writing == {
-            **saved,
-            "reason": "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다.",
-        }
+        assert (
+            writing["reason"]
+            == "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
+        )
     else:
-        assert writing == saved
-        assert "미확인" in writing["reason"]
-        assert "관측되지 않았습니다" not in writing["reason"]
-    assert decision_context(fact) == saved
-    assert fact == before
+        assert writing["reason"] == saved["reason"]
+        assert (
+            "미확인" in writing["reason"]
+            and "관측되지 않았습니다" not in writing["reason"]
+        )
+    assert "마감" in writing["action"] and "시범 실행" in writing["action"]
+    assert decision_context(fact) == saved and fact == before

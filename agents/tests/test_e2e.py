@@ -207,6 +207,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
+                        "ops-interpretation-reason-action-v3",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3163,6 +3164,13 @@ def test_aggregate_report_transition_verification_is_published(
         ("weak_capacity_purpose", "capacity_review"),
         ("presumed_capacity", "capacity_review"),
         ("repeated_trial", "schedule_candidate"),
+        ("renamed_trial", "schedule_candidate"),
+        ("raw_action", "schedule_candidate"),
+        ("advice_classification", "schedule_candidate"),
+        ("queue_duplicate", "queue_review"),
+        ("shortage_claim", "capacity_review"),
+        ("conditional_absence_valid", "queue_review"),
+        ("inherited_purpose_valid", "capacity_review"),
     ],
 )
 def test_scheduled_and_manual_reports_repair_same_data(
@@ -3170,6 +3178,16 @@ def test_scheduled_and_manual_reports_repair_same_data(
 ):
     from agent_common.artifacts import render
     from test_aggregate_report import DATA
+
+    code_condition_cases = {
+        "schedule_condition",
+        "missing_prerequisite",
+        "judgment_repair",
+        "observed_prerequisite",
+        "relative_memory",
+        "relative_observed_memory",
+        "weak_capacity_purpose",
+    }
 
     backend = f"http://127.0.0.1:{port()}/api/v1"
     extension = ".exe" if sys.platform == "win32" else ""
@@ -3266,8 +3284,16 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     if item["topic_id"] == "namespace_usage":
                         summary = item["advice"][0]["summary"]
                         item["advice"][0]["summary"] = (
-                            summary.replace("확인한 뒤", "확인하고")
-                            if failure == "schedule_condition"
+                            summary
+                            if failure in code_condition_cases
+                            else "작업을 옮깁니다."
+                            if failure == "raw_action"
+                            else "시범 실행을 검토 대상으로 삼습니다."
+                            if failure == "advice_classification"
+                            else "대기 Pod의 상태·스케줄러 이벤트를 점검해 대기 단계를 구분하세요."
+                            if failure == "queue_duplicate"
+                            else "GPU 부족으로 작업이 대기하고 있습니다."
+                            if failure == "shortage_claim"
                             else "대기 Pod 일부의 작업에 대해 " + summary
                             if failure == "pending_target"
                             else "작업 일부의 GPU 활동률이 낮았습니다. " + summary
@@ -3276,10 +3302,18 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "internal_field"
                             else summary.replace("자원 부족 여부를 확인하고 ", "")
                             if failure == "weak_capacity_purpose"
-                            else summary.replace("자원 부족 여부를", "자원 부족을")
+                            else "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족을 확인하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요."
                             if failure == "presumed_capacity"
-                            else "시작 시각 조정을 검토하되, " + summary
+                            else "시작 시각 조정을 검토하되, 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
                             if failure == "repeated_trial"
+                            else "작업 일부의 시범 실행을 검토 대상으로 삼습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
+                            if failure == "renamed_trial"
+                            else "미배정 Pod가 없어도 전체 배정 완료를 뜻하지 않습니다. "
+                            + summary
+                            if failure == "conditional_absence_valid"
+                            else "자원 부족은 확인되지 않았으므로, "
+                            + summary.replace("자원 부족 여부", "부족 여부")
+                            if failure == "inherited_purpose_valid"
                             else summary.replace("마감·", "")
                             if failure in {"missing_prerequisite", "judgment_repair"}
                             else "대기 관측도 완전했습니다. "
@@ -3380,6 +3414,26 @@ def test_scheduled_and_manual_reports_repair_same_data(
         for result in (scheduled, manual):
             fetched = client.get(f"/reports/{result['job_id']}")
             assert fetched.status_code == 200, fetched.text
+            diagnostics = next(
+                t for t in result["topics"] if t["topic_id"] == "namespace_usage"
+            )["quality"]["observation_diagnostics"]
+            if diagnostics["messages"]:
+                from html import escape
+
+                exported = client.get(
+                    f"/reports/{result['job_id']}/export", params={"format": "html"}
+                )
+                assert exported.status_code == 200, exported.text
+                stored = next(
+                    t
+                    for t in fetched.json()["result"]["topics"]
+                    if t["topic_id"] == "namespace_usage"
+                )["quality"]["observation_diagnostics"]
+                assert stored == diagnostics
+                for message in diagnostics["messages"]:
+                    assert message in result["limitations"]
+                    assert escape(message) in exported.text
+                    assert escape(message) in render(result)["html"].decode()
             if pattern:
                 assert pattern in fetched.text, (
                     result["quality"]["report"],
@@ -3387,48 +3441,59 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 )
     for result in (scheduled, manual):
         assert result["narrative_status"] == "complete"
-        assert result["quality"]["report"]["reason"] == "repaired"
-        failures = result["quality"]["report"]["failures"]
-        assert len(failures) == 1 and failures[0]["attempt"] == 1
-        assert failures[0]["reason"] in (
-            {"llm_invalid_output"}
-            if failure == "json"
-            else {"topic_sections_required"}
-            if failure
-            in {"topic_wrapper", "topic_wrapper_valid", "empty_namespace_heading"}
-            else {"conditional_scheduling_review_required"}
-            if failure == "schedule_condition"
-            else {"unobserved_pending_target"}
-            if failure == "pending_target"
-            else {"namespace_prerequisites_required"}
-            if failure
-            in {
-                "missing_prerequisite",
-                "judgment_repair",
-                "observed_prerequisite",
-                "relative_memory",
-                "relative_observed_memory",
-            }
-            else {"partial_placement_is_not_absence"}
-            if failure
-            in {
-                "partial_placement",
-                "partial_placement_causal",
-                "partial_placement_conjunction",
-                "partial_placement_nominal",
-            }
-            else {"review_before_schedule_change"}
-            if failure == "schedule_order"
-            else {"unsupported_workload_activity_attribution"}
-            if failure == "possessive_activity"
-            else {"internal_context_leak"}
-            if failure == "internal_field"
-            else {"resource_shortage_question_required"}
-            if failure in {"weak_capacity_purpose", "presumed_capacity"}
-            else {"repeated_trial_review"}
-            if failure == "repeated_trial"
-            else {"namespace_summary_tokens_required", "unsupported_prose"}
-        )
+        if failure in code_condition_cases | {
+            "conditional_absence_valid",
+            "inherited_purpose_valid",
+        }:
+            assert result["quality"]["report"]["attempts"] == 1
+            assert not result["quality"]["report"].get("failures")
+        else:
+            assert result["quality"]["report"]["reason"] == "repaired"
+            failures = result["quality"]["report"]["failures"]
+            assert len(failures) == 1 and failures[0]["attempt"] == 1
+            assert failures[0]["reason"] in (
+                {"llm_invalid_output"}
+                if failure == "json"
+                else {"topic_sections_required"}
+                if failure
+                in {"topic_wrapper", "topic_wrapper_valid", "empty_namespace_heading"}
+                else {"conditional_scheduling_review_required"}
+                if failure == "schedule_condition"
+                else {"reason_only_namespace_summary_required"}
+                if failure in {"raw_action", "advice_classification", "queue_duplicate"}
+                else {"unsupported_resource_shortage_claim"}
+                if failure == "shortage_claim"
+                else {"unobserved_pending_target"}
+                if failure == "pending_target"
+                else {"namespace_prerequisites_required"}
+                if failure
+                in {
+                    "missing_prerequisite",
+                    "judgment_repair",
+                    "observed_prerequisite",
+                    "relative_memory",
+                    "relative_observed_memory",
+                }
+                else {"partial_placement_is_not_absence"}
+                if failure
+                in {
+                    "partial_placement",
+                    "partial_placement_causal",
+                    "partial_placement_conjunction",
+                    "partial_placement_nominal",
+                }
+                else {"reason_only_namespace_summary_required"}
+                if failure == "schedule_order"
+                else {"unsupported_workload_activity_attribution"}
+                if failure == "possessive_activity"
+                else {"internal_context_leak"}
+                if failure == "internal_field"
+                else {"reason_only_namespace_summary_required"}
+                if failure in {"weak_capacity_purpose", "presumed_capacity"}
+                else {"reason_only_namespace_summary_required"}
+                if failure in {"repeated_trial", "renamed_trial"}
+                else {"namespace_summary_tokens_required", "unsupported_prose"}
+            )
         if failure == "namespace_refs":
             assert failures[0]["reference_errors"] == {
                 "missing": [],
@@ -3477,7 +3542,11 @@ def test_scheduled_and_manual_reports_repair_same_data(
             assert len(repair["summary_repair"]) == 1
             assert "sections" not in repair["response_shape"]
             assert "topics" not in repair
-    if failure == "topic_wrapper_valid":
+    if failure in {
+        "topic_wrapper_valid",
+        "conditional_absence_valid",
+        "inherited_purpose_valid",
+    }:
         calls = [
             b
             for path, b in Upstream.requests[before:]
@@ -3485,52 +3554,92 @@ def test_scheduled_and_manual_reports_repair_same_data(
         ]
         assert len(calls) == 2  # One initial response per origin; no model rewrite.
         assert all(r["quality"]["report"]["attempts"] == 1 for r in (scheduled, manual))
-    if failure in {"relative_memory", "relative_observed_memory"}:
+    if failure in code_condition_cases:
         calls = [
-            b
-            for path, b in Upstream.requests[before:]
+            body
+            for path, body in Upstream.requests[before:]
             if path == "/v1/chat/completions"
         ]
-        assert len(calls) == 4
-        for call in calls[1::2]:
-            repair = json.loads(call["messages"][1]["content"])["summary_repair"]
-            assert len(repair) == 1
-            assert repair[0]["required_checks"] == [
-                "작업 마감",
-                "예약",
-                "가용 GPU",
-                "메모리 요구",
-            ]
-            assert "누락된 조건: 메모리 요구" in repair[0]["validation_error"]
-    if failure == "schedule_condition":
-        calls = [
-            b
-            for path, b in Upstream.requests[before:]
-            if path == "/v1/chat/completions"
-        ]
-        assert len(calls) == 4  # Initial and repair for each report origin.
-        for call in calls:
-            assert call["chat_template_kwargs"] == {
-                "enable_thinking": True,
-                "medium_effort": True,
-            }
-        for call in calls[1::2]:
-            item = json.loads(call["messages"][1]["content"])["summary_repair"][0]
-            assert "'확인한 뒤'" in item["validation_error"]
-            assert item["required_prose_terms"] == ["확인", "뒤", "검토"]
+        assert len(calls) == 2
+        for body in calls:
+            request = json.loads(body["messages"][1]["content"])
+            for topic in request["topics"]:
+                if topic.get("advice_mode"):
+                    for fact in topic["findings"]:
+                        assert (
+                            "required_checks" not in fact
+                            and "required_prose_terms" not in fact
+                        )
+        for result in (scheduled, manual):
+            namespace = next(
+                n for n in result["narrative"] if n["topic_id"] == "namespace_usage"
+            )
+            for item in namespace["advice"]:
+                if item["kind"] in {
+                    "schedule_candidate",
+                    "relative_activity",
+                    "capacity_review",
+                }:
+                    assert "확인한 뒤" in item["summary_parts"]["decision"]
+                    assert "검토" in item["summary_parts"]["decision"]
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("failure", ["structure", "http"])
+def test_scheduled_and_manual_partial_diagnostics_are_published(stack, monkeypatch):
+    import test_aggregate_report
+    from copy import deepcopy
+
+    original_fixture = test_aggregate_report.fixture
+
+    def partial_fixture(*args, **kwargs):
+        evidence = original_fixture(*args, **kwargs)
+        evidence[2]["snapshot"]["series"][0]["values"][-1][1] = "2"
+        return evidence
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", partial_fixture)
+    monkeypatch.setattr(Upstream, "transition_fixture", "overlap", raising=False)
+    published = []
+    original_worker_result = worker_result
+
+    def capture(*args, **kwargs):
+        body, evidence = original_worker_result(*args, **kwargs)
+        published.append(deepcopy(body))
+        return body, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    assert len(published) == 2
+    for result in published:
+        assert result["result_status"] == "partial"
+        diagnostic = next(
+            t for t in result["topics"] if t["topic_id"] == "namespace_usage"
+        )["quality"]["observation_diagnostics"]
+        assert {r["period_role"] for r in diagnostic["rows"]} == {"current", "previous"}
+        assert all(r["excluded_hours"] == 1 for r in diagnostic["rows"])
+        assert "gpu_interval_unverified" in str(diagnostic)
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("failure", ["structure", "http", "raw_action"])
 def test_aggregate_invalid_interpretation_keeps_published_calculations(
     stack, monkeypatch, failure
 ):
     from test_aggregate_report import DATA
     from ops_agent.report_contract import VERSION
 
-    monkeypatch.setattr(
-        sys.modules[__name__], "interpretation_reply", lambda data: {"sections": []}
-    )
+    original_reply = interpretation_reply
+
+    def invalid_reply(data):
+        if failure != "raw_action":
+            return {"sections": []}
+        reply = original_reply(data)
+        advice = reply.get("advice")
+        if advice is None:
+            advice = next(s["advice"] for s in reply["sections"] if "advice" in s)
+        advice[0]["summary"] = "작업을 옮깁니다."
+        return reply
+
+    monkeypatch.setattr(sys.modules[__name__], "interpretation_reply", invalid_reply)
     if failure == "http":
         send = Upstream.send
 
@@ -3546,6 +3655,11 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
     assert body["narrative_status"] == "failed"
     assert body["quality"]["report"]["method"] == "deterministic_fallback"
     assert body["quality"]["report"]["attempts"] == (1 if failure == "http" else 2)
+    if failure == "raw_action":
+        assert body["quality"]["report"]["failures"] == [
+            {"attempt": n, "reason": "reason_only_namespace_summary_required"}
+            for n in (1, 2)
+        ]
     if failure == "http":
         assert body["quality"]["report"]["failures"] == [
             {"attempt": 1, "reason": "llm_http_error", "http_status": 503}
