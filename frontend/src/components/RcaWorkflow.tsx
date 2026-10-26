@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { obj, rows, str, strings, useList, useResource, type Row } from '../lib/live';
 import { relationMismatch } from '../lib/debug';
 import { queryName } from '../lib/report';
@@ -11,8 +11,21 @@ import { EvidenceEvaluation } from './RcaDebug';
 import { evaluationLabels } from './RcaEvaluation';
 import { rcaStages, RcaStageDetails, stageForRecord, reviewStatus } from './RcaEvaluationTrace';
 import './RcaWorkflow.css';
+import { RcaCodeDecision } from './RcaCodeDecision';
 
 const steps: Record<string, { title: string; actor: string; purpose: string }> = {
+  collection_assessment: {
+    title: '수집 결과 코드 판정',
+    actor: '코드',
+    purpose:
+      '수집 직후 알람·로그·시작 근거와 필수 자료를 대조하고, 조건별 입력·판정·누락 사유를 기록합니다.',
+  },
+  rca_status_decision: {
+    title: '최종 산출 상태 판정',
+    actor: '코드',
+    purpose:
+      '수집 판정과 분석 상태를 합쳐 조사 지침별 missing_inputs와 전체 result_status를 결정합니다.',
+  },
   incident_snapshot: {
     title: '조사 대상 사건 원본 보존',
     actor: '코드',
@@ -200,7 +213,10 @@ function WorkflowRecords({
 }: { jobId: string; attempt: number } & WorkflowSelection) {
   const q = useList(`/jobs/${encodeURIComponent(jobId)}/evidence?attempt=${attempt}&limit=50`);
   const [selected, setSelected] = useState('');
+  const detailRef = useRef<HTMLDivElement>(null);
+  const selectionPending = useRef(false);
   const select = (id: string) => {
+    selectionPending.current = true;
     setSelected(id);
     onSelect?.(attempt, id);
   };
@@ -210,6 +226,12 @@ function WorkflowRecords({
       ? `/jobs/${encodeURIComponent(jobId)}/evidence/${encodeURIComponent(id)}?attempt=${attempt}`
       : null,
   );
+  useEffect(() => {
+    if (!selectionPending.current || detail.data?.id !== id) return;
+    selectionPending.current = false;
+    detailRef.current?.focus({ preventScroll: true });
+    detailRef.current?.scrollIntoView({ block: 'start' });
+  }, [id, detail.data]);
   const index = q.items.findIndex((r) => r.id === id);
   const planId = str(q.items.find((r) => r.query_id === 'investigation_plan')?.id);
   const plan = useResource(
@@ -234,6 +256,25 @@ function WorkflowRecords({
       <p>
         {q.items.length}개 기록 불러옴{q.hasNextPage ? ' · 추가 기록 있음' : ''}
       </p>
+      {q.items.some((r) =>
+        ['rca_status_decision', 'rca_result_frozen'].includes(str(r.query_id)),
+      ) && (
+        <button
+          className="button"
+          onClick={() =>
+            select(
+              str(
+                (
+                  q.items.find((r) => r.query_id === 'rca_status_decision') ||
+                  q.items.find((r) => r.query_id === 'rca_result_frozen')
+                )?.id,
+              ),
+            )
+          }
+        >
+          산출 상태·누락 사유 확인
+        </button>
+      )}
       <QueryState query={q} empty={!q.items.length}>
         <div className="rca-workflow-layout">
           <nav aria-label="워크플로우 기록 선택" className="stack">
@@ -259,7 +300,7 @@ function WorkflowRecords({
             ))}
             <More query={q} />
           </nav>
-          <div className="stack">
+          <div className="stack" ref={detailRef} tabIndex={-1} aria-label="선택한 워크플로우 기록">
             <div className="head-actions">
               <button
                 className="button"
@@ -301,6 +342,9 @@ function WorkflowRecords({
                     'observation_plan',
                     'evidence_evaluation',
                     'investigation_decision',
+                    'collection_assessment',
+                    'rca_status_decision',
+                    'rca_result_frozen',
                   ].includes(str(r.query_id)),
                 )
                 .map((r) => (
@@ -382,6 +426,16 @@ export function RcaWorkflowRecord({
   return (
     <article className="stack" aria-label="워크플로우 단계 판단 근거">
       <h3>{step.title}</h3>
+      <RcaCodeDecision
+        record={record}
+        onEvidence={onEvidence}
+        evidenceLabels={Object.fromEntries(
+          relatedRecords.map((r) => [
+            str(r.id),
+            (stageForRecord(r, relatedRecords) || stepFor(str(r.query_id))).title,
+          ]),
+        )}
+      />
       <section>
         <h4>무엇을 했나</h4>
         <p>

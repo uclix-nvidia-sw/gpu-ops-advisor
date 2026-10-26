@@ -15,6 +15,8 @@ RCA의 출발점은 Fleet Intelligence가 판단한 장애다. 수집 목적은 
 
 이 흐름은 **모든 RCA Runbook 발행본**에 적용한다. Xid 79/D44 또는 SXid 11001/D47 존재 여부가 평가 활성화 조건이 아니다. `analysis_review` 호출·평가 토큰 예약·평가 피드백 재작성·goal 판정·보완 조회 선택·런북 확장·별도 해석 LLM은 Worker에서 제거했다. 조회·작성·공개 실패와 원문 참조 검증은 유지한다. 정상적인 모델 실행은 작성 1회와 보고서 1회이며, 모델 미설정·예산 부족이면 실제 호출 수는 줄 수 있다.
 
+워크플로우의 코드 판정은 별도 evidence로 남긴다. 수집 직후·모델 분석 전에 `collection_assessment`(`rca-code-decision/1`)가 `evaluate_requirements()`와 `match_alert()`에서 실행한 조건식·관측 입력·참/거짓·`alert_match`·`gaps`·`gate`를 저장한다. 시작 구간 검사는 같은 사유의 첫 오류보다 앞선 Healthy만 사용하며, 뒤쪽 재전환은 이 조건에서 평가하지 않는다는 선택 기준도 기록한다. 분석 뒤 `rca_status_decision`은 실제 `analysis_status`·누락 사유 결합 규칙·지침별 판정·최종 `result_status`를 남긴다. `rca_result_frozen.decision_evidence_refs`가 두 기록을 연결한다. 진단 evidence는 모델 관측으로 승격하지 않고, 판정 규칙·조회 수·모델 호출 정책은 바꾸지 않는다. 과거 저장 결과에는 이 실행 기록을 소급 생성하지 않는다.
+
 ## Xid 79·SXid 11001 비교 자료
 
 [incident_dossier.py](src/rcca_agent/incident_dossier.py)의 30분 로그·지표 비교는 `required_queries`에 보고서 메트릭(`METRICS`)을 가진 XID/SXID 발행 계획에서 제공한다. D09만 필수인 기존 발행본은 기존 경로를 유지한다. 같은 쿼리·GPU 시계열은 exporter의 파드 라벨로 나뉘어도 하나로 합치고, 그 라벨은 `gpus`(모델·드라이버·PCI·GPU 번호)와 `workloads`(namespace·pod·container와 관측 구간, 할당이 아닌 관측)로 남긴다. GPU 모델은 DCGM의 `modelName`과 Fleet의 `model_name` 라벨을 모두 읽는다. 파드 라벨은 DCGM exporter 지표에만 있으므로, 그런 지표가 없으면 `workload_label_source`를 비워 파드 없음과 구분한다. `gpus`·`workloads`는 같은 노드의 모든 GPU를 담아 한 파드가 함께 쓰는 GPU와 다른 작업을 보이게 하고, 지표 비교는 XID면 알림 GPU만 쓴다. `onset`은 같은 노드·컴포넌트의 마지막 Healthy 보고와 첫 Unhealthy 보고(Loki 기록 시각)다. 알림 대조에서 kmsg 이벤트가 없더라도 구간 안에 Healthy→Unhealthy 전환이 있으면 `event_not_exported`(결손 아님)로, 전환도 없으면 기존 `event_not_found`로 기록한다. 기존 발행본의 의미·조회를 자동으로 새 revision 내용으로 바꾸지 않는다. 비교 자료가 필요하면 검수된 최신 계획을 발행해야 하지만, 평가 제거 자체에는 새 발행이 필요하지 않다.

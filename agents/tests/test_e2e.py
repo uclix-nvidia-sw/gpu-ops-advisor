@@ -3939,11 +3939,16 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
     with psycopg.connect(stack["url"]) as conn:
         stored = dict(
             conn.execute(
-                "SELECT query_id,snapshot FROM evidence WHERE job_id=%s AND query_id IN ('rca_synthesis','rca_result_frozen','report_assembly')",
+                "SELECT query_id,snapshot FROM evidence WHERE job_id=%s AND query_id IN ('collection_assessment','rca_status_decision','rca_synthesis','rca_result_frozen','report_assembly')",
                 (jid,),
             ).fetchall()
         )
     diagnostics = stored["rca_synthesis"]["diagnostics"]
+    assert stored["collection_assessment"]["schema"] == "rca-code-decision/1"
+    decision = stored["rca_status_decision"]["outputs"]
+    assert decision["result_status"] == result["result_status"]
+    assert decision["missing_inputs"] == result["missing_inputs"]
+    assert len(stored["rca_result_frozen"]["decision_evidence_refs"]) == 2
     if invalid_interpretation == "http":
         # A gateway 400 gets exactly one more call with the lower output cap.
         assert diagnostics["request_attempts"] == 2
