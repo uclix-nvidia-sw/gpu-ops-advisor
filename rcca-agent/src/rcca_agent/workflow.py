@@ -35,7 +35,7 @@ from .incident_dossier import (
     dossier_summary,
     error_tools,
     operator_view,
-    component_metrics,
+    component_report,
     component_view,
     incident_brief,
 )
@@ -654,8 +654,13 @@ async def run(tools):
             events.append("query_failed")
         # Fleet baseline reports ("Healthy" without an error code) are left unmapped
         # by the producer contract. When error-coded reports exist, only those carry
-        # the values this investigation needs; baseline reports stay context.
-        relevant = [h for h in health if h.get("error_code")] or health
+        # the values this investigation needs; baseline reports stay context. Component
+        # alerts carry no code, so their mapped (Unhealthy) reports play that role.
+        relevant = (
+            [h for h in health if h.get("error_code")]
+            or [h for h in health if h["normalized_health"] != "unknown"]
+            or health
+        )
         if any(
             h["check_status"] != "valid" or h["normalized_health"] == "unknown"
             for h in relevant
@@ -769,7 +774,7 @@ async def run(tools):
             comparison,
             state["health"],
         )
-    elif round_no == 0 and component_metrics(selected):
+    elif round_no == 0 and component_report(selected):
         result["quality"]["component_observations"] = component_view(
             data,
             [e for values in collected.values() for e in values],

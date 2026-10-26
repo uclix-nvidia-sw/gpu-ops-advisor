@@ -38,7 +38,10 @@ export function ResultPage({ kind }: { kind: string }) {
       undefined,
       true,
     ),
-    cmd = useCommand();
+    cmd = useCommand(),
+    // The RCA result is a snapshot; the incident carries the alert state as it is now.
+    incidentId = kind === 'analysis' ? str(obj(q.data).incident_id) : '',
+    incident = useResource(incidentId ? `/incidents/${incidentId}` : null, undefined, true);
   const [evidence, setEvidence] = useState(''),
     [incidentState, setIncidentState] = useState(''),
     [status, setStatus] = useState(''),
@@ -161,6 +164,7 @@ export function ResultPage({ kind }: { kind: string }) {
                 onEvidence={setEvidence}
                 evaluationExpanded={app.mode === 'developer' || app.mode === 'workbench'}
                 reader={app.mode !== 'developer' && app.mode !== 'workbench'}
+                alarm={incident.data}
               />
             )}
             <div className="head-actions">

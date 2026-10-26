@@ -71,6 +71,18 @@
         "revision": "NCCL 2.32.3 documentation; mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/component.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "Check(): Unhealthy only when the lsmod peermem check fails; both module states are Healthy",
+        "checked_at": "2026-10-26"
+      },
+      {
+        "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/peermem.go",
+        "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+        "section": "CheckLsmodPeermemModule: requires root, runs sudo lsmod",
+        "checked_at": "2026-10-26"
       }
     ],
     "analysis_guidance": [
@@ -79,24 +91,28 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet peermem 점검이 커널 로그에서 nvidia-peermem의 'ERROR detected invalid context' 메시지를 찾아 Unhealthy로 보고한 것입니다. GPU 메모리를 네트워크 어댑터가 직접 읽고 쓰는 GPUDirect RDMA 경로에서 오류가 있었을 수 있다는 뜻입니다.",
-      "cause_note": "GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제가 주요 원인 후보입니다.",
+      "meaning": "모니터링 에이전트(Fleet)가 nvidia-peermem 모듈 상태를 확인하지 못했다는 보고이며, GPUDirect RDMA 경로의 오류나 하드웨어 고장 보고가 아닙니다. nvidia-peermem의 'ERROR detected invalid context' 줄은 Fleet이 이와 별도로 이벤트로만 기록하므로, 같은 시각 커널 로그에 그 줄이 있는지 함께 봅니다.",
+      "cause_note": "Fleet 에이전트가 root로 실행되지 않았거나 sudo lsmod를 실행하지 못한 것(권한·컨테이너 구성)이 주요 원인 후보입니다. 같은 시각 invalid context 줄이 있으면 GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제를 후보로 둡니다.",
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "dmesg -T에서 같은 시각 nvidia-peermem 메시지와 그 전후 프로세스 종료·mlx5 메시지를 확인합니다. 같은 시각 NCCL을 쓰던 작업이 실패했는지 작업 소유자에게 확인합니다."
+          "text": "노드에서 sudo lsmod | grep nvidia_peermem이 실행되는지 확인하고, Fleet 에이전트 로그에서 같은 시각 'error checking peermem'과 그 원인(예: 'requires sudo/root access')을 찾습니다. invalid context 줄이 있으면 그 전후의 프로세스 종료·mlx5 메시지와 같은 시각 NCCL 작업 실패 여부를 작업 소유자에게 확인합니다."
         },
         {
           "title": "진단 자료 보존 (리셋·재부팅 전)",
-          "text": "모듈이나 노드를 다시 올리기 전에 journalctl -k의 nvidia-peermem·mlx5 줄, lsmod | grep nvidia_peermem 출력, 작업 NCCL 로그를 저장합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다."
+          "text": "모듈이나 노드를 다시 올리기 전에 journalctl -k의 nvidia-peermem·mlx5 줄, lsmod | grep nvidia_peermem 출력, 작업 NCCL 로그를 저장합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다. Fleet 에이전트 로그도 함께 저장합니다."
         },
         {
           "title": "판단",
-          "text": "lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
+          "text": "lsmod가 노드에서 정상 실행되고 invalid context 줄도 없으면 에이전트의 권한·구성 문제이며, 작업·하드웨어 조치는 필요 없습니다. invalid context 줄이 있으면: lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
         },
         {
           "title": "복구",
-          "text": "작업이 반복해서 실패하면 작업을 배출한 뒤 nvidia-peermem 모듈과 네트워크 드라이버 구성을 점검하고, 필요하면 유지보수 승인 뒤 노드를 재부팅합니다."
+          "text": "에이전트 문제면 Fleet 에이전트가 root로(또는 sudo를 쓸 수 있게) 실행되도록 구성을 확인하고 다시 시작합니다. invalid context로 작업이 반복 실패하면: 작업이 반복해서 실패하면 작업을 배출한 뒤 nvidia-peermem 모듈과 네트워크 드라이버 구성을 점검하고, 필요하면 유지보수 승인 뒤 노드를 재부팅합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "Fleet peermem 보고가 Healthy로 돌아왔는지 확인합니다. 'ibcore is not using peermem module'도 Healthy이며 그 자체로는 오류가 아닙니다."
         },
         {
           "title": "공급사 전달",
@@ -106,8 +122,10 @@
       "references": [
         {
           "title": "Fleet 판정 기준",
-          "text": "Fleet은 커널 로그의 'ERROR detected invalid context, skipping further processing' 패턴을 peermem 오류로 보고합니다.",
+          "text": "Fleet peermem 점검은 root 권한으로 sudo lsmod를 실행해 ib_core가 nvidia_peermem을 쓰는지 확인하고, 이 확인이 실패하면('error checking peermem') Unhealthy로 보고합니다. 모듈을 쓰지 않는 것('ibcore is not using peermem module')은 Healthy입니다. 'ERROR detected invalid context' 줄은 'peermem error detected' 이벤트로만 기록합니다.",
           "source_indices": [
+            3,
+            4,
             0
           ]
         },

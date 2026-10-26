@@ -1,0 +1,183 @@
+{
+  "status": "local_review_not_published",
+  "checked_at": "2026-10-26",
+  "scope": "NCCL·peermem 런북의 Unhealthy 원인을 Fleet 원본대로 바로잡는다: nccl은 커널 로그를 읽지 못할 때('failed to read kmsg'), peermem은 sudo lsmod 모듈 확인이 실패할 때('error checking peermem')만 Unhealthy이며, libnccl.so segfault·invalid context 줄은 이벤트로만 기록된다. 판단·복구는 에이전트 문제와 실제 통신 오류(이벤트 줄 있음)로 나누고 복구 확인 단계를 더한다.",
+  "method": "Fleet source v1.5.0-rc.1 and pinned 84f99be: nccl/component.go Check, peermem/component.go Check, peermem/peermem.go CheckLsmodPeermemModule, kmsg matchers. before/after sha256 with previous_values.",
+  "entries": [
+    {
+      "file": "component/RB-COMPONENT-NCCL.json",
+      "before_content_sha256": "2c2c962a9664a42da45cc698ad7137e6e8d43d426aae2a12817363efdbd7c225",
+      "after_content_sha256": "8d798031ec62b10d835da05d00f1ca6ae48e3843146f9cc074e39cd7cd2abafa",
+      "change": "operator_guidance+sources: Fleet Unhealthy condition",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "GPU 간 통신 라이브러리(NCCL)를 쓰던 프로세스가 libnccl.so 안에서 비정상 종료(segfault)했다는 커널 로그 보고이며, 하드웨어 고장 보고가 아닙니다. Fleet nccl 점검은 커널 로그에서 이 segfault 줄을 찾아 Unhealthy로 보고합니다.",
+          "cause_note": "애플리케이션·NCCL 버전 문제나 버그, 네트워크(IB/RoCE)·GPU 오류에 따른 통신 실패가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "dmesg -T의 segfault 줄에서 프로세스 이름과 PID, 시각을 확인해 어느 작업인지 찾습니다. 같은 시각 GPU XID나 IB 포트 오류가 있으면 그쪽을 먼저 조사합니다."
+            },
+            {
+              "title": "진단 자료 보존 (리셋·재부팅 전)",
+              "text": "작업을 다시 실행하기 전에 커널 로그의 segfault 줄(프로세스 이름·PID·시각)과 작업 NCCL 로그(NCCL_DEBUG=INFO, NCCL_DEBUG_FILE로 받은 파일)를 저장합니다."
+            },
+            {
+              "title": "판단",
+              "text": "같은 작업이 여러 노드에서 함께 실패하면 애플리케이션·NCCL 쪽, 이 노드에서만 반복되면 노드(네트워크·GPU) 쪽으로 점검 방향을 잡습니다. 작업 소유자에게 NCCL_DEBUG=INFO와 NCCL_DEBUG_FILE=/tmp/nccl_%h_%p.log로 다시 실행해 프로세스별 로그를 받도록 요청합니다. 초기화 단계에서 멈추면 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET으로 범위를 좁힙니다."
+            },
+            {
+              "title": "노드 점검",
+              "text": "GPUDirect RDMA를 쓰면 lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인합니다. nvidia-smi topo -p2p n으로 GPU 쌍의 NVLink P2P가 모두 OK인지 확인합니다. 노드 하드웨어 조치는 같은 노드에서 반복되고 다른 오류가 함께 있을 때만 검토합니다."
+            },
+            {
+              "title": "복구",
+              "text": "작업 소유자가 같은 작업을 다시 실행해 반복되는지 확인합니다. 다른 노드에서는 성공하고 이 노드에서만 반복되면 kubectl cordon <노드>로 새 배치를 막고 위 노드 점검을 진행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "같은 노드에서 반복되고 NCCL 로그가 NVIDIA 소프트웨어 문제를 가리키면 NCCL 로그, nvidia-bug-report.sh 결과, 재현 방법을 갖춰 NVIDIA 또는 공급사에 보고합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 커널 로그의 'segfault at ... in libnccl.so' 패턴을 NCCL 통신 오류로 보고합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "NCCL 로그",
+              "text": "문제 분석에는 NCCL_DEBUG=INFO를 쓰고, 초기화 멈춤은 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET, 네트워크 문제는 NET으로 범위를 좁힙니다. NCCL_DEBUG_FILE로 프로세스별 로그 파일을 남깁니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "NCCL GPU 점검",
+              "text": "GPUDirect RDMA에는 nvidia-peermem 모듈이 필요하고, nvidia-smi topo -p2p n에서 사용하는 GPU 쌍이 모두 OK여야 합니다.",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "GPU Node Triage 애플리케이션 디버깅",
+              "text": "모든 노드에서 나면 최근 애플리케이션·시스템 변경을, 일부 노드에서만 나면 노드 간 시스템 소프트웨어 차이와 로그를 비교합니다.",
+              "source_indices": [
+                3
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/nccl/kmsg_matcher.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "segfault in libnccl.so pattern",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/logging.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS, NCCL_DEBUG_FILE"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/gpu_troubleshooting.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "GPU Direct (nvidia-peermem), ACS and IOMMU, P2P checks"
+          },
+          {
+            "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
+            "revision": "Last updated on Oct 04, 2026; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "Figure 3 Debug Application; Debugging Applications"
+          }
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-PEERMEM.json",
+      "before_content_sha256": "c0e30bdd942b5628c3e72e29143506f612100419960a1a2b3a35b04caa229c0a",
+      "after_content_sha256": "235ec957deb1dea0dea765e40174583284b29dbca6473f85f29b852dbd0bdef0",
+      "change": "operator_guidance+sources: Fleet Unhealthy condition",
+      "added_fields": [],
+      "previous_values": {
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet peermem 점검이 커널 로그에서 nvidia-peermem의 'ERROR detected invalid context' 메시지를 찾아 Unhealthy로 보고한 것입니다. GPU 메모리를 네트워크 어댑터가 직접 읽고 쓰는 GPUDirect RDMA 경로에서 오류가 있었을 수 있다는 뜻입니다.",
+          "cause_note": "GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제가 주요 원인 후보입니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인",
+              "text": "dmesg -T에서 같은 시각 nvidia-peermem 메시지와 그 전후 프로세스 종료·mlx5 메시지를 확인합니다. 같은 시각 NCCL을 쓰던 작업이 실패했는지 작업 소유자에게 확인합니다."
+            },
+            {
+              "title": "진단 자료 보존 (리셋·재부팅 전)",
+              "text": "모듈이나 노드를 다시 올리기 전에 journalctl -k의 nvidia-peermem·mlx5 줄, lsmod | grep nvidia_peermem 출력, 작업 NCCL 로그를 저장합니다. root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 실행에 최대 1시간이 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행합니다."
+            },
+            {
+              "title": "판단",
+              "text": "lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인하며, 모듈은 부팅마다 sudo modprobe nvidia-peermem으로 올려야 합니다. 최근 커널과 open 드라이버에서는 nvidia-peermem 대신 DMA-BUF가 자동으로 쓰일 수 있으므로 작업 NCCL 로그(NCCL_DEBUG=INFO)의 'DMA-BUF is available' 줄로 실제 경로를 확인합니다. 작업이 정상 종료됐고 반복되지 않으면 경과를 지켜봅니다."
+            },
+            {
+              "title": "복구",
+              "text": "작업이 반복해서 실패하면 작업을 배출한 뒤 nvidia-peermem 모듈과 네트워크 드라이버 구성을 점검하고, 필요하면 유지보수 승인 뒤 노드를 재부팅합니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "같은 노드에서 반복되면 dmesg의 peermem·mlx5 메시지, NCCL 로그, nvidia-bug-report.sh 결과를 갖춰 NVIDIA 또는 공급사에 보고합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 커널 로그의 'ERROR detected invalid context, skipping further processing' 패턴을 peermem 오류로 보고합니다.",
+              "source_indices": [
+                0
+              ]
+            },
+            {
+              "title": "NCCL GPU Direct 점검",
+              "text": "GPUDirect RDMA에는 nvidia-peermem 모듈이 필요하며 lsmod로 확인하고 부팅마다 modprobe로 올립니다. 최근 커널과 open 드라이버에서는 DMA-BUF가 자동으로 쓰일 수 있습니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "NCCL 로그",
+              "text": "NCCL_DEBUG=INFO 로그에서 사용한 전송 경로(예: DMA-BUF 사용 가능 여부, 네트워크 종류)를 확인합니다.",
+              "source_indices": [
+                2
+              ]
+            }
+          ]
+        },
+        "sources": [
+          {
+            "url": "https://github.com/dsx-ai-factory/fleet-intelligence-agent/blob/84f99beef3e633071ad0998b10629b01fb294eaf/third_party/fleet-intelligence-sdk/components/accelerator/nvidia/peermem/kmsg_matcher.go",
+            "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
+            "section": "invalid context pattern",
+            "checked_at": "2026-10-22"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/gpu_troubleshooting.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "GPU Direct (nvidia-peermem, DMA-BUF), ACS and IOMMU"
+          },
+          {
+            "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting/logging.html",
+            "revision": "NCCL 2.32.3 documentation; mutable upstream document",
+            "checked_at": "2026-10-22",
+            "section": "NCCL_DEBUG, NCCL_DEBUG_SUBSYS"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -527,7 +527,10 @@ it('says when no post-incident sample exists yet instead of leading with an idle
   expect(v.findings[2].verdict).toBe(
     '사건 뒤 지표 표본이 아직 없습니다(수집 간격 최대 4분). 사건 전 정정 불가 ECC(DBE) 휘발성 누적값은 0 회라 이번 오류가 반영됐는지는 nvidia-smi -q -d ECC로 직접 확인하세요.',
   );
-  expect(v.findings[2].points).toEqual([]);
+  // XID 79: no post-incident sample yet, so whether the GPU still reports is open.
+  expect(v.findings[2].points).toEqual([
+    '버스 이탈 확인: 사건 뒤 표본이 아직 없어 판단할 수 없습니다 — Grafana에서 이 GPU 지표가 계속 들어오는지 확인합니다',
+  ]);
 });
 
 it('reads stored component metrics, row-remap flags and disk bytes', () => {
@@ -765,4 +768,29 @@ it('shows how much cumulative counters grew and reads violation time as elapsed 
   const power = v.metrics.find((m) => m.query === 'D62')!;
   expect(power.afterText).toBe('41.7일 (+1.6초)');
   expect(valueText(42e9, 'ns')).toBe('42.0초');
+});
+
+it('tells an XID 79 GPU that keeps reporting from one that went silent', () => {
+  const power = (after: object | null) => ({
+    name: 'GPU 전력',
+    query_id: 'D11',
+    unit: 'W',
+    kind: 'gauge',
+    gpu_uuid: gpu,
+    last: '2026-10-22T03:28:40Z',
+    max_sample_gap_seconds: 60,
+    incident_windows: { before: { ...before(61), last_value: 61 }, at_or_after: after },
+  });
+  const v = operatorView({
+    quality: {
+      triage_observations: {
+        ...result.quality.triage_observations,
+        metrics: [
+          power({ ...before(62, '2026-10-22T03:28:40Z'), min: 62, last_value: 62, samples: 3 }),
+        ],
+      },
+    },
+  })!;
+  expect(v.findings[2].points[0]).toContain('사건 뒤에도 이 GPU 지표가 3회 새로 들어왔습니다');
+  expect(v.findings[2].tone).not.toBe('unknown');
 });

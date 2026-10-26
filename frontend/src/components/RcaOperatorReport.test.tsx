@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaOperatorReport } from './RcaOperatorReport';
@@ -75,4 +76,91 @@ it('preserves the existing six-section report when the console summary is not re
     '5. 이전 사건 이력',
   ])
     expect(html).toContain(heading);
+});
+
+it('names the component reason, target, Fleet event time and live alert state', () => {
+  const report = (at: string, health: string, reason: string) => ({
+    component: 'disk',
+    raw_health: health,
+    reason,
+    observed_at: at,
+    target: { node: 'dgx02' },
+    evidence_refs: ['log'],
+  });
+  const ro = 'filesystem remounted as read-only due to errors';
+  const disk = JSON.parse(
+    readFileSync(
+      new URL('../../../rcca-agent/runbooks/component/RB-COMPONENT-DISK.json', import.meta.url),
+      'utf8',
+    ),
+  ).content;
+  const window = (value: number, at: string) => ({
+    min: value,
+    max: value + 5582848,
+    last_value: value,
+    samples: 2,
+    first: at,
+    last: at,
+  });
+  const html = renderToStaticMarkup(
+    <RcaOperatorReport
+      alarm={{ alarm_status: 'firing' }}
+      result={{
+        runbook_revisions: [{ knowledge_key: 'RB-COMPONENT-DISK', revision: 3 }],
+        time_range: { start: '2026-10-26T01:36:50Z', end: '2026-10-26T02:07:48Z' },
+        incident_time: '2026-10-26T02:06:50Z',
+        device_observations: [
+          report('2026-10-26T02:05:25Z', 'Healthy', 'ok'),
+          report('2026-10-26T02:06:25Z', 'Unhealthy', ro),
+        ],
+        quality: {
+          runbook_guidance: [
+            {
+              report_applicability: 'matched',
+              guidance: disk.operator_guidance,
+              sources: disk.sources,
+            },
+          ],
+          component_observations: {
+            schema: 'rca-component-observations/1',
+            event_boundary: '2026-10-26T02:06:25Z',
+            events: [
+              {
+                recorded_at: '2026-10-26T02:04:58Z',
+                event_name: 'filesystem_read_only',
+                message: `[Warning] disk: ${ro}`,
+              },
+            ],
+            metrics: [
+              {
+                query_id: 'D59',
+                name: '디스크 사용량 (/)',
+                mount_point: '/',
+                unit: 'bytes',
+                kind: 'gauge',
+                last: '2026-10-26T02:02:25Z',
+                max_sample_gap_seconds: 480,
+                incident_windows: {
+                  before: window(1353207746560, '2026-10-26T02:02:25Z'),
+                  at_or_after: null,
+                },
+              },
+            ],
+          },
+        },
+      }}
+    />,
+  );
+  const text = html.replace(/<[^>]+>/g, '');
+  expect(text).toContain('지금 알림 발생 중');
+  expect(text).toContain('조회 종료 시점에도 보고 중');
+  expect(text).toContain('이번 사유: 읽기 전용 재마운트 (Fleet 원문:');
+  expect(text).toContain('가능한 사유 8가지: 읽기 전용 재마운트(이번) · RAID 배열 실패');
+  expect(text).toContain('대상 디스크·파티션 이름은 Fleet 보고에 없습니다');
+  expect(text).toContain('Fleet 커널 이벤트 기록');
+  expect(text).toContain('▶ 읽기 전용 재마운트:');
+  expect(text).not.toContain('▶ RAID 배열 실패:');
+  expect(text).not.toContain('분기(오류 영역·사유)');
+  // Byte ranges read in scaled units, never raw byte counts.
+  expect(text).not.toContain('1353207746560');
 });

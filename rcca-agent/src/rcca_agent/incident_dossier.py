@@ -512,23 +512,63 @@ def operator_view(data, evidence, comparison, health=()):
     }
 
 
-def component_metrics(books):
-    """Component Runbooks whose plan names a report metric get stored metric rows.
+def component_report(books):
+    """Component alerts store observations: Fleet kernel events and planned metrics.
 
     Selection keeps the published general Runbook only when no dedicated one
-    applies, so an alert without its own Runbook still gets node rows.
+    applies, so an alert without its own Runbook still gets the same rows.
     """
     return any(
-        (
-            book.get("knowledge_key", "").startswith("RB-COMPONENT-")
-            or book.get("knowledge_key") == "RB-GENERAL-GPU-NODE"
-        )
-        and any(
-            s.get("query_id") in METRICS
-            for s in book["content"].get("observation_plan", [])
-        )
+        book.get("knowledge_key", "").startswith("RB-COMPONENT-")
+        or book.get("knowledge_key") == "RB-GENERAL-GPU-NODE"
         for book in books
     )
+
+
+def component_events(data, evidence, component):
+    """Fleet's own kernel-message events for a component (e.g. disk filesystem_read_only).
+
+    Times are Loki record times of the exported event, not kernel timestamps.
+    """
+    node = data["target"].get("node") or data["target"].get("k8s_node_name")
+    start = timestamp(data["time_range"]["start"])
+    end = timestamp(data["time_range"]["end"])
+    found = {}
+    for entry in evidence:
+        if entry["query_id"] != "D09" or not usable_observation(entry):
+            continue
+        for ns, line in log_entries(entry["snapshot"]):
+            raw = object_value(line)
+            attributes = object_value(raw.get("attributes"))
+            resources = object_value(raw.get("resources"))
+            if (
+                attributes.get("log_type") != "event"
+                or attributes.get("component") != component
+                or not isinstance(attributes.get("event_name"), str)
+                or (node and resources.get("k8s.node.name") != node)
+            ):
+                continue
+            try:
+                at = int(ns) / 1e9
+            except (TypeError, ValueError):
+                continue
+            if not start <= at <= end:
+                continue
+            body = raw.get("body") if isinstance(raw.get("body"), str) else ""
+            key = attributes.get("event_id") or f"{attributes['event_name']}@{ns}"
+            item = found.setdefault(
+                key,
+                {
+                    "recorded_at": iso(at),
+                    "event_name": attributes["event_name"],
+                    "event_type": attributes.get("event_type"),
+                    "message": body,
+                    "evidence_refs": [],
+                },
+            )
+            if entry["id"] not in item["evidence_refs"]:
+                item["evidence_refs"].append(entry["id"])
+    return sorted(found.values(), key=lambda e: e["recorded_at"])
 
 
 def component_view(data, evidence, health, component):
@@ -564,6 +604,7 @@ def component_view(data, evidence, health, component):
         "boundary_basis": basis,
         "metrics": metrics,
         "metric_scope": "node_gpu_context",
+        "events": component_events(data, evidence, component),
         **observed,
     }
 
