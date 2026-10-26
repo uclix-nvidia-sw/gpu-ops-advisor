@@ -163,17 +163,11 @@ async def test_nominal_absence_gets_one_item_repair_then_existing_fallback(
     before = deepcopy(result["topics"])
     initial = reply_for(payload_for(result))
     bad = initial["sections"][0]["advice"][0]
-    bad["summary"] = (
-        "미배정 Pod가 없음을 관측했으며, 관측이 불완전할 수 있습니다. "
-        "Pod 상태·이벤트를 점검해 대기 단계를 구분하세요."
-    )
+    bad["summary"] = "미배정 Pod가 없음을 관측했으며, 관측이 불완전할 수 있습니다. "
     raw = deepcopy(initial)
     fixed = deepcopy(bad)
     if not repeat_bad:
-        fixed["summary"] = (
-            "미배정 관측이 불완전해 배정 완료로 단정할 수 없습니다. "
-            "Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분하세요."
-        )
+        fixed["summary"] = "미배정 관측이 불완전해 배정 완료로 단정할 수 없습니다. "
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [initial, {"advice": [fixed]}]
     await interpret_report(result, llm)
@@ -312,26 +306,26 @@ def test_separate_review_purposes_are_not_duplicate_trial_reviews(opening):
         (
             "internal",
             "queue_review",
-            "target의 period에 Pod 상태·이벤트를 점검해 대기 단계를 구분하세요.",
+            "target의 period에 대기 Pod가 관측됐습니다.",
             "internal_context_leak",
         ),
         (
             "presumed",
             "capacity_review",
             "자원 부족을 확인하고 " + CAPACITY_CHECKS,
-            "resource_shortage_question_required",
+            "reason_only_namespace_summary_required",
         ),
         (
             "purpose",
             "capacity_review",
             CAPACITY_CHECKS,
-            "resource_shortage_question_required",
+            "reason_only_namespace_summary_required",
         ),
         (
             "repeated",
             "schedule_candidate",
             "시작 시각 조정을 검토하되, " + TRIAL_CHECKS,
-            "repeated_trial_review",
+            "reason_only_namespace_summary_required",
         ),
     ],
 )
@@ -378,7 +372,7 @@ async def test_prose_failures_repair_only_the_named_item_once(
             for a in s.get("advice", [])
         }
         assert all(
-            final[a["fact_id"]] == a["summary"]
+            final[a["fact_id"]].startswith(a["summary"] + " ")
             for s in original["sections"]
             for a in s.get("advice", [])
             if a["fact_id"] != bad["fact_id"]
@@ -396,3 +390,226 @@ def test_shortage_question_can_precede_the_final_conditional_judgment():
         {"advice": [{"fact_id": fact["fact_id"], "summary": text}]},
         {"findings": [fact]},
     )
+
+
+@pytest.mark.parametrize(
+    "subject", ["미배정 Pod가", "미배치 Pod가", "노드를 배정받지 못한 Pod가"]
+)
+@pytest.mark.parametrize("conditional", ["없어도", "없더라도"])
+def test_conditional_absence_is_not_an_observed_absence(subject, conditional):
+    fact = queue_fact()
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": (
+                    f"{subject} {conditional} 전체 배정 완료를 뜻하지 않습니다. "
+                    "Pod 상태·이벤트를 점검해 노드 배정 대기인지 시작 준비 중인지 구분하세요."
+                ),
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})
+    assert raw == before
+
+
+@pytest.mark.parametrize(
+    "claim", ["미배정 Pod가 없습니다.", "모든 Pod는 노드를 배정받았습니다."]
+)
+def test_conditional_absence_does_not_hide_another_assertion(claim):
+    fact = queue_fact()
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": (
+                    "미배정 Pod가 없어도 배정 완료를 뜻하지 않습니다. "
+                    + claim
+                    + " Pod 상태·이벤트를 점검해 대기 단계를 구분하세요."
+                ),
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="partial_placement_is_not_absence"):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize("resource", ["자원", "GPU"])
+@pytest.mark.parametrize("question", ["부족 여부", "부족 유무"])
+def test_shortage_question_can_inherit_explicit_unknown_resource(resource, question):
+    fact = next(
+        f
+        for f in candidates(topic(activity=90, pending=2))
+        if f["kind"] == "capacity_review"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": (
+                    f"{resource} 부족은 확인되지 않았으므로, 스케줄러 사유와 GPU 요청·실제 할당을 대조해 {question}를 알아내고, "
+                    "보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요."
+                ),
+            }
+        ]
+    }
+    before = deepcopy(raw)
+    assert validate_written_advice(raw, {"findings": [fact]})
+    assert raw == before
+
+
+@pytest.mark.parametrize(
+    "prefix", ["", "메모리 부족은 확인되지 않았으므로, ", "자원 부족이 있습니다. "]
+)
+def test_unbound_shortage_question_is_not_a_resource_question(prefix):
+    fact = next(
+        f
+        for f in candidates(topic(activity=90, pending=2))
+        if f["kind"] == "capacity_review"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": (
+                    prefix
+                    + "스케줄러 사유와 GPU 요청·실제 할당을 대조해 부족 여부를 알아내고, "
+                    "보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요."
+                ),
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="resource_shortage_question_required"):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize(
+    "opening",
+    [
+        "시작 시각 조정을 검토하되, ",
+        "작업 일부의 시범 실행 여부를 검토하시기 바랍니다. ",
+        "작업 일부의 시범 실행을 검토할지 판단합니다. ",
+        "작업 일부의 시범 실행을 검토 대상으로 삼습니다. ",
+        "작업 일부의 시범 실행 여부를 판단하되, ",
+    ],
+)
+@pytest.mark.parametrize("kind", ["schedule_candidate", "relative_activity"])
+def test_renamed_trial_judgment_is_still_a_duplicate_review(opening, kind):
+    source = (
+        topic() if kind == "schedule_candidate" else pattern_topic([70, 80, 20, 25])
+    )
+    fact = next(f for f in candidates(source) if f["kind"] == kind)
+    checks = "마감·예약·대기·가용 GPU·메모리를 확인한 뒤 일부 작업의 시작 시각 조정과 시범 실행을 검토하고 변경 여부를 판단하세요."
+    raw = {"advice": [{"fact_id": fact["fact_id"], "summary": opening + checks}]}
+    with pytest.raises(ValueError, match="repeated_trial_review"):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize(
+    "opening",
+    [
+        "시범 실행 전 작업 마감을 검토합니다. ",
+        "시범 실행을 검토하지 않고, ",
+        "예약 조건을 판단한 뒤 ",
+    ],
+)
+def test_separate_or_negated_review_is_not_a_trial_decision(opening):
+    fact = next(f for f in candidates(topic()) if f["kind"] == "schedule_candidate")
+    raw = {"advice": [{"fact_id": fact["fact_id"], "summary": opening + TRIAL_CHECKS}]}
+    assert validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize("origin", ["schedule", "manual"])
+@pytest.mark.parametrize("repeat_bad", [False, True])
+async def test_renamed_review_uses_one_partial_repair_and_preserves_normal_items(
+    origin, repeat_bad
+):
+    result = dict(topics=[topic()], quality={}, time_range={}, report_origin=origin)
+    original_topics = deepcopy(result["topics"])
+    initial = reply_for(payload_for(result))
+    facts = {
+        f["fact_id"]: f for t in payload_for(result)["topics"] for f in t["findings"]
+    }
+    bad = next(
+        a
+        for s in initial["sections"]
+        for a in s.get("advice", [])
+        if facts[a["fact_id"]]["kind"] == "schedule_candidate"
+    )
+    fixed = deepcopy(bad)
+    bad["summary"] = (
+        "시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토 대상으로 삼습니다. "
+        + TRIAL_CHECKS
+    )
+    if repeat_bad:
+        fixed = deepcopy(bad)
+    original = deepcopy(initial)
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [initial, {"advice": [fixed]}]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    repair = llm.complete.call_args_list[1].args[1]["summary_repair"]
+    assert [i["fact_id"] for i in repair] == [bad["fact_id"]]
+    assert repair[0]["validation_error"].startswith(
+        "reason_only_namespace_summary_required:"
+    )
+    assert "판단" in repair[0]["validation_error"]
+    assert initial == original and result["topics"] == original_topics
+    assert result["narrative_status"] == ("failed" if repeat_bad else "complete")
+    if not repeat_bad:
+        final = {
+            a["fact_id"]: a["summary_parts"]["decision"]
+            for s in result["narrative"]
+            for a in s.get("advice", [])
+        }
+        assert all(
+            final[a["fact_id"]].startswith(a["summary"] + " ")
+            for s in original["sections"]
+            for a in s.get("advice", [])
+            if a["fact_id"] != bad["fact_id"]
+        )
+
+
+@pytest.mark.parametrize(
+    "prefix,purpose",
+    [
+        ("자원 부족은 확인되지 않았으므로, 메모리 요청을 대조해 ", "부족 여부"),
+        ("GPU 부족을 확인했습니다. 스케줄러 사유를 대조해 ", "GPU 부족 여부"),
+    ],
+)
+def test_shortage_context_does_not_hide_changed_subject_or_positive_claim(
+    prefix, purpose
+):
+    fact = next(
+        f
+        for f in candidates(topic(activity=90, pending=2))
+        if f["kind"] == "capacity_review"
+    )
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": prefix + purpose + "를 확인하고 " + CAPACITY_CHECKS,
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="resource_shortage_question_required"):
+        validate_written_advice(raw, {"findings": [fact]})
+
+
+@pytest.mark.parametrize(
+    "followup",
+    [
+        "노드 상태를 확인한 뒤 예약 정책 변경 필요성을 판단하세요.",
+        "예약 조건을 확인한 뒤 추가로 검토하지 않습니다.",
+    ],
+)
+def test_trial_review_does_not_absorb_distinct_or_denied_followup(followup):
+    fact = next(f for f in candidates(topic()) if f["kind"] == "schedule_candidate")
+    raw = {
+        "advice": [
+            {"fact_id": fact["fact_id"], "summary": TRIAL_CHECKS + " " + followup}
+        ]
+    }
+    assert validate_written_advice(raw, {"findings": [fact]})

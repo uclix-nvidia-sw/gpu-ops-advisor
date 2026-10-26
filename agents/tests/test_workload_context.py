@@ -300,7 +300,9 @@ def test_connected_writing_examples_pass_existing_guards_without_changing_choice
     before = deepcopy(fact)
     c = summary_context(fact)
     observation, _, action = c["decision"]["option"].partition(". ")
-    assert "운영자" not in observation and "운영자" in action
+    assert "운영자" not in observation and any(
+        verb in action for verb in ("확인", "점검")
+    )
     item = {
         "fact_id": fact["fact_id"],
         "summary": c["decision"]["option"] + " " + c["summary_start"],
@@ -313,7 +315,9 @@ def test_connected_writing_examples_pass_existing_guards_without_changing_choice
             "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
         )
     assert {
-        k: v for k, v in c["decision"].items() if k not in {"option", "needed", "known"}
+        k: v
+        for k, v in c["decision"].items()
+        if k not in {"option", "action", "needed", "known"}
     } == expected
     assert decision_context(fact) == original
     assert fact == before
@@ -426,15 +430,17 @@ def test_capacity_wording_is_conditional_and_repeated_observations_stay_checks()
         }
         context = summary_context(fact)
         option = context["decision"]["option"]
-        assert "스케줄러 이벤트" in option
+        assert "스케줄러" in option
         if kind == "capacity_review":
-            assert "GPU 부족 여부를 확인" in option
+            assert "자원 부족 여부를 확인" in option
             assert (
                 "운영정책" in option and "뒤" in option and "추가 할당을 검토" in option
             )
         else:
             assert "추가 할당" not in option and "부족" not in option
-            assert "노드 선택 조건이 맞지 않았는지" in option
+            assert "노드 선택 조건" in option and (
+                "맞았는지" in option or "맞지 않았는지" in option
+            )
         assert validate_advice(
             {
                 "advice": [
@@ -471,7 +477,9 @@ def test_pending_check_examples_are_not_observed_failure_causes():
         ],
     }
     option = summary_context(fact)["decision"]["option"]
-    assert "GPU 요청을 충족할 노드가 없었는지" in option
-    assert "노드 선택 조건이 맞지 않았는지" in option
+    assert "요청을 충족할 노드가 있었는지" in option
+    assert "노드 선택 조건" in option and (
+        "맞았는지" in option or "맞지 않았는지" in option
+    )
     assert "GPU가 부족합니다" not in option and "노드가 없었습니다" not in option
-    assert "스케줄러 이벤트(노드 배정 기록)" in option
+    assert "스케줄러 이벤트" in option

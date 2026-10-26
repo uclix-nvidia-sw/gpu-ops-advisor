@@ -73,14 +73,19 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
     result["report_origin"] = origin
     invalid = deepcopy(valid)
     queue = next(
-        a for a in invalid["sections"][0]["advice"] if "스케줄러" in a["summary"]
+        a
+        for a in invalid["sections"][0]["advice"]
+        if a["fact_id"]
+        == next(
+            f["fact_id"]
+            for t in payload_for(result)["topics"]
+            for f in t["findings"]
+            if f.get("kind") == "queue_review"
+        )
     )
     patches = {}
     if broken in {"namespace", "both"}:
-        queue["summary"] = queue["summary"].replace(
-            "대기 Pod의 상태·스케줄러 이벤트를 대조해 노드 배정 전인지 준비 단계인지 확인하세요.",
-            "관측된 범위입니다.",
-        )
+        queue["summary"] = "Pod의 GPU 활동률이 낮았습니다."
         patches["advice"] = [
             next(
                 a
