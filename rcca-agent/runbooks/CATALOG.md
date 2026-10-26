@@ -156,6 +156,10 @@ Backend 검증기도 전체 284개 JSON(컴포넌트 17개 포함)을 검사한�
 - Fleet 등록 컴포넌트 중 `accelerator-nvidia-dcgm-clock`·`-cpu`·`-prof`·`-utilization`은 수집 실패 외의 Unhealthy 판정이 없어 제외했다. 이 컴포넌트와 새 컴포넌트는 기존 일반 조사로 처리된다. 일반 조사 Runbook(RB-GENERAL-GPU-NODE)은 GPU Node Triage 순서의 운영자 지침(분류→보존→표 1 조치→표 2 리셋→DCGM 진단→공급사 전달 9항목)과 노드 요약 지표(D04·D11·D40·D18·D63)를 가지며, 전용 Runbook이 선택되지 않을 때만 `general_fallback`으로 표시된다. 패키지 기본 일반 조사(`general_runbook.json`)는 어떤 프로필에서도 검증되도록 이 지침·지표가 없는 이전 내용을 유지한다.
 - 검사: `test_component_runbooks_are_registered_and_select_only_their_component`(등록·선택 범위), `test_shipped_component_guidance_survives_healthy_reports_before_failure`(Healthy 보고가 앞서는 실제 disk 구간에서 지침 표시).
 
+## 보고서 점검 영역 애니메이션
+
+S1–S7 / P1–P7의 자산·조건부 XID/SXID/컴포넌트 매핑과 보고서 연결 계획은 [RCA 애니메이션 구현 설명](../../docs/rca-animations/README.md)에서 관리한다. 현재는 검토 자산이며 보고서 자동 삽입·Runbook 발행에는 연결되지 않았다.
+
 ## 코드별 파일
 
 | 코드 | Runbook | 증거 그룹 | 자료 상태 |
