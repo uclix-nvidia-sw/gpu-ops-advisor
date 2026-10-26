@@ -3428,7 +3428,16 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 f"/reports/{result['job_id']}/export", params={"format": "html"}
             )
             assert exported.status_code == 200, exported.text
-            if diagnostics["messages"]:
+            if diagnostics.get("clusters_without_current_attribution"):
+                assert (
+                    "<li>namespace_current_attribution_missing</li>"
+                    not in exported.text
+                )
+                assert (
+                    "<li>현재 기간에 선택 범위의 Namespace 귀속 GPU 관측이 없습니다.</li>"
+                    in exported.text
+                )
+            if diagnostics["messages"] or diagnostics.get("unattributed_messages"):
                 from html import escape
 
                 stored = next(
@@ -3437,7 +3446,9 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     if t["topic_id"] == "namespace_usage"
                 )["quality"]["observation_diagnostics"]
                 assert stored == diagnostics
-                for message in diagnostics["messages"]:
+                for message in diagnostics["messages"] + diagnostics.get(
+                    "unattributed_messages", []
+                ):
                     assert message in result["limitations"]
                     assert escape(message) in exported.text
                     assert escape(message) in render(result)["html"].decode()
@@ -3659,14 +3670,16 @@ def test_scheduled_and_manual_pending_pod_transition_is_published(
         assert row["activity_percent"] == 60
         assert result["result_status"] == ("partial" if wrong_node else "ready")
         diagnostics = usage["quality"]["observation_diagnostics"]
-        assert diagnostics["version"] == "ops-observation-diagnostics-v2"
+        assert diagnostics["version"] == "ops-observation-diagnostics-v3"
         assert ("pod_node_unverified" in str(diagnostics)) is wrong_node
         artifact = next(a for a in result["artifacts"] if a["format"] == "html")
         worker_html = Path(
             stack["env"]["ARTIFACT_DIR"], artifact["object_key"]
         ).read_bytes()
         assert hashlib.sha256(worker_html).hexdigest() == artifact["checksum"]
-        for message in diagnostics["messages"]:
+        for message in diagnostics["messages"] + diagnostics.get(
+            "unattributed_messages", []
+        ):
             assert escape(message) in worker_html.decode()
         (LOCAL / f"pending-{wrong_node}-{origin}.json").write_text(
             json.dumps(result, ensure_ascii=False), encoding="utf-8"
@@ -3736,7 +3749,9 @@ def test_scheduled_and_manual_partial_diagnostics_are_published(
                 stack["env"]["ARTIFACT_DIR"], artifact["object_key"]
             ).read_bytes()
             assert hashlib.sha256(worker_html).hexdigest() == artifact["checksum"]
-            for message in diagnostic["messages"]:
+            for message in diagnostic["messages"] + diagnostic.get(
+                "unattributed_messages", []
+            ):
                 assert escape(message) in worker_html.decode()
             (LOCAL / "unscoped-diagnostics.json").write_text(
                 json.dumps(result, ensure_ascii=False), encoding="utf-8"
@@ -4237,3 +4252,65 @@ def test_collector_handoff_is_verified_before_report_publication(
         row = next(r for r in topic["rows"] if r["namespace"] == "dev")
         assert row["valid_hours"] == (23 if overlap else 24)
         assert row["activity_percent"] == 60
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("empty", [False, True])
+def test_scheduled_and_manual_attribution_quality_is_published(
+    stack, monkeypatch, empty
+):
+    from copy import deepcopy
+    from html import escape
+    import test_aggregate_report
+
+    original_fixture = test_aggregate_report.fixture
+    if not empty:
+        monkeypatch.setattr(
+            sys.modules[__name__],
+            "SCOPE",
+            {"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
+        )
+
+    def observations(*args, **kwargs):
+        evidence = original_fixture(*args, **kwargs)
+        if empty:
+            for item in evidence:
+                item["snapshot"]["series"] = []
+        else:
+            for index in (0, 2):
+                extra = deepcopy(evidence[index]["snapshot"]["series"])
+                for series in extra:
+                    series["metric"]["UUID"] = "unattributed-gpu"
+                    series["metric"].pop("namespace", None)
+                    series["metric"].pop("pod", None)
+                evidence[index]["snapshot"]["series"].extend(extra)
+        return evidence
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", observations)
+    published = []
+    original_worker = worker_result
+
+    def capture(*args, **kwargs):
+        result, evidence = original_worker(*args, **kwargs)
+        published.append(deepcopy(result))
+        return result, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    assert len(published) == 2
+    for result in published:
+        usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
+        assert usage["status"] == ("blocked" if empty else "ready")
+        assert result["result_status"] == ("partial" if empty else "ready")
+        diagnostics = usage["quality"]["observation_diagnostics"]
+        assert diagnostics["clusters_without_current_attribution"] == (
+            ["cpc-2"] if empty else []
+        )
+        if not empty:
+            assert diagnostics["summary"] == diagnostics["messages"] == []
+            assert diagnostics["unattributed_messages"]
+            assert any(not row["namespace"] for row in usage["rows"])
+        artifact = next(a for a in result["artifacts"] if a["format"] == "html")
+        html = Path(stack["env"]["ARTIFACT_DIR"], artifact["object_key"]).read_text()
+        for message in diagnostics["messages"] + diagnostics["unattributed_messages"]:
+            assert escape(message) in html

@@ -256,9 +256,14 @@ def test_diagnostics_are_output_only_and_old_evidence_does_not_invent_skip_cause
     del baseline["topics"][0]["quality"]["observation_diagnostics"]
     assert payload == payload_for(baseline)
     assert render(result)["csv"] == render(baseline)["csv"]
-    result["limitations"].extend(diagnostic(result)["messages"])
+    result["limitations"].extend(
+        diagnostic(result)["messages"] + diagnostic(result)["unattributed_messages"]
+    )
     html = render(result)["html"].decode()
-    assert "Namespace 미표기" in html and "미할당 여부는 미확인" in html
+    assert (
+        "Namespace 미표기" in html
+        and "미할당 여부와 전체 GPU 귀속의 완전성은 미확인" in html
+    )
     assert render(result)["csv"] == render(baseline)["csv"]
 
 
@@ -358,11 +363,22 @@ def test_absent_periods_and_all_blocked_keep_existing_status_rules():
     assert result["result_status"] == "blocked"
 
 
-async def test_run_appends_diagnostics_only_after_llm_interpretation(monkeypatch):
+@pytest.mark.parametrize("unattributed", [False, True])
+async def test_run_appends_diagnostics_only_after_llm_interpretation(
+    monkeypatch, unattributed
+):
     async def collect(self, cluster, period, *, queries=None, uid=None):
         if queries is not None:
             return []
         evidence = changed_hours(period, cluster["cluster_id"], 7)
+        if unattributed:
+            for index in (0, 2):
+                extra = deepcopy(evidence[index]["snapshot"]["series"])
+                for series in extra:
+                    series["metric"]["UUID"] = "unattributed-gpu"
+                    series["metric"].pop("namespace", None)
+                    series["metric"].pop("pod", None)
+                evidence[index]["snapshot"]["series"].extend(extra)
         for item in evidence:
             item["input"]["datasourceUid"] = "fixture"
         return evidence
@@ -403,7 +419,9 @@ async def test_run_appends_diagnostics_only_after_llm_interpretation(monkeypatch
         attempt_context.reset(token)
     result = output["result"]
     validate_result(result, output["evidence"])
-    messages = diagnostic(result)["messages"]
+    diagnostics = diagnostic(result)
+    assert bool(diagnostics["unattributed_messages"]) is unattributed
+    messages = diagnostics["messages"] + diagnostics["unattributed_messages"]
     assert messages and requests
     assert result["quality"]["report"]["method"] == "llm_interpreted"
     assert all(message in result["limitations"] for message in messages)

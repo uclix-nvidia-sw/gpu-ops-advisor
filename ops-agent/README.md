@@ -18,9 +18,11 @@ Job Controller(JC)에서 보고서 작업을 인수해 관측·사건을 집계�
 
 ### 부분 산출 원인 / Partial observation diagnostics
 
-[report_diagnostics.py](src/ops_agent/report_diagnostics.py)는 현재·이전 기간의 제외 원인과 연결 변경 검증의 예산/마감 미실행·조회 실패·신원 검증 불충족을 구분합니다. 기존 `missing_inputs`가 비어 있어도 시간별 신원 조건 때문에 부분 산출일 수 있습니다. Namespace 미표기 관측은 별도로 보여주지만 전체 품질 판정에는 포함하며 미할당 GPU로 단정하지 않습니다.
+[report_diagnostics.py](src/ops_agent/report_diagnostics.py)는 현재·이전 기간의 제외 원인과 연결 변경 검증의 예산 소진·마감 미실행·조회 실패·신원 조건 불충족을 구분합니다. `ops-observation-diagnostics-v3`는 미표기 관측을 참고용 `unattributed_messages`로 분리하고, 현재 기간 귀속 관측이 없는 요청 클러스터를 따로 기록합니다. 진단 문장은 해석 후 `limitations`에 연결하며 모델 입력에 넣지 않습니다.
 
-진단은 선택적 `topics[].quality.observation_diagnostics`에 저장하고, LLM 해석이 끝난 뒤 기존 `limitations`에 설명을 연결해 웹과 HTML에 표시합니다. 진단 문장 자체는 계산이나 모델 입력에 반영하지 않습니다. 연결 검증 v2는 같은 UID의 연결 전 미배정 구간과 배정 구간을 구분하고, 배정 구간의 표본 수를 원래 집계와 대조합니다. 현재 기간을 먼저, 클러스터별 배치를 교대로 검증하며 전환 32회·전체 80회 예산은 유지합니다. 새로 인정된 관측과 조회 배분에 따라 같은 기간의 과거 보고서와 활동률·비교·후보·CSV 값이 달라질 수 있습니다. 이전 기간의 미실행과 4클러스터 전체 호출 한계는 계속 진단합니다. 과거 결과에 없는 예산 사유는 추정하거나 재작성하지 않습니다. 세부 단위와 검사 경계는 [진단 계약](../docs/specs/ops-agent/aggregate-report-v1.md#partial-observation-diagnostics--부분-산출-진단)을 따릅니다.
+`namespace_status_basis=attributed_rows_with_current_cluster_coverage_v1`인 새 결과는 Namespace가 있는 행으로 활동 판정을 계산하고, 요청한 모든 클러스터에 현재 기간 귀속 행이 있어야 완료할 수 있습니다. 이전 기간에서 넘어온 행은 현재 관측으로 세지 않습니다. 선택한 Namespace가 유휴여도 현재 관측이 없으면 완료할 수 없으며, 다른 정상 관측이 있으면 부분 산출, 산출할 활동이 없으면 근거 부족입니다. 미표기 행의 수치·시간별 값·참조·CSV는 보존하되 단독으로 상태를 낮추지 않습니다. 미할당 여부와 전체 GPU 귀속의 완전성은 여전히 미확인입니다. 과거 결과는 저장된 상태와 판정 설명을 유지합니다.
+
+현재 기간 우선·클러스터별 교대 검증과 전환 32회·전체 80회 상한을 유지합니다. 후속 조회 예약과 이전 기간 검증량 확대는 별도 후속 작업입니다. 기본 조회 실패는 유휴 여부 미확인과 구분하고, Backend HTML은 신규·과거 관측 없음 코드를 한국어로 표시하되 원본 코드를 보존합니다. 단위·판정 변경·호환 경계는 [진단 계약](../docs/specs/ops-agent/aggregate-report-v1.md#partial-observation-diagnostics--부분-산출-진단)을 따릅니다.
 
 ### 주제별 AI 운영 해석 / Topic-level AI interpretation
 

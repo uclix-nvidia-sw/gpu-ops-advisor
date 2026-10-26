@@ -1108,3 +1108,57 @@
     animation: none !important;
   }
 }
+/* Classic mode chrome follows the NVIDIA console look; page content keeps its own styles. */
+.view-classic .sidebar {
+  background: #171a18;
+  border-right: 0;
+  color: #b7beb8;
+}
+.view-classic .sidebar .brand {
+  color: #fff;
+  border-bottom: 1px solid #363b36;
+}
+.view-classic .sidebar .brand-icon {
+  background: #76b900;
+  color: #10170a;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.view-classic .sidebar .brand > div > span {
+  color: #939b94;
+}
+.view-classic .sidebar .workspace-label,
+.view-classic .sidebar .profile {
+  display: none;
+}
+.view-classic .sidebar .nav-label {
+  color: #939b94;
+  margin-top: 28px;
+}
+.view-classic .sidebar .nav-item {
+  color: #bdc5bf;
+  border-radius: 2px;
+  border-left: 3px solid transparent;
+}
+.view-classic .sidebar .nav-item:hover {
+  background: #282e29;
+  color: #fff;
+}
+.view-classic .sidebar .nav-item.active {
+  color: #fff;
+  background: #2b3425;
+  border-left-color: #76b900;
+}
+.view-classic .sidebar .nav-item.active:before {
+  display: none;
+}
+.view-classic .sidebar .sidebar-bottom {
+  border-top: 1px solid #363b36;
+}
+.view-classic .sidebar .environment,
+.view-classic .sidebar .version {
+  color: #bdc5bf;
+}
+.view-classic .topbar {
+  border-top: 3px solid #76b900;
+}

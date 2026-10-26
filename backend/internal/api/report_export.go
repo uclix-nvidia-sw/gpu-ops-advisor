@@ -233,6 +233,8 @@ func reportMetricName(id string) string {
 
 func reportReason(reason string) string {
 	text := map[string]string{
+		"namespace_current_attribution_missing":       "현재 기간에 선택 범위의 Namespace 귀속 GPU 관측이 없습니다.",
+		"namespace_observations_missing":              "Namespace 관측 자료가 없습니다.",
 		"shared_gpu_attribution_unverified":           "GPU 공유 구간은 Namespace별 활동률을 구분할 수 없어 제외했습니다.",
 		"gpu_activity_identity_unverified":            "활동 자료의 GPU·Pod 신원 또는 MIG 여부가 확인되지 않아 제외했습니다.",
 		"gpu_activity_missing":                        "연결은 관측됐지만 활동 자료가 없는 구간은 평균에서 제외했습니다.",

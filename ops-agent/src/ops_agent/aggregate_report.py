@@ -97,6 +97,16 @@ def build_result(claim, context, evidence):
             rows = namespace_summary.compare(current, before)
             t["rows"] = rows
             t["missing_inputs"] = sorted(set(errors + old_errors))
+            attributed_rows = [r for r in rows if r["namespace"]]
+            current_clusters = {r["cluster_id"] for r in current if r["namespace"]}
+            missing_clusters = sorted(
+                c["cluster_id"]
+                for c in data["scope"]["clusters"]
+                if c["cluster_id"] not in current_clusters
+            )
+            t["quality"]["namespace_status_basis"] = (
+                "attributed_rows_with_current_cluster_coverage_v1"
+            )
             t["quality"]["observation_diagnostics"] = observation_diagnostics(
                 [
                     ("current", data["time_range"], current, excluded),
@@ -104,6 +114,7 @@ def build_result(claim, context, evidence):
                 ],
                 rows,
                 activity_inputs,
+                missing_clusters=missing_clusters,
             )
             for i, row in enumerate(rows):
                 target = {k: row[k] for k in ("cluster_id", "namespace", "gpu_model")}
@@ -180,19 +191,20 @@ def build_result(claim, context, evidence):
                 )
             t["status"] = (
                 "ready"
-                if rows
+                if attributed_rows
+                and not missing_clusters
                 and all(
                     r["quality_status"] == "ready"
                     and r["comparison_status"] == "comparable"
-                    for r in rows
+                    for r in attributed_rows
                 )
                 and not t["missing_inputs"]
                 else "partial"
-                if any(r["activity_percent"] is not None for r in rows)
+                if any(r["activity_percent"] is not None for r in attributed_rows)
                 else "blocked"
             )
-            if not rows:
-                t["missing_inputs"].append("namespace_observations_missing")
+            if missing_clusters:
+                t["missing_inputs"].append("namespace_current_attribution_missing")
             enrich_memory(t, inputs, data)
             enrich_workloads(t, inputs, data)
             enrich_context(t, inputs, data)
@@ -387,9 +399,9 @@ async def run(tools):
     await interpret_report(result, ctx["llm"])
     # Output-only explanation must not alter the writer's input or candidate selection.
     for topic in result["topics"]:
-        result["limitations"].extend(
-            topic["quality"].get("observation_diagnostics", {}).get("messages", [])
-        )
+        diagnostics = topic["quality"].get("observation_diagnostics", {})
+        result["limitations"].extend(diagnostics.get("messages", []))
+        result["limitations"].extend(diagnostics.get("unattributed_messages", []))
     result["llm_usage"] = ctx["llm"].usage
     result["quality"]["query_count"] = collector.calls
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:

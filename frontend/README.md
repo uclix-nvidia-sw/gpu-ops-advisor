@@ -23,6 +23,8 @@ GPU Ops Advisor의 React·TypeScript 화면이다. 모든 관점은 같은 Backe
 
 Ops 목록은 선택한 날짜와 분석 기간이 겹치는 보고서를 찾는다. 상태·주제·요청 접수일은 보조 조건이며 분석 기간만, 보조 조건만, 모든 조건을 각각 해제할 수 있다. 저장된 주요 변화와 관측·해석 한계를 먼저 보여주고, `method`·`narrative_status`에 따라 AI 해석·AI가 고른 변화·계산 요약을 구분한다. 생성 방식이 확인되지 않으면 ‘저장된 주요 변화’로 표시한다. 발췌 여부를 알리고 전체 본문으로 연결한다. 작성 중·삭제된 결과는 작성 현황·삭제 기록으로 연결하며 일부 목록을 전체 건수나 클러스터 건강 점수로 표시하지 않는다.
 
+기존 관점의 `/dashboard`([OperatorDashboard](src/pages/OperatorDashboard.tsx))와 `/cases`([OperatorCases](src/pages/OperatorCases.tsx))는 최근 14일 사건(`/incidents`, 200건씩 최대 5쪽)을 [incidentOverview](src/lib/incidentOverview.ts)로 계산한다. 사건마다 오류 코드·한국어 이름·장치(PCI)·같은 장치 반복 횟수·알림 상태·NVIDIA 즉시 조치 분류·RCA 보고서 링크를 한 줄로 보이며, 해제 신호 없이 하루 넘게 `firing`인 사건은 '확인 필요'로 분리한다. RCA 결과 품질(산출 가능·부분 산출)은 목록에 표시하지 않고 보고서에서 읽는다. 대시보드는 '오늘 한눈에' 문장, 지금 대응할 사건과 런북 단계, 반복 장치, 14일 추이, 노드별 현황을 보여준다. 추이·건수는 GPU 자체·GPU 간 연결(NVSwitch·NVLink)·네트워크·서버로 묶는다. 이름·조치 분류·단계는 런북에서 생성한 [incidentLabels.json](src/lib/incidentLabels.json)(`python tools/generate_incident_labels.py` 후 `npm run format`)을 쓴다. 기존 관점의 사이드바·상단 선도 운영 콘솔의 녹색 강조를 따르며, 다른 관점과 Ops 보고서 본문은 바뀌지 않는다.
+
 두 콘솔은 검정·회색 바탕과 녹색 강조, 얇은 구분선과 표를 사용한다. 상태는 색상과 글자를 함께 제공한다. 좁은 화면은 메뉴를 접고 긴 표 안에서 스크롤하며, 선택 범위와 여섯 관점 전환은 유지한다.
 
 ## 실행
