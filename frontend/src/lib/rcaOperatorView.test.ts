@@ -180,6 +180,12 @@ it('returns null for results without triage observations', () => {
 it('keeps full PCI addresses and splits Korean guidance into lines', () => {
   expect(fullPci('PCI:00000000:4E:00.0')).toBe('0000:4e:00.0');
   expect(sentences('보존합니다. 재시작은 상태를 바꿉니다. CUDA 12.7 기준')).toHaveLength(3);
+  expect(sentences('오류입니다(GPU has fallen off the bus). 작업은 멈춥니다.')).toEqual([
+    '오류입니다(GPU has fallen off the bus).',
+    '작업은 멈춥니다.',
+  ]);
+  // A parenthesis that does not close a Korean sentence stays inside it.
+  expect(sentences('XID 79(PCIe). 확인합니다.')).toHaveLength(1);
 });
 
 it('flags uncorrectable ECC growth and treats bitmasks as codes', () => {

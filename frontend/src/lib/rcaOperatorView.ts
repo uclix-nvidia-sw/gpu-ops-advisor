@@ -152,7 +152,8 @@ export const normPci = (v: string) =>
 /** Korean sentence split used to turn dense guidance into numbered lines. */
 export const sentences = (text: string) =>
   text
-    .split(/(?<=[다요][.])\s+/)
+    // Also after "다(English source)." so a quoted source name does not merge sentences.
+    .split(/(?<=[다요][.])\s+|(?<=[다요]\([^()]*\)[.])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 

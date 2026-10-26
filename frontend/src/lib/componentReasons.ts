@@ -112,9 +112,9 @@ const COMPONENTS: Record<string, ComponentInfo> = {
       { label: 'GPU 접근 상실', matches: ['GPU lost'], branch: 'GPU lost' },
       { label: 'GPU 리셋 필요', matches: ['GPU requires reset'], branch: 'GPU requires reset' },
       {
-        label: 'persistence mode 조회 실패',
+        label: 'persistence mode 조회 오류',
         matches: ['error getting persistence mode', 'failed to get DCGM persistence-mode field'],
-        branch: 'failed to get DCGM persistence-mode field',
+        branch: 'persistence mode 조회 오류',
       },
     ],
   },
