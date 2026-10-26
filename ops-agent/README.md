@@ -20,7 +20,7 @@ Job Controller(JC)에서 보고서 작업을 인수해 관측·사건을 집계�
 
 [report_diagnostics.py](src/ops_agent/report_diagnostics.py)는 현재·이전 기간의 제외 원인과 연결 변경 검증의 예산/마감 미실행·조회 실패·신원 검증 불충족을 구분합니다. 기존 `missing_inputs`가 비어 있어도 시간별 신원 조건 때문에 부분 산출일 수 있습니다. Namespace 미표기 관측은 별도로 보여주지만 전체 품질 판정에는 포함하며 미할당 GPU로 단정하지 않습니다.
 
-진단은 선택적 `topics[].quality.observation_diagnostics`에 저장하고, LLM 해석이 끝난 뒤 기존 `limitations`에 설명을 연결해 웹과 HTML에 표시합니다. 모델 입력·후보·산식·상태·CSV·조회 순서와 예산은 유지합니다. 과거 결과에 없는 예산 사유는 추정하거나 재작성하지 않습니다. 세부 단위와 검사 경계는 [진단 계약](../docs/specs/ops-agent/aggregate-report-v1.md#partial-observation-diagnostics--부분-산출-진단)을 따릅니다.
+진단은 선택적 `topics[].quality.observation_diagnostics`에 저장하고, LLM 해석이 끝난 뒤 기존 `limitations`에 설명을 연결해 웹과 HTML에 표시합니다. 진단 문장 자체는 계산이나 모델 입력에 반영하지 않습니다. 연결 검증 v2는 같은 UID의 연결 전 미배정 구간과 배정 구간을 구분하고, 배정 구간의 표본 수를 원래 집계와 대조합니다. 현재 기간을 먼저, 클러스터별 배치를 교대로 검증하며 전환 32회·전체 80회 예산은 유지합니다. 새로 인정된 관측과 조회 배분에 따라 같은 기간의 과거 보고서와 활동률·비교·후보·CSV 값이 달라질 수 있습니다. 이전 기간의 미실행과 4클러스터 전체 호출 한계는 계속 진단합니다. 과거 결과에 없는 예산 사유는 추정하거나 재작성하지 않습니다. 세부 단위와 검사 경계는 [진단 계약](../docs/specs/ops-agent/aggregate-report-v1.md#partial-observation-diagnostics--부분-산출-진단)을 따릅니다.
 
 ### 주제별 AI 운영 해석 / Topic-level AI interpretation
 

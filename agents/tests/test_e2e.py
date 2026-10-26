@@ -38,6 +38,7 @@ import pytest
 from agent_common.contracts import content_hash, timestamp
 from rcca_agent.runbook_admin import draft, transition
 from test_rca_analysis import general_runbook, analysis_reply
+from test_identity_transitions import transition_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCAL = ROOT / ".local" / "agent-e2e"
@@ -331,17 +332,23 @@ class Upstream(BaseHTTPRequestHandler):
         if u.path.endswith("/api/v1/query"):
             expr = query.get("query", [""])[0]
             if getattr(self, "transition_fixture", None) and "[1h] offset 1ms" in expr:
-                from test_identity_transitions import transition_fixture
                 from ops_agent.report_contract import iso
 
                 at = float(query["time"][0])
-                _, gpu, pods, _ = transition_fixture(
+                fixture = (
+                    pending_transition_fixture
+                    if self.transition_fixture in {"pending", "pending_wrong_node"}
+                    else transition_fixture
+                )
+                _, gpu, pods, _ = fixture(
                     {"start": iso(at - 3600), "end": iso(at)},
                     cluster="cpc-2",
                     namespace="dev",
                 )
                 if self.transition_fixture == "overlap":
                     gpu[1]["values"][0][0] = gpu[0]["values"][-1][0]
+                if self.transition_fixture == "pending_wrong_node":
+                    pods[0]["metric"]["node"] = "other-node"
                 return self.send(
                     {
                         "status": "success",
@@ -3097,7 +3104,6 @@ def test_aggregate_report_transition_verification_is_published(
     stack, monkeypatch, overlap
 ):
     import test_aggregate_report
-    from test_identity_transitions import transition_fixture
     from ops_agent.report_contract import VERSION
 
     monkeypatch.setattr(
@@ -3414,16 +3420,17 @@ def test_scheduled_and_manual_reports_repair_same_data(
         for result in (scheduled, manual):
             fetched = client.get(f"/reports/{result['job_id']}")
             assert fetched.status_code == 200, fetched.text
+            assert fetched.json()["result"]["topics"] == result["topics"]
             diagnostics = next(
                 t for t in result["topics"] if t["topic_id"] == "namespace_usage"
             )["quality"]["observation_diagnostics"]
+            exported = client.get(
+                f"/reports/{result['job_id']}/export", params={"format": "html"}
+            )
+            assert exported.status_code == 200, exported.text
             if diagnostics["messages"]:
                 from html import escape
 
-                exported = client.get(
-                    f"/reports/{result['job_id']}/export", params={"format": "html"}
-                )
-                assert exported.status_code == 200, exported.text
                 stored = next(
                     t
                     for t in fetched.json()["result"]["topics"]
@@ -3584,14 +3591,108 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     assert "검토" in item["summary_parts"]["decision"]
 
 
+def pending_transition_fixture(*args, **kwargs):
+    from copy import deepcopy
+
+    evidence, gpu, pods, at = transition_fixture(*args, **kwargs)
+    assigned = pods[0]
+    pending = deepcopy(assigned)
+    pending["metric"].pop("node")
+    pending["values"] = [[at - 3600 + i * 15 + 2, "1"] for i in range(13)]
+    early = deepcopy(assigned)
+    early["values"] = early["values"][:7]
+    assigned["values"] = assigned["values"][7:]
+    assigned["metric"]["pod_ip"] = "192.0.2.1"
+    hourly = evidence[1]["snapshot"]["series"][0]
+    hourly["metric"]["pod_ip"] = "192.0.2.1"
+    hourly["values"][0][1] = "220"
+    evidence[1]["snapshot"]["series"].extend(
+        [
+            {"metric": early["metric"], "values": [[at, "7"]]},
+            {"metric": pending["metric"], "values": [[at, "13"]]},
+        ]
+    )
+    return evidence, gpu, [pending, early, assigned], at
+
+
 @pytest.mark.e2e
-def test_scheduled_and_manual_partial_diagnostics_are_published(stack, monkeypatch):
+@pytest.mark.parametrize("wrong_node", [False, True])
+def test_scheduled_and_manual_pending_pod_transition_is_published(
+    stack, monkeypatch, wrong_node
+):
+    from copy import deepcopy
+    from html import escape
+    import test_aggregate_report
+
+    monkeypatch.setattr(
+        Upstream,
+        "transition_fixture",
+        "pending_wrong_node" if wrong_node else "pending",
+        raising=False,
+    )
+
+    def hourly_fixture(*args, **kwargs):
+        evidence = pending_transition_fixture(*args, **kwargs)[0]
+        if wrong_node:
+            evidence[1]["snapshot"]["series"][-1]["metric"]["node"] = "other-node"
+        return evidence
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", hourly_fixture)
+    published = []
+    original_worker_result = worker_result
+
+    def capture(*args, **kwargs):
+        body, evidence = original_worker_result(*args, **kwargs)
+        published.append(deepcopy(body))
+        return body, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    assert len(published) == 2
+    for origin, result in zip(("scheduled", "manual"), published):
+        usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
+        row = next(r for r in usage["rows"] if r["namespace"] == "dev")
+        assert row["valid_hours"] == (23 if wrong_node else 24)
+        assert row["previous_valid_hours"] == (23 if wrong_node else 24)
+        assert row["verified_transition_hours"] == (0 if wrong_node else 1)
+        assert row["hours"][0]["sample_count"] == (0 if wrong_node else 227)
+        assert row["activity_percent"] == 60
+        assert result["result_status"] == ("partial" if wrong_node else "ready")
+        diagnostics = usage["quality"]["observation_diagnostics"]
+        assert diagnostics["version"] == "ops-observation-diagnostics-v2"
+        assert ("pod_node_unverified" in str(diagnostics)) is wrong_node
+        artifact = next(a for a in result["artifacts"] if a["format"] == "html")
+        worker_html = Path(
+            stack["env"]["ARTIFACT_DIR"], artifact["object_key"]
+        ).read_bytes()
+        assert hashlib.sha256(worker_html).hexdigest() == artifact["checksum"]
+        for message in diagnostics["messages"]:
+            assert escape(message) in worker_html.decode()
+        (LOCAL / f"pending-{wrong_node}-{origin}.json").write_text(
+            json.dumps(result, ensure_ascii=False), encoding="utf-8"
+        )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("unscoped", [False, True])
+def test_scheduled_and_manual_partial_diagnostics_are_published(
+    stack, monkeypatch, unscoped
+):
     import test_aggregate_report
     from copy import deepcopy
 
     original_fixture = test_aggregate_report.fixture
 
+    if unscoped:
+        monkeypatch.setattr(
+            sys.modules[__name__],
+            "SCOPE",
+            {"clusters": [{"cluster_id": "cpc-2", "namespaces": None}]},
+        )
+
     def partial_fixture(*args, **kwargs):
+        if unscoped:
+            return transition_fixture(*args, **kwargs)[0]
         evidence = original_fixture(*args, **kwargs)
         evidence[2]["snapshot"]["series"][0]["values"][-1][1] = "2"
         return evidence
@@ -3615,8 +3716,31 @@ def test_scheduled_and_manual_partial_diagnostics_are_published(stack, monkeypat
             t for t in result["topics"] if t["topic_id"] == "namespace_usage"
         )["quality"]["observation_diagnostics"]
         assert {r["period_role"] for r in diagnostic["rows"]} == {"current", "previous"}
-        assert all(r["excluded_hours"] == 1 for r in diagnostic["rows"])
+        assert all(
+            r["excluded_hours"] == 1 for r in diagnostic["rows"] if r["namespace"]
+        )
         assert "gpu_interval_unverified" in str(diagnostic)
+        if unscoped:
+            unnamed = [r for r in diagnostic["rows"] if not r["namespace"]]
+            assert len(unnamed) == 2
+            for row in unnamed:
+                assert {r["code"] for r in row["reasons"]} == {
+                    "identity_labels_missing",
+                    "unobserved_hour",
+                }
+                assert "GPU 시간대의 표본 수" not in row["text"]
+            from html import escape
+
+            artifact = next(a for a in result["artifacts"] if a["format"] == "html")
+            worker_html = Path(
+                stack["env"]["ARTIFACT_DIR"], artifact["object_key"]
+            ).read_bytes()
+            assert hashlib.sha256(worker_html).hexdigest() == artifact["checksum"]
+            for message in diagnostic["messages"]:
+                assert escape(message) in worker_html.decode()
+            (LOCAL / "unscoped-diagnostics.json").write_text(
+                json.dumps(result, ensure_ascii=False), encoding="utf-8"
+            )
 
 
 @pytest.mark.e2e

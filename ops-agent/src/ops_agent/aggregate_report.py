@@ -15,6 +15,7 @@ from . import incident_summary, namespace_summary
 from .report_contract import MAX_BYTES, VERSION, previous_period, validate
 from .report_queries import ReportQueries, memory_queries
 from .report_diagnostics import observation_diagnostics
+from .identity_transitions import VERSION as TRANSITION_VERSION
 from .incident_findings import add_node_findings
 from .gpu_memory import enrich_memory
 from .workload_queries import QUERY_IDS, workload_queries
@@ -267,7 +268,7 @@ def build_result(claim, context, evidence):
         sampling_interval_seconds=15,
         low_activity_threshold_percent=5,
         bucket_seconds=3600,
-        gpu_attribution_version="gpu-identity-transitions-v1",
+        gpu_attribution_version=TRANSITION_VERSION,
     )
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:
         raise ValueError("report_result_limit_exceeded")
@@ -287,12 +288,15 @@ async def run(tools):
                 collected = await collector.collect(cluster, period)
                 evidence.extend(collected)
                 pending.append((cluster, period, collected))
-        # Optional verification must not spend another cluster's base collection budget.
-        for cluster, period, collected in pending:
-            uid = collected[0]["input"]["datasourceUid"]
-            evidence.extend(
-                await collector.check_transitions(cluster, period, uid, collected)
+        # Finish every base query before sharing transition batches across clusters.
+        evidence.extend(
+            await collector.check_transitions(
+                [
+                    (cluster, period, collected[0]["input"]["datasourceUid"], collected)
+                    for cluster, period, collected in pending
+                ]
             )
+        )
         # Optional memory follows all activity/identity work; keep time for interpretation.
         for cluster, period, collected in pending:
             if period == data["time_range"]:

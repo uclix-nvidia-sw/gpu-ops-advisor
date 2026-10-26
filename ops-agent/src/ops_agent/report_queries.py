@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 from uuid import uuid4
 
 from agent_common.contracts import timestamp
@@ -13,7 +13,12 @@ from agent_common.grafana_time import mcp_time
 from agent_common.observation import evidence_stamp, unwrap
 
 from .report_contract import MAX_BYTES, MAX_POINTS, VERSION, iso
-from .identity_transitions import identity, sample_bounds, verified_transitions
+from .identity_transitions import (
+    VERSION as TRANSITION_VERSION,
+    identity,
+    sample_bounds,
+    verified_transitions,
+)
 from .collector_identity import groups, source_values, verified, JOB_FIELDS
 
 
@@ -190,12 +195,30 @@ class ReportQueries:
             )
         return evidence
 
-    async def check_transitions(self, cluster, period, uid, evidence):
+    async def check_transitions(self, groups):
+        """Share bounded verification across clusters, current period before previous."""
+        output = []
+        for current in (True, False):
+            batches = deque(
+                self.transition_batches(*group)
+                for group in groups
+                if (group[1] == self.data["time_range"]) == current
+            )
+            while batches:
+                stream = batches.popleft()
+                try:
+                    output.append(await anext(stream))
+                except StopAsyncIteration:
+                    continue
+                batches.append(stream)
+        return output
+
+    async def transition_batches(self, cluster, period, uid, evidence):
         activity, _, counts = evidence
         audit = activity["quality"]["transition_verification"] = []
         if not uid or any(e["tool_status"] != "ok" for e in evidence):
             activity["quality"]["transition_skip_reason"] = "base_query_unavailable"
-            return []
+            return
         if self.transition_deadline is None:
             self.transition_deadline = min(self.deadline - 30, time.monotonic() + 60)
         selected = {
@@ -210,7 +233,6 @@ class ReportQueries:
             for at, value in s["values"]:
                 if gpu and float(value) > 1 and (float(at), gpu) in selected:
                     hours[float(at)][gpu] = float(value)
-        output = []
         for at, expected in sorted(hours.items()):
             gpu_ids = sorted(expected)
             # Bound exceptional raw reads; normal hours keep the three aggregate queries.
@@ -274,28 +296,25 @@ class ReportQueries:
                     reason=reason,
                     rejected=rejected,
                 )
-                output.append(
-                    dict(
-                        id=str(uuid4()),
-                        query_id="gpu_identity_transitions",
-                        query_version="gpu-identity-transitions-v1",
-                        cluster_id=cluster["cluster_id"],
-                        scope={"clusters": [cluster]},
-                        time_range=period,
-                        input={"queries": inputs},
-                        tool_status="unavailable" if reason else "ok",
-                        snapshot={"checks": checks},
-                        quality={
-                            "reason": reason,
-                            "hour_end": iso(at),
-                            "gpu_count": len(batch),
-                            "elapsed_seconds": time.monotonic() - before,
-                            "raw_samples_stored": False,
-                        },
-                        **evidence_stamp(),
-                    )
+                yield dict(
+                    id=str(uuid4()),
+                    query_id="gpu_identity_transitions",
+                    query_version=TRANSITION_VERSION,
+                    cluster_id=cluster["cluster_id"],
+                    scope={"clusters": [cluster]},
+                    time_range=period,
+                    input={"queries": inputs},
+                    tool_status="unavailable" if reason else "ok",
+                    snapshot={"checks": checks},
+                    quality={
+                        "reason": reason,
+                        "hour_end": iso(at),
+                        "gpu_count": len(batch),
+                        "elapsed_seconds": time.monotonic() - before,
+                        "raw_samples_stored": False,
+                    },
+                    **evidence_stamp(),
                 )
-        return output
 
     async def check_collectors(self, cluster, period, uid, evidence):
         # Optional raw reads stay inside the existing total call/byte/deadline limits.

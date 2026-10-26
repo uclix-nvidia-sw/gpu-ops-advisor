@@ -45,7 +45,7 @@ def changed_hours(period, cluster, count):
     return evidence
 
 
-def test_shared_budget_records_later_cluster_without_changing_order_or_values():
+def test_shared_budget_prefers_current_period_and_alternates_clusters():
     data = deepcopy(DATA)
     data["scope"]["clusters"].append(dict(cluster_id="cpc-2", namespaces=None))
     previous = previous_period(data)
@@ -53,7 +53,7 @@ def test_shared_budget_records_later_cluster_without_changing_order_or_values():
         changed_hours(data["time_range"], "cpc-1", 7),
         changed_hours(previous, "cpc-1", 9),
         changed_hours(data["time_range"], "cpc-2", 7),
-        fixture(previous, cluster="cpc-2"),
+        changed_hours(previous, "cpc-2", 7),
     ]
     evidence = [e for group in groups for e in group]
     baseline = result_for(deepcopy(evidence), data)
@@ -64,17 +64,30 @@ def test_shared_budget_records_later_cluster_without_changing_order_or_values():
         return {"data": {"result": []}}
 
     collector = ReportQueries({"query_prometheus": query}, data, time.monotonic() + 900)
-    for group in groups:
-        cluster = group[0]["scope"]["clusters"][0]
-        evidence.extend(
-            asyncio.run(
-                collector.check_transitions(
-                    cluster, group[0]["time_range"], "mimir", group
-                )
+    evidence.extend(
+        asyncio.run(
+            collector.check_transitions(
+                [
+                    (
+                        group[0]["scope"]["clusters"][0],
+                        group[0]["time_range"],
+                        "mimir",
+                        group,
+                    )
+                    for group in groups
+                ]
             )
         )
+    )
     assert len(calls) == collector.transition_calls == 32
-    assert all('cluster_id="cpc-1"' in call["expr"] for call in calls)
+    assert ['cluster_id="cpc-1"' in call["expr"] for call in calls[::2]] == [
+        True,
+        False,
+    ] * 8
+    checked = [e for e in evidence if e["query_id"] == "gpu_identity_transitions"]
+    assert [e["time_range"] for e in checked] == [data["time_range"]] * 14 + [
+        previous
+    ] * 2
     assert [call["endTime"] for call in calls[::2]] == [
         e["input"]["queries"][0]["endTime"]
         for e in evidence
@@ -97,7 +110,11 @@ def test_shared_budget_records_later_cluster_without_changing_order_or_values():
         # Added evidence IDs are expected; calculations and interpretation are unchanged.
         for key in ("status", "missing_inputs"):
             assert before[key] == after[key]
-    cpc2 = next(r for r in diagnostic(result)["rows"] if r["cluster_id"] == "cpc-2")
+    cpc2 = next(
+        r
+        for r in diagnostic(result)["rows"]
+        if r["cluster_id"] == "cpc-2" and r["period_role"] == "previous"
+    )
     assert (cpc2["valid_hours"], cpc2["excluded_hours"]) == (17, 7)
     assert (
         next(
@@ -105,23 +122,25 @@ def test_shared_budget_records_later_cluster_without_changing_order_or_values():
             for r in cpc2["reasons"]
             if r["code"] == "transition_query_budget_exhausted"
         )["hours"]
-        == 7
+        == 6
     )
     audit = next(
         r
         for r in diagnostic(result)["collection"]
-        if r["cluster_id"] == "cpc-2" and r["period_role"] == "current"
+        if r["cluster_id"] == "cpc-2" and r["period_role"] == "previous"
     )
     assert (
         audit["checked_batches"],
         audit["skipped_hours"],
         audit["skipped_gpu_hours"],
-    ) == (0, 7, 7)
-    # No fake query evidence is created for the skipped cluster.
+    ) == (1, 6, 6)
+    # Skips leave audits, not invented query evidence.
+    assert len(checked) == 16
+    assert len({e["cluster_id"] for e in checked}) == 2
     assert all(
-        e["cluster_id"] == "cpc-1"
-        for e in evidence
-        if e["query_id"] == "gpu_identity_transitions"
+        row["skipped_hours"] == 0
+        for row in diagnostic(result)["collection"]
+        if row["period_role"] == "current"
     )
 
 
@@ -151,7 +170,7 @@ def test_failure_stages_are_distinct_and_do_not_promote_hours(case):
     )
     checks = asyncio.run(
         collector.check_transitions(
-            DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+            [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
         )
     )
     if case == "proof":
@@ -164,7 +183,7 @@ def test_failure_stages_are_distinct_and_do_not_promote_hours(case):
         base="base_query_unavailable",
         query="transition_verification_unavailable",
         overlap="gpu_interval_unverified",
-        pod="pod_interval_unverified",
+        pod="pod_uid_unverified",
         proof="transition_aggregate_mismatch",
     )[case]
     assert code in str(diagnostic(result))
@@ -176,6 +195,56 @@ def test_failure_stages_are_distinct_and_do_not_promote_hours(case):
     assert len(calls) == (
         0 if case in {"deadline", "base"} else 1 if case == "query" else 2
     )
+
+
+@pytest.mark.parametrize("case", ["budget", "deadline", "gpu"])
+@pytest.mark.parametrize("conflicting_labels", [False, True])
+def test_transition_audits_only_explain_repairable_named_rows(case, conflicting_labels):
+    evidence, gpu, pods, _ = transition_fixture()
+    if conflicting_labels:
+        for series in evidence[0]["snapshot"]["series"]:
+            if series["metric"].get("namespace"):
+                series["metric"]["node"] = "other-node"
+    if case == "gpu":
+        gpu[1]["values"][0][0] = gpu[0]["values"][-1][0]
+
+    async def query(args):
+        return {"data": {"result": pods if "kube_pod_info" in args["expr"] else gpu}}
+
+    collector = ReportQueries(
+        {"query_prometheus": query},
+        DATA,
+        time.monotonic() + (20 if case == "deadline" else 900),
+    )
+    if case == "budget":
+        collector.transition_calls = 32
+    checks = asyncio.run(
+        collector.check_transitions(
+            [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
+        )
+    )
+    result = result_for(evidence + checks + fixture(previous_period(DATA)))
+    details = diagnostic(result)
+    code = dict(
+        budget="transition_query_budget_exhausted",
+        deadline="transition_deadline_exhausted",
+        gpu="gpu_interval_unverified",
+    )[case]
+    unnamed = next(r for r in details["rows"] if not r["namespace"])
+    named = next(r for r in details["rows"] if r["namespace"])
+    assert code not in {r["code"] for r in unnamed["reasons"]}
+    assert "identity_labels_missing" in {r["code"] for r in unnamed["reasons"]}
+    assert (code in {r["code"] for r in named["reasons"]}) is not conflicting_labels
+    audit = evidence[0]["quality"]["transition_verification"][0]
+    assert code == (audit["reason"] or audit["rejected"][0]["reason"])
+    assert details["collection"][0]["skipped_hours"] == (0 if case == "gpu" else 1)
+    unannotated = deepcopy(evidence + checks + fixture(previous_period(DATA)))
+    unannotated[0]["quality"].pop("transition_verification")
+    baseline = result_for(unannotated)
+    assert result["topics"][0]["rows"] == baseline["topics"][0]["rows"]
+    assert result["result_status"] == baseline["result_status"]
+    assert payload_for(result) == payload_for(baseline)
+    assert render(result)["csv"] == render(baseline)["csv"]
 
 
 def test_diagnostics_are_output_only_and_old_evidence_does_not_invent_skip_cause():
@@ -251,7 +320,7 @@ def test_multiple_gpus_in_one_skipped_hour_do_not_double_count_row_hours():
     assert (
         asyncio.run(
             collector.check_transitions(
-                DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+                [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
             )
         )
         == []
@@ -368,7 +437,7 @@ def test_transition_rejections_preserve_selected_namespace_scope(namespaces):
         ),
         dict(
             gpu_id="gpu-1",
-            reason="pod_interval_unverified",
+            reason="pod_uid_unverified",
             namespace="test-dept-service",
             pod="test-pod",
         ),

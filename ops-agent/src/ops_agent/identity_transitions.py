@@ -3,6 +3,8 @@
 from collections import defaultdict
 import math
 
+VERSION = "gpu-identity-transitions-v2"
+
 
 def identity(labels):
     return tuple(
@@ -131,25 +133,41 @@ def verified_transitions(gpus, pods, at, expected_counts, namespaces, *, rejecte
                 continue
             matches.sort(key=lambda p: p["first"])
             uids = {p["labels"].get("uid") for p in matches}
-            if (
-                len(uids) != 1
-                or not all(uids)
-                or any(
-                    p["labels"].get("node") != labels.get("Hostname")
-                    or p["values"]["minimum"] != 1
-                    or p["values"]["maximum"] != 1
-                    or p["min_gap"] < 14
-                    or p["max_gap"] > 30
-                    for p in matches
-                )
-                or any(
-                    not 0 < b["first"] - a["last"] <= 30
-                    for a, b in zip(matches, matches[1:])
-                )
-                or matches[0]["first"] > row["first"] + 15
-                or matches[-1]["last"] < row["last"] - 15
+            if len(uids) != 1 or not all(uids):
+                reject(gpu, "pod_uid_unverified", labels)
+                continue
+            if any(
+                p["values"]["minimum"] != 1
+                or p["values"]["maximum"] != 1
+                or p["min_gap"] < 14
+                or p["max_gap"] > 30
+                for p in matches
             ):
-                reject(gpu, "pod_interval_unverified", labels)
+                reject(gpu, "pod_samples_unverified", labels)
+                continue
+            if any(
+                not 0 < b["first"] - a["last"] <= 30
+                for a, b in zip(matches, matches[1:])
+            ):
+                reject(gpu, "pod_continuity_unverified", labels)
+                continue
+            assigned_at = next(
+                (i for i, p in enumerate(matches) if p["labels"].get("node")),
+                len(matches),
+            )
+            assigned = matches[assigned_at:]
+            if (
+                not assigned
+                or any(p["last"] >= row["first"] for p in matches[:assigned_at])
+                or any(p["labels"].get("node") != labels["Hostname"] for p in assigned)
+            ):
+                reject(gpu, "pod_node_unverified", labels)
+                continue
+            if (
+                assigned[0]["first"] > row["first"] + 15
+                or assigned[-1]["last"] < row["last"] - 15
+            ):
+                reject(gpu, "pod_coverage_unverified", labels)
                 continue
             verified.append(
                 {
@@ -157,7 +175,7 @@ def verified_transitions(gpus, pods, at, expected_counts, namespaces, *, rejecte
                     "at": at,
                     "pod_uid": next(iter(uids)),
                     "pod_sample_count": sum(
-                        p["values"]["sample_count"] for p in matches
+                        p["values"]["sample_count"] for p in assigned
                     ),
                     "source_identity_count": len(rows),
                 }

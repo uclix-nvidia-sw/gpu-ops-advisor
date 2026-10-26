@@ -9,50 +9,106 @@ import {
 } from './AggregateReport';
 import { aggregatePeriod } from '../pages/AggregateReportForm';
 
-it('shows saved exclusion causes independently of AI and preserves legacy uncertainty', () => {
-  const reason = '추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함';
-  const detail =
-    'cpc-2 / batch / V100 · 현재 기간: 24시간 중 17시간을 활동률에 반영했습니다. ' +
-    reason +
-    ' 7시간.';
-  const value = {
-    result_status: 'partial',
-    narrative_status: 'omitted',
-    limitations: [detail],
-    topics: [
-      {
-        topic_id: 'namespace_usage',
-        status: 'partial',
-        rows: [],
-        quality: {
-          observation_diagnostics: {
-            summary: [reason],
-            messages: [detail, '<script>private</script>'],
+it.each(['ops-observation-diagnostics-v1', 'ops-observation-diagnostics-v2'])(
+  'shows saved %s causes independently of AI and preserves legacy uncertainty',
+  (version) => {
+    const reason = '추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함';
+    const detail =
+      'cpc-2 / batch / V100 · 현재 기간: 24시간 중 17시간을 활동률에 반영했습니다. ' +
+      reason +
+      ' 7시간.';
+    const value = {
+      result_status: 'partial',
+      narrative_status: 'omitted',
+      limitations: [detail],
+      topics: [
+        {
+          topic_id: 'namespace_usage',
+          status: 'partial',
+          rows: [],
+          quality: {
+            observation_diagnostics: {
+              version,
+              summary: [reason],
+              messages: [detail, '<script>private</script>'],
+            },
           },
         },
-      },
-    ],
-  };
-  const render = (data: unknown) =>
-    renderToStaticMarkup(
-      <MemoryRouter>
-        <AggregateReport value={data as typeof value} />
-      </MemoryRouter>,
-    );
-  const html = render(value);
-  expect(html).toContain('활동률 산출·기간 비교의 제한');
-  expect(html.indexOf(reason)).toBeLessThan(html.indexOf('대상·기간별 제외 사유 보기'));
+      ],
+    };
+    const render = (data: unknown) =>
+      renderToStaticMarkup(
+        <MemoryRouter>
+          <AggregateReport value={data as typeof value} />
+        </MemoryRouter>,
+      );
+    const html = render(value);
+    expect(html).toContain('활동률 산출·기간 비교의 제한');
+    expect(html.indexOf(reason)).toBeLessThan(html.indexOf('대상·기간별 제외 사유 보기'));
+    expect(html).toContain('검증 미실행은 신원 충돌이 확인됐다는 뜻이 아닙니다');
+    expect(html.split(detail)).toHaveLength(2);
+    expect(html).toContain('&lt;script&gt;private&lt;/script&gt;');
+    expect(html).not.toContain('<script>private</script>');
+    const old = render({
+      ...value,
+      limitations: [],
+      topics: [{ topic_id: 'namespace_usage', status: 'partial', rows: [] }],
+    });
+    expect(old).not.toContain(reason);
+    expect(old).not.toContain('부분 산출 원인');
+  },
+);
+
+it('shows v2 Pod failures and previous-period budget limits before the AI interpretation', () => {
+  const podReason = 'Pod 노드가 GPU 노드와 다르거나 미배정 구간이 연결 이전에 끝나지 않음';
+  const budgetReason = '추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함';
+  const podDetail = `cluster-a / batch / A100 · 현재 기간: 24시간 중 23시간을 활동률에 반영했습니다. ${podReason} 1시간.`;
+  const previousDetail = `cluster-b / batch / V100 · 이전 기간: 24시간 중 17시간을 활동률에 반영했습니다. ${budgetReason} 7시간.`;
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport
+        value={{
+          result_status: 'partial',
+          narrative_status: 'complete',
+          quality: { report: { method: 'llm_interpreted' } },
+          limitations: [podDetail, previousDetail],
+          topics: [
+            {
+              topic_id: 'namespace_usage',
+              status: 'partial',
+              rows: [],
+              quality: {
+                observation_diagnostics: {
+                  version: 'ops-observation-diagnostics-v2',
+                  summary: [podReason, budgetReason],
+                  messages: [podDetail, previousDetail],
+                },
+              },
+            },
+          ],
+          narrative: [
+            {
+              topic_id: 'namespace_usage',
+              observation: 'GPU 활동을 관측했습니다.',
+              meaning: '확인된 구간에 한해 해석합니다.',
+              next_check: '추가 할당 전에 운영 조건을 확인하세요.',
+            },
+          ],
+        }}
+      />
+    </MemoryRouter>,
+  );
+  const aiStart = html.indexOf('aria-label="namespace_usage AI 운영 해석"');
+  expect(aiStart).toBeGreaterThan(0);
+  for (const detail of [podDetail, previousDetail]) {
+    expect(html).toContain(detail);
+    expect(html.split(detail)).toHaveLength(2);
+    expect(html.indexOf(detail)).toBeLessThan(aiStart);
+  }
+  for (const reason of [podReason, budgetReason]) {
+    expect(html.indexOf(reason)).toBeLessThan(html.indexOf('대상·기간별 제외 사유 보기'));
+  }
   expect(html).toContain('검증 미실행은 신원 충돌이 확인됐다는 뜻이 아닙니다');
-  expect(html.split(detail)).toHaveLength(2);
-  expect(html).toContain('&lt;script&gt;private&lt;/script&gt;');
-  expect(html).not.toContain('<script>private</script>');
-  const old = render({
-    ...value,
-    limitations: [],
-    topics: [{ topic_id: 'namespace_usage', status: 'partial', rows: [] }],
-  });
-  expect(old).not.toContain(reason);
-  expect(old).not.toContain('부분 산출 원인');
 });
 
 it('renders observed zero separately from missing observations and comparison', () => {
