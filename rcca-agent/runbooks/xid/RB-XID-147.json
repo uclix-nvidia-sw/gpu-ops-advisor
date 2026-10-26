@@ -230,6 +230,10 @@
       "cause_note": "NVLink 링크·커넥터·케이블 이상, 링크 반대편 GPU·NVSwitch 문제, 신호 품질 저하가 주요 원인 후보입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 147 줄을 확인하고, nvidia-smi nvlink -s(링크 상태)와 nvidia-smi nvlink -e(오류 카운터)로 해당 GPU의 링크를 봅니다. NVSwitch 시스템이면 Fabric Manager 로그의 같은 시각 SXID 줄도 확인하고, 중단된 작업을 작업 소유자에게 확인합니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi nvlink -s(링크 상태)·-e(오류 카운터) 출력과 Xid 메시지의 16진수 필드 원문을 함께 저장합니다. HGX 시스템이면 같은 시각 Fabric Manager 로그도 확보합니다."
         },
@@ -240,6 +244,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 WORKFLOW_NVLINK5_ERR: 메시지의 intrInfo·errorStatus 값을 NVIDIA 카탈로그의 'Xid 144-150 Decode' 표로 해석해 조치를 정합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "링크가 모두 정상이고 nvidia-smi nvlink -e의 오류 카운터와 3장 표의 NVLink 오류 누적값이 더 늘지 않는지, dcgmi diag -r 2가 통과하는지 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

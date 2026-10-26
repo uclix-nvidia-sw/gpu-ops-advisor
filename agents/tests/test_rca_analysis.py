@@ -91,6 +91,7 @@ def general_runbook(cluster="c"):
         "uncertain",
         "missing_runbook",
         "query_failed",
+        "optional_failed",
         "invalid_plan",
         "xid",
         "sxid",
@@ -178,6 +179,8 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
 
     async def metrics(args):
         events.append("collect")
+        if mode == "optional_failed":
+            raise OSError("fixture metric failure")
         return {
             "data": {
                 "result": [{"metric": {"UUID": "GPU-1"}, "values": [[1789430400, "2"]]}]
@@ -426,6 +429,15 @@ async def test_query_first_collection_analysis_and_failure_boundaries(
         )
     if mode == "query_failed":
         assert any(e["tool_status"] == "unavailable" for e in output["evidence"])
+    if mode == "optional_failed":
+        # Supporting metrics failed: named in the report, which is not degraded.
+        assert "observation_degraded" not in result["missing_inputs"]
+        assert {m["query_id"] for m in result["quality"]["optional_unavailable"]} >= {
+            "D02"
+        }
+        assert all(m["name"] for m in result["quality"]["optional_unavailable"])
+    elif "optional_unavailable" in result["quality"]:
+        assert mode == "query_failed"
     assert all(c["causal_status"] != "confirmed" for c in result["cause_candidates"])
 
 

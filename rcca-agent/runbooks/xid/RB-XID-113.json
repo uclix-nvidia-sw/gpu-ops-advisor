@@ -44,6 +44,42 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D03",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 메모리 사용량을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 온도을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 전력을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
@@ -161,6 +197,10 @@
       "cause_note": "현재 NVIDIA 카탈로그상 미사용 코드라 구버전 드라이버이거나 다른 코드의 해석 오류일 가능성을 먼저 봅니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 113 줄의 원문과 드라이버 버전을 그대로 기록합니다. Xid 카탈로그상 데이터센터 GPU에서 쓰지 않거나 예약된 코드이므로, nvidia-smi로 GPU 상태를 확인하고 같은 시각 다른 XID가 있으면 그 XID 보고서를 먼저 봅니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. 오류 원문과 드라이버 버전, 같은 시각 다른 XID를 함께 보존합니다."
         },
@@ -171,6 +211,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 CONTACT_SUPPORT: 현재 카탈로그상 미사용 코드여서 NVIDIA가 정한 자체 복구 절차는 없습니다. 원문과 드라이버 버전, nvidia-bug-report.sh 결과를 보존해 공급사(지원 조직)에 문의합니다. 같은 시각 다른 XID가 함께 보고됐으면 그 XID의 복구 지침을 먼저 따릅니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "같은 코드가 다시 나지 않는지 4장 이전 사건 이력으로 확인하고, 다시 나면 원문과 드라이버 버전으로 공급사에 문의합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

@@ -29,6 +29,7 @@ from .investigation_summary import investigation_summary
 from .switch_inventory import collect_switch_pci
 from .host_history import host_history, history_summary
 from .incident_dossier import (
+    METRICS,
     enabled as dossier_enabled,
     current_data,
     comparison_targets,
@@ -45,7 +46,7 @@ from .requirement_diagnostics import (
     unmet_requirements,
     reported_facts,
 )
-from .report_labels import query_label
+from .report_labels import LABELS, query_label
 from .observation_agents import collect_round
 from .incident import alert_clues
 from .retrieval import retrieve_runbooks
@@ -639,11 +640,18 @@ async def run(tools):
             alert_match = {**alert_match, "status": "collection_failed"}
         if alert_match["status"] in MISMATCH_CODES:
             gaps.append(alert_match["status"])
-        degraded = any(
-            e["tool_status"] in ("unavailable", "partial")
-            for es in collected.values()
-            for e in es
-        )
+        # A failed optional (supporting) metric is reported by name; only failures of
+        # the error source and the Runbooks' required metrics degrade the report.
+        failed = {
+            q
+            for q, es in collected.items()
+            if any(e["tool_status"] in ("unavailable", "partial") for e in es)
+        }
+        required = {
+            s["query_id"] for b in selected for s in steps(b) if s.get("required")
+        }
+        optional = set(plan_queries(selected)) - required
+        degraded = bool(failed - optional)
         conflicting = conflicting_health(health)
         events = []
         if gaps:
@@ -682,6 +690,7 @@ async def run(tools):
             remaining=remaining,
             approved=approved,
             events=events,
+            optional_failed=sorted(failed & optional),
             alert_match=alert_match,
             # Skipping analysis needs the code's own published Runbook guidance.
             matched=False,
@@ -987,6 +996,12 @@ async def run(tools):
         ],
         reported_facts(health, error_events, data),
     )
+    if state["optional_failed"]:
+        # Plain metric names for section 5; the report itself stays complete.
+        result["quality"]["optional_unavailable"] = [
+            {"query_id": q, "name": METRICS.get(q) or LABELS["queries"].get(q, q)}
+            for q in state["optional_failed"]
+        ]
     material_fields = (
         "cause_candidates",
         "recommendations",

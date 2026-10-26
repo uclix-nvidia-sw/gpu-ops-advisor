@@ -191,6 +191,10 @@
       "cause_note": "PCIe 링크·슬롯·라이저 불량, 전원 이상, GPU 하드웨어 결함, 드라이버 오류가 주요 원인 후보입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 167 줄과 같은 시각 커널 PCIe AER 줄을 확인하고, nvidia-smi -q의 PCI 항목(Replays Since Reset)과 GPU 조회 여부를 확인합니다. 중단된 작업을 작업 소유자에게 확인합니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. 커널 PCIe/AER 로그와 해당 BDF의 lspci -vvv 출력을 함께 저장합니다."
         },
@@ -201,6 +205,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "GPU가 정상 조회되고 3장 표의 PCIe replay 누적값이 더 늘지 않는지, dcgmi diag -r 2가 통과하는지 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

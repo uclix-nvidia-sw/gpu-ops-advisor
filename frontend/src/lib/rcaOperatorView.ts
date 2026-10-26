@@ -1093,6 +1093,12 @@ export function operatorView(result: Row) {
         `${str(c.title)}: ${c.status === 'connection_required' ? '수집 경로가 연결되지 않아 조회하지 못했습니다' : `수집 상태 ${str(c.status)}`}`,
       ),
     );
+  // Supporting metrics the worker could not fetch; the report itself stays complete.
+  const optionalMissing = rows(quality.optional_unavailable).map((m) => str(m.name));
+  if (optionalMissing.length)
+    gapPoints.push(
+      `가져오지 못한 보조 지표: ${optionalMissing.join(', ')} — 보고서 판단에는 쓰지 않았습니다. 필요하면 직접 확인하세요.`,
+    );
   if (noAfter.length && metrics.length)
     gapPoints.push(
       `사건 이후 표본이 없는 지표 ${noAfter.length}개 — 조치 전후 상태는 직접 확인해야 합니다.`,

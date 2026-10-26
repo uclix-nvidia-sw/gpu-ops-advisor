@@ -44,6 +44,42 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D03",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 메모리 사용량을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 온도을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 전력을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
@@ -162,6 +198,10 @@
       "cause_note": "사용자 공간의 오류 주입(시험)입니다. 하드웨어·드라이버 장애로 보지 않습니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 14 줄의 원문과 드라이버 버전을 기록합니다. NVIDIA Xid 카탈로그는 이 코드를 사용자 공간에서 넣은 가짜 오류로 정의하므로, 같은 시각 오류 주입 도구나 시험 작업이 있었는지 작업 기록으로 확인합니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. 오류 원문과 드라이버 버전, 같은 시각 다른 XID를 함께 보존합니다."
         },
@@ -172,6 +212,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 IGNORE: 조치가 필요하지 않습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "주입한 기록이 없는데 다시 나면 원문과 드라이버 버전으로 공급사에 문의합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

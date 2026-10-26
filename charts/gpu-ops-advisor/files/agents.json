@@ -75,7 +75,17 @@
         "library": "component",
         "os": "component",
         "cpu": "component",
-        "memory": "component"
+        "memory": "component",
+        "accelerator-nvidia-dcgm-clock": "component",
+        "accelerator-nvidia-dcgm-cpu": "component",
+        "accelerator-nvidia-dcgm-prof": "component",
+        "accelerator-nvidia-dcgm-utilization": "component",
+        "accelerator-nvidia-memory": "component",
+        "accelerator-nvidia-nvml": "component",
+        "containerd": "component",
+        "kubelet": "component",
+        "nfs": "component",
+        "tailscale": "component"
       },
       "checks": {
         "reported": "valid"

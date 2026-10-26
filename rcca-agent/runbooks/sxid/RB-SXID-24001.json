@@ -239,6 +239,10 @@
       "cause_note": "NVSwitch 내부 메모리의 정정 가능한 비트 오류로, 하드웨어가 자동 정정합니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "Fabric Manager 로그(기본 /var/log/fabricmanager.log)와 dmesg -T에서 SXID 24001 줄의 NVSwitch PCI·포트를 확인하고, 같은 시각 GPU 쪽 XID 74·45와 작업 중단 여부를 작업 소유자에게 확인합니다. B200·B300은 이 SXID 절차를 적용하지 않습니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "Fabric Manager 로그의 같은 시각 SXID 줄(NVSwitch PCI·Link 번호)과 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
         },
@@ -253,6 +257,10 @@
         {
           "title": "복구 조치",
           "text": "조치가 필요하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "Fabric Manager가 실행 중(sudo systemctl status nvidia-fabricmanager)이고 nvidia-smi nvlink -s의 링크가 정상인지, 같은 SXID가 다시 나지 않는지 4장 이전 사건 이력으로 확인합니다."
         },
         {
           "title": "추이 관찰",
