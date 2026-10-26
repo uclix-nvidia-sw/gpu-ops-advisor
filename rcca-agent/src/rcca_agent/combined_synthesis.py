@@ -26,8 +26,9 @@ from .synthesis_context import bounded_context, encoded_size
 
 NUMERIC_REPAIR = (
     "Previous findings were dropped because their prose contained quantities. "
-    "Rewrite each finding without digits or number words; cite values only through "
-    "the supplied value references. Keep the same evidence references."
+    "Rewrite each finding without digits, times or number words; cite measurements, "
+    "report counts, times and host-history totals only through the incident_brief "
+    "value tokens. Keep the same evidence references."
 )
 
 COMBINED = (
@@ -56,7 +57,8 @@ Hypothesis supporting_refs cite observation_refs, never diagnostics or Runbooks.
 Interpretation cites input_evidence_refs; it is not independent evidence.
 Top-level limitations and hypothesis missing_inputs are Korean strings.
 State limits once. Do not invent causes/actions or self-review.
-Use investigation_summary's full-collection comparisons in findings.
+Use investigation_summary's full-collection comparisons in findings through the
+matching incident_brief value tokens; do not copy its numbers.
 Other GPUs' metrics cannot describe the reported device. Error text is not physical proof.
 Validation feedback concerns response structure."""
 )
@@ -225,14 +227,19 @@ def validate_author(response, view, criteria, details=None, dropped=None):
                 )
                 retained.append({**finding, "statement": expanded})
             except ValueError as exc:
+                diagnostic = getattr(exc, "diagnostic", {})
                 dropped.append(
                     {
                         "code": "invalid_finding_prose",
                         "path": f"$.interpretation.findings[{index}]",
-                        "rule": getattr(exc, "diagnostic", {}).get(
-                            "rule", "invalid_value_reference"
-                        ),
+                        "rule": diagnostic.get("rule", "invalid_value_reference"),
                         "action": "dropped",
+                        # Offsets and kinds only; the rejected text is never kept.
+                        **{
+                            k: diagnostic[k]
+                            for k in ("numeric_diagnostic", "language_diagnostic")
+                            if k in diagnostic
+                        },
                     }
                 )
         interpretation["findings"] = retained
@@ -255,6 +262,20 @@ def validate_author(response, view, criteria, details=None, dropped=None):
         hypotheses = list(hypotheses)
         stated = response["limitations"]
         stated = list(stated) if isinstance(stated, list) else stated
+        if isinstance(stated, list):
+            # Top-level limitations are strings; models mirror the interpretation item
+            # shape. Keep the statement unchanged instead of losing every limitation.
+            for index, item in enumerate(stated):
+                if isinstance(item, dict) and isinstance(item.get("statement"), str):
+                    stated[index] = item["statement"]
+                    dropped.append(
+                        {
+                            "code": "limitation_object",
+                            "path": f"$.limitations[{index}]",
+                            "rule": "shape",
+                            "action": "normalized",
+                        }
+                    )
         # ponytail: one dropped claim per pass; bounded by 8 hypotheses + 32 limitations.
         for _ in range(8 + 32 + 1):
             try:

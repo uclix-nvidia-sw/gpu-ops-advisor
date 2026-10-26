@@ -293,6 +293,27 @@ def validate_synthesis(
             "PARTIAL",
             "TRUE",
             "FALSE",
+            # Domain terms the code-written inputs themselves use in Korean text.
+            "XID",
+            "SXID",
+            "NVRM",
+            "KST",
+            "UTC",
+            "ID",
+            "UUID",
+            "FLEET",
+            "LOKI",
+            "KMSG",
+            "HEALTHY",
+            "UNHEALTHY",
+            "DEGRADED",
+            "FABRIC",
+            "MANAGER",
+            "CRC",
+            "SMART",
+            "RAID",
+            "SEL",
+            "NCCL",
         }
         matches = [
             m
