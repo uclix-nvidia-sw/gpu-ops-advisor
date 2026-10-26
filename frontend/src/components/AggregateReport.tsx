@@ -395,6 +395,8 @@ export function AggregateReport({
   const selectedNodes = (models: Row[]) =>
     [...new Set(models.flatMap((r) => strings(r.nodes)))].sort();
   const unattributed = comparisons.filter((r) => !str(r.namespace));
+  const observationDiagnostics = obj(obj(usage?.quality).observation_diagnostics);
+  const diagnosticMessages = strings(observationDiagnostics.messages);
   const [selection, setSelection] = useState('');
   const [modelSelection, setModelSelection] = useState('');
   const [incidentLimit, setIncidentLimit] = useState(50);
@@ -472,6 +474,28 @@ export function AggregateReport({
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
           <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
+          {diagnosticMessages.length > 0 && (
+            <section aria-label="부분 산출 원인">
+              <h3>활동률 산출·기간 비교의 제한</h3>
+              <p>
+                일부 관측을 활동률 계산이나 기간 비교에 사용할 수 없었습니다. 검증 미실행은 신원
+                충돌이 확인됐다는 뜻이 아닙니다.
+              </p>
+              <ul>
+                {strings(observationDiagnostics.summary).map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+              <details>
+                <summary>대상·기간별 제외 사유 보기</summary>
+                <ul>
+                  {diagnosticMessages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+              </details>
+            </section>
+          )}
           {aiInterpreted && (
             <TopicInterpretation
               topic={usage}
@@ -991,9 +1015,11 @@ export function AggregateReport({
           일평균끼리 평균내지 않고 활동률 합계와 표본 수를 합산합니다. 이전 보고서의 시간가중 평균과
           계산 방식이 다릅니다.
         </p>
-        {strings(value.limitations).map((text) => (
-          <p key={text}>{text}</p>
-        ))}
+        {strings(value.limitations)
+          .filter((text) => !diagnosticMessages.includes(text))
+          .map((text) => (
+            <p key={text}>{text}</p>
+          ))}
         <div className="aggregate-evidence-buttons">
           {onEvidence &&
             strings(value.evidence_refs).map((id, i) => (

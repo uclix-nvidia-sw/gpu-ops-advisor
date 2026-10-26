@@ -16,6 +16,12 @@ Job Controller(JC)에서 보고서 작업을 인수해 관측·사건을 집계�
 
 수집 누락·연결 모호성·잘림은 보고서 품질과 근거에 남깁니다. 응답 크기 한도는 프로세스 최대 메모리 보장이 아니며, 과거 큰 snapshot을 변환하는 migration은 없습니다.
 
+### 부분 산출 원인 / Partial observation diagnostics
+
+[report_diagnostics.py](src/ops_agent/report_diagnostics.py)는 현재·이전 기간의 제외 원인과 연결 변경 검증의 예산/마감 미실행·조회 실패·신원 검증 불충족을 구분합니다. 기존 `missing_inputs`가 비어 있어도 시간별 신원 조건 때문에 부분 산출일 수 있습니다. Namespace 미표기 관측은 별도로 보여주지만 전체 품질 판정에는 포함하며 미할당 GPU로 단정하지 않습니다.
+
+진단은 선택적 `topics[].quality.observation_diagnostics`에 저장하고, LLM 해석이 끝난 뒤 기존 `limitations`에 설명을 연결해 웹과 HTML에 표시합니다. 모델 입력·후보·산식·상태·CSV·조회 순서와 예산은 유지합니다. 과거 결과에 없는 예산 사유는 추정하거나 재작성하지 않습니다. 세부 단위와 검사 경계는 [진단 계약](../docs/specs/ops-agent/aggregate-report-v1.md#partial-observation-diagnostics--부분-산출-진단)을 따릅니다.
+
 ### 주제별 AI 운영 해석 / Topic-level AI interpretation
 
 `ops-interpretation-reason-action-v3`의 Namespace 후보는 아래 운영 제안 경로를 사용합니다. 후보·판단·수치·참조는 기존 코드가 결정하고 LLM은 관측의 의미와 판단 이유를 설명합니다. 후보가 없으면 기존 주제별 관측·의미·확인 경로를 유지합니다. 사건 해석의 참조·판단 범위는 유지하며 원인·반복 장애·복구를 확정하지 않습니다.
