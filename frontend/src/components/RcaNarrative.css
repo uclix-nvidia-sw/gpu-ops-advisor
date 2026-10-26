@@ -1,3 +1,4 @@
+@import '@fontsource-variable/jetbrains-mono';
 .rca-narrative {
   min-width: 0;
   border: 1px solid var(--border);
@@ -232,6 +233,8 @@
   --rca-unknown-soft: #f1f3f2;
   --rca-command: #1f5fa8;
   --rca-command-soft: #e8f0fb;
+  /* RCA report only: commands and IDs in JetBrains Mono, Korean placeholders in the body font. */
+  --font-mono: 'JetBrains Mono Variable', 'Noto Sans KR Variable', ui-monospace, monospace;
 }
 .rca-chips {
   display: flex;
@@ -559,6 +562,9 @@ mark.rca-mark-action {
 mark.rca-mark-caution {
   color: var(--rca-alert);
   background: var(--rca-alert-soft);
+}
+.rca-mark-command.rca-nowrap {
+  white-space: nowrap;
 }
 .rca-points > li.rca-branch-hit {
   border-left: 3px solid var(--rca-warn);

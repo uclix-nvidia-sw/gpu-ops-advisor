@@ -58,7 +58,8 @@ export function Marked({ text }: { text: string }) {
     <>
       {highlightSegments(text).map((s, i) =>
         s.mark === 'command' ? (
-          <code className="rca-mark-command" key={i}>
+          // Short commands stay on one line; long ones may wrap between words.
+          <code className={`rca-mark-command${s.text.length <= 40 ? ' rca-nowrap' : ''}`} key={i}>
             {s.text}
           </code>
         ) : s.mark ? (

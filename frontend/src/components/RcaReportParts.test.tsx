@@ -18,7 +18,7 @@ it('moves the reported branch first and marks commands, actions and prohibitions
   expect(items[0]).toContain('▶ ');
   expect(items[0]).toContain('GPU requires reset');
   expect(items[1]).toContain('GPU lost');
-  expect(html).toContain('<code class="rca-mark-command">nvidia-smi -q</code>');
+  expect(html).toContain('<code class="rca-mark-command rca-nowrap">nvidia-smi -q</code>');
   expect(html).toContain('<mark class="rca-mark-action">호스트를 재시작합니다</mark>');
   expect(html).toContain('<mark class="rca-mark-caution">재시작하지 않고</mark>');
 });
