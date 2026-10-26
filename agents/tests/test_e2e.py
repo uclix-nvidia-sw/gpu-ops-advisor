@@ -3414,6 +3414,26 @@ def test_scheduled_and_manual_reports_repair_same_data(
         for result in (scheduled, manual):
             fetched = client.get(f"/reports/{result['job_id']}")
             assert fetched.status_code == 200, fetched.text
+            diagnostics = next(
+                t for t in result["topics"] if t["topic_id"] == "namespace_usage"
+            )["quality"]["observation_diagnostics"]
+            if diagnostics["messages"]:
+                from html import escape
+
+                exported = client.get(
+                    f"/reports/{result['job_id']}/export", params={"format": "html"}
+                )
+                assert exported.status_code == 200, exported.text
+                stored = next(
+                    t
+                    for t in fetched.json()["result"]["topics"]
+                    if t["topic_id"] == "namespace_usage"
+                )["quality"]["observation_diagnostics"]
+                assert stored == diagnostics
+                for message in diagnostics["messages"]:
+                    assert message in result["limitations"]
+                    assert escape(message) in exported.text
+                    assert escape(message) in render(result)["html"].decode()
             if pattern:
                 assert pattern in fetched.text, (
                     result["quality"]["report"],
@@ -3562,6 +3582,41 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 }:
                     assert "확인한 뒤" in item["summary_parts"]["decision"]
                     assert "검토" in item["summary_parts"]["decision"]
+
+
+@pytest.mark.e2e
+def test_scheduled_and_manual_partial_diagnostics_are_published(stack, monkeypatch):
+    import test_aggregate_report
+    from copy import deepcopy
+
+    original_fixture = test_aggregate_report.fixture
+
+    def partial_fixture(*args, **kwargs):
+        evidence = original_fixture(*args, **kwargs)
+        evidence[2]["snapshot"]["series"][0]["values"][-1][1] = "2"
+        return evidence
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", partial_fixture)
+    monkeypatch.setattr(Upstream, "transition_fixture", "overlap", raising=False)
+    published = []
+    original_worker_result = worker_result
+
+    def capture(*args, **kwargs):
+        body, evidence = original_worker_result(*args, **kwargs)
+        published.append(deepcopy(body))
+        return body, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    assert len(published) == 2
+    for result in published:
+        assert result["result_status"] == "partial"
+        diagnostic = next(
+            t for t in result["topics"] if t["topic_id"] == "namespace_usage"
+        )["quality"]["observation_diagnostics"]
+        assert {r["period_role"] for r in diagnostic["rows"]} == {"current", "previous"}
+        assert all(r["excluded_hours"] == 1 for r in diagnostic["rows"])
+        assert "gpu_interval_unverified" in str(diagnostic)
 
 
 @pytest.mark.e2e

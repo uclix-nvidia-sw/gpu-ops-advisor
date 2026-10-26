@@ -9,6 +9,52 @@ import {
 } from './AggregateReport';
 import { aggregatePeriod } from '../pages/AggregateReportForm';
 
+it('shows saved exclusion causes independently of AI and preserves legacy uncertainty', () => {
+  const reason = '추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함';
+  const detail =
+    'cpc-2 / batch / V100 · 현재 기간: 24시간 중 17시간을 활동률에 반영했습니다. ' +
+    reason +
+    ' 7시간.';
+  const value = {
+    result_status: 'partial',
+    narrative_status: 'omitted',
+    limitations: [detail],
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        status: 'partial',
+        rows: [],
+        quality: {
+          observation_diagnostics: {
+            summary: [reason],
+            messages: [detail, '<script>private</script>'],
+          },
+        },
+      },
+    ],
+  };
+  const render = (data: unknown) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport value={data as typeof value} />
+      </MemoryRouter>,
+    );
+  const html = render(value);
+  expect(html).toContain('활동률 산출·기간 비교의 제한');
+  expect(html.indexOf(reason)).toBeLessThan(html.indexOf('대상·기간별 제외 사유 보기'));
+  expect(html).toContain('검증 미실행은 신원 충돌이 확인됐다는 뜻이 아닙니다');
+  expect(html.split(detail)).toHaveLength(2);
+  expect(html).toContain('&lt;script&gt;private&lt;/script&gt;');
+  expect(html).not.toContain('<script>private</script>');
+  const old = render({
+    ...value,
+    limitations: [],
+    topics: [{ topic_id: 'namespace_usage', status: 'partial', rows: [] }],
+  });
+  expect(old).not.toContain(reason);
+  expect(old).not.toContain('부분 산출 원인');
+});
+
 it('renders observed zero separately from missing observations and comparison', () => {
   const row = {
     cluster_id: 'cpc-1',

@@ -46,12 +46,27 @@ def sample_bounds(series, at, cluster):
     return bounds
 
 
-def verified_transitions(gpus, pods, at, expected_counts, namespaces):
+def verified_transitions(gpus, pods, at, expected_counts, namespaces, *, rejected=None):
     """A whole GPU hour must be continuous, disjoint, and match the hourly identity count."""
     grouped = defaultdict(list)
     for row in gpus:
         grouped[row["labels"].get("UUID")].append(row)
     verified = []
+
+    def reject(gpu, reason, labels=None):
+        if rejected is not None and gpu in expected_counts:
+            rejected.append(
+                {
+                    "gpu_id": gpu,
+                    "reason": reason,
+                    **(
+                        {"namespace": labels["namespace"], "pod": labels.get("pod", "")}
+                        if labels
+                        else {}
+                    ),
+                }
+            )
+
     for gpu, rows in grouped.items():
         rows.sort(key=lambda r: r["first"])
         if (
@@ -65,26 +80,33 @@ def verified_transitions(gpus, pods, at, expected_counts, namespaces):
                 }
             )
             != 1
+        ):
+            reject(gpu, "gpu_identity_unverified")
+            continue
+        if any(
+            not r["labels"].get("Hostname")
+            or not r["labels"].get("modelName")
+            or r["labels"].get("node", r["labels"].get("Hostname"))
+            != r["labels"].get("Hostname")
+            or r["labels"].get("uuid", gpu) != gpu
+            or gpu.startswith("MIG-")
+            or r["labels"].get("allocation_mode") in {"shared", "mig"}
             or any(
-                not r["labels"].get("Hostname")
-                or not r["labels"].get("modelName")
-                or r["labels"].get("node", r["labels"].get("Hostname"))
-                != r["labels"].get("Hostname")
-                or r["labels"].get("uuid", gpu) != gpu
-                or gpu.startswith("MIG-")
-                or r["labels"].get("allocation_mode") in {"shared", "mig"}
-                or any(
-                    k in r["labels"]
-                    for k in ("GPU_I_ID", "GPU_I_PROFILE", "GPU_CI_ID", "instance_id")
-                )
-                for r in rows
+                k in r["labels"]
+                for k in ("GPU_I_ID", "GPU_I_PROFILE", "GPU_CI_ID", "instance_id")
             )
-            or not 238 <= sum(r["values"]["sample_count"] for r in rows) <= 242
+            for r in rows
+        ):
+            reject(gpu, "gpu_attribution_unverified")
+            continue
+        if (
+            not 238 <= sum(r["values"]["sample_count"] for r in rows) <= 242
             or rows[0]["first"] - (at - 3600) > 30
             or at - rows[-1]["last"] > 30
             or any(r["min_gap"] < 14 or r["max_gap"] > 30 for r in rows)
             or any(not 0 < b["first"] - a["last"] <= 30 for a, b in zip(rows, rows[1:]))
         ):
+            reject(gpu, "gpu_interval_unverified")
             continue
         for row in rows:
             labels = row["labels"]
@@ -105,6 +127,7 @@ def verified_transitions(gpus, pods, at, expected_counts, namespaces):
                 )
             ]
             if not matches:
+                reject(gpu, "pod_identity_missing", labels)
                 continue
             matches.sort(key=lambda p: p["first"])
             uids = {p["labels"].get("uid") for p in matches}
@@ -126,6 +149,7 @@ def verified_transitions(gpus, pods, at, expected_counts, namespaces):
                 or matches[0]["first"] > row["first"] + 15
                 or matches[-1]["last"] < row["last"] - 15
             ):
+                reject(gpu, "pod_interval_unverified", labels)
                 continue
             verified.append(
                 {

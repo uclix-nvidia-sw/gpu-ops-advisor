@@ -14,6 +14,7 @@ from .report_interpretation import interpret_report
 from . import incident_summary, namespace_summary
 from .report_contract import MAX_BYTES, VERSION, previous_period, validate
 from .report_queries import ReportQueries, memory_queries
+from .report_diagnostics import observation_diagnostics
 from .incident_findings import add_node_findings
 from .gpu_memory import enrich_memory
 from .workload_queries import QUERY_IDS, workload_queries
@@ -81,16 +82,28 @@ def build_result(claim, context, evidence):
                 if e["query_id"]
                 not in QUERY_IDS | {"hourly_gpu_memory", CONTEXT_QUERY_ID}
             ]
+            excluded, old_excluded = [], []
             current, errors = namespace_summary.summarize(
                 [e for e in activity_inputs if e["time_range"] == data["time_range"]],
                 data["time_range"],
+                excluded=excluded,
             )
             before, old_errors = namespace_summary.summarize(
-                [e for e in activity_inputs if e["time_range"] == previous], previous
+                [e for e in activity_inputs if e["time_range"] == previous],
+                previous,
+                excluded=old_excluded,
             )
             rows = namespace_summary.compare(current, before)
             t["rows"] = rows
             t["missing_inputs"] = sorted(set(errors + old_errors))
+            t["quality"]["observation_diagnostics"] = observation_diagnostics(
+                [
+                    ("current", data["time_range"], current, excluded),
+                    ("previous", previous, before, old_excluded),
+                ],
+                rows,
+                activity_inputs,
+            )
             for i, row in enumerate(rows):
                 target = {k: row[k] for k in ("cluster_id", "namespace", "gpu_model")}
                 target["model"] = target.pop("gpu_model")
@@ -277,10 +290,9 @@ async def run(tools):
         # Optional verification must not spend another cluster's base collection budget.
         for cluster, period, collected in pending:
             uid = collected[0]["input"]["datasourceUid"]
-            if uid and all(e["tool_status"] == "ok" for e in collected):
-                evidence.extend(
-                    await collector.check_transitions(cluster, period, uid, collected)
-                )
+            evidence.extend(
+                await collector.check_transitions(cluster, period, uid, collected)
+            )
         # Optional memory follows all activity/identity work; keep time for interpretation.
         for cluster, period, collected in pending:
             if period == data["time_range"]:
@@ -369,6 +381,11 @@ async def run(tools):
         await task
         raise
     await interpret_report(result, ctx["llm"])
+    # Output-only explanation must not alter the writer's input or candidate selection.
+    for topic in result["topics"]:
+        result["limitations"].extend(
+            topic["quality"].get("observation_diagnostics", {}).get("messages", [])
+        )
     result["llm_usage"] = ctx["llm"].usage
     result["quality"]["query_count"] = collector.calls
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:

@@ -191,9 +191,13 @@ class ReportQueries:
         return evidence
 
     async def check_transitions(self, cluster, period, uid, evidence):
+        activity, _, counts = evidence
+        audit = activity["quality"]["transition_verification"] = []
+        if not uid or any(e["tool_status"] != "ok" for e in evidence):
+            activity["quality"]["transition_skip_reason"] = "base_query_unavailable"
+            return []
         if self.transition_deadline is None:
             self.transition_deadline = min(self.deadline - 30, time.monotonic() + 60)
-        activity, _, counts = evidence
         selected = {
             (float(at), s["metric"].get("UUID"))
             for s in activity["snapshot"]["series"]
@@ -211,12 +215,15 @@ class ReportQueries:
             gpu_ids = sorted(expected)
             # Bound exceptional raw reads; normal hours keep the three aggregate queries.
             for offset in range(0, len(gpu_ids), 16):
-                if (
-                    self.transition_calls + 2 > 32
-                    or time.monotonic() >= self.transition_deadline
-                ):
-                    return output
                 batch = gpu_ids[offset : offset + 16]
+                entry = dict(hour_end=iso(at), gpu_ids=batch, status="not_checked")
+                audit.append(entry)
+                if self.transition_calls + 2 > 32:
+                    entry["reason"] = "transition_query_budget_exhausted"
+                    continue
+                if time.monotonic() >= self.transition_deadline:
+                    entry["reason"] = "transition_deadline_exhausted"
+                    continue
                 pod_names = sorted(
                     {
                         s["metric"]["pod"]
@@ -237,6 +244,7 @@ class ReportQueries:
                     restrict("kube_pod_info", "pod", pod_names),
                 ]
                 inputs, bounds, checks, reason = [], [], [], None
+                rejected = []
                 before = time.monotonic()
                 try:
                     for expr in expressions:
@@ -257,9 +265,15 @@ class ReportQueries:
                         at,
                         {g: expected[g] for g in batch},
                         cluster.get("namespaces"),
+                        rejected=rejected,
                     )
                 except Exception:
                     reason = "transition_verification_unavailable"
+                entry.update(
+                    status="query_failed" if reason else "checked",
+                    reason=reason,
+                    rejected=rejected,
+                )
                 output.append(
                     dict(
                         id=str(uuid4()),
