@@ -1,0 +1,3768 @@
+{
+  "component:accelerator-nvidia-dcgm-inforom": {
+    "name": "DCGM InfoROM 건강 점검 실패",
+    "detail": "InfoROM health failure",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-mem": {
+    "name": "DCGM 메모리 건강 점검 실패",
+    "detail": "memory health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-nvlink": {
+    "name": "DCGM NVLink 건강 점검 실패",
+    "detail": "NVLink health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-nvswitch": {
+    "name": "DCGM NVSwitch 건강 점검 실패",
+    "detail": "NVSwitch health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-pcie": {
+    "name": "DCGM PCIe 건강 점검 실패",
+    "detail": "PCIe health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-power": {
+    "name": "DCGM 전력 건강 점검 실패",
+    "detail": "power health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-dcgm-thermal": {
+    "name": "DCGM 열 건강 점검 실패",
+    "detail": "thermal health failure",
+    "action": "판단: DCGM 코드별 조치",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: DCGM 코드별 조치",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-infiniband": {
+    "name": "InfiniBand 포트 이상 보고",
+    "detail": "device(s) down too long",
+    "action": "판단",
+    "steps": ["즉시 확인·영향", "진단 자료 보존", "판단", "복구", "복구 확인", "공급사 전달"]
+  },
+  "component:accelerator-nvidia-nccl": {
+    "name": "NCCL 라이브러리 segfault 보고",
+    "detail": "NCCL communication error (segfault in libnccl.so)",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "노드 점검",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-peermem": {
+    "name": "GPUDirect RDMA(peermem) 오류 보고",
+    "detail": "peermem error detected (possible GPU communication issue)",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:accelerator-nvidia-persistence-mode": {
+    "name": "GPU 접근 상실·리셋 필요 보고",
+    "detail": "GPU lost",
+    "action": "판단: 보고 사유별 복구 수준",
+    "steps": [
+      "즉시 확인·격리",
+      "진단 자료 보존 (재시작·리셋 전)",
+      "판단: 보고 사유별 복구 수준",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:cpu": {
+    "name": "CPU 정보 수집 오류 보고",
+    "detail": "error calculating CPU usage",
+    "action": "판단: 커널 메시지별",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: 커널 메시지별",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:disk": {
+    "name": "디스크·파일시스템 오류 보고",
+    "detail": "filesystem remounted as read-only due to errors",
+    "action": "판단: 보고 사유별",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "판단: 보고 사유별",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:library": {
+    "name": "NVIDIA 드라이버 라이브러리 누락 보고",
+    "detail": "library \"libnvidia-ml.so\" does not exist",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:memory": {
+    "name": "메모리 정보 수집 오류 보고",
+    "detail": "error getting virtual memory",
+    "action": "판단: 커널 메시지별",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단: 커널 메시지별",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:network-ethernet": {
+    "name": "이더넷 링크 전체 다운 보고",
+    "detail": "all ethernet links are down",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "component:os": {
+    "name": "OS 자원 고갈 보고",
+    "detail": "too many zombie processes",
+    "action": "판단",
+    "steps": [
+      "즉시 확인",
+      "진단 자료 보존 (리셋·재부팅 전)",
+      "판단",
+      "복구",
+      "복구 확인",
+      "공급사 전달"
+    ]
+  },
+  "sxid:10001": {
+    "name": "NVSwitch 오류",
+    "detail": "Host_priv_error",
+    "action": "기타 주의 SXID (FM 표 25) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:10002": {
+    "name": "NVSwitch 오류",
+    "detail": "Host_priv_timeout",
+    "action": "기타 주의 SXID (FM 표 25) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:10003": {
+    "name": "NVSwitch 오류",
+    "detail": "Host_unhandled_interrupt",
+    "action": "기타 주의 SXID (FM 표 25) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:10004": {
+    "name": "NVSwitch 오류",
+    "detail": "Host_thermal_event_start",
+    "action": "기타 주의 SXID (FM 표 25) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 공급사 전달"
+    ]
+  },
+  "sxid:10005": {
+    "name": "NVSwitch 오류",
+    "detail": "Host_thermal_event_end",
+    "action": "기타 주의 SXID (FM 표 25) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 공급사 전달"
+    ]
+  },
+  "sxid:11001": {
+    "name": "NVSwitch 이벤트",
+    "detail": "NVSwitch ingress invalid command",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "판단: 치명 여부와 영향 범위",
+      "복구",
+      "복구 확인",
+      "공급사 전달 (재발)"
+    ]
+  },
+  "sxid:11004": {
+    "name": "NVSwitch 오류",
+    "detail": "Ingress invalid ACL",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11009": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress invalid VCSet",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11012": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:11013": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress header DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11018": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress RID DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11019": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress RLAN DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11020": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress control parity",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:11021": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:11022": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:11023": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:12001": {
+    "name": "NVSwitch 오류",
+    "detail": "egress crossbar overflow",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12002": {
+    "name": "NVSwitch 오류",
+    "detail": "egress packet route",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12020": {
+    "name": "NVSwitch 오류",
+    "detail": "egress sequence ID error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12021": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:12022": {
+    "name": "NVSwitch 오류",
+    "detail": "egress input ECC DBE error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12023": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:12024": {
+    "name": "NVSwitch 오류",
+    "detail": "egress output ECC DBE error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12025": {
+    "name": "NVSwitch 오류",
+    "detail": "egress credit overflow",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12026": {
+    "name": "NVSwitch 오류",
+    "detail": "egress destination request ID error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12027": {
+    "name": "NVSwitch 오류",
+    "detail": "egress destination response ID error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12028": {
+    "name": "NVSwitch 오류",
+    "detail": "egress non-posted PRIV error",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12030": {
+    "name": "NVSwitch 오류",
+    "detail": "egress control parity error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12031": {
+    "name": "NVSwitch 오류",
+    "detail": "egress credit parity error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:12032": {
+    "name": "NVSwitch 오류",
+    "detail": "egress flit type mismatch",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:14017": {
+    "name": "NVSwitch 오류",
+    "detail": "TS ATO timeout",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15001": {
+    "name": "NVSwitch 오류",
+    "detail": "route buffer over/underflow",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15006": {
+    "name": "NVSwitch 오류",
+    "detail": "route transdone over/underflow",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15008": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:15009": {
+    "name": "NVSwitch 오류",
+    "detail": "route GLT DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15010": {
+    "name": "NVSwitch 오류",
+    "detail": "route parity",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15011": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:15012": {
+    "name": "NVSwitch 오류",
+    "detail": "route incoming DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:15013": {
+    "name": "NVSwitch 오류",
+    "detail": "route credit parity",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19047": {
+    "name": "NVSwitch 오류",
+    "detail": "NCISOC HDR ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19048": {
+    "name": "NVSwitch 오류",
+    "detail": "NCISOC DAT ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19049": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19054": {
+    "name": "NVSwitch 오류",
+    "detail": "HDR RAM ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19055": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19056": {
+    "name": "NVSwitch 오류",
+    "detail": "DAT0 RAM ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19057": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19058": {
+    "name": "NVSwitch 오류",
+    "detail": "DAT1 RAM ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19059": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19060": {
+    "name": "NVSwitch 오류",
+    "detail": "CREQ RAM HDR ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19061": {
+    "name": "NVSwitch 오류",
+    "detail": "CREQ RAM DAT ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19062": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19063": {
+    "name": "NVSwitch 오류",
+    "detail": "Response RAM HDR ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19064": {
+    "name": "NVSwitch 오류",
+    "detail": "Response RAM DAT ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19065": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19066": {
+    "name": "NVSwitch 오류",
+    "detail": "COM RAM HDR ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19067": {
+    "name": "NVSwitch 오류",
+    "detail": "COM RAM DAT ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19068": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19069": {
+    "name": "NVSwitch 오류",
+    "detail": "RSP1 RAM HDR ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19070": {
+    "name": "NVSwitch 오류",
+    "detail": "RSP1 RAM DAT ECC DBE Error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:19071": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:19084": {
+    "name": "NVSwitch 오류",
+    "detail": "AN1 Heartbeat Timeout Error",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:20001": {
+    "name": "NVSwitch 오류",
+    "detail": "TX Replay Error",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:20009": {
+    "name": "NVSwitch 오류",
+    "detail": "RX Short Error Rate",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:20012": {
+    "name": "NVSwitch 오류",
+    "detail": "20012",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:20034": {
+    "name": "NVSwitch 오류",
+    "detail": "LTSSM Fault Up Guest VM impact: This SXid is triggered when the associated link has gone down from active. This interrupt is usually associated with other NVLink errors. Guest VM recovery: In an A100 system, restart the VM. In an H100 system, reset the GPU (refer to GPU VM System Reset Capabilities and Limitations). If the issue persists, report the GPU issues. Other guest VM impact: No impact if error is confined to one GPU.",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:22003": {
+    "name": "NVSwitch 오류",
+    "detail": "Minion Halt",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:22011": {
+    "name": "NVSwitch 오류",
+    "detail": "Minion exterror",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:22012": {
+    "name": "NVSwitch 오류",
+    "detail": "Minion Link NA interrupt",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:22013": {
+    "name": "NVSwitch 오류",
+    "detail": "22013(Minion Link DLREQ interrupt",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:23001": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress SRC-VC buffer overflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23002": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress SRC-VC buffer underflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23003": {
+    "name": "NVSwitch 오류",
+    "detail": "egress DST-VC credit overflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23004": {
+    "name": "NVSwitch 오류",
+    "detail": "egress DST-VC credit underflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23005": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet burst error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23006": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet sticky error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23007": {
+    "name": "NVSwitch 오류",
+    "detail": "possible bubbles at ingress",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23008": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet invalid dst error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23009": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet parity error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23010": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress SRC-VC buffer overflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23011": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress SRC-VC buffer underflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23012": {
+    "name": "NVSwitch 오류",
+    "detail": "egress DST-VC credit overflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23013": {
+    "name": "NVSwitch 오류",
+    "detail": "egress DST-VC credit underflow",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23014": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet burst error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23015": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress packet sticky error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23016": {
+    "name": "NVSwitch 오류",
+    "detail": "possible bubbles at ingress",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:23017": {
+    "name": "NVSwitch 오류",
+    "detail": "ingress credit parity error",
+    "action": "항상 치명 SXID (FM 표 24) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:24001": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:24002": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:24003": {
+    "name": "NVSwitch 오류",
+    "detail": "Single bit ECC errors",
+    "action": "비치명 SXID (FM 표 22) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "추이 관찰"
+    ]
+  },
+  "sxid:24004": {
+    "name": "NVSwitch 오류",
+    "detail": "sourcetrack TCEN0 crubmstore DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:24005": {
+    "name": "NVSwitch 오류",
+    "detail": "sourcetrack TCEN0 TD crubmstore DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:24006": {
+    "name": "NVSwitch 오류",
+    "detail": "sourcetrack TCEN1 crubmstore DBE",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "sxid:24007": {
+    "name": "NVSwitch 오류",
+    "detail": "sourcetrack timeout error",
+    "action": "치명 가능 SXID (FM 표 23) · 런북 판단",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "패브릭 상태 확인",
+      "영향 범위",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:1": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:10": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:100": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG2 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:101": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG3 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:102": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG4 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:103": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG5 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:104": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG6 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:105": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG7 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:106": {
+    "name": "정보성 이벤트",
+    "detail": "SMBPBI Test Message",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:107": {
+    "name": "정보성 이벤트",
+    "detail": "SMBPBI Test Message Silent",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:108": {
+    "name": "미사용·구세대 코드",
+    "detail": "Reserved (미사용 코드)",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:109": {
+    "name": "GPU 응답 정지",
+    "detail": "Context Switch Timeout Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:11": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Invalid or corrupted push buffer stream",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:110": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Security Fault Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:111": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Bundle Error Event (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:112": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Supervisor Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:113": {
+    "name": "미사용·구세대 코드",
+    "detail": "DP Link Training Erro (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:114": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Pipeline Underflow Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:115": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Core Channel Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:116": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Window Channel Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:117": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Cursor Channel Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:118": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Pixel Pipeline Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:119": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "GSP RPC Timeout",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:12": {
+    "name": "미사용·구세대 코드",
+    "detail": "Driver error handling GPU exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:120": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "GSP Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:121": {
+    "name": "C2C 링크 오류",
+    "detail": "C2C Error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:122": {
+    "name": "미사용·구세대 코드",
+    "detail": "SPI PMU RPC Read Failure (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:123": {
+    "name": "미사용·구세대 코드",
+    "detail": "SPI PMU RPC Write Failure (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:124": {
+    "name": "미사용·구세대 코드",
+    "detail": "SPI PMU RPC Erase Failure (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:125": {
+    "name": "미사용·구세대 코드",
+    "detail": "Inforom FS Failure (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:126": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE10: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:127": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE11: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:128": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE12: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:129": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE13: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:13": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Graphics Engine Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:130": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE14: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:131": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE15: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:132": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE16: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:133": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE17: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:134": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE18: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:135": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE19: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:136": {
+    "name": "NVLink 오류",
+    "detail": "Link Training Failed",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:137": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVLink Privilege Error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:138": {
+    "name": "미사용·구세대 코드",
+    "detail": "Reserved (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:139": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "OFA1 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:14": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:140": {
+    "name": "ECC·메모리 오류",
+    "detail": "ECC Unrecovered Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:141": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CUDA Fast Path Error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:142": {
+    "name": "미사용·구세대 코드",
+    "detail": "NVENC3 Error",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:143": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "GPU Initialization Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:144": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: SAW Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:145": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: RLW Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:146": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: TLW Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:147": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: TREX Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:148": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: NVLPW_CTRL Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:149": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: NETIR Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:15": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:150": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: MSE Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:151": {
+    "name": "vGPU·가상화 오류",
+    "detail": "Key rotation Error",
+    "action": "VM 재시작 (RESTART_VM)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:152": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "DLA SMMU Error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:153": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "DLA timeout Error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:154": {
+    "name": "정보성 이벤트",
+    "detail": "GPU Recovery Action Changed",
+    "action": "XID 154 복구 수준 따름",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:155": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK: SW Defined Error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:156": {
+    "name": "ECC·메모리 오류",
+    "detail": "Resource Retirement Event",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:157": {
+    "name": "ECC·메모리 오류",
+    "detail": "Resource Retirement Failure",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:158": {
+    "name": "GPU 응답 정지",
+    "detail": "GPU Fatal Timeout",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:159": {
+    "name": "C2C 링크 오류",
+    "detail": "CHI Non-Data Error",
+    "action": "UVM 점검 (CHECK_UVM)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:16": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display engine hung (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:160": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Channel Retirement Event",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:161": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Channel Retirement Failure",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:162": {
+    "name": "전원·열·전력 평활",
+    "detail": "Power Smoothing HW Circuitry capability reengaged",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:163": {
+    "name": "전원·열·전력 평활",
+    "detail": "Power Smoothing HW Circuitry capability disengaged",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:164": {
+    "name": "전원·열·전력 평활",
+    "detail": "Power Smoothing HW Circuitry low lifetime reached",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:165": {
+    "name": "전원·열·전력 평활",
+    "detail": "Power Smoothing HW Circuitry lifetime exhausted",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:166": {
+    "name": "NVLink 오류",
+    "detail": "CC traffic seen prior to link properly being configured for encrypted traffic",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:167": {
+    "name": "PCIe·버스 오류",
+    "detail": "PCIE_FATAL_TIMEOUT",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:168": {
+    "name": "ECC·메모리 오류",
+    "detail": "Errors found in WPR (write protected region)",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:169": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Internal micro-controller halt",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:17": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:170": {
+    "name": "NVLink 오류",
+    "detail": "Interrupt seen in CC mode",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:171": {
+    "name": "ECC·메모리 오류",
+    "detail": "Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:172": {
+    "name": "ECC·메모리 오류",
+    "detail": "Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:173": {
+    "name": "C2C 링크 오류",
+    "detail": "C2C Fatal Link Failure",
+    "action": "런북 순서대로 확인",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:18": {
+    "name": "미사용·구세대 코드",
+    "detail": "Bus mastering disabled in PCI Config Space (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:19": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Engine error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:2": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:20": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted Mpeg push buffer (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:21": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted Motion Estimation push buffer (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:22": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted Video Processor push buffer (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:23": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:24": {
+    "name": "미사용·구세대 코드",
+    "detail": "GPU semaphore timeout (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:25": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Invalid or illegal push buffer stream",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:26": {
+    "name": "미사용·구세대 코드",
+    "detail": "Framebuffer timeout (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:27": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:28": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:29": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:3": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:30": {
+    "name": "미사용·구세대 코드",
+    "detail": "GPU semaphore access error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:31": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "GPU memory page fault",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:32": {
+    "name": "PCIe·버스 오류",
+    "detail": "Invalid or corrupted push buffer stream",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:33": {
+    "name": "미사용·구세대 코드",
+    "detail": "Internal micro-controller error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:34": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:35": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:36": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:37": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Driver firmware error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:38": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Driver firmware error",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:39": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Copy Engine Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:4": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:40": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Copy Engine Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:41": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Copy Engine Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:42": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:43": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "GPU stopped processing",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:44": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Graphics Engine fault during context switch",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:45": {
+    "name": "정보성 이벤트",
+    "detail": "Preemptive cleanup, due to previous errors – Most likely to see when running multiple cuda applications and hitting a DBE",
+    "action": "조건별 절차 (WORKFLOW_XID_45)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:46": {
+    "name": "GPU 응답 정지",
+    "detail": "GPU stopped processing",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:47": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:48": {
+    "name": "ECC·메모리 오류",
+    "detail": "Double Bit ECC Error",
+    "action": "조건별 절차 (WORKFLOW_XID_48)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:49": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:5": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:50": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:51": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:52": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:53": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:54": {
+    "name": "전원·열·전력 평활",
+    "detail": "Auxiliary power is not connected to the GPU board",
+    "action": "기계적 연결 점검 (CHECK_MECHANICALS)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:55": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unused (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:56": {
+    "name": "미사용·구세대 코드",
+    "detail": "Display Engine error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:57": {
+    "name": "미사용·구세대 코드",
+    "detail": "Error programming video memory interface (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:58": {
+    "name": "미사용·구세대 코드",
+    "detail": "Unstable video memory interface detected (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:59": {
+    "name": "미사용·구세대 코드",
+    "detail": "Internal micro-controller error (older drivers) (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:6": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:60": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Video processor exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:61": {
+    "name": "미사용·구세대 코드",
+    "detail": "Internal micro-controller breakpoint/warning (newer drivers) (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:62": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Internal micro-controller halt (newer drivers)",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:63": {
+    "name": "ECC·메모리 오류",
+    "detail": "GPU memory remapping event",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:64": {
+    "name": "ECC·메모리 오류",
+    "detail": "GPU memory remapping failure",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:65": {
+    "name": "미사용·구세대 코드",
+    "detail": "Video processor exception (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:66": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Illegal access by driver",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:67": {
+    "name": "드라이버·펌웨어 오류",
+    "detail": "Illegal access by driver",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:68": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC0 Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:69": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Graphics Engine class error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:7": {
+    "name": "미사용·구세대 코드",
+    "detail": "Invalid or corrupted push buffer address (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:70": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE3: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:71": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE4: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:72": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE5: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:73": {
+    "name": "미사용·구세대 코드",
+    "detail": "NVENC2 Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:74": {
+    "name": "NVLink 오류",
+    "detail": "NVLINK Error",
+    "action": "조건별 절차 (WORKFLOW_NVLINK_ERR)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:75": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE6: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:76": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE7: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:77": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE8: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:78": {
+    "name": "vGPU·가상화 오류",
+    "detail": "vGPU Start Error",
+    "action": "소프트웨어·펌웨어 업데이트 (UPDATE_SWFW)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:79": {
+    "name": "GPU 접근 상실",
+    "detail": "GPU has fallen off the bus",
+    "action": "호스트 재시작 (RESTART_BM)",
+    "steps": [
+      "즉시 확인·격리",
+      "진단 자료 보존 (재시작 전)",
+      "복구 수준 확인 (XID 154)",
+      "판단: 반복·확산",
+      "복구: 호스트 재시작 (RESTART_BM)",
+      "복구 확인",
+      "공급사 전달 (재발·미복구)"
+    ]
+  },
+  "xid:8": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "GPU stopped processing",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:80": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "Corrupted data sent to GPU",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:81": {
+    "name": "미사용·구세대 코드",
+    "detail": "VGA Subsystem Error (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:82": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG0 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:83": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC1 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:84": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC2 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:85": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "CE9: Unknown Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:86": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "OFA Exception",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:87": {
+    "name": "미사용·구세대 코드",
+    "detail": "Reserved (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:88": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC3 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:89": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC4 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:9": {
+    "name": "미사용·구세대 코드",
+    "detail": "Driver error programming GPU (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:90": {
+    "name": "미사용·구세대 코드",
+    "detail": "Reserved (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:91": {
+    "name": "미사용·구세대 코드",
+    "detail": "Reserved (미사용 코드)",
+    "action": "공급사 문의 (CONTACT_SUPPORT)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:92": {
+    "name": "ECC·메모리 오류",
+    "detail": "High single-bit ECC error rate",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:93": {
+    "name": "정보성 이벤트",
+    "detail": "Non-fatal violation of provisioned InfoROM wear limit",
+    "action": "조치 불필요 (IGNORE)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:94": {
+    "name": "ECC·메모리 오류",
+    "detail": "Contained memory error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:95": {
+    "name": "ECC·메모리 오류",
+    "detail": "Uncontained memory error",
+    "action": "GPU 리셋 (RESET_GPU)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:96": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC5 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:97": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC6 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:98": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVDEC7 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  },
+  "xid:99": {
+    "name": "애플리케이션·엔진 오류",
+    "detail": "NVJPG1 Error",
+    "action": "애플리케이션 재시작 (RESTART_APP)",
+    "steps": [
+      "즉시 확인·영향",
+      "진단 자료 보존",
+      "오류별 판단 기준",
+      "복구 조치",
+      "복구 확인",
+      "재발 시 진단·공급사 전달"
+    ]
+  }
+}
