@@ -1,10 +1,11 @@
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
 
-from rcca_agent.report_labels import LABELS
+from rcca_agent.report_labels import LABELS, query_name
 from rcca_agent.synthesis import identifier_tokens, validate_synthesis
 from rcca_agent.report import write_report
 
@@ -230,8 +231,10 @@ async def test_report_all_queries_grouped_without_summing_samples(old):
     )
     sections = {s["id"]: s["text"] for s in result["narrative"]}
     limits = sections["limits"]
+    # One line per query, named for the operator; query IDs stay out of the report.
     for query in ("D05", "D06", "D08", "D09"):
-        assert limits.count(query + "(") == 1
+        assert limits.count(query_name(query) + ":") == 1
+    assert not re.search(r"(?<![A-Za-z0-9])D\d{2}(?![A-Za-z0-9])", limits)
     assert "5개 구간" in limits and "125" not in limits
     assert (
         "조회 시각 정밀도 축소" in limits
@@ -241,7 +244,7 @@ async def test_report_all_queries_grouped_without_summing_samples(old):
     assert "조회는 정상 완료됐으나 데이터 0건" in limits and "부분 산출" in limits
     assert "응답 검증은 완료했지만" in limits
     assert limits.count("관측은 원인 확정이 아닙니다.") == 1
-    assert "D08(GPU–Pod 할당)" in sections["next"]
+    assert "GPU–Pod 할당" in sections["next"] and "D08" not in sections["next"]
     assert "상태 fact로" in sections["next"]
     assert "클러스터: cpc-2\n노드: node-a" in sections["problem"]
     assert evidence == before[1]

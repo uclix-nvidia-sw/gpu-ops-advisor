@@ -167,8 +167,8 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-nvswitch 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 DCGM_FR 코드·스위치·링크 정보를 확인한다.",
-      "D33·D34는 GPU 쪽 NVLink 송수신량이며 스위치 자체 상태가 아니다. 트래픽 감소는 작업 중단의 보조 단서일 뿐이다."
+      "오류·상태 로그에서 같은 노드 dcgm-nvswitch 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 DCGM_FR 코드·스위치·링크 정보를 확인한다.",
+      "NVLink 수신량·송신량은 GPU 쪽 관측이며 스위치 자체 상태가 아니다. 트래픽 감소는 작업 중단의 보조 단서일 뿐이다."
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",

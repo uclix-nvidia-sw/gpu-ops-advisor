@@ -98,7 +98,7 @@ def collection_checks(profile, planned, collected, relations, error_codes):
         "error_logs",
         "오류·시스템 원본",
         ["D09"],
-        "사건 서버·기간의 원본 로그 datasource와 검증된 D09 binding을 연결하세요.",
+        "사건 서버·기간의 원본 로그 datasource에 오류·상태 로그 조회를 연결하세요.",
     )
     # RCA covers the GPU node; Kubernetes workload identity is outside its scope,
     # so no GPU–Pod connection is requested here.

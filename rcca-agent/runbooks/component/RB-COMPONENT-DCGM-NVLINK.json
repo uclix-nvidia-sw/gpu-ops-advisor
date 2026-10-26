@@ -159,8 +159,8 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-nvlink 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·링크 번호를 확인한다.",
-      "D33·D34는 NVLink 송수신량이다. 사건 뒤 트래픽 감소는 작업 중단의 보조 단서일 뿐 링크 상태나 원인 판정 근거가 아니다."
+      "오류·상태 로그에서 같은 노드 dcgm-nvlink 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·링크 번호를 확인한다.",
+      "NVLink 수신량·송신량은 트래픽 관측이다. 사건 뒤 트래픽 감소는 작업 중단의 보조 단서일 뿐 링크 상태나 원인 판정 근거가 아니다."
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",

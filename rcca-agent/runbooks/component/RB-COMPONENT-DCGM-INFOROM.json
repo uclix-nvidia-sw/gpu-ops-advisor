@@ -116,7 +116,7 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-inforom 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드를 확인한다.",
+      "오류·상태 로그에서 같은 노드 dcgm-inforom 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드를 확인한다.",
       "InfoROM 손상 보고는 GPU 보드 영구 저장 영역의 문제이며 사용률·온도 지표로 판단하지 않는다."
     ],
     "operator_guidance": {
