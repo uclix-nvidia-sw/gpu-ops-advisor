@@ -809,8 +809,10 @@ export function AggregateReport({
             <details className="aggregate-unattributed">
               <summary>Namespace에 연결하지 못한 관측 · {unattributed.length}개 모델 묶음</summary>
               <p>
-                이 자료는 Namespace별 사용량 비교에서 제외했습니다. 미사용 GPU라고 판단한 것은
-                아닙니다.
+                {obj(usage.quality).namespace_status_basis ===
+                'attributed_rows_with_current_cluster_coverage_v1'
+                  ? '이 자료는 Namespace 활동 판정에 포함하지 않습니다. 미할당 여부와 전체 GPU 귀속의 완전성은 확인하지 않았습니다.'
+                  : '이 자료는 Namespace별 사용량 비교에서 제외했습니다. 미사용 GPU라고 판단한 것은 아닙니다.'}
               </p>
               <ul>
                 {unattributed.map((row) => (

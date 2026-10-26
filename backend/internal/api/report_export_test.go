@@ -158,3 +158,25 @@ func TestClusterObservationExportKeepsZeroUnknownAndLabels(t *testing.T) {
 		t.Fatal(w.Body.String())
 	}
 }
+
+func TestNamespaceMissingInputsHaveReadableDownloadReasons(t *testing.T) {
+	for code, want := range map[string]string{
+		"namespace_current_attribution_missing": "현재 기간에 선택 범위의 Namespace 귀속 GPU 관측이 없습니다.",
+		"namespace_observations_missing":        "Namespace 관측 자료가 없습니다.",
+	} {
+		t.Run(code, func(t *testing.T) {
+			body := Object{"topics": []any{Object{"missing_inputs": []any{code}}}}
+			out := httptest.NewRecorder()
+			if err := exportMetrics(out, "missing-namespace", "html", body, nil, nil); err != nil {
+				t.Fatal(err)
+			}
+			html := out.Body.String()
+			if !strings.Contains(html, "<li>"+want+"</li>") || strings.Contains(html, "<li>"+code+"</li>") {
+				t.Fatalf("untranslated limitation: %s", html)
+			}
+			if !strings.Contains(html, code) {
+				t.Fatal("stored raw reason was lost")
+			}
+		})
+	}
+}
