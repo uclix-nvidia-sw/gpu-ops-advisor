@@ -169,7 +169,7 @@
         },
         {
           "title": "복구 조치",
-          "text": "NVIDIA 즉시 조치 분류 XID_154: 메시지에 적힌 복구 값대로 조치합니다. None이면 추가 복구가 필요 없고 함께 보고된 XID의 지침만 따릅니다. GPU Reset Required(Reset)이면 해당 GPU의 프로세스를 모두 끝낸 뒤 nvidia-smi -r로 리셋하며, 리셋 범위는 리셋 방식 표를 따릅니다. Node Reboot Required(Reboot)이면 작업을 배출하고 OS를 재부팅하며, AC 전원 차단은 필요하지 않습니다. Drain P2P이면 새 작업 배치를 막고 P2P 통신을 쓰는 GPU 프로세스를 끝낸 뒤 persistence mode를 끄고 값을 다시 조회하며, 그래도 Drain P2P이면 GPU를 리셋합니다. Drain and Reset이면 새 작업 배치만 막고 기존 작업이 끝나거나 체크포인트에 이르면 GPU를 리셋해 메모리 용량을 되찾습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+          "text": "NVIDIA 즉시 조치 분류 XID_154: 메시지에 적힌 복구 값대로 조치합니다. None이면 추가 복구가 필요 없고 함께 보고된 XID의 지침만 따릅니다. GPU Reset Required(Reset)이면 해당 GPU의 프로세스를 모두 끝낸 뒤 nvidia-smi -r로 리셋하며, 리셋 범위는 리셋 방식 표를 따릅니다. Node Reboot Required(Reboot)이면 작업을 배출하고 OS를 재부팅하며, AC 전원 차단은 필요하지 않습니다. Drain P2P이면 새 작업 배치를 막고 P2P 통신을 쓰는 GPU 프로세스를 끝낸 뒤 persistence mode를 끄고 값을 다시 조회하며, 그래도 Drain P2P이면 GPU를 리셋합니다. Drain and Reset이면 새 작업 배치만 막고 기존 작업이 끝나거나 체크포인트에 이르면 GPU를 리셋해 메모리 용량을 되찾습니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

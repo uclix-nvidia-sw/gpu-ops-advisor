@@ -285,7 +285,7 @@
         },
         {
           "title": "복구 조치",
-          "text": "NVIDIA 즉시 조치 분류 IGNORE: 즉시 조치는 필요하지 않고 GPU는 계속 운용할 수 있습니다. GPU Node Triage는 Field Diagnostics로 추가 자료를 수집하라고 안내하므로, 조사 조치 분류(CONTACT_SUPPORT)대로 유지보수 창에 공급사 안내에 따라 진단합니다. 같은 GPU의 정정 가능(SBE) 오류가 계속 늘면 nvidia-smi -q -d ROW_REMAPPER로 row remapping 상태를 함께 확인합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+          "text": "NVIDIA 즉시 조치 분류 IGNORE: 즉시 조치는 필요하지 않고 GPU는 계속 운용할 수 있습니다. GPU Node Triage는 Field Diagnostics로 추가 자료를 수집하라고 안내하므로, 조사 조치 분류(CONTACT_SUPPORT)대로 유지보수 창에 공급사 안내에 따라 진단합니다. 같은 GPU의 정정 가능(SBE) 오류가 계속 늘면 nvidia-smi -q -d ROW_REMAPPER로 row remapping 상태를 함께 확인합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

@@ -85,7 +85,7 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet nccl 점검이 커널 로그에서 libnccl.so 안의 segfault(프로세스 비정상 종료)를 찾아 Unhealthy로 보고한 것입니다. GPU 간 통신 라이브러리(NCCL)를 쓰던 프로세스가 죽었다는 뜻이며 하드웨어 고장 보고는 아닙니다.",
+      "meaning": "GPU 간 통신 라이브러리(NCCL)를 쓰던 프로세스가 libnccl.so 안에서 비정상 종료(segfault)했다는 커널 로그 보고이며, 하드웨어 고장 보고가 아닙니다. Fleet nccl 점검은 커널 로그에서 이 segfault 줄을 찾아 Unhealthy로 보고합니다.",
       "cause_note": "애플리케이션·NCCL 버전 문제나 버그, 네트워크(IB/RoCE)·GPU 오류에 따른 통신 실패가 주요 원인 후보입니다.",
       "next_checks": [
         {

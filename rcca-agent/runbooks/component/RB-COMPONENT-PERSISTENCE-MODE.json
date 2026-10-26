@@ -129,7 +129,7 @@
       "next_checks": [
         {
           "title": "즉시 확인·격리",
-          "text": "kubectl cordon <노드>로 새 작업 배치를 먼저 막습니다. nvidia-smi -L과 nvidia-smi -q로 어느 GPU가 사라졌거나 오류를 내는지 확인합니다. dmesg -T에서 같은 시각의 NVRM Xid 줄(특히 XID 79, XID 154)을 찾아 함께 기록합니다. GPU가 정상 조회되면 로그 주입 시험이나 DCGM 쪽 일시 오류일 수 있으므로 복구 조치 전에 확인합니다."
+          "text": "kubectl cordon <노드>로 새 작업 배치를 먼저 막습니다. nvidia-smi -L과 nvidia-smi -q로 어느 GPU가 사라졌거나 오류를 내는지 확인합니다. dmesg -T에서 같은 시각의 NVRM Xid 줄(특히 XID 79, XID 154)을 찾아 함께 기록합니다. GPU가 정상 조회되면 DCGM 쪽 일시 오류일 수 있으므로, 커널 로그(NVRM: Xid 줄)에 같은 오류가 있는지 복구 조치 전에 확인합니다."
         },
         {
           "title": "진단 자료 보존 (재시작·리셋 전)",

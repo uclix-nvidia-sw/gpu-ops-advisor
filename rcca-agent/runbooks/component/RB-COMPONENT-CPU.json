@@ -114,12 +114,12 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet cpu 점검이 CPU 사용률이나 load average를 계산하지 못해 Unhealthy로 보고한 것입니다. CPU 하드웨어 오류 보고가 아니라 모니터링 에이전트가 운영체제의 CPU 통계를 읽지 못했다는 뜻이며, Fleet 시험용 장애 주입도 같은 사유를 냅니다. Fleet은 이와 별도로 커널 로그의 CPU soft lockup과 'blocked for more than' 메시지를 이벤트로 기록하므로 같은 시각 커널 로그를 함께 봅니다.",
-      "cause_note": "Fleet 에이전트의 일시적인 수집 실패나 시험용 장애 주입이 주요 원인 후보입니다. 같은 시각 soft lockup·hung task 메시지가 있으면 커널·작업·저장장치 문제를, 'Hardware Error' 메시지가 있으면 하드웨어 오류를 후보로 둡니다.",
+      "meaning": "모니터링 에이전트(Fleet)가 운영체제의 CPU 통계를 읽지 못해 CPU 사용률·load average를 계산하지 못했다는 보고이며, CPU 하드웨어 오류 보고가 아닙니다. Fleet은 이와 별도로 커널 로그의 CPU soft lockup과 'blocked for more than' 메시지를 이벤트로 기록하므로 같은 시각 커널 로그를 함께 봅니다.",
+      "cause_note": "Fleet 에이전트가 운영체제 통계를 읽는 과정의 일시적인 실패가 주요 원인 후보입니다. 같은 시각 soft lockup·hung task 메시지가 있으면 커널·작업·저장장치 문제를, 'Hardware Error' 메시지가 있으면 하드웨어 오류를 후보로 둡니다.",
       "next_checks": [
         {
           "title": "즉시 확인·영향",
-          "text": "같은 시각 Fleet 장애 주입 시험이 있었는지 시험 담당자에게 확인합니다. top과 cat /proc/loadavg로 노드 CPU 상태를, 3장 표에서 CPU 사용률과 평균 부하의 사건 전후 값을 확인합니다. journalctl -k(또는 dmesg -T)에서 같은 시각 'soft lockup', 'blocked for more than', 'Hardware Error' 줄이 있는지 확인합니다."
+          "text": "top과 cat /proc/loadavg로 노드에서 CPU 통계가 직접 읽히는지 확인하고, 3장 표에서 CPU 사용률과 평균 부하의 사건 전후 값을 봅니다. journalctl -k(또는 dmesg -T)에서 같은 시각 'soft lockup', 'blocked for more than', 'Hardware Error' 줄이 있는지 확인합니다."
         },
         {
           "title": "진단 자료 보존 (리셋·재부팅 전)",
@@ -127,7 +127,7 @@
         },
         {
           "title": "판단: 커널 메시지별",
-          "text": "커널 메시지 없이 수집 오류만 있으면 모니터링 에이전트 문제이며 하드웨어 조치는 필요 없습니다. soft lockup은 커널이 한 CPU에서 20초 넘게(기본 watchdog_thresh 10초의 2배) 커널 모드로 돈 것이며, 메시지 괄호 안의 '<프로세스>:<PID>'로 해당 작업을 찾습니다. 'task <프로세스>:<PID> blocked for more than N seconds'는 D 상태(중단할 수 없는 대기) 작업이 hung_task_timeout_secs보다 오래 실행되지 못한 것으로, 보통 디스크·NFS I/O 대기이므로 저장장치 상태부터 확인합니다. 'Hardware Error' 줄은 하드웨어가 보고한 오류이므로 공급사 전달 대상입니다."
+          "text": "노드에서 CPU 통계가 정상으로 읽히고 커널 메시지도 없으면 모니터링 에이전트의 수집 문제이며, 하드웨어 조치는 필요 없습니다. soft lockup은 커널이 한 CPU에서 20초 넘게(기본 watchdog_thresh 10초의 2배) 커널 모드로 돈 것이며, 메시지 괄호 안의 '<프로세스>:<PID>'로 해당 작업을 찾습니다. 'task <프로세스>:<PID> blocked for more than N seconds'는 D 상태(중단할 수 없는 대기) 작업이 hung_task_timeout_secs보다 오래 실행되지 못한 것으로, 보통 디스크·NFS I/O 대기이므로 저장장치 상태부터 확인합니다. 'Hardware Error' 줄은 하드웨어가 보고한 오류이므로 공급사 전달 대상입니다."
         },
         {
           "title": "복구",
