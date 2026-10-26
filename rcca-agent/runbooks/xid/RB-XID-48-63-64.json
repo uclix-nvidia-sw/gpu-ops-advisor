@@ -247,11 +247,11 @@
       "NVIDIA WORKFLOW_XID_48은 단독 48과 63/64 동반을 구분한다. 단독의 RESET_GPU/RUN_FIELDDIAG, 동반의 DRAIN_AND_RESET 등은 원문 조건을 확인한 운영자 검토 대상이다.",
       "원본 오류의 영향 영역(FB/SRAM), GPU 모델, ECC/row-remap 정보와 SRAM 임계 플래그를 확인한다. 플래그 값과 제품별 의미를 확보하지 못하면 상세 조치 분기를 보류한다.",
       "Fleet/GPUd의 48·63·64 정적 목록은 재부팅/점검을 포함하나 NVIDIA 63의 일반 분류와 동일하지 않다. 모델·동반 오류·상태 평가를 확인하며 목록을 일괄 실행 지시로 변환하지 않는다.",
-      "D09에서 같은 GPU의 48·63·64 시각을 확인한다. 조회 누락이 있으면 단독 발생이라고 단정하지 않는다. 63/64만 있는 사건에는 이 Xid 48 조사 계획을 매칭하지 않는다.",
+      "오류·상태 로그에서 같은 GPU의 48·63·64 시각을 확인한다. 조회 누락이 있으면 단독 발생이라고 단정하지 않는다. 63/64만 있는 사건에는 이 Xid 48 조사 계획을 매칭하지 않는다.",
       "Fleet 고정 카탈로그: Double Bit ECC Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "NVIDIA 적용: A100, H100, B100, GB200.",
       "NVIDIA 조치 분류: immediate=WORKFLOW_XID_48; investigatory=WORKFLOW_XID_48; Xid154 linkage=CUDA 12.7; GPU driver R565.",
-      "D03의 MiB 사용량은 용량 사용 관측이다. ECC 오류 발생·정상 여부나 오류 원인을 증명하지 않으며 사용률은 검증된 전체 용량 없이 계산하지 않는다."
+      "GPU 메모리 사용량(MiB)은 용량 사용 관측이다. ECC 오류 발생·정상 여부나 오류 원인을 증명하지 않으며 사용률은 검증된 전체 용량 없이 계산하지 않는다."
     ],
     "recommendations": [
       {

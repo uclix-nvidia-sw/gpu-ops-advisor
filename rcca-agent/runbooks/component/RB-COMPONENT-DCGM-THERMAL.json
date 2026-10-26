@@ -153,8 +153,8 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-thermal 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
-      "D04·D23은 온도 관측이며 제품별 임계값 없이 과열로 판정하지 않는다. D45는 비트마스크이므로 크기를 비교하지 않고 0x20(SW 열 제한)·0x40(HW 열 제한) 비트 포함 여부만 원문 값으로 설명한다."
+      "오류·상태 로그에서 같은 노드 dcgm-thermal 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
+      "GPU 온도·GPU 메모리 온도는 온도 관측이며 제품별 임계값 없이 과열로 판정하지 않는다. 클록 제한 사유는 비트마스크이므로 크기를 비교하지 않고 0x20(SW 열 제한)·0x40(HW 열 제한) 비트 포함 여부만 원문 값으로 설명한다."
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",

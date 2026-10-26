@@ -111,8 +111,8 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-pcie 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
-      "D44는 GPU 단위 누적 카운터다. 사건 전후 증가 여부만 비교하고 reset·공백 검증 없이 AER 발생이나 원인으로 해석하지 않는다."
+      "오류·상태 로그에서 같은 노드 dcgm-pcie 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
+      "PCIe replay 누적값은 GPU 단위 누적 카운터다. 사건 전후 증가 여부만 비교하고 reset·공백 검증 없이 AER 발생이나 원인으로 해석하지 않는다."
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",

@@ -13,7 +13,7 @@ from .evidence_interpretation import (
     response_refs,
 )
 from .evaluation import FIXED_LIMITS
-from .report_labels import LABELS
+from .report_labels import LABELS, plain_query_ids, query_name
 
 
 def label(code):
@@ -77,10 +77,10 @@ OUT_OF_SCOPE = {
     "physical_or_synthetic_origin": "실제 장애·주입 시험 구분",
 }
 MATCH_DETAIL = {
-    "reported_reasons": "D09 상태 보고 사유",
-    "other_codes": "D09의 다른 오류 코드",
-    "event_devices": "D09 이벤트 장치",
-    "event_device": "D09 이벤트 장치",
+    "reported_reasons": "로그의 상태 보고 사유",
+    "other_codes": "로그의 다른 오류 코드",
+    "event_devices": "로그의 이벤트 장치",
+    "event_device": "로그의 이벤트 장치",
     "inventory_gpu_candidates": "로그의 GPU 목록에서 대응된 GPU",
     "last_healthy_at": "마지막 정상 보고",
     "first_unhealthy_at": "첫 오류 보고",
@@ -95,12 +95,8 @@ def reader_text(text):
         "상태 보고의 발생 시각이 비어 있거나 초기값입니다",
         text,
     )
+    text = plain_query_ids(text)
     for old, new in {
-        "D09": "오류·상태 로그",
-        "D02": "GPU 사용률",
-        "D11": "GPU 전력",
-        "D44": "PCIe 재전송 횟수",
-        "D13": "보조 원본 로그",
         "GPU 재고": "수집된 GPU 목록",
         "GPU 인벤토리": "수집된 GPU 목록",
         "표본": "측정 기록",
@@ -291,7 +287,8 @@ def report_sources(material):
         if not row.get("complete"):
             add(
                 "limits",
-                f"{row['query_id']}: {label(row.get('reason') or row.get('tool_status'))}",
+                f"{query_name(row['query_id'])}: "
+                f"{label(row.get('reason') or row.get('tool_status'))}",
                 row.get("evidence_refs", []),
             )
     for missing in material.get("missing_inputs", []):
@@ -472,7 +469,7 @@ async def write_material_report(result, material, llm):
             {
                 "id": section,
                 "title": "수집·작성 상세" if section == "limits" else title,
-                "text": text,
+                "text": reader_text(text),
                 "evidence_refs": list(
                     dict.fromkeys(
                         ref for row in selected for ref in row["evidence_refs"]

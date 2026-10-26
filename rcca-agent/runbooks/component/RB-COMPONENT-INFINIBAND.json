@@ -98,7 +98,7 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 infiniband 컴포넌트의 Unhealthy 보고 사유(활성 포트 수·속도 부족, 물리 상태, 장시간 다운, flapping)와 해당 장치 이름을 확인한다.",
+      "오류·상태 로그에서 같은 노드 infiniband 컴포넌트의 Unhealthy 보고 사유(활성 포트 수·속도 부족, 물리 상태, 장시간 다운, flapping)와 해당 장치 이름을 확인한다.",
       "IB 포트·카운터 지표는 등록 조회가 없으므로 보고 사유와 시각만으로 설명하고, GPU 지표로 네트워크 상태를 판단하지 않는다."
     ],
     "operator_guidance": {

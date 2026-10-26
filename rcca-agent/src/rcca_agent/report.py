@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from .report_editor import prioritize
 
-from .report_labels import label, query_label
+from .report_labels import label, plain_query_ids, query_name
 from .fleet_events import pci
 from .incident_findings import incident_findings
 from .report_findings import statements as finding_statements
@@ -354,7 +354,7 @@ async def write_report(result, data, clues, evidence, llm, material=None):
             "확인하고, 원본 데이터 존재 여부와 조회 권한·한도를 점검한 뒤 다시 조사해야 합니다. "
             + "대상 조회: "
             + ", ".join(
-                query_label(q) for q in sorted({e["query_id"] for e in incomplete})
+                query_name(q) for q in sorted({e["query_id"] for e in incomplete})
             ),
             [e["id"] for e in incomplete],
         )
@@ -530,9 +530,10 @@ async def write_report(result, data, clues, evidence, llm, material=None):
         }[status]
         add(
             "action" if status == "collected" and not lead else "limits",
-            f"{check['title']}: {label_text}. "
-            + (", ".join(check["query_ids"]) or "등록된 조회 없음")
-            + (" · " + ", ".join(check["reasons"]) if check["reasons"] else ""),
+            f"{check['title']}: {label_text}"
+            + ("" if check["query_ids"] else " · 등록된 조회 없음")
+            + (" · " + ", ".join(check["reasons"]) if check["reasons"] else "")
+            + ".",
             check["evidence_refs"],
         )
         if status in {"connection_required", "plan_required", "identity_unresolved"}:
@@ -622,7 +623,7 @@ async def write_report(result, data, clues, evidence, llm, material=None):
             summary = "조회는 정상 완료됐으나 데이터 0건"
         if all(e["quality"].get("derived_from") for e in chunks):
             summary += " · 원본 로그에서 파생한 보기(추가 관측 아님)"
-        add("limits", f"{query_label(query_id)}: {summary}.", [e["id"] for e in chunks])
+        add("limits", f"{query_name(query_id)}: {summary}.", [e["id"] for e in chunks])
     for limitation in dict.fromkeys(result["limitations"]):
         add("limits", limitation)
 
@@ -649,7 +650,9 @@ async def write_report(result, data, clues, evidence, llm, material=None):
             title="이 오류에 대한 참고 안내"
             if lead and section == "guidance"
             else title,
-            text="\n\n".join(s["text"] for s in ordered if s["section"] == section),
+            text=plain_query_ids(
+                "\n\n".join(s["text"] for s in ordered if s["section"] == section)
+            ),
             evidence_refs=list(
                 dict.fromkeys(
                     ref

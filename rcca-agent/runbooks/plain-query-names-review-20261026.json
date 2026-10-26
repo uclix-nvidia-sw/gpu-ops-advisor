@@ -1,0 +1,342 @@
+{
+  "status": "local_review_not_published",
+  "checked_at": "2026-10-26",
+  "scope": "보고서에 옮겨지는 런북 문장(analysis_guidance·limitations)의 조회 ID(D02·D09 등)를 지표 이름으로 바꾼다. 수집 계획·required_queries·판단 기준은 바뀌지 않는다.",
+  "method": "Metric names follow the report's section 3 names (incident_dossier.METRICS) and 오류·상태 로그 for D09; awkward swaps are hand-written, the rest use report_labels.plain_query_ids. before/after sha256 over canonical content JSON with previous_values for exact restoration.",
+  "entries": [
+    {
+      "file": "component/RB-COMPONENT-CPU.json",
+      "before_content_sha256": "3fc56380fa2b26219af279d8acd9fb55a00647e3d8013a0a1df30c40e9f3cf0a",
+      "after_content_sha256": "a55500bb594496311588ff0441d37b46dc14291f5f292df2fa0698d08ebe22f3",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 cpu 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 모니터링 에이전트의 수집 오류이며 CPU 하드웨어 상태가 아니다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-INFOROM.json",
+      "before_content_sha256": "ffe48577a5023338ce899842a2e00733d36ba49e8e2f580e6ea348594583ff48",
+      "after_content_sha256": "797ac31a2ba3c6068000e35f11329d9e6bd470f379bc04978157dfe6d0982f7b",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-inforom 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드를 확인한다.",
+          "InfoROM 손상 보고는 GPU 보드 영구 저장 영역의 문제이며 사용률·온도 지표로 판단하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-MEM.json",
+      "before_content_sha256": "577dd892c2319db2c7430fc0003b784f488c898ab04f406ddac656f64cf9e824",
+      "after_content_sha256": "e6c9cb9f3fb2729c0e0b4dfcdf96eefe3e8ab6dae996227273db67283158bd77",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-mem 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다. 코드 번호는 원문 값 그대로 인용한다.",
+          "D40·D36은 GPU 단위 누적값이며 사건 전후 증가 여부만 비교한다. 드라이버 재로드·리셋으로 휘발성 값이 초기화될 수 있으므로 감소를 오류 해소로 해석하지 않는다. D23은 보조 관측이며 임계값 판정에 쓰지 않는다.",
+          "row remapping 대기·실패와 SRAM 임계 플래그는 수집하지 않는다. 운영자가 nvidia-smi -q -d ROW_REMAPPER로 확인할 항목으로 남긴다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-NVLINK.json",
+      "before_content_sha256": "e950464157ef04bb8bb135c0ba8baa6a34f78140e067da8d736d25b972bb64d9",
+      "after_content_sha256": "a73ece45ce71c70a5568bac568c951aefbede05aa42389300ba71bfc96dbffdb",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-nvlink 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·링크 번호를 확인한다.",
+          "D33·D34는 NVLink 송수신량이다. 사건 뒤 트래픽 감소는 작업 중단의 보조 단서일 뿐 링크 상태나 원인 판정 근거가 아니다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-NVSWITCH.json",
+      "before_content_sha256": "7ce0bc09dbf09a74b2fece62c07130ff708a67d61a92850f773881a08800f3cf",
+      "after_content_sha256": "592962bdf0d79a5e03af41db69ae2df839a9767a7a6e1036296cd2483de9e136",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-nvswitch 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 DCGM_FR 코드·스위치·링크 정보를 확인한다.",
+          "D33·D34는 GPU 쪽 NVLink 송수신량이며 스위치 자체 상태가 아니다. 트래픽 감소는 작업 중단의 보조 단서일 뿐이다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-PCIE.json",
+      "before_content_sha256": "49d53dc317e72632c8396add5dbb78953c5bfb281fba4a01e6c5410e63b797e0",
+      "after_content_sha256": "5efa372d68f79552e6cd01a711e955d1917d3fd1345b5bf65b7b54d4fef7f783",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-pcie 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
+          "D44는 GPU 단위 누적 카운터다. 사건 전후 증가 여부만 비교하고 reset·공백 검증 없이 AER 발생이나 원인으로 해석하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-POWER.json",
+      "before_content_sha256": "7f91744c661189d72c681e8e9626d8c5697c24128e64dcedca1bb88be49d4e35",
+      "after_content_sha256": "59a088d2a181da0fa0d3782d8c5522014642e9ea42dbf3dfead44372d66cd479",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-power 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
+          "D11은 전력 사용량, D48은 적용 전력 한도이며 소비량이 아니다. D45는 비트마스크이므로 0x4(SW 전력 한도)·0x80(HW 전력 브레이크) 비트 포함 여부만 원문 값으로 설명한다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DCGM-THERMAL.json",
+      "before_content_sha256": "6fccbda1dbf5f331748ef742c32ff621ac100de7b344bd688382d6269da66524",
+      "after_content_sha256": "5e661df580e7e8a5ce531096d6a90c8cc4336de1ab681b762d923a6b986a43f5",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 dcgm-thermal 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다.",
+          "D04·D23은 온도 관측이며 제품별 임계값 없이 과열로 판정하지 않는다. D45는 비트마스크이므로 크기를 비교하지 않고 0x20(SW 열 제한)·0x40(HW 열 제한) 비트 포함 여부만 원문 값으로 설명한다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-DISK.json",
+      "before_content_sha256": "0d811a803d43f647c49bce5873ddb509727013969b3e230e3cf12bcada045aa9",
+      "after_content_sha256": "d276b767b2720404c8a7f48e50de71b157968f4390cf1e78801aa97810c5f9d6",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 disk 컴포넌트의 Unhealthy 보고 사유와 처음·마지막 보고 시각을 확인한다. 사유 문자열이 여러 패턴을 쉼표로 묶을 수 있으므로 패턴별로 나눠 설명한다.",
+          "보고에 포함된 파티션 정보(장치·마운트 지점·파일시스템·여유 공간)는 Fleet 보고 시점의 값이며 현재 마운트 상태가 아니다.",
+          "Fleet 권고(REBOOT_SYSTEM·HARDWARE_INSPECTION)는 재부팅 이력 기반 규칙의 결과이며 수행 증거가 아니다. GPU 지표는 디스크 상태를 알려 주지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-INFINIBAND.json",
+      "before_content_sha256": "2b9085706d738ccec434d70457f6cc6da89646b95500aa06ed8655cbc80506b6",
+      "after_content_sha256": "315e726624313659d0ac7253ae64784f772467ba8944be694999cf0fc68fe92d",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 infiniband 컴포넌트의 Unhealthy 보고 사유(활성 포트 수·속도 부족, 물리 상태, 장시간 다운, flapping)와 해당 장치 이름을 확인한다.",
+          "IB 포트·카운터 지표는 등록 조회가 없으므로 보고 사유와 시각만으로 설명하고, GPU 지표로 네트워크 상태를 판단하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-LIBRARY.json",
+      "before_content_sha256": "2ea4e262568fbcae8c12c35e1e8d0fb081a47382a339fcd7056d510758515ec9",
+      "after_content_sha256": "96c2e456c539e6b5eedcc3ccea3ab1c8606b9aac18469c9184f1ff7f0082bfdd",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 library 컴포넌트의 Unhealthy 보고 사유와 누락된 라이브러리 이름을 확인한다.",
+          "라이브러리 누락은 드라이버 설치 상태 문제이며 GPU 하드웨어 상태를 뜻하지 않는다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "드라이버 설치 기록과 GPU Operator 파드 로그는 수집하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-MEMORY.json",
+      "before_content_sha256": "6ae58f8d78ab806ab4ed0b9e653f61d2e48b7b6596f611f6e7b8be07d7c8613c",
+      "after_content_sha256": "581bea91789a23dc23c242c376f000fe477b863c749a64022522a876831f771d",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 memory 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 모니터링 에이전트의 수집 오류이며 메모리 하드웨어 상태가 아니다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-NCCL.json",
+      "before_content_sha256": "8d798031ec62b10d835da05d00f1ca6ae48e3843146f9cc074e39cd7cd2abafa",
+      "after_content_sha256": "4a93a766afb7fae915501e192978836b3c6bf4372f79756365b76cb3ff218545",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 nccl 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 프로세스 비정상 종료 패턴이며 하드웨어 고장 판정이 아니다.",
+          "같은 시각의 GPU XID·IB 포트 보고는 D09 범위에 없으므로 운영자 확인 항목으로 남긴다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "segfault를 낸 프로세스·작업 이름과 NCCL 로그는 수집하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-NETWORK-ETHERNET.json",
+      "before_content_sha256": "ed930ee7436e0e2316e7eb29c584ecf9436c9958a6753dce21ce7a867d828618",
+      "after_content_sha256": "19f6abe1a6ad7269fd76f8cbfef7baa1630dac9259e258e0a4eda2719775a9d3",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 network-ethernet 컴포넌트의 Unhealthy 보고 사유와 다운된 인터페이스 목록을 확인한다.",
+          "모든 링크가 다운이면 로그 전송도 끊겼을 수 있으므로 보고 시각과 수신 지연을 구분하고, 지표 공백을 장애 지속 시간으로 바꾸지 않는다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "스위치 포트·케이블 상태는 수집하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-OS.json",
+      "before_content_sha256": "0d0e459b3920e4867a2a0fd5a94347d344180c7e752f8013c3cc8e5255edff94",
+      "after_content_sha256": "3f5a13255be73ee1c72ac57a97aa5ad19c81e582f03bd9dded94729cbad14d48",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 os 컴포넌트의 Unhealthy 보고 사유(좀비 수, 실행 중 PID 비율, 파일 핸들 비율, OS 정보 조회 오류)를 확인한다.",
+          "임계값은 Fleet 설정값(기본: PID·파일 핸들 95%)이며 하드웨어 상태와 무관하다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "프로세스 목록과 파일 핸들 사용량은 수집하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-PEERMEM.json",
+      "before_content_sha256": "235ec957deb1dea0dea765e40174583284b29dbca6473f85f29b852dbd0bdef0",
+      "after_content_sha256": "bea2f95082ec254ccfb8db234fdf135b274eff28432242258692b3d1d3dab059",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 peermem 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 커널 메시지 패턴 일치이며 통신 실패나 원인 확정이 아니다.",
+          "같은 시각 NCCL·IB 보고는 D09 범위에 없으므로 운영자 확인 항목으로 남긴다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "nvidia-peermem 모듈 상태와 작업 로그는 수집하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-PERSISTENCE-MODE.json",
+      "before_content_sha256": "a26465e4137381db407cc39805389d92da7682cc0af5f8088ba4074e1b193d92",
+      "after_content_sha256": "b79c447ba3dbb2d4c132338a90adba313ef18b208b603c80c79a38e5142ba06e",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 같은 노드 persistence-mode 컴포넌트의 Unhealthy 보고 사유(GPU lost, GPU requires reset, persistence mode 조회 오류)와 처음·마지막 보고 시각을 확인한다. 조회 오류 문구는 Fleet 버전에 따라 'error getting persistence mode'(NVML) 또는 'failed to get DCGM persistence-mode field'(DCGM)이다. 마지막 Healthy 보고와 첫 Unhealthy 보고 사이를 시작 구간으로 설명한다.",
+          "D02·D11은 사건 전후 같은 노드 GPU의 표본 지속 여부를 비교하는 보조 관측이다. 표본이 계속돼도 접근 회복의 근거로 쓰지 않고, 공백은 수집 주기를 넘을 때만 끊김으로 설명한다.",
+          "같은 시각 XID 79·154 등 커널 로그는 D09 범위에 없으므로 운영자 확인 항목으로 남긴다. Fleet 권고 REBOOT_SYSTEM은 정적 기본값이며 수행 증거가 아니다."
+        ],
+        "limitations": [
+          "D09는 이 컴포넌트의 Fleet 보고만 조회한다. 같은 시각 XID·커널 로그·DCGM 원문을 수집하지 않으므로 미수집을 오류 부재로 해석하지 않는다.",
+          "보고는 Fleet가 받은 점검 결과이며 현재 장치 상태나 원인 확정이 아니다. 로그 주입 시험과 실제 장애는 같은 경로로 보고될 수 있다."
+        ]
+      }
+    },
+    {
+      "file": "RB-GENERAL-GPU-NODE.json",
+      "before_content_sha256": "0bcdb422ba94248584b944001729bd937f1b6aa9bc13e44675d0d25845cafce3",
+      "after_content_sha256": "7cdcfd0f7aef1fddeb161d7ceb38d97738640039f7a766c5ee25757ce9b1cfdb",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "limitations": [
+          "전용 Runbook이 없을 때 사용한다. 대상 식별·원본 로그·상태가 부족하면 원인을 보류한다.",
+          "일반 조사에서 D09 로그와 D02 사용률을 조회해도 생산자 상태·대상·시각의 검증이 자동 충족되지는 않는다. 미지원 컴포넌트는 원문 문맥으로만 남기며 전용 오류 해석이나 원인 판정을 만들어내지 않는다.",
+          "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다."
+        ]
+      }
+    },
+    {
+      "file": "sxid/RB-SXID-11001.json",
+      "before_content_sha256": "98548afdc3a66291ace81c9c7d6ef18cc076503acc743cacbd1ca847f1fcf699",
+      "after_content_sha256": "34922dc0844c1975490c78c4bd2e35d33ee85b16d01a9e7d68acb71ab66cae34",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "FM 문헌의 공통 Recovery에는 guest VM 복구가 포함된다. GPUd 시스템 재부팅 권고와 구분하고 bare metal/VM 모드·플랫폼·FM 버전을 확인한 뒤 적용한다.",
+          "D09에서 원본 NVSwitch/FM 이벤트의 switch PCI·source port·시각을 보존한다. access/trunk와 연결 GPU·partition 정보가 확인될 때만 영향 범위를 설명한다.",
+          "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+          "동반 Xid 74 및 다른 SXid는 대상·시간·연결 관계가 확인된 경우에만 연관 증거로 사용한다. 코드 동시 발생만으로 전파 방향이나 근본 원인을 확정하지 않는다.",
+          "Fleet 고정 카탈로그: ingress invalid command; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+          "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=false.",
+          "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
+          "Potential Fatal 분류다. bare metal에서 치명으로 처리되면 access port는 그 GPU의 작업, trunk port는 노드의 모든 작업이 중단된다. 공유 NVSwitch 가상화에서는 access port이면 연결 guest VM, trunk port이면 그 연결을 사용하는 partition 범위를 확인한다. 운영 모드에 맞는 리셋·재시작 전제와 영향을 운영자가 검토한다.",
+          "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다.",
+          "같은 대상·코드·내용의 반복 보고를 묶고 이벤트 식별자·발생 시각이 있는 경우 재전달을 구분한다. 수신 건수를 장애 횟수로 바꾸지 않는다.",
+          "현재 30분과 과거 동일 대상의 최근 보고를 포함한 30분 구간의 코드·메시지·지표를 비교한다. 새 코드나 기록 순서를 원인으로 단정하지 않는다.",
+          "과거 조회 기간·수집 상태와 원문 근거를 보존한다. 모델이 통찰을 내지 못해도 보고 대상·시각·반복 구간·비교 값·공식 지침을 표시한다.",
+          "Observation plan 전체를 한 수집 단계에서 실행하고 호스트 Incident 이력을 함께 사용한다. 모델은 추가 조회를 선택하지 않는다. 대상·기록 구간 → 관련 로그·지표 → 반복 사건 → 다음 점검 순서로 짧게 설명한다. 수치와 이력 표는 코드 산출물을 사용한다."
+        ]
+      }
+    },
+    {
+      "file": "xid/RB-XID-48-63-64.json",
+      "before_content_sha256": "f44a24d7ac20c0cfa4ff4d0a53018ff252dffdbce59abd1d49db1029d90a07d7",
+      "after_content_sha256": "9eebdbd3baeb365027126300734566dedd352eb701707d07597d52d95f5943c7",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "수집 항목: 오류·상태 로그, DBE ECC(휘발성), DBE ECC(영구), SBE ECC(휘발성), SBE ECC(영구), GPU 메모리 온도, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+          "판단: 같은 GPU의 DBE·SBE 누적값이 사건 시각 전후로 늘었는지, XID 48·63·64·94·95가 함께 보고됐는지, 이전 사건 이력에서 같은 GPU가 반복되는지를 대조한다.",
+          "NVIDIA 발생 조건: GPU에서 정정 불가(uncorrectable) 오류가 감지되면 기록되며 애플리케이션에도 보고됩니다. GPU 리셋이나 노드 재부팅으로만 해제됩니다. SRAM(프레임버퍼 제외) 오류이면 SRAM DBE 임계값 초과 여부를 확인해 초과 시 RMA 절차를 따릅니다.",
+          "NVIDIA WORKFLOW_XID_48은 단독 48과 63/64 동반을 구분한다. 단독의 RESET_GPU/RUN_FIELDDIAG, 동반의 DRAIN_AND_RESET 등은 원문 조건을 확인한 운영자 검토 대상이다.",
+          "원본 오류의 영향 영역(FB/SRAM), GPU 모델, ECC/row-remap 정보와 SRAM 임계 플래그를 확인한다. 플래그 값과 제품별 의미를 확보하지 못하면 상세 조치 분기를 보류한다.",
+          "Fleet/GPUd의 48·63·64 정적 목록은 재부팅/점검을 포함하나 NVIDIA 63의 일반 분류와 동일하지 않다. 모델·동반 오류·상태 평가를 확인하며 목록을 일괄 실행 지시로 변환하지 않는다.",
+          "D09에서 같은 GPU의 48·63·64 시각을 확인한다. 조회 누락이 있으면 단독 발생이라고 단정하지 않는다. 63/64만 있는 사건에는 이 Xid 48 조사 계획을 매칭하지 않는다.",
+          "Fleet 고정 카탈로그: Double Bit ECC Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+          "NVIDIA 적용: A100, H100, B100, GB200.",
+          "NVIDIA 조치 분류: immediate=WORKFLOW_XID_48; investigatory=WORKFLOW_XID_48; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+          "D03의 MiB 사용량은 용량 사용 관측이다. ECC 오류 발생·정상 여부나 오류 원인을 증명하지 않으며 사용률은 검증된 전체 용량 없이 계산하지 않는다."
+        ]
+      }
+    },
+    {
+      "file": "xid/RB-XID-79.json",
+      "before_content_sha256": "5a4ecdc61f81c133064a6c242733fbbac5f59f8d7c5486a5367466afeeb88257",
+      "after_content_sha256": "b1e4838c81fbd0a96cd4b751c9e88bab331b5e6dc3b07a8490e6553cde9838a2",
+      "change": "wording: query IDs to plain metric names",
+      "added_fields": [],
+      "previous_values": {
+        "analysis_guidance": [
+          "D09에서 수집된 Fleet Xid 관측의 대상·시각을 확인한다. D09가 시스템·커널 PCI/PCIe 원문 전체를 수집한다고 가정하지 않는다. AER 등 추가 원문은 수집 경로·장치·시각을 별도로 검증한 경우에만 연관 근거로 사용하고, 미수집은 오류 부재로 해석하지 않는다.",
+          "GPU의 현재 접근 상태와 사건 당시 장치 매핑이 없으면 접근 회복을 판정하지 않는다. D02 사용률은 접근 가능성의 대체 증거가 아니다.",
+          "Xid 154 연계가 지원되는 드라이버에서는 같은 장치·시간의 복구 action 이벤트를 추가 확인한다. 동반 이벤트 부재는 지원 버전·수집 완전성 확인 전에는 부정 근거가 아니다.",
+          "Fleet 고정 카탈로그: GPU has fallen off the bus; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
+          "NVIDIA 적용: A100, H100, B100, GB200.",
+          "NVIDIA 조치 분류: immediate=RESTART_BM; investigatory=CONTACT_SUPPORT; Xid154 linkage=CUDA 12.7; GPU driver R565.",
+          "조건부 복구 권고: 적용 모델의 실제 XID 79 장애이고 bare-metal 환경이면, 원본 로그 보존·작업 배출·유지보수 승인 후 해당 호스트를 재시작한다. 로그만 시험 주입했고 접근 장애가 없는 경우에는 시험 로그만으로 재시작하지 않는다.",
+          "같은 대상·코드·내용의 반복 보고를 묶고 이벤트 식별자·발생 시각이 있는 경우 재전달을 구분한다. 수신 건수를 장애 횟수로 바꾸지 않는다.",
+          "현재 30분과 과거 동일 대상의 최근 보고를 포함한 30분 구간의 코드·메시지·지표를 비교한다. 새 코드나 기록 순서를 원인으로 단정하지 않는다.",
+          "과거 조회 기간·수집 상태와 원문 근거를 보존한다. 모델이 통찰을 내지 못해도 보고 대상·시각·반복 구간·비교 값·공식 지침을 표시한다.",
+          "Observation plan 전체를 한 수집 단계에서 실행하고 호스트 Incident 이력을 함께 사용한다. 모델은 추가 조회를 선택하지 않는다. 대상·기록 구간 → 관련 로그·지표 → 반복 사건 → 다음 점검 순서로 짧게 설명한다. 수치와 이력 표는 코드 산출물을 사용한다."
+        ]
+      }
+    }
+  ]
+}

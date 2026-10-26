@@ -202,8 +202,8 @@
       }
     ],
     "analysis_guidance": [
-      "D09에서 같은 노드 dcgm-mem 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다. 코드 번호는 원문 값 그대로 인용한다.",
-      "D40·D36은 GPU 단위 누적값이며 사건 전후 증가 여부만 비교한다. 드라이버 재로드·리셋으로 휘발성 값이 초기화될 수 있으므로 감소를 오류 해소로 해석하지 않는다. D23은 보조 관측이며 임계값 판정에 쓰지 않는다.",
+      "오류·상태 로그에서 같은 노드 dcgm-mem 컴포넌트의 Unhealthy 보고 사유와 extra_info.dcgm_incidents의 장치·DCGM_FR 코드·메시지를 확인한다. 코드 번호는 원문 값 그대로 인용한다.",
+      "정정 불가·정정 가능 ECC 휘발성 누적값은 GPU 단위 누적값이며 사건 전후 증가 여부만 비교한다. 드라이버 재로드·리셋으로 휘발성 값이 초기화될 수 있으므로 감소를 오류 해소로 해석하지 않는다. GPU 메모리 온도는 보조 관측이며 임계값 판정에 쓰지 않는다.",
       "row remapping 대기·실패와 SRAM 임계 플래그는 수집하지 않는다. 운영자가 nvidia-smi -q -d ROW_REMAPPER로 확인할 항목으로 남긴다."
     ],
     "operator_guidance": {

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from agent_common.contracts import timestamp
 
-from .report_labels import query_label
+from .report_labels import query_name
 
 KST = timezone(timedelta(hours=9))
 ACTION_NAMES = {
@@ -81,12 +81,12 @@ def gpu_name(identity):
 
 def source_name(source):
     return {
-        "fleet_inventory": "Fleet 인벤토리(D09)",
-        "fleet_status_message": "Fleet 상태 보고 원문(D09)",
-        "fleet_event": "Fleet 오류 이벤트 원문(D09)",
+        "fleet_inventory": "Fleet 인벤토리",
+        "fleet_status_message": "Fleet 상태 보고 원문",
+        "fleet_event": "Fleet 오류 이벤트 원문",
     }.get(
         source["source"],
-        f"{query_label(source.get('query_id', '?'))} 지표 라벨({source['producer']})",
+        f"{query_name(source.get('query_id', '?'))} 지표 라벨({source['producer']})",
     )
 
 
@@ -95,7 +95,7 @@ def unit_text(unit):
 
 
 def metric_text(m):
-    label = query_label(m["query_id"])
+    label = query_name(m["query_id"])
     window = f"{kst(m['start'])}–{kst(m['end'])}"
     if m["kind"] == "counter":
         text = f"{label}: {window} 이 GPU 값 {number(m['first'])}→{number(m['last'])}"
@@ -409,8 +409,8 @@ def statements(findings, result, data, clues, evidence, guidance):
     )
 
     # 권고 조치: 한 문단으로 순서를 보존한다.
-    preserved = ["오류 원문(D09)", "장치 식별 정보"] + [
-        query_label(m["query_id"]) for m in metrics
+    preserved = ["오류 원문", "장치 식별 정보"] + [
+        query_name(m["query_id"]) for m in metrics
     ]
     host = "nvidia-bug-report.sh 결과·커널 로그" + (
         "·Fabric Manager 로그" if switch else ""
@@ -602,7 +602,7 @@ def statements(findings, result, data, clues, evidence, guidance):
         out["next"].append(
             (
                 "스위치 포트·연결 대상: source port, access/trunk 구분과 연결 GPU·VM·파티션은 "
-                f"수집 원천(D09)에 없습니다. {node}의 Fabric Manager 로그에서 "
+                f"수집한 오류·상태 로그에 없습니다. {node}의 Fabric Manager 로그에서 "
                 f"{kst(findings['event_time'])} 전후 {device}의 포트 정보를 확인하십시오.",
                 [],
             )
@@ -615,7 +615,7 @@ def statements(findings, result, data, clues, evidence, guidance):
     ):
         out["next"].append(
             (
-                "커널 PCIe 오류(AER): 수집 원천(D09)에는 커널 로그가 없습니다. 원인을 좁히려면 "
+                "커널 PCIe 오류(AER): 수집한 오류·상태 로그에는 커널 로그가 없습니다. 원인을 좁히려면 "
                 f"{node}의 커널 로그에서 {kst(findings['event_time'])} 전후 "
                 f"{device}의 AER 기록을 확인하십시오.",
                 [],
