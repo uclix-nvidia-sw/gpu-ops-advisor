@@ -3,18 +3,23 @@
 import asyncio
 from copy import deepcopy
 import time
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
 from agent_common.artifacts import render
 from agent_common.contracts import validate_result
+from agent_common.runtime import attempt_context
+from ops_agent import aggregate_report
 from ops_agent.aggregate_report import build_result
+from ops_agent.identity_transitions import sample_bounds, verified_transitions
 from ops_agent.report_contract import VERSION, previous_period
 from ops_agent.report_interpretation import payload_for
 from ops_agent.report_queries import ReportQueries
 from test_aggregate_report import DATA, fixture
 from test_identity_transitions import transition_fixture, proof
+from test_report_interpretation import reply_for
 
 
 def result_for(evidence, data=DATA):
@@ -282,3 +287,94 @@ def test_absent_periods_and_all_blocked_keep_existing_status_rules():
     data = {**DATA, "topic_ids": ["namespace_usage"]}
     result = result_for(changed_hours(DATA["time_range"], "cpc-1", 24), data)
     assert result["result_status"] == "blocked"
+
+
+async def test_run_appends_diagnostics_only_after_llm_interpretation(monkeypatch):
+    async def collect(self, cluster, period, *, queries=None, uid=None):
+        if queries is not None:
+            return []
+        evidence = changed_hours(period, cluster["cluster_id"], 7)
+        for item in evidence:
+            item["input"]["datasourceUid"] = "fixture"
+        return evidence
+
+    async def query(args):
+        return {"data": {"result": []}}
+
+    requests = []
+
+    async def complete(system, payload, *, json_object):
+        assert json_object is True
+        requests.append(deepcopy(payload))
+        return reply_for(payload)
+
+    monkeypatch.setattr(ReportQueries, "collect", collect)
+    llm = AsyncMock(configured=True, usage={})
+    llm.complete.side_effect = complete
+    token = attempt_context.set(
+        dict(
+            claim=dict(
+                job_id=str(uuid4()),
+                kind="report",
+                input=DATA,
+                versions={"criteria": VERSION},
+            ),
+            context=dict(
+                data_cutoff_at=DATA["time_range"]["end"],
+                incidents=[],
+                previous_incidents=[],
+            ),
+            deadline=time.monotonic() + 900,
+            llm=llm,
+        )
+    )
+    try:
+        output = await aggregate_report.run({"query_prometheus": query})
+    finally:
+        attempt_context.reset(token)
+    result = output["result"]
+    validate_result(result, output["evidence"])
+    messages = diagnostic(result)["messages"]
+    assert messages and requests
+    assert result["quality"]["report"]["method"] == "llm_interpreted"
+    assert all(message in result["limitations"] for message in messages)
+    for request in requests:
+        # The ordinary interpretation path sends limitations to the model.
+        assert not any(t.get("advice_mode") for t in request["topics"])
+        assert "limitations" in request
+        assert not set(messages).intersection(request["limitations"])
+
+
+@pytest.mark.parametrize("namespaces", [None, ["test-dept-service"], ["other"]])
+def test_transition_rejections_preserve_selected_namespace_scope(namespaces):
+    _, gpu, pods, at = transition_fixture()
+    gpu[0]["metric"].update(namespace="other", pod="other-pod")
+    pods[0]["metric"]["uid"] = ""
+    rejected = []
+    assert not verified_transitions(
+        sample_bounds(gpu, at, "cpc-1"),
+        sample_bounds(pods, at, "cpc-1"),
+        at,
+        {"gpu-1": 2},
+        namespaces,
+        rejected=rejected,
+    )
+    expected = [
+        dict(
+            gpu_id="gpu-1",
+            reason="pod_identity_missing",
+            namespace="other",
+            pod="other-pod",
+        ),
+        dict(
+            gpu_id="gpu-1",
+            reason="pod_interval_unverified",
+            namespace="test-dept-service",
+            pod="test-pod",
+        ),
+    ]
+    assert rejected == [
+        item
+        for item in expected
+        if namespaces is None or item["namespace"] in namespaces
+    ]
