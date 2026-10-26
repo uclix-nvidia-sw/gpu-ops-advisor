@@ -1023,3 +1023,40 @@ it('uses an independent original-style AI card for each selected cluster', () =>
   expect(html.match(/<strong>작성 방식<\/strong>/g)).toHaveLength(1);
   expect(JSON.stringify(value)).toBe(original);
 });
+
+it.each([false, true])(
+  'keeps unattributed quality wording tied to the saved basis: %s',
+  (current) => {
+    const value = {
+      result_status: current ? 'ready' : 'partial',
+      topics: [
+        {
+          topic_id: 'namespace_usage',
+          status: current ? 'ready' : 'partial',
+          rows: [{ cluster_id: 'cpc-1', namespace: '', gpu_model: 'A100', hours: [] }],
+          quality: current
+            ? {
+                namespace_status_basis: 'attributed_rows_with_current_cluster_coverage_v1',
+                observation_diagnostics: {
+                  version: 'ops-observation-diagnostics-v3',
+                  summary: [],
+                  messages: [],
+                  unattributed_messages: ['Namespace 귀속 미확인'],
+                },
+              }
+            : {},
+        },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport value={value} />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('Namespace에 연결하지 못한 관측');
+    expect(html).not.toContain('부분 산출 원인');
+    expect(html.includes('Namespace 활동 판정에 포함하지 않습니다')).toBe(current);
+    expect(html.includes('전체 GPU 귀속의 완전성은 확인하지 않았습니다')).toBe(current);
+    expect(html.includes('Namespace별 사용량 비교에서 제외했습니다')).toBe(!current);
+  },
+);

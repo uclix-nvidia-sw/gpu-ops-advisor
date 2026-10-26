@@ -39,9 +39,34 @@ REASONS = {
 }
 
 
-def observation_diagnostics(periods, compared, evidence):
+def observation_diagnostics(periods, compared, evidence, *, missing_clusters=()):
     """Keep period, row-hour and GPU-hour units distinct; never infer old skip causes."""
     details, messages, collection, summary = [], [], [], []
+    unattributed_messages = []
+    for cluster in missing_clusters:
+        reason = "현재 기간에 선택 범위의 Namespace 귀속 GPU 관측 없음"
+        summary.append(reason)
+        current_period = next(
+            period for role, period, _, _ in periods if role == "current"
+        )
+        unavailable = any(
+            e["cluster_id"] == cluster
+            and e["time_range"] == current_period
+            and e["query_id"]
+            in {
+                "hourly_gpu_activity",
+                "hourly_pod_identity",
+                "hourly_gpu_identity_count",
+            }
+            and e["tool_status"] != "ok"
+            for e in evidence
+        )
+        detail = (
+            "현재 기간 기본 조회가 완료되지 않아 귀속 관측을 확인할 수 없습니다."
+            if unavailable
+            else "유휴 상태인지 수집 누락인지는 확인하지 않았습니다."
+        )
+        messages.append(f"{cluster}: {reason}. {detail}")
     for role, period, rows, excluded in periods:
         period_name = "현재 기간" if role == "current" else "이전 기간"
         excluded_by_row = defaultdict(list)
@@ -162,14 +187,13 @@ def observation_diagnostics(periods, compared, evidence):
                 dict(code=code, hours=len(hours), text=REASONS.get(code, code))
                 for code, hours in sorted(reasons.items())
             ]
-            summary.extend(r["text"] for r in counts)
+            if key[1]:
+                summary.extend(r["text"] for r in counts)
             text = f"{target} · {period_name}: {row['expected_hours']}시간 중 {row['valid_hours']}시간을 활동률에 반영했습니다. "
             text += "; ".join(f"{r['text']} {r['hours']}시간" for r in counts) + "."
             if not key[1]:
-                text += (
-                    " 미할당 여부는 미확인이며 이 관측도 전체 품질 판정에 포함됩니다."
-                )
-            messages.append(text)
+                text += " Namespace에 귀속하지 못한 GPU 관측이며 Namespace 활동 판정에는 포함하지 않습니다. 미할당 여부와 전체 GPU 귀속의 완전성은 미확인입니다."
+            (messages if key[1] else unattributed_messages).append(text)
             details.append(
                 dict(
                     cluster_id=key[0],
@@ -191,7 +215,7 @@ def observation_diagnostics(periods, compared, evidence):
                 f"{period_name}: Namespace 활동을 산출할 관측 행이 없습니다."
             )
     for row in compared:
-        if row["comparison_status"] in {
+        if row["namespace"] and row["comparison_status"] in {
             "previous_not_observed",
             "current_not_observed",
         }:
@@ -209,7 +233,9 @@ def observation_diagnostics(periods, compared, evidence):
             "검증 미실행은 신원 충돌 확인을 뜻하지 않습니다. 제외 사유별 시간은 겹칠 수 있으며, 일부 신원의 검증 성공이 해당 시간 전체의 유효성을 뜻하지는 않습니다."
         )
     return dict(
-        version="ops-observation-diagnostics-v2",
+        version="ops-observation-diagnostics-v3",
+        clusters_without_current_attribution=list(missing_clusters),
+        unattributed_messages=list(dict.fromkeys(unattributed_messages)),
         messages=list(dict.fromkeys(messages)),
         summary=list(dict.fromkeys(summary)),
         rows=details,
