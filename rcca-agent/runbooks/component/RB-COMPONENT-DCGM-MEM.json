@@ -225,7 +225,7 @@
         },
         {
           "title": "복구",
-          "text": "A100에서 MIG가 꺼진 상태로 격리되지 않은 오류가 났다면 GPU Node Triage는 노드 즉시 재부팅을 안내합니다. GPU 리셋은 그 GPU를 쓰는 프로세스를 모두 끝낸 뒤 root로 nvidia-smi -r -i <번호>로 하며, Ampere+NVSwitch는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. 리셋·재부팅은 작업 배출과 유지보수 승인 뒤 수행합니다."
+          "text": "격리되지 않은 오류(XID 95)는 A100에서 MIG가 꺼져 있으면 GPU Node Triage가 노드 즉시 재부팅을, MIG가 켜져 있으면 다른 인스턴스 작업을 배출한 뒤 GPU 리셋을 안내합니다. 그 밖의 GPU(H100·H200·B200·B300 등)는 NVIDIA Xid 카탈로그 즉시 조치 RESET_GPU대로 작업을 배출한 뒤 GPU를 리셋합니다. GPU 리셋은 그 GPU를 쓰는 프로세스를 모두 끝낸 뒤 root로 nvidia-smi -r -i <번호>로 하며, Ampere+NVSwitch는 Fabric Manager가 실행 중일 때만 개별 리셋이 됩니다. 리셋·재부팅은 작업 배출과 유지보수 승인 뒤 수행합니다."
         },
         {
           "title": "복구 확인",

@@ -44,6 +44,66 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D03",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 메모리 사용량을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 온도을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
+        "priority": 5,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 GPU 전력을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D50",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 행 재매핑 대기(0/1)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D51",
+        "priority": 7,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 GPU의 행 재매핑 실패(0/1)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
@@ -160,6 +220,10 @@
       "cause_note": "다른 XID의 복구 조치 요약(정보성)입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 154 줄을 확인하고 같은 시각 함께 난 다른 XID와 GPU 복구 동작(XID 154)을 봅니다. nvidia-smi로 GPU 상태를 확인합니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. 오류 원문과 드라이버 버전, 같은 시각 다른 XID를 함께 보존합니다."
         },
@@ -170,6 +234,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 XID_154: 메시지에 적힌 복구 값대로 조치합니다. None이면 추가 복구가 필요 없고 함께 보고된 XID의 지침만 따릅니다. GPU Reset Required(Reset)이면 해당 GPU의 프로세스를 모두 끝낸 뒤 nvidia-smi -r로 리셋하며, 리셋 범위는 리셋 방식 표를 따릅니다. Node Reboot Required(Reboot)이면 작업을 배출하고 OS를 재부팅하며, AC 전원 차단은 필요하지 않습니다. Drain P2P이면 새 작업 배치를 막고 P2P 통신을 쓰는 GPU 프로세스를 끝낸 뒤 persistence mode를 끄고 값을 다시 조회하며, 그래도 Drain P2P이면 GPU를 리셋합니다. Drain and Reset이면 새 작업 배치만 막고 기존 작업이 끝나거나 체크포인트에 이르면 GPU를 리셋해 메모리 용량을 되찾습니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "함께 난 XID의 복구 확인 절차를 따르고, 이 코드만 반복되는지 4장 이전 사건 이력으로 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

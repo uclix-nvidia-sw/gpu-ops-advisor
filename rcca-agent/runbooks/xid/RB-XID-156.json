@@ -276,6 +276,10 @@
       "cause_note": "GPU 메모리(DRAM)나 내부 SRAM의 비트 오류, 메모리 노후화가 주요 원인 후보입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 156 줄과 nvidia-smi -q -d ECC,ROW_REMAPPER 출력(row remapping이 없는 이전 세대 GPU는 PAGE_RETIREMENT)으로 정정 불가 오류와 행 재매핑 대기·실패를 확인합니다. 그 GPU의 작업이 중단됐으면 작업 소유자에게 알리고 kubectl cordon <노드>로 새 배치를 막습니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d ECC,ROW_REMAPPER 출력(구세대 GPU는 PAGE_RETIREMENT)도 함께 저장합니다."
         },
@@ -286,6 +290,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 RESET_GPU: 작업을 배출한 뒤 해당 GPU를 리셋합니다. NVIDIA 기준으로 노드 재시작까지는 필요하지 않습니다. 리셋 가능 범위는 리셋 방식 표를 따릅니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "리셋·재부팅 뒤 nvidia-smi -q -d ROW_REMAPPER의 대기(Pending)와 실패(Remapping Failure Occurred)가 No인지, 3장 표의 정정 불가 오류가 더 늘지 않는지 확인하고 dcgmi diag -r 2를 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

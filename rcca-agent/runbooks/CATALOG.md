@@ -13,7 +13,7 @@ runbooks/
   catalog-manifest.json
 ```
 
-`catalog-manifest.json`의 `fleet_event_type`(고정 Fleet 카탈로그 분류, 없으면 Fleet이 내보내지 않음)과 `fm_sxid_table`(FM 가이드 v2.6 표 번호)은 [Grafana 알림 규칙](../../incident/README.md#grafana-알림-규칙)의 RCA 허용 목록을 계산하는 입력이다. JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등록, 승인 정책, 런타임 역할, parser/query의 개발 상태 같은 공통 설명은 이 문서와 [DB-WORKFLOW](DB-WORKFLOW.md)에서 관리한다. 반복 설명 정리로 analysis_guidance와 limitations의 전체 글자 수를 약 61% 줄였다. 수집 품질·대상 일치, 문헌과 수행 증거의 구분, 자동 조치 금지는 기존 Worker 계약으로 유지한다.
+`catalog-manifest.json`의 `fleet_event_type`(고정 Fleet 카탈로그 분류, 없으면 Fleet이 내보내지 않음)과 `fm_sxid_table`(FM 가이드 v2.6 표 번호)은 [Grafana 알림 규칙](../../incident/README.md#grafana-알림-규칙)이 코드를 상태 규칙(Fatal·Critical)과 이벤트 규칙(그 밖) 중 어디서 받는지 정하는 입력이다. JSON에는 코드별 증거·분기·조치 조건·출처만 남긴다. DB 등록, 승인 정책, 런타임 역할, parser/query의 개발 상태 같은 공통 설명은 이 문서와 [DB-WORKFLOW](DB-WORKFLOW.md)에서 관리한다. 반복 설명 정리로 analysis_guidance와 limitations의 전체 글자 수를 약 61% 줄였다. 수집 품질·대상 일치, 문헌과 수행 증거의 구분, 자동 조치 금지는 기존 Worker 계약으로 유지한다.
 
 ## 자료 범위와 작성 결과
 
@@ -61,6 +61,7 @@ GPU Node Triage(Last updated on Oct 04, 2026) 표 1·2와 흐름도, Xid 카탈�
 | 원문 근거 문구 (246건) | 운영자 지침에서 장애 주입 시험 확인을 운영자가 직접 확인할 수 있는 원문 근거로 바꿈: XID는 커널 로그(NVRM: Xid 줄), SXID는 Fabric Manager 로그에 같은 오류가 없고 Fleet 보고만 있으면 복구 조치를 하지 않고 보고 경로부터 확인(XID 172·SXID 70·컴포넌트 4). CPU·메모리·NCCL 의미의 첫 문장을 '하드웨어 오류 보고가 아님'으로 시작하고 즉시 확인을 노드에서 통계가 직접 읽히는지로 바꿈. XID 14(주입한 가짜 오류가 정의)와 참조 문단은 유지([검토 기록](operator-evidence-wording-review-20261026.json)) |
 | NCCL·peermem (2건) | Fleet 원본대로 Unhealthy 원인 정정: nccl은 커널 로그를 읽지 못할 때('failed to read kmsg'), peermem은 sudo lsmod 모듈 확인 실패('error checking peermem')일 때만 Unhealthy이고 segfault·invalid context 줄은 이벤트로만 기록. 판단·복구를 에이전트 문제와 실제 통신 오류로 나누고 복구 확인 단계 추가([검토 기록](nccl-peermem-review-20261026.json)) |
 | persistence-mode | 배포되지 않은 Fleet 84f99be(DCGM 조회)만 근거로 삼아 배포된 v1.5.0-rc.1(NVML 조회)의 사유 'error getting persistence mode'가 빠져 있었음. 고객 Fleet 버전을 알 수 없으므로 두 버전의 사유와 Unhealthy·Degraded 기준을 함께 적고, 판단 갈래를 'persistence mode 조회 오류'로 묶음([검토 기록](persistence-mode-version-review-20261026.json)) |
+| 묶음 4 (265건) | XID·SXID 284종을 모두 RCA로 받기 위한 보강([검토 기록](runbook-batch4-review-20261026.json)). XID 79·SXID 11001을 뺀 XID 172·SXID 92에 오류 묶음별 "즉시 확인·영향"(맨 앞)과 "복구 확인"(복구 조치 뒤) 단계를 넣음. GPU 사용률·메모리만 수집하던 XID 33종에 온도·전력·클록 제한 사유(D03·D04·D11)를 선택 단계로, XID 154에 행 재매핑(D50·D51)을 더함. XID 63은 row remapping 이전 세대(페이지 폐기)와 Ampere 이후(행 재매핑)를, DCGM 메모리는 A100 밖 GPU의 XID 95(카탈로그 RESET_GPU)를 나눠 적음 |
 | 수집 계획 125건 | 장애와 직접 관련된 지표를 선택 단계로 추가: 메모리 XID 12건·DCGM 메모리는 행 재매핑(D50~D54), NVLink XID 12건·SXID 93건·DCGM NVLink/NVSwitch는 NVLink 오류 누적값(D55~D57), DCGM InfoROM은 체크섬 유효(D58), disk는 마운트별 사용·여유(D59·D60). XID 13·31은 카탈로그대로 DCGM EUD → Field Diagnostics, XID 45는 DBE 동반 확인, XID 74는 적용 범위와 NVLink 오류 카운터 비교, 메모리 XID는 행 재매핑 값으로 리셋·RMA 판단을 연결([검토 기록](metric-coverage-review-20261024.json)). 새 조회가 든 프로필을 배포한 뒤에 발행한다 |
 | XID 48 | 메시지의 `framebuffer` 여부로 DRAM·SRAM 분기, 행 재매핑 Pending(리셋 뒤 적용)·Remapping Failure(Field Diagnostics 확인 뒤 RMA), 구세대 GPU의 페이지 폐기, RMA 기준(뱅크당 UCE 재매핑 8개·재매핑 행 재시도·합계 512, Blackwell HBM 채널 수리), 함께 보는 Xid 63·64·94·95·160·171·172 추가. 카탈로그 요약의 'Xid 154 연계' 오표기를 적용 버전 문구로 정정([검토 기록](xid48-memory-review-20261023.json)) |
 | XID 63·92 | 즉시 조치는 없지만 row remapping은 GPU 리셋 뒤 적용(63), Field Diagnostics 권고(92)를 복구 단계에 추가 |

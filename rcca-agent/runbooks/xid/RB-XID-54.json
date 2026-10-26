@@ -229,6 +229,10 @@
       "cause_note": "보조 전원 연결, 전원 공급·열 이벤트, 전력 평활 회로 수명이 주요 원인 후보입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 54 줄을 확인하고 nvidia-smi -q -d POWER,PERFORMANCE로 전력 한도와 클록 제한 사유를 봅니다. BMC 시스템 이벤트 로그(ipmitool sel elist)에서 같은 시각 전원·온도 이벤트를 확인합니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. nvidia-smi -q -d POWER,TEMPERATURE,PERFORMANCE 출력(클록 제한 사유 포함)을 함께 저장합니다."
         },
@@ -239,6 +243,10 @@
         {
           "title": "복구 조치",
           "text": "NVIDIA 즉시 조치 분류 CHECK_MECHANICALS: 장치 장착 상태와 관련 커넥터(보조 전원 포함)가 단단히 연결됐는지 점검합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "클록 제한 사유가 풀리고 3장 표의 전력·온도·제한 시간이 사건 전 수준인지 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

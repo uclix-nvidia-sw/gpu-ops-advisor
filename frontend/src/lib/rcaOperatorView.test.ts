@@ -121,6 +121,20 @@ it('answers the operator questions from collected evidence only', () => {
   );
 });
 
+it('names supporting metrics the worker could not fetch without judging from them', () => {
+  const v = operatorView({
+    ...result,
+    quality: {
+      ...result.quality,
+      optional_unavailable: [{ query_id: 'D11', name: 'GPU 전력' }],
+    },
+  })!;
+  const gaps = v.findings[4].points.join('\n');
+  expect(gaps).toContain('가져오지 못한 보조 지표: GPU 전력');
+  expect(gaps).toContain('판단에는 쓰지 않았습니다');
+  expect(gaps).not.toContain('D11');
+});
+
 it('scopes the report to the alert code and device; other node errors stay context', () => {
   // Shape of a stored SXID 11001 result whose window also caught a GPU XID 79 (synthetic).
   const view = (title: string) =>

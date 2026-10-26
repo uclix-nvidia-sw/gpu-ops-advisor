@@ -1,10 +1,11 @@
 # Grafana-managed alert rules that feed GPU Ops Incident from Fleet Intelligence logs.
 # Render the ${...} placeholders (see incident/README.md#grafana-알림-규칙) before provisioning.
-# Alert names: GPUAlert has an Incident analysis policy (RCA); GPUErrorNotice is stored without RCA.
+# Every rule raises GPUAlert, which has an Incident analysis policy (RCA).
 # Fatal/Critical XID and SXID come from the repeating Fleet state lines so a lost event line cannot
-# drop an alert; event lines only add Warning codes that never change the component state.
-# The xid/sxid allowlist and the component list are checked against the runbook catalog by
-# tools/ci/tests/test_alert_rules.py.
+# drop an alert; event lines add every other XID/SXID event, which never changes the component state.
+# The component rule takes every Fleet component except the XID/SXID ones the two rules above own.
+# A failed Loki query keeps the last state (KeepLast) so it does not open an incident.
+# tools/ci/tests/test_alert_rules.py checks this split against the runbook catalog.
 apiVersion: 1
 groups:
   - orgId: ${GRAFANA_ORG_ID}
@@ -61,7 +62,7 @@ groups:
                       - 0
               refId: C
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         annotations:
           description: |-
             클러스터: {{ $labels.cluster_id }}
@@ -101,7 +102,7 @@ groups:
                              k8s_node_name=`resources["k8s.node.name"]`, machine_id=`resources["machine.id"]`
                       | __error__="" | log_type="event" | event_name=~"error_(xid|sxid)" | machine_id!=""
                       | label_format code=`{{ if .xid }}xid:{{ .xid }}{{ else }}sxid:{{ .sxid }}{{ end }}`
-                      | event_type!~"Fatal|Critical" and code=~"^(xid:(54|92|109|136|144|145|146|147|148|149|150|151|154|155|156|158|159)|sxid:(10003|12030))$"
+                      | event_type!~"Fatal|Critical"
                     [10m]
                   )
                 )
@@ -126,67 +127,7 @@ groups:
                       - 0
               refId: C
         noDataState: OK
-        execErrState: Error
-        annotations:
-          description: |-
-            클러스터: {{ $labels.cluster_id }}
-            노드: {{ $labels.k8s_node_name }}
-            오류: {{ $labels.reason }}
-        isPaused: false
-        notification_settings:
-          receiver: ${GPU_OPS_CONTACT_POINT}
-      - uid: gpuops-xid-sxid-notice
-        title: GPUErrorNotice
-        condition: C
-        data:
-          - refId: A
-            queryType: instant
-            relativeTimeRange:
-              from: 600
-              to: 0
-            datasourceUid: ${LOKI_DATASOURCE_UID}
-            model:
-              datasource:
-                type: loki
-                uid: ${LOKI_DATASOURCE_UID}
-              editorMode: code
-              expr: |-
-                sum by (cluster_id, component, event_type, code, device, reason, k8s_node_name, machine_id) (
-                  count_over_time(
-                    {cluster_id=~".+", job="fleet-intelligence-agent"}
-                      | json log_type=`attributes["log_type"]`, component=`attributes["component"]`,
-                             event_name=`attributes["event_name"]`, event_type=`attributes["event_type"]`,
-                             xid=`attributes["extra_info"]["data"]["xid"]`, sxid=`attributes["extra_info"]["data"]["sxid"]`,
-                             device=`attributes["extra_info"]["device_uuid"]`, reason=`body`,
-                             k8s_node_name=`resources["k8s.node.name"]`, machine_id=`resources["machine.id"]`
-                      | __error__="" | log_type="event" | event_name=~"error_(xid|sxid)" | machine_id!=""
-                      | label_format code=`{{ if .xid }}xid:{{ .xid }}{{ else }}sxid:{{ .sxid }}{{ end }}`
-                      | event_type!~"Fatal|Critical" and code!~"^(xid:(54|92|109|136|144|145|146|147|148|149|150|151|154|155|156|158|159)|sxid:(10003|12030))$"
-                    [10m]
-                  )
-                )
-              instant: true
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              type: reduce
-              expression: A
-              reducer: last
-              refId: B
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              type: threshold
-              expression: B
-              conditions:
-                - evaluator:
-                    type: gt
-                    params:
-                      - 0
-              refId: C
-        noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         annotations:
           description: |-
             클러스터: {{ $labels.cluster_id }}
@@ -224,7 +165,7 @@ groups:
                              suggested_actions=`attributes["suggested_actions"]`,
                              k8s_node_name=`resources["k8s.node.name"]`, machine_id=`resources["machine.id"]`
                       | __error__="" | log_type="component_data" | health="Unhealthy" | machine_id!=""
-                      | component=~"^(accelerator-nvidia-dcgm-inforom|accelerator-nvidia-dcgm-mem|accelerator-nvidia-dcgm-nvlink|accelerator-nvidia-dcgm-nvswitch|accelerator-nvidia-dcgm-pcie|accelerator-nvidia-dcgm-power|accelerator-nvidia-dcgm-thermal|accelerator-nvidia-infiniband|accelerator-nvidia-nccl|accelerator-nvidia-peermem|accelerator-nvidia-persistence-mode|cpu|disk|library|memory|network-ethernet|os)$"
+                      | component!~"accelerator-nvidia-error-(xid|sxid)"
                     [1m]
                   )
                 )
@@ -249,7 +190,7 @@ groups:
                       - 0
               refId: C
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         annotations:
           description: |-
             클러스터: {{ $labels.cluster_id }}

@@ -240,6 +240,10 @@
       "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
       "next_checks": [
         {
+          "title": "즉시 확인·영향",
+          "text": "Fabric Manager 로그(기본 /var/log/fabricmanager.log)와 dmesg -T에서 SXID 15006 줄의 NVSwitch PCI·포트를 확인하고, 같은 시각 GPU 쪽 XID 74·45와 작업 중단 여부를 작업 소유자에게 확인합니다. B200·B300은 이 SXID 절차를 적용하지 않습니다."
+        },
+        {
           "title": "진단 자료 보존",
           "text": "Fabric Manager 로그의 같은 시각 SXID 줄(NVSwitch PCI·Link 번호)과 nvidia-bug-report.sh 결과는 재부팅하면 확인하기 어려우므로 먼저 확보합니다."
         },
@@ -254,6 +258,10 @@
         {
           "title": "복구 조치",
           "text": "bare metal: 치명으로 처리된 오류가 GPU와 연결된 access 포트에서 났으면 해당 GPU와 같은 작업에 쓰인 GPU를 모두 리셋합니다. 리셋 명령은 nvidia-smi -r -i <번호>이며 Ampere는 Fabric Manager가 실행 중일 때만 개별 리셋이 되고, Hopper 이후는 Fabric Manager와 관계없이 개별 리셋할 수 있습니다. NVSwitch 사이 trunk 포트에서 났으면 Fabric Manager를 멈추고 GPU 작업을 모두 끝낸 뒤 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋하고 Fabric Manager를 다시 시작합니다. 리셋 뒤에도 계속되면 노드를 재부팅하거나 전원 사이클합니다. 공유 NVSwitch 가상화: access 포트면 해당 guest VM을 종료하고, trunk 포트면 그 trunk를 지나는 guest VM 파티션을 종료한 뒤 다시 만듭니다. Fabric Manager 로그에 같은 SXID 줄이 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+        },
+        {
+          "title": "복구 확인",
+          "text": "Fabric Manager가 실행 중(sudo systemctl status nvidia-fabricmanager)이고 nvidia-smi nvlink -s의 링크가 정상인지, 같은 SXID가 다시 나지 않는지 4장 이전 사건 이력으로 확인합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",
