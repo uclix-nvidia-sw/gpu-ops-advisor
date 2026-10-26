@@ -7,6 +7,8 @@ import { Empty } from './components/ui';
 import { AppProvider, useApp } from './lib/store';
 import { Cases } from './pages/Cases';
 import { Dashboard } from './pages/Dashboard';
+import { OperatorCases } from './pages/OperatorCases';
+import { OperatorDashboard } from './pages/OperatorDashboard';
 import { Fleet } from './pages/Fleet';
 import { JobDetail, Jobs } from './pages/Jobs';
 import { Knowledge } from './pages/Knowledge';
@@ -26,12 +28,21 @@ function HomeView() {
     <OperationsHome />
   ) : mode === 'developer' ? (
     <DeveloperHome />
+  ) : mode === 'classic' ? (
+    <OperatorDashboard />
   ) : (
     <Dashboard />
   );
 }
 function CasesView() {
-  return useApp().mode === 'operations' ? <OperationsCases /> : <Cases />;
+  const { mode } = useApp();
+  return mode === 'operations' ? (
+    <OperationsCases />
+  ) : mode === 'classic' ? (
+    <OperatorCases />
+  ) : (
+    <Cases />
+  );
 }
 function ReportsView() {
   return useApp().mode === 'operations' ? <OperationsReports /> : <Reports />;
