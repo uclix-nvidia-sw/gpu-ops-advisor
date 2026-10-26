@@ -252,7 +252,7 @@
         },
         {
           "title": "복구 조치",
-          "text": "bare metal: Fabric Manager 가이드는 비치명 SXID를 정보성으로 보고 별도 복구를 요구하지 않으므로, 작업이 XID 45로 끝났다면 그 작업만 다시 시작합니다. 공유 NVSwitch 가상화: nvswitch-audit 도구로 GPU/NVSwitch 파티션 라우팅 정보를 검증하고 guest VM을 재시작합니다. trunk 포트에서 났다면 trunk를 쓰는 파티션도 영향받습니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+          "text": "bare metal: Fabric Manager 가이드는 비치명 SXID를 정보성으로 보고 별도 복구를 요구하지 않으므로, 작업이 XID 45로 끝났다면 그 작업만 다시 시작합니다. 공유 NVSwitch 가상화: nvswitch-audit 도구로 GPU/NVSwitch 파티션 라우팅 정보를 검증하고 guest VM을 재시작합니다. trunk 포트에서 났다면 trunk를 쓰는 파티션도 영향받습니다. Fabric Manager 로그에 같은 SXID 줄이 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
         },
         {
           "title": "재발 시 진단·공급사 전달",

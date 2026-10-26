@@ -37,7 +37,7 @@ it('keeps literature separate from device facts and explains restart prerequisit
   const html = renderToStaticMarkup(<RcaGuidance paragraphs={paragraphs} result={result} />);
   expect(html).toContain('작업 배출·유지보수 승인 후 호스트를 재시작합니다');
   expect(html).not.toContain('복구에는 재시작이 필요합니다');
-  expect(html).toContain('로그 주입 시험에는 재시작을 적용하지 않습니다');
+  expect(html).toContain('재시작하지 않고 보고 경로부터 확인합니다');
   expect(html).toContain('실제 XID 79 장애');
   expect(html).toContain('revision 5');
   expect(html).toContain('<details><summary>적용 지침</summary><p>');
