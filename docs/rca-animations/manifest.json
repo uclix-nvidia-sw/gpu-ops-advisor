@@ -9,13 +9,13 @@
       "caption": "8U · GPU 8개 장착 영역",
       "assets": {
         "webp": {
-          "path": "assets/S1.webp",
+          "path": "frontend/public/inspection-figures/S1.webp",
           "sha256": "dc5fc8744389abdafb7a94b48dc1aad3e9bca74c0eacdabfcf2697bc8c91c418",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S1.png",
+          "path": "frontend/public/inspection-figures/S1.png",
           "sha256": "e3834084ec1e5d01bcff0de9d65fca21e140ffe98bbd7dc222917ffddd0cb1c5",
           "width": 750,
           "height": 500
@@ -44,13 +44,13 @@
       "caption": "4U · 후단 GPU 8개 영역",
       "assets": {
         "webp": {
-          "path": "assets/P1.webp",
+          "path": "frontend/public/inspection-figures/P1.webp",
           "sha256": "9b4445b91bc3116a15753d22cabbcb6608fe09a7988d34923677c5b9492d67f8",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P1.png",
+          "path": "frontend/public/inspection-figures/P1.png",
           "sha256": "dee2fdbf8681780e8d83a9aba961e7875f3caae63e24a480877a0ca7489195ac",
           "width": 750,
           "height": 500
@@ -79,13 +79,13 @@
       "caption": "8U · NVSwitch 영역 전체",
       "assets": {
         "webp": {
-          "path": "assets/S2.webp",
+          "path": "frontend/public/inspection-figures/S2.webp",
           "sha256": "63e5fde4a81ead8b651ae07e838a5d4bc59a392f1591aa99b9b6b43afe6ce7e0",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S2.png",
+          "path": "frontend/public/inspection-figures/S2.png",
           "sha256": "b2444aa4e6d152dac281dd1fc27344d49e62992a40f0ecfb5425fc19f481b76a",
           "width": 750,
           "height": 500
@@ -108,13 +108,13 @@
       "caption": "4U · 브리지 장착 구성 전용",
       "assets": {
         "webp": {
-          "path": "assets/P2.webp",
+          "path": "frontend/public/inspection-figures/P2.webp",
           "sha256": "ccc5eba93e824540298e41887efc22d32647bc5c81b8a7159380af45a3da3869",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P2.png",
+          "path": "frontend/public/inspection-figures/P2.png",
           "sha256": "5fe7807b0576cf32653016041c7e854011b0ff2290b1d5012504029671b2636f",
           "width": 750,
           "height": 500
@@ -136,13 +136,13 @@
       "caption": "데이터 포트 영역 전체 · BMC 제외",
       "assets": {
         "webp": {
-          "path": "assets/S3.webp",
+          "path": "frontend/public/inspection-figures/S3.webp",
           "sha256": "707de8f9a323d7740243683f3225dbd181857e6e75e01356d0407fe1a73139a2",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S3.png",
+          "path": "frontend/public/inspection-figures/S3.png",
           "sha256": "48090bf24a41c5110cefc32a27b556f550bc70a6ee1296148ffebd05f266ad86",
           "width": 750,
           "height": 500
@@ -165,13 +165,13 @@
       "caption": "데이터 포트 영역 전체 · BMC 제외",
       "assets": {
         "webp": {
-          "path": "assets/P3.webp",
+          "path": "frontend/public/inspection-figures/P3.webp",
           "sha256": "41d49f63b8cff4e831f2d377e5ffcab73a4672c008b135f6fd7e992a97f86277",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P3.png",
+          "path": "frontend/public/inspection-figures/P3.png",
           "sha256": "84327a008f2a00aa37c08861466d867030d81924faa38514393476d0a0d4fb7c",
           "width": 750,
           "height": 500
@@ -194,13 +194,13 @@
       "caption": "전면 드라이브 베이 전체",
       "assets": {
         "webp": {
-          "path": "assets/S4.webp",
+          "path": "frontend/public/inspection-figures/S4.webp",
           "sha256": "bad498538eb7397834cfd018f4e763214c50e486f2b65329195569505ccc1cd8",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S4.png",
+          "path": "frontend/public/inspection-figures/S4.png",
           "sha256": "148ac70b9b10a3b393a63786cc512954b46c915654f19839fb293a0f73f97fba",
           "width": 750,
           "height": 500
@@ -222,13 +222,13 @@
       "caption": "전면 드라이브 베이 전체",
       "assets": {
         "webp": {
-          "path": "assets/P4.webp",
+          "path": "frontend/public/inspection-figures/P4.webp",
           "sha256": "b0217dfe514b26aca44049b0acfde2c755a7e797152ccadee3126d6c0cab944a",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P4.png",
+          "path": "frontend/public/inspection-figures/P4.png",
           "sha256": "5b7868f83da108e65c7967c81b113a7f9ceca0a4e6b1fa3beb2ad36cc1546f45",
           "width": 750,
           "height": 500
@@ -250,13 +250,13 @@
       "caption": "상부 분리 → 하부 트레이 → M.2",
       "assets": {
         "webp": {
-          "path": "assets/S5.webp",
+          "path": "frontend/public/inspection-figures/S5.webp",
           "sha256": "fbd08d0063ba68c4655a6f40655b8f94b0c3eecb23adc35125fab7c70ba1928d",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S5.png",
+          "path": "frontend/public/inspection-figures/S5.png",
           "sha256": "569f9284d405b9b1a1f1075d3a4e007cb2d0fb04a5bd39650001e04ebdb2d3e8",
           "width": 750,
           "height": 500
@@ -279,13 +279,13 @@
       "caption": "상부 덮개 → 보드 M.2 영역",
       "assets": {
         "webp": {
-          "path": "assets/P5.webp",
+          "path": "frontend/public/inspection-figures/P5.webp",
           "sha256": "64df383a894d294fa9b0595386723df19f6e3f635c4fa714d2d0fac688d77988",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P5.png",
+          "path": "frontend/public/inspection-figures/P5.png",
           "sha256": "07253c3fba3b95119ba2da0904ad8679bc8696fc2061f89a7aeba98869373025",
           "width": 750,
           "height": 500
@@ -308,13 +308,13 @@
       "caption": "PSU·전원 입력 영역 전체",
       "assets": {
         "webp": {
-          "path": "assets/S6.webp",
+          "path": "frontend/public/inspection-figures/S6.webp",
           "sha256": "c9826f331871b521fbdfb0d396afc9005a9c1b63169b14e94db7e7bcce408e8b",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S6.png",
+          "path": "frontend/public/inspection-figures/S6.png",
           "sha256": "caed5c24618c9712bd2ff5cf2bddbfd65d51d9a8b8501a284a3c49e8ebb665d2",
           "width": 750,
           "height": 500
@@ -336,13 +336,13 @@
       "caption": "PSU·전원 입력 영역 전체",
       "assets": {
         "webp": {
-          "path": "assets/P6.webp",
+          "path": "frontend/public/inspection-figures/P6.webp",
           "sha256": "dd2651d02327ede704d2fb0308597a115fedf713fbbca0d33ffc19444a25df84",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P6.png",
+          "path": "frontend/public/inspection-figures/P6.png",
           "sha256": "2600ad9aa83b793def2b1c40f8f0206de39a2cc7f4208c56a4953c14939f1fec",
           "width": 750,
           "height": 500
@@ -364,13 +364,13 @@
       "caption": "전면 팬·흡기 영역 전체",
       "assets": {
         "webp": {
-          "path": "assets/S7.webp",
+          "path": "frontend/public/inspection-figures/S7.webp",
           "sha256": "5dc01b39fc72db34f9028e7f68231373daf01330d541f8249bfbf1342a956670",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/S7.png",
+          "path": "frontend/public/inspection-figures/S7.png",
           "sha256": "9f12e928769efee4302a2eb8b629aa103663e18894efe74979827a4adbdfc744",
           "width": 750,
           "height": 500
@@ -392,13 +392,13 @@
       "caption": "내부 전방 팬 8개 영역",
       "assets": {
         "webp": {
-          "path": "assets/P7.webp",
+          "path": "frontend/public/inspection-figures/P7.webp",
           "sha256": "505aa6b6eff9e0682efa447199353762d67c2f18a471b19763901682957458c4",
           "width": 900,
           "height": 600
         },
         "png": {
-          "path": "assets/P7.png",
+          "path": "frontend/public/inspection-figures/P7.png",
           "sha256": "2d552a5256cf45644e905b026005cff8d0c252073f8f28bdd4c5a52072fea531",
           "width": 750,
           "height": 500

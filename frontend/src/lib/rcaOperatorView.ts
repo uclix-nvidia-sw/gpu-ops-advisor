@@ -1205,6 +1205,7 @@ export function operatorView(result: Row) {
 
   return {
     family,
+    component,
     gpuModel: str(alertInfo.model),
     driver: str(alertInfo.driver),
     gpuIndex: str(alertInfo.gpu_index),

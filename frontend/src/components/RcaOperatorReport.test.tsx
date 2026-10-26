@@ -164,3 +164,50 @@ it('names the component reason, target, Fleet event time and live alert state', 
   // Byte ranges read in scaled units, never raw byte counts.
   expect(text).not.toContain('1353207746560');
 });
+
+it('shows inspection previews only under the step that directs physical work', () => {
+  const book = (path: string) =>
+    JSON.parse(
+      readFileSync(new URL(`../../../rcca-agent/runbooks/${path}.json`, import.meta.url), 'utf8'),
+    ).content;
+  const report = (code: string, path: string) => {
+    const content = book(path);
+    return renderToStaticMarkup(
+      <RcaOperatorReport
+        result={{
+          quality: {
+            triage_observations: {
+              schema: 'rca-triage-observations/1',
+              period: { start: '2026-10-26T01:00:00Z', end: '2026-10-26T01:30:00Z' },
+              target: { node: 'dgx01', title: `${code} detected on GPU PCI:0000:4e:00` },
+              logs: [{ code: code.toLowerCase().replace(' ', ':'), device: 'PCI:0000:4e:00' }],
+              metrics: [],
+            },
+            runbook_guidance: [
+              {
+                report_applicability: 'matched',
+                guidance: content.operator_guidance,
+                sources: content.sources,
+              },
+            ],
+          },
+        }}
+      />,
+    );
+  };
+  const xid79 = report('XID 79', 'xid/RB-XID-79');
+  expect(xid79.match(/class="rca-figures"/g)).toHaveLength(1);
+  expect(xid79.indexOf('rca-figures')).toBeGreaterThan(
+    xid79.indexOf('복구: 호스트 재시작 (RESTART_BM)'),
+  );
+  expect(xid79.indexOf('rca-figures')).toBeLessThan(xid79.indexOf('<strong>복구 확인</strong>'));
+  expect(xid79).toContain('inspection-figures/S1.png');
+  expect(xid79).toContain('inspection-figures/P1.png');
+  expect(xid79).not.toContain('inspection-figures/S2');
+  // Animations load only when the large view asks for them.
+  expect(xid79).not.toContain('.webp');
+  const sxid = report('SXID 11001', 'sxid/RB-SXID-11001');
+  expect(sxid).toContain('inspection-figures/S2.png');
+  expect(sxid).not.toContain('inspection-figures/P');
+  expect(report('XID 13', 'xid/RB-XID-13')).not.toContain('rca-figures');
+});

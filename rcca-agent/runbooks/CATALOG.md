@@ -158,7 +158,7 @@ Backend 검증기도 전체 284개 JSON(컴포넌트 17개 포함)을 검사한�
 
 ## 보고서 점검 영역 애니메이션
 
-S1–S7 / P1–P7의 자산·조건부 XID/SXID/컴포넌트 매핑과 보고서 연결 계획은 [RCA 애니메이션 구현 설명](../../docs/rca-animations/README.md)에서 관리한다. 현재는 검토 자산이며 보고서 자동 삽입·Runbook 발행에는 연결되지 않았다.
+S1–S7 / P1–P7의 자산·조건부 XID/SXID/컴포넌트 매핑과 보고서 연결 계획은 [RCA 애니메이션 구현 설명](../../docs/rca-animations/README.md)에서 관리한다. 보고서 2장은 런북 단계 제목으로 그림을 고르므로, 대응표에 있는 단계 제목을 바꾸면 [대응표](../../frontend/src/lib/inspectionFigures.ts)도 함께 고친다(프런트엔드 테스트가 검사). Runbook JSON과 발행 절차는 바뀌지 않는다.
 
 ## 코드별 파일
 
