@@ -1,4 +1,5 @@
 import { toneLabels, type Tone } from '../lib/rcaOperatorView';
+import { highlightSegments } from '../lib/rcaHighlight';
 
 export function ToneBadge({ tone, label }: { tone: Tone; label?: string }) {
   return <span className={`rca-badge tone-${tone}`}>{label || toneLabels[tone]}</span>;
@@ -43,6 +44,56 @@ export function RcaPoints({ items }: { items: string[] }) {
               </>
             ) : (
               <Ids text={body} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Step text with commands, prohibitions and disruptive actions set apart. */
+export function Marked({ text }: { text: string }) {
+  return (
+    <>
+      {highlightSegments(text).map((s, i) =>
+        s.mark === 'command' ? (
+          // Short commands stay on one line; long ones may wrap between words.
+          <code className={`rca-mark-command${s.text.length <= 40 ? ' rca-nowrap' : ''}`} key={i}>
+            {s.text}
+          </code>
+        ) : s.mark ? (
+          <mark className={`rca-mark-${s.mark}`} key={i}>
+            {s.text}
+          </mark>
+        ) : (
+          <Ids key={i} text={s.text} />
+        ),
+      )}
+    </>
+  );
+}
+
+/** Response-step sentences; the branch this alert reported moves first, marked with ▶. */
+export function RcaStepPoints({ items, branches = [] }: { items: string[]; branches?: string[] }) {
+  if (!items.length) return null;
+  const hit = (text: string) => branches.some((b) => text.startsWith(`${b}:`));
+  const ordered = [...items.filter(hit), ...items.filter((text) => !hit(text))];
+  return (
+    <ol className="rca-points">
+      {ordered.map((text, i) => {
+        const at = text.indexOf(': ');
+        const labelled = at > 0 && at <= 32;
+        return (
+          <li key={i} className={hit(text) ? 'rca-branch-hit' : undefined}>
+            {hit(text) && '▶ '}
+            {labelled ? (
+              <>
+                <strong>{text.slice(0, at)}</strong>
+                <Marked text={text.slice(at)} />
+              </>
+            ) : (
+              <Marked text={text} />
             )}
           </li>
         );

@@ -3,6 +3,7 @@
 import { obj, rows, str, num, strings, type Row } from './live';
 import { formatRcaTime as fmt } from './rcaTime';
 import { rcaReasons } from './rcaLabels';
+import { componentInfo, matchedReasons } from './componentReasons';
 
 export type Tone = 'alert' | 'warn' | 'ok' | 'unknown';
 export const toneLabels: Record<Tone, string> = {
@@ -151,7 +152,8 @@ export const normPci = (v: string) =>
 /** Korean sentence split used to turn dense guidance into numbered lines. */
 export const sentences = (text: string) =>
   text
-    .split(/(?<=[다요][.])\s+/)
+    // Also after "다(English source)." so a quoted source name does not merge sentences.
+    .split(/(?<=[다요][.])\s+|(?<=[다요]\([^()]*\)[.])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -376,7 +378,13 @@ function componentTriage(result: Row): Row | null {
     logs: [...byReason].map(([reason, items]) => ({
       code: component,
       device: '',
-      event_times: [],
+      // Fleet's own kernel-message events for this reason (Loki record time).
+      event_times: rows(stored.events)
+        .filter((e) => {
+          const m = plainReason(str(e.message));
+          return !!m && (m.includes(reason) || reason.includes(m));
+        })
+        .map((e) => str(e.recorded_at)),
       first: str(items[0].observed_at),
       last: str(items[items.length - 1].observed_at),
       reports: items.length,
@@ -384,6 +392,7 @@ function componentTriage(result: Row): Row | null {
       evidence_refs: [...new Set(items.flatMap((o) => strings(o.evidence_refs)))],
     })),
     metrics,
+    event_basis: 'fleet_event',
     // Disk rows are per mount, not per GPU.
     metric_scope: metrics.some((m) => str(m.gpu_uuid)) ? 'node_gpu_context' : 'node',
     event_boundary: str(stored.event_boundary) || str(unhealthy[0].observed_at),
@@ -460,6 +469,7 @@ export function operatorView(result: Row) {
 
   // When: producer event time, report span and whether reports continue to the query end.
   const eventTimes = logs.flatMap((r) => strings(r.event_times)).filter((v) => !isNaN(t(v)));
+  const fleetEvent = view.event_basis === 'fleet_event';
   eventTimes.sort((a, b) => t(a) - t(b));
   const reportTimes = logs.flatMap((r) => [str(r.first), str(r.last)]).filter((v) => !isNaN(t(v)));
   reportTimes.sort((a, b) => t(a) - t(b));
@@ -566,12 +576,12 @@ export function operatorView(result: Row) {
       tone: logs.length ? 'ok' : 'unknown',
       label: logs.length ? '일치' : '확인 필요',
       verdict: logs.length
-        ? `알림과 Fleet 상태 보고가 같은 컴포넌트(${component})·노드(${node})를 가리킵니다. 보고에 장치 정보가 없어 대상 장치는 대응 순서의 명령으로 직접 확인합니다.`
+        ? `알림과 Fleet 상태 보고가 같은 컴포넌트(${component})·노드(${node})를 가리킵니다. ${componentInfo(component).target}.`
         : `Fleet 상태 보고에서 ${component} 오류 보고를 찾지 못했습니다. 알림 원문으로 직접 확인하세요.`,
       points: [
         `알림 컴포넌트: ${component} · 노드 ${node}`,
         `Fleet 상태 보고: ${component} · ${node} 오류 보고 ${reports}건 → ${logs.length ? '알림과 일치' : '없음'}`,
-        '장치: Fleet 보고에 장치 정보가 없습니다 — 대응 순서의 즉시 확인 단계로 대상 장치를 찾으세요.',
+        `대상: ${componentInfo(component).target}.`,
         ...(metricGpus.length
           ? [
               `지표 범위: 같은 노드 GPU ${metricGpus.length}개 전체 — 컴포넌트 보고는 장치를 지정하지 않습니다.`,
@@ -591,7 +601,7 @@ export function operatorView(result: Row) {
   const timePoints: string[] = [];
   timePoints.push(
     eventTimes.length
-      ? `오류 발생(커널 원본 이벤트 시각): ${fmt(eventTimes[0])}`
+      ? `오류 발생(${fleetEvent ? 'Fleet이 커널 로그에서 감지해 기록한 시각' : '커널 원본 이벤트 시각'}): ${fmt(eventTimes[0])}`
       : onsetText
         ? `시작 구간: 커널 원본 이벤트는 수집되지 않았지만 상태 보고로 ${onsetText}했습니다.`
         : '시작 시각: 조회 구간에 커널 원본 이벤트도, 정상→오류 전환도 없습니다 — 구간보다 먼저 시작됐을 수 있습니다.',
@@ -657,9 +667,9 @@ export function operatorView(result: Row) {
     const range = (w: Window) =>
       w.min === w.max
         ? val(w.min)
-        : u === 'B/s'
+        : ['B/s', 'B', 'ns'].includes(u)
           ? `${val(w.min)} ~ ${val(w.max)}`
-          : `${fmtNum(w.min)}~${fmtNum(w.max)} ${u}`;
+          : `${fmtNum(w.min)}~${fmtNum(w.max)}${u ? ` ${u}` : ''}`;
     const once = after?.samples === 1 ? ', 사건 뒤 표본 1회' : '';
     const fm = q === 'D47';
     const labels = STATE_CODES[q];
@@ -975,6 +985,20 @@ export function operatorView(result: Row) {
       : [], // one GPU: the per-metric table under the verdict carries the values
     refs: refsOf(metricRows),
   };
+  // XID 79: whether the alert GPU still reports after the event is the first branch of
+  // the Runbook's immediate check (a GPU off the bus stops reporting).
+  if (family === 'gpu' && codes.includes('xid:79') && metrics.length) {
+    const own = metrics.filter((m) => !alertUuid || m.uuids.includes(alertUuid));
+    const arrived = Math.max(0, ...own.map((m) => m.after?.samples || 0));
+    telemetry.points.unshift(
+      arrived
+        ? `버스 이탈 확인: 사건 뒤에도 이 GPU 지표가 ${arrived}회 새로 들어왔습니다 — GPU가 아직 응답하고 있을 수 있으므로 즉시 확인 단계대로 커널 로그(NVRM: Xid 79 줄)를 먼저 대조합니다`
+        : own.some((m) => m.tag === '끊김')
+          ? '버스 이탈 확인: 사건 뒤 이 GPU 지표가 끊겼습니다 — GPU가 버스에서 떨어진 증상과 일치합니다'
+          : '버스 이탈 확인: 사건 뒤 표본이 아직 없어 판단할 수 없습니다 — Grafana에서 이 GPU 지표가 계속 들어오는지 확인합니다',
+    );
+    if (arrived && telemetry.tone === 'unknown') telemetry.tone = 'warn';
+  }
 
   // 4. Recurrence on this device and spread across the host.
   const history = obj(quality.host_incident_history);
@@ -1103,7 +1127,7 @@ export function operatorView(result: Row) {
     ...(healthyAt ? [{ at: healthyAt, label: '마지막 정상 상태 보고', tone: 'ok' as Tone }] : []),
     ...eventTimes.map((at) => ({
       at,
-      label: '오류 발생 (커널 원본 이벤트)',
+      label: fleetEvent ? '오류 발생 (Fleet 커널 이벤트 기록)' : '오류 발생 (커널 원본 이벤트)',
       tone: 'alert' as Tone,
     })),
     ...(firstReport ? [{ at: firstReport, label: '첫 오류 보고', tone: 'warn' as Tone }] : []),
@@ -1190,6 +1214,13 @@ export function operatorView(result: Row) {
     alertUuid,
     alertGpu: alertUuid ? gpuLabel(alertUuid) : '',
     message: str(logs[0]?.message) || plainReason(title),
+    eventLabel: fleetEvent ? 'Fleet 커널 이벤트 기록' : '커널 이벤트',
+    target: component ? componentInfo(component).target : '',
+    targetShort: component ? componentInfo(component).short : '',
+    reasons: component ? componentInfo(component).reasons : [],
+    currentReasons: component
+      ? matchedReasons(component, str(logs[0]?.message) || plainReason(title))
+      : [],
     meaning: str(g0.meaning),
     causeNote: str(g0.cause_note),
     targetCheck,

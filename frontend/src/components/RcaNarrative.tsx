@@ -85,6 +85,7 @@ export function RcaNarrative({
   reader = false,
   decisionSummary = false,
   onEvidence,
+  alarm,
 }: {
   result: Row;
   consolidateChecks?: boolean;
@@ -92,6 +93,8 @@ export function RcaNarrative({
   decisionSummary?: boolean;
   evaluationExpanded?: boolean;
   onEvidence?: (id: string) => void;
+  /** The incident now, for the report's live alert state. */
+  alarm?: Row;
 }) {
   if (
     obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1' ||
@@ -102,6 +105,7 @@ export function RcaNarrative({
         result={result}
         decisionSummary={decisionSummary}
         onEvidence={onEvidence}
+        alarm={alarm}
       />
     );
   }

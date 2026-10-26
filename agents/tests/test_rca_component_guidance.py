@@ -145,6 +145,8 @@ async def test_shipped_component_guidance_survives_healthy_reports_before_failur
     result = await replay(case)
     output = result["output"]["result"]
     assert len(output["device_observations"]) == 4
+    # Healthy baseline reports stay context; the Unhealthy ones carry the values.
+    assert "unknown_value" not in output["missing_inputs"]
     guidance = output["quality"]["runbook_guidance"]
     assert [g["report_applicability"] for g in guidance] == ["matched"]
     assert "findmnt -O ro" in str(output["narrative"])

@@ -3,7 +3,7 @@ import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperato
 import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons } from '../lib/rcaLabels';
 import { formatRcaTime } from '../lib/rcaTime';
-import { Ids, RcaPoints, ToneBadge } from './RcaReportParts';
+import { Ids, RcaPoints, RcaStepPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
 
@@ -16,13 +16,25 @@ export function RcaOperatorReport({
   result,
   decisionSummary = false,
   onEvidence,
+  alarm,
 }: {
   result: Row;
   decisionSummary?: boolean;
   onEvidence?: (id: string) => void;
+  /** The incident as it is now; the report itself is a snapshot from its query window. */
+  alarm?: Row;
 }) {
   const quality = obj(result.quality);
   const v = operatorView(result);
+  // Judgment-step labels for the reason this alert reported (component Runbooks).
+  // Generic triage close-out unless the published Runbook already covers it.
+  const closeOut =
+    !!v &&
+    v.family !== 'component' &&
+    !v.actionChecks.some((c) => str(c.text).includes('dcgmi diag'));
+  const branches = [
+    ...new Set((v?.currentReasons || []).flatMap((r) => (r.branch ? [r.branch] : []))),
+  ];
   const narrative = rows(result.narrative).map((section) =>
     section.id === 'limits'
       ? {
@@ -116,7 +128,7 @@ export function RcaOperatorReport({
         <h3>RCA 장애 보고서{v ? ` · ${v.node} · ${v.codes.join(', ')}` : ''}</h3>
         {v?.family === 'component' && (
           <p>
-            {v.codes[0]} 컴포넌트 · 노드 {v.node} · 장치 정보 없음
+            {v.codes[0]} 컴포넌트 · 노드 {v.node} · {v.targetShort}
           </p>
         )}
         {v && v.family !== 'component' && (
@@ -133,7 +145,14 @@ export function RcaOperatorReport({
           </p>
         )}
         <div className="rca-chips">
-          {v?.ongoing && <ToneBadge tone="alert" label="오류 계속 보고 중" />}
+          {alarm?.alarm_status === 'firing' && <ToneBadge tone="alert" label="지금 알림 발생 중" />}
+          {alarm?.alarm_status === 'resolved' && (
+            <ToneBadge
+              tone="ok"
+              label={`알림 해제됨${str(alarm.alarm_resolved_at) ? ` · ${formatRcaTime(str(alarm.alarm_resolved_at))}` : ''}`}
+            />
+          )}
+          {v?.ongoing && <ToneBadge tone="alert" label="조회 종료 시점에도 보고 중" />}
           {v && v.sameDeviceCount > 1 && (
             <ToneBadge
               tone="alert"
@@ -241,11 +260,21 @@ export function RcaOperatorReport({
           </h4>
           <RcaPoints
             items={[
-              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}${v.family === 'component' ? ` · 보고 사유: ${v.message}` : ''}`,
+              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
+              ...(v.currentReasons.length
+                ? [
+                    `이번 사유: ${v.currentReasons.map((r) => r.label).join(' · ')} (Fleet 원문: ${v.message})`,
+                  ]
+                : []),
+              ...(v.reasons.length > 1
+                ? [
+                    `가능한 사유 ${v.reasons.length}가지: ${v.reasons.map((r) => (v.currentReasons.includes(r) ? `${r.label}(이번)` : r.label)).join(' · ')}`,
+                  ]
+                : []),
               v.family === 'component'
-                ? `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.codes[0]} 컴포넌트 — 보고에 장치 정보가 없어 대응 순서의 즉시 확인으로 찾습니다`
+                ? `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.target}`
                 : `대상: ${v.cluster ? `${v.cluster} · ` : ''}${v.node} · ${v.family === 'nvswitch' ? 'NVSwitch' : 'GPU'} PCI ${v.alertPci || '—'}${v.alertUuid ? ` · ${v.alertUuid}` : ''}`,
-              `언제: ${v.eventTime ? `${formatRcaTime(v.eventTime)} 커널 이벤트` : v.onsetText || '시작 시각 미확인'} — ${timing.verdict}`,
+              `언제: ${v.eventTime ? `${formatRcaTime(v.eventTime)} ${v.eventLabel}` : v.onsetText || '시작 시각 미확인'} — ${timing.verdict}`,
               ...v.otherNotes.map((note) => `같은 노드 다른 오류: ${note}`),
               ...(v.workloads.some((w) => w.atIncident)
                 ? [
@@ -300,43 +329,53 @@ export function RcaOperatorReport({
           <>
             {v.message && (
               <p>
-                이번 로그 원문: <Ids text={v.message} /> — 아래 판단 기준의 분기(오류 영역·사유)를
-                이 문구로 고르세요.
+                이번 로그 원문: <Ids text={v.message} />
+                {branches.length > 0 &&
+                  ` — '${v.currentReasons.map((r) => r.label).join(' · ')}'에 해당합니다. 판단 단계 맨 위에 ▶로 표시한 항목을 따르세요.`}
               </p>
             )}
+            <nav className="rca-step-toc" aria-label="대응 단계 목차">
+              {[
+                '대상 장치 확정',
+                ...v.actionChecks.map((c) => str(c.title)),
+                ...(closeOut ? ['조치 후 확인·에스컬레이션'] : []),
+              ].map((title, i) => (
+                <a key={i} href={`#rca-step-${i + 1}`}>
+                  {i + 1} {title}
+                </a>
+              ))}
+            </nav>
             <ol className="rca-steps">
-              <li>
+              <li id="rca-step-1">
                 <div className="rca-step-head">
                   <strong>대상 장치 확정</strong>{' '}
                   <ToneBadge tone={identity.tone} label={identity.label} />
                 </div>
                 <p>{identity.verdict}</p>
-                <RcaPoints items={sentences(str(v.targetCheck?.text))} />
+                <RcaStepPoints items={sentences(str(v.targetCheck?.text))} />
               </li>
               {v.actionChecks.map((c, i) => (
-                <li key={i}>
+                <li key={i} id={`rca-step-${i + 2}`}>
                   <div className="rca-step-head">
                     <strong>{str(c.title)}</strong>
                   </div>
-                  <RcaPoints items={sentences(str(c.text))} />
+                  <RcaStepPoints items={sentences(str(c.text))} branches={branches} />
                 </li>
               ))}
-              {/* Generic triage close-out unless the published Runbook already covers it. */}
-              {v.family !== 'component' &&
-                !v.actionChecks.some((c) => str(c.text).includes('dcgmi diag')) && (
-                  <li>
-                    <div className="rca-step-head">
-                      <strong>조치 후 확인·에스컬레이션</strong>
-                    </div>
-                    <RcaPoints
-                      items={[
-                        '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
-                        '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
-                        '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
-                      ]}
-                    />
-                  </li>
-                )}
+              {closeOut && (
+                <li id={`rca-step-${v.actionChecks.length + 2}`}>
+                  <div className="rca-step-head">
+                    <strong>조치 후 확인·에스컬레이션</strong>
+                  </div>
+                  <RcaStepPoints
+                    items={[
+                      '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
+                      '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
+                      '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
+                    ]}
+                  />
+                </li>
+              )}
             </ol>
             {guidance.map((g, i) => (
               <span key={i}>{links([g.evidence_id])}</span>

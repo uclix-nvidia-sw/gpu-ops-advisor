@@ -655,7 +655,7 @@ async def test_numeric_findings_get_one_repair_request_in_combined_author():
 
 
 def test_component_alert_metrics_are_split_at_the_first_unhealthy_report():
-    from rcca_agent.incident_dossier import component_metrics, component_view
+    from rcca_agent.incident_dossier import component_report, component_view
 
     def evidence(query, labels, points, unit="count"):
         return {
@@ -714,14 +714,14 @@ def test_component_alert_metrics_are_split_at_the_first_unhealthy_report():
     # Without an Unhealthy report the alert time splits the windows.
     assert component_view(data, rows, [], "disk")["boundary_basis"] == "alert_time"
     plan = [{"query_id": "D09"}, {"query_id": "D59"}]
-    assert component_metrics(
+    assert component_report(
         [{"knowledge_key": "RB-COMPONENT-DISK", "content": {"observation_plan": plan}}]
     )
-    assert not component_metrics(
+    assert not component_report(
         [{"knowledge_key": "RB-XID-79", "content": {"observation_plan": plan}}]
     )
     # Selection keeps the general Runbook only when nothing dedicated applies.
-    assert component_metrics(
+    assert component_report(
         [
             {
                 "knowledge_key": "RB-GENERAL-GPU-NODE",
@@ -730,6 +730,69 @@ def test_component_alert_metrics_are_split_at_the_first_unhealthy_report():
             }
         ]
     )
+
+
+def test_component_report_keeps_fleet_kernel_events():
+    from rcca_agent.incident_dossier import component_report, component_view
+
+    # A component plan without metrics still stores observations (events).
+    assert component_report(
+        [
+            {
+                "knowledge_key": "RB-COMPONENT-NCCL",
+                "content": {"observation_plan": [{"query_id": "D09"}]},
+            }
+        ]
+    )
+    line = lambda component, node, name: json.dumps(  # noqa: E731
+        {
+            "body": f"[Warning] {component}: filesystem remounted as read-only due to errors",
+            "attributes": {
+                "component": component,
+                "event_id": f"{component}-{node}",
+                "event_name": name,
+                "event_type": "Warning",
+                "log_type": "event",
+            },
+            "resources": {"k8s.node.name": node},
+        }
+    )
+    ns = str(1792743298 * 10**9)  # 2026-10-23T08:14:58Z
+    evidence = [
+        {
+            "id": "logs",
+            "query_id": "D09",
+            "cluster_id": "cpc-1",
+            "tool_status": "ok",
+            "quality": {"complete": True},
+            "snapshot": {
+                "data": {
+                    "result": [
+                        {
+                            "stream": {},
+                            "values": [
+                                [ns, line("disk", "dgx01", "filesystem_read_only")],
+                                [ns, line("disk", "dgx02", "filesystem_read_only")],
+                                [ns, line("os", "dgx01", "kernel_panic")],
+                            ],
+                        }
+                    ]
+                }
+            },
+        }
+    ]
+    data = {
+        "scope": {"clusters": [{"cluster_id": "cpc-1"}]},
+        "target": {"node": "dgx01"},
+        "time_range": {"start": "2026-10-23T08:00:00Z", "end": "2026-10-23T08:30:00Z"},
+        "incident_time": "2026-10-23T08:19:00Z",
+    }
+    events = component_view(data, evidence, [], "disk")["events"]
+    # Only this node's events of the alert component, with Loki record time.
+    assert [(e["event_name"], e["recorded_at"]) for e in events] == [
+        ("filesystem_read_only", "2026-10-23T08:14:58Z")
+    ]
+    assert events[0]["evidence_refs"] == ["logs"]
 
 
 def test_host_rows_are_named_by_interface_and_load_window():

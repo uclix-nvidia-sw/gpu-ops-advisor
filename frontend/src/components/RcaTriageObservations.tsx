@@ -117,7 +117,7 @@ export function RcaTriageObservations({
             <td>
               {v.family === 'component' ? (
                 <strong>
-                  {v.codes[0]} 컴포넌트 · 노드 {v.node} (장치 정보 없음)
+                  {v.codes[0]} 컴포넌트 · 노드 {v.node} ({v.targetShort})
                 </strong>
               ) : (
                 <strong>
@@ -156,7 +156,7 @@ export function RcaTriageObservations({
                 {!v.workloads.some((w) => w.atIncident) && (
                   <div>
                     {v.podsKnown
-                      ? `사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 없습니다 (작업 영향 미관측)`
+                      ? `사건 시각에 ${v.family === 'nvswitch' ? '노드 GPU' : '이 GPU'}를 쓰던 파드가 DCGM 지표 라벨에 없습니다 (작업 영향 미관측)`
                       : `수집한 ${v.family === 'component' ? '자료' : '지표'}에 파드 정보가 없어 확인하지 못했습니다 — kubectl get pods -A -o wide로 확인`}
                   </div>
                 )}

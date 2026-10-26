@@ -460,6 +460,7 @@ export function RcaResult({
   showEvidence = true,
   evaluationExpanded = false,
   reader = false,
+  alarm,
 }: {
   job: Row;
   onEvidence: (id: string) => void;
@@ -467,6 +468,8 @@ export function RcaResult({
   evaluationExpanded?: boolean;
   /** Operator view: the report only; evidence and processing records stay in developer mode. */
   reader?: boolean;
+  /** The incident now, for the report's live alert state. */
+  alarm?: Row;
 }) {
   const result = obj(job.result),
     analysis = obj(obj(result.quality).analysis),
@@ -483,7 +486,7 @@ export function RcaResult({
       <div className="stack">
         <RcaJobSummary job={job} reader />
         {job.result_ref != null && (
-          <RcaNarrative result={result} consolidateChecks onEvidence={onEvidence} />
+          <RcaNarrative result={result} consolidateChecks onEvidence={onEvidence} alarm={alarm} />
         )}
       </div>
     );
@@ -497,6 +500,7 @@ export function RcaResult({
             consolidateChecks
             evaluationExpanded={evaluationExpanded}
             onEvidence={onEvidence}
+            alarm={alarm}
           />
           {obj(obj(result.quality).triage_observations).schema !== 'rca-triage-observations/1' &&
             obj(obj(result.quality).analysis).workflow !== 'single_collection' && (
