@@ -107,10 +107,12 @@ Never request another query round for this completed observation plan.
 """
 
 TRIAGE_CONTEXT += """
-In findings, insert incident_brief.value_token verbatim when a measurement is useful.
-The application expands that token to its exact device, metric, unit, measured period
-and values. Cite all of that row's evidence_refs. Do not copy or translate the numeric
-phrase yourself. Explain the operational meaning immediately after the token.
+In findings, insert incident_brief.value_token verbatim whenever a measurement, report
+count, time or host-history total is useful. The application expands that token to its
+exact device, metric, unit, period, counts and values. Cite all of that row's
+evidence_refs. Never write digits, times or number words yourself, even when another
+input such as investigation_summary states them; use the matching token instead.
+Explain the operational meaning immediately after the token.
 Write three to five focused findings when supported: chronology, device-specific
 measurements, comparison with prior incidents and the resulting debugging priority.
 Distinguish producer_event_time from alert_time and repeated status receptions.
