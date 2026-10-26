@@ -3,7 +3,7 @@ import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperato
 import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons } from '../lib/rcaLabels';
 import { formatRcaTime } from '../lib/rcaTime';
-import { Ids, RcaPoints, ToneBadge } from './RcaReportParts';
+import { Ids, RcaPoints, RcaStepPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
 
@@ -27,6 +27,11 @@ export function RcaOperatorReport({
   const quality = obj(result.quality);
   const v = operatorView(result);
   // Judgment-step labels for the reason this alert reported (component Runbooks).
+  // Generic triage close-out unless the published Runbook already covers it.
+  const closeOut =
+    !!v &&
+    v.family !== 'component' &&
+    !v.actionChecks.some((c) => str(c.text).includes('dcgmi diag'));
   const branches = [
     ...new Set((v?.currentReasons || []).flatMap((r) => (r.branch ? [r.branch] : []))),
   ];
@@ -326,46 +331,51 @@ export function RcaOperatorReport({
               <p>
                 이번 로그 원문: <Ids text={v.message} />
                 {branches.length > 0 &&
-                  ` — '${v.currentReasons.map((r) => r.label).join(' · ')}'에 해당합니다. 아래 판단 단계에서 ▶로 표시한 항목을 따르세요.`}
+                  ` — '${v.currentReasons.map((r) => r.label).join(' · ')}'에 해당합니다. 판단 단계 맨 위에 ▶로 표시한 항목을 따르세요.`}
               </p>
             )}
+            <nav className="rca-step-toc" aria-label="대응 단계 목차">
+              {[
+                '대상 장치 확정',
+                ...v.actionChecks.map((c) => str(c.title)),
+                ...(closeOut ? ['조치 후 확인·에스컬레이션'] : []),
+              ].map((title, i) => (
+                <a key={i} href={`#rca-step-${i + 1}`}>
+                  {i + 1} {title}
+                </a>
+              ))}
+            </nav>
             <ol className="rca-steps">
-              <li>
+              <li id="rca-step-1">
                 <div className="rca-step-head">
                   <strong>대상 장치 확정</strong>{' '}
                   <ToneBadge tone={identity.tone} label={identity.label} />
                 </div>
                 <p>{identity.verdict}</p>
-                <RcaPoints items={sentences(str(v.targetCheck?.text))} />
+                <RcaStepPoints items={sentences(str(v.targetCheck?.text))} />
               </li>
               {v.actionChecks.map((c, i) => (
-                <li key={i}>
+                <li key={i} id={`rca-step-${i + 2}`}>
                   <div className="rca-step-head">
                     <strong>{str(c.title)}</strong>
                   </div>
-                  <RcaPoints
-                    items={sentences(str(c.text)).map((line) =>
-                      branches.some((b) => line.startsWith(`${b}:`)) ? `▶ ${line}` : line,
-                    )}
-                  />
+                  <RcaStepPoints items={sentences(str(c.text))} branches={branches} />
                 </li>
               ))}
-              {/* Generic triage close-out unless the published Runbook already covers it. */}
-              {v.family !== 'component' &&
-                !v.actionChecks.some((c) => str(c.text).includes('dcgmi diag')) && (
-                  <li>
-                    <div className="rca-step-head">
-                      <strong>조치 후 확인·에스컬레이션</strong>
-                    </div>
-                    <RcaPoints
-                      items={[
-                        '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
-                        '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
-                        '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
-                      ]}
-                    />
-                  </li>
-                )}
+              {closeOut && (
+                <li id={`rca-step-${v.actionChecks.length + 2}`}>
+                  <div className="rca-step-head">
+                    <strong>조치 후 확인·에스컬레이션</strong>
+                  </div>
+                  <RcaStepPoints
+                    items={[
+                      '재인식 확인: 같은 장치가 다시 인식·접근되는지와 같은 오류의 재발 여부를 확인합니다.',
+                      '정밀 진단: 하드웨어 문제가 의심되거나 재발하면 dcgmi diag -r 3(약 30분)으로 진단합니다.',
+                      '공급사 전달: 해결되지 않으면 아래 전달 자료를 갖춰 시스템 공급사에 티켓을 제출합니다.',
+                    ]}
+                  />
+                </li>
+              )}
             </ol>
             {guidance.map((g, i) => (
               <span key={i}>{links([g.evidence_id])}</span>
