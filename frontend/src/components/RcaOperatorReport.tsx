@@ -3,6 +3,8 @@ import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperato
 import { gapMeaning } from '../lib/rcaGuidance';
 import { rcaReasons } from '../lib/rcaLabels';
 import { formatRcaTime } from '../lib/rcaTime';
+import { inspectionFigures } from '../lib/inspectionFigures';
+import { InspectionFigures } from './InspectionFigures';
 import { Ids, RcaPoints, RcaStepPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
@@ -104,6 +106,11 @@ export function RcaOperatorReport({
     ? savedChecks
     : (v?.actionChecks || []).map((c) => `${str(c.title)} — ${str(c.text)}`);
   const first = v?.actionChecks[0];
+  // Inspection-area figures keyed by the alert code (or component) and step title.
+  const figures = inspectionFigures(
+    (v?.family === 'component' ? v.component : v?.codes[0]) || '',
+    (v?.actionChecks || []).map((c) => str(c.title)),
+  );
   const maxCount = Math.max(1, ...(v?.devices || []).map((d) => d.count));
   // Sections 1 and 3 need the triage observations; say why they are empty.
   const books = rows(result.runbook_revisions).filter(
@@ -360,6 +367,9 @@ export function RcaOperatorReport({
                     <strong>{str(c.title)}</strong>
                   </div>
                   <RcaStepPoints items={sentences(str(c.text))} branches={branches} />
+                  {figures.get(str(c.title)) && (
+                    <InspectionFigures ids={figures.get(str(c.title))!} />
+                  )}
                 </li>
               ))}
               {closeOut && (

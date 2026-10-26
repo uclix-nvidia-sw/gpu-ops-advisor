@@ -583,3 +583,104 @@ mark.rca-mark-caution {
   font-size: 12px;
   text-decoration: none;
 }
+/* Inspection-area previews stay one short row under the step; the large view is a dialog. */
+.rca-figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.rca-figure-thumb {
+  display: grid;
+  grid-template-columns: 96px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: zoom-in;
+}
+.rca-figure-thumb:hover {
+  border-color: var(--green);
+}
+.rca-figure-thumb:focus-visible,
+.rca-figure-play:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.rca-figure-thumb img {
+  width: 96px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.rca-figure-thumb span {
+  display: grid;
+  gap: 1px;
+}
+.rca-figure-thumb small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.rca-figure-note {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.rca-figure-view {
+  display: grid;
+  gap: 10px;
+}
+.rca-figure-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.rca-figure-view img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  max-height: calc(100dvh - 220px);
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--surface);
+}
+/* Phones: two previews side by side, label under each image. */
+@media (max-width: 640px) {
+  .rca-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rca-figure-thumb {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 4px;
+  }
+  .rca-figure-thumb img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 2;
+  }
+  .rca-figure-note {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rca-figure-play {
+    display: none;
+  }
+}
