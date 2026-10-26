@@ -85,7 +85,7 @@ const units: Record<string, string> = {
   processes: '개',
   load: '',
 };
-export const unitLabel = (unit: unknown) => units[str(unit)] || str(unit);
+export const unitLabel = (unit: unknown) => units[str(unit)] ?? str(unit);
 
 const fmtNum = (v: number) => String(Math.round(v * 1000) / 1000);
 /** Value with its unit label; byte rates scale to KB/MB/GB per second. */
@@ -288,7 +288,10 @@ function mergeSeries(metricRows: Row[]) {
     };
   };
   for (const m of metricRows) {
-    const key = `${str(m.query_id) || str(m.name)}|${str(m.gpu_uuid)}`;
+    // Node rows without a GPU are told apart by mount, interface or load window.
+    const key = [m.query_id || m.name, m.gpu_uuid, m.mount_point, m.interface, m.window]
+      .map((v) => str(v))
+      .join('|');
     const seen = merged.get(key);
     if (!seen) {
       merged.set(key, { ...m });
@@ -704,6 +707,13 @@ export function operatorView(result: Row) {
       if (flag && latest === flag[0]) {
         [tag, tone, short] = [flag[1], flag[2], `${code(latest)} — ${flag[3]}`];
         enumChange = changed ? enumChange : `상태 코드 ${code(latest)}`;
+        // A link already down before the incident is usually an unused port, not this fault.
+        if (q === 'D65' && !changed)
+          [tag, tone, short] = [
+            '사건 전부터 끊김',
+            'unknown',
+            `${code(latest)} — 사건 전부터 내려가 있던 인터페이스입니다. 사용하는 포트인지 확인합니다`,
+          ];
       }
     } else if (whole) {
       [tag, short] = [
@@ -822,9 +832,11 @@ export function operatorView(result: Row) {
   const multi =
     view.metric_scope === 'node_gpu_context' || new Set(metrics.flatMap((m) => m.uuids)).size > 1;
   const order = [...new Set(metrics.map((m) => m.name))];
-  const allGpus = new Set(metrics.flatMap((m) => m.uuids));
+  const allGpus = new Set(metrics.flatMap((m) => m.uuids).filter(Boolean));
   const gpuSet = (uuids: string[]) => {
     const unique = [...new Set(uuids)];
+    // Host rows (CPU, memory, ethernet) carry no GPU.
+    if (unique.every((u) => !u)) return '노드 지표';
     const nos = unique.map((u) => str(obj(gpuInfo.get(u)).gpu_index));
     if (unique.length > 2 && unique.length === allGpus.size) return `GPU ${unique.length}개 모두`;
     return nos.every(Boolean)

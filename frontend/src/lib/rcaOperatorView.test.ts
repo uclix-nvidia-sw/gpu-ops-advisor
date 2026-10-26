@@ -663,6 +663,77 @@ it('builds a report from the general Runbook and flags a down ethernet link', ()
   expect(valueText(2.5, '')).toBe('2.5');
 });
 
+it('keeps node rows apart by load window and interface', () => {
+  const window = (value: number, at: string) => ({
+    min: value,
+    max: value,
+    last_value: value,
+    samples: 2,
+    first: at,
+    last: at,
+  });
+  const row = (query: string, name: string, unit: string, extra: object, v: [number, number]) => ({
+    query_id: query,
+    name,
+    unit,
+    kind: 'gauge',
+    last: '2026-10-23T08:25:00Z',
+    max_sample_gap_seconds: 60,
+    incident_windows: {
+      before: window(v[0], '2026-10-23T08:10:00Z'),
+      at_or_after: window(v[1], '2026-10-23T08:25:00Z'),
+    },
+    ...extra,
+  });
+  const v = operatorView({
+    runbook_revisions: [{ knowledge_key: 'RB-COMPONENT-CPU', revision: 3 }],
+    time_range: { start: '2026-10-23T07:50:00Z', end: '2026-10-23T08:30:00Z' },
+    incident_time: '2026-10-23T08:19:00Z',
+    device_observations: [
+      {
+        component: 'cpu',
+        raw_health: 'Unhealthy',
+        reason: 'error calculating CPU usage',
+        observed_at: '2026-10-23T08:18:00Z',
+        target: { node: 'dgx01' },
+      },
+    ],
+    quality: {
+      component_observations: {
+        schema: 'rca-component-observations/1',
+        event_boundary: '2026-10-23T08:18:00Z',
+        metrics: [
+          row('D19', 'CPU 평균 부하 (1분)', 'load', { window: '1m0s' }, [7.44, 11.71]),
+          row('D19', 'CPU 평균 부하 (15분)', 'load', { window: '15m0s' }, [7.32, 7.55]),
+          row('D68', '이더넷 수신 폐기 누적값 (eth0)', 'packets', { interface: 'eth0' }, [0, 0]),
+          row('D68', '이더넷 수신 폐기 누적값 (eth1)', 'packets', { interface: 'eth1' }, [5, 9]),
+          {
+            ...row('D65', '이더넷 링크 상태 (eth9)', 'enum', { interface: 'eth9' }, [0, 0]),
+            kind: 'enum',
+          },
+          { ...row('D04', 'GPU 온도', 'celsius', { gpu_uuid: gpu }, [40, 41]) },
+        ],
+      },
+    },
+  })!;
+  expect(v.metrics.map((m) => m.name).sort()).toEqual([
+    'CPU 평균 부하 (15분)',
+    'CPU 평균 부하 (1분)',
+    'GPU 온도',
+    '이더넷 링크 상태 (eth9)',
+    '이더넷 수신 폐기 누적값 (eth0)',
+    '이더넷 수신 폐기 누적값 (eth1)',
+  ]);
+  // A port already down before the incident is not flagged as this fault.
+  expect(v.metrics.find((m) => m.query === 'D65')).toMatchObject({
+    tag: '사건 전부터 끊김',
+    tone: 'unknown',
+  });
+  // Host rows are labelled as node metrics, not as one more GPU.
+  expect(v.gpuRows.map((r) => r.gpus)).toContain('노드 지표');
+  expect(v.metrics.find((m) => m.name === 'CPU 평균 부하 (1분)')!.afterText).toBe('11.71');
+});
+
 it('shows how much cumulative counters grew and reads violation time as elapsed time', () => {
   const counter = (query: string, name: string, unit: string, from: number, to: number) => ({
     name,
