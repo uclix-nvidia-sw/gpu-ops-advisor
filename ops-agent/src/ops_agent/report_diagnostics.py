@@ -4,6 +4,7 @@ from collections import defaultdict
 
 
 REASONS = {
+    "transition_query_budget_reserved": "후속 메모리·작업·문맥 수집과 수집기 검증의 최대 조회 예산을 남기기 위해 연결 변경 검증을 실행하지 않음",
     "transition_query_budget_exhausted": "추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함",
     "transition_deadline_exhausted": "검증 시간 한도에 도달하여 연결 변경 검증을 실행하지 못함",
     "base_query_unavailable": "기본 조회 자료가 없어 연결 변경 검증을 실행하지 못함",

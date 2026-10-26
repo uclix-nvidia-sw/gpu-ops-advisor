@@ -4314,3 +4314,92 @@ def test_scheduled_and_manual_attribution_quality_is_published(
         html = Path(stack["env"]["ARTIFACT_DIR"], artifact["object_key"]).read_text()
         for message in diagnostics["messages"] + diagnostics["unattributed_messages"]:
             assert escape(message) in html
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize(
+    "extra_sources,reason",
+    [
+        (0, "transition_query_budget_exhausted"),
+        (29, "transition_query_budget_reserved"),
+    ],
+)
+def test_scheduled_and_manual_query_skip_reason_is_exported(
+    stack, monkeypatch, extra_sources, reason
+):
+    from copy import deepcopy
+    from html import escape
+    import test_aggregate_report
+    from ops_agent.report_diagnostics import REASONS
+
+    original_get = Upstream.do_GET
+
+    def discovery(self):
+        path = urlparse(self.path).path
+        if path == "/api/datasources":
+            return self.send(
+                [
+                    {"id": 1, "uid": "mimir", "name": "Metrics", "type": "prometheus"},
+                    *[
+                        {
+                            "id": i + 10,
+                            "uid": f"unused-{i}",
+                            "name": "Unused",
+                            "type": "prometheus",
+                        }
+                        for i in range(extra_sources)
+                    ],
+                ]
+            )
+        if "unused-" in path and "/label/" in path:
+            return self.send({"status": "success", "data": []})
+        if "unused-" in path and "/proxy/" not in path and "/resources/" not in path:
+            return self.send(
+                {
+                    "id": 10,
+                    "uid": path.rsplit("/", 1)[-1],
+                    "name": "Unused",
+                    "type": "prometheus",
+                    "url": f"http://127.0.0.1:{self.server.server_port}",
+                    "access": "proxy",
+                    "jsonData": {},
+                }
+            )
+        return original_get(self)
+
+    monkeypatch.setattr(Upstream, "do_GET", discovery)
+    original_fixture = test_aggregate_report.fixture
+
+    def changed(*args, **kwargs):
+        evidence = original_fixture(*args, **kwargs)
+        for point in evidence[2]["snapshot"]["series"][0]["values"]:
+            point[1] = "2"
+        return evidence
+
+    monkeypatch.setattr(test_aggregate_report, "fixture", changed)
+    published = []
+    original_worker = worker_result
+
+    def capture(*args, **kwargs):
+        result, evidence = original_worker(*args, **kwargs)
+        published.append(deepcopy(result))
+        return result, evidence
+
+    monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
+    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    assert len(published) == 2
+    for result in published:
+        usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
+        diagnostics = usage["quality"]["observation_diagnostics"]
+        assert reason in str(diagnostics)
+        assert REASONS[reason] in diagnostics["summary"]
+        other = (
+            "transition_query_budget_exhausted"
+            if extra_sources
+            else "transition_query_budget_reserved"
+        )
+        assert other not in str(diagnostics)
+        artifact = next(a for a in result["artifacts"] if a["format"] == "html")
+        html = Path(stack["env"]["ARTIFACT_DIR"], artifact["object_key"]).read_text()
+        assert escape(REASONS[reason]) in html
+        assert result["quality"]["query_count"] <= 80
