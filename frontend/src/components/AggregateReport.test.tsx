@@ -1060,3 +1060,31 @@ it.each([false, true])(
     expect(html.includes('Namespace별 사용량 비교에서 제외했습니다')).toBe(!current);
   },
 );
+
+it.each([
+  '추가 조회 예산이 소진되어 연결 변경 검증을 실행하지 못함',
+  '후속 메모리·작업·문맥 수집과 수집기 검증의 최대 조회 예산을 남기기 위해 연결 변경 검증을 실행하지 않음',
+])('shows the saved skip reason without replacing it: %s', (reason) => {
+  const value = {
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        rows: [],
+        quality: {
+          observation_diagnostics: {
+            version: 'ops-observation-diagnostics-v3',
+            summary: [reason],
+            messages: [`cpc-2: ${reason}`],
+          },
+        },
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <AggregateReport value={value} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain(reason);
+  expect(html).toContain(`cpc-2: ${reason}`);
+});

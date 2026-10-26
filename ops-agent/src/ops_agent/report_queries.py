@@ -195,12 +195,12 @@ class ReportQueries:
             )
         return evidence
 
-    async def check_transitions(self, groups):
+    async def check_transitions(self, groups, *, reserved_calls=0):
         """Share bounded verification across clusters, current period before previous."""
         output = []
         for current in (True, False):
             batches = deque(
-                self.transition_batches(*group)
+                self.transition_batches(*group, reserved_calls=reserved_calls)
                 for group in groups
                 if (group[1] == self.data["time_range"]) == current
             )
@@ -213,7 +213,9 @@ class ReportQueries:
                 batches.append(stream)
         return output
 
-    async def transition_batches(self, cluster, period, uid, evidence):
+    async def transition_batches(
+        self, cluster, period, uid, evidence, *, reserved_calls=0
+    ):
         activity, _, counts = evidence
         audit = activity["quality"]["transition_verification"] = []
         if not uid or any(e["tool_status"] != "ok" for e in evidence):
@@ -245,6 +247,13 @@ class ReportQueries:
                     continue
                 if time.monotonic() >= self.transition_deadline:
                     entry["reason"] = "transition_deadline_exhausted"
+                    continue
+                if reserved_calls and self.calls + 2 + reserved_calls > 80:
+                    entry["reason"] = (
+                        "report_query_limit_exceeded"
+                        if self.calls + 2 > 80
+                        else "transition_query_budget_reserved"
+                    )
                     continue
                 pod_names = sorted(
                     {
