@@ -736,7 +736,7 @@ async def test_topic_structure_repair_uses_one_complete_shape(
     )
     for call in llm.complete.call_args_list:
         system = call.args[0]
-        assert "아래 주제 설명은 추가 section이 아닙니다" in system
+        assert "response_shape의 주제·항목 ID·순서" in system
         assert 'namespace_usage: {"topic_id"' not in system
         assert 'incident_summary: {"topic_id"' not in system
     assert result["quality"]["report"]["attempts"] == 2
