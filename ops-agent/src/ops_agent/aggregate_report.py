@@ -306,7 +306,15 @@ async def run(tools):
                 [
                     (cluster, period, collected[0]["input"]["datasourceUid"], collected)
                     for cluster, period, collected in pending
-                ]
+                ],
+                # Maximum reservation; unavailable sources may use fewer calls.
+                reserved_calls=4
+                + sum(
+                    len(memory_queries(cluster))
+                    + len(workload_queries(cluster))
+                    + len(context_queries(cluster))
+                    for cluster in data["scope"]["clusters"]
+                ),
             )
         )
         # Optional memory follows all activity/identity work; keep time for interpretation.

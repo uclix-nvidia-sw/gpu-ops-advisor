@@ -125,14 +125,19 @@ async def test_cancellation_stops_before_another_cluster_query():
     assert query.await_count == 1
 
 
-@pytest.mark.parametrize("datasources,expected_calls", [(1, 79), (2, 81)])
-async def test_four_cluster_supplements_and_existing_total_limit(
-    datasources, expected_calls
+@pytest.mark.parametrize("datasources", [1, 2])
+@pytest.mark.parametrize("clusters", [1, 2, 3, 4])
+async def test_cluster_supplements_and_collectors_keep_reserved_budget(
+    datasources, clusters
 ):
     data = deepcopy(DATA)
     data["scope"]["clusters"] = [
-        dict(cluster_id=f"cpc-{i}", namespaces=None) for i in range(1, 5)
+        dict(cluster_id=f"cpc-{i}", namespaces=None) for i in range(1, clusters + 1)
     ]
+    transition_calls = 30 if (clusters, datasources) == (4, 2) else 32
+    expected_calls = (
+        1 + 2 * datasources + 10 * clusters + transition_calls + min(4, 2 * clusters)
+    )
     calls = []
 
     async def list_datasources(args):
@@ -217,25 +222,30 @@ async def test_four_cluster_supplements_and_existing_total_limit(
             "hourly_gpu_workload_context",
         }
     ]
-    assert len(supplemental) == 16 and all(
+    assert len(supplemental) == 4 * clusters and all(
         e["tool_status"] == "ok" for e in supplemental
     )
     transitions = [
         e for e in output["evidence"] if e["query_id"] == "gpu_identity_transitions"
     ]
-    assert len(transitions) == 16
-    assert Counter(e["cluster_id"] for e in transitions) == {
-        f"cpc-{i}": 4 for i in range(1, 5)
+    assert len(transitions) == transition_calls // 2
+    counts = Counter(e["cluster_id"] for e in transitions)
+    assert max(counts.values()) - min(counts.values()) <= 1
+    reasons = {
+        a.get("reason")
+        for e in output["evidence"]
+        for a in e["quality"].get("transition_verification", [])
     }
+    assert ("transition_query_budget_reserved" in reasons) == (
+        (clusters, datasources) == (4, 2)
+    )
     audits = [
         a
         for e in output["evidence"]
         for a in e["quality"].get("collector_verification", [])
     ]
-    assert len(audits) == 4
-    assert sum(a["reason"] == "collector_verification_unavailable" for a in audits) == (
-        datasources == 2
-    )
+    assert len(audits) == min(4, 2 * clusters)
+    assert all(a["reason"] is None for a in audits)
 
 
 def test_legacy_pod_rejection_audit_remains_readable():
@@ -264,4 +274,61 @@ def test_legacy_pod_rejection_audit_remains_readable():
     assert any(
         "Pod UID·노드·표본·연결 구간 조건을 확인하지 못함" in m
         for m in diagnostic(result)["messages"]
+    )
+
+
+@pytest.mark.parametrize(
+    "used,reserved,expected,reason",
+    [
+        (73, 4, 2, "transition_query_budget_reserved"),
+        (74, 4, 2, "transition_query_budget_reserved"),
+        (75, 4, 0, "transition_query_budget_reserved"),
+        (79, 4, 0, "report_query_limit_exceeded"),
+        (20, 8, 32, "transition_query_budget_exhausted"),
+    ],
+)
+async def test_reservation_skips_whole_batches_without_spending_calls(
+    used, reserved, expected, reason
+):
+    group_data = group("cpc-1", DATA["time_range"], 24)
+    query = AsyncMock(return_value={"data": {"result": []}})
+    collector = ReportQueries({"query_prometheus": query}, DATA, time.monotonic() + 900)
+    collector.calls = used
+    await collector.check_transitions([group_data], reserved_calls=reserved)
+    assert query.await_count == collector.transition_calls == expected
+    assert collector.calls == used + expected
+    audit = group_data[3][0]["quality"]["transition_verification"]
+    skipped = [a for a in audit if a["status"] == "not_checked"]
+    assert skipped and {a["reason"] for a in skipped} == {reason}
+
+
+async def test_failed_transition_queries_do_not_spend_reserved_calls():
+    group_data = group("cpc-1", DATA["time_range"], 24)
+    query = AsyncMock(side_effect=ValueError("fixture query failure"))
+    collector = ReportQueries({"query_prometheus": query}, DATA, time.monotonic() + 900)
+    collector.calls = 72
+    await collector.check_transitions([group_data], reserved_calls=4)
+    # Each failure spends only the first call of a pair. One spare call cannot start a pair.
+    assert query.await_count == 3
+    assert collector.calls == 75
+    audit = group_data[3][0]["quality"]["transition_verification"]
+    assert sum(a["status"] == "query_failed" for a in audit) == 3
+    assert all(
+        a["reason"] == "transition_query_budget_reserved"
+        for a in audit
+        if a["status"] == "not_checked"
+    )
+
+
+async def test_deadline_is_not_misreported_as_reservation():
+    group_data = group("cpc-1", DATA["time_range"], 1)
+    query = AsyncMock()
+    collector = ReportQueries({"query_prometheus": query}, DATA, time.monotonic() + 900)
+    collector.calls = 75
+    collector.transition_deadline = time.monotonic() - 1
+    await collector.check_transitions([group_data], reserved_calls=4)
+    query.assert_not_awaited()
+    assert (
+        group_data[3][0]["quality"]["transition_verification"][0]["reason"]
+        == "transition_deadline_exhausted"
     )
