@@ -365,7 +365,9 @@ export function RcaTriageObservations({
                   ) : (
                     <>
                       <td>
-                        {m.before ? (
+                        {m.before && m.kind === 'enum' ? (
+                          m.beforeText
+                        ) : m.before ? (
                           <>
                             {rangeText(m.before, m.unit)}
                             <br />
@@ -378,7 +380,13 @@ export function RcaTriageObservations({
                       <td>
                         <ToneBadge
                           tone={m.tone}
-                          label={m.after ? rangeText(m.after, m.unit) : '표본 없음'}
+                          label={
+                            !m.after
+                              ? '표본 없음'
+                              : m.kind === 'enum'
+                                ? m.afterText
+                                : rangeText(m.after, m.unit)
+                          }
                         />
                       </td>
                     </>
