@@ -1,0 +1,418 @@
+{
+  "version": 1,
+  "status": "review_only",
+  "duration_ms": 14000,
+  "items": [
+    {
+      "id": "S1",
+      "title": "SXM(예시) · GPU",
+      "caption": "8U · GPU 8개 장착 영역",
+      "assets": {
+        "webp": {
+          "path": "assets/S1.webp",
+          "sha256": "dc5fc8744389abdafb7a94b48dc1aad3e9bca74c0eacdabfcf2697bc8c91c418",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S1.png",
+          "sha256": "e3834084ec1e5d01bcff0de9d65fca21e140ffe98bbd7dc222917ffddd0cb1c5",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "32, 79, 167 / 48, 63–64, 92, 94–95, 140, 156–157, 168, 171–172 / 74, 144–150 / 54, 162–165",
+      "sxid": "20001, 20012, 20034, 22012–22013",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-PCIE",
+        "RB-COMPONENT-DCGM-MEM",
+        "RB-COMPONENT-DCGM-THERMAL",
+        "RB-COMPONENT-DCGM-POWER",
+        "RB-COMPONENT-DCGM-INFOROM",
+        "RB-COMPONENT-PERSISTENCE-MODE",
+        "RB-COMPONENT-DCGM-NVLINK"
+      ],
+      "conditions": [
+        "GPU 자체 또는 GPU–호스트 PCIe 경로의 물리 점검이 필요한 경우. 28개 XID는 자동 삽입 목록이 아닌 후보다.",
+        "63·156·162의 복구/상태 기록만 있는 경우와 단순 조회 실패는 생략한다. PERSISTENCE-MODE는 GPU lost/reset-required 등 점검 분기만 해당한다.",
+        "NVLink는 GPU 측 점검 시 사용한다. SXID 5개는 S2 점검에 더해 연결 상대 GPU도 확인해야 할 때만 S1을 추가한다."
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "PCIe(예시) · GPU",
+      "caption": "4U · 후단 GPU 8개 영역",
+      "assets": {
+        "webp": {
+          "path": "assets/P1.webp",
+          "sha256": "9b4445b91bc3116a15753d22cabbcb6608fe09a7988d34923677c5b9492d67f8",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P1.png",
+          "sha256": "dee2fdbf8681780e8d83a9aba961e7875f3caae63e24a480877a0ca7489195ac",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "32, 79, 167 / 48, 63–64, 92, 94–95, 140, 156–157, 168, 171–172 / 74, 144–150 / 54, 162–165",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-PCIE",
+        "RB-COMPONENT-DCGM-MEM",
+        "RB-COMPONENT-DCGM-THERMAL",
+        "RB-COMPONENT-DCGM-POWER",
+        "RB-COMPONENT-DCGM-INFOROM",
+        "RB-COMPONENT-PERSISTENCE-MODE",
+        "RB-COMPONENT-DCGM-NVLINK"
+      ],
+      "conditions": [
+        "GPU 자체 또는 GPU–호스트 PCIe 경로의 물리 점검이 필요한 경우. 28개 XID는 자동 삽입 목록이 아닌 후보다.",
+        "63·156·162의 복구/상태 기록만 있는 경우와 단순 조회 실패는 생략한다. PERSISTENCE-MODE는 GPU lost/reset-required 등 점검 분기만 해당한다.",
+        "NVLink는 GPU 측 점검 시 사용한다. 장착된 외부 브리지 자체를 확인해야 하면 P2를 선택한다."
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "SXM(예시) · NVSwitch",
+      "caption": "8U · NVSwitch 영역 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/S2.webp",
+          "sha256": "63e5fde4a81ead8b651ae07e838a5d4bc59a392f1591aa99b9b6b43afe6ce7e0",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S2.png",
+          "sha256": "b2444aa4e6d152dac281dd1fc27344d49e62992a40f0ecfb5425fc19f481b76a",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "74, 144–150",
+      "sxid": "10001–10005, 11001, 11004, 11009, 11012–11013, 11018–11023, 12001–12002, 12020–12028, 12030–12032, 14017, 15001, 15006, 15008–15013, 19047–19049, 19054–19071, 19084, 22003, 22011, 23001–23017, 24001–24007, 20001, 20012, 20034, 22012–22013",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-NVSWITCH",
+        "RB-COMPONENT-DCGM-NVLINK"
+      ],
+      "conditions": [
+        "실제 NVSwitch가 있고 스위치 영역의 물리 점검이 필요한 경우. XID·DCGM-NVLINK에서는 스위치 측 점검 근거가 있을 때만 추가한다.",
+        "SXID 92개는 후보다. 열 이벤트 종료·인터럽트·FM 설정 확인 등 위치 안내가 불필요한 경우는 생략한다. SXM이라는 이유만으로 모든 제품에 SXID를 적용하지 않는다."
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "PCIe(예시) · NVLink 브리지",
+      "caption": "4U · 브리지 장착 구성 전용",
+      "assets": {
+        "webp": {
+          "path": "assets/P2.webp",
+          "sha256": "ccc5eba93e824540298e41887efc22d32647bc5c81b8a7159380af45a3da3869",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P2.png",
+          "sha256": "5fe7807b0576cf32653016041c7e854011b0ff2290b1d5012504029671b2636f",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "74, 144–150",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-NVLINK"
+      ],
+      "conditions": [
+        "지원 GPU에 호환되는 외부 NVLink 브리지가 실제 장착되어 있고, 브리지 영역 점검이 필요한 경우만 사용한다.",
+        "브리지가 없거나 장착 여부가 불명확하면 P1 수준에서 안내한다. 이 PCIe 샘플에는 NVSwitch·SXID를 배정하지 않는다."
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "SXM(예시) · 네트워크 포트",
+      "caption": "데이터 포트 영역 전체 · BMC 제외",
+      "assets": {
+        "webp": {
+          "path": "assets/S3.webp",
+          "sha256": "707de8f9a323d7740243683f3225dbd181857e6e75e01356d0407fe1a73139a2",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S3.png",
+          "sha256": "48090bf24a41c5110cefc32a27b556f550bc70a6ee1296148ffebd05f266ad86",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-INFINIBAND",
+        "RB-COMPONENT-NETWORK-ETHERNET"
+      ],
+      "conditions": [
+        "IB/Ethernet 데이터 네트워크 포트의 물리 점검이 필요한 경우. BMC·관리 포트는 제외한다.",
+        "포트 영역 전체를 안내하며 실제 NIC 번호·포트 위치·케이블 단선을 특정하지 않는다."
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "PCIe(예시) · 네트워크 포트",
+      "caption": "데이터 포트 영역 전체 · BMC 제외",
+      "assets": {
+        "webp": {
+          "path": "assets/P3.webp",
+          "sha256": "41d49f63b8cff4e831f2d377e5ffcab73a4672c008b135f6fd7e992a97f86277",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P3.png",
+          "sha256": "84327a008f2a00aa37c08861466d867030d81924faa38514393476d0a0d4fb7c",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-INFINIBAND",
+        "RB-COMPONENT-NETWORK-ETHERNET"
+      ],
+      "conditions": [
+        "IB/Ethernet 데이터 네트워크 포트의 물리 점검이 필요한 경우. BMC·관리 포트는 제외한다.",
+        "포트 영역 전체를 안내하며 실제 NIC 번호·포트 위치·케이블 단선을 특정하지 않는다."
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "SXM(예시) · 전면 드라이브",
+      "caption": "전면 드라이브 베이 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/S4.webp",
+          "sha256": "bad498538eb7397834cfd018f4e763214c50e486f2b65329195569505ccc1cd8",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S4.png",
+          "sha256": "148ac70b9b10a3b393a63786cc512954b46c915654f19839fb293a0f73f97fba",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DISK"
+      ],
+      "conditions": [
+        "점검 대상이 전면 장착 드라이브인 것으로 확인되고 물리 점검이 필요한 경우.",
+        "nvme 번호·루트 파일시스템만으로 전면 드라이브를 추정하지 않는다. 파일시스템·RAID 논리 문제만 있으면 생략한다."
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "PCIe(예시) · 전면 드라이브",
+      "caption": "전면 드라이브 베이 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/P4.webp",
+          "sha256": "b0217dfe514b26aca44049b0acfde2c755a7e797152ccadee3126d6c0cab944a",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P4.png",
+          "sha256": "5b7868f83da108e65c7967c81b113a7f9ceca0a4e6b1fa3beb2ad36cc1546f45",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DISK"
+      ],
+      "conditions": [
+        "점검 대상이 전면 장착 드라이브인 것으로 확인되고 물리 점검이 필요한 경우.",
+        "nvme 번호·루트 파일시스템만으로 전면 드라이브를 추정하지 않는다. 파일시스템·RAID 논리 문제만 있으면 생략한다."
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "SXM(예시) · 내부 M.2",
+      "caption": "상부 분리 → 하부 트레이 → M.2",
+      "assets": {
+        "webp": {
+          "path": "assets/S5.webp",
+          "sha256": "fbd08d0063ba68c4655a6f40655b8f94b0c3eecb23adc35125fab7c70ba1928d",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S5.png",
+          "sha256": "569f9284d405b9b1a1f1075d3a4e007cb2d0fb04a5bd39650001e04ebdb2d3e8",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DISK"
+      ],
+      "conditions": [
+        "점검 대상이 내부 M.2인 것으로 확인되고 물리 점검이 필요한 경우.",
+        "nvme 번호만으로 M.2를 추정하지 않는다. 실제 장착 구조와 맞는 샘플을 선택한다.",
+        "상부 분리 → 긴 하부 트레이 → M.2 캐리어는 구조 안내이며 정비 절차가 아니다."
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "PCIe(예시) · 내부 M.2",
+      "caption": "상부 덮개 → 보드 M.2 영역",
+      "assets": {
+        "webp": {
+          "path": "assets/P5.webp",
+          "sha256": "64df383a894d294fa9b0595386723df19f6e3f635c4fa714d2d0fac688d77988",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P5.png",
+          "sha256": "07253c3fba3b95119ba2da0904ad8679bc8696fc2061f89a7aeba98869373025",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DISK"
+      ],
+      "conditions": [
+        "점검 대상이 내부 M.2인 것으로 확인되고 물리 점검이 필요한 경우.",
+        "nvme 번호만으로 M.2를 추정하지 않는다. 실제 장착 구조와 맞는 샘플을 선택한다.",
+        "확인된 내부 보드의 M.2 슬롯군 주변을 안내한다. 숨은 접점이나 실제 SSD 번호는 표시하지 않는다."
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "SXM(예시) · PSU·전원 입력",
+      "caption": "PSU·전원 입력 영역 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/S6.webp",
+          "sha256": "c9826f331871b521fbdfb0d396afc9005a9c1b63169b14e94db7e7bcce408e8b",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S6.png",
+          "sha256": "caed5c24618c9712bd2ff5cf2bddbfd65d51d9a8b8501a284a3c49e8ebb665d2",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-POWER"
+      ],
+      "conditions": [
+        "GPU 전력 점검에 더해 서버 PSU·입력부 점검이 필요하다는 근거가 있을 때 추가하는 보조 그림이다.",
+        "예: HW Power Brake·BMC 전원 관측과 조사 결과로 노드 전원 점검을 권고한 경우. XID 79 또는 54·162–165만으로 선택하지 않는다."
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "PCIe(예시) · PSU·전원 입력",
+      "caption": "PSU·전원 입력 영역 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/P6.webp",
+          "sha256": "dd2651d02327ede704d2fb0308597a115fedf713fbbca0d33ffc19444a25df84",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P6.png",
+          "sha256": "2600ad9aa83b793def2b1c40f8f0206de39a2cc7f4208c56a4953c14939f1fec",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-POWER"
+      ],
+      "conditions": [
+        "GPU 전력 점검에 더해 서버 PSU·입력부 점검이 필요하다는 근거가 있을 때 추가하는 보조 그림이다.",
+        "예: HW Power Brake·BMC 전원 관측과 조사 결과로 노드 전원 점검을 권고한 경우. XID 79 또는 54·162–165만으로 선택하지 않는다."
+      ]
+    },
+    {
+      "id": "S7",
+      "title": "SXM(예시) · 팬·흡기",
+      "caption": "전면 팬·흡기 영역 전체",
+      "assets": {
+        "webp": {
+          "path": "assets/S7.webp",
+          "sha256": "5dc01b39fc72db34f9028e7f68231373daf01330d541f8249bfbf1342a956670",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/S7.png",
+          "sha256": "9f12e928769efee4302a2eb8b629aa103663e18894efe74979827a4adbdfc744",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-THERMAL"
+      ],
+      "conditions": [
+        "GPU 온도 점검에 더해 팬·흡기 등 냉각 계통 점검이 권고된 경우 추가하는 보조 그림이다.",
+        "온도 상승만으로 특정 팬 고장이라고 표시하지 않는다. 실제 장비의 팬·흡기 배치와 맞는 경우에 사용한다."
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "PCIe(예시) · 팬·흡기",
+      "caption": "내부 전방 팬 8개 영역",
+      "assets": {
+        "webp": {
+          "path": "assets/P7.webp",
+          "sha256": "505aa6b6eff9e0682efa447199353762d67c2f18a471b19763901682957458c4",
+          "width": 900,
+          "height": 600
+        },
+        "png": {
+          "path": "assets/P7.png",
+          "sha256": "2d552a5256cf45644e905b026005cff8d0c252073f8f28bdd4c5a52072fea531",
+          "width": 750,
+          "height": 500
+        }
+      },
+      "xid": "",
+      "sxid": "",
+      "runbooks": [
+        "RB-COMPONENT-DCGM-THERMAL"
+      ],
+      "conditions": [
+        "GPU 온도 점검에 더해 팬·흡기 등 냉각 계통 점검이 권고된 경우 추가하는 보조 그림이다.",
+        "온도 상승만으로 특정 팬 고장이라고 표시하지 않는다. 실제 장비의 팬·흡기 배치와 맞는 경우에 사용한다."
+      ]
+    }
+  ]
+}
