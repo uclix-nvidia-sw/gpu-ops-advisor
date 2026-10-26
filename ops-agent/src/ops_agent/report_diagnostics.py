@@ -12,6 +12,11 @@ REASONS = {
     "gpu_attribution_unverified": "GPU·노드 라벨 충돌 또는 공유·MIG 귀속 미확인",
     "gpu_interval_unverified": "GPU 시간대의 표본 수·시간 경계·비중복 연속 조건 불충족",
     "pod_identity_missing": "연결 구간에 대응하는 Pod 신원 자료가 없음",
+    "pod_uid_unverified": "Pod UID가 없거나 서로 다른 UID가 관측됨",
+    "pod_node_unverified": "Pod 노드가 GPU 노드와 다르거나 미배정 구간이 연결 이전에 끝나지 않음",
+    "pod_samples_unverified": "Pod 표본 값 또는 수집 간격 조건 불충족",
+    "pod_continuity_unverified": "Pod 관측 구간이 겹치거나 연속되지 않음",
+    "pod_coverage_unverified": "배정된 Pod 관측이 GPU 연결 구간을 충분히 덮지 못함",
     "pod_interval_unverified": "Pod UID·노드·표본·연결 구간 조건을 확인하지 못함",
     "transition_aggregate_mismatch": "연결 검증 증거와 원래 집계의 값·신원 수가 일치하지 않음",
     "transition_check_unresolved": "추가 조회는 완료했으나 해당 신원의 검증 증거가 확보되지 않음",
@@ -114,7 +119,16 @@ def observation_diagnostics(periods, compared, evidence):
                         reasons[reason].add(h["end"])
             for item in excluded_by_row[key]:
                 at = item["hour_end"]
-                if at not in invalid:
+                if (
+                    at not in invalid
+                    or not key[1]
+                    or item["reason"]
+                    not in {
+                        "duplicate_or_changed_gpu_identity",
+                        "pod_identity_unverified",
+                        "incomplete_hour_or_sampling_interval",
+                    }
+                ):
                     continue
                 if item["proof_mismatch"]:
                     reasons["transition_aggregate_mismatch"].add(at)
@@ -195,7 +209,7 @@ def observation_diagnostics(periods, compared, evidence):
             "검증 미실행은 신원 충돌 확인을 뜻하지 않습니다. 제외 사유별 시간은 겹칠 수 있으며, 일부 신원의 검증 성공이 해당 시간 전체의 유효성을 뜻하지는 않습니다."
         )
     return dict(
-        version="ops-observation-diagnostics-v1",
+        version="ops-observation-diagnostics-v2",
         messages=list(dict.fromkeys(messages)),
         summary=list(dict.fromkeys(summary)),
         rows=details,

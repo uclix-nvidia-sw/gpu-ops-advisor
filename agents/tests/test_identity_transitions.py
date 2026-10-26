@@ -61,7 +61,7 @@ def transition_fixture(
     return evidence, gpu, pods, at
 
 
-def proof(evidence, gpu, pods, at):
+def proof(evidence, gpu, pods, at, *, rejected=None):
     cluster = evidence[0]["cluster_id"]
     checks = verified_transitions(
         sample_bounds(gpu, at, cluster),
@@ -69,6 +69,7 @@ def proof(evidence, gpu, pods, at):
         at,
         {"gpu-1": 2},
         None,
+        rejected=rejected,
     )
     return {
         **evidence[0],
@@ -94,6 +95,157 @@ def test_verified_start_keeps_only_named_samples():
     assert row["hours"][0]["sample_count"] == 227
     assert row["verified_transition_hours"] == 1
     assert next(r for r in after if not r["namespace"])["activity_percent"] is None
+
+
+def pending_transition_fixture():
+    evidence, gpu, pods, at = transition_fixture()
+    pending = deepcopy(pods[0])
+    del pending["metric"]["node"]
+    pending["values"] = [[at - 3600 + i * 15 + 2, "1"] for i in range(13)]
+    pods.insert(0, pending)
+    evidence[1]["snapshot"]["series"].append(
+        {"metric": deepcopy(pending["metric"]), "values": [[at, "13"]]}
+    )
+    return evidence, gpu, pods, at
+
+
+@pytest.mark.parametrize(
+    "case,reason",
+    [
+        ("leading_missing_node", None),
+        ("leading_empty_node", None),
+        ("pending_ends_at_gpu_start", "pod_node_unverified"),
+        ("pending_ends_after_gpu_start", "pod_node_unverified"),
+        ("pending_assigned_overlap", "pod_continuity_unverified"),
+        ("pending_assigned_gap", "pod_continuity_unverified"),
+        ("leading_other_node", "pod_node_unverified"),
+        ("leading_other_uid", "pod_uid_unverified"),
+        ("unassigned_after_assignment", "pod_node_unverified"),
+        ("no_assigned_interval", "pod_node_unverified"),
+        ("assignment_starts_too_late", "pod_coverage_unverified"),
+    ],
+)
+def test_pending_to_assigned_transition_requires_safe_prefix(case, reason):
+    evidence, gpu, pods, at = pending_transition_fixture()
+    gpu_first = gpu[1]["values"][0][0]
+    if case == "leading_empty_node":
+        pods[0]["metric"]["node"] = ""
+    elif case in {"pending_ends_at_gpu_start", "pending_ends_after_gpu_start"}:
+        shift = gpu_first - pods[0]["values"][-1][0] + case.endswith("after_gpu_start")
+        for sample in pods[0]["values"]:
+            sample[0] += shift
+        pods[1]["values"] = pods[1]["values"][1:]
+    elif case == "pending_assigned_overlap":
+        pods[0]["values"][-1][0] = pods[1]["values"][0][0]
+    elif case == "pending_assigned_gap":
+        pods[0]["values"] = pods[0]["values"][:-2]
+    elif case == "leading_other_node":
+        pods[0]["metric"]["node"] = "other-node"
+    elif case == "leading_other_uid":
+        pods[0]["metric"]["uid"] = "other-uid"
+    elif case == "unassigned_after_assignment":
+        tail = deepcopy(pods[1])
+        del tail["metric"]["node"]
+        tail["values"] = tail["values"][-7:]
+        pods[1]["values"] = pods[1]["values"][:-7]
+        pods.append(tail)
+    elif case == "no_assigned_interval":
+        pods.pop()
+    elif case == "assignment_starts_too_late":
+        pods[0]["values"][-1][0] = gpu_first - 5
+        pods[1]["values"] = [[gpu_first + 20 + i * 15, "1"] for i in range(226)]
+    rejected = []
+    check = proof(evidence, gpu, pods, at, rejected=rejected)
+    rows, _ = summarize(evidence + [check], DATA["time_range"])
+    if reason:
+        assert not check["snapshot"]["checks"]
+        assert rejected == [
+            dict(
+                gpu_id="gpu-1",
+                namespace="test-dept-service",
+                pod="test-pod",
+                reason=reason,
+            )
+        ]
+        assert named(rows)["valid_hours"] == 23
+    else:
+        assert rejected == []
+        assert check["snapshot"]["checks"][0]["pod_sample_count"] == 227
+        assert named(rows)["valid_hours"] == 24
+
+
+@pytest.mark.parametrize("split_metadata", [False, True])
+def test_assigned_pod_count_matches_node_aggregate_after_pending(split_metadata):
+    evidence, gpu, pods, at = pending_transition_fixture()
+    if split_metadata:
+        tail = deepcopy(pods[1])
+        tail["metric"]["pod_ip"] = "192.0.2.1"
+        tail["values"] = tail["values"][7:]
+        pods[1]["values"] = pods[1]["values"][:7]
+        pods.append(tail)
+        evidence[1]["snapshot"]["series"][0]["values"][0][1] = "7"
+        evidence[1]["snapshot"]["series"].append(
+            {"metric": deepcopy(tail["metric"]), "values": [[at, "220"]]}
+        )
+    before, _ = summarize(evidence, DATA["time_range"])
+    check = proof(evidence, gpu, pods, at)
+    after, _ = summarize(evidence + [check], DATA["time_range"])
+    assert check["snapshot"]["checks"][0]["pod_sample_count"] == 227
+    assert named(after)["valid_hours"] == 24
+    assert named(after)["activity_percent"] == 60
+    assert named(after)["hours"][1:] == named(before)["hours"][1:]
+    unknown_before = next(r for r in before if not r["namespace"])
+    unknown_after = next(r for r in after if not r["namespace"])
+    assert {k: v for k, v in unknown_before.items() if k != "evidence_refs"} == {
+        k: v for k, v in unknown_after.items() if k != "evidence_refs"
+    }
+    # A node-only relaxation includes pending samples and cannot satisfy the saved aggregate.
+    check["snapshot"]["checks"][0]["pod_sample_count"] = 240
+    wrong, _ = summarize(evidence + [check], DATA["time_range"])
+    assert named(wrong)["valid_hours"] == 23
+    assert "pod_identity_unverified" in named(wrong)["hours"][0]["reasons"]
+
+
+@pytest.mark.parametrize(
+    "condition,value,reason",
+    [
+        ("min_gap", 14, None),
+        ("min_gap", 13.999, "pod_samples_unverified"),
+        ("max_gap", 30, None),
+        ("max_gap", 30.001, "pod_samples_unverified"),
+        ("boundary_gap", 30, None),
+        ("boundary_gap", 30.001, "pod_continuity_unverified"),
+        ("start_lag", 15, None),
+        ("start_lag", 15.001, "pod_coverage_unverified"),
+        ("end_lag", 15, None),
+        ("end_lag", 15.001, "pod_coverage_unverified"),
+        ("pending_value", 0, "pod_samples_unverified"),
+        ("pending_uid", "", "pod_uid_unverified"),
+    ],
+)
+def test_pod_transition_bounds_keep_existing_tolerances(condition, value, reason):
+    _, gpu, pods, at = pending_transition_fixture()
+    gpus = sample_bounds(gpu, at, "cpc-1")
+    bounds = sample_bounds(pods, at, "cpc-1")
+    if condition in {"min_gap", "max_gap"}:
+        bounds[0][condition] = value
+    elif condition == "boundary_gap":
+        bounds[0]["last"] = bounds[1]["first"] - value
+    elif condition == "start_lag":
+        bounds[0]["last"] = gpus[1]["first"] - 5
+        bounds[1]["first"] = gpus[1]["first"] + value
+    elif condition == "end_lag":
+        bounds[1]["last"] = gpus[1]["last"] - value
+    elif condition == "pending_value":
+        bounds[0]["values"]["minimum"] = value
+    elif condition == "pending_uid":
+        bounds[0]["labels"]["uid"] = value
+    rejected = []
+    checks = verified_transitions(
+        gpus, bounds, at, {"gpu-1": 2}, None, rejected=rejected
+    )
+    assert bool(checks) is (reason is None)
+    assert [r["reason"] for r in rejected] == ([] if reason is None else [reason])
 
 
 @pytest.mark.parametrize(
@@ -239,7 +391,7 @@ def test_collector_uses_bounded_instant_queries_and_saves_no_raw_samples(failure
     c = ReportQueries({"query_prometheus": query}, DATA, time.monotonic() + 60)
     out = asyncio.run(
         c.check_transitions(
-            DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+            [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
         )
     )
     assert len(calls) == (1 if failure else 2)
@@ -250,7 +402,7 @@ def test_collector_uses_bounded_instant_queries_and_saves_no_raw_samples(failure
     assert (
         asyncio.run(
             c.check_transitions(
-                DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+                [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
             )
         )
         == []
@@ -265,7 +417,7 @@ def test_unchanged_hours_do_not_trigger_raw_queries():
     assert (
         asyncio.run(
             c.check_transitions(
-                DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", fixture()
+                [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", fixture())]
             )
         )
         == []
@@ -286,7 +438,7 @@ def test_many_changed_hours_stop_at_verification_budget():
     c = ReportQueries({"query_prometheus": query}, DATA, time.monotonic() + 60)
     out = asyncio.run(
         c.check_transitions(
-            DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+            [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
         )
     )
     assert len(calls) == 32 and len(out) == 16
@@ -317,7 +469,7 @@ def test_optional_verification_reserves_time_for_publication():
     assert (
         asyncio.run(
             c.check_transitions(
-                DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence
+                [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
             )
         )
         == []
