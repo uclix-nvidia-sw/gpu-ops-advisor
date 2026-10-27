@@ -208,7 +208,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
-                        "ops-interpretation-incident-items-v6",
+                        "ops-interpretation-topic-fallback-v7",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3012,7 +3012,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-items-v6"
+        == "ops-interpretation-topic-fallback-v7"
     )
     assert incident_section["observation_source"] == "calculated"
     assert "cpc-2 / dgx01 / XID 79" in incident_section["observation"]
@@ -3836,7 +3836,13 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
             return send(self, body, status)
 
         monkeypatch.setattr(Upstream, "send", unavailable)
-    jid = submit(stack, "report", {**DATA, "scope": SCOPE}, execution_profile=VERSION)
+    # This case covers total AI failure; mixed-topic preservation is tested separately.
+    jid = submit(
+        stack,
+        "report",
+        {**DATA, "scope": SCOPE, "topic_ids": ["namespace_usage"]},
+        execution_profile=VERSION,
+    )
     body, evidence = worker_result(stack, "report", jid, "-invalid-interpretation")
     assert body["result_status"] == "ready"
     assert body["narrative_status"] == "failed"
@@ -3859,7 +3865,8 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
         ]["activity_percent"]
         == 60
     )
-    assert len(evidence) == 11
+    assert len(evidence) == 10
+    assert all(query != "report_incident_snapshot" for query, _ in evidence)
 
 
 @pytest.mark.e2e
@@ -4456,3 +4463,85 @@ def test_scheduled_and_manual_query_skip_reason_is_exported(
         html = Path(stack["env"]["ARTIFACT_DIR"], artifact["object_key"]).read_text()
         assert escape(REASONS[reason]) in html
         assert result["quality"]["query_count"] <= 80
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("failed_topic", ["incident_summary", "namespace_usage"])
+def test_aggregate_partial_interpretation_publishes_other_topic(
+    stack, monkeypatch, failed_topic
+):
+    from test_aggregate_report import DATA
+    from ops_agent.report_contract import VERSION
+    from agent_common.artifacts import render
+
+    original_reply = interpretation_reply
+
+    def invalid_topic(data):
+        response = original_reply(data)
+        for section in response.get("sections", []):
+            if section.get("topic_id") != failed_topic:
+                continue
+            if failed_topic == "incident_summary":
+                section["meaning"] = "XID 79가 기록됐습니다."
+            else:
+                for item in section["advice"]:
+                    item["summary"] = ""
+        if failed_topic == "namespace_usage":
+            for item in response.get("advice", []):
+                item["summary"] = ""
+        return response
+
+    monkeypatch.setattr(sys.modules[__name__], "interpretation_reply", invalid_topic)
+    incident_id = str(uuid4())
+    with psycopg.connect(stack["url"]) as conn:
+        conn.execute(
+            "INSERT INTO incidents(id,cluster_id,scope,occurred_at,state,evidence_version,symptom,target,alarm_status) VALUES(%s,'cpc-2',%s,%s,'open',1,'XID 79',%s,'firing')",
+            (
+                incident_id,
+                Jsonb(SCOPE),
+                DATA["time_range"]["start"],
+                Jsonb({"node": "fallback-node"}),
+            ),
+        )
+    try:
+        jid = submit(
+            stack, "report", {**DATA, "scope": SCOPE}, execution_profile=VERSION
+        )
+        body, _ = worker_result(stack, "report", jid, "-partial-interpretation")
+        good_topic = (
+            "namespace_usage"
+            if failed_topic == "incident_summary"
+            else "incident_summary"
+        )
+        assert body["narrative_status"] == "failed"
+        diagnostic = body["quality"]["report"]
+        assert diagnostic["attempts"] == 2
+        assert diagnostic["method"] == "partial_interpretation"
+        assert diagnostic["topic_statuses"] == {
+            failed_topic: "failed",
+            good_topic: "complete",
+        }
+        good = next(n for n in body["narrative"] if n["topic_id"] == good_topic)
+        assert good.get("advice") or good.get("meaning")
+        fallback = next(n for n in body["narrative"] if n["topic_id"] == failed_topic)
+        assert fallback["interpretation_source"] == "deterministic_fallback"
+        assert "meaning" not in fallback and "advice" not in fallback
+        from html import escape
+
+        exported = render(body)["html"].decode()
+        for paragraph in good["text"].split("\n\n"):
+            assert escape(paragraph) in exported
+        if failed_topic == "incident_summary":
+            assert diagnostic["failures"] == [
+                {
+                    "attempt": n,
+                    "reason": "unsupported_prose",
+                    "topic_id": "incident_summary",
+                    "field": "meaning",
+                    "violation_kind": "number",
+                }
+                for n in (1, 2)
+            ]
+    finally:
+        with psycopg.connect(stack["url"]) as conn:
+            conn.execute("DELETE FROM incidents WHERE id=%s", (incident_id,))

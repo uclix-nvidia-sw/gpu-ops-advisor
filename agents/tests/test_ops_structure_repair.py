@@ -87,7 +87,11 @@ async def test_named_topics_repair_only_invalid_prose(
     assert len(failures) == (2 if repair_error else 1)
     if repair_error:
         assert report["narrative_status"] == "failed"
-        assert report["quality"]["report"]["method"] == "deterministic_fallback"
+        assert report["quality"]["report"]["method"] == "partial_interpretation"
+        assert report["quality"]["report"]["topic_statuses"] == {
+            "incident_summary": "complete",
+            "namespace_usage": "failed",
+        }
     else:
         expected = validate_sections(valid, payload, original)
         present_advice(expected)

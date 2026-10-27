@@ -1090,7 +1090,7 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-items-v6"
+        == "ops-interpretation-topic-fallback-v7"
     )
     section = next(
         s

@@ -122,7 +122,12 @@ async def test_mixed_repair_cannot_change_valid_scope_or_skip_final_validation(
     llm.complete.side_effect = [invalid, patch]
     await interpret_report(result, llm)
     assert result["narrative_status"] == "failed"
-    assert result["quality"]["report"]["method"] == "deterministic_fallback"
+    assert result["quality"]["report"]["method"] == "partial_interpretation"
+    expected = validate_sections(valid, payload_for(result), result)
+    present_advice(expected)
+    assert result["narrative"][0] == expected[0]
+    assert result["narrative"][1]["interpretation_source"] == "deterministic_fallback"
+    assert "meaning" not in result["narrative"][1]
     assert result["topics"] == original and llm.complete.call_count == 2
 
 
@@ -137,6 +142,11 @@ async def test_oversized_topic_repair_keeps_original_input_limit_and_fallback(
     await interpret_report(result, llm)
     assert result["narrative_status"] == "failed"
     assert result["quality"]["report"]["reason"] == "interpretation_input_limit"
+    assert result["quality"]["report"]["method"] == "partial_interpretation"
+    assert result["quality"]["report"]["topic_statuses"] == {
+        "namespace_usage": "complete",
+        "incident_summary": "failed",
+    }
     assert result["topics"] == original and llm.complete.call_count == 1
 
 

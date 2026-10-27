@@ -374,6 +374,17 @@ function TopicInterpretation({
   onEvidence?: (id: string) => void;
 }) {
   const section = narrative.find((item) => item.topic_id === topic.topic_id);
+  if (section?.interpretation_source === 'deterministic_fallback') {
+    return (
+      <section className="aggregate-summary" aria-label={`${str(topic.topic_id)} 계산 결과 요약`}>
+        <h3>계산 결과 요약</h3>
+        <p className="aggregate-static-note">
+          이 주제의 AI 해석을 작성하지 못해 저장된 계산 결과를 표시합니다.
+        </p>
+        <p style={{ whiteSpace: 'pre-line' }}>{str(section.text)}</p>
+      </section>
+    );
+  }
   if (!section || !['observation', 'meaning', 'next_check'].every((key) => str(section[key])))
     return null;
   const facts = rows(topic.findings).filter((fact) =>
@@ -555,8 +566,11 @@ export function AggregateReport({
     });
   const summary = obj(incident?.summary);
   const summaryMethod = str(obj(obj(value.quality).report).method);
+  const partialInterpretation =
+    value.narrative_status === 'failed' && summaryMethod === 'partial_interpretation';
   const aiInterpreted =
-    value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted';
+    (value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted') ||
+    partialInterpretation;
   const incidentNumber = usage ? 2 : 1;
   const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
   const calculatedSummary = summaryMethod === 'deterministic_fallback';
@@ -582,6 +596,12 @@ export function AggregateReport({
         {incident && <a href="#incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</a>}
         <a href="#report-evidence">집계 기준과 근거</a>
       </nav>
+      {partialInterpretation && (
+        <Notice>
+          일부 주제의 AI 해석을 작성하지 못했습니다. 검증을 통과한 주제의 AI 해석은 유지하고,
+          나머지는 계산 결과 요약으로 표시합니다.
+        </Notice>
+      )}
       {!aiInterpreted && rows(value.narrative).length > 0 && (
         <section
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}

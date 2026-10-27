@@ -160,7 +160,9 @@ func exportMetrics(w http.ResponseWriter, id, format string, body Object, metric
 		limitations = append(limitations, reportReason(reason))
 	}
 	editorial := "LLM 편집을 사용하지 못한 기본 보고서입니다. 보고서 작성 완료와 자료의 완전성은 별개입니다."
-	if String(body, "narrative_status") == "complete" {
+	if report, ok := quality["report"].(map[string]any); ok && String(report, "method") == "partial_interpretation" {
+		editorial = "일부 주제의 AI 해석을 작성하지 못했습니다. 검증을 통과한 주제의 AI 해석과 나머지 주제의 계산 결과 요약을 표시합니다."
+	} else if String(body, "narrative_status") == "complete" {
 		editorial = "확인된 내용을 LLM이 정리했습니다. 보고서 작성 완료와 자료의 완전성은 별개입니다."
 	}
 	return page.Execute(w, Object{"Title": reportDocumentTitle(body), "Projection": projection, "Timed": timed, "PerTopic": perTopic, "Narrative": reportNarrative(body), "Editorial": editorial, "Criteria": String(versions, "criteria"), "Grouping": grouping, "ID": id, "Status": status, "Period": String(period, "start") + " – " + String(period, "end"), "Rows": data, "Limitations": limitations, "Raw": string(raw)})

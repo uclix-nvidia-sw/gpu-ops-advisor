@@ -609,13 +609,15 @@ function ReportPreview({ value }: { value: Row }) {
       {summaries.length ? (
         <>
           <b>
-            {value.narrative_status === 'complete' && value.method === 'llm_interpreted'
-              ? 'AI 해석 요약'
-              : value.narrative_status === 'complete' && value.method === 'llm_prioritized'
-                ? 'AI가 고른 주요 변화'
-                : value.method === 'deterministic_fallback'
-                  ? '계산 결과 요약'
-                  : '저장된 주요 변화'}
+            {value.narrative_status === 'failed' && value.method === 'partial_interpretation'
+              ? '일부 주제 AI 해석·계산 요약'
+              : value.narrative_status === 'complete' && value.method === 'llm_interpreted'
+                ? 'AI 해석 요약'
+                : value.narrative_status === 'complete' && value.method === 'llm_prioritized'
+                  ? 'AI가 고른 주요 변화'
+                  : value.method === 'deterministic_fallback'
+                    ? '계산 결과 요약'
+                    : '저장된 주요 변화'}
             {value.truncated === true ? ' · 발췌' : ''}
           </b>
           <ul>
