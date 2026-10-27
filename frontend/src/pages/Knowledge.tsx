@@ -14,6 +14,18 @@ import {
 } from '../lib/live';
 import { useApp } from '../lib/store';
 import { RunbookContent } from '../components/RunbookContent';
+
+/** State transitions offered for a revision; unpublished ones can be discarded too. */
+export function knowledgeActions(state: string): string[][] {
+  const discard = ['retire', '폐기'];
+  if (state === 'draft') return [['request', '검토 요청'], discard];
+  if (state === 'in_review')
+    return [['approve', '검토 승인'], ['request_changes', '수정 요청'], discard];
+  if (state === 'reviewed') return [['publish', '발행'], discard];
+  if (state === 'published') return [discard];
+  return [];
+}
+
 export function Knowledge() {
   const app = useApp();
   const [state, setState] = useState('draft'),
@@ -307,21 +319,11 @@ function KnowledgeDialog({
                   새 revision 작성
                 </button>
               )}
-              {(row.state === 'draft'
-                ? [['request', '검토 요청']]
-                : row.state === 'in_review'
-                  ? [
-                      ['approve', '검토 승인'],
-                      ['request_changes', '수정 요청'],
-                    ]
-                  : row.state === 'reviewed'
-                    ? [['publish', '발행']]
-                    : row.state === 'published'
-                      ? [['retire', '폐기']]
-                      : []
-              ).map(([v, l]) => (
+              {knowledgeActions(str(row.state, 'draft')).map(([v, l]) => (
                 <button
-                  className="button primary"
+                  className={
+                    v === 'retire' && row.state !== 'published' ? 'button' : 'button primary'
+                  }
                   key={v}
                   onClick={() => {
                     setAction(v);
@@ -339,7 +341,9 @@ function KnowledgeDialog({
               <Notice>
                 {action === 'publish'
                   ? '검토된 이 revision을 발행합니다.'
-                  : '변경 사유 또는 검토 의견을 남겨 주세요.'}
+                  : action === 'retire' && row.state !== 'published'
+                    ? '발행하지 않은 revision을 닫습니다. 실행 중인 RCA와 발행본에는 영향이 없고, 기록은 남습니다.'
+                    : '변경 사유 또는 검토 의견을 남겨 주세요.'}
               </Notice>
               {action !== 'publish' && (
                 <Field label="검토 의견·사유">

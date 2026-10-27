@@ -204,8 +204,9 @@ func (s *Server) knowledge(w http.ResponseWriter, q *Request, parts []string) er
 				if e = only(q.Body, "reason"); e != nil {
 					return e
 				}
-				if state != "published" {
-					return Fail(409, "INVALID_STATE", "발행된 지식만 폐기할 수 있습니다.")
+				// Unpublished revisions are closed the same way; JC selects only published ones.
+				if state == "retired" {
+					return Fail(409, "INVALID_STATE", "이미 폐기된 지식입니다.")
 				}
 				if String(q.Body, "reason") == "" {
 					return Invalid("reason")

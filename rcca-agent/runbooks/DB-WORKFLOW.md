@@ -148,7 +148,7 @@ python -m rcca_agent.runbook_admin publish .local/xid79-reviewed.json --profile 
 
 ### 수정과 회수
 
-검토 중 수정 요청은 `request_changes <직전 응답 파일> --comment ...`를 사용한다. 발행본 회수는 `retire <발행 응답 파일> --comment ...`이며 두 경우 모두 backend/profile/request-key를 명시한다. retire 후 신규 선택에서는 제외되지만 실행 중인 claim의 고정 참조와 과거 결과는 보존한다. 수정은 새로운 draft revision에서 진행하고 삭제·과거 hash 변경으로 복구하지 않는다.
+검토 중 수정 요청은 `request_changes <직전 응답 파일> --comment ...`를 사용한다. 발행본 회수는 `retire <발행 응답 파일> --comment ...`이며, 쓰지 않을 초안·검토 중·검토 완료 revision도 같은 `retire <그 응답 파일>`로 닫는다. 두 경우 모두 backend/profile/request-key를 명시한다. retire 후 신규 선택에서는 제외되지만 실행 중인 claim의 고정 참조와 과거 결과는 보존한다. 수정은 새로운 draft revision에서 진행하고 삭제·과거 hash 변경으로 복구하지 않는다.
 
 ## 6. 재현 검사와 인수인계
 

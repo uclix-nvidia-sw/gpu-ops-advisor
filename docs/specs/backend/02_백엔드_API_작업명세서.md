@@ -99,7 +99,7 @@ Backend는 GUI 연결점이며 조회·입력 검증·내부 호출·결과 응�
 | GET/POST /knowledge | 목록/초안 | 지식 ID·revision |
 | GET/PATCH /knowledge/{id}/revisions/{rev} | 상세/초안 수정 | content_hash·상태 |
 | POST /knowledge/{id}/revisions/{rev}/review | request/approve/request_changes | draft/in_review/reviewed |
-| POST /knowledge/{id}/revisions/{rev}/publish, /retire | revision·If-Match | 발행/폐기 상태 |
+| POST /knowledge/{id}/revisions/{rev}/publish, /retire | revision·If-Match, 폐기 reason 필수 | 발행/폐기 상태. 폐기는 retired가 아닌 모든 revision(초안·검토 중·검토 완료 포함)에 허용 |
 | GET /procedures | 등록 조사 메타데이터 | 읽기 전용 목록, 임의 실행 API 없음 |
 | GET/POST /models; GET/PATCH /models/{id} | 비밀 제외 프로필 | 불변 revision·enabled |
 | POST /models/{id}/test-connection | 프로필 revision | transport/schema 검사 결과 |
