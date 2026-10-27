@@ -378,3 +378,153 @@ def test_incident_category_fallbacks_and_previous_only_counts():
     assert categories["XID 79"]["previous_count"] == 1
     assert categories["XID 79"]["nodes"] == []
     assert result["count"] == 3 and result["groups"] == []
+
+
+def concentration_records():
+    return [
+        {
+            "id": f"event-{i}",
+            "cluster_id": "cpc-1",
+            "symptom": "XID 79"
+            if i < 8
+            else "XID 13"
+            if i == 8
+            else "SXID 11001"
+            if i == 9
+            else "disk",
+            "target": {
+                "node": "dgx01" if i < 5 or i == 8 else "dgx02",
+                "component": "disk" if i == 10 else "gpu",
+            },
+            "occurred_at": DATA["time_range"]["start"],
+            "alarm_status": "firing" if i == 0 else "resolved",
+        }
+        for i in range(11)
+    ]
+
+
+def concentration_report(records=None, previous=None):
+    data = {**DATA, "topic_ids": ["incident_summary"]}
+    context = {
+        "data_cutoff_at": data["time_range"]["end"],
+        "incidents": concentration_records() if records is None else records,
+        "previous_incidents": previous or [],
+    }
+    return build_result(
+        {
+            "job_id": str(uuid4()),
+            "kind": "report",
+            "input": data,
+            "versions": {"criteria": VERSION},
+        },
+        context,
+        [{"id": str(uuid4()), "query_id": "report_incident_snapshot"}],
+    )
+
+
+def test_incident_concentration_counts_shares_targets_and_periods():
+    report = concentration_report()
+    validate_result(report, [{"id": ref} for ref in report["evidence_refs"]])
+    topic = report["topics"][0]
+    metrics = {m["id"]: m for m in topic["metrics"]}
+    top_type, top_node = topic["findings"][1:3]
+    assert [f["id"] for f in topic["findings"][:3]] == [
+        "incident-period-summary",
+        "incident-top-type-cpc-1",
+        "incident-top-node-cpc-1",
+    ]
+    for fact, target, values, names in (
+        (
+            top_type,
+            {"cluster_id": "cpc-1", "alert_type": "XID 79"},
+            [8, 72.7, 0, 11, 0],
+            [
+                "top_type_count",
+                "top_type_share",
+                "top_type_previous_count",
+                "top_type_cluster_count",
+                "top_type_cluster_previous_count",
+            ],
+        ),
+        (
+            top_node,
+            {"cluster_id": "cpc-1", "node": "dgx01"},
+            [6, 54.5, 1],
+            ["top_node_count", "top_node_share", "top_node_firing"],
+        ),
+    ):
+        assert fact["target"] == target
+        assert fact["evidence_refs"] == topic["evidence_refs"]
+        assert len(fact["value_refs"]) == len(names)
+        for mid, name, value in zip(fact["value_refs"], names, values):
+            metric = metrics[mid]
+            assert mid.startswith(f"incident_summary.{name}.")
+            expected_target = (
+                {"cluster_id": target["cluster_id"]}
+                if name.startswith("top_type_cluster_")
+                else target
+            )
+            assert metric["target"] == expected_target and metric["value"] == value
+            assert metric["unit"] == ("percent" if name.endswith("share") else "events")
+            assert metric["period"] == (
+                previous_period(DATA)
+                if name.endswith("previous_count")
+                else DATA["time_range"]
+            )
+    assert "XID 79 5건, XID 13 1건" in top_node["text"]
+    assert (
+        "이 클러스터 저장 사건 11건(이전 기간 0건) 중 8건으로 72.7%" in top_type["text"]
+    )
+    assert "발생 노드 dgx01, dgx02" in top_type["text"]
+    assert all(f["id"].startswith("incident-node-") for f in topic["findings"][3:])
+
+
+@pytest.mark.parametrize("count", [0, 1])
+def test_incident_concentration_requires_two_current_events(count):
+    topic = concentration_report(concentration_records()[:count])["topics"][0]
+    assert not any(f["id"].startswith("incident-top-") for f in topic["findings"])
+
+
+def test_incident_concentration_orders_clusters_by_current_count():
+    records = concentration_records()
+    other = [
+        {**r, "id": "other-" + r["id"], "cluster_id": "cpc-2"} for r in records[:4]
+    ]
+    previous = other[:2] + [{**records[0], "symptom": "XID 31"}]
+    topic = concentration_report(other + records, previous)["topics"][0]
+    assert [
+        f["id"] for f in topic["findings"] if f["id"].startswith("incident-top-")
+    ] == [
+        "incident-top-type-cpc-1",
+        "incident-top-node-cpc-1",
+        "incident-top-type-cpc-2",
+        "incident-top-node-cpc-2",
+    ]
+    metrics = {m["id"]: m for m in topic["metrics"]}
+    top_types = [
+        f for f in topic["findings"] if f["id"].startswith("incident-top-type-")
+    ]
+    assert [
+        [metrics[mid]["value"] for mid in f["value_refs"][-2:]] for f in top_types
+    ] == [[11, 1], [4, 2]]
+
+
+@pytest.mark.parametrize("known_nodes", [True, False])
+def test_incident_concentration_ties_unknown_nodes_and_previous_only_types(known_nodes):
+    records = concentration_records()[:4]
+    for i, r in enumerate(records):
+        r["symptom"] = "XID 79" if i < 2 else "XID 13"
+        r["target"] = (
+            {"node": "dgx02" if i == 0 else "dgx01"} if known_nodes and i < 2 else {}
+        )
+    previous = [{**r, "id": "old-" + r["id"]} for r in records[2:]]
+    previous += [{**previous[0], "id": "old-only", "symptom": "SXID 11001"}]
+    topic = concentration_report(records, previous)["topics"][0]
+    facts = [f for f in topic["findings"] if f["id"].startswith("incident-top-")]
+    metrics = {m["id"]: m for m in topic["metrics"]}
+    assert facts[0]["target"]["alert_type"] == "XID 13"
+    assert [metrics[mid]["value"] for mid in facts[0]["value_refs"]] == [2, 50, 2, 4, 3]
+    assert len(facts) == (2 if known_nodes else 1)
+    if known_nodes:
+        assert facts[1]["target"]["node"] == "dgx01"
+        assert [metrics[mid]["value"] for mid in facts[1]["value_refs"]] == [1, 25, 0]

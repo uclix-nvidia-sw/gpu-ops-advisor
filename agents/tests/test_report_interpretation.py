@@ -19,6 +19,7 @@ def result():
             "topic_id": name,
             "status": "ready",
             "missing_inputs": [],
+            **({"summary": {"count": value}} if name == "incident_summary" else {}),
             "metrics": [
                 {
                     "id": name + ".value",
@@ -43,7 +44,7 @@ def result():
     return {
         "topics": [
             topic("namespace_usage", 60, "percent"),
-            topic("incident_summary", 0, "events"),
+            topic("incident_summary", 1, "events"),
         ],
         "time_range": {},
         "quality": {},
@@ -70,6 +71,10 @@ def reply_for(payload):
             "meaning": "확인된 범위의 관측이며 전체 상태를 뜻하지 않습니다.",
             "next_check": "작업 일정 또는 기존 조사 기록과 대조해 보세요.",
         }
+        if f["target"].get("node"):
+            section["next_check"] = (
+                "{{target:" + f["fact_id"] + "}}의 기존 조사 기록과 대조하세요."
+            )
         if pair:
             target = "{{target:" + f["fact_id"] + "}}"
             periods = ["{{period:" + i + "}}" for i in pair]
@@ -79,6 +84,10 @@ def reply_for(payload):
             )
             section["next_check"] = (
                 f"{target}의 {periods[1]}에 작업이 시작됐는지 실행 기록과 대조해 보세요."
+            )
+        if f["fact_id"].startswith("incident-top-type-"):
+            section["observation"] += (
+                " 비율 {{value:" + f["values"][1]["metric_id"] + "}}입니다."
             )
         if f.get("memory_refs"):
             used, free = f["memory_refs"]
@@ -114,7 +123,7 @@ async def test_both_topics_are_interpreted_without_changing_facts(result):
     assert result["quality"]["report"]["method"] == "llm_interpreted"
     assert len(result["narrative"]) == 2
     assert "60.00%" in result["narrative"][0]["observation"]
-    assert "0건" in result["narrative"][1]["observation"]
+    assert "1건" in result["narrative"][1]["observation"]
     for section, topic in zip(result["narrative"], result["topics"]):
         assert section["evidence_refs"] == topic["findings"][0]["evidence_refs"]
         assert section["value_refs"] == topic["findings"][0]["value_refs"]
@@ -270,7 +279,7 @@ def test_exact_repeated_unit_and_scope_target_are_rendered_once(result):
     )
     sections = validate_sections(reply, payload, result)
     assert sections[0]["observation"] == "60.00%입니다."
-    assert sections[1]["observation"] == "선택한 보고서 범위의 사건은 0건입니다."
+    assert sections[1]["observation"] == "선택한 보고서 범위의 사건은 1건입니다."
 
 
 @pytest.fixture
@@ -745,3 +754,305 @@ async def test_topic_structure_repair_uses_one_complete_shape(
     ]
     assert result["narrative_status"] == ("failed" if repeat_error else "complete")
     assert result["topics"] == before and invalid == original
+
+
+@pytest.fixture
+def concentrated_result(result):
+    from test_aggregate_report import concentration_report
+
+    result["topics"][1] = concentration_report()["topics"][0]
+    return result
+
+
+def concentration_reply(payload):
+    reply = reply_for(payload)
+    topic = next(t for t in payload["topics"] if t["topic_id"] == "incident_summary")
+    top_type, top_node = topic["findings"][:2]
+    node = next(
+        f for f in topic["findings"] if f["fact_id"].startswith("incident-node-")
+    )
+    facts = [top_type, top_node, node]
+
+    def value(fact, index):
+        return "{{value:" + fact["values"][index]["metric_id"] + "}}"
+
+    observation = (
+        f"클러스터 {value(top_type, 3)}·이전 {value(top_type, 4)}. "
+        "{{target:"
+        + top_type["fact_id"]
+        + "}} "
+        + value(top_type, 0)
+        + "·"
+        + value(top_type, 1)
+        + "·이전 "
+        + value(top_type, 2)
+        + ", {{target:"
+        + top_node["fact_id"]
+        + "}} "
+        + value(top_node, 0)
+        + "·"
+        + value(top_node, 1)
+        + "."
+    )
+    section = next(s for s in reply["sections"] if s["topic_id"] == "incident_summary")
+    section.update(
+        fact_ids=[f["fact_id"] for f in facts],
+        observation=observation,
+        meaning="한 종류와 한 노드에 저장 알림이 몰렸으며 최다 종류는 이전 기간에 없었습니다. 시험 알림이 섞일 수 있고 동일 GPU 반복 장애·원인·복구는 확정하지 않습니다.",
+        next_check="{{target:"
+        + node["fact_id"]
+        + "}}의 {{period:"
+        + node["values"][0]["metric_id"]
+        + "}} 발생 시각을 기존 RCA 결과·점검 기록과 대조하고 작성 당시 발생 중 알림의 해제 여부를 확인하세요.",
+    )
+    return reply
+
+
+def test_concentration_payload_order_and_rendered_tokens(concentrated_result):
+    from ops_agent.incident_findings import INCIDENT_RULES
+    from ops_agent.report_interpretation import SYSTEM
+
+    payload = payload_for(concentrated_result)
+    assert [f["fact_id"] for f in payload["topics"][1]["findings"][:3]] == [
+        "incident-top-type-cpc-1",
+        "incident-top-node-cpc-1",
+        "incident-period-summary",
+    ]
+    assert INCIDENT_RULES in SYSTEM
+    reply = concentration_reply(payload)
+    rendered = validate_sections(reply, payload, concentrated_result)[1]
+    assert all(
+        text in rendered["observation"]
+        for text in ("11건", "8건", "72.7%", "6건", "54.5%", "0건")
+    )
+    assert rendered["source_fact_ids"] == [
+        "incident-top-type-cpc-1",
+        "incident-top-node-cpc-1",
+        "incident-node-0",
+    ]
+    assert "cpc-1 / dgx01 / XID 79" in rendered["next_check"]
+
+
+@pytest.mark.parametrize("fact_index", [0, 1])
+@pytest.mark.parametrize("replacement", ["", "period"])
+def test_selected_concentration_share_must_be_value_token_in_observation(
+    concentrated_result, fact_index, replacement
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    mid = payload["topics"][1]["findings"][fact_index]["values"][1]["metric_id"]
+    section = reply["sections"][1]
+    section["observation"] = section["observation"].replace(
+        "{{value:" + mid + "}}", "{{period:" + mid + "}}" if replacement else ""
+    )
+    section["meaning"] += " 비율 {{value:" + mid + "}}"
+    with pytest.raises(ValueError, match="share_reference_required"):
+        validate_sections(reply, payload, concentrated_result)
+
+
+@pytest.mark.parametrize(
+    "count,status", [(0, "ready"), (11, "partial"), (None, "blocked")]
+)
+async def test_zero_or_unready_incidents_are_excluded_from_llm(
+    concentrated_result, count, status
+):
+    incident = concentrated_result["topics"][1]
+    incident["summary"]["count"] = count
+    incident["status"] = status
+    before = deepcopy(incident)
+    payload = payload_for(concentrated_result)
+    assert [t["topic_id"] for t in payload["topics"]] == ["namespace_usage"]
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = reply_for(payload)
+    await interpret_report(concentrated_result, llm)
+    assert concentrated_result["narrative_status"] == "complete"
+    assert [s["topic_id"] for s in concentrated_result["narrative"]] == [
+        "namespace_usage"
+    ]
+    assert incident == before and llm.complete.call_count == 1
+
+
+@pytest.mark.parametrize("field", ["observation", "meaning", "next_check"])
+@pytest.mark.parametrize("advice_mode", [False, True])
+async def test_incident_template_echo_uses_one_repair(
+    concentrated_result, field, advice_mode
+):
+    from ops_agent.incident_findings import INCIDENT_RULES
+    from ops_agent.report_interpretation import INCIDENT_EXAMPLE
+    from test_namespace_advice import topic
+
+    if advice_mode:
+        concentrated_result["topics"][0] = topic()
+    payload = payload_for(concentrated_result)
+    valid = concentration_reply(payload)
+    invalid = deepcopy(valid)
+    invalid["sections"][1][field] = INCIDENT_EXAMPLE[field]
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        invalid,
+        {"sections": [valid["sections"][1]]} if advice_mode else valid,
+    ]
+    await interpret_report(concentrated_result, llm)
+    assert concentrated_result["narrative_status"] == "complete"
+    assert (
+        concentrated_result["quality"]["report"]["failures"][0]["reason"]
+        == "template_echo"
+    )
+    assert concentrated_result["quality"]["report"]["reason"] == "repaired"
+    assert llm.complete.call_count == 2
+    system, request = llm.complete.call_args_list[0].args
+    assert INCIDENT_RULES in system
+    if advice_mode:
+        assert len(request["topics"][1]["findings"]) == 6
+        assert [f["fact_id"] for f in request["topics"][1]["findings"][:3]] == [
+            "incident-top-type-cpc-1",
+            "incident-top-node-cpc-1",
+            "incident-period-summary",
+        ]
+        example = request["response_shape"]["sections"][1]
+        assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+        repair = llm.complete.call_args.args[1]
+        example = repair["response_shape"]["sections"][0]
+        assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+        assert len(repair["section_repair"]) == 1
+
+
+@pytest.mark.parametrize("advice_mode", [False, True])
+async def test_empty_incident_report_preserves_calculated_change(result, advice_mode):
+    from test_aggregate_report import concentration_report, concentration_records
+    from test_namespace_advice import topic
+
+    incident = concentration_report([], concentration_records())["topics"][0]
+    if advice_mode:
+        result["topics"][0] = topic()
+    result["topics"][1] = incident
+    before = deepcopy(result["topics"])
+    assert (
+        "기간 내 저장된 사건은 0건이며 직전 기간보다 -11건 변했습니다."
+        in incident["findings"][0]["text"]
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = reply_for(payload_for(result))
+    await interpret_report(result, llm)
+    assert result["narrative_status"] == "complete"
+    assert [s["topic_id"] for s in result["narrative"]] == ["namespace_usage"]
+    assert result["topics"] == before
+    assert [t["topic_id"] for t in llm.complete.call_args.args[1]["topics"]] == [
+        "namespace_usage"
+    ]
+
+
+async def test_concentration_share_failure_uses_existing_partial_repair(
+    concentrated_result,
+):
+    from test_namespace_advice import topic
+
+    concentrated_result["topics"][0] = topic()
+    payload = payload_for(concentrated_result)
+    valid = concentration_reply(payload)
+    invalid = deepcopy(valid)
+    mid = payload["topics"][1]["findings"][0]["values"][1]["metric_id"]
+    invalid["sections"][1]["observation"] = invalid["sections"][1][
+        "observation"
+    ].replace("{{value:" + mid + "}}", "")
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"sections": [valid["sections"][1]]}]
+    await interpret_report(concentrated_result, llm)
+    assert concentrated_result["narrative_status"] == "complete"
+    assert concentrated_result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "share_reference_required"}
+    ]
+    assert len(llm.complete.call_args.args[1]["section_repair"]) == 1
+    assert llm.complete.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "problem", ["missing_top_type", "missing_value", "missing_node_target"]
+)
+def test_incident_grounding_requires_selected_top_type_value_and_node(
+    concentrated_result, problem
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    section = reply["sections"][1]
+    if problem == "missing_top_type":
+        fact = next(
+            f
+            for f in payload["topics"][1]["findings"]
+            if f["fact_id"].startswith("incident-node-")
+        )
+        section["fact_ids"] = [fact["fact_id"]]
+        section["observation"] = (
+            "저장 사건은 {{value:" + fact["values"][0]["metric_id"] + "}}입니다."
+        )
+        section["next_check"] = (
+            "{{target:" + fact["fact_id"] + "}}의 기존 기록을 대조하세요."
+        )
+    elif problem == "missing_value":
+        section["observation"] = "알림이 여러 노드에서 발생했습니다."
+    else:
+        section["next_check"] = "기존 조사와 점검 기록을 대조하세요."
+    with pytest.raises(ValueError, match="incident_grounding_required"):
+        validate_sections(reply, payload, concentrated_result)
+
+
+def test_single_incident_without_node_still_accepts_grounded_count():
+    from test_aggregate_report import concentration_report, concentration_records
+
+    record = concentration_records()[0]
+    record["target"] = {}
+    report = concentration_report([record])
+    payload = payload_for(report)
+    rendered = validate_sections(reply_for(payload), payload, report)
+    assert "1건" in rendered[0]["observation"]
+
+
+@pytest.mark.parametrize(
+    "observation",
+    [
+        "알림이 여러 노드에서 발생했습니다.",
+        "{{target:incident_summary-fact}}의 알림 기록입니다.",
+        "관측은 {{value:namespace_usage.value}}입니다.",
+    ],
+)
+def test_incident_grounding_rejects_missing_or_unselected_value(result, observation):
+    payload = payload_for(result)
+    reply = reply_for(payload)
+    reply["sections"][1]["observation"] = observation
+    with pytest.raises(ValueError, match="incident_grounding_required"):
+        validate_sections(reply, payload, result)
+
+
+def test_incident_grounding_rejects_punctuated_template(result):
+    from ops_agent.report_interpretation import INCIDENT_EXAMPLE
+
+    payload = payload_for(result)
+    reply = reply_for(payload)
+    reply["sections"][1]["observation"] = INCIDENT_EXAMPLE["observation"] + "."
+    with pytest.raises(ValueError, match="incident_grounding_required"):
+        validate_sections(reply, payload, result)
+
+
+async def test_incident_grounding_failure_uses_existing_partial_repair(
+    concentrated_result,
+):
+    from test_namespace_advice import topic
+
+    concentrated_result["topics"][0] = topic()
+    valid = concentration_reply(payload_for(concentrated_result))
+    invalid = deepcopy(valid)
+    invalid["sections"][1]["next_check"] = "기존 조사 기록을 대조하세요."
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"sections": [valid["sections"][1]]}]
+    await interpret_report(concentrated_result, llm)
+    diagnostic = concentrated_result["quality"]["report"]
+    assert concentrated_result["narrative_status"] == "complete"
+    assert diagnostic["failures"] == [
+        {"attempt": 1, "reason": "incident_grounding_required"}
+    ]
+    assert (
+        diagnostic["interpretation_version"]
+        == "ops-interpretation-incident-concentration-v4"
+    )
+    assert len(llm.complete.call_args.args[1]["section_repair"]) == 1
+    assert llm.complete.call_count == 2
