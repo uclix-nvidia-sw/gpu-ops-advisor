@@ -32,17 +32,20 @@ it('shows the error, device repeat, alert state, NVIDIA action and the report li
       rca_summary: { latest_published: { job_id: 'job-1', result_status: 'partial' } },
     },
   ]);
-  expect(html).toContain('<span class="oh-badge">SXID 11001</span>');
+  expect(html).toContain('<span class="oh-badge sx">SXID 11001</span>');
   expect(html).toContain('dgx02 · NVSwitch');
   expect(html).toContain('0000:c8:00.0');
   expect(html).toContain('이 스위치 2번째');
   expect(html).toContain('해제됨');
+  // Resolve time with the date and weekday in KST.
+  expect(html).toContain('2026.10.26. (월) 13:27');
   expect(html).toContain('치명 가능 SXID (FM 표 23)');
   expect(html).toContain('href="/analyses/job-1#final-report"');
   expect(html).toContain('보고서 열기');
   // Result quality labels stay in the report, not the list.
   expect(html).not.toContain('부분 산출');
-  expect(html).toContain('href="/incidents/new"');
+  // The report button is the only link; the title no longer opens the incident.
+  expect(html).not.toContain('href="/incidents/');
 });
 
 it('marks a day-old firing alert for checking and a component by its Korean name', () => {

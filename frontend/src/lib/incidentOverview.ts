@@ -136,6 +136,56 @@ export interface DeviceRepeat {
 export const dayKey = (d: Date) =>
   new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(d);
 
+const WEEKDAY = '일월화수목금토';
+const weekday = (key: string) => WEEKDAY[new Date(`${key}T12:00:00+09:00`).getUTCDay()];
+
+/** "2026.10.26. (월)" for a KST day key. */
+export const fullDate = (key: string) => `${key.replaceAll('-', '.')}. (${weekday(key)})`;
+
+/** "10.26 (월)" for chart axes. */
+export const shortDate = (key: string) => `${key.slice(5).replace('-', '.')} (${weekday(key)})`;
+
+/** "17:41" in KST. */
+export const clock = (d: Date) =>
+  new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+
+/** "2026.10.26. (월) 17:41" in KST. */
+export const dateTimeText = (d: Date) => `${fullDate(dayKey(d))} ${clock(d)}`;
+
+export interface ErrorRepeat {
+  code: string;
+  codeText: string;
+  name: string;
+  kind: DeviceKind;
+  count: number;
+  devices: number;
+  last: Date;
+}
+
+/** Repeats per error code across devices, most frequent first. */
+export function errorRepeats(views: IncidentView[]): ErrorRepeat[] {
+  const groups = new Map<string, IncidentView[]>();
+  views
+    .filter((v) => v.kind !== 'host')
+    .forEach((v) => groups.set(v.code, [...(groups.get(v.code) || []), v]));
+  return [...groups.values()]
+    .map((list) => ({
+      code: list[0].code,
+      codeText: list[0].codeText,
+      name: list[0].label?.name || '',
+      kind: list[0].kind,
+      count: list.length,
+      devices: new Set(list.map((v) => v.deviceKey)).size,
+      last: list.reduce((a, v) => (v.at > a ? v.at : a), list[0].at),
+    }))
+    .sort((a, b) => b.count - a.count || b.last.getTime() - a.last.getTime());
+}
+
 /** Day keys (KST) of the window, oldest first. */
 export function windowDays(now: Date, days: number) {
   return Array.from({ length: days }, (_, i) =>
@@ -158,7 +208,7 @@ export function deviceRepeats(views: IncidentView[], days: string[]): DeviceRepe
       device: list[0].device,
       kind: list[0].kind,
       count: list.length,
-      last: list[0].at,
+      last: list.reduce((a, v) => (v.at > a ? v.at : a), list[0].at),
       perDay: days.map((d) => list.filter((v) => dayKey(v.at) === d).length),
     }))
     .sort((a, b) => b.count - a.count || b.last.getTime() - a.last.getTime());
