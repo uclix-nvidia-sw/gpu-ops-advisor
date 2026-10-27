@@ -208,7 +208,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
-                        "ops-interpretation-incident-calculated-v5",
+                        "ops-interpretation-incident-items-v6",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3012,14 +3012,49 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-calculated-v5"
+        == "ops-interpretation-incident-items-v6"
     )
     assert incident_section["observation_source"] == "calculated"
     assert "cpc-2 / dgx01 / XID 79" in incident_section["observation"]
-    assert "저장 사건 1건, 작성 당시 발생 중 1건." in incident_section["observation"]
-    assert incident_section["next_check"].startswith(
-        incident_section["observation"] + " "
+    assert "저장 사건 1건." in incident_section["observation"]
+    assert "cpc-2 / dgx01 / XID 79" in incident_section["check_target"]
+    assert "저장 사건 1건, 작성 당시 발생 중 1건" in incident_section["check_target"]
+    assert "공개 RCA 결과가 있는 사건 0건" in incident_section["check_target"]
+    assert "RCA 결과 유무와 작업 생성 여부·상태" in incident_section["next_check"]
+    assert "cpc-2 / dgx01 / XID 79" not in incident_section["next_check"]
+    extension = ".exe" if sys.platform == "win32" else ""
+    binary = Path(
+        os.getenv("BACKEND_BINARY", str(ROOT / (".local/backend-e2e" + extension)))
     )
+    assert binary.is_file(), "Build Backend for incident source export E2E"
+    backend = f"http://127.0.0.1:{port()}/api/v1"
+    process = stack["spawn"](
+        [str(binary)],
+        {
+            **os.environ,
+            "DATABASE_URL": stack["url"],
+            "DSX_ADDRESS": backend.removeprefix("http://").removesuffix("/api/v1"),
+            "DSX_MIGRATE": "false",
+            "DSX_SEED": "false",
+            "DSX_SCHEDULER_ENABLED": "false",
+            "DSX_JOB_CONTROLLER_URL": stack["jc"].removesuffix("/internal/v1"),
+        },
+        "incident-source-backend",
+    )
+    wait_http(backend + "/health/ready", process)
+    exported = httpx.get(
+        backend + "/reports/" + jid + "/export", params={"format": "html"}, timeout=30
+    )
+    assert exported.status_code == 200
+    for label in (
+        "알림 집계(자동 집계)",
+        "AI 운영 해석",
+        "확인 대상(자동 선정)",
+        "AI 확인 제안",
+    ):
+        assert label in exported.text
+    assert incident_section["check_target"] in exported.text
+    assert incident_section["next_check"] in exported.text
     assert "private_raw_payload" not in json.dumps(body)
 
 

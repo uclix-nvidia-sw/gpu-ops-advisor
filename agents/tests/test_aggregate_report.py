@@ -398,6 +398,7 @@ def concentration_records():
             },
             "occurred_at": DATA["time_range"]["start"],
             "alarm_status": "firing" if i == 0 else "resolved",
+            "result_id": f"result-{i}" if i != 8 else None,
         }
         for i in range(11)
     ]
@@ -563,3 +564,45 @@ def test_second_node_ties_use_name_order_and_full_cluster_denominator():
         "events",
         "percent",
     ]
+
+
+def test_incident_node_rca_counts_published_results_without_reading_body():
+    report = concentration_report()
+    topic = report["topics"][0]
+    metrics = {m["id"]: m for m in topic["metrics"]}
+    facts = [f for f in topic["findings"] if f["id"].startswith("incident-node-")]
+    for fact in facts:
+        assert [ref.split(".")[1] for ref in fact["value_refs"]] == [
+            "node_alert_count",
+            "node_alert_firing",
+            "node_alert_rca",
+        ]
+        rca = metrics[fact["value_refs"][2]]
+        assert rca["unit"] == "events" and rca["target"] == fact["target"]
+        expected = (
+            0
+            if fact["target"]["alert_type"] == "XID 13"
+            else metrics[fact["value_refs"][0]]["value"]
+        )
+        assert rca["value"] == expected
+    assert metrics[facts[0]["value_refs"][2]]["value"] == 5
+
+
+def test_low_volume_firing_node_survives_six_candidate_limit():
+    records = []
+    for group in range(8):
+        for event in range(8 - group):
+            records.append(
+                {
+                    "id": f"{group}-{event}",
+                    "cluster_id": "cpc-1",
+                    "symptom": f"XID {group}",
+                    "target": {"node": f"node-{group}"},
+                    "occurred_at": DATA["time_range"]["start"],
+                    "alarm_status": "firing" if group == 7 else "resolved",
+                }
+            )
+    topic = concentration_report(records)["topics"][0]
+    facts = [f for f in topic["findings"] if f["id"].startswith("incident-node-")]
+    assert len(facts) == 6
+    assert facts[0]["target"]["node"] == "node-7"

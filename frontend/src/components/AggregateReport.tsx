@@ -237,6 +237,133 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
   );
 }
 
+function IncidentInterpretation({
+  topic,
+  section,
+  facts,
+  onEvidence,
+}: {
+  topic: Row;
+  section: Row;
+  facts: Row[];
+  onEvidence?: (id: string) => void;
+}) {
+  const check = str(section.check_target);
+  // Match the saved selection exactly; do not select a new target in the reader.
+  const selected = facts.find((fact) => {
+    const target = obj(fact.target);
+    return (
+      target.node &&
+      check.startsWith([target.cluster_id, target.node, target.alert_type].join(' / ') + ' · ')
+    );
+  });
+  const target = obj(selected?.target);
+  const clusters = [
+    ...new Set(facts.map((fact) => str(obj(fact.target).cluster_id)).filter(Boolean)),
+  ];
+  const count = rows(topic.metrics).find(
+    (metric) =>
+      strings(selected?.value_refs).includes(str(metric.id)) &&
+      str(metric.id).startsWith('incident_summary.node_alert_count.'),
+  );
+  return (
+    <section
+      className="aggregate-interpretation aggregate-interpretation-grouped"
+      aria-label="incident_summary AI 운영 해석"
+    >
+      <div className="aggregate-advice-groups">
+        <section className="aggregate-advice-cluster">
+          <h3 className="aggregate-advice-card-title">AI 운영 해석</h3>
+          {clusters.length > 0 && (
+            <p className="aggregate-advice-cluster-target">
+              <span>대상 클러스터 :</span> <code>{clusters.join(' · ')}</code>
+            </p>
+          )}
+          {count && (
+            <p className="aggregate-advice-time-note">
+              분석 기간 · {adviceTime(obj(count.period))}
+            </p>
+          )}
+          <div className="aggregate-advice-namespace">
+            <h4 className="aggregate-advice-identity">
+              <span>확인 대상</span>
+              <span aria-hidden="true">:</span>
+              {selected ? (
+                <code>
+                  {[
+                    ...(clusters.length > 1 ? [str(target.cluster_id)] : []),
+                    str(target.node),
+                    str(target.alert_type),
+                  ].join(' / ')}
+                </code>
+              ) : (
+                <span>
+                  {check
+                    ? '저장된 확인 대상은 아래 근거에서 확인하세요.'
+                    : '노드가 확인된 사건이 없어 선정하지 않았습니다.'}
+                </span>
+              )}
+            </h4>
+            <ul className="aggregate-namespace-summary">
+              <li>
+                <div className="aggregate-advice-heading">
+                  <h5>알림 해석과 확인 제안</h5>
+                </div>
+                <p className="aggregate-advice-decision">
+                  <InterpretationText text={str(section.meaning)} />{' '}
+                  <InterpretationText text={str(section.next_check)} />
+                </p>
+                <details className="aggregate-advice-evidence">
+                  <summary>판단 근거와 확인 범위</summary>
+                  <p>
+                    <strong>관측 근거 · 자동 집계</strong>{' '}
+                    <InterpretationText text={str(section.observation)} />
+                  </p>
+                  <p>
+                    <strong>확인 대상 · 자동 선정</strong>{' '}
+                    <InterpretationText
+                      text={check || '노드가 확인된 사건이 없어 선정하지 않았습니다.'}
+                    />
+                  </p>
+                  <p className="aggregate-advice-basis">
+                    <strong>해석 기준</strong> 같은 종류의 여러 노드 발생, 같은 노드의 다른 종류,
+                    작성 당시 발생 중 여부, 이전 비교기간 기록 유무를 확인합니다. 발생 중 건수, 같은
+                    종류의 발생 노드 수, 건수 순으로 확인 대상을 선정합니다. 선정된 내역으로 전체
+                    분포나 원인을 단정하지 않습니다.
+                  </p>
+                  <p>
+                    <strong>해석 범위</strong> {str(section.interpretation_limit)}
+                  </p>
+                  {onEvidence && (
+                    <div className="aggregate-evidence-links">
+                      {strings(section.evidence_refs).map((id, i) => (
+                        <button
+                          type="button"
+                          className="text-link"
+                          key={id}
+                          onClick={() => onEvidence(id)}
+                        >
+                          근거 {i + 1} 확인
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </details>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
+      <p className="aggregate-summary-source aggregate-static-note">
+        본문은 AI 작성 · 관측 근거와 확인 대상은 자동 집계·선정
+      </p>
+      <p className="aggregate-interpretation-limit">
+        알림 상태는 보고서 작성 당시 기준입니다. 확인 제안은 실제 조치나 장애 원인 판정이 아닙니다.
+      </p>
+    </section>
+  );
+}
+
 function TopicInterpretation({
   topic,
   narrative,
@@ -252,6 +379,16 @@ function TopicInterpretation({
   const facts = rows(topic.findings).filter((fact) =>
     strings(section.source_fact_ids).includes(str(fact.id)),
   );
+  if (topic.topic_id === 'incident_summary' && 'check_target' in section) {
+    return (
+      <IncidentInterpretation
+        topic={topic}
+        section={section}
+        facts={facts}
+        onEvidence={onEvidence}
+      />
+    );
+  }
   const advice = rows(section.advice);
   const hasSummary = advice.length > 0 && advice.every((item) => str(item.summary));
   const selection = obj(section.selection);
@@ -311,16 +448,17 @@ function TopicInterpretation({
       {advice.length > 0 ? null : (
         <dl>
           {[
-            ['observation', '눈에 띄는 변화'],
+            [
+              'observation',
+              section.observation_source === 'calculated'
+                ? '계산으로 확인한 관측'
+                : '눈에 띄는 변화',
+            ],
             ['meaning', '의미와 한계'],
             ['next_check', '확인할 점'],
           ].map(([key, label]) => (
             <div key={key}>
-              <dt>
-                {key === 'observation' && section.observation_source === 'calculated'
-                  ? '계산으로 확인한 관측'
-                  : label}
-              </dt>
+              <dt>{label}</dt>
               <dd>
                 <InterpretationText text={str(section[key])} />
               </dd>

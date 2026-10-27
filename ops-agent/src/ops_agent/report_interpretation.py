@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-calculated-v5"
+VERSION = "ops-interpretation-incident-items-v6"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -54,7 +54,7 @@ PREREQUISITES = {
 FIELDS = ("observation", "meaning", "next_check")
 INCIDENT_EXAMPLE = {
     "observation": "",
-    "meaning": "알림 종류와 노드 각각의 집중·분산 결론, 이어서 한계 한 문장",
+    "meaning": "알림 집계가 운영상 뜻하는 바, 이어서 한계 한 문장",
     "next_check": "대조할 기록과 발생 중 건의 해제 여부 확인",
 }
 LABELS = ("눈에 띄는 변화", "의미와 한계", "확인할 점")
@@ -239,48 +239,24 @@ def payload_for(result):
                 )
 
             facts.sort(key=priority, reverse=True)
+        omitted_nodes = 0
         if topic["topic_id"] == "incident_summary":
-
-            def incident_priority(fact):
-                values = fact["values"]
-                firing = next(
-                    (
-                        v["value"]
-                        for v in values
-                        if v["metric_id"].startswith(
-                            "incident_summary.node_alert_firing."
-                        )
-                        and isinstance(v["value"], (int, float))
-                    ),
-                    0,
+            nodes = [f for f in facts if f["fact_id"].startswith("incident-node-")]
+            # Preserve the candidate order and reserve node facts before applying either cap.
+            facts = (
+                nodes
+                + [f for f in facts if f["fact_id"] == "incident-period-summary"]
+                + [f for f in facts if f["fact_id"].startswith("incident-top-type-")]
+            )
+            omitted_nodes = max(
+                0,
+                sum(
+                    len(c["nodes"])
+                    for c in topic.get("summary", {}).get("categories", [])
                 )
-                count = next(
-                    (
-                        v["value"]
-                        for v in values
-                        if v["metric_id"].startswith(
-                            "incident_summary.node_alert_count."
-                        )
-                        and isinstance(v["value"], (int, float))
-                    ),
-                    0,
-                )
-                if fact["fact_id"].startswith(
-                    (
-                        "incident-top-type-",
-                        "incident-top-node-",
-                        "incident-second-node-",
-                    )
-                ):
-                    return (2, False, 0, 0)
-                return (
-                    fact["fact_id"] == "incident-period-summary",
-                    bool(fact["target"].get("node")),
-                    firing,
-                    count,
-                )
-
-            facts.sort(key=incident_priority, reverse=True)
+                - len(nodes),
+            )
+        offered_count = len(facts)
         facts = facts[:30]
         for fact in facts:
             target = fact["target"]
@@ -305,7 +281,7 @@ def payload_for(result):
                 "status": topic["status"],
                 "missing_inputs": topic.get("missing_inputs", []),
                 "findings": facts,
-                "omitted_findings": max(0, len(topic.get("findings", [])) - len(facts)),
+                "omitted_findings": omitted_nodes + max(0, offered_count - len(facts)),
             }
         )
     namespace = next(
@@ -333,9 +309,13 @@ def payload_for(result):
                     t["omitted_findings"] = selection["omitted_count"]
                     t["advice_mode"] = ADVICE_VERSION
             else:
-                t["findings"] = t["findings"][
-                    : 12 if t["topic_id"] == "incident_summary" else 6
-                ]
+                limit = 12 if t["topic_id"] == "incident_summary" else 6
+                if t["topic_id"] == "incident_summary":
+                    t["omitted_findings"] += max(0, len(t["findings"]) - limit)
+                t["findings"] = t["findings"][:limit]
+    for topic in topics:
+        if topic["topic_id"] == "incident_summary":
+            topic["focus"] = incident_focus(topic["findings"])
     return {
         "interpretation_version": VERSION,
         "time_range": result["time_range"],
@@ -716,8 +696,11 @@ def validate_sections(reply, payload, result):
             check = section.get("next_check")
             if not isinstance(check, str) or not check.strip() or len(check) > 450:
                 raise ValueError("invalid_section_text")
+            if not isinstance(section.get("meaning"), str):
+                raise ValueError("invalid_section_text")
             section["observation"] = focus["observation"]
-            section["next_check"] = focus["check_prefix"] + check.strip()
+            section["check_target"] = focus["check_target"]
+            section["next_check"] = check.strip()
 
         if any(f.get("related_workload_fact_id") for f in selected):
             if "대기" not in str(section.get("meaning", "")) or "Pod" not in str(
@@ -786,14 +769,42 @@ def validate_sections(reply, payload, result):
             if re.search(
                 r"(?:설명|판단|작성)(?:하며|하세요|합니다)|했는지|됐는지|몰렸는지|분산된지|흩어졌는지",
                 meaning,
-            ) or (
-                any(fid.startswith("incident-top-type-") for fid in ids)
-                and any(fid.startswith("incident-top-node-") for fid in ids)
-                and not all(term in meaning for term in ("종류", "노드"))
             ):
                 raise ValueError(
-                    "incident_meaning_required: 작성 지시를 옮기지 말고 알림 종류와 노드 각각이 집중인지 분산인지 결론을 쓰세요"
+                    "incident_meaning_required: 작성 지시를 옮기지 말고 선택된 알림 근거의 의미를 설명하세요"
                 )
+            check = TOKEN.sub("", section["next_check"])
+            if re.search(
+                r"새로\s*(?:나타|발생|등장)|새로운\s*(?:장애|유형|종류)|"
+                r"최초\s*발생|처음\s*발생|공통\s*원인|동시(?:에)?\s*발생",
+                meaning + " " + check,
+            ):
+                raise ValueError(
+                    "incident_overreach: 이전 비교기간 기록 유무만 쓰고 새 유형·공통 원인·동시 발생으로 단정하지 마세요"
+                )
+            context = focus["check_context"]
+            # shortcut: bounded RCA phrasing, not semantic proof; extend with reviewed failures.
+            if context and context["rca_count"] < context["count"]:
+                invalid_rca = False
+                if context["rca_count"] == 0:
+                    for mention in re.finditer(r"RCA\s*(?:분석\s*)?결과", check, re.I):
+                        tail = check[mention.end() :]
+                        if not re.match(
+                            r"\s*(?:가|의|는|도)?\s*(?:유무|존재\s*여부|공개\s*여부|발행\s*여부|"
+                            r"있(?:는지|다면|으면)|없|미공개|미발행|공개됐는지|발행됐는지)",
+                            tail,
+                        ):
+                            invalid_rca = True
+                elif re.search(
+                    r"(?:모든|전체)[^.!?]{0,30}RCA\s*결과|RCA\s*결과[^.!?]{0,20}(?:모두|전부)",
+                    check,
+                    re.I,
+                ):
+                    invalid_rca = True
+                if invalid_rca:
+                    raise ValueError(
+                        "incident_rca_reference: 확인 대상의 공개 RCA 결과 범위를 지키세요. 결과가 없으면 결과 유무·작업 생성 여부와 상태를 확인하고, 일부만 있으면 공개된 결과만 대조하세요"
+                    )
             prose = " ".join(section.get(field, "") for field in FIELDS)
             if re.search(
                 r"현재\s*기준|(?:확인|점검)[^.!?]{0,30}필요(?:가)?\s*없|점검\s*불필요",
@@ -875,17 +886,20 @@ def validate_sections(reply, payload, result):
             return f"{value:g}{suffix}"
 
         rendered = {}
-        for field in FIELDS:
+        for field in FIELDS + (("check_target",) if incident else ()):
             text = section.get(field)
+            if incident and field == "check_target" and text == "":
+                rendered[field] = ""
+                continue
             if (
                 not isinstance(text, str)
                 or not text.strip()
                 or (
-                    not (incident and field == "observation")
+                    not (incident and field in {"observation", "check_target"})
                     and len(text)
                     > (
                         900
-                        if (memory_focus or workload_focus or incident)
+                        if (memory_focus or workload_focus)
                         and field in {"observation", "next_check"}
                         else 450
                     )
@@ -972,6 +986,10 @@ def validate_sections(reply, payload, result):
             if topic["topic_id"] == "namespace_usage"
             else "알림 상태는 보고서 작성 당시 기준입니다. 유사한 알림만으로 같은 GPU의 반복 장애나 실제 복구 여부를 판단하지 않습니다."
         )
+        if incident:
+            limits += " 이 해석은 선정된 알림 근거를 다루며 전체 내역은 아래 집계에서 확인할 수 있습니다."
+            if topic.get("omitted_findings"):
+                limits += " 선정 한도로 일부 근거를 생략했습니다. 생략은 알림 부재나 노드 미확인을 뜻하지 않습니다."
         if workload_focus:
             limits += " 활동률·메모리의 시간대와 작업 관측의 집계 기간은 다를 수 있습니다. 같은 시각의 상태나 대기 원인으로 연결하지 않습니다."
         if topic["status"] != "ready":
@@ -994,10 +1012,21 @@ def validate_sections(reply, payload, result):
             ),
             "value_refs": sorted(used_values),
         }
+        if incident:
+            parts = [
+                ("알림 집계(자동 집계)", rendered["observation"]),
+                ("AI 운영 해석", rendered["meaning"]),
+                (
+                    "확인 대상(자동 선정)",
+                    rendered["check_target"]
+                    or "노드가 확인된 사건이 없어 선정하지 않았습니다.",
+                ),
+                ("AI 확인 제안", rendered["next_check"]),
+            ]
+        else:
+            parts = [(label, rendered[key]) for label, key in zip(LABELS, FIELDS)]
         item["text"] = (
-            "\n\n".join(
-                f"{label}: {rendered[key]}" for label, key in zip(LABELS, FIELDS)
-            )
+            "\n\n".join(f"{label}: {text}" for label, text in parts)
             + "\n\n해석 범위: "
             + limits
         )
