@@ -229,6 +229,35 @@ func TestBackendE2E(t *testing.T) {
 			t.Fatal("new revision did not preserve draft lifecycle")
 		}
 	})
+	t.Run("unpublished_revisions_can_be_discarded", func(t *testing.T) {
+		b := Object{"knowledge_key": "e2e-discard", "kind": "runbook", "visibility": "common", "content": Object{"text": "superseded draft"}}
+		first := call("POST", "/knowledge", b, 201, "Idempotency-Key", "discard-draft")
+		id := String(first, "knowledge_id")
+		path := "/knowledge/" + id + "/revisions/1"
+		call("POST", path+"/retire", Object{"reason": ""}, 422, "Idempotency-Key", "discard-no-reason", "If-Match", "1")
+		call("POST", path+"/retire", Object{"reason": "stale"}, 409, "Idempotency-Key", "discard-stale", "If-Match", "9")
+		closed := call("POST", path+"/retire", Object{"reason": "superseded by a later revision"}, 200, "Idempotency-Key", "discard-r1", "If-Match", "1")
+		if String(closed, "state") != "retired" || closed["published_at"] != nil || closed["retired_at"] == nil {
+			t.Fatalf("draft discard: %v", closed)
+		}
+		call("POST", path+"/retire", Object{"reason": "again"}, 409, "Idempotency-Key", "discard-r1-again", "If-Match", "2")
+		// in_review and reviewed close the same way.
+		for i, stop := range []string{"request", "approve"} {
+			next := call("POST", "/knowledge/"+id+"/revisions", b, 201, "Idempotency-Key", "discard-next-"+stop)
+			rev := fmt.Sprintf("/knowledge/%s/revisions/%v", id, Number(next, "revision"))
+			version := 1
+			for _, action := range []string{"request", "approve"}[:i+1] {
+				call("POST", rev+"/review", Object{"action": action, "comment": "fixture"}, 200, "Idempotency-Key", "discard-"+stop+"-"+action, "If-Match", fmt.Sprint(version))
+				version++
+			}
+			call("POST", rev+"/retire", Object{"reason": "superseded"}, 200, "Idempotency-Key", "discard-"+stop+"-retire", "If-Match", fmt.Sprint(version))
+		}
+		var open int
+		must(t, db.Pool.QueryRow(ctx, "SELECT count(*) FROM knowledge_revisions WHERE knowledge_id=$1 AND state<>'retired'", id).Scan(&open))
+		if open != 0 {
+			t.Fatalf("discarded revisions remain open: %d", open)
+		}
+	})
 	t.Run("replica_safe_schedule_outbox_recovery_and_revision", func(t *testing.T) {
 		template := report()
 		delete(template, "time_range")

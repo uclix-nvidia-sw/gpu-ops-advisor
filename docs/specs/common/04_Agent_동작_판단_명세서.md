@@ -168,7 +168,7 @@ O05의 기준은 다음과 같다.
 | 데이터 사전 | D 항목·원본 의미·단위·지원·query ID | 해당 source·모델·기간에 적용 |
 | 참고·검증 사례 | 공식/내부 원문·실제 검토 결과·출처 | 후보·설명 보완. 검증 수준 명시 |
 
-초안 draft→검토 요청 in_review→검토 완료 reviewed→발행 published→폐기 retired 흐름을 사용한다. 검토 action=request/approve/request_changes를 02 API로 처리하며 수정 요청·검토 후 내용 수정은 draft로 돌리고 재검토한다. 발행은 검토한 content_hash가 일치해야 한다. 발행 content는 불변이고 신규 revision으로 수정한다. 폐기는 신규 실행 선택만 막으며 과거 실행 인용은 보존한다.
+초안 draft→검토 요청 in_review→검토 완료 reviewed→발행 published→폐기 retired 흐름을 사용한다. 검토 action=request/approve/request_changes를 02 API로 처리하며 수정 요청·검토 후 내용 수정은 draft로 돌리고 재검토한다. 발행은 검토한 content_hash가 일치해야 한다. 발행 content는 불변이고 신규 revision으로 수정한다. 폐기는 신규 실행 선택만 막으며 과거 실행 인용은 보존한다. 발행하지 않은 초안·검토 중·검토 완료 revision도 사유와 함께 폐기해 닫을 수 있으며, 이때 published_at은 비어 있다.
 
 지식은 분석 범위와 기술 호환성을 검사한다. 제품 권한/공개 범위 정책은 이번 범위에서 제외한다. 실제 사건 사례의 출처·검토 수준을 보존한다. 등록 procedure는 읽기 전용 메타데이터이며 화면에서 임의 실행 코드를 편집·발행하지 않는다.
 
