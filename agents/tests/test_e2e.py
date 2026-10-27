@@ -208,7 +208,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
-                        "ops-interpretation-incident-concentration-v4",
+                        "ops-interpretation-incident-calculated-v5",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3007,6 +3007,19 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     assert summary["unclassified_count"] == 1
     assert [(g["count"], g["previous_count"]) for g in summary["groups"]] == [(0, 1)]
     assert "cpc-2의 XID 79 1건(dgx01, 이전 0건)" in incident["findings"][0]["text"]
+    incident_section = next(
+        n for n in body["narrative"] if n["topic_id"] == "incident_summary"
+    )
+    assert (
+        body["quality"]["report"]["interpretation_version"]
+        == "ops-interpretation-incident-calculated-v5"
+    )
+    assert incident_section["observation_source"] == "calculated"
+    assert "cpc-2 / dgx01 / XID 79" in incident_section["observation"]
+    assert "저장 사건 1건, 작성 당시 발생 중 1건." in incident_section["observation"]
+    assert incident_section["next_check"].startswith(
+        incident_section["observation"] + " "
+    )
     assert "private_raw_payload" not in json.dumps(body)
 
 
@@ -3352,7 +3365,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             else summary + " {{period}}"
                         )
                     elif failure == "mixed_topics":
-                        item["observation"] = "알림은 3건입니다."
+                        item["meaning"] = "알림 종류와 노드는 3건입니다."
                 if failure == "empty_namespace_heading":
                     reply["sections"].append(
                         {"topic_id": "namespace_usage", "advice": []}

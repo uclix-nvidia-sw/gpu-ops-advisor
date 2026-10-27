@@ -19,46 +19,14 @@ def repair_case():
     for key in ("rows", "workloads"):
         quiet[key][0]["namespace"] = "quiet"
         usage[key].extend(quiet[key])
-    period = usage["workloads"][0]["hours"][0]
-    incident = dict(
-        topic_id="incident_summary",
-        status="ready",
-        summary={"count": 3},
-        missing_inputs=[],
-        metrics=[
-            dict(
-                id="incident.count",
-                value=3,
-                unit="events",
-                period={k: period[k] for k in ("start", "end")},
-                target={"cluster_id": "cpc-1", "node": "gpu-node"},
-                quality={},
-            )
-        ],
-        findings=[
-            dict(
-                id="incident-node",
-                text="저장 알림 기록입니다.",
-                target={"cluster_id": "cpc-1", "node": "gpu-node"},
-                value_refs=["incident.count"],
-                evidence_refs=["incident-evidence"],
-            )
-        ],
-    )
+    from test_aggregate_report import concentration_report
+
+    incident = concentration_report()["topics"][0]
     result = dict(topics=[usage, incident], time_range={}, quality={})
     wire = payload_for(result)
-    target = wire["topics"][1]["findings"][0]["fact_id"]
-    inc = dict(
-        topic_id="incident_summary",
-        fact_ids=[target],
-        observation="{{target:"
-        + target
-        + "}}의 {{period:incident.count}} 저장 사건은 {{value:incident.count}}입니다.",
-        meaning="저장된 알림이며 현재 장비 상태는 미확인입니다.",
-        next_check="{{target:"
-        + target
-        + "}}의 {{period:incident.count}} 알림과 기존 점검 기록을 대조하세요.",
-    )
+    from test_report_interpretation import concentration_reply
+
+    inc = concentration_reply(wire)["sections"][1]
     valid = {"sections": [writer_section(wire["topics"][0]["findings"]), inc]}
     validate_sections(valid, wire, result)
     return result, valid
@@ -95,7 +63,7 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
             )
         ]
     if broken in {"incident", "both"}:
-        invalid["sections"][1]["observation"] = "사건은 3건입니다."
+        invalid["sections"][1]["meaning"] = "사건은 3건입니다."
         patches["sections"] = [valid["sections"][1]]
     if incident_first:
         result["topics"].reverse()
@@ -126,7 +94,7 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
         "wrong_topic",
         "missing_topic",
         "duplicate_topic",
-        "unknown_fact",
+        "unknown_value",
         "unsupported_claim",
     ],
 )
@@ -135,7 +103,7 @@ async def test_mixed_repair_cannot_change_valid_scope_or_skip_final_validation(
 ):
     result, valid = repair_case
     invalid = deepcopy(valid)
-    invalid["sections"][1]["observation"] = "사건은 3건입니다."
+    invalid["sections"][1]["meaning"] = "사건은 3건입니다."
     patch = {"sections": [deepcopy(valid["sections"][1])]}
     if attack == "unsolicited_item":
         patch["advice"] = valid["sections"][0]["advice"]
@@ -145,10 +113,10 @@ async def test_mixed_repair_cannot_change_valid_scope_or_skip_final_validation(
         patch["sections"] = []
     elif attack == "duplicate_topic":
         patch["sections"] *= 2
-    elif attack == "unknown_fact":
-        patch["sections"][0]["fact_ids"] = ["not-offered"]
+    elif attack == "unknown_value":
+        patch["sections"][0]["meaning"] = "종류와 노드는 {{value:not-offered}}입니다."
     else:
-        patch["sections"][0]["observation"] = "사건은 7건입니다."
+        patch["sections"][0]["meaning"] = "종류와 노드는 7건입니다."
     original = deepcopy(result["topics"])
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [invalid, patch]
@@ -162,7 +130,7 @@ async def test_oversized_topic_repair_keeps_original_input_limit_and_fallback(
     repair_case,
 ):
     result, invalid = repair_case
-    invalid["sections"][1]["observation"] = "x" * 33_000
+    invalid["sections"][1]["meaning"] = "x" * 33_000
     original = deepcopy(result["topics"])
     llm = AsyncMock(configured=True)
     llm.complete.return_value = invalid
@@ -175,7 +143,7 @@ async def test_oversized_topic_repair_keeps_original_input_limit_and_fallback(
 async def test_mixed_repair_above_legacy_limit_preserves_all_context(repair_case):
     result, valid = repair_case
     invalid = deepcopy(valid)
-    invalid["sections"][1]["observation"] = "x" * 17_000
+    invalid["sections"][1]["meaning"] = "x" * 17_000
     original = deepcopy(result["topics"])
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [invalid, {"sections": [valid["sections"][1]]}]

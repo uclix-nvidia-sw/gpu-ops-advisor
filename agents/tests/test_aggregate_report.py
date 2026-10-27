@@ -403,8 +403,12 @@ def concentration_records():
     ]
 
 
-def concentration_report(records=None, previous=None):
-    data = {**DATA, "topic_ids": ["incident_summary"]}
+def concentration_report(records=None, previous=None, period=None):
+    data = {
+        **DATA,
+        "time_range": period or DATA["time_range"],
+        "topic_ids": ["incident_summary"],
+    }
     context = {
         "data_cutoff_at": data["time_range"]["end"],
         "incidents": concentration_records() if records is None else records,
@@ -476,7 +480,11 @@ def test_incident_concentration_counts_shares_targets_and_periods():
         "이 클러스터 저장 사건 11건(이전 기간 0건) 중 8건으로 72.7%" in top_type["text"]
     )
     assert "발생 노드 dgx01, dgx02" in top_type["text"]
-    assert all(f["id"].startswith("incident-node-") for f in topic["findings"][3:])
+    second = topic["findings"][3]
+    assert second["id"] == "incident-second-node-cpc-1"
+    assert second["target"] == {"cluster_id": "cpc-1", "node": "dgx02"}
+    assert [metrics[mid]["value"] for mid in second["value_refs"]] == [5, 45.5]
+    assert all(f["id"].startswith("incident-node-") for f in topic["findings"][4:])
 
 
 @pytest.mark.parametrize("count", [0, 1])
@@ -528,3 +536,30 @@ def test_incident_concentration_ties_unknown_nodes_and_previous_only_types(known
     if known_nodes:
         assert facts[1]["target"]["node"] == "dgx01"
         assert [metrics[mid]["value"] for mid in facts[1]["value_refs"]] == [1, 25, 0]
+
+
+def test_second_node_requires_two_identified_nodes():
+    records = concentration_records()
+    for record in records:
+        record["target"]["node"] = "dgx01"
+    topic = concentration_report(records)["topics"][0]
+    assert not any(
+        f["id"].startswith("incident-second-node-") for f in topic["findings"]
+    )
+
+
+def test_second_node_ties_use_name_order_and_full_cluster_denominator():
+    records = concentration_records()[:4]
+    for record, node in zip(records, ["dgx02", "dgx01", None, None]):
+        record["target"] = {"node": node} if node else {}
+    topic = concentration_report(records)["topics"][0]
+    metrics = {m["id"]: m for m in topic["metrics"]}
+    second = next(
+        f for f in topic["findings"] if f["id"].startswith("incident-second-node-")
+    )
+    assert second["target"] == {"cluster_id": "cpc-1", "node": "dgx02"}
+    assert [metrics[mid]["value"] for mid in second["value_refs"]] == [1, 25]
+    assert [metrics[mid]["unit"] for mid in second["value_refs"]] == [
+        "events",
+        "percent",
+    ]

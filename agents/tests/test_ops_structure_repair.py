@@ -159,7 +159,7 @@ async def test_compact_repair_preserves_output_room_without_larger_budget(
     incident["findings"] = [
         {
             **deepcopy(sample),
-            "id": f"incident-fixture-{i}",
+            "id": sample["id"] if i == 0 else f"incident-fixture-{i}",
             "text": "저장된 알림은 관측 범위의 표본이며 원인이나 현재 상태를 확정하지 않습니다. "
             * 10,
         }
