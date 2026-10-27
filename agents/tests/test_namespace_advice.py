@@ -2015,22 +2015,9 @@ async def test_more_than_five_clusters_keeps_selection_guidance_instead_of_overs
 
 
 async def test_namespace_writing_list_does_not_replace_incident_section_contract():
-    incident = dict(
-        topic_id="incident_summary",
-        status="ready",
-        summary={"count": 1},
-        missing_inputs=[],
-        metrics=[],
-        findings=[
-            dict(
-                id="incident-empty",
-                text="저장 사건 미확인",
-                target={},
-                value_refs=[],
-                evidence_refs=[],
-            )
-        ],
-    )
+    from test_aggregate_report import concentration_report, concentration_records
+
+    incident = concentration_report(concentration_records()[:1])["topics"][0]
     result = dict(topics=[topic(), incident], quality={}, time_range={})
     llm = AsyncMock(configured=True)
     llm.complete.return_value = None

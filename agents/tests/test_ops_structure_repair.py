@@ -154,17 +154,9 @@ async def test_compact_repair_preserves_output_room_without_larger_budget(
     structured_report,
 ):
     report = structured_report
-    incident = report["topics"][0]
-    sample = incident["findings"][0]
-    incident["findings"] = [
-        {
-            **deepcopy(sample),
-            "id": sample["id"] if i == 0 else f"incident-fixture-{i}",
-            "text": "저장된 알림은 관측 범위의 표본이며 원인이나 현재 상태를 확정하지 않습니다. "
-            * 10,
-        }
-        for i in range(6)
-    ]
+    from test_aggregate_report import concentration_report
+
+    report["topics"][0] = concentration_report()["topics"][0]
     valid = reply_for(payload_for(report))
     full_llm = AsyncMock(configured=True)
     ambiguous = {**wrapped_reply(valid), "unknown_topic": {}}

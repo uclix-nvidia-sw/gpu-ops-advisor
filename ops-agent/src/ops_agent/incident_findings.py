@@ -4,11 +4,13 @@ from collections import Counter, defaultdict
 
 
 INCIDENT_RULES = """incident_summary 작성:
-- observation은 코드가 작성합니다. 빈 문자열 ""을 반환하세요. fact_ids도 코드가 정하므로 응답 값은 쓰이지 않습니다.
-- meaning: findings의 최다 종류 비율과 노드별 비율(최다 노드, 두 번째 노드)을 비교하세요. 알림 종류가 한 종류에 집중됐는지, 노드가 한 노드에 집중됐는지를 각각 결론으로 쓰세요. 최다 종류의 이전 기간 건수가 0이면 새로 나타난 종류라고 쓰세요. 마지막에 저장 알림 기록이며 시험 알림이 섞일 수 있고 원인·같은 GPU 반복 장애·복구는 확정하지 않는다는 한계를 한 문장으로 쓰세요. "~했는지", "~를 설명" 같은 작성 지시 표현은 쓰지 마세요.
-- next_check: 코드가 확인 대상 노드·알림, 기간, 건수, 발생 중 건수를 앞에 붙입니다. 대상·기간 토큰을 다시 쓰지 마세요. 그 알림의 발생 시각을 어떤 기록과 대조할지(기존 RCA 결과, 점검 기록, 같은 알림이 있는 다른 노드의 발생 시각)와 발생 중 건의 해제 여부 확인을 짧게 쓰세요.
+- observation과 check_target은 코드가 작성합니다. observation은 빈 문자열 ""을 반환하세요. fact_ids도 코드가 정하므로 응답 값은 쓰이지 않습니다.
+- focus는 코드가 선정한 관측과 확인 대상입니다. focus.ids의 근거만 해석하세요. 전체 알림의 노드별 합계와 특정 종류의 노드별 건수를 섞지 마세요. 일부 내역이나 선정 제외가 있으면 전체 분포로 일반화하지 마세요.
+- meaning: 같은 종류가 여러 노드에서 기록됐는지, 이전 비교기간에 그 종류의 기록이 있었는지를 근거에 맞는 결론으로 쓰세요. 이전 건수가 0이면 "이전 비교기간에는 기록이 없었다"고 쓰세요. 집중·분산 판단은 쓰지 마세요. 마지막에 저장 알림 기록이며 시험 알림이 섞일 수 있고 원인·같은 GPU 반복·복구는 확정하지 않는다는 한계를 한 문장으로 쓰세요. "~를 설명" 같은 작성 지시를 옮기지 마세요.
+- "새로 나타난", "새로운 장애·유형", "최초 발생", "공통 원인", "동시 발생"은 부정문에서도 쓰지 마세요. 시각 비교는 "발생 시각이 겹치는지 확인"으로 표현하세요.
+- next_check: focus.check_context의 확인 대상을 기준으로 무엇을 어떤 기록과 대조할지만 짧게 쓰세요. 대상·기간 토큰을 반복하지 마세요. rca_count가 0이면 있는 RCA 결과처럼 대조를 제안하지 말고 결과 유무·RCA 작업 생성 여부와 상태 확인을 쓰세요. 일부 사건에만 결과가 있으면 공개된 결과만 대조하세요. RCA 본문을 읽었거나 작업 진행·실패를 확인한 것처럼 쓰지 마세요. firing이 양수면 작성 이후 해제 여부, other_alert_fact_ids가 있으면 같은 노드의 다른 알림과 선후 관계 확인을 쓰세요. 확인 대상이 없으면 노드 식별 정보 확인을 제안하세요.
 - 건수 감소를 복구로, 알림 해제를 복구 확인으로 쓰지 마세요. 점검 불필요·현재 정상이라고 쓰지 마세요. 건수를 평균이나 GPU 활동률로 설명하지 마세요.
-- 이 주제의 숫자·노드·알림 이름은 {{target:fact_id}}, {{value:metric_id}} 토큰으로만 쓰거나 생략하세요. 필드마다 짧은 두세 문장, 450자 이내입니다.
+- 숫자·노드·알림 이름은 {{target:fact_id}}, {{value:metric_id}} 토큰으로만 쓰거나 생략하세요. AI가 작성하는 필드는 각각 450자 이내입니다.
 """
 
 
@@ -106,12 +108,15 @@ def add_concentration_findings(topic, put, refs):
 
 
 def incident_focus(findings):
-    """Compose incident observations and a check target from verified payload facts."""
+    """Use the same selected facts for model context, observation and check target."""
     ids = []
     metrics = {
         f["fact_id"]: {v["metric_id"].split(".")[1]: v for v in f["values"]}
         for f in findings
     }
+
+    def value(fact, name):
+        return metrics[fact["fact_id"]][name]["value"]
 
     def token(kind, fact, name=None):
         fid = fact["fact_id"]
@@ -121,76 +126,118 @@ def incident_focus(findings):
         return "{{" + kind + ":" + key + "}}"
 
     top_types = [f for f in findings if f["fact_id"].startswith("incident-top-type-")]
-    node_facts = [f for f in findings if f["fact_id"].startswith("incident-node-")]
-    nodes = {
-        (f["target"].get("cluster_id"), prefix): f
-        for f in findings
-        for prefix in ("incident-top-node-", "incident-second-node-")
-        if f["fact_id"].startswith(prefix)
-    }
-    observations = []
+    nodes = [f for f in findings if f["fact_id"].startswith("incident-node-")]
+    observations, clusters = [], set()
     for fact in top_types:
+        clusters.add(fact["target"]["cluster_id"])
         text = (
             f"{token('target', fact)} · {token('period', fact, 'top_type_count')}: "
-            f"클러스터 저장 사건 {token('value', fact, 'top_type_cluster_count')}"
-            f"(이전 {token('value', fact, 'top_type_cluster_previous_count')}) 중 "
-            f"{token('value', fact, 'top_type_count')}, {token('value', fact, 'top_type_share')}"
-            f"(이 종류의 이전 기간 {token('value', fact, 'top_type_previous_count')})."
+            f"클러스터 저장 사건 {token('value', fact, 'top_type_cluster_count')} 중 "
+            f"{token('value', fact, 'top_type_count')}"
+            f"(이전 비교기간 이 종류 {token('value', fact, 'top_type_previous_count')})."
         )
-        cluster = fact["target"]["cluster_id"]
-        top_node = nodes.get((cluster, "incident-top-node-"))
-        if top_node:
-            text += (
-                f" 노드별: {token('target', top_node)} {token('value', top_node, 'top_node_count')}, "
-                f"{token('value', top_node, 'top_node_share')}, "
-                f"작성 당시 발생 중 {token('value', top_node, 'top_node_firing')}"
+        matching = [
+            n
+            for n in nodes
+            if all(
+                n["target"][k] == fact["target"][k]
+                for k in ("cluster_id", "alert_type")
             )
-            second = nodes.get((cluster, "incident-second-node-"))
-            if second:
-                text += (
-                    f" · {token('target', second)} {token('value', second, 'second_node_count')}, "
-                    f"{token('value', second, 'second_node_share')}"
+        ]
+        if matching:
+            complete = sum(value(n, "node_alert_count") for n in matching) == value(
+                fact, "top_type_count"
+            )
+            text += " 노드별: " if complete else " 확인된 일부 노드 내역: "
+            text += (
+                " · ".join(
+                    f"{token('target', n)} {token('value', n, 'node_alert_count')}"
+                    for n in matching
                 )
-            text += "."
+                + "."
+            )
+            if not complete:
+                text += " 나머지 사건의 노드별 내역은 이 해석에 포함하지 않았습니다."
+        else:
+            text += " 이 종류의 노드별 내역은 이 해석에 포함하지 않았습니다."
         observations.append(text)
-    if not top_types:
-        if node_facts:
-            fact = node_facts[0]
+    for fact in nodes:
+        cluster = fact["target"]["cluster_id"]
+        if cluster not in clusters:
             observations.append(
                 f"{token('target', fact)} · {token('period', fact, 'node_alert_count')}: "
-                f"저장 사건 {token('value', fact, 'node_alert_count')}, "
-                f"작성 당시 발생 중 {token('value', fact, 'node_alert_firing')}."
+                f"저장 사건 {token('value', fact, 'node_alert_count')}."
             )
-        else:
-            fact = next(
-                (f for f in findings if f["fact_id"] == "incident-period-summary"), None
+            clusters.add(cluster)
+    if not observations:
+        fact = next(
+            (f for f in findings if f["fact_id"] == "incident-period-summary"), None
+        )
+        if fact:
+            observations.append(
+                f"{token('target', fact)} · {token('period', fact, 'count')}: "
+                f"저장 사건 {token('value', fact, 'count')}"
+                f"(이전 비교기간 {token('value', fact, 'previous_count')})."
             )
-            if fact:
-                observations.append(
-                    f"{token('target', fact)} · {token('period', fact, 'count')}: "
-                    f"저장 사건 {token('value', fact, 'count')}"
-                    f"(이전 {token('value', fact, 'previous_count')})."
-                )
     check = next(
-        (
-            f
-            for f in node_facts
-            if metrics[f["fact_id"]]["node_alert_firing"]["value"] > 0
-        ),
-        node_facts[0] if node_facts else None,
+        (f for f in nodes if value(f, "node_alert_firing") > 0),
+        nodes[0] if nodes else None,
     )
-    prefix = ""
+    target, context = "", None
     if check:
-        prefix = (
+        target = (
             f"{token('target', check)} · {token('period', check, 'node_alert_count')}: "
             f"저장 사건 {token('value', check, 'node_alert_count')}"
         )
-        if metrics[check["fact_id"]]["node_alert_firing"]["value"] > 0:
-            prefix += (
+        if value(check, "node_alert_firing") > 0:
+            target += (
                 f", 작성 당시 발생 중 {token('value', check, 'node_alert_firing')}"
             )
-        prefix += ". "
-    return {"ids": ids, "observation": " ".join(observations), "check_prefix": prefix}
+        target += (
+            f", 공개 RCA 결과가 있는 사건 {token('value', check, 'node_alert_rca')}."
+        )
+        others = [
+            n
+            for n in nodes
+            if n is not check
+            and all(
+                n["target"][k] == check["target"][k] for k in ("cluster_id", "node")
+            )
+        ]
+        if others:
+            target += (
+                " 같은 노드의 다른 알림: "
+                + " · ".join(
+                    f"{token('target', n)} {token('value', n, 'node_alert_count')}"
+                    for n in others
+                )
+                + "."
+            )
+        same_type = [
+            n
+            for n in nodes
+            if all(
+                n["target"][k] == check["target"][k]
+                for k in ("cluster_id", "alert_type")
+            )
+        ]
+        for fact in same_type:
+            if fact["fact_id"] not in ids:
+                ids.append(fact["fact_id"])
+        context = {
+            "fact_id": check["fact_id"],
+            "count": value(check, "node_alert_count"),
+            "firing": value(check, "node_alert_firing"),
+            "rca_count": value(check, "node_alert_rca"),
+            "same_type_fact_ids": [f["fact_id"] for f in same_type],
+            "other_alert_fact_ids": [f["fact_id"] for f in others],
+        }
+    return {
+        "ids": ids,
+        "observation": " ".join(observations),
+        "check_target": target,
+        "check_context": context,
+    }
 
 
 def add_node_findings(topic, put, refs):
@@ -205,11 +252,18 @@ def add_node_findings(topic, put, refs):
             if node and event.get("occurred_at"):
                 nodes[node].append(event)
         for node, events in nodes.items():
-            candidates.append((category, node, events))
-    for i, (category, node, events) in enumerate(
+            candidates.append((category, node, events, len(nodes)))
+    for i, (category, node, events, _) in enumerate(
         sorted(
             candidates,
-            key=lambda x: (-len(x[2]), x[0]["cluster_id"], x[1], x[0]["name"]),
+            key=lambda x: (
+                -sum(e.get("alarm_status") == "firing" for e in x[2]),
+                -x[3],
+                -len(x[2]),
+                x[0]["cluster_id"],
+                x[1],
+                x[0]["name"],
+            ),
         )[:6]
     ):
         target = {
@@ -224,12 +278,18 @@ def add_node_findings(topic, put, refs):
             "events",
             target,
         )
+        rca = put(
+            "node_alert_rca",
+            sum(bool(e.get("result_id")) for e in events),
+            "events",
+            target,
+        )
         topic["findings"].append(
             {
                 "id": f"incident-node-{i}",
                 "target": target,
-                "value_refs": [count, firing],
+                "value_refs": [count, firing, rca],
                 "evidence_refs": refs,
-                "text": f"{category['cluster_id']} / {node} / {category['name']}: 저장 사건입니다. {len(events)}건 중 보고서 작성 당시 발생 중 {sum(e.get('alarm_status') == 'firing' for e in events)}건. 같은 GPU의 반복 장애나 원인 확정이 아닙니다. 이 노드의 해당 알림 시각과 기존 조사·점검 기록을 대조하세요. 시험 알림이 포함될 수 있습니다.",
+                "text": f"{category['cluster_id']} / {node} / {category['name']}: 저장 사건입니다. {len(events)}건 중 보고서 작성 당시 발생 중 {sum(e.get('alarm_status') == 'firing' for e in events)}건. 공개 RCA 결과가 있는 사건 {sum(bool(e.get('result_id')) for e in events)}건. 같은 GPU의 반복 장애나 원인 확정이 아닙니다. 이 노드의 해당 알림 시각과 기존 조사·점검 기록을 대조하세요. 시험 알림이 포함될 수 있습니다.",
             }
         )

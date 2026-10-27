@@ -1088,3 +1088,56 @@ it.each([
   expect(html).toContain(reason);
   expect(html).toContain(`cpc-2: ${reason}`);
 });
+
+it.each(['selected', 'unknown', 'legacy'])(
+  'keeps incident sources explicit for %s and preserves saved legacy fields',
+  (state) => {
+    const section = {
+      topic_id: 'incident_summary',
+      observation_source: 'calculated',
+      observation: 'XID 79: dgx01 5건 · dgx02 3건.',
+      meaning: '같은 종류가 두 노드에서 관측됐습니다.',
+      next_check: '기존 점검 기록과 발생 순서를 확인하세요.',
+      ...(state === 'legacy'
+        ? {}
+        : { check_target: state === 'selected' ? 'cpc-1 / dgx01 / XID 79 · 저장 사건 5건' : '' }),
+    };
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport
+          value={{
+            narrative_status: 'complete',
+            quality: { report: { method: 'llm_interpreted' } },
+            topics: [{ topic_id: 'incident_summary' }],
+            narrative: [section],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    for (const text of [section.observation, section.meaning, section.next_check]) {
+      expect(html.split(text)).toHaveLength(2);
+    }
+    const labels =
+      state === 'legacy'
+        ? ['계산으로 확인한 관측', '의미와 한계', '확인할 점']
+        : ['알림 집계', 'AI 운영 해석', '확인 대상', 'AI 확인 제안'];
+    const fields = [...html.matchAll(/<dt>(.*?)<\/dt>/g)].map((match) => match[1]);
+    expect(fields).toHaveLength(labels.length);
+    labels.forEach((label, i) => expect(fields[i]).toContain(label));
+    if (state === 'legacy') {
+      expect(html).not.toContain('자동 선정');
+      expect(html).not.toContain('해석 기준:');
+    } else {
+      ['자동 집계', 'AI 작성', '자동 선정', 'AI 작성'].forEach((source, i) =>
+        expect(fields[i]).toContain(source),
+      );
+      expect(html).toContain('<h3>장애 알림 해석</h3>');
+      expect(html).toContain('해석 기준:');
+      expect(html).toContain(
+        state === 'unknown'
+          ? '노드가 확인된 사건이 없어 선정하지 않았습니다.'
+          : section.check_target!,
+      );
+    }
+  },
+);

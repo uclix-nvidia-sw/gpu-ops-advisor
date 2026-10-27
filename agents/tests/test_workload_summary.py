@@ -233,7 +233,7 @@ def test_incident_node_facts_have_specific_counts_without_claiming_gpu_recurrenc
         "node": "node-a",
         "alert_type": "XID 79",
     }
-    assert [v["value"] for v in facts[0]["values"]] == [2, 1]
+    assert [v["value"] for v in facts[0]["values"]] == [2, 1, 0]
     top_type = next(
         f
         for f in payload_for(report)["topics"][0]["findings"]

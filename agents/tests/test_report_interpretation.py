@@ -73,13 +73,25 @@ def reply_for(payload):
             sections.append(writer_section(t["findings"]))
             continue
         if t["topic_id"] == "incident_summary":
+            context = t.get("focus", {}).get("check_context")
+            check = "노드 식별 정보를 확인하세요."
+            if context:
+                check = (
+                    "공개된 RCA 결과와 점검 기록을 대조하세요."
+                    if context["rca_count"]
+                    else "RCA 결과 유무와 작업 생성 여부·상태를 확인하세요."
+                )
+                if context["firing"]:
+                    check += " 작성 이후 해제 여부를 확인하세요."
+                if context["other_alert_fact_ids"]:
+                    check += " 같은 노드의 다른 알림과 선후 관계를 확인하세요."
             sections.append(
                 {
                     "topic_id": "incident_summary",
                     "fact_ids": [],
                     "observation": "",
                     "meaning": "알림 종류와 노드 분포는 저장된 관측이며 같은 원인을 뜻하지 않습니다.",
-                    "next_check": "해당 알림의 발생 시각을 기존 RCA 결과·점검 기록과 대조하고 발생 중 건의 해제 여부를 확인하세요.",
+                    "next_check": check,
                 }
             )
             continue
@@ -296,7 +308,7 @@ def test_exact_repeated_unit_and_scope_target_are_rendered_once(result):
     assert sections[0]["observation"] == "60.00%입니다."
     assert (
         sections[1]["observation"]
-        == "선택한 보고서 범위 · 10/13 00:00~10/14 00:00 KST: 저장 사건 1건(이전 0건)."
+        == "선택한 보고서 범위 · 10/13 00:00~10/14 00:00 KST: 저장 사건 1건(이전 비교기간 0건)."
     )
 
 
@@ -551,39 +563,18 @@ def test_incident_absence_is_not_current_health_or_no_check(result, text):
         validate_sections(reply, payload, result)
 
 
-def test_incident_selection_ranks_recorded_firing_then_count_without_recounting(result):
-    incident = result["topics"][1]
-    incident["metrics"], incident["findings"] = [], []
-    for name, count, firing in (
-        ("quiet-node", 10, 0),
-        ("active-node", 2, 1),
-        ("more-active-node", 5, 1),
-    ):
-        ids = []
-        for field, value in (
-            ("node_alert_count", count),
-            ("node_alert_firing", firing),
-        ):
-            mid = f"incident_summary.{field}.{name}"
-            ids.append(mid)
-            incident["metrics"].append(
-                dict(id=mid, value=value, unit="events", period={}, quality={})
-            )
-        incident["findings"].append(
-            dict(
-                id=name,
-                text="저장된 알림",
-                target=dict(cluster_id="cpc-1", node=name, alert_type="XID"),
-                value_refs=ids,
-            )
-        )
+def test_incident_selection_preserves_candidate_order_without_recounting():
+    from test_aggregate_report import concentration_report
+
+    result = concentration_report()
     before = deepcopy(result)
-    findings = payload_for(result)["topics"][1]["findings"]
-    assert [f["fact_id"] for f in findings] == [
-        "more-active-node",
-        "active-node",
-        "quiet-node",
+    original = [
+        f["id"]
+        for f in result["topics"][0]["findings"]
+        if f["id"].startswith("incident-node-")
     ]
+    findings = payload_for(result)["topics"][0]["findings"]
+    assert [f["fact_id"] for f in findings[: len(original)]] == original
     assert result == before
 
 
@@ -789,35 +780,33 @@ def concentration_reply(payload):
     reply = reply_for(payload)
     incident = next(s for s in reply["sections"] if s["topic_id"] == "incident_summary")
     incident["meaning"] = (
-        "최다 알림 종류는 이전 기간에 없었고 이번에는 한 종류가 대부분을 차지했습니다. 노드는 양쪽에 비슷하게 나뉘었습니다. 저장 알림이며 시험 알림이 섞일 수 있고 동일 GPU 반복 장애·원인·복구는 확정하지 않습니다."
+        "같은 종류의 알림이 두 노드에서 기록됐고 이전 비교기간에는 이 종류의 기록이 없었습니다. 저장 알림이며 시험 알림이 섞일 수 있고 동일 GPU 반복 장애·원인·복구는 확정하지 않습니다."
     )
     return reply
 
 
-def test_concentration_payload_order_and_rendered_tokens(concentrated_result):
+def test_incident_payload_reserves_node_facts_and_renders_type_counts(
+    concentrated_result,
+):
     from ops_agent.incident_findings import INCIDENT_RULES
     from ops_agent.report_interpretation import SYSTEM
 
     payload = payload_for(concentrated_result)
-    assert [f["fact_id"] for f in payload["topics"][1]["findings"][:3]] == [
-        "incident-top-type-cpc-1",
-        "incident-top-node-cpc-1",
-        "incident-second-node-cpc-1",
-    ]
-    assert INCIDENT_RULES in SYSTEM
-    reply = concentration_reply(payload)
-    rendered = validate_sections(reply, payload, concentrated_result)[1]
-    assert all(
-        text in rendered["observation"]
-        for text in ("11건", "8건", "72.7%", "6건", "54.5%", "0건")
+    facts = payload["topics"][1]["findings"]
+    assert [f["fact_id"] for f in facts[:5]] == [f"incident-node-{i}" for i in range(5)]
+    assert not any(
+        f["fact_id"].startswith(("incident-top-node-", "incident-second-node-"))
+        for f in facts
     )
-    assert rendered["source_fact_ids"] == [
-        "incident-top-type-cpc-1",
-        "incident-top-node-cpc-1",
-        "incident-second-node-cpc-1",
-        "incident-node-0",
-    ]
-    assert "cpc-1 / dgx01 / XID 79" in rendered["next_check"]
+    assert INCIDENT_RULES in SYSTEM
+    rendered = validate_sections(
+        concentration_reply(payload), payload, concentrated_result
+    )[1]
+    assert rendered["observation"] == CALCULATED_INCIDENT_OBSERVATION
+    assert "54.5%" not in rendered["observation"]
+    assert "cpc-1 / dgx01 6건" not in rendered["observation"]
+    assert "cpc-1 / dgx02 5건" not in rendered["observation"]
+    assert rendered["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
 
 
 @pytest.mark.parametrize(
@@ -873,11 +862,11 @@ async def test_incident_template_echo_uses_one_repair(
     system, request = llm.complete.call_args_list[0].args
     assert INCIDENT_RULES in system
     if advice_mode:
-        assert len(request["topics"][1]["findings"]) == 9
+        assert len(request["topics"][1]["findings"]) == 7
         assert [f["fact_id"] for f in request["topics"][1]["findings"][:3]] == [
-            "incident-top-type-cpc-1",
-            "incident-top-node-cpc-1",
-            "incident-second-node-cpc-1",
+            "incident-node-0",
+            "incident-node-1",
+            "incident-node-2",
         ]
         example = request["response_shape"]["sections"][1]
         assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
@@ -913,10 +902,13 @@ async def test_empty_incident_report_preserves_calculated_change(result, advice_
 
 
 CALCULATED_INCIDENT_OBSERVATION = (
-    "cpc-1 / XID 79 · 10/26 00:00~10/27 00:00 KST: 클러스터 저장 사건 11건(이전 0건) 중 8건, 72.7%(이 종류의 이전 기간 0건). "
-    "노드별: cpc-1 / dgx01 6건, 54.5%, 작성 당시 발생 중 1건 · cpc-1 / dgx02 5건, 45.5%."
+    "cpc-1 / XID 79 · 10/26 00:00~10/27 00:00 KST: 클러스터 저장 사건 11건 중 8건(이전 비교기간 이 종류 0건). "
+    "노드별: cpc-1 / dgx01 / XID 79 5건 · cpc-1 / dgx02 / XID 79 3건."
 )
-CALCULATED_INCIDENT_CHECK_PREFIX = "cpc-1 / dgx01 / XID 79 · 10/26 00:00~10/27 00:00 KST: 저장 사건 5건, 작성 당시 발생 중 1건. "
+CALCULATED_INCIDENT_CHECK_TARGET = (
+    "cpc-1 / dgx01 / XID 79 · 10/26 00:00~10/27 00:00 KST: 저장 사건 5건, 작성 당시 발생 중 1건, 공개 RCA 결과가 있는 사건 5건. "
+    "같은 노드의 다른 알림: cpc-1 / dgx01 / XID 13 1건."
+)
 
 
 def test_incident_focus_renders_exact_calculated_observation_and_check(
@@ -926,21 +918,21 @@ def test_incident_focus_renders_exact_calculated_observation_and_check(
 
     payload = payload_for(concentrated_result)
     focus = incident_focus(payload["topics"][1]["findings"])
-    assert len(focus["observation"]) > 450
+    assert payload["topics"][1]["focus"] == focus
     reply = concentration_reply(payload)
     before = deepcopy(reply)
     section = validate_sections(reply, payload, concentrated_result)[1]
     assert section["observation"] == CALCULATED_INCIDENT_OBSERVATION
-    assert section["next_check"].startswith(CALCULATED_INCIDENT_CHECK_PREFIX)
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
     assert section["observation_source"] == "calculated"
     assert (
         section["source_fact_ids"]
         == focus["ids"]
         == [
             "incident-top-type-cpc-1",
-            "incident-top-node-cpc-1",
-            "incident-second-node-cpc-1",
             "incident-node-0",
+            "incident-node-1",
+            "incident-node-2",
         ]
     )
     assert reply == before
@@ -963,7 +955,7 @@ def test_incident_model_selection_and_observation_do_not_change_calculation(
     reply["sections"][1].update(fact_ids=ids, observation=observation)
     section = validate_sections(reply, payload, concentrated_result)[1]
     assert section["observation"] == CALCULATED_INCIDENT_OBSERVATION
-    assert section["next_check"].startswith(CALCULATED_INCIDENT_CHECK_PREFIX)
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
 
 
 @pytest.mark.parametrize(
@@ -971,13 +963,9 @@ def test_incident_model_selection_and_observation_do_not_change_calculation(
     [
         "비율에 근거해 알림이 한 종류에 몰렸는지 분산된지를 설명하며, 이는 저장된 알림 기록이고 시험 알림이 섞일 수 있고 같은 GPU의 반복 장애·원인·복구는 이 보고서로 확정하지 않으며 발생 중 건수는 작성 시점 기준입니다.",
         "알림 종류와 노드가 몰렸는지 분산된지를 설명하며 기록의 한계를 유지합니다.",
-        "알림 종류는 한 종류에 집중됐습니다.",
-        "노드는 양쪽에 나뉘었습니다.",
     ],
 )
-def test_incident_meaning_requires_conclusions_for_type_and_node(
-    concentrated_result, meaning
-):
+def test_incident_meaning_rejects_instruction_copy(concentrated_result, meaning):
     payload = payload_for(concentrated_result)
     reply = concentration_reply(payload)
     reply["sections"][1]["meaning"] = meaning
@@ -998,13 +986,13 @@ def test_single_incident_calculated_observation_fallback(known_node):
     if known_node:
         assert (
             section["observation"]
-            == "cpc-1 / dgx01 / XID 79 · 10/12 00:00~10/13 00:00 KST: 저장 사건 1건, 작성 당시 발생 중 1건."
+            == "cpc-1 / dgx01 / XID 79 · 10/12 00:00~10/13 00:00 KST: 저장 사건 1건."
         )
-        assert section["next_check"].startswith(section["observation"] + " ")
+        assert "저장 사건 1건, 작성 당시 발생 중 1건" in section["check_target"]
     else:
         assert (
             section["observation"]
-            == "선택한 보고서 범위 · 10/12 00:00~10/13 00:00 KST: 저장 사건 1건(이전 0건)."
+            == "선택한 보고서 범위 · 10/12 00:00~10/13 00:00 KST: 저장 사건 1건(이전 비교기간 0건)."
         )
         assert section["next_check"] == reply_for(payload)["sections"][0]["next_check"]
     assert section["observation_source"] == "calculated"
@@ -1029,8 +1017,8 @@ def test_incident_check_prefers_first_firing_fact_then_first_node(firing):
         if firing
         else nodes[-1]
     )
-    assert "{{target:" + expected["fact_id"] + "}}" in focus["check_prefix"]
-    assert ("작성 당시 발생 중" in focus["check_prefix"]) == firing
+    assert "{{target:" + expected["fact_id"] + "}}" in focus["check_target"]
+    assert ("작성 당시 발생 중" in focus["check_target"]) == firing
 
 
 def test_two_cluster_observations_keep_cluster_order_and_check_facts():
@@ -1046,16 +1034,8 @@ def test_two_cluster_observations_keep_cluster_order_and_check_facts():
     report["topics"].insert(0, topic())
     payload = payload_for(report)
     facts = payload["topics"][1]["findings"]
-    assert len(facts) == 12
-    assert [f["fact_id"] for f in facts[:7]] == [
-        "incident-top-type-cpc-1",
-        "incident-top-node-cpc-1",
-        "incident-second-node-cpc-1",
-        "incident-top-type-cpc-2",
-        "incident-top-node-cpc-2",
-        "incident-second-node-cpc-2",
-        "incident-period-summary",
-    ]
+    assert len(facts) == 9
+    assert all(f["fact_id"].startswith("incident-node-") for f in facts[:6])
     assert any(f["fact_id"].startswith("incident-node-") for f in facts)
     section = validate_sections(concentration_reply(payload), payload, report)[1]
     assert section["observation"].index("cpc-1 / XID 79") < section[
@@ -1110,7 +1090,7 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-calculated-v5"
+        == "ops-interpretation-incident-items-v6"
     )
     section = next(
         s
@@ -1118,16 +1098,214 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
         if s["topic_id"] == "incident_summary"
     )
     assert section["observation"] == CALCULATED_INCIDENT_OBSERVATION
-    assert section["next_check"].startswith(CALCULATED_INCIDENT_CHECK_PREFIX)
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
     assert llm.complete.call_count == 2
 
 
-def test_incident_code_prefix_does_not_consume_model_check_limit(concentrated_result):
+def test_incident_check_target_does_not_consume_model_check_limit(concentrated_result):
     payload = payload_for(concentrated_result)
     reply = concentration_reply(payload)
     check = "기록을 대조하세요. " * 37
     assert len(check) <= 450
     reply["sections"][1]["next_check"] = check
     section = validate_sections(reply, payload, concentrated_result)[1]
-    assert section["next_check"] == CALCULATED_INCIDENT_CHECK_PREFIX + check.strip()
-    assert len(section["next_check"]) > 450
+    assert section["next_check"] == check.strip()
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
+    assert len(section["next_check"]) <= 450
+
+
+def test_incident_source_labels_and_check_context_are_separate(concentrated_result):
+    payload = payload_for(concentrated_result)
+    focus = payload["topics"][1]["focus"]
+    assert focus["check_context"] == {
+        "fact_id": "incident-node-0",
+        "count": 5,
+        "firing": 1,
+        "rca_count": 5,
+        "same_type_fact_ids": ["incident-node-0", "incident-node-1"],
+        "other_alert_fact_ids": ["incident-node-2"],
+    }
+    reply = concentration_reply(payload)
+    reply["sections"][1].update(
+        fact_ids=[], observation="", check_target="モデル入力は使用しない"
+    )
+    section = validate_sections(reply, payload, concentrated_result)[1]
+    assert section["next_check"] == reply["sections"][1]["next_check"]
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
+    labels = [
+        "알림 집계(자동 집계)",
+        "AI 운영 해석",
+        "확인 대상(자동 선정)",
+        "AI 확인 제안",
+    ]
+    positions = [section["text"].index(label) for label in labels]
+    assert positions == sorted(positions)
+    assert "눈에 띄는 변화:" not in section["text"]
+    assert section["text"].count(CALCULATED_INCIDENT_CHECK_TARGET) == 1
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "새로 나타난 종류입니다",
+        "새로 발생했습니다",
+        "새로운 장애입니다",
+        "최초 발생입니다",
+        "공통 원인은 미확인입니다",
+        "동시에 발생했습니다",
+    ],
+)
+def test_incident_overreach_is_rejected(concentrated_result, field, claim):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1][field] = claim
+    with pytest.raises(ValueError, match="incident_overreach"):
+        validate_sections(reply, payload, concentrated_result)
+
+
+@pytest.mark.parametrize(
+    "rca_count,check,valid",
+    [
+        (0, "RCA 결과와 대조하세요.", False),
+        (0, "기존 rca 결과를 검토하세요.", False),
+        (0, "RCA 분석 결과와 점검 기록을 비교하세요.", False),
+        (0, "RCA 결과 유무와 작업 생성 여부·상태를 확인하세요.", True),
+        (0, "RCA 결과가 있는지 확인하세요.", True),
+        (0, "RCA 작업 상태와 작성 이후 해제됐는지 확인하세요.", True),
+        (1, "공개된 RCA 결과만 점검 기록과 대조하세요.", True),
+        (1, "모든 사건의 RCA 결과를 대조하세요.", False),
+        (5, "모든 사건의 RCA 결과를 대조하세요.", True),
+    ],
+)
+def test_incident_rca_reference_respects_selected_target(rca_count, check, valid):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    for i, record in enumerate(records[:5]):
+        record["result_id"] = f"published-{i}" if i < rca_count else None
+    report = concentration_report(records)
+    payload = payload_for(report)
+    reply = reply_for(payload)
+    reply["sections"][0]["next_check"] = check
+    assert payload["topics"][0]["focus"]["check_context"]["rca_count"] == rca_count
+    if valid:
+        section = validate_sections(reply, payload, report)[0]
+        assert section["next_check"] == check
+        assert f"공개 RCA 결과가 있는 사건 {rca_count}건" in section["check_target"]
+    else:
+        with pytest.raises(ValueError, match="incident_rca_reference"):
+            validate_sections(reply, payload, report)
+
+
+def test_four_clusters_keep_check_target_through_advice_input_cap():
+    from test_aggregate_report import concentration_records, concentration_report
+    from test_namespace_advice import topic
+
+    records = [
+        {**r, "id": f"{cluster}-{r['id']}", "cluster_id": f"cpc-{cluster}"}
+        for cluster in range(1, 5)
+        for r in concentration_records()
+    ]
+    report = concentration_report(records)
+    report["topics"].insert(0, topic())
+    wire = payload_for(report)
+    incident = wire["topics"][1]
+    assert len(incident["findings"]) <= 12
+    assert (
+        sum(f["fact_id"].startswith("incident-node-") for f in incident["findings"])
+        == 6
+    )
+    assert incident["focus"]["check_context"]["firing"] == 1
+    assert incident["omitted_findings"] == 14
+    section = validate_sections(reply_for(wire), wire, report)[1]
+    assert "선정 한도로 일부 근거를 생략" in section["interpretation_limit"]
+    assert "노드가 확인된 사건이 없어" not in section["text"]
+
+
+@pytest.mark.parametrize("known_node", [True, False])
+def test_selected_node_detail_is_not_presented_as_full_distribution(known_node):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    base = concentration_records()[0]
+    records = [
+        {
+            **base,
+            "id": str(i),
+            "alarm_status": "resolved",
+            "target": {"node": f"node-{i}"} if known_node or i < 2 else {},
+        }
+        for i in range(8)
+    ]
+    report = concentration_report(records)
+    wire = payload_for(report)
+    section = validate_sections(reply_for(wire), wire, report)[0]
+    assert "저장 사건 8건 중 8건" in section["observation"]
+    assert "확인된 일부 노드 내역:" in section["observation"]
+    assert (
+        "나머지 사건의 노드별 내역은 이 해석에 포함하지 않았습니다."
+        in section["observation"]
+    )
+
+
+def test_single_event_cluster_is_kept_beside_top_type_cluster():
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    records.append({**records[0], "id": "single", "cluster_id": "cpc-2"})
+    report = concentration_report(records)
+    wire = payload_for(report)
+    section = validate_sections(reply_for(wire), wire, report)[0]
+    assert "cpc-1 / XID 79" in section["observation"]
+    assert "cpc-2 / dgx01 / XID 79" in section["observation"]
+
+
+@pytest.mark.parametrize("known_node", [False, True])
+def test_incident_meaning_does_not_require_literal_type_and_node_terms(known_node):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    if not known_node:
+        for record in records:
+            record["target"] = {}
+    report = concentration_report(records)
+    wire = payload_for(report)
+    reply = reply_for(wire)
+    reply["sections"][0]["meaning"] = (
+        "이전 비교기간에는 기록이 없었습니다. 시험 알림이 섞일 수 있으며 원인은 확정하지 않습니다."
+    )
+    section = validate_sections(reply, wire, report)[0]
+    if not known_node:
+        assert section["check_target"] == ""
+        assert "노드가 확인된 사건이 없어 선정하지 않았습니다." in section["text"]
+
+
+async def test_incident_rca_repair_preserves_focus_and_valid_namespace(
+    concentrated_result,
+):
+    from test_namespace_advice import topic
+
+    concentrated_result["topics"][0] = topic()
+    for metric in concentrated_result["topics"][1]["metrics"]:
+        if ".node_alert_rca." in metric["id"]:
+            metric["value"] = 0
+    wire = payload_for(concentrated_result)
+    valid = reply_for(wire)
+    baseline = deepcopy(concentrated_result)
+    await interpret_report(
+        baseline,
+        AsyncMock(configured=True, complete=AsyncMock(return_value=deepcopy(valid))),
+    )
+    invalid = deepcopy(valid)
+    invalid["sections"][1]["next_check"] = "RCA 결과를 검토하세요."
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [invalid, {"sections": [valid["sections"][1]]}]
+    await interpret_report(concentrated_result, llm)
+    first = llm.complete.call_args_list[0].args[1]
+    repair = llm.complete.call_args_list[1].args[1]
+    assert first["topics"][1]["focus"] == repair["section_repair"][0]["topic"]["focus"]
+    assert concentrated_result["narrative"][0] == baseline["narrative"][0]
+    assert concentrated_result["quality"]["report"]["failures"] == [
+        {"attempt": 1, "reason": "incident_rca_reference"}
+    ]
+    assert concentrated_result["narrative_status"] == "complete"

@@ -252,6 +252,7 @@ function TopicInterpretation({
   const facts = rows(topic.findings).filter((fact) =>
     strings(section.source_fact_ids).includes(str(fact.id)),
   );
+  const incidentSources = topic.topic_id === 'incident_summary' && 'check_target' in section;
   const advice = rows(section.advice);
   const hasSummary = advice.length > 0 && advice.every((item) => str(item.summary));
   const selection = obj(section.selection);
@@ -259,9 +260,9 @@ function TopicInterpretation({
   return (
     <section
       className={`aggregate-interpretation${advice.length ? ' aggregate-interpretation-grouped' : ''}`}
-      aria-label={`${str(topic.topic_id)} AI 운영 해석`}
+      aria-label={incidentSources ? '장애 알림 해석' : `${str(topic.topic_id)} AI 운영 해석`}
     >
-      {advice.length === 0 && <h3>AI 운영 해석</h3>}
+      {advice.length === 0 && <h3>{incidentSources ? '장애 알림 해석' : 'AI 운영 해석'}</h3>}
       {advice.length > 0 && (
         <div className="aggregate-advice-groups">
           {adviceGroups(advice).map((cluster) => (
@@ -301,28 +302,49 @@ function TopicInterpretation({
       )}
       <p className="aggregate-summary-source aggregate-static-note">
         <strong>작성 방식</strong>
-        {hasSummary
-          ? 'AI가 작성한 요약입니다. 관측한 구간의 조건부 제안이며 실제 할당·대기 원인은 별도 확인이 필요합니다.'
-          : section.observation_source === 'calculated'
-            ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
-            : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
+        {incidentSources
+          ? '알림 집계와 확인 대상은 저장된 사건 기록에서 자동으로 집계·선정했습니다. 운영 해석과 확인 제안은 AI가 작성했습니다.'
+          : hasSummary
+            ? 'AI가 작성한 요약입니다. 관측한 구간의 조건부 제안이며 실제 할당·대기 원인은 별도 확인이 필요합니다.'
+            : section.observation_source === 'calculated'
+              ? '관측 수치·대상·시간은 코드가 확인한 사실이며, 의미와 확인할 점은 AI가 작성했습니다.'
+              : '저장된 계산 결과를 바탕으로 AI가 작성했습니다.'}{' '}
         {hasSummary ? null : '확인할 점은 제안이며, 실제 조치나 장애 원인 판정이 아닙니다.'}
       </p>
       {advice.length > 0 ? null : (
         <dl>
-          {[
-            ['observation', '눈에 띄는 변화'],
-            ['meaning', '의미와 한계'],
-            ['next_check', '확인할 점'],
-          ].map(([key, label]) => (
+          {(incidentSources
+            ? [
+                ['observation', '알림 집계', '자동 집계'],
+                ['meaning', 'AI 운영 해석', 'AI 작성'],
+                ['check_target', '확인 대상', '자동 선정'],
+                ['next_check', 'AI 확인 제안', 'AI 작성'],
+              ]
+            : [
+                [
+                  'observation',
+                  section.observation_source === 'calculated'
+                    ? '계산으로 확인한 관측'
+                    : '눈에 띄는 변화',
+                  '',
+                ],
+                ['meaning', '의미와 한계', ''],
+                ['next_check', '확인할 점', ''],
+              ]
+          ).map(([key, label, source]) => (
             <div key={key}>
               <dt>
-                {key === 'observation' && section.observation_source === 'calculated'
-                  ? '계산으로 확인한 관측'
-                  : label}
+                {label}
+                {source && <span className="aggregate-static-note"> · {source}</span>}
               </dt>
               <dd>
-                <InterpretationText text={str(section[key])} />
+                <InterpretationText
+                  text={
+                    key === 'check_target' && !str(section[key])
+                      ? '노드가 확인된 사건이 없어 선정하지 않았습니다.'
+                      : str(section[key])
+                  }
+                />
               </dd>
             </div>
           ))}
@@ -333,6 +355,13 @@ function TopicInterpretation({
       )}
       <details>
         <summary>해석 근거와 계산 결과</summary>
+        {incidentSources && (
+          <p className="aggregate-static-note">
+            해석 기준: 같은 종류의 여러 노드 발생, 같은 노드의 다른 종류, 작성 당시 발생 중 여부,
+            이전 비교기간 기록 유무를 확인합니다. 발생 중 건수, 같은 종류의 발생 노드 수, 건수
+            순으로 확인 대상을 선정합니다. 선정된 내역으로 전체 분포나 원인을 단정하지 않습니다.
+          </p>
+        )}
         {hasSummary ? (
           <p className="aggregate-static-note">
             {str(section.interpretation_limit)} 작업 시간대 제안은 예약·대기와 사용 가능한 GPU를
