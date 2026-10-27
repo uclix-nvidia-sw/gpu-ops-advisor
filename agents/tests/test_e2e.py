@@ -2863,7 +2863,13 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
         assert result.status_code == 200 and VERSION in result.text
         exported = client.get("/reports/" + jid + "/export", params={"format": "html"})
         assert exported.status_code == 200, exported.text
-        assert "눈에 띄는 변화" in exported.text and "확인할 점" in exported.text
+        incident = next(
+            t for t in body["topics"] if t["topic_id"] == "incident_summary"
+        )
+        assert incident["summary"]["count"] == 0
+        assert body["narrative_status"] == "complete"
+        assert [n["topic_id"] for n in body["narrative"]] == ["namespace_usage"]
+        assert "<h3>기간 내 장애 알림 해석</h3>" not in exported.text
         advice = next(
             n for n in body["narrative"] if n["topic_id"] == "namespace_usage"
         )["advice"]
