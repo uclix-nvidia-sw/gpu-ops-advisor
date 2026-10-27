@@ -234,3 +234,24 @@ it('labels a preview as AI interpretation only when the stored narrative is comp
   expect(renderPreview('failed')).not.toContain('AI');
   expect(renderPreview('')).not.toContain('AI');
 });
+
+it('labels partial interpretation previews without claiming all topics succeeded', () => {
+  const html = render(
+    <OperatorReportList
+      from="/reports"
+      items={[
+        {
+          id: 'partial',
+          result_ref: 'published',
+          report_preview: {
+            method: 'partial_interpretation',
+            narrative_status: 'failed',
+            summaries: [{ text: '채택된 AI 설명과 계산 요약' }],
+          },
+        },
+      ]}
+    />,
+  );
+  expect(html).toContain('일부 주제 AI 해석·계산 요약');
+  expect(html).not.toContain('>AI 해석 요약<');
+});

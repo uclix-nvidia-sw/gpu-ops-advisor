@@ -180,3 +180,26 @@ func TestNamespaceMissingInputsHaveReadableDownloadReasons(t *testing.T) {
 		})
 	}
 }
+
+func TestPartialInterpretationHTMLKeepsAIAndLabelsCalculatedFallback(t *testing.T) {
+	body := Object{
+		"narrative_status": "failed",
+		"quality":          Object{"report": Object{"method": "partial_interpretation"}},
+		"narrative": []any{
+			Object{"topic_id": "namespace_usage", "title": "Namespace AI 운영 해석", "text": "채택된 AI 문장을 보존합니다."},
+			Object{"topic_id": "incident_summary", "title": "장애 알림 · 계산 결과 요약", "text": "저장된 사건 집계입니다.", "interpretation_source": "deterministic_fallback"},
+		},
+	}
+	w := httptest.NewRecorder()
+	if err := exportMetrics(w, "partial-fixture", "html", body, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"일부 주제의 AI 해석을 작성하지 못했습니다", "채택된 AI 문장을 보존합니다.", "장애 알림 · 계산 결과 요약", "저장된 사건 집계입니다."} {
+		if !strings.Contains(w.Body.String(), want) {
+			t.Fatalf("missing partial interpretation content: %s", want)
+		}
+	}
+	if strings.Contains(w.Body.String(), "LLM 편집을 사용하지 못한 기본 보고서") {
+		t.Fatal("partial AI success described as a fully calculated report")
+	}
+}

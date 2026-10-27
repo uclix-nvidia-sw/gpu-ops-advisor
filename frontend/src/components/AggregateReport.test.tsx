@@ -1199,3 +1199,49 @@ it.each([
     }
   },
 );
+
+it.each(['namespace_usage', 'incident_summary'])(
+  'keeps %s AI prose beside a clearly calculated failed topic',
+  (success) => {
+    const failed = success === 'namespace_usage' ? 'incident_summary' : 'namespace_usage';
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport
+          value={{
+            narrative_status: 'failed',
+            quality: {
+              report: {
+                method: 'partial_interpretation',
+                topic_statuses: { [success]: 'complete', [failed]: 'failed' },
+              },
+            },
+            topics: [{ topic_id: 'namespace_usage' }, { topic_id: 'incident_summary' }],
+            narrative: [
+              {
+                topic_id: success,
+                observation: '검증한 관측입니다.',
+                meaning: '채택된 AI 해석입니다.',
+                next_check: '기존 기록을 확인하세요.',
+              },
+              {
+                id: failed,
+                topic_id: failed,
+                interpretation_source: 'deterministic_fallback',
+                title: '계산 결과 요약',
+                text: '실패 주제의 저장 계산입니다.',
+              },
+            ],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('일부 주제의 AI 해석을 작성하지 못했습니다');
+    expect(html).toContain('채택된 AI 해석입니다.');
+    expect(html).toContain('기존 기록을 확인하세요.');
+    expect(html).toContain('이 주제의 AI 해석을 작성하지 못해 저장된 계산 결과를 표시합니다.');
+    expect(html).toContain('실패 주제의 저장 계산입니다.');
+    expect(html).toContain(`aria-label="${failed} 계산 결과 요약"`);
+    expect(html).not.toContain('id="report-summary-title"');
+    expect(html.match(/<h3>AI 운영 해석<\/h3>/g)).toHaveLength(1);
+  },
+);

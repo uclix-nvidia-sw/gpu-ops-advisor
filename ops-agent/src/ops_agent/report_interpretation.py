@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-items-v6"
+VERSION = "ops-interpretation-topic-fallback-v7"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -643,7 +643,7 @@ def validate_written_advice(section, topic):
     return output
 
 
-def validate_sections(reply, payload, result):
+def _validate_sections(reply, payload, result):
     sections = reply.get("sections") if isinstance(reply, dict) else None
     expected = [t["topic_id"] for t in payload["topics"]]
     if not isinstance(sections, list) or len(sections) != len(expected):
@@ -908,14 +908,27 @@ def validate_sections(reply, payload, result):
                 raise ValueError("invalid_section_text")
             validate_workload_wording(text, field, values)
             plain = TOKEN.sub("", text)
-            invalid = re.search(r"\d|[{}<>%]|https?://", plain) or UNSUPPORTED.search(
-                plain
-            )
+            number = re.search(r"\d", plain)
+            symbol = re.search(r"[{}<>%]|https?://", plain)
+            forbidden = UNSUPPORTED.search(plain)
+            invalid = number or symbol or forbidden
             if invalid or not re.search(r"[가-힣]", plain):
+                violation_kind = (
+                    "number"
+                    if number
+                    else "symbol"
+                    if symbol
+                    else "forbidden_expression"
+                    if forbidden
+                    else "missing_korean"
+                )
                 reason = repr(invalid.group()) if invalid else "한국어 필요"
-                raise ValueError(
+                raise ProseValidationError(
+                    topic["topic_id"],
+                    field,
+                    violation_kind,
                     f"unsupported_prose: {topic['topic_id']}.{field}: {reason}; "
-                    "직접 쓴 숫자·시간은 토큰으로 바꾸고, 금지 표현은 부정문에서도 빼세요"
+                    "직접 쓴 숫자·시간은 토큰으로 바꾸고, 금지 표현은 부정문에서도 빼세요",
                 )
             rendered[field] = TOKEN.sub(resolve, text.strip())
         if topic["topic_id"] == "namespace_usage" and any(
@@ -1032,6 +1045,43 @@ def validate_sections(reply, payload, result):
         )
         output.append(item)
     return output
+
+
+class ProseValidationError(ValueError):
+    """Only fixed provenance codes are persisted; the message is repair-only."""
+
+    def __init__(self, topic_id, field, violation_kind, message):
+        super().__init__(message)
+        self.topic_id = topic_id
+        self.field = field
+        self.violation_kind = violation_kind
+
+
+def validate_sections(reply, payload, result):
+    sections = reply.get("sections") if isinstance(reply, dict) else None
+    if (
+        not isinstance(sections, list)
+        or len(sections) != len(payload["topics"])
+        or any(
+            not isinstance(section, dict)
+            or section.get("topic_id") != topic["topic_id"]
+            for section, topic in zip(sections, payload["topics"])
+        )
+    ):
+        # An ambiguous response cannot establish a topic's provenance.
+        return _validate_sections(reply, payload, result)
+    valid, errors = [], []
+    for section, topic in zip(sections, payload["topics"]):
+        try:
+            valid.extend(
+                _validate_sections({"sections": [section]}, {"topics": [topic]}, result)
+            )
+        except (ValueError, TypeError, KeyError) as exc:
+            errors.append(exc)
+    if errors:
+        errors[0].valid_sections = valid
+        raise errors[0]
+    return valid
 
 
 def partial_repair(reply, payload, result):
@@ -1283,6 +1333,11 @@ async def interpret_report(result, llm):
             diagnostic["reason"] = "invalid_code_advice"
             return
     repair = None
+    retained = {}
+
+    def remember_valid(exc):
+        for section in getattr(exc, "valid_sections", []):
+            retained.setdefault(section["topic_id"], section)
 
     def request_payload():
         if repair is not None:
@@ -1429,10 +1484,13 @@ async def interpret_report(result, llm):
             {"attempt": attempt + 1, "reason": reason, **details}
         )
         log.warning(
-            "Ops interpretation rejected job=%s attempt=%d reason=%s",
+            "Ops interpretation rejected job=%s attempt=%d reason=%s topic=%s field=%s violation=%s",
             result.get("job_id", "unknown"),
             attempt + 1,
             reason,
+            details.get("topic_id", "-"),
+            details.get("field", "-"),
+            details.get("violation_kind", "-"),
         )
 
     for attempt in range(2):
@@ -1514,9 +1572,19 @@ async def interpret_report(result, llm):
         except (ValueError, TypeError, KeyError) as exc:
             diagnostic["reason"] = "invalid_interpretation"
             error = str(exc)
+            remember_valid(exc)
             record_failure(
                 attempt,
                 error.partition(":")[0],
+                **(
+                    {
+                        "topic_id": exc.topic_id,
+                        "field": exc.field,
+                        "violation_kind": exc.violation_kind,
+                    }
+                    if isinstance(exc, ProseValidationError)
+                    else {}
+                ),
                 **(
                     {"reference_errors": exc.reference_errors}
                     if isinstance(exc, SummaryTokenError)
@@ -1538,6 +1606,11 @@ async def interpret_report(result, llm):
             }
             if advice_mode and repair is None:
                 repair = partial_repair(reply, payload, result)
+                if repair is not None:
+                    try:
+                        validate_sections(repair[2], payload, result)
+                    except (ValueError, TypeError, KeyError) as normalized_error:
+                        remember_valid(normalized_error)
                 if (
                     repair is not None
                     and len(json.dumps(request_payload(), ensure_ascii=False).encode())
@@ -1552,6 +1625,9 @@ async def interpret_report(result, llm):
                 narrative = validate_sections(repair[2], payload, result)
             except (ValueError, TypeError, KeyError):
                 break
+        narrative = [
+            retained.get(section["topic_id"], section) for section in narrative
+        ]
         if advice_mode:
             present_advice(narrative)
         result["narrative"] = narrative
@@ -1563,4 +1639,50 @@ async def interpret_report(result, llm):
             reason="repaired" if diagnostic.get("failures") else "complete",
         )
         return
+    if retained and all(t["topic_id"] in retained for t in payload["topics"]):
+        narrative = [retained[t["topic_id"]] for t in payload["topics"]]
+        if advice_mode:
+            present_advice(narrative)
+            diagnostic["namespace_advice_version"] = ADVICE_VERSION
+        result["narrative"] = narrative
+        result["narrative_status"] = "complete"
+        diagnostic.update(method="llm_interpreted", reason="repaired")
+        return
     result["narrative_status"] = "failed"
+    if retained:
+        narrative = []
+        for topic in payload["topics"]:
+            topic_id = topic["topic_id"]
+            if topic_id in retained:
+                narrative.append(retained[topic_id])
+                continue
+            source = next(t for t in result["topics"] if t["topic_id"] == topic_id)
+            facts = source.get("findings", [])[:3]
+            narrative.append(
+                {
+                    "id": topic_id,
+                    "topic_id": topic_id,
+                    "title": TOPICS[topic_id] + " · 계산 결과 요약",
+                    "text": "\n\n".join(f["text"] for f in facts),
+                    "interpretation_source": "deterministic_fallback",
+                    "source_fact_ids": [f["id"] for f in facts],
+                    "evidence_refs": sorted(
+                        {ref for f in facts for ref in f.get("evidence_refs", [])}
+                    ),
+                    "value_refs": sorted(
+                        {ref for f in facts for ref in f.get("value_refs", [])}
+                    ),
+                }
+            )
+        if advice_mode:
+            present_advice(narrative)
+        result["narrative"] = narrative
+        diagnostic.update(
+            method="partial_interpretation",
+            topic_statuses={
+                t["topic_id"]: "complete" if t["topic_id"] in retained else "failed"
+                for t in payload["topics"]
+            },
+        )
+        if any(section.get("advice") for section in narrative):
+            diagnostic["namespace_advice_version"] = ADVICE_VERSION
