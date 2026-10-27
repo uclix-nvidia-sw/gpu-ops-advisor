@@ -10,6 +10,7 @@ import {
   WINDOW_DAYS,
   useRecentIncidents,
 } from '../components/IncidentOverview';
+import { OpsUsage } from '../components/OpsUsage';
 import { rows, str, useResource } from '../lib/live';
 import {
   CATEGORIES,
@@ -116,7 +117,7 @@ export function OperatorDashboard() {
           </p>
         </div>
         <Link className="oh-btn" to="/cases">
-          사건 · RCA 보기 →
+          RCA 조사 보기 →
         </Link>
       </div>
       <QueryState query={query}>
@@ -414,6 +415,7 @@ export function OperatorDashboard() {
           </div>
         </section>
       </QueryState>
+      <OpsUsage />
       <section className="oh-card oh-foot" aria-label="내부 서비스 상태">
         {(
           [

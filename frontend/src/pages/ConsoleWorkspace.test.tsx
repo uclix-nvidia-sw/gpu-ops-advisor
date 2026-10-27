@@ -9,7 +9,7 @@ import {
 } from './ConsoleWorkspace';
 import type { ReactNode } from 'react';
 import type { Row } from '../lib/live';
-const state = vi.hoisted(() => ({ mode: 'control', paths: [] as string[], error: false }));
+const state = vi.hoisted(() => ({ mode: 'classic', paths: [] as string[], error: false }));
 vi.mock('../lib/store', () => ({
   useApp: () => ({
     mode: state.mode,
@@ -35,7 +35,7 @@ vi.mock('../lib/live', async (original) => ({
 const render = (child: ReactNode, path = '/dashboard') =>
   renderToStaticMarkup(<MemoryRouter initialEntries={[path]}>{child}</MemoryRouter>);
 beforeEach(() => {
-  state.mode = 'control';
+  state.mode = 'classic';
   state.paths = [];
   state.error = false;
 });
@@ -108,17 +108,6 @@ it('keeps debug destination and list filters together and labels Ops by report s
   expect(html).toContain('결과 미발행');
   expect(html).not.toContain('알람 이름 미확인');
 });
-it('keeps old unclosed incidents in the default queue regardless of the global time range', () => {
-  render(<ConsoleWorkspace />);
-  const incidents = new URL(state.paths[0], 'http://fixture'),
-    reports = new URL(state.paths[1], 'http://fixture');
-  expect(incidents.pathname).toBe('/incidents');
-  expect(incidents.searchParams.has('from')).toBe(false);
-  expect(incidents.searchParams.has('to')).toBe(false);
-  expect(incidents.searchParams.get('status')).toBe('unclosed');
-  expect(reports.pathname).toBe('/reports');
-  expect(reports.searchParams.has('from')).toBe(false);
-});
 it('uses server side execution filters without applying the incident time filter to jobs', () => {
   state.mode = 'workbench';
   const html = render(<ConsoleWorkspace />, '/jobs?status=failed&kind=rca');
@@ -129,38 +118,21 @@ it('uses server side execution filters without applying the incident time filter
   expect(html).toContain('aria-label="실행 상태"');
   expect(html).toContain('/settings/backend');
 });
-it('displays network failure instead of an empty or healthy queue', () => {
+it('displays network failure instead of an empty report list', () => {
   state.error = true;
-  const html = render(<ConsoleWorkspace />);
+  const html = render(<ConsoleWorkspace />, '/reports');
   expect(html).toContain('데이터를 가져오지 못했습니다.');
-  expect(html).not.toContain('조회된 미종결 사건이 없습니다.');
+  expect(html).not.toContain('조회된 보고서가 없습니다.');
 });
-it('does not send a developer execution filter as an incident lifecycle status on mode change', () => {
-  render(<ConsoleWorkspace />, '/dashboard?status=failed');
-  expect(new URL(state.paths[0], 'http://fixture').searchParams.get('status')).toBe('unclosed');
-  state.paths = [];
-  render(<ConsoleWorkspace />, '/cases?status=running');
-  expect(new URL(state.paths[0], 'http://fixture').searchParams.get('status')).toBe('unclosed');
-});
-
-it('queries full history separately and applies optional occurrence dates in KST', () => {
-  render(<ConsoleWorkspace />, '/cases?status=all&occurred_from=2026-10-01&occurred_to=2026-10-02');
-  const q = new URL(state.paths[0], 'http://fixture').searchParams;
-  expect(q.has('status')).toBe(false);
-  expect(q.get('from')).toBe('2026-09-30T15:00:00.000Z');
-  expect(q.get('to')).toBe('2026-10-02T15:00:00.000Z');
-});
-it('never limits unclosed incidents by leftover occurrence filters, even invalid ones', () => {
-  const html = render(
-    <ConsoleWorkspace />,
-    '/cases?status=unclosed&occurred_from=wrong&occurred_to=2026-10-01',
-  );
-  const q = new URL(state.paths[0], 'http://fixture').searchParams;
-  expect(q.get('status')).toBe('unclosed');
-  expect(q.has('from')).toBe(false);
-  expect(q.has('to')).toBe(false);
-  expect(html).not.toContain('올바른 발생일');
-  expect(html).not.toContain('보고서 만들기');
+it('keeps classic RCA pages, the former Ops console reports and no job list in the unified console', () => {
+  for (const path of ['/dashboard', '/cases', '/analyses/a1', '/incidents/i1', '/jobs/j1'])
+    expect(render(<ConsoleWorkspace />, path)).toBe('');
+  // The job list redirects to RCA 조사 instead of loading jobs.
+  expect(render(<ConsoleWorkspace />, '/jobs')).toBe('');
+  expect(state.paths).toEqual([]);
+  const html = render(<ConsoleWorkspace />, '/reports');
+  expect(html).toContain('Ops 보고서');
+  expect(new URL(state.paths[0], 'http://fixture').pathname).toBe('/reports');
 });
 it('finds stored jobs by node and incident with an independent receipt window', () => {
   state.mode = 'workbench';
@@ -239,11 +211,6 @@ it('shows only published bounded previews and keeps missing summaries explicit',
   expect(html).toContain('목록 요약 없음');
   expect(html).not.toContain('UNPUBLISHED');
   expect(html).not.toContain('DELETED');
-});
-it('does not interpret an empty incident list as healthy hardware', () => {
-  const html = render(<ConsoleWorkspace />, '/cases');
-  expect(html).toContain('장비 정상 여부를 판단할 수 없습니다.');
-  expect(state.paths).toHaveLength(1);
 });
 it('labels a preview as AI interpretation only when the stored narrative is complete', () => {
   const renderPreview = (narrative_status: string) =>

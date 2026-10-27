@@ -599,7 +599,6 @@ function Incident({ id }: { id: string }) {
   );
 }
 function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }) {
-  const app = useApp();
   const [evidence, setEvidence] = useState<string | null>(null);
   const q = useResource(`/analyses/${id}`, undefined, true),
     job = obj(q.data),
@@ -622,12 +621,7 @@ function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }
             <Status job={{ ...job, result_status: result.result_status }} />
             {job.result_ref && Object.keys(result).length ? (
               <>
-                <RcaNarrative
-                  result={result}
-                  reader
-                  decisionSummary={app.mode === 'control'}
-                  onEvidence={setEvidence}
-                />
+                <RcaNarrative result={result} reader onEvidence={setEvidence} />
                 {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
                 {!rows(result.narrative).length && (
                   <>

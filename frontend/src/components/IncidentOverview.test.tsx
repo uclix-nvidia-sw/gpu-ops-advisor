@@ -44,7 +44,8 @@ it('shows the error, device repeat, alert state, NVIDIA action and the report li
   expect(html).toContain('보고서 열기');
   // Result quality labels stay in the report, not the list.
   expect(html).not.toContain('부분 산출');
-  // The report button is the only link; the title no longer opens the incident.
+  // The title and the report button open the RCA report; neither opens the incident.
+  expect(html.match(/href="\/analyses\/job-1#final-report"/g)).toHaveLength(2);
   expect(html).not.toContain('href="/incidents/');
 });
 

@@ -36,11 +36,20 @@ const nav = [
   { to: '/knowledge', label: '지식·Runbook', icon: BookOpen },
   { to: '/settings/models', label: '연결·설정', icon: Settings2 },
 ];
+// The unified console: job history opens from each RCA report instead of its own menu.
+const consoleNav = [
+  { to: '/dashboard', label: '운영 대시보드', icon: LayoutDashboard },
+  { to: '/cases', label: 'RCA 조사', icon: ScanSearch },
+  { to: '/reports', label: 'Ops 보고서', icon: ChartNoAxesCombined },
+  { to: '/knowledge', label: '지식·Runbook', icon: BookOpen },
+  { to: '/fleet/assets', label: '자산·관측', icon: Server },
+  { to: '/settings/models', label: '연결·설정', icon: Settings2 },
+];
 export function Shell() {
   const app = useApp(),
     location = useLocation(),
     me = app.connection;
-  const consoleMode = app.mode === 'workbench' || app.mode === 'control';
+  const consoleMode = app.mode === 'workbench' || app.mode === 'classic';
   const reportId = matchPath('/reports/:id', location.pathname)?.params.id;
   const isSavedReport = !!reportId && reportId !== 'new';
   const report = useResource(isSavedReport ? `/reports/${reportId}` : null, undefined, true);
@@ -50,34 +59,30 @@ export function Shell() {
   const names =
     app.mode === 'workbench'
       ? ['실패 진단', '자산·관측', '사건·RCA', 'Ops 보고서', '전체 작업', 'Runbook', '연결·설정']
-      : app.mode === 'control'
-        ? ['운영 개요', '자산·관측', 'RCA 사건', 'Ops 보고서', '작업 이력', 'Runbook', '연결·설정']
-        : app.mode === 'operations'
+      : app.mode === 'operations'
+        ? [
+            '오늘의 운영',
+            '자산 탐색',
+            '사건 대응',
+            '분석 서재',
+            '요청 진행',
+            '운영 지식',
+            '환경 관리',
+          ]
+        : app.mode === 'developer'
           ? [
-              '오늘의 운영',
-              '자산 탐색',
-              '사건 대응',
-              '분석 서재',
-              '요청 진행',
-              '운영 지식',
-              '환경 관리',
+              '처리 흐름·검증',
+              '관측·신원',
+              '사건·RCA',
+              '보고서·일정',
+              '작업 디버깅',
+              'Runbook·revision',
+              '연결·구성',
             ]
-          : app.mode === 'developer'
-            ? [
-                '처리 흐름·검증',
-                '관측·신원',
-                '사건·RCA',
-                '보고서·일정',
-                '작업 디버깅',
-                'Runbook·revision',
-                '연결·구성',
-              ]
-            : nav.map((n) => n.label);
+          : nav.map((n) => n.label);
   const menus =
-    app.mode === 'control'
-      ? [0, 2, 3]
-          .map((i) => ({ ...nav[i], label: names[i] }))
-          .concat([{ to: '/schedules', label: '자동 보고서', icon: History }])
+    app.mode === 'classic'
+      ? consoleNav
       : app.mode === 'new'
         ? [
             { ...nav[0], label: '운영 현황' },
@@ -112,8 +117,7 @@ export function Shell() {
   const active = (to: string) =>
     location.pathname.startsWith(to.split('/').slice(0, 2).join('/')) ||
     (to === '/cases' && /analyses|incidents/.test(location.pathname)) ||
-    (to === '/reports' &&
-      (isGuide || (app.mode !== 'control' && location.pathname.startsWith('/schedules'))));
+    (to === '/reports' && (isGuide || location.pathname.startsWith('/schedules')));
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
@@ -151,7 +155,7 @@ export function Shell() {
           <span className={app.ready ? 'pulse-dot' : ''} />
           <span>
             {app.ready
-              ? app.mode === 'new' || app.mode === 'control'
+              ? app.mode === 'new' || app.mode === 'classic'
                 ? '조회 API 연결됨'
                 : '로컬 API 연결'
               : '연결 확인 중'}
@@ -195,7 +199,7 @@ export function Shell() {
             <span>
               {app.mode === 'workbench'
                 ? 'DEVELOPER'
-                : app.mode === 'control'
+                : app.mode === 'classic'
                   ? 'OPERATIONS'
                   : 'Workspace'}
             </span>
@@ -207,7 +211,7 @@ export function Shell() {
           </div>
         </header>
         {!isGuide &&
-          ((app.mode !== 'new' && app.mode !== 'control') ||
+          ((app.mode !== 'new' && app.mode !== 'classic') ||
             ['/dashboard', '/cases', '/reports', '/reports/new', '/schedules'].includes(
               location.pathname,
             )) && (
@@ -259,7 +263,7 @@ export function Shell() {
                     <span className="time-zone">Asia/Seoul</span>
                     {!isJobHistory &&
                       app.mode !== 'workbench' &&
-                      app.mode !== 'control' &&
+                      app.mode !== 'classic' &&
                       !location.pathname.startsWith('/reports') &&
                       (app.mode !== 'new' ||
                         ['/dashboard', '/cases'].includes(location.pathname)) && (
@@ -342,7 +346,7 @@ export function Shell() {
         </main>
         <footer className="app-footer">
           <span>
-            {app.mode === 'new' || app.mode === 'control'
+            {app.mode === 'new' || app.mode === 'classic'
               ? 'GPU Ops Advisor'
               : 'GPU Ops Advisor · Go API · PostgreSQL'}
           </span>

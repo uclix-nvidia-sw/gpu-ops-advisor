@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { QueryState } from '../components/live';
+import { RangeCalendar } from '../components/RangeCalendar';
 import {
   IncidentHead,
   IncidentRow,
@@ -9,6 +10,7 @@ import {
 import {
   dateTimeText,
   dayKey,
+  dayRange,
   deviceRepeats,
   fullDate,
   kindText,
@@ -22,7 +24,13 @@ const PERIODS: [string, string][] = [
   ['1', '오늘'],
   ['7', '7일'],
   [String(WINDOW_DAYS), `${WINDOW_DAYS}일`],
+  ['30', '30일'],
+  ['all', '전체'],
 ];
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+// Date order pages by incident; device or error order pages whole groups.
+const PAGE = 50,
+  GROUP_PAGE = 20;
 const KINDS: [string, string][] = [
   ['', '전체'],
   ['gpu', 'GPU'],
@@ -87,26 +95,46 @@ function groupIncidents(list: IncidentView[], sort: string, today: string): Grou
 /** Classic-mode cases: one line per incident with alert state, NVIDIA action and RCA report. */
 export function OperatorCases() {
   const [params, setParams] = useSearchParams();
-  const { query, views, now, truncated } = useRecentIncidents();
-  const set = (key: string, value: string) => {
+  const update = (values: Record<string, string>) => {
     const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
+    // Any filter change starts again from the first page.
+    if (!('page' in values)) next.delete('page');
+    Object.entries(values).forEach(([key, value]) =>
+      value ? next.set(key, value) : next.delete(key),
+    );
     setParams(next, { replace: true });
   };
+  const set = (key: string, value: string) => update({ [key]: value });
+  const picked = DAY.test(params.get('from') || '') ? params.get('from')! : '',
+    pickedTo = DAY.test(params.get('to') || '') ? params.get('to')! : '';
+  const period = picked
+    ? ''
+    : PERIODS.find((p) => p[0] === params.get('period'))?.[0] || String(WINDOW_DAYS);
+  const first = picked || (period === 'all' ? null : windowDays(new Date(), Number(period))[0]);
+  const last = picked ? (pickedTo > picked ? pickedTo : picked) : undefined;
+  const { query, views, now, truncated } = useRecentIncidents(first, last);
   const node = params.get('node') || '',
     kind = params.get('kind') || '',
-    period = params.get('period') || String(WINDOW_DAYS),
     focus = params.get('focus') || '',
     device = params.get('device') || '',
     sort = params.get('sort') || '';
-  const days = windowDays(now, Number(period));
   const today = dayKey(now);
+  const oldest = views.length ? dayKey(views[views.length - 1].at) : today;
+  const days = dayRange(first || oldest, last || today);
+  const rangeText = picked
+    ? picked === last
+      ? fullDate(picked)
+      : `${fullDate(picked)} ~ ${fullDate(last!)}`
+    : period === 'all'
+      ? '전체 기간'
+      : period === '1'
+        ? `오늘 · ${fullDate(today)}`
+        : `최근 ${period}일`;
+  // The Backend filters by occurrence day; the rest narrows what was loaded.
   const scoped = views.filter(
     (v) =>
       (!node || v.node === node) &&
       (!kind || v.kind === (kind as DeviceKind)) &&
-      days.includes(dayKey(v.at)) &&
       (!device || v.deviceKey === device),
   );
   const hot = new Set(
@@ -124,11 +152,25 @@ export function OperatorCases() {
   const shown = focus && focusTest[focus] ? scoped.filter(focusTest[focus]) : scoped;
   const stale = shown.filter((v) => v.stale);
   const live = shown.filter((v) => !v.stale);
-  const groups = groupIncidents(sort === 'old' ? [...live].reverse() : live, sort, today);
+  const ordered = sort === 'old' ? [...live].reverse() : live;
+  const byGroup = sort === 'device' || sort === 'error';
+  const allGroups = byGroup ? groupIncidents(ordered, sort, today) : [];
+  const size = byGroup ? GROUP_PAGE : PAGE,
+    total = byGroup ? allGroups.length : ordered.length;
+  const pages = Math.max(1, Math.ceil(total / size));
+  const page = Math.min(pages, Math.max(1, Math.floor(Number(params.get('page'))) || 1));
+  const offset = (page - 1) * size;
+  const groups = byGroup
+    ? allGroups.slice(offset, offset + size)
+    : groupIncidents(ordered.slice(offset, offset + size), sort, today);
+  const goTo = (p: number) => {
+    update({ page: p > 1 ? String(p) : '' });
+    window.scrollTo(0, 0);
+  };
   const chips: [string, string, number, string][] = [
     ['firing', '발생 중', scoped.filter(focusTest.firing).length, 'red'],
     ['stale', '확인 필요', scoped.filter(focusTest.stale).length, 'amber'],
-    ['', `전체 ${PERIODS.find((p) => p[0] === period)?.[1] || ''}`, scoped.length, ''],
+    ['', '조회 기간 전체', scoped.length, ''],
     ['today', '오늘', scoped.filter(focusTest.today).length, ''],
     ['repeat', '3회 이상 반복 장치', hot.size, ''],
     ['notice', '알림만 (RCA 없음)', scoped.filter(focusTest.notice).length, ''],
@@ -140,10 +182,10 @@ export function OperatorCases() {
       <div className="oh-head-row">
         <div>
           <div className="oh-eyebrow">GPU OPERATIONS</div>
-          <h1 tabIndex={-1}>사건 · RCA</h1>
+          <h1 tabIndex={-1}>RCA 조사</h1>
           <p className="oh-sub">
-            알림이 들어온 장애와 RCA 보고서를 한 줄에서 봅니다. 최근 {WINDOW_DAYS}일 · 기준{' '}
-            {dateTimeText(now)} KST
+            알림이 들어온 장애와 RCA 장애 보고서를 한 줄에서 봅니다. 제목을 누르면 보고서가
+            열립니다. {rangeText} · 기준 {dateTimeText(now)} KST
           </p>
         </div>
       </div>
@@ -171,10 +213,17 @@ export function OperatorCases() {
         장치
         <Seg value={kind} options={KINDS} onChange={(v) => set('kind', v)} />
         기간
+        <RangeCalendar
+          first={first || oldest}
+          last={last || today}
+          today={today}
+          label={rangeText}
+          onChange={(from, to) => update({ from, to: to === from ? '' : to, period: '' })}
+        />
         <Seg
           value={period}
           options={PERIODS}
-          onChange={(v) => set('period', v === String(WINDOW_DAYS) ? '' : v)}
+          onChange={(v) => update({ period: v === String(WINDOW_DAYS) ? '' : v, from: '', to: '' })}
         />
         정렬
         <Seg value={sort} options={SORTS} onChange={(v) => set('sort', v)} />
@@ -189,11 +238,11 @@ export function OperatorCases() {
         query={query}
         empty={!shown.length}
         emptyTitle="조건에 맞는 사건이 없습니다."
-        emptyDescription={`최근 ${WINDOW_DAYS}일 중 선택한 조건의 사건이 없습니다.`}
+        emptyDescription={`${rangeText} 중 선택한 조건의 사건이 없습니다.`}
       >
         {truncated && (
           <p className="muted">
-            사건이 많아 최근 일부만 집계했습니다. 기간이나 노드를 좁혀 확인하세요.
+            사건이 많아 최근 일부만 불러왔습니다. 달력에서 기간을 좁혀 확인하세요.
           </p>
         )}
         {stale.length > 0 && (
@@ -225,6 +274,37 @@ export function OperatorCases() {
             </div>
           </section>
         ))}
+        {total > 0 && (
+          <nav className="oh-pager" aria-label="사건 목록 페이지">
+            <small>
+              {offset + 1}–{Math.min(offset + size, total)} / {total}
+              {byGroup ? '개 묶음' : '건'} · 페이지당 {size}
+              {byGroup ? '개 묶음' : '건'}
+            </small>
+            <span className="oh-seg">
+              <button aria-label="이전 페이지" disabled={page === 1} onClick={() => goTo(page - 1)}>
+                ‹
+              </button>
+              {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  aria-pressed={p === page}
+                  aria-current={p === page ? 'page' : undefined}
+                  onClick={() => goTo(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                aria-label="다음 페이지"
+                disabled={page === pages}
+                onClick={() => goTo(page + 1)}
+              >
+                ›
+              </button>
+            </span>
+          </nav>
+        )}
       </QueryState>
     </div>
   );

@@ -10,7 +10,7 @@ const data = vi.hoisted(() => ({
 }));
 vi.mock('../lib/store', () => ({
   useApp: () => ({
-    mode: 'control',
+    mode: 'classic',
     canOperate: true,
     scope: { clusters: [{ cluster_id: 'global-cluster', namespaces: null }] },
   }),

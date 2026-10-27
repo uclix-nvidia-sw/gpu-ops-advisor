@@ -3,7 +3,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import { apiRequest } from './api';
 import { currentRange } from './live';
 import type { Scope, TimeRange } from './types';
-export type ViewMode = 'classic' | 'operations' | 'developer' | 'new' | 'workbench' | 'control';
+// 'classic' is the unified console; a saved 'control' (the former Ops console) opens it.
+export type ViewMode = 'classic' | 'operations' | 'developer' | 'new' | 'workbench';
 type AppState = {
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
@@ -30,8 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return saved === 'operations' ||
         saved === 'developer' ||
         saved === 'new' ||
-        saved === 'workbench' ||
-        saved === 'control'
+        saved === 'workbench'
         ? saved
         : 'classic';
     } catch {

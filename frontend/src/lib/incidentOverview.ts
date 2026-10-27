@@ -193,6 +193,14 @@ export function windowDays(now: Date, days: number) {
   );
 }
 
+/** Inclusive KST day keys from `first` to `last`. */
+export function dayRange(first: string, last: string) {
+  const days: string[] = [];
+  for (let t = Date.parse(`${first}T12:00:00+09:00`); dayKey(new Date(t)) <= last; t += 24 * HOUR)
+    days.push(dayKey(new Date(t)));
+  return days;
+}
+
 export function deviceRepeats(views: IncidentView[], days: string[]): DeviceRepeat[] {
   const groups = new Map<string, IncidentView[]>();
   views

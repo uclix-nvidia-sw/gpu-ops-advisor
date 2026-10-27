@@ -88,7 +88,9 @@ it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
   },
 );
 
+// The unified console shows Ops reports as the former Ops console did; comparison modes keep this bar.
 it('uses the saved report scope and keeps global controls on new requests', () => {
+  app.mode = 'operations';
   const saved = render('/reports/saved');
   expect(saved).toContain('이 보고서의 분석 범위');
   expect(saved).toContain('saved-cluster');
@@ -99,6 +101,7 @@ it('uses the saved report scope and keeps global controls on new requests', () =
 });
 
 it('hides the unused time selector on job history and detail while retaining scope and refresh', () => {
+  app.mode = 'operations';
   const html = render('/jobs');
   expect(html).not.toContain('aria-label="조회 기간"');
   expect(html).toContain('class="scope-button"');
@@ -117,7 +120,7 @@ it('keeps a guide entry on reports when the connection fails', () => {
 });
 
 it('explains current aggregate advice order, time windows, AI fallback and all seven types', () => {
-  app.mode = 'control';
+  app.mode = 'classic';
   const html = render('/operator-guide#guide-values');
   for (const text of [
     '클러스터와 네임스페이스는',
