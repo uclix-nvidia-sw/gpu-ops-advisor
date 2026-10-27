@@ -109,7 +109,7 @@ const COMPONENTS: Record<string, ComponentInfo> = {
     short: 'GPU: 보고에 없음',
     target: '어느 GPU인지 Fleet 보고에 없습니다 — nvidia-smi -L·nvidia-smi -q로 확인합니다',
     reasons: [
-      { label: 'GPU 접근 상실', matches: ['GPU lost'], branch: 'GPU lost' },
+      { label: 'GPU 연결 끊김', matches: ['GPU lost'], branch: 'GPU lost' },
       { label: 'GPU 리셋 필요', matches: ['GPU requires reset'], branch: 'GPU requires reset' },
       {
         label: 'persistence mode 조회 오류',

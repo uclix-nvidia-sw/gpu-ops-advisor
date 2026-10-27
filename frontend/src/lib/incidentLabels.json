@@ -124,7 +124,7 @@
     ]
   },
   "component:accelerator-nvidia-persistence-mode": {
-    "name": "GPU 접근 상실·리셋 필요 보고",
+    "name": "GPU 연결 끊김·리셋 필요 보고",
     "detail": "GPU lost",
     "action": "판단: 보고 사유별 복구 수준",
     "steps": [
@@ -3466,7 +3466,7 @@
     ]
   },
   "xid:79": {
-    "name": "GPU 접근 상실",
+    "name": "GPU 연결 끊김",
     "detail": "GPU has fallen off the bus",
     "action": "호스트 재시작 (RESTART_BM)",
     "steps": [

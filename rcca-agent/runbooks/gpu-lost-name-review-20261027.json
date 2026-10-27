@@ -1,0 +1,130 @@
+{
+  "status": "local_review_not_published",
+  "checked_at": "2026-10-27",
+  "scope": "XID 79('GPU has fallen off the bus')와 persistence-mode의 'GPU lost'를 운영자·연구원·경영진이 바로 알아보도록 'GPU 접근 상실' 대신 'GPU 연결 끊김'으로 부른다. 의미·판단·조치는 바꾸지 않는다.",
+  "method": "Title, meaning and one judgment sentence only; NVIDIA Xid catalog meaning (GPU has fallen off the bus) unchanged. before/after sha256 with previous_values.",
+  "entries": [
+    {
+      "file": "xid/RB-XID-79.json",
+      "before_content_sha256": "b1e4838c81fbd0a96cd4b751c9e88bab331b5e6dc3b07a8490e6553cde9838a2",
+      "after_content_sha256": "66e816d5cf5767f00124086868418ed84e26a210ed7801ec3e1d13c1f23b0c9e",
+      "change": "operator-facing name: GPU 접근 상실 -> GPU 연결 끊김",
+      "added_fields": [],
+      "previous_values": {
+        "title": "Xid 79 GPU 접근 상실 조사",
+        "search": {
+          "codes": [
+            "xid:79"
+          ],
+          "aliases": [
+            "GPU has fallen off the bus"
+          ],
+          "symptoms": [
+            "GPU 접근 상실",
+            "GPU 장치 응답 없음"
+          ],
+          "producer_events": [
+            "accelerator-nvidia-error-xid"
+          ]
+        }
+      }
+    },
+    {
+      "file": "component/RB-COMPONENT-PERSISTENCE-MODE.json",
+      "before_content_sha256": "b79c447ba3dbb2d4c132338a90adba313ef18b208b603c80c79a38e5142ba06e",
+      "after_content_sha256": "454b3b54f64fcfce97df8fcb3a6bcc1f1ed5bc3dc02917389156b6222034b0fb",
+      "change": "operator-facing name: GPU 접근 상실 -> GPU 연결 끊김",
+      "added_fields": [],
+      "previous_values": {
+        "title": "GPU 접근 상실·리셋 필요 보고 조사 (Fleet persistence-mode)",
+        "search": {
+          "producer_events": [
+            "accelerator-nvidia-persistence-mode"
+          ],
+          "aliases": [
+            "GPU lost",
+            "GPU requires reset",
+            "error getting persistence mode",
+            "failed to get DCGM persistence-mode field"
+          ],
+          "symptoms": [
+            "GPU 접근 상실",
+            "GPU 리셋 필요"
+          ]
+        },
+        "operator_guidance": {
+          "schema": "gpu-rca-guidance/1.0",
+          "meaning": "Fleet persistence-mode 점검이 GPU의 persistence mode 상태를 읽다가 GPU 접근 상실('GPU lost'), 리셋 필요('GPU requires reset') 또는 조회 오류를 받아 Unhealthy로 보고한 것입니다. 이름과 달리 persistence mode 설정 문제가 아니라 GPU에 접근하지 못한다는 보고이며, persistence mode 꺼짐은 Degraded로 따로 보고됩니다.",
+          "cause_note": "GPU가 PCIe에서 이탈한 상태(XID 79와 같은 상태)이거나 드라이버가 리셋 전까지 GPU를 쓸 수 없다고 판단한 상태가 주요 원인 후보입니다. 같은 시각의 XID 79·154와 메모리 오류 XID가 위치를 좁혀 줍니다.",
+          "next_checks": [
+            {
+              "title": "즉시 확인·격리",
+              "text": "kubectl cordon <노드>로 새 작업 배치를 먼저 막습니다. nvidia-smi -L과 nvidia-smi -q로 어느 GPU가 사라졌거나 오류를 내는지 확인합니다. dmesg -T에서 같은 시각의 NVRM Xid 줄(특히 XID 79, XID 154)을 찾아 함께 기록합니다. GPU가 정상 조회되면 Fleet의 상태 조회 경로(NVML 또는 DCGM) 쪽 일시 오류일 수 있으므로, 커널 로그(NVRM: Xid 줄)에 같은 오류가 있는지 복구 조치 전에 확인합니다."
+            },
+            {
+              "title": "진단 자료 보존 (재시작·리셋 전)",
+              "text": "재시작·리셋 전에 root로 nvidia-bug-report.sh를 실행해 nvidia-bug-report.log.gz를 보관합니다. 스크립트가 멈추면 --safe-mode --extra-system-data 옵션으로 다시 실행하며, 최대 1시간이 걸릴 수 있습니다. 사건 전후 커널 로그(journalctl -k)와 BMC 이벤트 로그(SEL)도 저장합니다. NVSwitch가 있는 HGX·DGX 시스템은 Fabric Manager 로그(/var/log/fabricmanager.log)도 함께 보존합니다."
+            },
+            {
+              "title": "판단: 보고 사유별 복구 수준",
+              "text": "XID 154가 함께 기록됐거나 nvidia-smi --query-gpu=gpu_recovery_action --format=csv 값이 있으면 그 복구 수준을 우선 따릅니다. GPU lost: XID 79와 같은 접근 상실로 보고, 작업 배출과 유지보수 승인 뒤 호스트를 재시작합니다. GPU requires reset: 작업 배출 뒤 해당 GPU를 리셋하고, 리셋 뒤에도 GPU가 비정상이면 노드 전원 사이클로 완전히 리셋합니다. persistence mode 조회 오류: 사유가 'error getting persistence mode'(Fleet v1.5.0-rc.1, NVML 조회) 또는 'failed to get DCGM persistence-mode field'(DCGM 조회 버전)이고 nvidia-smi로 GPU가 정상 조회되면, 시스템 로그와 Fleet 에이전트 로그를 확인하고 DCGM 문구이면 DCGM을 재시작한 뒤 진단을 다시 실행합니다."
+            },
+            {
+              "title": "복구 확인",
+              "text": "nvidia-smi -L에 노드의 GPU가 모두 다시 보이는지 확인합니다. nvidia-smi -q의 Persistence Mode가 Enabled인지 확인하고, Disabled이면 root로 nvidia-smi -i <번호> -pm 1을 실행합니다. dcgmi diag -r 2로 빠르게 점검하고, 하드웨어가 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 같은 보고가 더 나오지 않으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+            },
+            {
+              "title": "공급사 전달",
+              "text": "재시작 뒤에도 GPU가 돌아오지 않거나 같은 GPU에서 다시 나면 시스템 공급사에 티켓을 엽니다. 전달 자료는 OS·드라이버 정보, 증상과 핵심 로그, 수행한 조치, 전체 로그, nvidia-bug-report.sh 결과, Fabric Manager 로그(HGX), DCGM 진단 로그입니다. DGX 시스템은 sudo nvsm dump health 결과(/tmp/nvsm-health-*.tar.xz)도 함께 전달합니다."
+            }
+          ],
+          "references": [
+            {
+              "title": "Fleet 판정 기준",
+              "text": "Fleet은 GPU lost·GPU requires reset을 Unhealthy로 보고하고 시스템 재부팅(REBOOT_SYSTEM)을 권고합니다. v1.5.0-rc.1은 NVML로 읽으며 그 밖의 조회 오류를 모두 'error getting persistence mode'(Unhealthy)로 보고합니다. DCGM으로 옮긴 버전(84f99be)은 GPU 상태 이상을 뜻하는 DCGM 오류만 'failed to get DCGM persistence-mode field'(Unhealthy)로, 그 밖의 조회 오류는 Degraded로 보고합니다. persistence mode 꺼짐은 작업에 영향이 없는 설정 문제로 보고 Degraded로만 보고합니다. 정적 권고이며 수행 증거가 아닙니다.",
+              "source_indices": [
+                0,
+                6
+              ]
+            },
+            {
+              "title": "NVIDIA Xid 조치 분류",
+              "text": "XID 79(버스 이탈)의 즉시 조치는 RESTART_BM, 조사 조치는 CONTACT_SUPPORT입니다. XID 154는 None, Drain P2P, Drain and Reset, GPU Reset Required, Node Reboot Required 중 필요한 복구 수준을 알려 줍니다.",
+              "source_indices": [
+                3
+              ]
+            },
+            {
+              "title": "GPU Recovery Action (nvidia-smi)",
+              "text": "Reset은 GPU 프로세스를 모두 끝내고 nvidia-smi -r로 리셋한 뒤 다시 쓸 수 있다는 뜻이고, Reboot는 OS 재부팅이 필요하지만 AC 전원 차단은 필요 없다는 뜻입니다. 리셋 뒤에는 GPU 상태를 확인하고, 비정상이면 노드 전원 사이클로 완전히 리셋합니다.",
+              "source_indices": [
+                4
+              ]
+            },
+            {
+              "title": "리셋 방식 (GPU Node Triage 표 2)",
+              "text": "Ampere(A100)+NVSwitch는 Fabric Manager가 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 NVSwitch 쪽 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 FM과 무관하게 개별 리셋할 수 있습니다. VM 안에서는 GPU 리셋 대신 VM을 재시작합니다. 리셋은 root 권한이 필요하고 그 GPU를 쓰는 프로세스가 없어야 합니다.",
+              "source_indices": [
+                1
+              ]
+            },
+            {
+              "title": "DCGM 권고",
+              "text": "GPU 버스 이탈은 GPU 재장착, 열·전원 점검, 드라이버·BIOS 버그 확인 뒤 계속되면 Field Diagnostics를 실행합니다. persistence mode 꺼짐은 root로 nvidia-smi -i <gpuId> -pm 1을 실행합니다.",
+              "source_indices": [
+                2
+              ]
+            },
+            {
+              "title": "nvidia-bug-report.sh",
+              "text": "root로 실행하며 결과는 nvidia-bug-report.log.gz 한 파일입니다. 최대 1시간까지 걸릴 수 있고, 멈추면 --safe-mode --extra-system-data로 다시 실행합니다.",
+              "source_indices": [
+                5
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

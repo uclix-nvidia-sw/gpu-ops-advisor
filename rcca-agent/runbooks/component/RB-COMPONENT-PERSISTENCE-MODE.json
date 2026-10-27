@@ -7,7 +7,7 @@
   "source_refs": [],
   "content": {
     "schema": "gpu-rca-runbook/1.2",
-    "title": "GPU 접근 상실·리셋 필요 보고 조사 (Fleet persistence-mode)",
+    "title": "GPU 연결 끊김·리셋 필요 보고 조사 (Fleet persistence-mode)",
     "description": "Fleet persistence-mode 점검이 GPU lost·GPU requires reset·persistence mode 조회 오류를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
     "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
     "classification": {
@@ -25,6 +25,7 @@
         "failed to get DCGM persistence-mode field"
       ],
       "symptoms": [
+        "GPU 연결 끊김",
         "GPU 접근 상실",
         "GPU 리셋 필요"
       ]
@@ -131,7 +132,7 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet persistence-mode 점검이 GPU의 persistence mode 상태를 읽다가 GPU 접근 상실('GPU lost'), 리셋 필요('GPU requires reset') 또는 조회 오류를 받아 Unhealthy로 보고한 것입니다. 이름과 달리 persistence mode 설정 문제가 아니라 GPU에 접근하지 못한다는 보고이며, persistence mode 꺼짐은 Degraded로 따로 보고됩니다.",
+      "meaning": "Fleet persistence-mode 점검이 GPU의 persistence mode 상태를 읽다가 GPU 연결 끊김('GPU lost'), 리셋 필요('GPU requires reset') 또는 조회 오류를 받아 Unhealthy로 보고한 것입니다. 이름과 달리 persistence mode 설정 문제가 아니라 GPU에 접근하지 못한다는 보고이며, persistence mode 꺼짐은 Degraded로 따로 보고됩니다.",
       "cause_note": "GPU가 PCIe에서 이탈한 상태(XID 79와 같은 상태)이거나 드라이버가 리셋 전까지 GPU를 쓸 수 없다고 판단한 상태가 주요 원인 후보입니다. 같은 시각의 XID 79·154와 메모리 오류 XID가 위치를 좁혀 줍니다.",
       "next_checks": [
         {
@@ -144,7 +145,7 @@
         },
         {
           "title": "판단: 보고 사유별 복구 수준",
-          "text": "XID 154가 함께 기록됐거나 nvidia-smi --query-gpu=gpu_recovery_action --format=csv 값이 있으면 그 복구 수준을 우선 따릅니다. GPU lost: XID 79와 같은 접근 상실로 보고, 작업 배출과 유지보수 승인 뒤 호스트를 재시작합니다. GPU requires reset: 작업 배출 뒤 해당 GPU를 리셋하고, 리셋 뒤에도 GPU가 비정상이면 노드 전원 사이클로 완전히 리셋합니다. persistence mode 조회 오류: 사유가 'error getting persistence mode'(Fleet v1.5.0-rc.1, NVML 조회) 또는 'failed to get DCGM persistence-mode field'(DCGM 조회 버전)이고 nvidia-smi로 GPU가 정상 조회되면, 시스템 로그와 Fleet 에이전트 로그를 확인하고 DCGM 문구이면 DCGM을 재시작한 뒤 진단을 다시 실행합니다."
+          "text": "XID 154가 함께 기록됐거나 nvidia-smi --query-gpu=gpu_recovery_action --format=csv 값이 있으면 그 복구 수준을 우선 따릅니다. GPU lost: XID 79와 같은 연결 끊김로 보고, 작업 배출과 유지보수 승인 뒤 호스트를 재시작합니다. GPU requires reset: 작업 배출 뒤 해당 GPU를 리셋하고, 리셋 뒤에도 GPU가 비정상이면 노드 전원 사이클로 완전히 리셋합니다. persistence mode 조회 오류: 사유가 'error getting persistence mode'(Fleet v1.5.0-rc.1, NVML 조회) 또는 'failed to get DCGM persistence-mode field'(DCGM 조회 버전)이고 nvidia-smi로 GPU가 정상 조회되면, 시스템 로그와 Fleet 에이전트 로그를 확인하고 DCGM 문구이면 DCGM을 재시작한 뒤 진단을 다시 실행합니다."
         },
         {
           "title": "복구 확인",

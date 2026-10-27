@@ -3,8 +3,12 @@ import {
   category,
   categorySummary,
   dailyCounts,
+  dateTimeText,
   deviceRepeats,
+  errorRepeats,
+  fullDate,
   incidentLabel,
+  shortDate,
   incidentView,
   incidentViews,
   nodeStats,
@@ -148,5 +152,30 @@ describe('incident overview', () => {
     expect(of('component:accelerator-nvidia-dcgm-thermal')).toBe('gpu');
     expect(of('component:disk')).toBe('server');
     expect(of('')).toBe('server');
+  });
+
+  it('writes dates with the weekday in KST and groups repeats per error', () => {
+    expect(fullDate('2026-10-26')).toBe('2026.10.26. (월)');
+    expect(shortDate('2026-10-25')).toBe('10.25 (일)');
+    // 16:30 UTC is already the next day in KST.
+    expect(dateTimeText(new Date('2026-10-26T16:30:00Z'))).toBe('2026.10.27. (화) 01:30');
+    const views = incidentViews(
+      [
+        incident({ id: 'a', occurred_at: '2026-10-24T01:00:00Z' }),
+        incident({
+          id: 'b',
+          target: { k8s_node_name: 'dgx02', title: 'XID 79 detected on GPU PCI:0000:07:00' },
+        }),
+        incident({
+          id: 'c',
+          target: { k8s_node_name: 'dgx02', title: 'SXID 11001 detected on PCI:0000:c8:00.0' },
+        }),
+      ],
+      now,
+    );
+    expect(errorRepeats(views).map((e) => [e.codeText, e.count, e.devices])).toEqual([
+      ['XID 79', 2, 2],
+      ['SXID 11001', 1, 1],
+    ]);
   });
 });

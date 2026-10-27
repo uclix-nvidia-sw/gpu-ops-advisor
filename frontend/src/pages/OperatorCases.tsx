@@ -1,33 +1,88 @@
 import { useSearchParams } from 'react-router-dom';
-import { Panel } from '../components/ui';
 import { QueryState } from '../components/live';
 import {
-  DeviceTable,
   IncidentHead,
   IncidentRow,
   WINDOW_DAYS,
-  dateTime,
   useRecentIncidents,
 } from '../components/IncidentOverview';
 import {
+  dateTimeText,
   dayKey,
   deviceRepeats,
+  fullDate,
+  kindText,
+  titleText,
   windowDays,
   type DeviceKind,
   type IncidentView,
 } from '../lib/incidentOverview';
 
-const PERIODS = [
+const PERIODS: [string, string][] = [
   ['1', '오늘'],
   ['7', '7일'],
   [String(WINDOW_DAYS), `${WINDOW_DAYS}일`],
-] as const;
+];
 const KINDS: [string, string][] = [
   ['', '전체'],
   ['gpu', 'GPU'],
   ['switch', 'NVSwitch'],
   ['host', '서버'],
 ];
+const SORTS: [string, string][] = [
+  ['', '최신순'],
+  ['old', '오래된순'],
+  ['device', '장치별'],
+  ['error', '오류별'],
+];
+
+interface Group {
+  key: string;
+  title: string;
+  note: string;
+  items: IncidentView[];
+  showDate: boolean;
+}
+
+/** Date groups by default; device or error groups put the most frequent first. */
+function groupIncidents(list: IncidentView[], sort: string, today: string): Group[] {
+  const by = (key: (v: IncidentView) => string) => {
+    const groups = new Map<string, IncidentView[]>();
+    list.forEach((v) => groups.set(key(v), [...(groups.get(key(v)) || []), v]));
+    return [...groups.entries()];
+  };
+  if (sort === 'device' || sort === 'error')
+    return by((v) => (sort === 'device' ? v.deviceKey : v.code))
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([key, items]) => {
+        const v = items[0];
+        return {
+          key,
+          title:
+            sort === 'device'
+              ? [
+                  v.node,
+                  `${kindText(v.kind)} ${v.device}`.trim(),
+                  titleText({ ...v, codeText: '' }),
+                ].join(' · ')
+              : titleText(v),
+          note:
+            sort === 'device'
+              ? `${items.length}건 · 마지막 ${dateTimeText(v.at)}`
+              : `${items.length}건 · 장치 ${new Set(items.map((i) => i.deviceKey)).size}개`,
+          items,
+          showDate: true,
+        };
+      });
+  // The list is already newest- or oldest-first; date groups keep that order.
+  return by((v) => dayKey(v.at)).map(([day, items]) => ({
+    key: day,
+    title: `${fullDate(day)}${day === today ? ' · 오늘' : ''}`,
+    note: `${items.length}건`,
+    items,
+    showDate: false,
+  }));
+}
 
 /** Classic-mode cases: one line per incident with alert state, NVIDIA action and RCA report. */
 export function OperatorCases() {
@@ -44,7 +99,7 @@ export function OperatorCases() {
     period = params.get('period') || String(WINDOW_DAYS),
     focus = params.get('focus') || '',
     device = params.get('device') || '',
-    view = params.get('view') === 'device' ? 'device' : 'time';
+    sort = params.get('sort') || '';
   const days = windowDays(now, Number(period));
   const today = dayKey(now);
   const scoped = views.filter(
@@ -54,8 +109,11 @@ export function OperatorCases() {
       days.includes(dayKey(v.at)) &&
       (!device || v.deviceKey === device),
   );
-  const repeats = deviceRepeats(scoped, days);
-  const hot = new Set(repeats.filter((d) => d.count >= 3).map((d) => d.key));
+  const hot = new Set(
+    deviceRepeats(scoped, days)
+      .filter((d) => d.count >= 3)
+      .map((d) => d.key),
+  );
   const focusTest: Record<string, (v: IncidentView) => boolean> = {
     firing: (v) => v.firing && !v.stale,
     stale: (v) => v.stale,
@@ -66,6 +124,7 @@ export function OperatorCases() {
   const shown = focus && focusTest[focus] ? scoped.filter(focusTest[focus]) : scoped;
   const stale = shown.filter((v) => v.stale);
   const live = shown.filter((v) => !v.stale);
+  const groups = groupIncidents(sort === 'old' ? [...live].reverse() : live, sort, today);
   const chips: [string, string, number, string][] = [
     ['firing', '발생 중', scoped.filter(focusTest.firing).length, 'red'],
     ['stale', '확인 필요', scoped.filter(focusTest.stale).length, 'amber'],
@@ -76,7 +135,6 @@ export function OperatorCases() {
   ];
   const nodes = [...new Set(views.map((v) => v.node).filter(Boolean))].sort();
   const selectedDevice = device ? views.find((v) => v.deviceKey === device) : undefined;
-  let lastDay = '';
   return (
     <div className="page oh-page">
       <div className="oh-head-row">
@@ -85,18 +143,19 @@ export function OperatorCases() {
           <h1 tabIndex={-1}>사건 · RCA</h1>
           <p className="oh-sub">
             알림이 들어온 장애와 RCA 보고서를 한 줄에서 봅니다. 최근 {WINDOW_DAYS}일 · 기준{' '}
-            {dateTime(now)} KST
+            {dateTimeText(now)} KST
           </p>
         </div>
       </div>
       <div className="oh-chips">
-        {chips.map(([key, label, count, tone]) => (
+        {chips.map(([key, label, count, dot]) => (
           <button
             key={label}
-            className={`oh-chip ${tone}`}
+            className="oh-chip"
             aria-pressed={focus === key}
             onClick={() => set('focus', focus === key ? '' : key)}
           >
+            {dot && <i className={`oh-dot ${dot}`} />}
             {label}
             <b>{count}</b>
           </button>
@@ -114,21 +173,15 @@ export function OperatorCases() {
         기간
         <Seg
           value={period}
-          options={PERIODS.map(([v, l]): [string, string] => [v, l])}
+          options={PERIODS}
           onChange={(v) => set('period', v === String(WINDOW_DAYS) ? '' : v)}
         />
-        보기
-        <Seg
-          value={view}
-          options={[
-            ['time', '시간순'],
-            ['device', '장치별'],
-          ]}
-          onChange={(v) => set('view', v === 'time' ? '' : v)}
-        />
+        정렬
+        <Seg value={sort} options={SORTS} onChange={(v) => set('sort', v)} />
         {selectedDevice && (
           <button className="oh-chip" aria-pressed="true" onClick={() => set('device', '')}>
-            장치: {selectedDevice.node} {selectedDevice.device || selectedDevice.codeText} ✕
+            장치: {selectedDevice.node} {kindText(selectedDevice.kind)}{' '}
+            {selectedDevice.device || titleText(selectedDevice)} ✕
           </button>
         )}
       </div>
@@ -143,55 +196,35 @@ export function OperatorCases() {
             사건이 많아 최근 일부만 집계했습니다. 기간이나 노드를 좁혀 확인하세요.
           </p>
         )}
-        {view === 'device' ? (
-          <Panel
-            title={`같은 장치 반복 (최근 ${period}일)`}
-            description="같은 GPU·NVSwitch에서 반복되면 런북의 '공급사 전달' 단계 근거가 됩니다. 막대는 하루 단위 발생 수입니다."
-          >
-            <div className="oh-pad">
-              <DeviceTable
-                items={repeats}
-                onSelect={(key) => {
-                  const next = new URLSearchParams(params);
-                  next.set('device', key);
-                  next.delete('view');
-                  setParams(next, { replace: true });
-                }}
-              />
+        {stale.length > 0 && (
+          <details className="oh-stale">
+            <summary>
+              <i className="oh-dot amber" />
+              확인 필요 {stale.length}건 — 해제 신호 없이 하루 넘게 '발생 중'으로 남은 사건 (Grafana
+              알림 상태와 대조)
+            </summary>
+            <div className="oh-list">
+              <IncidentHead />
+              {stale.map((v) => (
+                <IncidentRow key={v.id} v={v} now={now} showDate />
+              ))}
             </div>
-          </Panel>
-        ) : (
-          <>
-            {stale.length > 0 && (
-              <details className="oh-stale">
-                <summary>
-                  확인 필요 {stale.length}건 — 해제 신호 없이 하루 넘게 '발생 중'으로 남은 사건
-                  (Grafana 알림 상태와 대조)
-                </summary>
-                {stale.map((v) => (
-                  <IncidentRow key={v.id} v={v} now={now} />
-                ))}
-              </details>
-            )}
-            <IncidentHead />
-            {live.map((v) => {
-              const day = dayKey(v.at);
-              const heading = day !== lastDay;
-              lastDay = day;
-              return (
-                <div key={v.id}>
-                  {heading && (
-                    <div className="oh-day">
-                      {day === today ? '오늘 ' : ''}
-                      {day.slice(5)}
-                    </div>
-                  )}
-                  <IncidentRow v={v} now={now} />
-                </div>
-              );
-            })}
-          </>
+          </details>
         )}
+        {groups.map((g) => (
+          <section key={g.key}>
+            <div className="oh-group">
+              <h2>{g.title}</h2>
+              <small>{g.note}</small>
+            </div>
+            <div className="oh-list">
+              <IncidentHead />
+              {g.items.map((v) => (
+                <IncidentRow key={v.id} v={v} now={now} showDate={g.showDate} />
+              ))}
+            </div>
+          </section>
+        ))}
       </QueryState>
     </div>
   );
