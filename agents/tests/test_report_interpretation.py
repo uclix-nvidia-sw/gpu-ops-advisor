@@ -1151,7 +1151,7 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-topic-fallback-v7"
+        == "ops-interpretation-incident-names-v8"
     )
     section = next(
         s
@@ -1370,3 +1370,125 @@ async def test_incident_rca_repair_preserves_focus_and_valid_namespace(
         {"attempt": 1, "reason": "incident_rca_reference"}
     ]
     assert concentrated_result["narrative_status"] == "complete"
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize(
+    "name",
+    ["dgx01에서", "XID 79가", "cpc-1의", "dgx01·dgx02와", "(dgx01), XID 79."],
+)
+def test_incident_exact_target_names_allow_korean_particles(
+    concentrated_result, field, name
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1][field] += " " + name + " 저장된 범위를 확인하세요."
+    before = deepcopy(reply)
+    section = validate_sections(reply, payload, concentrated_result)[1]
+    assert name in section[field]
+    assert section["observation"] == CALCULATED_INCIDENT_OBSERVATION
+    assert section["check_target"] == CALCULATED_INCIDENT_CHECK_TARGET
+    assert reply == before
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "dgx010에서",
+        "XID 790가",
+        "xdgx01에서",
+        "dgx01x에서",
+        "xXID 79가",
+        "dgx01１에서",
+        "dgx03에서",
+        "SXID 11001이",
+        "CPC-1에서",
+        "XID  79가",
+        "dgx01에서 5건",
+        "XID 79가 72.7%",
+        "dgx01에서 10/26에",
+    ],
+)
+def test_incident_names_do_not_exempt_other_numbers(concentrated_result, field, text):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1][field] += " " + text + " 저장된 범위를 확인하세요."
+    with pytest.raises(ValueError, match="unsupported_prose") as caught:
+        validate_sections(reply, payload, concentrated_result)
+    assert caught.value.topic_id == "incident_summary"
+    assert caught.value.field == field
+    assert caught.value.violation_kind == "number"
+
+
+@pytest.mark.parametrize("key", ["cluster_id", "cluster"])
+def test_incident_cluster_target_name_is_grounded(concentrated_result, key):
+    payload = payload_for(concentrated_result)
+    payload["topics"][1]["findings"][0]["target"][key] = "lab-7"
+    reply = concentration_reply(payload)
+    reply["sections"][1]["meaning"] += " lab-7에서 기록됐습니다."
+    section = validate_sections(reply, payload, concentrated_result)[1]
+    assert "lab-7에서" in section["meaning"]
+
+
+@pytest.mark.parametrize(
+    "name,kind",
+    [
+        ("dgx.01", "number"),
+        ("node-01%", "symbol"),
+        ("때문에-01", "forbidden_expression"),
+    ],
+)
+def test_incident_name_matching_is_literal_and_preserves_other_guards(
+    concentrated_result, name, kind
+):
+    payload = payload_for(concentrated_result)
+    payload["topics"][1]["findings"][0]["target"]["node"] = name
+    reply = concentration_reply(payload)
+    reply["sections"][1]["meaning"] += (
+        " " + ("dgxX01" if kind == "number" else name) + "에서 기록됐습니다."
+    )
+    with pytest.raises(ValueError, match="unsupported_prose") as caught:
+        validate_sections(reply, payload, concentrated_result)
+    assert caught.value.violation_kind == kind
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+def test_namespace_literal_node_name_still_requires_token(result, field):
+    result["topics"][0]["findings"][0]["target"]["node"] = "dgx01"
+    payload = payload_for(result)
+    reply = reply_for(payload)
+    reply["sections"][0][field] += " dgx01에서 기록됐습니다."
+    with pytest.raises(ValueError, match="unsupported_prose") as caught:
+        validate_sections(reply, payload, result)
+    assert caught.value.topic_id == "namespace_usage"
+    assert caught.value.field == field
+    assert caught.value.violation_kind == "number"
+
+
+@pytest.mark.parametrize("advice_mode", [False, True])
+async def test_incident_short_names_complete_without_repair(
+    concentrated_result, advice_mode
+):
+    if advice_mode:
+        from test_namespace_advice import topic
+
+        concentrated_result["topics"][0] = topic()
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1]["meaning"] = (
+        "dgx01·dgx02에서 XID 79가 기록됐고 이전 비교기간에는 이 종류의 기록이 없었습니다. "
+        "dgx01의 XID 13도 함께 확인할 대상입니다. 저장 알림이며 시험 알림이 섞일 수 있고 원인·복구는 확정하지 않습니다."
+    )
+    llm = AsyncMock(configured=True)
+    llm.complete.return_value = reply
+    await interpret_report(concentrated_result, llm)
+    assert llm.complete.await_count == 1
+    report = concentrated_result["quality"]["report"]
+    assert concentrated_result["narrative_status"] == "complete"
+    assert report["method"] == "llm_interpreted" and report["reason"] == "complete"
+    assert not report.get("failures") and "topic_statuses" not in report
+    system = llm.complete.call_args.args[0]
+    assert "건수·발생 중 건수·공개 RCA 수는 반복하지 마세요" in system
+    assert "실제 선택된 근거에 있는 이름만" in system
+    assert "다른 주제의 이름 직접 작성 금지는 유지" in system

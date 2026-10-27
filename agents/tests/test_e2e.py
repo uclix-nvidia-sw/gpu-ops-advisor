@@ -208,7 +208,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
-                        "ops-interpretation-topic-fallback-v7",
+                        "ops-interpretation-incident-names-v8",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -2909,7 +2909,9 @@ def test_aggregate_report_backend_intake_schedule_and_read(stack):
 
 
 @pytest.mark.e2e
-def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
+def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
+    stack, monkeypatch
+):
     import asyncio
     from test_aggregate_report import DATA
     from ops_agent.report_contract import VERSION, previous_period
@@ -2975,6 +2977,17 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     }
     assert context["previous_incidents"][0]["symptom"] == "XID fixture"
 
+    original_reply = interpretation_reply
+    meaning = "cpc-2의 dgx01에서 XID 79가 기록됐습니다. 저장 알림이며 시험 알림이 섞일 수 있고 원인·같은 GPU 반복·복구는 확정하지 않습니다."
+
+    def short_names(payload):
+        response = original_reply(payload)
+        for section in response.get("sections", []):
+            if section.get("topic_id") == "incident_summary":
+                section["meaning"] = meaning
+        return response
+
+    monkeypatch.setattr(sys.modules[__name__], "interpretation_reply", short_names)
     jid = submit(stack, "report", data, execution_profile=VERSION)
     body, evidence = worker_result(stack, "report", jid, "-incident-details")
     usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
@@ -3012,8 +3025,11 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(stack):
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-topic-fallback-v7"
+        == "ops-interpretation-incident-names-v8"
     )
+    assert incident_section["meaning"] == meaning
+    assert body["quality"]["report"]["attempts"] == 1
+    assert not body["quality"]["report"].get("failures")
     assert incident_section["observation_source"] == "calculated"
     assert "cpc-2 / dgx01 / XID 79" in incident_section["observation"]
     assert "저장 사건 1건." in incident_section["observation"]
@@ -4482,7 +4498,8 @@ def test_aggregate_partial_interpretation_publishes_other_topic(
             if section.get("topic_id") != failed_topic:
                 continue
             if failed_topic == "incident_summary":
-                section["meaning"] = "XID 79가 기록됐습니다."
+                # Exact target names are valid in v8; a literal count must still fail.
+                section["meaning"] = "알림이 999건 기록됐습니다."
             else:
                 for item in section["advice"]:
                     item["summary"] = ""
