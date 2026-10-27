@@ -393,6 +393,7 @@ async def run(tools):
         "target": target,
         "log_query_target": log_query_target,
         "identity_conflicts": clues["conflicts"],
+        "alert_error_codes": clues["error_codes"],
     }
     obs = Observation(tools, profile, data, ctx["deadline"])
     eid = str(uuid4())

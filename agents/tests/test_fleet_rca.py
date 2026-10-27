@@ -640,6 +640,85 @@ def test_parsed_d09_report_and_event_match_the_alert(kind):
     assert match_alert(alert(kind), health, events)["status"] == "match"
 
 
+def warning_lines(code, device, uuid):
+    """Fleet lines of a Warning XID: the state report stays Healthy (job b80adf64)."""
+    reason = f"XID {code} detected on GPU {device} UUID:{uuid}"
+    at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(NS) // 10**9))
+    resources = {
+        "machine.id": "machine-1",
+        "k8s.node.name": "node-1",
+        "gpuInfo.gpus": json.dumps(
+            [
+                {"uuid": GPU_UUID, "busID": "00000000:01:00.0"},
+                {"uuid": GPU_UUID[:-1] + "2", "busID": "00000000:02:00.0"},
+            ]
+        ),
+    }
+    state = {
+        "component": "accelerator-nvidia-error-xid",
+        "log_type": "component_data",
+        "health": "Healthy",
+        "reason": reason,
+    }
+    event = {
+        "component": "accelerator-nvidia-error-xid",
+        "log_type": "event",
+        "event_name": "error_xid",
+        "event_type": "Warning",
+        "event_id": f"fixture-{code}",
+        "extra_info": {
+            "data": {
+                "time": at,
+                "data_source": "kmsg",
+                "xid": code,
+                "device_uuid": device,
+                "raw_kmsg": f"NVRM: Xid ({device}): {code}, fixture",
+            }
+        },
+    }
+    return [
+        [NS, json.dumps({"attributes": a, "resources": resources})]
+        for a in (event, state)
+    ]
+
+
+def test_warning_xid_alert_matches_healthy_report_beside_other_gpu_error():
+    """XID 92 alert on one GPU while another GPU of the node reports XID 13."""
+    from rcca_agent.fleet_events import enrich_report_inventory, match_alert
+    from rcca_agent.fleet_events import parse_events
+    from rcca_agent.requirement_diagnostics import reported_facts
+
+    other = GPU_UUID[:-1] + "2"
+    p, e = profile(), evidence()
+    e["snapshot"]["data"]["result"][0]["values"] = warning_lines(
+        92, "PCI:0000:01:00", GPU_UUID
+    ) + warning_lines(13, "PCI:0000:02:00", other)
+    health = enrich_report_inventory(
+        parse_health([e], p["health_contracts"], p["queries"]), [e]
+    )
+    target = {
+        "cluster_id": "c",
+        "node": "node-1",
+        "machine_id": "machine-1",
+        "component": "accelerator-nvidia-error-xid",
+    }
+    events = parse_events([e], p, target)
+    clues = {
+        **alert(),
+        "reason": f"XID 92 detected on GPU PCI:0000:01:00 UUID:{GPU_UUID}",
+        "error_codes": ["xid:92"],
+    }
+    assert match_alert(clues, health, events)["status"] == "match"
+    data = {"target": target, "scope": {"clusters": [{"cluster_id": "c"}]}}
+    # Without the alert's code the two GPUs' codes cancel out.
+    assert "reported_error_code" not in reported_facts(health, events, data)
+    data["alert_error_codes"] = ["xid:92"]
+    assert reported_facts(health, events, data)["reported_error_code"] == "xid:92"
+    # A code the logs never reported is not invented from the alert.
+    data["alert_error_codes"] = ["xid:48"]
+    assert "reported_error_code" not in reported_facts(health, events, data)
+
+
 # The D09 LogQL the workflow builds from the alert's component and node labels.
 D09_LOGQL = (
     "{} | drop dsx_json_0, dsx_json_0_extracted, dsx_json_1, dsx_json_1_extracted"

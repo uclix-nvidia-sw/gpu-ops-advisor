@@ -166,6 +166,9 @@ def event_item(raw, ns, contract, period, target, cluster):
         "cluster_id": cluster,
         "target": identity,
         "error_code": f"{kind}:{code}",
+        "event_type": attributes.get("event_type")
+        if isinstance(attributes.get("event_type"), str)
+        else None,
         "event_time": datetime.fromtimestamp(timestamp(at), timezone.utc).isoformat(),
         "time_basis": "producer_event_time",
         "loki_timestamp_ns": ns,
@@ -229,8 +232,8 @@ def match_alert(clues, health, events, diagnostics=None):
     """Compare the alert's Fleet state report with D09 reports and kmsg events.
 
     Anchor: the alert's evidence record is the Fleet state report S (state =
-    EXPECTED_HEALTH[ALERT_EVENT_TYPE]); kmsg events E corroborate it. An event-based
-    alert stage would anchor on E instead. The report reason names the most severe
+    EXPECTED_HEALTH of the alert code's kmsg event type, else ALERT_EVENT_TYPE); kmsg
+    events E corroborate it. The report reason names the most severe
     retained XID/SXID. A match means the alert, that report and one
     kmsg event agree on code and device. It routes the investigation only; it is
     not verified current health, physical origin or independent device identity.
@@ -275,10 +278,21 @@ def match_alert(clues, health, events, diagnostics=None):
         )
         if v
     }
+    # A Warning/Info XID leaves its reason on a Healthy state report (Fleet
+    # health_state.go), so the alert code's own kmsg event type selects the state.
+    event_types = {
+        e.get("event_type")
+        for e in events
+        if e["component"] == component and e["error_code"] == codes[0]
+    }
+    expected = EXPECTED_HEALTH.get(
+        next(iter(event_types)) if len(event_types) == 1 else ALERT_EVENT_TYPE,
+        EXPECTED_HEALTH[ALERT_EVENT_TYPE],
+    )
     reports = [
         h
         for h in health
-        if h.get("raw_health") == EXPECTED_HEALTH[ALERT_EVENT_TYPE]
+        if h.get("raw_health") == expected
         and h.get("component") == component
         and all(h.get("target", {}).get(k) == v for k, v in scope.items())
     ]
@@ -290,7 +304,7 @@ def match_alert(clues, health, events, diagnostics=None):
         {
             "scope": scope,
             "component": component,
-            "expected_health": EXPECTED_HEALTH[ALERT_EVENT_TYPE],
+            "expected_health": expected,
             "reports_count": len(reports),
         },
     ):

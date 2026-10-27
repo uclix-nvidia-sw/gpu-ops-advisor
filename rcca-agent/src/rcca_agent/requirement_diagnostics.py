@@ -73,6 +73,14 @@ def unmet_requirements(missing, health, events, data):
 def reported_facts(health, events, data):
     """Scoped source reports; never current-health or action-condition facts."""
     reports, reported_events = _scoped_reports(health, events, data)
+    # Another GPU on the node may report a different code in the same window. The
+    # alert's single code selects its own reports; the fact still comes from them.
+    codes = data.get("alert_error_codes") or []
+    if len(codes) == 1 and any(
+        r.get("error_code") == codes[0] for r in reports + reported_events
+    ):
+        reports = [r for r in reports if r.get("error_code") == codes[0]]
+        reported_events = [r for r in reported_events if r["error_code"] == codes[0]]
     result = {}
     for field in ("error_code", "producer_contract", "component", "normalized_health"):
         rows = reports + reported_events

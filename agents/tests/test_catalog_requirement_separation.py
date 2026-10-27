@@ -40,6 +40,12 @@ TRIAGE_REVIEW = {
         (CATALOG / "triage-guidance-review-20261022.json").read_text("utf-8")
     )["entries"]
 }
+XID92_MEMORY_REVIEW = {
+    e["file"]: e
+    for e in json.loads(
+        (CATALOG / "xid92-memory-guidance-review-20261027.json").read_text("utf-8")
+    )["entries"]
+}
 GPU_LOST_NAME_REVIEW = {
     e["file"]: e
     for e in json.loads(
@@ -144,10 +150,11 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
-        # Newest review first: GPU lost name, plain query names, batch 4, evidence wording, batch 3, batch 2, metric coverage, memory
+        # Newest review first: XID 92 memory guidance, GPU lost name, plain query names, batch 4, evidence wording, batch 3, batch 2, metric coverage, memory
         # guidance, wording,
         # catalog actions, triage, then the report review.
         for review in (
+            XID92_MEMORY_REVIEW,
             GPU_LOST_NAME_REVIEW,
             PLAIN_NAMES_REVIEW,
             BATCH4_REVIEW,
