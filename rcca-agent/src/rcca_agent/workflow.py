@@ -17,6 +17,7 @@ from agent_common.parsers import parse_health, health_facts
 from importlib.resources import files
 from .synthesis import synthesis_input
 from .evaluation import evaluate_analysis, collection_status, BASE_LIMIT
+from .decision_trace import check, record_decision
 from .fleet_events import (
     MISMATCH_CODES,
     enrich_report_inventory,
@@ -598,6 +599,7 @@ async def run(tools):
 
     def evaluate_requirements(round_no, approved):
         """Retain collection and Runbook requirement diagnostics independently of review."""
+        decision_checks = []
         health, facts, verified, relations, available = normalized_state(
             obs, collected, data, profile, initial_facts
         )
@@ -608,9 +610,31 @@ async def run(tools):
             k for b in selected for k in b["content"].get("required_evidence", [])
         }
         gaps = sorted(required_facts - available)
-        if not selected:
+        check(
+            decision_checks,
+            "required_evidence",
+            "bool(required_facts - available)",
+            bool(required_facts - available),
+            {"required_facts": sorted(required_facts), "available": sorted(available)},
+        )
+        if check(
+            decision_checks,
+            "approved_runbook",
+            "not selected",
+            not selected,
+            {"selected_count": len(selected)},
+        ):
             gaps.append("approved_runbook")
-        if "incident_mapping" in required_facts and not relations:
+        if check(
+            decision_checks,
+            "incident_mapping",
+            "'incident_mapping' in required_facts and not relations",
+            "incident_mapping" in required_facts and not relations,
+            {
+                "mapping_required": "incident_mapping" in required_facts,
+                "relations_count": len(relations),
+            },
+        ):
             gaps.append(
                 "mapping_target_unverified"
                 if not (target.get("gpu_uuid") or target.get("pod_uid"))
@@ -624,21 +648,50 @@ async def run(tools):
                 for e in collected[mapping_id]
             ):
                 gaps.append("mapping_source_unavailable")
-        if data["identity_conflicts"]:
+        if check(
+            decision_checks,
+            "target_identity_conflict",
+            "bool(identity_conflicts)",
+            bool(data["identity_conflicts"]),
+            {"identity_conflicts": data["identity_conflicts"]},
+        ):
             gaps.append("target_identity_conflict")
+        alert_checks = []
         alert_match = match_alert(
             clues,
             health,
             []
             if data.get("identity_conflicts")
             else parse_events(obs.evidence, profile, data.get("target", {})),
+            diagnostics=alert_checks,
+        )
+        decision_checks.extend(
+            {**c, "source": "rcca_agent.fleet_events.match_alert"} for c in alert_checks
         )
         d09 = collected.get("D09")
-        if alert_match["status"] != "error_code_unparsed" and not (
-            d09 and all(usable_observation(e) for e in d09)
+        if check(
+            decision_checks,
+            "collection_failed",
+            "alert_match.status != 'error_code_unparsed' and not (d09 and all(usable_observation(e) for e in d09))",
+            alert_match["status"] != "error_code_unparsed"
+            and not (d09 and all(usable_observation(e) for e in d09)),
+            {
+                "alert_match.status": alert_match["status"],
+                "d09_count": len(d09 or []),
+                "d09_usable_count": sum(usable_observation(e) for e in d09 or []),
+            },
         ):
             alert_match = {**alert_match, "status": "collection_failed"}
-        if alert_match["status"] in MISMATCH_CODES:
+        if check(
+            decision_checks,
+            "alert_match_gap",
+            "alert_match.status in MISMATCH_CODES",
+            alert_match["status"] in MISMATCH_CODES,
+            {
+                "alert_match.status": alert_match["status"],
+                "MISMATCH_CODES": list(MISMATCH_CODES),
+            },
+        ):
             gaps.append(alert_match["status"])
         # A failed optional (supporting) metric is reported by name; only failures of
         # the error source and the Runbooks' required metrics degrade the report.
@@ -653,6 +706,20 @@ async def run(tools):
         optional = set(plan_queries(selected)) - required
         degraded = bool(failed - optional)
         conflicting = conflicting_health(health)
+        check(
+            decision_checks,
+            "observation_degraded",
+            "bool(failed - optional)",
+            degraded,
+            {"failed": sorted(failed), "optional": sorted(optional)},
+        )
+        check(
+            decision_checks,
+            "conflicting_evidence",
+            "conflicting_health(health)",
+            conflicting,
+            {"health_count": len(health)},
+        )
         events = []
         if gaps:
             events.append("missing_evidence")
@@ -669,10 +736,25 @@ async def run(tools):
             or [h for h in health if h["normalized_health"] != "unknown"]
             or health
         )
-        if any(
-            h["check_status"] != "valid" or h["normalized_health"] == "unknown"
-            for h in relevant
-        ) or (any(collected.get(q) for q in ("D05", "D09")) and not health):
+        if check(
+            decision_checks,
+            "unknown_value",
+            "any(h.check_status != 'valid' or h.normalized_health == 'unknown' for h in relevant) or (health_query_collected and not health)",
+            any(
+                h["check_status"] != "valid" or h["normalized_health"] == "unknown"
+                for h in relevant
+            )
+            or (any(collected.get(q) for q in ("D05", "D09")) and not health),
+            {
+                "health_count": len(health),
+                "relevant_count": len(relevant),
+                "invalid_or_unknown_count": sum(
+                    h["check_status"] != "valid" or h["normalized_health"] == "unknown"
+                    for h in relevant
+                ),
+                "health_query_collected": any(collected.get(q) for q in ("D05", "D09")),
+            },
+        ):
             events.append("unknown_value")
             gaps.append("unknown_value")
         remaining = [q for q in approved if q not in collected]
@@ -692,6 +774,7 @@ async def run(tools):
             events=events,
             optional_failed=sorted(failed & optional),
             alert_match=alert_match,
+            decision_checks=decision_checks,
             # Skipping analysis needs the code's own published Runbook guidance.
             matched=False,
         )
@@ -770,6 +853,24 @@ async def run(tools):
             )
         )
     state = evaluate_requirements(round_no, approved)
+    collection_decision_id = record_decision(
+        obs,
+        data["time_range"],
+        "collection_assessment",
+        "rcca_agent.workflow.evaluate_requirements",
+        state["decision_checks"],
+        {
+            "phase": "after collection, before evidence_validation and rca_synthesis",
+            "collected_queries": sorted(collected),
+        },
+        {
+            "alert_match": state["alert_match"],
+            "gaps": state["gaps"],
+            "gate": state["gate"],
+            "optional_failed": state["optional_failed"],
+        },
+        [e["id"] for es in collected.values() for e in es],
+    )
     if dossier and round_no == 0:
         comparison = comparison_targets(
             data, clues, [e for values in collected.values() for e in values]
@@ -1002,6 +1103,38 @@ async def run(tools):
             {"query_id": q, "name": METRICS.get(q) or LABELS["queries"].get(q, q)}
             for q in state["optional_failed"]
         ]
+    status_decision_id = record_decision(
+        obs,
+        data["time_range"],
+        "rca_status_decision",
+        "rcca_agent.workflow.run / agent_common.contracts.result_status",
+        [],
+        {
+            "analysis_status": analysis_status,
+            "gate": gate,
+            "gaps": gaps,
+            "analysis_missing": analysis_missing,
+            "available": sorted(available),
+            "applicable_count": len(applicable),
+            "relations_count": len(relations),
+            "assessment_rule": "ready if not missing else partial if 'observations' in available or applicable or relations else blocked",
+            "missing_rule": "missing = (runbook.required_evidence - available) | analysis_missing",
+            "analysis_rule": "analysis_missing = synthesis_<status> if analysis_status not in {complete, skipped_alert_match}; add approved_runbook if not selected; add observation_<gate> if gate in {degraded, conflicted}; extend gaps",
+            "result_rule": "exclude not_applicable; none => not_applicable; all ready => ready; any ready/partial => partial; otherwise blocked",
+        },
+        {
+            "assessments": [
+                {k: a[k] for k in ("assessment_id", "status", "missing_inputs")}
+                for a in assessments
+            ],
+            "missing_inputs": result["missing_inputs"],
+            "result_status": result["result_status"],
+            "termination_reason": result["termination_reason"],
+        },
+        [collection_decision_id]
+        + [e["id"] for e in obs.evidence if e["query_id"] == "rca_analysis_draft"],
+    )
+    result["evidence_refs"].append(status_decision_id)
     material_fields = (
         "cause_candidates",
         "recommendations",
@@ -1039,6 +1172,7 @@ async def run(tools):
             "analysis_id": evaluation["draft"]["analysis_id"],
             "material": material,
             "material_hash": material_hash,
+            "decision_evidence_refs": [collection_decision_id, status_decision_id],
             "execution_status": "complete",
             "evidence_refs": evaluation["review"]["evidence_refs"]
             + evaluation["evidence"]["evidence_refs"],
