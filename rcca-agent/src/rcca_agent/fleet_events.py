@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from agent_common.contracts import timestamp
 from agent_common.observation import usable_observation
 from agent_common.parsers import ERROR_CODE, log_entries
+from .decision_trace import check
 
 PCI_TEXT = re.compile(r"PCI:[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}(?:\.[0-7])?", re.I)
 STATUS_UUID = re.compile(r"UUID:(GPU-[0-9a-f-]{36})", re.I)
@@ -224,7 +225,7 @@ def parse_events(evidence, profile, target):
     return list(results.values())
 
 
-def match_alert(clues, health, events):
+def match_alert(clues, health, events, diagnostics=None):
     """Compare the alert's Fleet state report with D09 reports and kmsg events.
 
     Anchor: the alert's evidence record is the Fleet state report S (state =
@@ -248,10 +249,14 @@ def match_alert(clues, health, events):
             "detail": detail,
         }
 
-    if (
+    if check(
+        diagnostics,
+        "error_code_unparsed",
+        "kind not in ('xid', 'sxid') or len(codes) != 1 or not codes[0].startswith(kind + ':')",
         kind not in ("xid", "sxid")
         or len(codes) != 1
-        or not codes[0].startswith(kind + ":")
+        or not codes[0].startswith(kind + ":"),
+        {"kind": kind, "codes": codes},
     ):
         return result("error_code_unparsed")
     addresses = sorted(set(PCI_TEXT.findall(reason)))
@@ -277,12 +282,29 @@ def match_alert(clues, health, events):
         and h.get("component") == component
         and all(h.get("target", {}).get(k) == v for k, v in scope.items())
     ]
-    if not reports:
+    if check(
+        diagnostics,
+        "alert_report_not_found",
+        "len(reports) == 0",
+        not reports,
+        {
+            "scope": scope,
+            "component": component,
+            "expected_health": EXPECTED_HEALTH[ALERT_EVENT_TYPE],
+            "reports_count": len(reports),
+        },
+    ):
         return result("alert_report_not_found")
     same = [
         h for h in reports if report_reason(h.get("reason")) == report_reason(reason)
     ]
-    if not same:
+    if check(
+        diagnostics,
+        "report_reason_changed",
+        "len(same) == 0; same = reports with report_reason(h.reason) == report_reason(alert.reason)",
+        not same,
+        {"reports_count": len(reports), "same_reason_count": len(same)},
+    ):
         # Fleet rewrites the reason when a later Fatal error becomes the summary.
         return result(
             "report_reason_changed",
@@ -293,7 +315,17 @@ def match_alert(clues, health, events):
     matched = [
         e for e in events if e["component"] == component and e["error_code"] == codes[0]
     ]
-    if not matched:
+    if check(
+        diagnostics,
+        "event_missing",
+        "len(matched) == 0; matched = events with component == alert.component and error_code == codes[0]",
+        not matched,
+        {
+            "event_count": len(events),
+            "matched_event_count": len(matched),
+            "error_code": codes[0],
+        },
+    ):
         # A component report persists until reboot, while its kmsg event is
         # exported once. A Healthy report before the first Unhealthy one in the
         # same window bounds the onset inside it even without the kmsg line.
@@ -315,7 +347,19 @@ def match_alert(clues, health, events):
             ),
             key=lambda h: timestamp(h["observed_at"]),
         )
-        if healthy:
+        if check(
+            diagnostics,
+            "preceding_healthy",
+            "len(healthy) > 0; healthy = same-scope component reports with raw_health.lower() == 'healthy' and observed_at < first",
+            bool(healthy),
+            {
+                "first_unhealthy_at": dated[0]["observed_at"] if dated else None,
+                "last_healthy_at": healthy[-1]["observed_at"] if healthy else None,
+                "preceding_healthy_count": len(healthy),
+                "time_basis": "loki_recorded_at",
+                "selection": "earliest matching Unhealthy report; later transitions are not evaluated",
+            },
+        ):
             return result(
                 "event_not_exported",
                 refs + healthy[-1]["evidence_refs"],
@@ -336,21 +380,54 @@ def match_alert(clues, health, events):
         return address[:width] if address else str(value)
 
     devices = {device(e["reported_device"]) for e in matched}
-    if len(devices) > 1:
+    if check(
+        diagnostics,
+        "multiple_devices",
+        "len(devices) > 1",
+        len(devices) > 1,
+        {"device_count": len(devices)},
+    ):
         return result(
             "multiple_devices",
             refs,
             event_devices=sorted({str(e["reported_device"]) for e in matched}),
         )
-    if not alert["pci"] or device(alert["pci"]) not in devices:
+    if check(
+        diagnostics,
+        "pci_mismatch",
+        "not alert.pci or device(alert.pci) not in devices",
+        not alert["pci"] or device(alert["pci"]) not in devices,
+        {
+            "alert_pci": alert["pci"],
+            "event_devices": sorted(str(e["reported_device"]) for e in matched),
+        },
+    ):
         return result(
             "pci_mismatch", refs, event_device=str(matched[0]["reported_device"])
         )
     if kind == "xid":
         candidates = {e["inventory_gpu_candidate"] for e in matched}
-        if not alert["gpu_uuid"] or candidates == {None}:
+        if check(
+            diagnostics,
+            "uuid_unresolved",
+            "not alert.gpu_uuid or candidates == {None}",
+            not alert["gpu_uuid"] or candidates == {None},
+            {
+                "alert_gpu_uuid": alert["gpu_uuid"],
+                "candidates": sorted(str(c) for c in candidates),
+            },
+        ):
             return result("uuid_unresolved", refs)
-        if candidates != {alert["gpu_uuid"]}:
+        if check(
+            diagnostics,
+            "uuid_mismatch",
+            "candidates != {alert.gpu_uuid}",
+            candidates != {alert["gpu_uuid"]},
+            {
+                "alert_gpu_uuid": alert["gpu_uuid"],
+                "candidates": sorted(str(c) for c in candidates),
+            },
+        ):
             return result(
                 "uuid_mismatch",
                 refs,

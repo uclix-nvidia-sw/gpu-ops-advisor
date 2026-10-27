@@ -27,7 +27,48 @@
   margin-right: 8px;
   overflow-wrap: anywhere;
 }
+.rca-code-decision {
+  border-left: 3px solid var(--accent, #76b900);
+  padding: 0 16px 16px;
+  min-width: 0;
+}
+.rca-decision-flow {
+  font-weight: 600;
+}
+.rca-decision-fields {
+  margin: 12px 0;
+}
+.rca-decision-fields > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rca-decision-fields dt,
+.rca-decision-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.rca-decision-check {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+.rca-decision-check summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.rca-decision-expression {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
 @media (max-width: 700px) {
+  .rca-decision-fields > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
   .rca-workflow-layout {
     grid-template-columns: minmax(0, 1fr);
   }
