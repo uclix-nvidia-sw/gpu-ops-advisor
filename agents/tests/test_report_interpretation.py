@@ -8,6 +8,7 @@ from agent_common.llm import RemoteUncertain
 from ops_agent.report_interpretation import (
     interpret_report,
     payload_for,
+    reference_feedback,
     validate_sections,
 )
 
@@ -137,6 +138,66 @@ def reply_for(payload):
             section["next_check"] += " Pod 배치 기록을 대조하세요."
         sections.append(section)
     return {"sections": sections}
+
+
+@pytest.mark.parametrize("partial", [False, True])
+@pytest.mark.parametrize("kind", ["target", "value"])
+async def test_reference_feedback_reaches_repair_without_changing_guards(
+    result, partial, kind
+):
+    if partial:
+        from test_namespace_advice import topic
+
+        result["topics"][0] = topic(activity=90, pending=2)
+    before = deepcopy(result["topics"])
+    payload = payload_for(result)
+    good = reply_for(payload)
+    bad = deepcopy(good)
+    section = next(s for s in bad["sections"] if s["topic_id"] == "incident_summary")
+    code = f"invalid_{kind}_reference"
+    if kind == "target":
+        section["next_check"] = "{{target:incident-missing}}의 기존 기록을 대조하세요."
+        allowed = "incident-period-summary"
+    else:
+        section["meaning"] = "{{value:incident_summary.missing}}의 저장 관측입니다."
+        allowed = "incident_summary.count.0"
+    llm = AsyncMock(configured=True)
+    repaired = (
+        {
+            "sections": [
+                s for s in good["sections"] if s["topic_id"] == "incident_summary"
+            ]
+        }
+        if partial
+        else good
+    )
+    llm.complete.side_effect = [bad, repaired]
+    await interpret_report(result, llm)
+    repair = llm.complete.call_args_list[1].args[1]
+    feedback = (
+        repair["section_repair"][0]["validation_error"]
+        if partial
+        else repair["validation_feedback"]["error"]
+    )
+    assert feedback.startswith(code + ":")
+    assert allowed in feedback and "allowed_ids" in feedback
+    assert "namespace_usage.value" not in feedback
+    assert len(feedback.encode()) < 2048
+    assert result["quality"]["report"]["failures"] == [{"attempt": 1, "reason": code}]
+    assert result["narrative_status"] == "complete"
+    assert result["topics"] == before
+
+
+def test_reference_feedback_bounds_identifiers_without_echoing_prose():
+    text = reference_feedback(
+        "invalid_target_reference",
+        "PRIVATE_RESPONSE\n" + "x" * 10000,
+        [f"incident-{i}-" + "x" * 100 for i in range(50)],
+    )
+    assert "PRIVATE_RESPONSE" not in text
+    assert '"invalid_key": "[omitted]"' in text
+    assert '"allowed_count": 50' in text and '"list_truncated": true' in text
+    assert len(text.encode()) < 2048
 
 
 async def test_both_topics_are_interpreted_without_changing_facts(result):
