@@ -2046,6 +2046,8 @@ async def test_namespace_writing_list_does_not_replace_incident_section_contract
     assert set(inc) == {"topic_id", "fact_ids", "observation", "meaning", "next_check"}
     assert {key: inc[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
     assert INCIDENT_RULES in system
+    assert inc["observation"] == ""
+    assert "fact_ids도 코드가 정하므로 응답 값은 쓰이지 않습니다" in system
     assert "다른 주제의 필드를 Namespace summary에 복사하지" in system
     assert "점검 목적·필수 확인 조건·운영 행동은 다시 작성하지 마세요" in system
     assert "수치와 참조는 코드가 붙입니다" in system

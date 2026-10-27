@@ -6,7 +6,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
-from .incident_findings import INCIDENT_RULES
+from .incident_findings import INCIDENT_RULES, incident_focus
 from .workload_context import context_for
 from .namespace_advice import (
     candidates,
@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-concentration-v4"
+VERSION = "ops-interpretation-incident-calculated-v5"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -53,9 +53,9 @@ PREREQUISITES = {
 }
 FIELDS = ("observation", "meaning", "next_check")
 INCIDENT_EXAMPLE = {
-    "observation": "클러스터 사건 수·이전 수, 최다 종류의 대상·건수·비율·이전 건수, 최다 노드의 대상·건수·비율을 토큰으로",
-    "meaning": "집중 또는 분산 여부와 저장 기록·시험 알림·작성 시점 한계",
-    "next_check": "선택한 node·alert_type 대상과 기간 토큰, 대조할 기록",
+    "observation": "",
+    "meaning": "알림 종류와 노드 각각의 집중·분산 결론, 이어서 한계 한 문장",
+    "next_check": "대조할 기록과 발생 중 건의 해제 여부 확인",
 }
 LABELS = ("눈에 띄는 변화", "의미와 한계", "확인할 점")
 TOKEN = re.compile(
@@ -265,9 +265,15 @@ def payload_for(result):
                     ),
                     0,
                 )
+                if fact["fact_id"].startswith(
+                    (
+                        "incident-top-type-",
+                        "incident-top-node-",
+                        "incident-second-node-",
+                    )
+                ):
+                    return (2, False, 0, 0)
                 return (
-                    fact["fact_id"].startswith("incident-top-type-"),
-                    fact["fact_id"].startswith("incident-top-node-"),
                     fact["fact_id"] == "incident-period-summary",
                     bool(fact["target"].get("node")),
                     firing,
@@ -327,7 +333,9 @@ def payload_for(result):
                     t["omitted_findings"] = selection["omitted_count"]
                     t["advice_mode"] = ADVICE_VERSION
             else:
-                t["findings"] = t["findings"][:6]
+                t["findings"] = t["findings"][
+                    : 12 if t["topic_id"] == "incident_summary" else 6
+                ]
     return {
         "interpretation_version": VERSION,
         "time_range": result["time_range"],
@@ -673,8 +681,10 @@ def validate_sections(reply, payload, result):
             output.append(validate_reasoned_advice(section, topic))
             continue
         facts = {f["fact_id"]: f for f in topic["findings"]}
-        ids = section.get("fact_ids")
-        if (
+        incident = topic["topic_id"] == "incident_summary"
+        focus = incident_focus(topic["findings"]) if incident else None
+        ids = focus["ids"] if incident else section.get("fact_ids")
+        if not incident and (
             not isinstance(ids, list)
             or not 1 <= len(ids) <= 3
             or any(not isinstance(i, str) or i not in facts for i in ids)
@@ -688,12 +698,27 @@ def validate_sections(reply, payload, result):
             related = facts[fact_id].get("related_workload_fact_id")
             if related and related not in ids:
                 ids.append(related)
-        if len(ids) > 3:
+        if not incident and len(ids) > 3:
             raise ValueError(
                 "invalid_fact_reference: 한 Namespace의 활동 근거만 선택하세요"
             )
         selected = [facts[i] for i in ids]
         section = dict(section)
+        if incident:
+            if any(
+                section.get(field)
+                in (INCIDENT_EXAMPLE["meaning"], INCIDENT_EXAMPLE["next_check"])
+                for field in ("meaning", "next_check")
+            ):
+                raise ValueError(
+                    "template_echo: 예시 문장을 복사하지 말고 근거에 맞는 의미와 확인할 내용을 작성하세요"
+                )
+            check = section.get("next_check")
+            if not isinstance(check, str) or not check.strip() or len(check) > 450:
+                raise ValueError("invalid_section_text")
+            section["observation"] = focus["observation"]
+            section["next_check"] = focus["check_prefix"] + check.strip()
+
         if any(f.get("related_workload_fact_id") for f in selected):
             if "대기" not in str(section.get("meaning", "")) or "Pod" not in str(
                 section.get("next_check", "")
@@ -756,51 +781,19 @@ def validate_sections(reply, payload, result):
                     + ", ".join(statements)
                     + "."
                 )
-        if topic["topic_id"] == "incident_summary":
-            if any(section.get(field) in INCIDENT_EXAMPLE.values() for field in FIELDS):
-                raise ValueError(
-                    "template_echo: 예시 문장을 복사하지 말고 선택한 근거의 토큰으로 관측을 작성하세요"
-                )
-            observation_refs = {
-                (kind, key)
-                for kind, key, _ in TOKEN.findall(str(section.get("observation", "")))
-            }
-            check_refs = {
-                (kind, key)
-                for kind, key, _ in TOKEN.findall(str(section.get("next_check", "")))
-            }
-            node_ids = {f["fact_id"] for f in selected if f["target"].get("node")}
-            if (
-                (
-                    any(fid.startswith("incident-top-type-") for fid in facts)
-                    and not any(fid.startswith("incident-top-type-") for fid in ids)
-                )
-                or not any(("value", mid) in observation_refs for mid in values)
-                or (
-                    node_ids
-                    and not any(("target", fid) in check_refs for fid in node_ids)
-                )
+        if incident:
+            meaning = TOKEN.sub("", str(section.get("meaning", "")))
+            if re.search(
+                r"(?:설명|판단|작성)(?:하며|하세요|합니다)|했는지|됐는지|몰렸는지|분산된지|흩어졌는지",
+                meaning,
+            ) or (
+                any(fid.startswith("incident-top-type-") for fid in ids)
+                and any(fid.startswith("incident-top-node-") for fid in ids)
+                and not all(term in meaning for term in ("종류", "노드"))
             ):
                 raise ValueError(
-                    "incident_grounding_required: 최다 종류 근거를 고르고 observation에 수치 토큰, next_check에 노드 대상 토큰을 넣으세요"
+                    "incident_meaning_required: 작성 지시를 옮기지 말고 알림 종류와 노드 각각이 집중인지 분산인지 결론을 쓰세요"
                 )
-            for fact in selected:
-                if fact["fact_id"].startswith(
-                    ("incident-top-type-", "incident-top-node-")
-                ):
-                    for value in fact["values"]:
-                        if (
-                            value["metric_id"].startswith(
-                                (
-                                    "incident_summary.top_type_share.",
-                                    "incident_summary.top_node_share.",
-                                )
-                            )
-                            and ("value", value["metric_id"]) not in observation_refs
-                        ):
-                            raise ValueError(
-                                "share_reference_required: 선택한 집중도 근거의 비율 토큰을 observation에 넣으세요"
-                            )
             prose = " ".join(section.get(field, "") for field in FIELDS)
             if re.search(
                 r"현재\s*기준|(?:확인|점검)[^.!?]{0,30}필요(?:가)?\s*없|점검\s*불필요",
@@ -865,11 +858,8 @@ def validate_sections(reply, payload, result):
             if repeated_unit and repeated_unit != expected_unit:
                 raise ValueError("invalid_value_unit")
             if unit == "percent":
-                if key.startswith(
-                    (
-                        "incident_summary.top_type_share.",
-                        "incident_summary.top_node_share.",
-                    )
+                if key.startswith("incident_summary.") and key.split(".")[1].endswith(
+                    "_share"
                 ):
                     return f"{value:.1f}%"
                 return f"{value:.2f}%"
@@ -890,12 +880,15 @@ def validate_sections(reply, payload, result):
             if (
                 not isinstance(text, str)
                 or not text.strip()
-                or len(text)
-                > (
-                    900
-                    if (memory_focus or workload_focus)
-                    and field in {"observation", "next_check"}
-                    else 450
+                or (
+                    not (incident and field == "observation")
+                    and len(text)
+                    > (
+                        900
+                        if (memory_focus or workload_focus or incident)
+                        and field in {"observation", "next_check"}
+                        else 450
+                    )
                 )
             ):
                 raise ValueError("invalid_section_text")
@@ -993,7 +986,9 @@ def validate_sections(reply, payload, result):
             **rendered,
             "interpretation_limit": limits,
             "source_fact_ids": ids,
-            **({"observation_source": "calculated"} if memory_focus else {}),
+            **(
+                {"observation_source": "calculated"} if memory_focus or incident else {}
+            ),
             "evidence_refs": sorted(
                 {ref for f in originals for ref in f.get("evidence_refs", [])}
             ),

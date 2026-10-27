@@ -254,7 +254,7 @@ def test_incident_node_facts_have_specific_counts_without_claiming_gpu_recurrenc
                 + "}}의 알림이 확인됐습니다. 최다 종류 비율은 {{value:"
                 + top_type["values"][1]["metric_id"]
                 + "}}입니다.",
-                "meaning": "같은 장비의 반복 장애 여부는 확인이 필요합니다.",
+                "meaning": "알림 종류는 한 종류에 모였고 노드는 양쪽에 나뉘었습니다. 같은 장비의 반복 장애 여부는 확인이 필요합니다.",
                 "next_check": "{{target:"
                 + fid
                 + "}}의 기존 조사와 점검 기록을 대조하세요.",
