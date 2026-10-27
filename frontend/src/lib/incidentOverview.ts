@@ -39,7 +39,7 @@ const LABELS = labels as Record<string, IncidentLabel>;
 export const STALE_HOURS = 24;
 const HOUR = 3600_000;
 
-/** "XID 79 · GPU 접근 상실"; components show their Korean name only. */
+/** "XID 79 · GPU 연결 끊김"; components show their Korean name only. */
 export const titleText = (v: IncidentView) =>
   [v.codeText, v.label?.name || (v.codeText ? '런북 미등록 코드' : v.raw || '알림')]
     .filter(Boolean)
