@@ -78,11 +78,13 @@ function Donut({ values, title }: { values: Record<Category, number>; title: str
   );
 }
 
-/** Classic-mode dashboard: what is firing now, how faults split and where they repeat. */
+/** Unified dashboard: GPU use from the Ops report, then faults from count to node, type and repeat. */
 export function OperatorDashboard() {
   const { query, views, now, truncated } = useRecentIncidents();
   const modules = useResource('/service-status');
   const [repeatBy, setRepeatBy] = useState<'device' | 'error' | 'time'>('device');
+  // Firing incidents open in place from the KPI card instead of filling the page.
+  const [showFiring, setShowFiring] = useState(false);
   const days = windowDays(now, WINDOW_DAYS);
   const today = dayKey(now);
   const firing = views.filter((v) => v.firing && !v.stale);
@@ -112,29 +114,40 @@ export function OperatorDashboard() {
         <div>
           <div className="oh-eyebrow">GPU OPERATIONS</div>
           <h1 tabIndex={-1}>운영 대시보드</h1>
-          <p className="oh-sub">
-            GPU 서버 장애 현황 · 최근 {WINDOW_DAYS}일 · 기준 {dateTimeText(now)} KST
-          </p>
+          <p className="oh-sub">GPU 사용 현황과 장애 현황 · 기준 {dateTimeText(now)} KST</p>
         </div>
         <Link className="oh-btn" to="/cases">
           RCA 조사 보기 →
         </Link>
       </div>
+      <OpsUsage />
       <QueryState query={query}>
         {truncated && (
           <p className="muted">
             사건이 많아 최근 일부만 집계했습니다. 사건 화면에서 범위를 좁혀 확인하세요.
           </p>
         )}
+        <div className="oh-section-title">
+          <h2>장애 현황 · RCA</h2>
+          <p>최근 {WINDOW_DAYS}일 · 숫자 → 노드 → 분류·추이 → 반복 장치 순서로 좁혀 봅니다.</p>
+        </div>
         <div className="oh-kpis">
-          <Link className="oh-kpi" to="/cases?focus=firing">
+          <button
+            type="button"
+            className="oh-kpi"
+            aria-expanded={showFiring}
+            aria-controls="oh-firing"
+            onClick={() => setShowFiring(!showFiring)}
+          >
             <span>
               <i className="oh-dot red" />
               지금 발생 중
             </span>
             <strong>{firing.length}</strong>
-            <small>알림이 아직 해제되지 않은 사건</small>
-          </Link>
+            <small>
+              알림이 아직 해제되지 않은 사건 · {showFiring ? '목록 접기 ▲' : '눌러서 보기 ▼'}
+            </small>
+          </button>
           <Link className="oh-kpi" to="/cases?focus=stale">
             <span>
               <i className="oh-dot amber" />
@@ -160,6 +173,118 @@ export function OperatorDashboard() {
             <small>공급사 전달 검토 대상</small>
           </Link>
         </div>
+        {showFiring && (
+          <section className="oh-card" id="oh-firing" aria-label="지금 발생 중인 사건">
+            <div className="oh-card-h">
+              <div>
+                <h2>지금 대응할 사건</h2>
+                <p>알림이 발생 중인 사건입니다. 대응 순서와 근거는 RCA 보고서에서 확인합니다.</p>
+              </div>
+              <Link className="text-link" to="/cases?focus=firing">
+                RCA 조사에서 보기 →
+              </Link>
+            </div>
+            <div className="oh-card-b">
+              {firing.length ? (
+                firing.map((v) => (
+                  <article className="oh-now" key={v.id}>
+                    <div>
+                      <h3>
+                        <ErrorTitle v={v} />
+                      </h3>
+                      <div className="meta">
+                        <DeviceText v={v} /> · {ago(v.at, now)} 전 시작 ({dateTimeText(v.at)}){' '}
+                        <RepeatBadge v={v} />
+                      </div>
+                      <div className="act">
+                        NVIDIA 즉시 조치 분류: <b>{v.label?.action || '런북 순서대로 확인'}</b>
+                      </div>
+                    </div>
+                    <div className="oh-actions">
+                      <RcaLink v={v} button />
+                      {v.kind !== 'host' && (
+                        <Link
+                          className="oh-btn line"
+                          to={`/cases?device=${encodeURIComponent(v.deviceKey)}`}
+                        >
+                          이 {kindText(v.kind)} 사건 이력
+                        </Link>
+                      )}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="muted">지금 발생 중인 알림이 없습니다.</p>
+              )}
+            </div>
+          </section>
+        )}
+        <section className="oh-card">
+          <div className="oh-card-h">
+            <div>
+              <h2>노드별 현황</h2>
+              <p>최근 {WINDOW_DAYS}일 · 노드 이름을 누르면 그 노드 사건만 봅니다</p>
+            </div>
+          </div>
+          <div className="oh-card-b table-wrap">
+            <table className="oh-table">
+              <thead>
+                <tr>
+                  <th scope="col">노드</th>
+                  <th scope="col">사건</th>
+                  {CATEGORIES.map((c) => (
+                    <th scope="col" key={c.key}>
+                      {c.name}
+                    </th>
+                  ))}
+                  <th scope="col">오류 난 장치</th>
+                  <th scope="col">발생 중</th>
+                  <th scope="col">확인 필요</th>
+                  <th scope="col">마지막 사건</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nodeStats(views).map((n) => (
+                  <tr key={n.node}>
+                    <td>
+                      <Link className="oh-node" to={`/cases?node=${encodeURIComponent(n.node)}`}>
+                        {n.node}
+                      </Link>
+                    </td>
+                    <td>
+                      <b>{n.total}</b>
+                    </td>
+                    {CATEGORIES.map((c) => (
+                      <td key={c.key}>{n.counts[c.key]}</td>
+                    ))}
+                    <td>{n.devices}</td>
+                    <td>
+                      {n.firing ? (
+                        <b>
+                          <i className="oh-dot red" />
+                          {n.firing}
+                        </b>
+                      ) : (
+                        0
+                      )}
+                    </td>
+                    <td>
+                      {n.stale ? (
+                        <b>
+                          <i className="oh-dot amber" />
+                          {n.stale}
+                        </b>
+                      ) : (
+                        0
+                      )}
+                    </td>
+                    <td>{dateTimeText(n.last)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
         <div className="oh-grid">
           <section className="oh-card">
             <div className="oh-card-h">
@@ -256,47 +381,6 @@ export function OperatorDashboard() {
         <section className="oh-card">
           <div className="oh-card-h">
             <div>
-              <h2>지금 대응할 사건</h2>
-              <p>알림이 발생 중인 사건입니다. 대응 순서와 근거는 RCA 보고서에서 확인합니다.</p>
-            </div>
-          </div>
-          <div className="oh-card-b">
-            {firing.length ? (
-              firing.map((v) => (
-                <article className="oh-now" key={v.id}>
-                  <div>
-                    <h3>
-                      <ErrorTitle v={v} />
-                    </h3>
-                    <div className="meta">
-                      <DeviceText v={v} /> · {ago(v.at, now)} 전 시작 ({dateTimeText(v.at)}){' '}
-                      <RepeatBadge v={v} />
-                    </div>
-                    <div className="act">
-                      NVIDIA 즉시 조치 분류: <b>{v.label?.action || '런북 순서대로 확인'}</b>
-                    </div>
-                  </div>
-                  <div className="oh-actions">
-                    <RcaLink v={v} button />
-                    {v.kind !== 'host' && (
-                      <Link
-                        className="oh-btn line"
-                        to={`/cases?device=${encodeURIComponent(v.deviceKey)}`}
-                      >
-                        이 {kindText(v.kind)} 사건 이력
-                      </Link>
-                    )}
-                  </div>
-                </article>
-              ))
-            ) : (
-              <p className="muted">지금 발생 중인 알림이 없습니다.</p>
-            )}
-          </div>
-        </section>
-        <section className="oh-card">
-          <div className="oh-card-h">
-            <div>
               <h2>반복 장치</h2>
               <p>최근 {WINDOW_DAYS}일 같은 장치·같은 오류. 3회 이상은 공급사 전달을 검토합니다.</p>
             </div>
@@ -348,74 +432,7 @@ export function OperatorDashboard() {
             {!repeats.length && <p className="muted">반복된 장치가 없습니다.</p>}
           </div>
         </section>
-        <section className="oh-card">
-          <div className="oh-card-h">
-            <div>
-              <h2>노드별 현황</h2>
-              <p>최근 {WINDOW_DAYS}일 · 노드 이름을 누르면 그 노드 사건만 봅니다</p>
-            </div>
-          </div>
-          <div className="oh-card-b table-wrap">
-            <table className="oh-table">
-              <thead>
-                <tr>
-                  <th scope="col">노드</th>
-                  <th scope="col">사건</th>
-                  {CATEGORIES.map((c) => (
-                    <th scope="col" key={c.key}>
-                      {c.name}
-                    </th>
-                  ))}
-                  <th scope="col">오류 난 장치</th>
-                  <th scope="col">발생 중</th>
-                  <th scope="col">확인 필요</th>
-                  <th scope="col">마지막 사건</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nodeStats(views).map((n) => (
-                  <tr key={n.node}>
-                    <td>
-                      <Link className="oh-node" to={`/cases?node=${encodeURIComponent(n.node)}`}>
-                        {n.node}
-                      </Link>
-                    </td>
-                    <td>
-                      <b>{n.total}</b>
-                    </td>
-                    {CATEGORIES.map((c) => (
-                      <td key={c.key}>{n.counts[c.key]}</td>
-                    ))}
-                    <td>{n.devices}</td>
-                    <td>
-                      {n.firing ? (
-                        <b>
-                          <i className="oh-dot red" />
-                          {n.firing}
-                        </b>
-                      ) : (
-                        0
-                      )}
-                    </td>
-                    <td>
-                      {n.stale ? (
-                        <b>
-                          <i className="oh-dot amber" />
-                          {n.stale}
-                        </b>
-                      ) : (
-                        0
-                      )}
-                    </td>
-                    <td>{dateTimeText(n.last)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </QueryState>
-      <OpsUsage />
       <section className="oh-card oh-foot" aria-label="내부 서비스 상태">
         {(
           [

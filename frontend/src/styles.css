@@ -3519,6 +3519,56 @@ td small {
   border-radius: 10px;
   overflow-wrap: anywhere;
 }
+.runbook-summary {
+  padding: 0 24px 24px;
+}
+.runbook-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.runbook-kpis > div {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fafcfb;
+}
+.runbook-kpis span,
+.runbook-kpis small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+.runbook-kpis strong {
+  font-size: 24px;
+}
+.runbook-how {
+  margin: 14px 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.runbook-how b {
+  margin-right: 6px;
+}
+.runbook-table th[scope='row'] {
+  vertical-align: top;
+  white-space: nowrap;
+}
+.runbook-table th[scope='row'] small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.runbook-table .n {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .runbook-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .knowledge-live-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

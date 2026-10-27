@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Badge, Field, Modal, PageHead, Panel, SearchBox, Notice } from '../components/ui';
 import { CommandError, DataView, More, QueryState } from '../components/live';
 import {
   num,
   obj,
   queryPath,
+  rows,
   str,
   strings,
   useCommand,
@@ -16,7 +17,7 @@ import { useApp } from '../lib/store';
 import { RunbookContent } from '../components/RunbookContent';
 export function Knowledge() {
   const app = useApp();
-  const [state, setState] = useState('draft'),
+  const [state, setState] = useState('published'),
     [kind, setKind] = useState(''),
     [search, setSearch] = useState(''),
     [filter, setFilter] = useState(''),
@@ -40,6 +41,7 @@ export function Knowledge() {
           )
         }
       />
+      <RunbookSummary />
       <Panel title="지식 목록">
         <form
           className="live-toolbar"
@@ -107,6 +109,243 @@ export function Knowledge() {
     </div>
   );
 }
+// Domain labels for the stored runbook classification; unknown domains keep their key.
+const DOMAINS: Record<string, string> = {
+  GPU_DEVICE: 'GPU 장치',
+  GPU_INTERCONNECT: 'GPU 간 연결 (NVLink·NVSwitch)',
+  GPU_MEMORY: 'GPU 메모리 (ECC)',
+  GPU_SOFTWARE: 'GPU 소프트웨어·드라이버',
+  DRIVER_CUDA_RUNTIME: '드라이버·CUDA 런타임',
+  NETWORK_IB: '네트워크 (InfiniBand·RDMA)',
+  NODE_SYSTEM: '노드 시스템 (OS·디스크·CPU)',
+  GPU_NODE: 'GPU 노드 일반',
+};
+// NVIDIA resolution buckets named in runbook recommendations.
+const ACTIONS: Record<string, string> = {
+  RESTART_BM: '호스트 재시작',
+  DRAIN_AND_RESET: '작업 배출 후 GPU 리셋',
+  RESET_GPU: 'GPU 리셋',
+  RESTART_APP: '앱 재시작',
+  RESTART_VM: 'VM 재시작',
+  UPDATE_SWFW: 'SW·FW 업데이트',
+  CHECK_MECHANICALS: '전원·기계 연결 점검',
+  CHECK_UVM: 'UVM 점검',
+  WORKFLOW_NVLINK_ERR: 'NVLink 오류 절차',
+  CONTACT_SUPPORT: 'NVIDIA 지원 요청',
+  IGNORE: '조치 불필요(관찰)',
+};
+const ACTION = new RegExp(`(?<![A-Z_])(${Object.keys(ACTIONS).join('|')})(?![A-Z_])`, 'g');
+
+export interface RunbookGroup {
+  domain: string;
+  label: string;
+  count: number;
+  codes: string[];
+  sources: string[];
+  actions: [string, number][];
+}
+
+const plainTitle = (title: string) =>
+  title.replace(/\s*\(Fleet [^)]*\)$/, '').replace(/\s*조사$/, '');
+
+/**
+ * Published runbooks by stored classification. Code-less single-runbook categories in a domain
+ * share a row so the table stays readable; every runbook is still counted.
+ */
+export function runbookSummary(items: Row[]) {
+  const runbooks = items.filter((k) => str(k.kind) === 'runbook');
+  const byCategory = new Map<string, Row[]>();
+  runbooks.forEach((k) => {
+    const c = obj(obj(k.content).classification);
+    const key = `${str(c.domain, '미분류')}/${str(c.category, '미분류')}`;
+    byCategory.set(key, [...(byCategory.get(key) || []), k]);
+  });
+  const group = (domain: string, label: string, list: Row[]): RunbookGroup => {
+    const actions = new Map<string, number>();
+    list.forEach((k) =>
+      new Set(
+        rows(obj(k.content).recommendations).flatMap((r) =>
+          [...str(r.text).matchAll(ACTION)].map((m) => m[1]),
+        ),
+      ).forEach((a) => actions.set(a, (actions.get(a) || 0) + 1)),
+    );
+    return {
+      domain,
+      label,
+      count: list.length,
+      codes: list.flatMap((k) => strings(obj(obj(k.content).search).codes)),
+      sources: list.flatMap((k) => {
+        const fleet = /\(Fleet ([^)]*)\)$/.exec(str(obj(k.content).title));
+        return fleet ? [fleet[1]] : [];
+      }),
+      actions: [...actions].sort((a, b) => b[1] - a[1]),
+    };
+  };
+  const groups: RunbookGroup[] = [];
+  const domains = [...new Set([...byCategory.keys()].map((k) => k.split('/')[0]))];
+  domains.forEach((domain) => {
+    const categories = [...byCategory].filter(([k]) => k.split('/')[0] === domain);
+    const singles = categories.filter(([, list]) => list.length === 1).map(([, [k]]) => k);
+    categories
+      .filter(([, list]) => list.length > 1)
+      .forEach(([, list]) => {
+        // Multi-runbook titles end with " · <유형> 조사"; the most common suffix names the group.
+        const suffixes = list.map((k) => str(obj(k.content).title).split(' · ').at(-1) || '');
+        const top = suffixes.sort(
+          (a, b) => suffixes.filter((x) => x === b).length - suffixes.filter((x) => x === a).length,
+        )[0];
+        groups.push(group(domain, plainTitle(top), list));
+      });
+    // A single coded runbook (e.g. XID 79) keeps its own row; code-less Fleet reports share one.
+    const coded = (k: Row) => strings(obj(obj(k.content).search).codes).length > 0;
+    singles
+      .filter(coded)
+      .forEach((k) => groups.push(group(domain, plainTitle(str(obj(k.content).title)), [k])));
+    const reports = singles.filter((k) => !coded(k));
+    if (reports.length)
+      groups.push(
+        group(
+          domain,
+          reports.map((k) => plainTitle(str(obj(k.content).title))).join(', '),
+          reports,
+        ),
+      );
+  });
+  const domainTotal = (d: string) =>
+    groups.filter((g) => g.domain === d).reduce((a, g) => a + g.count, 0);
+  groups.sort(
+    (a, b) =>
+      domainTotal(b.domain) - domainTotal(a.domain) ||
+      a.domain.localeCompare(b.domain) ||
+      b.count - a.count,
+  );
+  const codes = runbooks.flatMap((k) => strings(obj(obj(k.content).search).codes));
+  return {
+    groups,
+    total: runbooks.length,
+    xid: codes.filter((c) => c.startsWith('xid:')).length,
+    sxid: codes.filter((c) => c.startsWith('sxid:')).length,
+    other: runbooks.filter((k) => !strings(obj(obj(k.content).search).codes).length).length,
+    investigation: runbooks.filter((k) => obj(k.content).investigation_only === true).length,
+    guided: runbooks.filter((k) => Object.keys(obj(obj(k.content).operator_guidance)).length)
+      .length,
+  };
+}
+
+/** "XID 79" for one code, otherwise the first numbers and the count. */
+function codeText(codes: string[], sources: string[]) {
+  const parts = ['xid', 'sxid']
+    .map((kind) => {
+      const nums = codes
+        .filter((c) => c.startsWith(`${kind}:`))
+        .map((c) => Number(c.split(':')[1]))
+        .sort((a, b) => a - b);
+      if (!nums.length) return '';
+      const head = nums.slice(0, 4).join('·');
+      return `${kind.toUpperCase()} ${head}${nums.length > 4 ? ` 외 ${nums.length - 4}` : ''}`;
+    })
+    .filter(Boolean);
+  if (sources.length) parts.push(`Fleet ${sources.join('·')}`);
+  return parts.join(' / ') || '코드 없음 (일반 조사)';
+}
+
+function RunbookSummary() {
+  const app = useApp();
+  const q = useList(
+    app.ready
+      ? queryPath('/knowledge', {
+          scope: app.scope,
+          state: 'published',
+          kind: 'runbook',
+          limit: 200,
+        })
+      : null,
+  );
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = q;
+  const pages = q.data?.pages.length || 0;
+  // ponytail: loads every published runbook (~300 now); add a Backend summary endpoint if it grows past ~2,000.
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && pages < 10) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, pages, fetchNextPage]);
+  const sum = runbookSummary(q.items);
+  const domainRows = (d: string) => sum.groups.filter((g) => g.domain === d);
+  return (
+    <Panel
+      title="발행 Runbook 한눈에 보기"
+      description="RCA가 지금 쓰는 발행 Runbook을 장애 영역·유형별로 묶었습니다."
+    >
+      <QueryState
+        query={q}
+        empty={!sum.total}
+        emptyTitle="발행된 Runbook이 없습니다."
+        emptyDescription="검토를 마친 Runbook을 발행하면 RCA가 사용하고 여기에 집계됩니다."
+      >
+        <div className="runbook-summary">
+          <div className="runbook-kpis">
+            <div>
+              <span>발행 Runbook</span>
+              <strong>{sum.total}종</strong>
+              {hasNextPage && <small>집계 중…</small>}
+            </div>
+            <div>
+              <span>GPU 오류 (XID)</span>
+              <strong>{sum.xid}종</strong>
+            </div>
+            <div>
+              <span>NVSwitch 오류 (SXID)</span>
+              <strong>{sum.sxid}종</strong>
+            </div>
+            <div>
+              <span>Fleet·DCGM 보고·일반 조사</span>
+              <strong>{sum.other}종</strong>
+            </div>
+          </div>
+          <p className="runbook-how">
+            <b>다루는 방식</b>{' '}
+            {sum.investigation === sum.total ? '모든' : `${sum.investigation}종의`} Runbook이 조사
+            전용입니다. RCA는 알림 코드로 Runbook을 고르고 관측·로그를 대조해 원인 후보와 확인
+            순서를 안내하며, 아래 권장 조치는 담당자가 판단해 수행합니다. 운영자 안내(의미·원인·다음
+            확인)를 갖춘 Runbook은 {sum.guided}종입니다.
+          </p>
+          <div className="table-wrap">
+            <table className="runbook-table">
+              <thead>
+                <tr>
+                  <th scope="col">영역</th>
+                  <th scope="col">장애 유형</th>
+                  <th scope="col">Runbook</th>
+                  <th scope="col">감지 코드·보고</th>
+                  <th scope="col">NVIDIA 권장 조치 (Runbook 수)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sum.groups.map((g, i) => (
+                  <tr key={`${g.domain}/${g.label}`}>
+                    {sum.groups.findIndex((o) => o.domain === g.domain) === i && (
+                      <th scope="row" rowSpan={domainRows(g.domain).length}>
+                        {DOMAINS[g.domain] || g.domain}
+                        <small>{domainRows(g.domain).reduce((a, o) => a + o.count, 0)}종</small>
+                      </th>
+                    )}
+                    <td>{g.label}</td>
+                    <td className="n">{g.count}종</td>
+                    <td>{codeText(g.codes, g.sources)}</td>
+                    <td>
+                      {g.actions.length
+                        ? g.actions.map(([a, n]) => `${ACTIONS[a]} ${n}`).join(' · ')
+                        : '조사 결과로 판단 (확인 순서 안내)'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </QueryState>
+    </Panel>
+  );
+}
+
 function KnowledgeDialog({
   initial,
   onClose,

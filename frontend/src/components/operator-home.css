@@ -828,3 +828,29 @@
   color: #b4bcb6;
   cursor: default;
 }
+button.oh-kpi {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.oh-kpi[aria-expanded='true'] {
+  border-color: var(--oh-nv);
+  box-shadow: inset 0 -3px 0 var(--oh-nv);
+}
+.oh-section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 28px 0 12px;
+}
+.oh-section-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.oh-section-title p {
+  margin: 0;
+  color: var(--oh-muted);
+  font-size: 13px;
+}
