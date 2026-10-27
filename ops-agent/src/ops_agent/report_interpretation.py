@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-topic-fallback-v7"
+VERSION = "ops-interpretation-incident-names-v8"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -75,8 +75,8 @@ SYSTEM = (
 
 참조 규칙:
 - fact_ids에는 해당 findings의 fact_id를 1~3개 넣으세요. 수치의 metric_id는 넣으면 안 됩니다.
-- 대상은 {{target:fact_id}}, 수치는 {{value:metric_id}}, 기간은 {{period:metric_id}}로만 쓰세요.
-- 숫자·날짜·클러스터/Namespace/모델/장비 이름을 문장에 직접 쓰지 마세요. 선택한 fact의 null이 아닌 값만 참조하세요.
+- 대상은 {{target:fact_id}}, 수치는 {{value:metric_id}}, 기간은 {{period:metric_id}}로만 쓰세요. 장애 알림의 대상명은 아래 incident_summary의 정확 일치 예외를 따르세요.
+- 숫자·날짜·클러스터/Namespace/모델/장비 이름을 문장에 직접 쓰지 마세요. 단, incident_summary는 선택된 근거의 클러스터·노드·알림 종류 이름을 그대로 쓸 수 있습니다. 건수·비율·기간은 예외가 아닙니다. 선택한 fact의 null이 아닌 값만 참조하세요.
 - value는 단위까지 포함합니다. %·건 등 단위를 토큰 뒤에 붙이지 마세요. period는 저장된 metric의 기간이며 코드가 KST로 표시합니다.
 - 참조할 수 없는 주장은 생략하세요. Markdown·HTML·URL은 쓰지 마세요.
 
@@ -705,6 +705,24 @@ def _validate_sections(reply, payload, result):
                 "invalid_fact_reference: 한 Namespace의 활동 근거만 선택하세요"
             )
         selected = [facts[i] for i in ids]
+        target_names = {
+            name
+            for fact in selected
+            for key in ("cluster_id", "cluster", "node", "alert_type")
+            if incident and isinstance(name := fact["target"].get(key), str) and name
+        }
+        target_name_pattern = (
+            re.compile(
+                r"(?<![A-Za-z\d])(?:"
+                + "|".join(
+                    re.escape(name)
+                    for name in sorted(target_names, key=len, reverse=True)
+                )
+                + r")(?![A-Za-z\d])"
+            )
+            if target_names
+            else None
+        )
         section = dict(section)
         if incident:
             if any(
@@ -942,7 +960,11 @@ def _validate_sections(reply, payload, result):
                 raise ValueError("invalid_section_text")
             validate_workload_wording(text, field, values)
             plain = TOKEN.sub("", text)
-            number = re.search(r"\d", plain)
+            # Exempt exact selected names only from numeric prose validation.
+            number = re.search(
+                r"\d",
+                target_name_pattern.sub(" ", plain) if target_name_pattern else plain,
+            )
             symbol = re.search(r"[{}<>%]|https?://", plain)
             forbidden = UNSUPPORTED.search(plain)
             invalid = number or symbol or forbidden
