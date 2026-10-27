@@ -42,6 +42,7 @@ response_shape의 주제·항목 ID·순서를 따라 JSON 객체만 반환하�
 작성 목록의 실제 fact_id는 지정된 순서대로 한 번씩 모두 작성하고 재선택하지 마세요. 목록 대신 선택 안내가 있으면 근거가 있는 서로 다른 질문을 최대 다섯 개로 고르며 required_batch_fact_id와 후보가 있는 클러스터를 포함하세요. 같은 클러스터·kind는 하나만, 완료 후보에 포함되는 같은 대상의 대기 후보는 함께 고르지 마세요. 이 목록·선택 안내는 namespace_usage에만 적용합니다.
 namespace_usage의 summary에는 관측 현상과 그 관측이 decision.reason의 판단을 뒷받침하는 이유를 짧고 자연스러운 존댓말로 설명하세요. 코드가 이어 붙일 점검 목적·필수 확인 조건·운영 행동은 다시 작성하지 마세요. 직접 지시형과 옮기기·실행·배치·조정·변경·할당·늘리기 등의 운영 행동 서술을 쓰지 마세요. 권고·당위(것이 좋습니다·해야 합니다·필요가 있습니다·권합니다)와 검토 대상으로 삼는 내부 분류도 다시 작성하지 마세요. 판단할 수 없음·확인되지 않음 같은 관측 한계는 설명할 수 있습니다. 같은 사실·판단을 반복하거나 작성 지시·내부 필드명을 복사하지 마세요. prose_max_chars는 코드 행동과 근거까지 포함한 기존 길이 한도에서 이유 설명에 남은 글자 수입니다. 기본적으로 짧은 한 문장을 쓰되 문장 조각이나 빈 설명은 쓰지 마세요.
 observed_values는 읽기 자료입니다. 숫자·단위·대상명·시간·URL·마크업·참조 토큰·근거 문장은 summary에 복사하지 마세요. 수치와 참조는 코드가 붙입니다. related_observations는 같은 Namespace의 다른 기간·질문을 구분하는 맥락이며 현재 항목의 사실·판단 범위·참조를 넓히지 않습니다.
+“이 관측은 판단 근거가 됩니다”처럼 관측을 평가하는 덧말은 붙이지 마세요. 무엇이 관측됐고 무엇이 확인되지 않았는지를 설명하세요.
 활동률 문장의 주어는 연결 GPU입니다. 개별 작업·Pod의 활동률이나 Namespace의 실제 할당·여유·성능으로 바꾸지 마세요. 시간대별 최대값은 같은 순간의 상태가 아니며 떨어진 관측은 연속·매일 반복을 증명하지 않습니다. 낮은 활동이나 관측 영은 작업 부재·미사용의 증거가 아닙니다. 현재 대기 Pod가 관측되지 않았으면 대기 작업이 있다고 쓰지 마세요.
 queue_context.unscheduled_complete=false에서 미배치 관측 영은 미배정 없음·배정 완료를 뜻하지 않습니다. 양수 관측은 미배정 Pod가 관측됐다는 근거이며 GPU 부족·배정 실패·지연의 원인을 확정하지 않습니다. 대기 단계가 이미 연결됐으면 미확인으로 되돌리지 마세요.
 decision.known의 작업 유형·GPU 요청·노드 상태는 연결된 일부 작업의 맥락이며 전체 작업으로 확대하지 않습니다. 테스트 유형은 실제 서빙·학습이 아닙니다. 이미 연결된 유형은 현상을 설명하는 맥락으로 쓰고 재확인 지시를 하지 마세요. Job 경과시간은 대기·준비를 포함할 수 있고 완료 표본이 전체 완료·성능 개선·대기 해소를 입증하지 않습니다.
@@ -905,7 +906,7 @@ def decision_context(fact):
     specific = True
     if kind == "repeated_activity":
         choice = "allocation_evidence_review"
-        reason = "서로 떨어진 여러 시간에 GPU 활동률이 높았고 실행을 기다리는 Pod도 관측됐습니다. 그 사이 시간의 상태를 이어서 추정하지 않습니다."
+        reason = "서로 떨어진 여러 시간에 GPU 활동률이 높았고 실행을 기다리는 Pod도 관측됐습니다. 관측 사이 시간의 상태는 확인되지 않았습니다."
         option = "높은 GPU 활동률과 대기가 여러 구간에 관측돼, 이 네임스페이스는 대기 작업의 노드 배정 조건을 점검할 대상입니다. 운영자는 대기 Pod의 GPU 요청·실제 할당과 스케줄러 이벤트를 대조해 실행을 막는 조건을 좁히세요."
         needed = "해당 구간의 요청·실제 할당·보장/제한·스케줄러 기록"
     elif kind == "relative_activity":
@@ -1034,10 +1035,21 @@ def writing_decision(fact):
         observations[kind] = (
             "Job 일부의 완료 기록과 마지막 구간의 대기가 있어, 이 네임스페이스는 완료 기록과 별도로 대기 Pod의 배정 단계를 점검할 대상입니다."
         )
+        actions[kind] = {
+            "placement": "대기 Pod의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하고,",
+            "preparation": "대기 Pod의 이미지 다운로드·초기화 이벤트에서 준비 단계와 실패 기록을 확인하고,",
+            "unknown": "대기 Pod의 상태·스케줄러 이벤트에서 노드 배정 대기인지 이미지 다운로드·컨테이너 초기화 중인지 구분하고,",
+        }[
+            phase
+        ] + " 완료 Job과 대기 Pod의 작업 유형을 대조해 완료 기록을 참고할지 확인하세요."
+    placement_limit = "GPU 부족으로 기다리는지는 확인되지 않았습니다."
+    if remaining and phase == "placement":
         actions[kind] = (
-            checks[phase]
-            + " 완료 Job과 대기 Pod의 작업 유형을 대조해 완료 기록을 참고할지 확인하세요."
+            placement_limit
+            + " 노드를 기다리는 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 확인하고 완료 Job·대기 Pod의 작업 유형도 대조하세요."
         )
+        decision["reason"] = decision["reason"].removesuffix(" " + placement_limit)
+        decision["known"] = [placement_limit]
     if kind == "schedule_candidate" and not fact["selection_basis"]["pending_complete"]:
         observations[kind] = (
             "GPU 활동률은 낮지만 대기 상태는 미확인이라, 이 네임스페이스 작업의 시범 실행 가능 여부를 먼저 점검할 대상입니다."
@@ -1055,7 +1067,9 @@ def writing_decision(fact):
         if len(types) == 1 and all(g["type_status"] == "declared_test" for g in groups)
         else None
     )
-    known = ["같은 시간대 일부 Pod의 일반 컨테이너 GPU 요청과 노드 상태가 연결됨"]
+    known = decision.get("known", []) + [
+        "같은 시간대 일부 Pod의 일반 컨테이너 GPU 요청과 노드 상태가 연결됨"
+    ]
     known.append(
         "연결된 일부 Pod의 유형: " + typed
         if typed
@@ -1099,11 +1113,17 @@ def writing_decision(fact):
                 "작업 유형이 확인된 테스트 Job 일부가 완료됐지만 대기 Pod도 있어, 남은 대기의 배정 단계를 점검할 대상입니다."
             )
             actions[kind] = checks[phase]
+            if phase == "placement":
+                actions[kind] = (
+                    placement_limit
+                    + " 노드를 기다리는 Pod의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하세요."
+                )
             if phase == "preparation":
                 actions[kind] = "작업 유형이 확인된 완료 Job과 별도로, " + checks[phase]
             if phase == "placement" and pending:
                 actions[kind] = (
-                    f"노드를 기다리는 {subject}의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 대조해 요청을 충족할 노드가 있었는지, 선택 조건이 맞았는지 확인하세요."
+                    placement_limit
+                    + f" 노드를 기다리는 {subject}의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하세요."
                 )
         else:
             actions[kind] = (

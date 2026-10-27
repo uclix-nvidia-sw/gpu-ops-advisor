@@ -592,3 +592,31 @@ def test_negated_recommendations_are_not_positive_actions(reason):
         {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]},
         {"findings": [fact]},
     )
+
+
+@pytest.mark.parametrize("context", ["none", "unknown", "typed"])
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_batch_code_preserves_placement_limit_without_model_repetition(context, phase):
+    fact = fact_for("batch-" + phase, context)
+    before = deepcopy(fact)
+    limit = "GPU 부족으로 기다리는지는 확인되지 않았습니다."
+    decision = writing_decision(fact)
+    sent = module.writing_context(fact)
+    reason = "완료 Job이 확인됐으나 마지막 시간에도 실행을 기다리는 Pod가 관측됐습니다."
+    reply = {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]}
+    accepted = module.validate_reasoned_advice(reply, {"findings": [fact]})
+    summary = accepted["advice"][0]["summary"]
+    if phase == "placement":
+        assert summary.count(limit) == 1
+        assert "노드를 기다리는" in decision["action"]
+        assert limit not in sent["decision"]["reason"]
+        assert limit in sent["decision"]["known"]
+        assert sent["prose_max_chars"] >= 60
+        assert all(
+            term in decision["action"]
+            for term in ("GPU 요청", "노드 선택 조건", "스케줄러 이벤트")
+        )
+    else:
+        assert limit not in decision["action"]
+        assert limit not in sent["decision"].get("known", [])
+    assert fact == before

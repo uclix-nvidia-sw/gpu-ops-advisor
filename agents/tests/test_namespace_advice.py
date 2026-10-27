@@ -2149,6 +2149,17 @@ def test_cluster_diversity_does_not_replace_specific_evidence_with_generic_check
     assert {f["target"]["cluster_id"] for f in selected} == {"cpc-1", "cpc-2"}
 
 
+def test_repeated_activity_reason_describes_the_observation_limit_in_model_input():
+    high = topic(activity=90, pending=2)
+    high["rows"][0]["hours"][1]["activity_percent"] = 10
+    fact = next(f for f in candidates(high) if f["kind"] == "repeated_activity")
+    before = deepcopy(fact)
+    reason = writing_context(fact)["decision"]["reason"]
+    assert "관측 사이 시간의 상태는 확인되지 않았습니다." in reason
+    assert "추정하지 않습니다" not in reason
+    assert fact == before
+
+
 def test_completion_only_is_not_an_optional_operating_change():
     batch = next(
         f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
@@ -2199,6 +2210,51 @@ def test_required_completion_is_covered_without_forcing_it_to_the_first_bullet()
     assert selected[0] == trial
     assert batch in selected
     assert audit["required_batch_fact_id"] == batch["fact_id"]
+
+
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_batch_action_keeps_each_check(phase):
+    from ops_agent.namespace_advice import writing_decision
+
+    t = completed_topic()
+    for hour in t["workloads"][0]["hours"]:
+        hour.update(pending_peak=2, pending_samples=240)
+        if phase != "unknown":
+            hour.update(
+                unscheduled_peak=2 if phase == "placement" else 0,
+                unscheduled_samples=240,
+            )
+    fact = next(f for f in candidates(t) if f["kind"] == "batch_progress")
+    before = deepcopy(fact)
+    action = writing_decision(fact)["action"]
+    checks = {
+        "placement": ("스케줄러 이벤트", "GPU 요청", "노드 선택 조건"),
+        "preparation": ("이미지 다운로드", "초기화", "준비 단계", "실패 기록"),
+        "unknown": (
+            "상태",
+            "스케줄러 이벤트",
+            "노드 배정 대기",
+            "컨테이너 초기화",
+            "구분",
+        ),
+    }
+    assert all(word in action for word in checks[phase])
+    assert all(word in action for word in ("완료 Job", "대기 Pod", "작업 유형", "대조"))
+    if phase == "placement":
+        assert action.count(".") == 2 and action.endswith("대조하세요.")
+    else:
+        assert action.count(".") == 1 and action.endswith("확인하세요.")
+        assert "완료 기록" in action and "참고" in action
+    reply = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": "완료 Job이 있지만 마지막 구간에도 대기 Pod가 관측됐습니다.",
+            }
+        ]
+    }
+    assert validate_reasoned_advice(reply, {"findings": [fact]})["advice"]
+    assert fact == before
 
 
 @pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])

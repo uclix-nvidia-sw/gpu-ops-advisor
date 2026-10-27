@@ -643,6 +643,28 @@ def validate_written_advice(section, topic):
     return output
 
 
+def reference_feedback(code, key, allowed):
+    """Bound model-supplied identifiers; never echo response prose into feedback."""
+
+    def identifier(value):
+        return isinstance(value, str) and re.fullmatch(r"[a-zA-Z0-9_.:-]{1,120}", value)
+
+    identifiers = sorted(allowed)
+    shown = [value for value in identifiers if identifier(value)][:8]
+    details = {
+        "invalid_key": key if identifier(key) else "[omitted]",
+        "allowed_ids": shown,
+        "allowed_count": len(identifiers),
+        "list_truncated": len(shown) != len(identifiers),
+    }
+    instruction = (
+        "target은 선택한 fact_ids의 ID만 쓰고 단위를 붙이지 마세요."
+        if code == "invalid_target_reference"
+        else "value·period는 선택한 근거의 값이 있는 metric_id만 쓰세요."
+    )
+    return f"{code}: {instruction} {json.dumps(details, ensure_ascii=False)}"
+
+
 def _validate_sections(reply, payload, result):
     sections = reply.get("sections") if isinstance(reply, dict) else None
     expected = [t["topic_id"] for t in payload["topics"]]
@@ -819,7 +841,9 @@ def _validate_sections(reply, payload, result):
             kind, key, repeated_unit = match.groups()
             if kind == "target":
                 if key not in ids or repeated_unit:
-                    raise ValueError("invalid_target_reference")
+                    raise ValueError(
+                        reference_feedback("invalid_target_reference", key, ids)
+                    )
                 return (
                     " / ".join(
                         str(facts[key]["target"][k])
@@ -837,7 +861,17 @@ def _validate_sections(reply, payload, result):
                 )
             metric = values.get(key)
             if metric is None or metric["value"] is None:
-                raise ValueError("invalid_value_reference")
+                raise ValueError(
+                    reference_feedback(
+                        "invalid_value_reference",
+                        key,
+                        [
+                            mid
+                            for mid, value in values.items()
+                            if value["value"] is not None
+                        ],
+                    )
+                )
             used_values.add(key)
             if kind == "period":
                 if repeated_unit or not all(
