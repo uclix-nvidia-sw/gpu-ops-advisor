@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-reason-action-v3"
+VERSION = "ops-interpretation-incident-concentration-v4"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -53,7 +53,7 @@ PREREQUISITES = {
 }
 FIELDS = ("observation", "meaning", "next_check")
 INCIDENT_EXAMPLE = {
-    "observation": "전체 건수·이전 차이, 최다 종류의 대상·건수·비율·이전 건수, 최다 노드의 대상·건수·비율을 토큰으로",
+    "observation": "클러스터 사건 수·이전 수, 최다 종류의 대상·건수·비율·이전 건수, 최다 노드의 대상·건수·비율을 토큰으로",
     "meaning": "집중 또는 분산 여부와 저장 기록·시험 알림·작성 시점 한계",
     "next_check": "선택한 node·alert_type 대상과 기간 토큰, 대조할 기록",
 }
@@ -765,6 +765,25 @@ def validate_sections(reply, payload, result):
                 (kind, key)
                 for kind, key, _ in TOKEN.findall(str(section.get("observation", "")))
             }
+            check_refs = {
+                (kind, key)
+                for kind, key, _ in TOKEN.findall(str(section.get("next_check", "")))
+            }
+            node_ids = {f["fact_id"] for f in selected if f["target"].get("node")}
+            if (
+                (
+                    any(fid.startswith("incident-top-type-") for fid in facts)
+                    and not any(fid.startswith("incident-top-type-") for fid in ids)
+                )
+                or not any(("value", mid) in observation_refs for mid in values)
+                or (
+                    node_ids
+                    and not any(("target", fid) in check_refs for fid in node_ids)
+                )
+            ):
+                raise ValueError(
+                    "incident_grounding_required: 최다 종류 근거를 고르고 observation에 수치 토큰, next_check에 노드 대상 토큰을 넣으세요"
+                )
             for fact in selected:
                 if fact["fact_id"].startswith(
                     ("incident-top-type-", "incident-top-node-")

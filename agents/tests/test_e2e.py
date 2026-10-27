@@ -208,7 +208,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-memory-v1",
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
-                        "ops-interpretation-reason-action-v3",
+                        "ops-interpretation-incident-concentration-v4",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data

@@ -234,6 +234,11 @@ def test_incident_node_facts_have_specific_counts_without_claiming_gpu_recurrenc
         "alert_type": "XID 79",
     }
     assert [v["value"] for v in facts[0]["values"]] == [2, 1]
+    top_type = next(
+        f
+        for f in payload_for(report)["topics"][0]["findings"]
+        if f["fact_id"].startswith("incident-top-type-")
+    )
     f = facts[0]
     fid = f["fact_id"]
     mid = f["values"][0]["metric_id"]
@@ -241,12 +246,14 @@ def test_incident_node_facts_have_specific_counts_without_claiming_gpu_recurrenc
         "sections": [
             {
                 "topic_id": "incident_summary",
-                "fact_ids": [fid],
+                "fact_ids": [top_type["fact_id"], fid],
                 "observation": "{{target:"
                 + fid
                 + "}}에서 {{value:"
                 + mid
-                + "}}의 알림이 확인됐습니다.",
+                + "}}의 알림이 확인됐습니다. 최다 종류 비율은 {{value:"
+                + top_type["values"][1]["metric_id"]
+                + "}}입니다.",
                 "meaning": "같은 장비의 반복 장애 여부는 확인이 필요합니다.",
                 "next_check": "{{target:"
                 + fid
