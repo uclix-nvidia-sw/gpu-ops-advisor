@@ -223,7 +223,11 @@ def test_incident_node_facts_have_specific_counts_without_claiming_gpu_recurrenc
     topic = report["topics"][0]
     assert topic["summary"]["count"] == 3
     assert topic["summary"]["unclassified_count"] == 3
-    facts = payload_for(report)["topics"][0]["findings"]
+    facts = [
+        f
+        for f in payload_for(report)["topics"][0]["findings"]
+        if f["fact_id"].startswith("incident-node-")
+    ]
     assert facts[0]["target"] == {
         "cluster_id": "cpc-1",
         "node": "node-a",

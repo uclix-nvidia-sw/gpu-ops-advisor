@@ -23,6 +23,7 @@ def repair_case():
     incident = dict(
         topic_id="incident_summary",
         status="ready",
+        summary={"count": 3},
         missing_inputs=[],
         metrics=[
             dict(
@@ -186,9 +187,8 @@ async def test_mixed_repair_above_legacy_limit_preserves_all_context(repair_case
         {k: f[k] for k in ("fact_id", "target", "values", "text")} for f in offered
     ]
     example = request["response_shape"]["sections"][0]
-    assert "{{target:" in example["observation"]
-    assert (
-        "{{period:" in example["observation"] and "{{value:" in example["observation"]
-    )
+    from ops_agent.report_interpretation import INCIDENT_EXAMPLE
+
+    assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["topics"] == original and llm.complete.call_count == 2

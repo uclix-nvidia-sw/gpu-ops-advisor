@@ -16,7 +16,7 @@ from .report_contract import MAX_BYTES, VERSION, previous_period, validate
 from .report_queries import ReportQueries, memory_queries
 from .report_diagnostics import observation_diagnostics
 from .identity_transitions import VERSION as TRANSITION_VERSION
-from .incident_findings import add_node_findings
+from .incident_findings import add_concentration_findings, add_node_findings
 from .gpu_memory import enrich_memory
 from .workload_queries import QUERY_IDS, workload_queries
 from .workload_summary import enrich_workloads
@@ -260,6 +260,7 @@ def build_result(claim, context, evidence):
                         "value_refs": ids,
                     }
                 )
+            add_concentration_findings(t, put, refs)
             add_node_findings(t, put, refs)
         topics.append(t)
     result.update(

@@ -2787,10 +2787,7 @@ def test_aggregate_report_publishes_without_d_registry(stack, monkeypatch, activ
     assert body["quality"]["report_format"] == VERSION
     assert body["quality"]["report"]["method"] == "llm_interpreted"
     assert body["narrative_status"] == "complete"
-    assert {n["topic_id"] for n in body["narrative"]} == {
-        "namespace_usage",
-        "incident_summary",
-    }
+    assert {n["topic_id"] for n in body["narrative"]} == {"namespace_usage"}
     assert all(n["source_fact_ids"] and n["evidence_refs"] for n in body["narrative"])
     usage = next(t for t in body["topics"] if t["topic_id"] == "namespace_usage")
     incident = next(t for t in body["topics"] if t["topic_id"] == "incident_summary")
@@ -3518,10 +3515,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 "duplicate": ["period"],
                 "unavailable_count": 0,
             }
-        assert {n["topic_id"] for n in result["narrative"]} == {
-            "namespace_usage",
-            "incident_summary",
-        }
+        assert {n["topic_id"] for n in result["narrative"]} == {"namespace_usage"}
         namespace = next(
             n for n in result["narrative"] if n["topic_id"] == "namespace_usage"
         )
