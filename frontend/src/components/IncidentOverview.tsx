@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { queryPath, useList } from '../lib/live';
 import { useApp } from '../lib/store';
 import {
@@ -21,16 +21,26 @@ export const WINDOW_DAYS = 14;
 const LIMIT = 200;
 const MAX_PAGES = 5;
 
-/** Incidents of the last two weeks in the selected scope, refreshed every minute. */
-export function useRecentIncidents() {
+/**
+ * Incidents in the selected scope, refreshed every minute: by default the last two weeks;
+ * `first`/`last` are inclusive KST days, and `first: null` means from the beginning.
+ */
+export function useRecentIncidents(first?: string | null, last?: string) {
   const app = useApp();
   // timeRange changes on the header refresh, which also moves the window forward.
   const now = useMemo(() => new Date(), [app.timeRange]);
-  // From KST midnight of the first window day, so every count covers the same 14 days.
-  const from = new Date(`${windowDays(now, WINDOW_DAYS)[0]}T00:00:00+09:00`);
+  // From KST midnight of the first day, so every count covers whole days.
+  const start = first === undefined ? windowDays(now, WINDOW_DAYS)[0] : first;
+  const midnight = (day: string, offset = 0) =>
+    new Date(Date.parse(`${day}T00:00:00+09:00`) + offset).toISOString();
   const query = useList(
     app.ready
-      ? queryPath('/incidents', { scope: app.scope, from: from.toISOString(), limit: LIMIT })
+      ? queryPath('/incidents', {
+          scope: app.scope,
+          from: start ? midnight(start) : undefined,
+          to: last ? midnight(last, 86_400_000) : undefined,
+          limit: LIMIT,
+        })
       : null,
   );
   const { refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = query;
@@ -64,7 +74,7 @@ export function CodeBadge({ code, text }: { code: string; text: string }) {
 export function RepeatBadge({ v }: { v: IncidentView }) {
   if (v.kind === 'host') return null;
   return (
-    <span className={`oh-rep ${v.nth >= 3 ? 'hot' : ''}`} title={`최근 ${WINDOW_DAYS}일 중`}>
+    <span className={`oh-rep ${v.nth >= 3 ? 'hot' : ''}`} title="조회한 기간 중">
       이 {v.kind === 'switch' ? '스위치' : 'GPU'} {v.nth}번째
     </span>
   );
@@ -103,27 +113,36 @@ export function AlarmState({ v, now }: { v: IncidentView; now: Date }) {
   );
 }
 
+/** The published RCA report of an incident, if any. */
+export const reportPath = (v: IncidentView) =>
+  ['ready', 'partial', 'blocked'].includes(v.rca) && v.jobId
+    ? `/analyses/${v.jobId}#final-report`
+    : '';
+
 /** The report when one exists; no result-quality labels on the list. */
 export function RcaLink({ v, button = false }: { v: IncidentView; button?: boolean }) {
-  const report = ['ready', 'partial', 'blocked'].includes(v.rca) && v.jobId;
+  const report = reportPath(v);
   const running = ['running', 'failed'].includes(v.rca) && v.jobId;
+  // "목록으로" on the report returns to this list with its dates and page.
+  const location = useLocation();
+  const state = { from: location.pathname + location.search };
   if (report)
     return (
-      <Link className={button ? 'oh-btn' : 'oh-rca'} to={`/analyses/${v.jobId}#final-report`}>
+      <Link className={button ? 'oh-btn' : 'oh-rca'} to={report} state={state}>
         {button ? 'RCA 보고서 열기' : '보고서 열기'}
       </Link>
     );
   if (button) return null;
   if (running)
     return (
-      <Link className="oh-rca quiet" to={`/jobs/${v.jobId}`}>
+      <Link className="oh-rca quiet" to={`/jobs/${v.jobId}`} state={state}>
         {v.rca === 'running' ? 'RCA 실행 중' : '실행 이력'}
       </Link>
     );
   return <span className="oh-rca none">{v.rca === 'notice' ? '알림만' : '—'}</span>;
 }
 
-/** Code badge and the Korean name; the RCA report button is the only link. */
+/** Code badge and the Korean name; list rows link it to the RCA report. */
 export function ErrorTitle({ v }: { v: IncidentView }) {
   return (
     <>
@@ -142,6 +161,7 @@ export function IncidentRow({
   now: Date;
   showDate?: boolean;
 }) {
+  const location = useLocation();
   return (
     <div className={`oh-row ${v.stale ? 'stale' : v.firing ? 'firing' : ''}`}>
       <div className="oh-t">
@@ -149,7 +169,17 @@ export function IncidentRow({
         {showDate && <small>{fullDate(dayKey(v.at)).slice(5)}</small>}
       </div>
       <div className="oh-what">
-        <ErrorTitle v={v} />
+        {reportPath(v) ? (
+          <Link
+            className="oh-title"
+            to={reportPath(v)}
+            state={{ from: location.pathname + location.search }}
+          >
+            <ErrorTitle v={v} />
+          </Link>
+        ) : (
+          <ErrorTitle v={v} />
+        )}
         {(v.reason || v.label?.detail) && (
           <span className="oh-detail">{v.reason || v.label?.detail}</span>
         )}

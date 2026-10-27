@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { ArrowRight, FileText, Search, Terminal, X } from 'lucide-react';
 import { useApp } from '../lib/store';
 import {
@@ -34,13 +41,10 @@ export function ConsoleWorkspace() {
     location = useLocation();
   if (app.mode === 'workbench')
     return ['/dashboard', '/jobs'].includes(location.pathname) ? <DeveloperConsole /> : <Outlet />;
-  if (['/dashboard', '/cases', '/reports'].includes(location.pathname)) return <OperatorConsole />;
-  return /^\/(incidents|analyses|reports|schedules)(\/|$)/.test(location.pathname) ||
-    /^\/jobs\/[^/]+$/.test(location.pathname) ? (
-    <NewWorkspace />
-  ) : (
-    <Outlet />
-  );
+  // Unified console: Ops 보고서 keeps the former Ops console pages; RCA and job pages stay classic.
+  if (location.pathname === '/jobs') return <Navigate to="/cases" replace />;
+  if (location.pathname === '/reports') return <OperatorConsole />;
+  return /^\/(reports|schedules)(\/|$)/.test(location.pathname) ? <NewWorkspace /> : <Outlet />;
 }
 
 export function DebugRunList({
