@@ -1089,8 +1089,15 @@ it.each([
   expect(html).toContain(`cpc-2: ${reason}`);
 });
 
-it.each(['selected', 'unknown', 'legacy'])(
-  'keeps incident sources explicit for %s and preserves saved legacy fields',
+it.each([
+  'selected',
+  'unknown',
+  'legacy',
+  'missing-facts',
+  'mismatched-target',
+  'multiple-clusters',
+])(
+  'puts incident AI prose first for %s while retaining saved evidence and legacy display',
   (state) => {
     const section = {
       topic_id: 'incident_summary',
@@ -1098,46 +1105,97 @@ it.each(['selected', 'unknown', 'legacy'])(
       observation: 'XID 79: dgx01 5건 · dgx02 3건.',
       meaning: '같은 종류가 두 노드에서 관측됐습니다.',
       next_check: '기존 점검 기록과 발생 순서를 확인하세요.',
+      source_fact_ids: ['other', 'selected'],
+      evidence_refs: ['source-1'],
+      interpretation_limit: '저장된 근거의 범위에서만 해석합니다.',
       ...(state === 'legacy'
         ? {}
-        : { check_target: state === 'selected' ? 'cpc-1 / dgx01 / XID 79 · 저장 사건 5건' : '' }),
+        : { check_target: state === 'unknown' ? '' : 'cpc-1 / dgx01 / XID 79 · 저장 사건 5건' }),
     };
+    const metric = {
+      id: 'incident_summary.node_alert_count.0',
+      period: { start: '2026-10-25T15:00:00Z', end: '2026-10-26T15:00:00Z' },
+    };
+    const value = {
+      narrative_status: 'complete',
+      quality: { report: { method: 'llm_interpreted' } },
+      topics: [
+        {
+          topic_id: 'incident_summary',
+          metrics: [metric],
+          findings:
+            state === 'missing-facts'
+              ? []
+              : [
+                  {
+                    id: 'other',
+                    target: {
+                      cluster_id: state === 'multiple-clusters' ? 'cpc-2' : 'cpc-1',
+                      node: 'other-node',
+                      alert_type: 'XID 13',
+                    },
+                  },
+                  {
+                    id: 'selected',
+                    target: {
+                      cluster_id: 'cpc-1',
+                      node: state === 'mismatched-target' ? 'different-node' : 'dgx01',
+                      alert_type: 'XID 79',
+                    },
+                    value_refs: [metric.id],
+                  },
+                ],
+        },
+      ],
+      narrative: [section],
+    };
+    const before = JSON.stringify(value);
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <AggregateReport
-          value={{
-            narrative_status: 'complete',
-            quality: { report: { method: 'llm_interpreted' } },
-            topics: [{ topic_id: 'incident_summary' }],
-            narrative: [section],
-          }}
-        />
+        <AggregateReport value={value} onEvidence={() => {}} />
       </MemoryRouter>,
     );
-    for (const text of [section.observation, section.meaning, section.next_check]) {
+    expect(JSON.stringify(value)).toBe(before);
+    for (const text of [section.observation, section.meaning, section.next_check])
       expect(html.split(text)).toHaveLength(2);
-    }
-    const labels =
-      state === 'legacy'
-        ? ['계산으로 확인한 관측', '의미와 한계', '확인할 점']
-        : ['알림 집계', 'AI 운영 해석', '확인 대상', 'AI 확인 제안'];
-    const fields = [...html.matchAll(/<dt>(.*?)<\/dt>/g)].map((match) => match[1]);
-    expect(fields).toHaveLength(labels.length);
-    labels.forEach((label, i) => expect(fields[i]).toContain(label));
     if (state === 'legacy') {
+      const fields = [...html.matchAll(/<dt>(.*?)<\/dt>/g)].map((match) => match[1]);
+      expect(fields).toEqual(['계산으로 확인한 관측', '의미와 한계', '확인할 점']);
       expect(html).not.toContain('자동 선정');
-      expect(html).not.toContain('해석 기준:');
+      expect(html).not.toContain('판단 근거와 확인 범위');
     } else {
-      ['자동 집계', 'AI 작성', '자동 선정', 'AI 작성'].forEach((source, i) =>
-        expect(fields[i]).toContain(source),
+      const [lead, rest] = html.split('<details class="aggregate-advice-evidence">');
+      const evidence = rest.split('</details>')[0];
+      expect(lead).toContain('aggregate-advice-cluster');
+      expect(lead).toContain('aggregate-advice-identity');
+      expect(lead).toContain(section.meaning + ' ' + section.next_check);
+      expect(lead).not.toContain(section.observation);
+      expect(lead).not.toContain('저장 사건 5건');
+      expect(lead).not.toContain('자동 집계');
+      expect(evidence).toContain('판단 근거와 확인 범위');
+      expect(evidence).toContain(section.observation);
+      expect(evidence).toContain(section.interpretation_limit);
+      expect(evidence).toContain('해석 기준');
+      expect(evidence).toContain('근거 1 확인');
+      expect(evidence).toContain(
+        section.check_target || '노드가 확인된 사건이 없어 선정하지 않았습니다.',
       );
-      expect(html).toContain('<h3>장애 알림 해석</h3>');
-      expect(html).toContain('해석 기준:');
-      expect(html).toContain(
-        state === 'unknown'
-          ? '노드가 확인된 사건이 없어 선정하지 않았습니다.'
-          : section.check_target!,
-      );
+      expect(html).toContain('본문은 AI 작성 · 관측 근거와 확인 대상은 자동 집계·선정');
+      expect(html).not.toContain('<details class="aggregate-advice-evidence" open');
+      if (['missing-facts', 'mismatched-target'].includes(state)) {
+        expect(lead).toContain('저장된 확인 대상은 아래 근거에서 확인하세요.');
+        expect(lead).not.toContain('different-node');
+      } else if (state === 'unknown') {
+        expect(lead).toContain('노드가 확인된 사건이 없어 선정하지 않았습니다.');
+      } else {
+        expect(lead).toContain(
+          state === 'multiple-clusters'
+            ? '<code>cpc-1 / dgx01 / XID 79</code>'
+            : '<code>dgx01 / XID 79</code>',
+        );
+        expect(lead).toContain('분석 기간');
+        expect(lead).not.toContain('other-node');
+      }
     }
   },
 );
