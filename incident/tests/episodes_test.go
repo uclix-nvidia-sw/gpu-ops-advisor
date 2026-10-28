@@ -346,7 +346,11 @@ func TestEpisodeMigrationConflict(t *testing.T) {
 	a := alertBody()
 	call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
 	a["labels"].(map[string]any)["node"] = "another-target-same-lifecycle"
-	call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+	// Seed legacy split attribution explicitly; current intake no longer splits on target.
+	fingerprint := a["fingerprint"]
+	a["fingerprint"] = ID()
+	second := call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
+	r.sql(t, "UPDATE alert_events SET fingerprint=$2 WHERE incident_id=$1", item(second, 0)["incident_id"], fingerprint)
 	cfg := r.service.Config
 	cfg.Episodes = &service.EpisodePolicy{Revision: "test-v1", RepeatIntervalSeconds: 60, ObservationGapSeconds: 120}
 	next, e := service.New(r.db, cfg)

@@ -379,7 +379,7 @@ export function BasicReport({ topics }: { topics: Row[] }) {
                       </td>
                       <td>
                         {(
-                          { firing: '발생 중으로 기록', resolved: '해제됨으로 기록' } as Record<
+                          { firing: '발생 알림 수신', resolved: '해제 알림 수신' } as Record<
                             string,
                             string
                           >

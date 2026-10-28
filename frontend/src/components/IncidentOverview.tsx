@@ -52,7 +52,7 @@ export function useRecentIncidents(first?: string | null, last?: string) {
   useEffect(() => {
     if (hasNextPage && !isFetchingNextPage && pages < MAX_PAGES) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, pages, fetchNextPage]);
-  const views = useMemo(() => incidentViews(query.items, now), [query.items, now]);
+  const views = useMemo(() => incidentViews(query.items), [query.items]);
   return { query, views, now, truncated: hasNextPage === true && pages >= MAX_PAGES };
 }
 
@@ -82,31 +82,22 @@ export function RepeatBadge({ v }: { v: IncidentView }) {
 
 /** Colour lives in the dot only; the words stay in the body colour. */
 export function AlarmState({ v, now }: { v: IncidentView; now: Date }) {
-  if (v.stale)
-    return (
-      <div className="oh-st">
-        <b>
-          <i className="oh-dot amber" />
-          확인 필요
-        </b>
-        <small>{ago(v.at, now)}째 '발생 중' · 해제 신호 없음</small>
-      </div>
-    );
   if (v.firing)
     return (
       <div className="oh-st">
         <b>
           <i className="oh-dot red" />
-          발생 중
+          발생 알림 수신
         </b>
         <small>{ago(v.at, now)} 전 시작</small>
       </div>
     );
+  if (!v.resolved) return <div className="oh-st">알림 상태 미확인</div>;
   return (
     <div className="oh-st resolved">
       <b>
         <i className="oh-dot" />
-        해제됨
+        해제 알림 수신
       </b>
       <small>{v.resolvedAt ? dateTimeText(v.resolvedAt) : '해제 시각 미확인'}</small>
     </div>
@@ -163,7 +154,7 @@ export function IncidentRow({
 }) {
   const location = useLocation();
   return (
-    <div className={`oh-row ${v.stale ? 'stale' : v.firing ? 'firing' : ''}`}>
+    <div className={`oh-row ${v.firing ? 'firing' : ''}`}>
       <div className="oh-t">
         {clock(v.at)}
         {showDate && <small>{fullDate(dayKey(v.at)).slice(5)}</small>}
@@ -204,7 +195,7 @@ export function IncidentHead() {
       <span>시각</span>
       <span>무슨 장애</span>
       <span>어디</span>
-      <span>알림</span>
+      <span>수신된 알림 상태</span>
       <span>NVIDIA 즉시 조치 분류</span>
       <span>RCA</span>
     </div>

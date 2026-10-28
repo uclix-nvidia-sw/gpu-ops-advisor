@@ -39,9 +39,9 @@ export function IncidentStates({ incident }: { incident: Row }) {
           status={str(incident.alarm_status) || null}
           label={
             incident.alarm_status === 'resolved'
-              ? '해제됨'
+              ? '해제 알림 수신'
               : incident.alarm_status === 'firing'
-                ? '발생 중'
+                ? '발생 알림 수신'
                 : undefined
           }
         />

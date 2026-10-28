@@ -1,6 +1,12 @@
 # 13. Incident 모듈 설계서
 
-현행 구현 계약 1.3 · 변경 목표 RCA 접수 계약 1.4 · 모듈 incident · F02/F03
+기본 RCA 접수 계약 1.5 · 선택적 에피소드 계약 1.4 · 모듈 incident · F02/F03
+
+## 기본 firing 접수 계약
+
+`episode_policy`를 생략한 기본 경로는 `source/cluster_id/fingerprint/startsAt`별 적격 firing을 한 번만 RCA outbox로 접수한다. 이미 저장된 resolved/closed 상태는 firing을 차단하지 않고, 내용·대상 보강·정책 revision 변경도 추가 분석을 만들지 않는다. resolved 수신 자체는 RCA를 만들지 않는다. 새 startsAt은 이전 해제 알림 수신 없이도 새 사건으로 접수한다. 기존 키·snapshot·보고서는 보존하고 원장의 자연키와 기존 outbox 이력으로 중복을 확인한다. 수신 상태는 현재 장애 지속·복구의 증거가 아니다. 구현·배포·과거 누락분 처리 제한은 [Incident README](../../../incident/README.md#기본-firing-단일-접수-배포)를 따른다.
+
+아래는 선택적 1.4 에피소드 경로의 설계·이력이며 기본 firing 단일 접수 정책과 구분한다.
 
 ## 0. 변경 기준과 구현 상태
 
@@ -8,7 +14,7 @@
 
 2026-09-23 구현: [episodes.go](../../../incident/service/episodes.go)와 [005 migration](../../../shared/migrations/005_incident_episodes.sql)에 IN-01/02의 에피소드·최초 snapshot/outbox 생산 및 IN-03의 Incident 내부 조회·종결 처리를 추가했다. `episode_policy`를 명시해야 1.4 경로를 사용하며 기본 1.3 연동은 유지한다. 기존 원장 다중 귀속은 전환 시 거절하고 snapshot/hash를 보존한다. JC·Worker 1.4 지원과 Backend/Frontend/Ops 소비자 전환은 후속 개발이며 아직 운영 전환할 수 없다. 설정·적용 순서는 [Incident README](../../../incident/README.md), 실행 증거와 미검증 항목은 [QA](../../../incident/QA.md)를 따른다. 아래 §0.1의 정적 대조표는 구현 착수 당시 기록으로 보존한다.
 
-현재 코드는 `alertname`에 `analysis_policies`를 매칭하고 기본 `GPUAlert`에 R01/R02를 지정한다. Xid/SXid 코드 의미를 분석하는 로직은 현재도 Incident에 없다. 정책 미등록 시 RCA 미생성, 의미 있는 증거/정책 revision 변경 시 새 RCA 생성 동작은 목표에서 제거한다. 실제 전환은 [14 실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)을 따른다.
+이 에피소드 설계의 출발점이었던 1.3 코드는 `alertname`에 `analysis_policies`를 매칭하고 기본 `GPUAlert`에 R01/R02를 지정했다. Xid/SXid 코드 의미를 분석하는 로직은 현재도 Incident에 없다. 정책 미등록 시 RCA 미생성, 의미 있는 증거/정책 revision 변경 시 새 RCA 생성 동작은 목표에서 제거한다. 실제 전환은 [14 실행 계약](../common/14_모듈간_호출과_공통실행_계약.md)을 따른다.
 
 이번 개정으로 사건 단위를 **알람 생명주기에서 관측 에피소드로 변경**한다. 이유는 §2.1에 있다. 기존 1.3 사건과 event_key는 그대로 보존하고 신규 경로에만 적용한다.
 

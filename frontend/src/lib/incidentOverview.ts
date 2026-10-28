@@ -1,6 +1,6 @@
-// Operator overview of stored incidents: what failed where, whether the alert is still
-// firing, repeats on the same device and the RCA report link. Pure functions over the
-// /incidents list so the cases page and the dashboard read the same numbers.
+// Operator overview of stored incidents: received alert states, device repeats
+// and the RCA report link. Received states do not establish current health.
+// Both pages use the same pure functions over the /incidents list.
 import labels from './incidentLabels.json';
 import { matchedReasons } from './componentReasons';
 import { obj, str, type Row } from './live';
@@ -27,7 +27,7 @@ export interface IncidentView {
   kind: DeviceKind;
   deviceKey: string;
   firing: boolean;
-  stale: boolean;
+  resolved: boolean;
   resolvedAt: Date | null;
   rca: RcaState;
   jobId: string;
@@ -35,8 +35,6 @@ export interface IncidentView {
 }
 
 const LABELS = labels as Record<string, IncidentLabel>;
-// A firing alert with no resolve signal for a day is shown apart for checking against Grafana.
-export const STALE_HOURS = 24;
 const HOUR = 3600_000;
 
 /** "XID 79 · GPU 연결 끊김"; components show their Korean name only. */
@@ -49,7 +47,7 @@ export function incidentLabel(code: string): IncidentLabel | null {
   return LABELS[code] || null;
 }
 
-export function incidentView(record: Row, now: Date): IncidentView {
+export function incidentView(record: Row): IncidentView {
   const target = obj(record.target);
   const raw = str(target.title) || str(target.reason) || str(target.alertname);
   const named = raw.match(/\b(S?XID)[\s:]*(\d+)/i);
@@ -98,7 +96,7 @@ export function incidentView(record: Row, now: Date): IncidentView {
     kind,
     deviceKey: `${node}|${code}|${pci}`,
     firing,
-    stale: firing && now.getTime() - at.getTime() > STALE_HOURS * HOUR,
+    resolved: record.alarm_status === 'resolved',
     resolvedAt: resolved ? new Date(resolved) : null,
     rca,
     jobId: str(published.job_id) || str(job.job_id),
@@ -107,9 +105,9 @@ export function incidentView(record: Row, now: Date): IncidentView {
 }
 
 /** Newest first; nth counts earlier incidents of the same node·code·device in the list. */
-export function incidentViews(records: Row[], now: Date): IncidentView[] {
+export function incidentViews(records: Row[]): IncidentView[] {
   const views = records
-    .map((r) => incidentView(r, now))
+    .map((r) => incidentView(r))
     .filter((v) => !Number.isNaN(v.at.getTime()))
     .sort((a, b) => a.at.getTime() - b.at.getTime());
   const seen = new Map<string, number>();
@@ -295,8 +293,8 @@ export function nodeStats(views: IncidentView[]) {
         CATEGORIES.map((c) => [c.key, list.filter((v) => category(v) === c.key).length]),
       ) as Record<Category, number>,
       devices: new Set(list.filter((v) => v.kind !== 'host').map((v) => v.deviceKey)).size,
-      firing: list.filter((v) => v.firing && !v.stale).length,
-      stale: list.filter((v) => v.stale).length,
+      firing: list.filter((v) => v.firing).length,
+      resolved: list.filter((v) => v.resolved).length,
       last: list[0].at,
     };
   });

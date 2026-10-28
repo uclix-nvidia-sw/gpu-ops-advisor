@@ -2,7 +2,7 @@
 
 ## RCA 1.5 Runbook-first input — 2026-10-02
 
-RCA 1.5는 기존 revision/source-key 생명주기를 유지하면서 `purpose_ids`를 금지한다. 입력은 `scope, incident_id, evidence_version, analysis_profile_revision, incident_time, time_range`와 선택 `target`이다. `evidence_version >= 1`이며 기존 불변 snapshot/hash 일치 검증을 적용한다. 1.3은 과거 요청 호환, 1.4는 최초 에피소드 전용 계약을 그대로 유지한다. 보고서 계약은 1.3이다.
+RCA 1.5는 `purpose_ids`를 금지한다. 입력은 `scope, incident_id, evidence_version, analysis_profile_revision, incident_time, time_range`와 선택 `target`이다. `evidence_version >= 1`이며 기존 불변 snapshot/hash 일치 검증을 적용한다. 기본 Incident의 신규 요청 키는 `incident:<incident_id>:first`이며 과거 revision/profile 키도 그대로 접수·재전송한다. 과거 미접수 snapshot이 있으면 최초 요청의 evidence_version이 1보다 클 수 있다. 발생 구간별 한 번 생성하는 생산자 정책은 [Incident README](../incident/README.md#수신증거전달-정책)를 따른다. JC는 동일 키·hash의 기존 작업을 반환하며 다른 입력은 409로 거절한다. 1.3은 과거 요청 호환, 1.4는 최초 에피소드 전용 계약을 그대로 유지한다. 보고서 계약은 1.3이다.
 
 Worker는 지원하는 `supported_contract_versions`를 등록한다. 새 RCA Worker는 1.3/1.4/1.5, 보고서 Worker는 1.3이다. JC는 입력 계약과 Worker 지원을 맞추고 결과의 `versions.input_contract`도 검증한다. 요청에 목적을 주입하지 않는다.
 

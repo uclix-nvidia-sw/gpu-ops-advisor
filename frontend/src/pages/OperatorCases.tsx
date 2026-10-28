@@ -143,16 +143,14 @@ export function OperatorCases() {
       .map((d) => d.key),
   );
   const focusTest: Record<string, (v: IncidentView) => boolean> = {
-    firing: (v) => v.firing && !v.stale,
-    stale: (v) => v.stale,
+    firing: (v) => v.firing,
+    resolved: (v) => v.resolved,
     today: (v) => dayKey(v.at) === today,
     repeat: (v) => hot.has(v.deviceKey),
     notice: (v) => v.rca === 'notice',
   };
   const shown = focus && focusTest[focus] ? scoped.filter(focusTest[focus]) : scoped;
-  const stale = shown.filter((v) => v.stale);
-  const live = shown.filter((v) => !v.stale);
-  const ordered = sort === 'old' ? [...live].reverse() : live;
+  const ordered = sort === 'old' ? [...shown].reverse() : shown;
   const byGroup = sort === 'device' || sort === 'error';
   const allGroups = byGroup ? groupIncidents(ordered, sort, today) : [];
   const size = byGroup ? GROUP_PAGE : PAGE,
@@ -168,8 +166,8 @@ export function OperatorCases() {
     window.scrollTo(0, 0);
   };
   const chips: [string, string, number, string][] = [
-    ['firing', '발생 중', scoped.filter(focusTest.firing).length, 'red'],
-    ['stale', '확인 필요', scoped.filter(focusTest.stale).length, 'amber'],
+    ['firing', '발생 알림 수신', scoped.filter(focusTest.firing).length, 'red'],
+    ['resolved', '해제 알림 수신', scoped.filter(focusTest.resolved).length, ''],
     ['', '조회 기간 전체', scoped.length, ''],
     ['today', '오늘', scoped.filter(focusTest.today).length, ''],
     ['repeat', '3회 이상 반복 장치', hot.size, ''],
@@ -185,7 +183,8 @@ export function OperatorCases() {
           <h1 tabIndex={-1}>RCA 조사</h1>
           <p className="oh-sub">
             알림이 들어온 장애와 RCA 장애 보고서를 한 줄에서 봅니다. 제목을 누르면 보고서가
-            열립니다. {rangeText} · 기준 {dateTimeText(now)} KST
+            열립니다. 수신 기록으로 현재 장애 지속·복구 여부를 판단하지 않습니다. {rangeText} · 기준{' '}
+            {dateTimeText(now)} KST
           </p>
         </div>
       </div>
@@ -244,21 +243,6 @@ export function OperatorCases() {
           <p className="muted">
             사건이 많아 최근 일부만 불러왔습니다. 달력에서 기간을 좁혀 확인하세요.
           </p>
-        )}
-        {stale.length > 0 && (
-          <details className="oh-stale">
-            <summary>
-              <i className="oh-dot amber" />
-              확인 필요 {stale.length}건 — 해제 신호 없이 하루 넘게 '발생 중'으로 남은 사건 (Grafana
-              알림 상태와 대조)
-            </summary>
-            <div className="oh-list">
-              <IncidentHead />
-              {stale.map((v) => (
-                <IncidentRow key={v.id} v={v} now={now} showDate />
-              ))}
-            </div>
-          </details>
         )}
         {groups.map((g) => (
           <section key={g.key}>

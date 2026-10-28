@@ -78,15 +78,15 @@ function Donut({ values, title }: { values: Record<Category, number>; title: str
   );
 }
 
-/** Classic-mode dashboard: what is firing now, how faults split and where they repeat. */
+/** Classic-mode dashboard: received alert states, how faults split and where they repeat. */
 export function OperatorDashboard() {
   const { query, views, now, truncated } = useRecentIncidents();
   const modules = useResource('/service-status');
   const [repeatBy, setRepeatBy] = useState<'device' | 'error' | 'time'>('device');
   const days = windowDays(now, WINDOW_DAYS);
   const today = dayKey(now);
-  const firing = views.filter((v) => v.firing && !v.stale);
-  const stale = views.filter((v) => v.stale);
+  const firing = views.filter((v) => v.firing);
+  const resolved = views.filter((v) => v.resolved);
   const todays = views.filter((v) => dayKey(v.at) === today);
   const repeats = deviceRepeats(views, days);
   const hot = repeats.filter((d) => d.count >= 3);
@@ -130,18 +130,18 @@ export function OperatorDashboard() {
           <Link className="oh-kpi" to="/cases?focus=firing">
             <span>
               <i className="oh-dot red" />
-              지금 발생 중
+              발생 알림 수신
             </span>
             <strong>{firing.length}</strong>
-            <small>알림이 아직 해제되지 않은 사건</small>
+            <small>발생 알림 기록 · 현재 상태는 별도 확인</small>
           </Link>
-          <Link className="oh-kpi" to="/cases?focus=stale">
+          <Link className="oh-kpi" to="/cases?focus=resolved">
             <span>
-              <i className="oh-dot amber" />
-              확인 필요
+              <i className="oh-dot" />
+              해제 알림 수신
             </span>
-            <strong>{stale.length}</strong>
-            <small>하루 넘게 '발생 중' · 해제 신호 없음</small>
+            <strong>{resolved.length}</strong>
+            <small>과거 해제 알림 기록 · 복구 확정 아님</small>
           </Link>
           <Link className="oh-kpi" to="/cases?focus=today">
             <span>
@@ -256,8 +256,11 @@ export function OperatorDashboard() {
         <section className="oh-card">
           <div className="oh-card-h">
             <div>
-              <h2>지금 대응할 사건</h2>
-              <p>알림이 발생 중인 사건입니다. 대응 순서와 근거는 RCA 보고서에서 확인합니다.</p>
+              <h2>발생 알림이 수신된 사건</h2>
+              <p>
+                수신 기록으로 현재 장애 지속·복구 여부를 판단하지 않습니다. 대응 순서와 근거는 RCA
+                보고서에서 확인합니다.
+              </p>
             </div>
           </div>
           <div className="oh-card-b">
@@ -290,7 +293,7 @@ export function OperatorDashboard() {
                 </article>
               ))
             ) : (
-              <p className="muted">지금 발생 중인 알림이 없습니다.</p>
+              <p className="muted">조회 기간에 발생 알림 수신으로 기록된 사건이 없습니다.</p>
             )}
           </div>
         </section>
@@ -367,8 +370,8 @@ export function OperatorDashboard() {
                     </th>
                   ))}
                   <th scope="col">오류 난 장치</th>
-                  <th scope="col">발생 중</th>
-                  <th scope="col">확인 필요</th>
+                  <th scope="col">발생 알림 수신</th>
+                  <th scope="col">해제 알림 수신</th>
                   <th scope="col">마지막 사건</th>
                 </tr>
               </thead>
@@ -398,10 +401,10 @@ export function OperatorDashboard() {
                       )}
                     </td>
                     <td>
-                      {n.stale ? (
+                      {n.resolved ? (
                         <b>
-                          <i className="oh-dot amber" />
-                          {n.stale}
+                          <i className="oh-dot" />
+                          {n.resolved}
                         </b>
                       ) : (
                         0
