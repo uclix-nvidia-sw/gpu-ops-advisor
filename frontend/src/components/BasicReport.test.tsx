@@ -50,7 +50,7 @@ it('prioritizes actionable checks and preserves incident uncertainty and evidenc
   expect(html.indexOf('먼저 확인할 내용')).toBeLessThan(html.indexOf('분석 범위와 자료 상태'));
   expect(html).toContain('다음 확인');
   expect(html).toContain('href="/incidents/event-id"');
-  expect(html).toContain('해제됨으로 기록');
+  expect(html).toContain('해제 알림 수신');
   expect(html).toContain('1건 연결됨');
   expect(html).toContain('연결된 조치 기록 없음 · 미수행 확정 아님');
   expect(html).toContain('10. 12. 10:00 기준');

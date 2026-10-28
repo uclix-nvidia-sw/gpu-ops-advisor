@@ -49,12 +49,12 @@ func (s *Server) Prepare(ctx context.Context, apply ...bool) error {
 	if e = s.prepareEpisodes(ctx, tx); e != nil {
 		return e
 	}
-	_, e = tx.Exec(ctx, "INSERT INTO incident_sources(source,config_revision,snapshot) VALUES($1,$2,$3) ON CONFLICT DO NOTHING", s.Config.Source, Hash(s.Config), s.Config)
+	_, e = tx.Exec(ctx, "INSERT INTO incident_sources(source,config_revision,snapshot) VALUES($1,$2,$3) ON CONFLICT DO NOTHING", s.Config.Source, s.configRevision(), s.Config)
 	if e != nil {
 		return e
 	}
 	if len(apply) > 0 && apply[0] {
-		if _, e = tx.Exec(ctx, "UPDATE incident_sources SET config_revision=$2,snapshot=$3 WHERE source=$1", s.Config.Source, Hash(s.Config), s.Config); e != nil {
+		if _, e = tx.Exec(ctx, "UPDATE incident_sources SET config_revision=$2,snapshot=$3 WHERE source=$1", s.Config.Source, s.configRevision(), s.Config); e != nil {
 			return e
 		}
 	}
@@ -105,10 +105,16 @@ func (s *Server) configuration(ctx context.Context, q interface {
 	if e := q.QueryRow(ctx, "SELECT config_revision FROM incident_sources WHERE source=$1 FOR SHARE", s.Config.Source).Scan(&rev); e != nil {
 		return e
 	}
-	if rev != Hash(s.Config) {
+	if rev != s.configRevision() {
 		return Fail(503, "configuration_mismatch", "Incident 운영 설정 revision이 다릅니다.")
 	}
 	return nil
+}
+func (s *Server) configRevision() string {
+	if s.Config.Episodes != nil {
+		return Hash(s.Config)
+	}
+	return Hash(Object{"config": s.Config, "intake_policy": "firing-once-v1"})
 }
 func one(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row

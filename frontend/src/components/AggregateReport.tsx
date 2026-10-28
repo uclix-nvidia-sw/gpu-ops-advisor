@@ -327,9 +327,9 @@ function IncidentInterpretation({
                   </p>
                   <p className="aggregate-advice-basis">
                     <strong>해석 기준</strong> 같은 종류의 여러 노드 발생, 같은 노드의 다른 종류,
-                    작성 당시 발생 중 여부, 이전 비교기간 기록 유무를 확인합니다. 발생 중 건수, 같은
-                    종류의 발생 노드 수, 건수 순으로 확인 대상을 선정합니다. 선정된 내역으로 전체
-                    분포나 원인을 단정하지 않습니다.
+                    작성 당시 저장된 알림 상태, 이전 비교기간 기록 유무를 확인합니다. 발생 알림 수신
+                    건수, 같은 종류의 발생 노드 수, 건수 순으로 확인 대상을 선정합니다. 선정된
+                    내역으로 전체 분포나 원인을 단정하지 않습니다.
                   </p>
                   <p>
                     <strong>해석 범위</strong> {str(section.interpretation_limit)}
@@ -1014,7 +1014,7 @@ export function AggregateReport({
                     <th>발생 노드</th>
                     <th>이번 기간</th>
                     <th>이전 기간</th>
-                    <th>작성 시 발생 중</th>
+                    <th>작성 시 발생 알림 기록</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1114,9 +1114,11 @@ export function AggregateReport({
                             </td>
                             <td>
                               {row.alarm_status === 'firing' ? (
-                                <Badge status="firing" label="발생 중" />
+                                <Badge status="firing" label="발생 알림 수신" />
                               ) : (
-                                <span>{row.alarm_status === 'resolved' ? '해제' : '미확인'}</span>
+                                <span>
+                                  {row.alarm_status === 'resolved' ? '해제 알림 수신' : '미확인'}
+                                </span>
                               )}
                             </td>
                             <td>

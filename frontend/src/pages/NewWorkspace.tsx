@@ -125,9 +125,9 @@ function IncidentCards({ items }: { items: Row[] }) {
                 <Badge status={str(i.state, str(i.status)) || null} />
                 <span>
                   {i.alarm_status === 'firing'
-                    ? '알림 발생 중'
+                    ? '발생 알림 수신'
                     : i.alarm_status === 'resolved'
-                      ? '알림 해제'
+                      ? '해제 알림 수신'
                       : '알림 상태 미확인'}
                 </span>
               </div>
@@ -450,9 +450,9 @@ function Incident({ id }: { id: string }) {
             <span>알림 상태</span>
             <strong>
               {incident.alarm_status === 'resolved'
-                ? '해제됨'
+                ? '해제 알림 수신'
                 : incident.alarm_status === 'firing'
-                  ? '발생 중'
+                  ? '발생 알림 수신'
                   : '미확인'}
             </strong>
           </div>

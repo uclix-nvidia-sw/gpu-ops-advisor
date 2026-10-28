@@ -5,7 +5,7 @@ import { OperatorCases } from './OperatorCases';
 import { incidentViews } from '../lib/incidentOverview';
 
 const now = new Date('2026-10-27T03:00:00Z');
-const fixture = vi.hoisted(() => ({ calls: [] as unknown[][], count: 0 }));
+const fixture = vi.hoisted(() => ({ calls: [] as unknown[][], count: 0, status: 'resolved' }));
 vi.mock('../components/IncidentOverview', async (original) => ({
   ...(await original<typeof import('../components/IncidentOverview')>()),
   useRecentIncidents: (...args: unknown[]) => {
@@ -13,14 +13,14 @@ vi.mock('../components/IncidentOverview', async (original) => ({
     const records = Array.from({ length: fixture.count }, (_, i) => ({
       id: `i${i}`,
       occurred_at: new Date(now.getTime() - i * 3600_000).toISOString(),
-      alarm_status: 'resolved',
+      alarm_status: fixture.status,
       alarm_resolved_at: now.toISOString(),
       target: { k8s_node_name: 'dgx01', title: 'XID 79 detected on PCI:0000:07:00.0' },
       rca_summary: { latest_published: { job_id: `job-${i}`, result_status: 'partial' } },
     }));
     return {
       query: { isPending: false, isError: false, error: null, refetch: vi.fn() },
-      views: incidentViews(records, now),
+      views: incidentViews(records),
       now,
       truncated: false,
     };
@@ -35,6 +35,18 @@ const render = (search = '') =>
 beforeEach(() => {
   fixture.calls = [];
   fixture.count = 60;
+  fixture.status = 'resolved';
+});
+
+it('keeps day-old firing records in the main paged list and firing filter', () => {
+  fixture.status = 'firing';
+  const html = render('?focus=firing&page=2');
+  expect(html).toContain('51–60 / 60건');
+  expect(html).toContain('href="/analyses/job-55#final-report"');
+  expect(html).toContain('발생 알림 수신');
+  expect(html).toContain('현재 장애 지속·복구 여부를 판단하지 않습니다');
+  expect(html).not.toContain('oh-stale');
+  expect(html).not.toContain('확인 필요');
 });
 
 it('pages incidents by 50 and links each title to its RCA report', () => {

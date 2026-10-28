@@ -152,11 +152,13 @@ export function RcaOperatorReport({
           </p>
         )}
         <div className="rca-chips">
-          {alarm?.alarm_status === 'firing' && <ToneBadge tone="alert" label="지금 알림 발생 중" />}
+          {alarm?.alarm_status === 'firing' && (
+            <ToneBadge tone="alert" label="발생 알림 수신 · 현재 상태 미확인" />
+          )}
           {alarm?.alarm_status === 'resolved' && (
             <ToneBadge
               tone="ok"
-              label={`알림 해제됨${str(alarm.alarm_resolved_at) ? ` · ${formatRcaTime(str(alarm.alarm_resolved_at))}` : ''}`}
+              label={`해제 알림 수신${str(alarm.alarm_resolved_at) ? ` · ${formatRcaTime(str(alarm.alarm_resolved_at))}` : ''}`}
             />
           )}
           {v?.ongoing && <ToneBadge tone="alert" label="조회 종료 시점에도 보고 중" />}

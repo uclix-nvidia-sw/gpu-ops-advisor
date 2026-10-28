@@ -159,6 +159,7 @@
     "alarm_resolved": "알람이 해제되어 새 RCA 접수 대상이 아닙니다.",
     "incident_closed": "종결된 사건입니다.",
     "repeated_evidence": "기존과 같은 증거로 새 RCA를 생성하지 않았습니다.",
+    "analysis_already_requested": "같은 알람 발생 구간의 RCA가 이미 접수되어 추가 생성하지 않았습니다.",
     "non_korean_claim": "원인 후보가 한국어 문장 기준을 통과하지 못했습니다.",
     "unsupported_assertion": "원인 후보에 단정 또는 표본의 과잉 해석 표현이 포함됐습니다.",
     "time_precision_reduced": "조회 시각 정밀도 축소",

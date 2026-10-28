@@ -505,9 +505,9 @@ export function OperatorIncidentList({ items, from }: { items: Row[]; from: stri
               <Badge status={str(i.state) || 'unknown'} />
               <span>
                 {i.alarm_status === 'firing'
-                  ? '알림 발생 중'
+                  ? '발생 알림 수신'
                   : i.alarm_status === 'resolved'
-                    ? '알림 해제'
+                    ? '해제 알림 수신'
                     : '알림 미확인'}
               </span>
             </div>
