@@ -22,19 +22,8 @@ def report_reason(text):
     return EVENT_TAGS.sub("", str(text or "")).strip()
 
 
-# Fleet XID/SXID health_state.go: the component state an event type leaves behind.
-# The single source for expected state; later alert stages extend only this table.
-EXPECTED_HEALTH = {
-    "Fatal": "Unhealthy",
-    "Critical": "Degraded",
-    "Warning": "Healthy",
-    "Info": "Healthy",
-}
-# GPUAlert currently fires on Fleet Unhealthy reports, i.e. Fatal XID/SXID events.
-ALERT_EVENT_TYPE = "Fatal"
-# Alert-to-D09 comparison outcomes besides "match". error_code_unparsed and
-# collection_failed keep the existing Runbook path; the rest are comparison gaps
-# that trigger one auxiliary collection. Codes route only; they are never facts.
+# Keep historical comparison codes readable; current events are matched by target.
+# Codes describe evidence gaps, never device-health facts or extra collection.
 MISMATCH_CODES = (
     "alert_report_not_found",
     "report_reason_changed",
@@ -62,6 +51,70 @@ def pci(value):
         re.I,
     )
     return tuple(int(v, 16) for v in match.groups(default="0")) if match else None
+
+
+def event_selector(clues):
+    """Alert identity is a search selector, never a verified device fact."""
+    component = clues.get("component", "")
+    kind = component.rsplit("-", 1)[-1]
+    codes = clues.get("error_codes", [])
+    if (
+        kind not in ("xid", "sxid")
+        or len(codes) != 1
+        or not codes[0].startswith(kind + ":")
+    ):
+        return {}
+    addresses = sorted(set(PCI_TEXT.findall(clues.get("reason", ""))))
+    uuids = sorted(set(STATUS_UUID.findall(clues.get("reason", ""))))
+    return {
+        "component": component,
+        "error_code": codes[0],
+        "pci": addresses[0] if len(addresses) == 1 else None,
+        "gpu_uuid": uuids[0] if kind == "xid" and len(uuids) == 1 else None,
+        **{
+            k: clues[k]
+            for k in ("cluster_id", "machine_id", "k8s_node_name")
+            if clues.get(k)
+        },
+    }
+
+
+def incident_selector(data):
+    from agent_common.contracts import incident_source
+    from .incident import alert_clues
+
+    if "incident_snapshot" not in data:
+        return {}
+    selector = event_selector(alert_clues(incident_source(data["incident_snapshot"])))
+    clusters = data.get("scope", {}).get("clusters", [])
+    if selector and len(clusters) == 1:
+        selector["cluster_id"] = clusters[0]["cluster_id"]
+    return selector
+
+
+def matches_target(row, selector, *, same_code=True):
+    """Match producer-reported host/PCI, without treating siblings as conflicts."""
+    address = pci(selector.get("pci"))
+    if not address or not any(selector.get(k) for k in ("machine_id", "k8s_node_name")):
+        return False
+    if row.get("component") != selector.get("component"):
+        return False
+    if selector.get("cluster_id") and row.get("cluster_id") != selector["cluster_id"]:
+        return False
+    for clue, key in (("machine_id", "machine_id"), ("k8s_node_name", "node")):
+        if selector.get(clue) and row.get("target", {}).get(key) != selector[clue]:
+            return False
+    if same_code and row.get("error_code") != selector.get("error_code"):
+        return False
+    addresses = (
+        [row["reported_device"]]
+        if row.get("reported_device")
+        else row.get("reported_pci_addresses")
+        or PCI_TEXT.findall(row.get("reason") or "")
+    )
+    width = 3 if selector["component"].endswith("-xid") else 4
+    devices = {parsed[:width] for value in addresses if (parsed := pci(value))}
+    return devices == {address[:width]}
 
 
 def event_item(raw, ns, contract, period, target, cluster):
@@ -226,20 +279,9 @@ def parse_events(evidence, profile, target):
 
 
 def match_alert(clues, health, events, diagnostics=None):
-    """Compare the alert's Fleet state report with D09 reports and kmsg events.
-
-    Anchor: the alert's evidence record is the Fleet state report S (state =
-    EXPECTED_HEALTH[ALERT_EVENT_TYPE]); kmsg events E corroborate it. An event-based
-    alert stage would anchor on E instead. The report reason names the most severe
-    retained XID/SXID. A match means the alert, that report and one
-    kmsg event agree on code and device. It routes the investigation only; it is
-    not verified current health, physical origin or independent device identity.
-    """
-    component = clues.get("component") or ""
-    kind = component.rsplit("-", 1)[-1]
-    codes = clues.get("error_codes", [])
-    reason = clues.get("reason") or ""
-    alert = {"error_code": None, "pci": None, "gpu_uuid": None}
+    """Confirm a target event; surrounding reports remain investigation context."""
+    selector = event_selector(clues)
+    alert = {k: selector.get(k) for k in ("error_code", "pci", "gpu_uuid")}
 
     def result(status, refs=(), **detail):
         return {
@@ -252,188 +294,112 @@ def match_alert(clues, health, events, diagnostics=None):
     if check(
         diagnostics,
         "error_code_unparsed",
-        "kind not in ('xid', 'sxid') or len(codes) != 1 or not codes[0].startswith(kind + ':')",
-        kind not in ("xid", "sxid")
-        or len(codes) != 1
-        or not codes[0].startswith(kind + ":"),
-        {"kind": kind, "codes": codes},
+        "not event_selector(clues)",
+        not selector,
+        {"codes": clues.get("error_codes", [])},
     ):
         return result("error_code_unparsed")
-    addresses = sorted(set(PCI_TEXT.findall(reason)))
-    uuids = sorted(set(STATUS_UUID.findall(reason)))
-    alert.update(
-        error_code=codes[0],
-        pci=addresses[0] if len(addresses) == 1 else None,
-        # SXID names an NVSwitch; a GPU UUID never identifies it.
-        gpu_uuid=uuids[0] if kind == "xid" and len(uuids) == 1 else None,
-    )
-    scope = {
-        k: v
-        for k, v in (
-            ("machine_id", clues.get("machine_id")),
-            ("node", clues.get("k8s_node_name")),
-        )
-        if v
-    }
-    reports = [
+    matched = [e for e in events if matches_target(e, selector)]
+    same = [
         h
         for h in health
-        if h.get("raw_health") == EXPECTED_HEALTH[ALERT_EVENT_TYPE]
-        and h.get("component") == component
-        and all(h.get("target", {}).get(k) == v for k, v in scope.items())
+        if matches_target(h, selector, same_code=False)
+        and report_reason(h.get("reason")) == report_reason(clues.get("reason"))
     ]
-    if check(
-        diagnostics,
-        "alert_report_not_found",
-        "len(reports) == 0",
-        not reports,
-        {
-            "scope": scope,
-            "component": component,
-            "expected_health": EXPECTED_HEALTH[ALERT_EVENT_TYPE],
-            "reports_count": len(reports),
-        },
-    ):
-        return result("alert_report_not_found")
-    same = [
-        h for h in reports if report_reason(h.get("reason")) == report_reason(reason)
-    ]
-    if check(
-        diagnostics,
-        "report_reason_changed",
-        "len(same) == 0; same = reports with report_reason(h.reason) == report_reason(alert.reason)",
-        not same,
-        {"reports_count": len(reports), "same_reason_count": len(same)},
-    ):
-        # Fleet rewrites the reason when a later Fatal error becomes the summary.
-        return result(
-            "report_reason_changed",
-            [r for h in reports for r in h["evidence_refs"]],
-            reported_reasons=sorted({str(h.get("reason")) for h in reports}),
-        )
     refs = [r for h in same for r in h["evidence_refs"]]
-    matched = [
-        e for e in events if e["component"] == component and e["error_code"] == codes[0]
-    ]
-    if check(
+    missing = check(
         diagnostics,
         "event_missing",
-        "len(matched) == 0; matched = events with component == alert.component and error_code == codes[0]",
+        "len(matched) == 0; matched = same-host, same-PCI, same-code events",
         not matched,
         {
             "event_count": len(events),
             "matched_event_count": len(matched),
-            "error_code": codes[0],
+            "error_code": selector["error_code"],
+            "alert_pci": selector["pci"],
         },
-    ):
-        # A component report persists until reboot, while its kmsg event is
-        # exported once. A Healthy report before the first Unhealthy one in the
-        # same window bounds the onset inside it even without the kmsg line.
-        dated = sorted(
-            (h for h in same if h.get("observed_at")),
-            key=lambda h: timestamp(h["observed_at"]),
-        )
-        first = timestamp(dated[0]["observed_at"]) if dated else None
-        healthy = sorted(
-            (
-                h
-                for h in health
-                if h.get("component") == component
-                and str(h.get("raw_health")).lower() == "healthy"
-                and h.get("observed_at")
-                and first is not None
-                and timestamp(h["observed_at"]) < first
-                and all(h.get("target", {}).get(k) == v for k, v in scope.items())
-            ),
-            key=lambda h: timestamp(h["observed_at"]),
-        )
-        if check(
-            diagnostics,
-            "preceding_healthy",
-            "len(healthy) > 0; healthy = same-scope component reports with raw_health.lower() == 'healthy' and observed_at < first",
-            bool(healthy),
-            {
-                "first_unhealthy_at": dated[0]["observed_at"] if dated else None,
-                "last_healthy_at": healthy[-1]["observed_at"] if healthy else None,
-                "preceding_healthy_count": len(healthy),
-                "time_basis": "loki_recorded_at",
-                "selection": "earliest matching Unhealthy report; later transitions are not evaluated",
-            },
-        ):
-            return result(
-                "event_not_exported",
-                refs + healthy[-1]["evidence_refs"],
-                last_healthy_at=healthy[-1]["observed_at"],
-                first_unhealthy_at=dated[0]["observed_at"],
-            )
-        return result(
-            "event_not_found",
-            refs,
-            other_codes=sorted({e["error_code"] for e in events} - {codes[0]}),
-        )
-    refs += [r for e in matched for r in e["evidence_refs"]]
-    # XID kmsg addresses carry no PCI function; SXID addresses do.
-    width = 3 if kind == "xid" else 4
-
-    def device(value):
-        address = pci(value)
-        return address[:width] if address else str(value)
-
-    devices = {device(e["reported_device"]) for e in matched}
-    if check(
-        diagnostics,
-        "multiple_devices",
-        "len(devices) > 1",
-        len(devices) > 1,
-        {"device_count": len(devices)},
-    ):
-        return result(
-            "multiple_devices",
-            refs,
-            event_devices=sorted({str(e["reported_device"]) for e in matched}),
-        )
-    if check(
-        diagnostics,
-        "pci_mismatch",
-        "not alert.pci or device(alert.pci) not in devices",
-        not alert["pci"] or device(alert["pci"]) not in devices,
-        {
-            "alert_pci": alert["pci"],
-            "event_devices": sorted(str(e["reported_device"]) for e in matched),
-        },
-    ):
-        return result(
-            "pci_mismatch", refs, event_device=str(matched[0]["reported_device"])
-        )
-    if kind == "xid":
-        candidates = {e["inventory_gpu_candidate"] for e in matched}
-        if check(
-            diagnostics,
-            "uuid_unresolved",
-            "not alert.gpu_uuid or candidates == {None}",
-            not alert["gpu_uuid"] or candidates == {None},
-            {
-                "alert_gpu_uuid": alert["gpu_uuid"],
-                "candidates": sorted(str(c) for c in candidates),
-            },
-        ):
-            return result("uuid_unresolved", refs)
+    )
+    if not missing:
+        refs += [r for e in matched for r in e["evidence_refs"]]
+        candidates = {e.get("inventory_gpu_candidate") for e in matched} - {None}
         if check(
             diagnostics,
             "uuid_mismatch",
-            "candidates != {alert.gpu_uuid}",
-            candidates != {alert["gpu_uuid"]},
-            {
-                "alert_gpu_uuid": alert["gpu_uuid"],
-                "candidates": sorted(str(c) for c in candidates),
-            },
+            "bool(alert.gpu_uuid and candidates and candidates != {alert.gpu_uuid})",
+            bool(
+                alert["gpu_uuid"] and candidates and candidates != {alert["gpu_uuid"]}
+            ),
+            {"alert_gpu_uuid": alert["gpu_uuid"], "candidates": sorted(candidates)},
         ):
             return result(
-                "uuid_mismatch",
-                refs,
-                inventory_gpu_candidates=sorted(str(c) for c in candidates),
+                "uuid_mismatch", refs, inventory_gpu_candidates=sorted(candidates)
             )
-    return result("match", refs)
+        # Repeated occurrences and other devices never invalidate an observed event.
+        return result(
+            "match",
+            refs,
+            matched_event_count=len(matched),
+            matching_basis="reported_host_pci_code_in_query_window",
+        )
+
+    # Preserve the legacy state-transition explanation when the event is absent.
+    dated = sorted(
+        (
+            h
+            for h in same
+            if h.get("observed_at") and h.get("raw_health") == "Unhealthy"
+        ),
+        key=lambda h: timestamp(h["observed_at"]),
+    )
+    first = timestamp(dated[0]["observed_at"]) if dated else None
+    scope = {
+        k: selector[c]
+        for c, k in (("machine_id", "machine_id"), ("k8s_node_name", "node"))
+        if selector.get(c)
+    }
+    healthy = sorted(
+        (
+            h
+            for h in health
+            if h.get("component") == selector["component"]
+            and str(h.get("raw_health")).lower() == "healthy"
+            and h.get("observed_at")
+            and first is not None
+            and timestamp(h["observed_at"]) < first
+            and all(h.get("target", {}).get(k) == v for k, v in scope.items())
+            and (
+                not selector.get("cluster_id")
+                or h.get("cluster_id") == selector["cluster_id"]
+            )
+        ),
+        key=lambda h: timestamp(h["observed_at"]),
+    )
+    if check(
+        diagnostics,
+        "preceding_healthy",
+        "len(healthy) > 0",
+        bool(healthy),
+        {
+            "first_unhealthy_at": dated[0]["observed_at"] if dated else None,
+            "last_healthy_at": healthy[-1]["observed_at"] if healthy else None,
+            "preceding_healthy_count": len(healthy),
+            "time_basis": "loki_recorded_at",
+            "selection": "earliest matching Unhealthy report; later transitions are not evaluated",
+        },
+    ):
+        return result(
+            "event_not_exported",
+            refs + healthy[-1]["evidence_refs"],
+            last_healthy_at=healthy[-1]["observed_at"],
+            first_unhealthy_at=dated[0]["observed_at"],
+        )
+    return result(
+        "event_not_found",
+        refs,
+        other_codes=sorted(
+            {e["error_code"] for e in events} - {selector["error_code"]}
+        ),
+    )
 
 
 def enrich_report_inventory(health, evidence):

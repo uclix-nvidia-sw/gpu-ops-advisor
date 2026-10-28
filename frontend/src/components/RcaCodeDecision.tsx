@@ -122,8 +122,9 @@ export function RcaCodeDecision({
                 <details>
                   <summary>현재 코드 기준 참고 · 당시 실행 기록 아님</summary>
                   <p>
-                    <code>rcca_agent.fleet_events.match_alert()</code>: 알람과 같은 사유의 오류
-                    보고를 찾은 뒤, 대응 이벤트가 없으면 첫 오류 이전의 정상 보고를 검사합니다.
+                    <code>rcca_agent.fleet_events.match_alert()</code>: 알림과 같은 서버·PCI·오류
+                    코드의 이벤트를 먼저 찾습니다. 다른 장치·오류는 참고 자료로 유지합니다. 대응
+                    이벤트가 없을 때만 같은 사유의 상태 보고와 그 이전 정상 보고를 검사합니다.
                   </p>
                   <pre className="rca-decision-expression">
                     {

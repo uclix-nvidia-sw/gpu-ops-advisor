@@ -23,6 +23,8 @@ from .fleet_events import (
     enrich_report_inventory,
     match_alert,
     parse_events,
+    incident_selector,
+    matches_target,
 )
 from .report import write_report
 from .report_observations import summarize_reports
@@ -338,9 +340,11 @@ def normalized_state(obs, collected, data, profile, initial_facts):
     return health, facts, verified, relations, available
 
 
-def conflicting_health(health):
+def conflicting_health(health, selector=None):
     groups = {}
     for h in health:
+        if selector and not matches_target(h, selector):
+            continue
         if h["check_status"] == "valid":
             key = (
                 h["cluster_id"],
@@ -362,6 +366,8 @@ async def run(tools):
     result = base_result(claim, ctx["context"]["data_cutoff_at"])
     source = incident_source(data["incident_snapshot"])
     clues = alert_clues(source)
+    if len(data["scope"]["clusters"]) == 1:
+        clues["cluster_id"] = data["scope"]["clusters"][0]["cluster_id"]
     # The raw snapshot stays immutable. Display names narrow collection only;
     # they do not prove a machine/GPU binding or become verified facts.
     target = dict(data.get("target", {}))
@@ -705,7 +711,7 @@ async def run(tools):
         }
         optional = set(plan_queries(selected)) - required
         degraded = bool(failed - optional)
-        conflicting = conflicting_health(health)
+        conflicting = conflicting_health(health, incident_selector(data))
         check(
             decision_checks,
             "observation_degraded",
@@ -716,7 +722,7 @@ async def run(tools):
         check(
             decision_checks,
             "conflicting_evidence",
-            "conflicting_health(health)",
+            "conflicting_health(health, incident_selector(data))",
             conflicting,
             {"health_count": len(health)},
         )
@@ -947,7 +953,7 @@ async def run(tools):
         and e["query_id"] in collected
         and not e["quality"].get("superseded_by_retry")
     ]
-    conflicting = conflicting_health(health)
+    conflicting = conflicting_health(health, incident_selector(data))
     reason = "evidence_sufficient" if not missing else "missing_data"
     if conflicting:
         reason = "conflicting_evidence"
