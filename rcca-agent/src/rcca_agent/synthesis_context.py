@@ -4,6 +4,8 @@ import json
 from collections import defaultdict
 from itertools import zip_longest
 
+from agent_common.contracts import timestamp
+from .fleet_events import matches_target
 from .report_observations import event_devices_by_scope, report_scope
 
 SECTIONS = (
@@ -72,6 +74,24 @@ def bounded_context(payload, max_bytes):
         ),
     }
     view["context_selection"] = coverage
+    selector = payload.get("event_target", {})
+    target_events = [
+        e for e in payload.get("error_events", []) if matches_target(e, selector)
+    ]
+
+    def distance(row):
+        try:
+            return abs(
+                timestamp(row["event_time"]) - timestamp(payload["incident_time"])
+            )
+        except (KeyError, TypeError, ValueError):
+            return float("inf")
+
+    primary = min(target_events, key=distance) if target_events else None
+    if selector:
+        coverage["target_event"] = (
+            "retained" if primary is not None else "not_collected"
+        )
     inventories = {}
     # Reserve room for the coverage counters and evidence IDs before admitting rows.
     # Admit one row per evidence source before more rows from that source.
@@ -100,6 +120,8 @@ def bounded_context(payload, max_bytes):
     # Passed format checks carry no incident meaning; admit them only after observations.
     scheduled.sort(
         key=lambda item: (
+            item[1] is not primary,
+            not matches_target(item[1], selector, same_code=False),
             item[0] != "incident_brief",
             item[0] == "evidence_checks" and item[1].get("outcome") == "pass",
         )
@@ -155,6 +177,11 @@ def bounded_context(payload, max_bytes):
             and encoded_size(view["incident_brief"]) > max_bytes // 2
         )
         if encoded_size(view) > max_bytes or brief_overflow:
+            if original is primary:
+                # Fail the existing size gate rather than send a view without its target.
+                coverage["target_event"] = "budget_exceeded"
+                coverage["omitted_observations"][section] -= 1
+                continue
             view[section].pop()
             view["observation_refs"] = previous_refs
             view["input_evidence_refs"] = previous_inputs

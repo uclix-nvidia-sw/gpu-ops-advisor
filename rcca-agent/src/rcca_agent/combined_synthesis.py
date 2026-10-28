@@ -60,6 +60,11 @@ State limits once. Do not invent causes/actions or self-review.
 Use investigation_summary's full-collection comparisons in findings through the
 matching incident_brief value tokens; do not copy its numbers.
 Other GPUs' metrics cannot describe the reported device. Error text is not physical proof.
+event_target identifies the alert's host, PCI and error code. Matching error_events
+confirm a reported event in the query window, not current failure or recovery.
+Other devices and other error codes are valid contextual evidence, never a reason
+to reject a matching target event. Repeated events do not imply conflicting data.
+Distinguish repeated event occurrences from periodic component state reports.
 Validation feedback concerns response structure."""
 )
 

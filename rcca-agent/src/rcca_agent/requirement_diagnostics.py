@@ -1,5 +1,7 @@
 """Explain unmet requirements without creating facts or changing assessments."""
 
+from .fleet_events import incident_selector, matches_target
+
 
 def _scoped_reports(health, events, data):
     target = data.get("target", {})
@@ -73,6 +75,11 @@ def unmet_requirements(missing, health, events, data):
 def reported_facts(health, events, data):
     """Scoped source reports; never current-health or action-condition facts."""
     reports, reported_events = _scoped_reports(health, events, data)
+    selector = incident_selector(data)
+    if selector:
+        # Other codes/devices remain in evidence, but cannot veto this incident.
+        reports = [r for r in reports if matches_target(r, selector)]
+        reported_events = [r for r in reported_events if matches_target(r, selector)]
     result = {}
     for field in ("error_code", "producer_contract", "component", "normalized_health"):
         rows = reports + reported_events

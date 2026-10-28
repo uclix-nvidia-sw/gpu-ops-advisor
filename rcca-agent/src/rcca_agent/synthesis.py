@@ -8,6 +8,7 @@ from agent_common.observation import series, usable_observation
 from .prompts import SYNTHESIS
 from .synthesis_context import bounded_context
 from .investigation_summary import investigation_summary
+from .fleet_events import incident_selector
 
 
 def synthesis_input(
@@ -30,6 +31,7 @@ def synthesis_input(
     # Prefer incident-node measurements over broad Pod inventory in a bounded view,
     # and the reported device's series over its siblings on that node.
     target = data.get("target", {})
+    selector = incident_selector(data)
     devices = {e.get("inventory_gpu_candidate") for e in events} - {None}
     metrics.sort(
         key=lambda row: (
@@ -56,6 +58,7 @@ def synthesis_input(
         **({"investigation_summary": comparisons} if comparisons else {}),
         "scope": data["scope"],
         "target": data.get("target", {}),
+        **({"event_target": selector} if selector else {}),
         "device_observations": observations,
         "error_events": events,
         "pod_relations": relations,
