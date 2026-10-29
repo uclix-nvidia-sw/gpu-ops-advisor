@@ -211,6 +211,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-workload-v2",
                         "ops-interpretation-incident-names-v8",
                         "ops-interpretation-incident-repair-v9",
+                        "ops-interpretation-incident-check-v10",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3035,7 +3036,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-repair-v9"
+        == "ops-interpretation-incident-check-v10"
     )
     assert incident_section["meaning"] == meaning
     assert body["quality"]["report"]["attempts"] == 1

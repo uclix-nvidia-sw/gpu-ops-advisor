@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-repair-v9"
+VERSION = "ops-interpretation-incident-check-v10"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -816,11 +816,14 @@ def _validate_sections(reply, payload, result):
             check = TOKEN.sub("", section["next_check"])
             if re.search(
                 r"새로\s*(?:나타|발생|등장)|새로운\s*(?:장애|유형|종류)|"
-                r"최초\s*발생|처음\s*발생|공통\s*원인|동시(?:에)?\s*발생",
+                r"최초\s*발생|처음\s*발생|공통\s*원인|동시(?:에)?\s*발생|"
+                r"원인(?:이|은|으로)?\s*(?:확인|판명|규명)(?:된|됐|되었)(?!는지)|"
+                r"RCA\s*(?:조사|분석)(?:가|는|이|은)?\s*(?:(?:모두|전부)\s*)?완료(?:된|됐|되었)(?!는지)|"
+                r"RCA\s*본문(?:에서|으로)[^.!?]{0,25}확인된\s*원인",
                 meaning + " " + check,
             ):
                 raise ValueError(
-                    "incident_overreach: 이전 비교기간 기록 유무만 쓰고 새 유형·공통 원인·동시 발생으로 단정하지 마세요"
+                    "incident_overreach: 이전 비교기간 기록 유무만 쓰고 새 유형·공통 원인·동시 발생·원인 확인·RCA 조사 완료나 본문 열람으로 단정하지 마세요"
                 )
             context = focus["check_context"]
             # shortcut: bounded RCA phrasing, not semantic proof; extend with reviewed failures.
