@@ -8,7 +8,7 @@ import pytest
 from rcca_agent.fleet_events import event_selector, match_alert
 from rcca_agent.requirement_diagnostics import reported_facts
 from rcca_agent.synthesis_context import bounded_context, encoded_size
-from test_fleet_rca import alert, kmsg_event, state_report, match_case
+from test_fleet_rca import CODES, DEVICES, alert, kmsg_event, state_report, match_case
 
 
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
@@ -159,3 +159,129 @@ async def test_workflow_mixed_errors_preserve_target_in_author_input(kind):
         author["error_events"][0]["error_code"] == author["event_target"]["error_code"]
     )
     assert any(e["error_code"] == kind + ":31" for e in author["error_events"])
+
+
+def healthy_event_case(kind):
+    case = match_case(kind=kind)
+    rows = case["queries"][0]["response"]["data"]["result"][0]["values"]
+    report = json.loads(rows[-1][1])
+    report["attributes"]["health"] = "Healthy"
+    rows[-1][1] = json.dumps(report)
+    return case, rows, report
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+@pytest.mark.parametrize("target_health", ["Healthy", "Unhealthy"])
+async def test_confirmed_event_keeps_unknown_sibling_reports_as_context(
+    kind, target_health
+):
+    from rca_replay import replay
+
+    case, rows, report = healthy_event_case(kind)
+    target = deepcopy(report)
+    target["attributes"]["health"] = target_health
+    rows[-1][1] = json.dumps(target)
+    for change in ("pci", "code", "host"):
+        other = deepcopy(report)
+        if change == "pci":
+            other["attributes"]["reason"] = other["attributes"]["reason"].replace(
+                DEVICES[kind], "PCI:0000:02:00.0"
+            )
+        elif change == "code":
+            other["attributes"]["reason"] = other["attributes"]["reason"].replace(
+                CODES[kind].split(":")[1], "31", 1
+            )
+        else:
+            other["resources"]["machine.id"] = "other-machine"
+        rows.append([rows[-1][0], json.dumps(other)])
+    original = deepcopy(rows)
+    replayed = await replay(case)
+    result = replayed["output"]["result"]
+    assert result["quality"]["analysis"]["alert_match"]["status"] == "match"
+    assert result["missing_inputs"] == []
+    assert result["result_status"] == "ready"
+    assert len(result["device_observations"]) == 4
+    unknown = [h for h in result["device_observations"] if h["raw_health"] == "Healthy"]
+    assert unknown and all(h["normalized_health"] == "unknown" for h in unknown)
+    assert all(not h["fact_eligible"] for h in result["device_observations"])
+    author = replayed["model_calls"][0]["input"]
+    # Unknown reports stay in stored context, never promoted to verified model facts.
+    assert len(author["device_observations"]) == int(target_health == "Unhealthy")
+    evidence = replayed["output"]["evidence"]
+    source = next(e for e in evidence if e["query_id"] == "D09")
+    assert source["snapshot"]["data"]["result"][0]["values"] == original
+    assessment = next(e for e in evidence if e["query_id"] == "collection_assessment")
+    decision = next(
+        c for c in assessment["snapshot"]["checks"] if c["rule"] == "unknown_value"
+    )
+    assert decision["value"] is False
+    assert decision["inputs"]["event_confirmed"] is True
+    assert decision["inputs"]["context_report_count"] == 3
+    assert decision["inputs"]["relevant_count"] == 1
+    assert rows == original
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+@pytest.mark.parametrize("baseline", [False, True])
+async def test_confirmed_event_does_not_require_component_state(kind, baseline):
+    from rca_replay import replay
+
+    case, rows, report = healthy_event_case(kind)
+    if baseline:
+        report["attributes"]["reason"] = kind.upper() + "Component is healthy"
+        rows[-1][1] = json.dumps(report)
+    else:
+        rows.pop()
+    result = (await replay(case))["output"]["result"]
+    assert result["quality"]["analysis"]["alert_match"]["status"] == "match"
+    assert result["result_status"] == "ready"
+    assert result["missing_inputs"] == []
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+@pytest.mark.parametrize(
+    "failure,missing",
+    [
+        ("no_event", "event_not_found"),
+        ("wrong_pci", "event_not_found"),
+        ("unknown_state", "unknown_value"),
+        ("invalid_check", "unknown_value"),
+        ("collection", "observation_degraded"),
+    ],
+)
+async def test_healthy_event_exception_preserves_real_gaps(kind, failure, missing):
+    from rca_replay import replay
+
+    case, rows, report = healthy_event_case(kind)
+    if failure == "no_event":
+        rows.pop(0)
+    elif failure == "wrong_pci":
+        rows[0][1] = rows[0][1].replace(DEVICES[kind], "PCI:0000:02:00.0")
+    elif failure == "unknown_state":
+        report["attributes"]["health"] = "Unregistered"
+        rows[-1][1] = json.dumps(report)
+    elif failure == "invalid_check":
+        case["attempt"]["profile"]["health_contracts"]["fleet-component-log-v1"][
+            "checks"
+        ]["reported"] = "unknown"
+    else:
+        case["queries"][0]["error"] = True
+    result = (await replay(case))["output"]["result"]
+    assert missing in result["missing_inputs"]
+    assert result["result_status"] != "ready"
+
+
+@pytest.mark.parametrize("kind", ["xid", "sxid"])
+async def test_confirmed_event_cannot_satisfy_explicit_current_health_requirement(kind):
+    from agent_common.contracts import content_hash
+    from rca_replay import replay
+
+    case, _, _ = healthy_event_case(kind)
+    book = case["attempt"]["context"]["runbooks"][0]
+    book["content"]["required_evidence"].append("normalized_health")
+    book["content_hash"] = book["reviewed_content_hash"] = content_hash(book["content"])
+    result = (await replay(case))["output"]["result"]
+    assert result["quality"]["analysis"]["alert_match"]["status"] == "match"
+    assert "unknown_value" not in result["missing_inputs"]
+    assert "normalized_health" in result["missing_inputs"]
+    assert result["result_status"] != "ready"

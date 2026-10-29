@@ -447,16 +447,18 @@ function Incident({ id }: { id: string }) {
             <span>사건 처리</span>
             <Badge status={str(incident.state, str(incident.status)) || null} />
           </div>
-          <div>
-            <span>알림 상태</span>
-            <strong>
-              {incident.alarm_status === 'resolved'
-                ? '해제 알림 수신'
-                : incident.alarm_status === 'firing'
-                  ? '발생 알림 수신'
-                  : '미확인'}
-            </strong>
-          </div>
+          {app.mode !== 'operations' && (
+            <div>
+              <span>알림 상태</span>
+              <strong>
+                {incident.alarm_status === 'resolved'
+                  ? '해제 알림 수신'
+                  : incident.alarm_status === 'firing'
+                    ? '발생 알림 수신'
+                    : '미확인'}
+              </strong>
+            </div>
+          )}
           <div>
             <span>최근 조사</span>
             <strong>{summaryState(incident)}</strong>

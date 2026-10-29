@@ -31,6 +31,10 @@ export interface IncidentView {
   resolvedAt: Date | null;
   rca: RcaState;
   jobId: string;
+  executionStatus?: string;
+  latestJobId?: string;
+  publishedStatus?: string;
+  publishedJobId?: string;
   nth: number;
 }
 
@@ -109,6 +113,10 @@ export function incidentView(record: Row): IncidentView {
     resolvedAt: resolved ? new Date(resolved) : null,
     rca,
     jobId: str(published.job_id) || str(job.job_id),
+    executionStatus: jobStatus,
+    latestJobId: str(job.job_id),
+    publishedStatus: result,
+    publishedJobId: str(published.job_id),
     nth: 0,
   };
 }
