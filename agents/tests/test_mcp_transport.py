@@ -18,7 +18,8 @@ from test_worker import MemoryStore, claim
 
 
 @pytest.fixture
-def mcp_http():
+def mcp_http(request):
+    options = getattr(request, "param", {})
     calls = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -43,13 +44,14 @@ def mcp_http():
                 result = {
                     "tools": [
                         {
-                            "name": "query_prometheus",
+                            "name": name,
                             "description": "Read fixture observations",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {"mode": {"type": "string"}},
                             },
                         }
+                        for name in options.get("tools", ["query_prometheus"])
                     ]
                 }
             elif method == "tools/call":
@@ -70,6 +72,8 @@ def mcp_http():
                 result = {
                     "content": [{"type": "text", "text": '{"data":{"result":[]}}'}]
                 }
+                if mode == "structured":
+                    result["structuredContent"] = {"wrong": "not the text response"}
                 if mode == "tool_error":
                     result = {
                         "content": [{"type": "text", "text": "query failed"}],
@@ -267,3 +271,67 @@ async def test_expired_session_reconnects_without_replaying_tool_errors(mcp_http
         2 if mode == "session_expired" else 1
     )
     assert client._connection_task.done()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mcp_http",
+    [
+        {
+            "tools": [
+                "list_datasources",
+                "list_prometheus_label_values",
+                "query_prometheus",
+            ]
+        }
+    ],
+    indirect=True,
+)
+async def test_collection_probe_matches_product_nat_adapter(mcp_http):
+    from agent_common.grafana_mcp import grafana_mcp
+    from ops_collect_probe import TOOLS, connect_mcp
+    from ops_agent.report_queries import ReportQueries
+    from test_aggregate_report import DATA
+
+    url, requests = mcp_http
+    config = GrafanaMCPConfig(
+        server={"transport": "streamable-http", "url": url}, include=list(TOOLS)
+    )
+    async with grafana_mcp(config, None) as group:
+        functions = await group.get_all_functions()
+        product_tools = {
+            name: functions["grafana_mcp__" + name].ainvoke for name in TOOLS
+        }
+        async with connect_mcp(url) as probe_tools:
+            collectors = [
+                ReportQueries(tools, DATA, time.monotonic() + 30)
+                for tools in (product_tools, probe_tools)
+            ]
+            for name in TOOLS:
+                results = [
+                    await c.call(name, {"mode": "structured"}) for c in collectors
+                ]
+                assert results == [{"data": {"result": []}}] * 2
+                assert collectors[0].bytes_received == collectors[1].bytes_received
+            for c in collectors:
+                with pytest.raises(ValueError) as error:
+                    await c.call("query_prometheus", {"mode": "tool_error"})
+                assert str(error.value) == "mcp_tool_error"
+            assert collectors[0].bytes_received == collectors[1].bytes_received
+            before = len([r for r in requests if r["method"] == "tools/call"])
+            for tools in (product_tools, probe_tools):
+                with pytest.raises(ValueError):
+                    await tools["query_prometheus"]({"mode": []})
+            assert len([r for r in requests if r["method"] == "tools/call"]) == before
+    assert sum(r["method"] == "tools/list" for r in requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_collection_probe_rejects_missing_tools(mcp_http):
+    from ops_collect_probe import connect_mcp
+
+    url, requests = mcp_http
+    with pytest.raises(ValueError, match="read tools are unavailable"):
+        async with connect_mcp(url):
+            pytest.fail("missing discovery tools must block collection")
+    assert not any(r["method"] == "tools/call" for r in requests)

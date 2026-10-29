@@ -9,12 +9,12 @@ from uuid import uuid4
 import pytest
 
 from agent_common.artifacts import render
-from agent_common.contracts import validate_result
+from agent_common.contracts import validate_result, timestamp
 from agent_common.runtime import attempt_context
 from ops_agent import aggregate_report
 from ops_agent.aggregate_report import build_result
 from ops_agent.identity_transitions import sample_bounds, verified_transitions
-from ops_agent.report_contract import VERSION, previous_period
+from ops_agent.report_contract import VERSION, previous_period, iso
 from ops_agent.report_interpretation import payload_for
 from ops_agent.report_queries import ReportQueries
 from test_aggregate_report import DATA, fixture
@@ -45,8 +45,9 @@ def changed_hours(period, cluster, count):
     return evidence
 
 
-def test_shared_budget_prefers_current_period_and_alternates_clusters():
+def test_weekly_shared_budget_prefers_current_period_and_alternates_clusters():
     data = deepcopy(DATA)
+    data["time_range"]["end"] = iso(timestamp(data["time_range"]["start"]) + 7 * 86400)
     data["scope"]["clusters"].append(dict(cluster_id="cpc-2", namespaces=None))
     previous = previous_period(data)
     groups = [
@@ -115,7 +116,7 @@ def test_shared_budget_prefers_current_period_and_alternates_clusters():
         for r in diagnostic(result)["rows"]
         if r["cluster_id"] == "cpc-2" and r["period_role"] == "previous"
     )
-    assert (cpc2["valid_hours"], cpc2["excluded_hours"]) == (17, 7)
+    assert (cpc2["valid_hours"], cpc2["excluded_hours"]) == (161, 7)
     assert (
         next(
             r
@@ -217,7 +218,7 @@ def test_transition_audits_only_explain_repairable_named_rows(case, conflicting_
         time.monotonic() + (20 if case == "deadline" else 900),
     )
     if case == "budget":
-        collector.transition_calls = 32
+        collector.transition_calls = collector.transition_limit
     checks = asyncio.run(
         collector.check_transitions(
             [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
@@ -321,7 +322,7 @@ def test_multiple_gpus_in_one_skipped_hour_do_not_double_count_row_hours():
     collector = ReportQueries(
         {"query_prometheus": unexpected}, DATA, time.monotonic() + 900
     )
-    collector.transition_calls = 32
+    collector.transition_calls = collector.transition_limit
     assert (
         asyncio.run(
             collector.check_transitions(
