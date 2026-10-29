@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { opsUsage } from './OpsUsage';
+import { opsUsage, snapshotReports } from './OpsUsage';
 
 // Shape of a stored report-aggregate-v1 result (namespace_usage rows and workloads).
 const result = {
@@ -76,4 +76,31 @@ it('returns nothing to chart for a report without Namespace usage', () => {
     alerts: null,
   });
   expect(opsUsage({}).items).toEqual([]);
+});
+
+it('selects published snapshots by analysis end, excluding deleted and unpublished reports', () => {
+  const report = {
+    status: 'succeeded',
+    result_ref: 'stored',
+    topic_ids: ['namespace_usage'],
+    result_status: 'partial',
+  };
+  const items = [
+    {
+      ...report,
+      id: 'recently-generated-old-period',
+      time_range: { end: '2026-10-22T00:00:00Z' },
+      created_at: '2026-10-29T00:00:00Z',
+    },
+    { ...report, id: 'newer-analysis', time_range: { end: '2026-10-28T00:00:00Z' } },
+    { ...report, id: 'deleted', deletion: { at: 'today' } },
+    { ...report, id: 'unpublished', result_ref: '' },
+    { ...report, id: 'running', status: 'running' },
+  ];
+  expect(snapshotReports(items).map((r) => r.id)).toEqual([
+    'newer-analysis',
+    'recently-generated-old-period',
+  ]);
+  expect(snapshotReports(items)[0].result_status).toBe('partial');
+  expect(items[0].id).toBe('recently-generated-old-period');
 });

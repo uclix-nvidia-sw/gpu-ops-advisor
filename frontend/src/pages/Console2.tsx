@@ -20,6 +20,7 @@ import {
   windowDays,
   type IncidentView,
 } from '../lib/incidentOverview';
+import { labels } from '../lib/domain';
 import { reportTitle } from '../lib/workflow';
 import { reportTabs } from '../lib/reportNavigation';
 import { ReportPeriod } from '../components/ReportMeta';
@@ -31,11 +32,20 @@ const qualityLabels: Record<string, string> = {
   ready: '산출 완료',
   partial: '부분 산출',
   blocked: '판단 보류',
-  running: '조사 중',
-  failed: '실행 실패',
-  notice: '알림만',
+
   none: '공개 결과 미확인',
 };
+const executionStates = [
+  'queued',
+  'running',
+  'retry_wait',
+  'succeeded',
+  'failed',
+  'cancelled',
+  'expired',
+];
+const publishedQuality = (v: IncidentView) =>
+  v.publishedStatus || (['ready', 'partial', 'blocked'].includes(v.rca) ? v.rca : 'none');
 export const console2DeviceKey = (v: IncidentView) =>
   JSON.stringify([v.cluster, v.node, v.device, v.code]);
 export function console2Date(value: string | null, today: string) {
@@ -54,7 +64,7 @@ export function console2Repeats(views: IncidentView[]) {
 export function console2Filter(views: IncidentView[], params: URLSearchParams) {
   const search = (params.get('q') || '').trim().toLocaleLowerCase();
   const repeated = new Set(console2Repeats(views).map((g) => console2DeviceKey(g[0])));
-  return views.filter(
+  const filtered = views.filter(
     (v) =>
       (!search ||
         [titleText(v), v.node, v.cluster, v.device, v.raw]
@@ -65,13 +75,28 @@ export function console2Filter(views: IncidentView[], params: URLSearchParams) {
       (!params.get('cluster') || v.cluster === params.get('cluster')) &&
       (!params.get('quality') ||
         (params.get('quality') === 'limited'
-          ? ['partial', 'blocked'].includes(v.rca)
-          : v.rca === params.get('quality'))) &&
+          ? ['partial', 'blocked'].includes(publishedQuality(v))
+          : publishedQuality(v) === params.get('quality'))) &&
       (!params.get('device2') || console2DeviceKey(v) === params.get('device2')) &&
-      (params.get('focus') !== 'firing' || v.firing) &&
-      (params.get('focus') !== 'resolved' || v.resolved) &&
+      (!params.get('execution') || (v.executionStatus || 'none') === params.get('execution')) &&
+      (!params.get('kind') || v.kind === params.get('kind')) &&
+      (!params.get('code') || v.code === params.get('code')) &&
+      (!params.get('category') || category(v) === params.get('category')) &&
       (params.get('focus') !== 'repeat' || repeated.has(console2DeviceKey(v))),
   );
+  return filtered.sort((a, b) => {
+    const sort = params.get('sort');
+    if (sort === 'oldest') return a.at.getTime() - b.at.getTime();
+    const group =
+      sort === 'device'
+        ? JSON.stringify([a.cluster, a.node, a.device]).localeCompare(
+            JSON.stringify([b.cluster, b.node, b.device]),
+          )
+        : sort === 'error'
+          ? a.code.localeCompare(b.code, undefined, { numeric: true })
+          : 0;
+    return group || b.at.getTime() - a.at.getTime();
+  });
 }
 function Heading({ title, note, children }: { title: string; note: string; children?: ReactNode }) {
   return (
@@ -109,17 +134,17 @@ function Surface({
     </section>
   );
 }
-function IncidentTable({ views }: { views: IncidentView[] }) {
+export function IncidentTable({ views }: { views: IncidentView[] }) {
   const location = useLocation();
   const from = location.pathname + location.search;
   return (
     <div className="c2-table-scroll">
       <table className="c2-table">
-        <caption className="sr-only">사건별 대상, 수신 상태와 공개 RCA 결과</caption>
+        <caption className="sr-only">사건별 대상, 최신 실행 상태와 공개 RCA 결과</caption>
         <thead>
           <tr>
             <th>사건 / 대상</th>
-            <th>알림 수신</th>
+            <th>보고서 생성</th>
             <th>RCA 결과</th>
             <th>발생 시각 · KST</th>
           </tr>
@@ -151,16 +176,35 @@ function IncidentTable({ views }: { views: IncidentView[] }) {
                 </small>
               </td>
               <td>
-                <span className={`c2-status ${v.firing ? 'attention' : 'neutral'}`}>
-                  {v.firing ? '발생 수신' : v.resolved ? '해제 수신' : '미확인'}
-                </span>
+                <Link
+                  to={`/incidents/${encodeURIComponent(v.id)}`}
+                  state={{ from, returnState: { row: v.id } }}
+                >
+                  <span
+                    className={`c2-status ${['queued', 'running', 'retry_wait'].includes(v.executionStatus || '') ? 'attention' : 'neutral'}`}
+                  >
+                    {labels[v.executionStatus || ''] || v.executionStatus || '실행 기록 없음'}
+                  </span>
+                </Link>
               </td>
               <td>
                 <span
                   className={`c2-status ${['partial', 'blocked', 'failed'].includes(v.rca) ? 'warning' : 'neutral'}`}
                 >
-                  {qualityLabels[v.rca]}
+                  {qualityLabels[publishedQuality(v)] || publishedQuality(v)}
                 </span>
+                {v.publishedJobId && (
+                  <Link
+                    className="c2-result-link"
+                    to={`/analyses/${encodeURIComponent(v.publishedJobId)}`}
+                    state={{ from, returnState: { row: v.id } }}
+                  >
+                    {v.latestJobId && v.latestJobId !== v.publishedJobId
+                      ? '이전 발행 보고서'
+                      : '보고서 열기'}{' '}
+                    →
+                  </Link>
+                )}
               </td>
               <td>
                 <time>{dateTimeText(v.at)}</time>
@@ -215,6 +259,16 @@ function Overview() {
   const daily = dailyCounts(views, days);
   const max = Math.max(1, ...daily.map((d) => Object.values(d.counts).reduce((a, b) => a + b, 0)));
   const repeats = console2Repeats(views);
+  const [repeatMode, setRepeatMode] = useState('device');
+  const repeatGroups =
+    repeatMode === 'error'
+      ? [...new Set(views.map((v) => v.code))]
+          .map((code) => views.filter((v) => v.code === code))
+          .filter((g) => g.length >= 3)
+          .sort((a, b) => b.length - a.length)
+      : repeatMode === 'time'
+        ? [...repeats].sort((a, b) => b[0].at.getTime() - a[0].at.getTime())
+        : repeats;
   const nodes = [...new Set(views.map((v) => JSON.stringify([v.cluster, v.node])))];
   const partial = views.filter((v) => v.rca === 'partial' || v.rca === 'blocked');
   const scopeNote = query.hasNextPage
@@ -231,7 +285,7 @@ function Overview() {
       <QueryState query={query}>
         <div className="c2-context">
           <Activity size={15} />
-          <span>{scopeNote}. 알림 수신 기록은 현재 장애·복구 상태가 아닙니다.</span>
+          <span>{scopeNote}. 저장된 사건이며 현재 장비 상태를 나타내지 않습니다.</span>
         </div>
         {truncated && (
           <p role="status" className="c2-warning">
@@ -242,10 +296,10 @@ function Overview() {
           {[
             ['수신된 사건', views.length, '조회 기간에 기록된 사건', `/cases?period=${period}`],
             [
-              '발생 알림 수신',
-              views.filter((v) => v.firing).length,
-              '현재 상태는 별도 확인',
-              `/cases?period=${period}&focus=firing`,
+              '오늘 발생 사건',
+              views.filter((v) => dayKey(v.at) === dayKey(now)).length,
+              'KST 오늘 발생 시각 기준',
+              '/cases?period=1',
             ],
             [
               '3회 이상 반복',
@@ -270,6 +324,14 @@ function Overview() {
             </Link>
           ))}
         </div>
+        <div className="c2-execution" aria-label="사건의 최신 보고서 생성 상태">
+          {executionStates.map((status) => (
+            <Link key={status} to={`/cases?period=${period}&execution=${status}`}>
+              <span>{labels[status]}</span>
+              <strong>{views.filter((v) => v.executionStatus === status).length}</strong>
+            </Link>
+          ))}
+        </div>
         <div className="c2-overview-grid">
           <Surface
             title="최근 수신된 사건"
@@ -284,27 +346,51 @@ function Overview() {
               </p>
             )}
           </Surface>
-          <Surface title="반복 발생 대상" note="동일 장치·동일 오류 3회 이상">
-            {repeats.slice(0, 5).map((group) => (
-              <Link
-                key={console2DeviceKey(group[0])}
-                className="c2-repeat"
-                to={`/cases?period=${period}&device2=${encodeURIComponent(console2DeviceKey(group[0]))}`}
-              >
-                <div>
-                  <b>{group[0].node || '노드 미확인'}</b>
-                  <small>
-                    {group[0].cluster} · {group[0].codeText || titleText(group[0])}
-                  </small>
-                  <code>{group[0].device || '장치 식별 미확인'}</code>
-                </div>
-                <strong>
-                  {group.length}
-                  <small>회</small>
-                </strong>
-              </Link>
-            ))}
-            {!repeats.length && (
+          <Surface title="반복 발생 탐색" note="장치·오류 조합 또는 오류 코드별 3회 이상">
+            <div className="c2-segment" aria-label="반복 탐색 기준">
+              {[
+                ['device', '장치별'],
+                ['error', '오류별'],
+                ['time', '최근 발생순'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  aria-pressed={repeatMode === value}
+                  onClick={() => setRepeatMode(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="c2-repeat-list">
+              {repeatGroups.map((group) => (
+                <Link
+                  key={console2DeviceKey(group[0])}
+                  className="c2-repeat"
+                  to={`/cases?period=${period}&${repeatMode === 'error' ? `code=${encodeURIComponent(group[0].code)}` : `device2=${encodeURIComponent(console2DeviceKey(group[0]))}`}`}
+                >
+                  <div>
+                    <b>
+                      {repeatMode === 'error'
+                        ? group[0].codeText || titleText(group[0])
+                        : group[0].node || '노드 미확인'}
+                    </b>
+                    <small>
+                      {repeatMode === 'error'
+                        ? `${new Set(group.map((v) => JSON.stringify([v.cluster, v.node]))).size}개 노드`
+                        : `${group[0].cluster} · ${group[0].codeText || titleText(group[0])}`}
+                    </small>
+                    {repeatMode !== 'error' && <code>{group[0].device || '장치 식별 미확인'}</code>}
+                    <small>최근 {dateTimeText(group[0].at)}</small>
+                  </div>
+                  <strong>
+                    {group.length}
+                    <small>회</small>
+                  </strong>
+                </Link>
+              ))}
+            </div>
+            {!repeatGroups.length && (
               <p className="c2-empty">같은 대상·오류가 3회 이상 반복된 기록이 없습니다.</p>
             )}
             <Link className="c2-foot-link" to={`/cases?period=${period}&focus=repeat`}>
@@ -313,7 +399,15 @@ function Overview() {
           </Surface>
         </div>
         <div className="c2-overview-grid">
-          <Surface title="사건 수신 추이" note="날짜를 선택하면 해당 날짜의 사건으로 이동">
+          <Surface title="유형별 사건 추이" note="날짜를 선택하면 해당 날짜의 사건으로 이동">
+            <div className="c2-trend-legend">
+              {CATEGORIES.map((c) => (
+                <span key={c.key}>
+                  <i className={`c2-cat-${c.key}`} />
+                  {c.name}
+                </span>
+              ))}
+            </div>
             <div
               className="c2-trend"
               style={{ gridTemplateColumns: `repeat(${days.length},minmax(20px,1fr))` }}
@@ -327,21 +421,36 @@ function Overview() {
                     aria-label={`${fullDate(d.day)} 사건 ${count}건`}
                   >
                     <span>{count}</span>
-                    <i style={{ height: `${Math.max(2, (count / max) * 120)}px` }} />
+                    <i className="c2-trend-stack" style={{ height: `${(count / max) * 120}px` }}>
+                      {CATEGORIES.map((c) => (
+                        <span
+                          key={c.key}
+                          className={`c2-cat-${c.key}`}
+                          style={{ flex: d.counts[c.key] }}
+                          title={`${c.name} ${d.counts[c.key]}건`}
+                        />
+                      ))}
+                    </i>
                     <small>{shortDate(d.day).slice(0, 5)}</small>
                   </Link>
                 );
               })}
             </div>
           </Surface>
-          <Surface title="유형별 수신 기록" note="오류 유형은 장비의 현재 상태와 다릅니다.">
+          <Surface title="유형별 사건 비교" note="오늘 / 선택 기간 · 현재 장비 상태와 구분">
             <div className="c2-categories">
               {CATEGORIES.map((c) => {
                 const n = views.filter((v) => category(v) === c.key).length;
                 return (
                   <div key={c.key}>
-                    <span>{c.name}</span>
-                    <b>{n}건</b>
+                    <Link to={`/cases?period=${period}&category=${c.key}`}>{c.name}</Link>
+                    <b>
+                      {
+                        views.filter((v) => category(v) === c.key && dayKey(v.at) === dayKey(now))
+                          .length
+                      }{' '}
+                      / {n}건
+                    </b>
                     <i style={{ width: `${views.length ? (n / views.length) * 100 : 0}%` }} />
                   </div>
                 );
@@ -364,6 +473,11 @@ function Overview() {
                 >
                   <span>{cluster || '클러스터 미확인'}</span>
                   <b>{node || '노드 미확인'}</b>
+                  <small>
+                    {CATEGORIES.map(
+                      (c) => `${c.name} ${group.filter((v) => category(v) === c.key).length}`,
+                    ).join(' · ')}
+                  </small>
                   <strong>
                     {group.length}
                     <small>건</small>
@@ -400,10 +514,7 @@ function Overview() {
           </div>
         </QueryState>
       </Surface>
-      <details className="c2-usage">
-        <summary>최근 Ops 보고서의 GPU 사용 현황 보기</summary>
-        <OpsUsage />
-      </details>
+      <OpsUsage snapshot />
       <footer className="c2-service">
         <span>조회 서비스</span>
         {['incident', 'job_controller'].map((name) => {
@@ -517,14 +628,12 @@ function Cases() {
             </select>
           </label>
           <label>
-            알림 수신
+            반복 발생
             <select
               value={params.get('focus') || ''}
               onChange={(e) => update({ focus: e.target.value })}
             >
               <option value="">전체</option>
-              <option value="firing">발생 수신</option>
-              <option value="resolved">해제 수신</option>
               <option value="repeat">3회 이상 반복</option>
             </select>
           </label>
@@ -543,6 +652,64 @@ function Cases() {
               ))}
             </select>
           </label>
+          <label>
+            보고서 생성
+            <select
+              value={params.get('execution') || ''}
+              onChange={(e) => update({ execution: e.target.value })}
+            >
+              <option value="">전체</option>
+              {executionStates.map((status) => (
+                <option key={status} value={status}>
+                  {labels[status]}
+                </option>
+              ))}
+              <option value="none">실행 기록 없음</option>
+            </select>
+          </label>
+          <label>
+            장치 유형
+            <select
+              value={params.get('kind') || ''}
+              onChange={(e) => update({ kind: e.target.value })}
+            >
+              <option value="">전체</option>
+              <option value="gpu">GPU</option>
+              <option value="switch">NVSwitch</option>
+              <option value="host">호스트</option>
+            </select>
+          </label>
+          <label>
+            정렬
+            <select
+              value={params.get('sort') || ''}
+              onChange={(e) => update({ sort: e.target.value })}
+            >
+              <option value="">최신순</option>
+              <option value="oldest">오래된 순</option>
+              <option value="device">장치별</option>
+              <option value="error">오류 코드별</option>
+            </select>
+          </label>
+          <label>
+            오류 유형
+            <select
+              value={params.get('category') || ''}
+              onChange={(e) => update({ category: e.target.value })}
+            >
+              <option value="">전체</option>
+              {CATEGORIES.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {params.get('code') && (
+            <button className="button" onClick={() => update({ code: '' })}>
+              코드 {params.get('code')} 해제
+            </button>
+          )}
         </div>
         <div className="c2-filter-period">
           <PeriodButtons

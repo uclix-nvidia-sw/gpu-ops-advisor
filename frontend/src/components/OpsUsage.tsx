@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { ReportScope } from './ReportMeta';
+import { reportTitle } from '../lib/workflow';
 import { Link } from 'react-router-dom';
 import {
   Bar,
@@ -14,7 +17,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { num, obj, queryPath, rows, str, strings, useResource, type Row } from '../lib/live';
+import {
+  num,
+  obj,
+  queryPath,
+  rows,
+  str,
+  strings,
+  useList,
+  useResource,
+  type Row,
+} from '../lib/live';
 import { reportPeriodLabel } from '../lib/reportPeriod';
 import { useApp } from '../lib/store';
 import { QueryState } from './live';
@@ -91,18 +104,38 @@ const OTHER = '#b4b2a9';
 const pct = (v: unknown) => (typeof v === 'number' ? `${Math.round(v)}%` : '관측 부족');
 
 /** Dashboard section: GPU use per Namespace from the latest stored Ops report. */
-export function OpsUsage() {
+export function snapshotReports(items: Row[]) {
+  return items
+    .filter(
+      (r) =>
+        r.status === 'succeeded' &&
+        r.result_ref &&
+        !r.deletion &&
+        strings(r.topic_ids).includes('namespace_usage'),
+    )
+    .sort(
+      (a, b) =>
+        (Date.parse(str(obj(b.time_range).end)) || 0) -
+        (Date.parse(str(obj(a.time_range).end)) || 0),
+    );
+}
+export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
+  const [selected, setSelected] = useState('');
   const app = useApp();
-  const list = useResource(
+  const list = useList(
     app.ready ? queryPath('/reports', { scope: app.scope, status: 'succeeded', limit: 20 }) : null,
   );
-  const latest = rows(list.data?.items).find((r) =>
-    strings(r.topic_ids).includes('namespace_usage'),
-  );
+  const snapshots = snapshotReports(list.items);
+  const latest = snapshot
+    ? snapshots.find((r) => r.id === selected) || snapshots[0]
+    : list.items.find((r) => strings(r.topic_ids).includes('namespace_usage'));
   const id = str(latest?.id);
   const report = useResource(id ? `/reports/${encodeURIComponent(id)}` : null);
   const range = obj(latest?.time_range);
-  const { items, hours, alerts } = opsUsage(obj(report.data?.result));
+  const available =
+    !snapshot ||
+    (report.data?.status === 'succeeded' && report.data?.result_ref && !report.data?.deletion);
+  const { items, hours, alerts } = opsUsage(available ? obj(report.data?.result) : {});
   const color = new Map(items.map((u, i) => [u.key, SERIES[i % SERIES.length]]));
   const measured = items.filter((u) => u.activity !== null);
   const missing = items.filter((u) => u.activity === null);
@@ -126,10 +159,12 @@ export function OpsUsage() {
     <section className="oh-card ops-usage" aria-labelledby="ops-usage-title">
       <div className="oh-card-h">
         <div>
-          <h2 id="ops-usage-title">GPU 사용 현황 · Ops 보고서</h2>
+          <h2 id="ops-usage-title">
+            {snapshot ? '저장된 Ops 보고서 요약' : 'GPU 사용 현황 · Ops 보고서'}
+          </h2>
           <p>
             {latest
-              ? `${reportPeriodLabel(str(range.start), str(range.end))} 분석 · 최근 성공한 보고서 기준`
+              ? `${reportPeriodLabel(str(range.start), str(range.end))} 분석 · 저장된 보고서 기준`
               : 'Namespace 사용 현황이 담긴 최근 Ops 보고서 기준'}
           </p>
         </div>
@@ -143,6 +178,37 @@ export function OpsUsage() {
         )}
       </div>
       <div className="oh-card-b">
+        {snapshot && (
+          <div className="c2-snapshot-meta">
+            <p>
+              사건 조회 기간과 별개인 저장 결과이며 실시간 지표가 아닙니다. 불러온 보고서 중 분석
+              종료일 최신순입니다.
+            </p>
+            {snapshots.length > 0 && (
+              <label>
+                요약할 보고서
+                <select value={id} onChange={(e) => setSelected(e.target.value)}>
+                  {snapshots.map((r) => (
+                    <option key={str(r.id)} value={str(r.id)}>
+                      {reportTitle(r)} ·{' '}
+                      {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {latest && <ReportScope job={latest} />}
+            {list.hasNextPage && (
+              <button
+                className="button"
+                disabled={list.isFetchingNextPage}
+                onClick={() => void list.fetchNextPage()}
+              >
+                이전 보고서 더 불러오기
+              </button>
+            )}
+          </div>
+        )}
         <QueryState
           query={list}
           empty={!latest}
@@ -163,7 +229,13 @@ export function OpsUsage() {
             <div className="oh-kpis ops-usage-kpis">
               <div className="oh-kpi">
                 <span>연결 GPU</span>
-                <strong>{gpuTotal}대</strong>
+                <strong>
+                  {byGpus.length
+                    ? `${gpuTotal}대`
+                    : items.some((u) => u.gpus === 0)
+                      ? '0대'
+                      : '관측 부족'}
+                </strong>
                 <small>{byGpus.length}개 Namespace · 기간 중 고유 대수</small>
               </div>
               <div className="oh-kpi">
@@ -173,8 +245,17 @@ export function OpsUsage() {
               </div>
               <div className="oh-kpi">
                 <span>대기 Pod 최대</span>
-                <strong>{waiting[0]?.pending ?? 0}개</strong>
-                <small>{waiting[0]?.label || '대기 Pod 없음'}</small>
+                <strong>
+                  {items.some((u) => u.pending !== null)
+                    ? `${waiting[0]?.pending ?? 0}개`
+                    : '관측 부족'}
+                </strong>
+                <small>
+                  {waiting[0]?.label ||
+                    (items.some((u) => u.pending !== null)
+                      ? '관측된 대기 Pod 없음'
+                      : '대기 Pod 자료 미확인')}
+                </small>
               </div>
               <div className="oh-kpi">
                 <span>기간 내 알림</span>

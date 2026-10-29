@@ -711,7 +711,8 @@ async def run(tools):
         }
         optional = set(plan_queries(selected)) - required
         degraded = bool(failed - optional)
-        conflicting = conflicting_health(health, incident_selector(data))
+        selector = incident_selector(data)
+        conflicting = conflicting_health(health, selector)
         check(
             decision_checks,
             "observation_degraded",
@@ -733,31 +734,45 @@ async def run(tools):
             events.append("conflicting_evidence")
         if degraded:
             events.append("query_failed")
-        # Fleet baseline reports ("Healthy" without an error code) are left unmapped
-        # by the producer contract. When error-coded reports exist, only those carry
-        # the values this investigation needs; baseline reports stay context. Component
-        # alerts carry no code, so their mapped (Unhealthy) reports play that role.
-        relevant = (
-            [h for h in health if h.get("error_code")]
-            or [h for h in health if h["normalized_health"] != "unknown"]
-            or health
-        )
+        # Sibling reports stay in evidence, but only the target can create a value gap.
+        # Non-code component alerts keep their existing mapped-state selection.
+        if selector:
+            relevant = [h for h in health if matches_target(h, selector)]
+        else:
+            relevant = (
+                [h for h in health if h.get("error_code")]
+                or [h for h in health if h["normalized_health"] != "unknown"]
+                or health
+            )
+        event_confirmed = alert_match["status"] == "match"
+        # A valid Healthy report does not invalidate a confirmed historical event;
+        # its normalized health remains unknown, never a recovery/current-health fact.
+        unknown = [
+            h
+            for h in relevant
+            if h["check_status"] != "valid"
+            or (
+                h["normalized_health"] == "unknown"
+                and not (event_confirmed and h.get("raw_health") == "Healthy")
+            )
+        ]
         if check(
             decision_checks,
             "unknown_value",
-            "any(h.check_status != 'valid' or h.normalized_health == 'unknown' for h in relevant) or (health_query_collected and not health)",
-            any(
-                h["check_status"] != "valid" or h["normalized_health"] == "unknown"
-                for h in relevant
-            )
-            or (any(collected.get(q) for q in ("D05", "D09")) and not health),
+            "bool(unknown) or (health_query_collected and not relevant and not event_confirmed); unknown excludes valid Healthy reports only when the target event is confirmed",
+            bool(unknown)
+            or (
+                any(collected.get(q) for q in ("D05", "D09"))
+                and not relevant
+                and not event_confirmed
+            ),
             {
                 "health_count": len(health),
                 "relevant_count": len(relevant),
-                "invalid_or_unknown_count": sum(
-                    h["check_status"] != "valid" or h["normalized_health"] == "unknown"
-                    for h in relevant
-                ),
+                "context_report_count": len(health) - len(relevant),
+                "invalid_or_unknown_count": len(unknown),
+                "event_target": selector,
+                "event_confirmed": event_confirmed,
                 "health_query_collected": any(collected.get(q) for q in ("D05", "D09")),
             },
         ):

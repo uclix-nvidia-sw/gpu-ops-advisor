@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import {
   Console2,
+  IncidentTable,
   console2Date,
   console2DeviceKey,
   console2Filter,
@@ -75,14 +76,14 @@ it('keeps identical node/device names in different clusters separate and filters
   ).toHaveLength(3);
   expect(console2Filter(incidents, new URLSearchParams('q=missing-node'))).toEqual([]);
 });
-it('keeps alarm state and published quality independent, including the combined partial/blocked overview link', () => {
+it('filters published quality without inferring current health from legacy alarm receipt', () => {
   expect(console2Filter(incidents, new URLSearchParams('quality=limited'))).toHaveLength(5);
   expect(console2Filter(incidents, new URLSearchParams('quality=blocked'))).toHaveLength(1);
   expect(
     console2Filter(incidents, new URLSearchParams('focus=resolved&quality=ready')),
   ).toHaveLength(1);
   expect(console2Filter(incidents, new URLSearchParams('focus=firing&quality=ready'))).toHaveLength(
-    0,
+    1,
   );
 });
 it('shows both report topics before details, preserves stored statements and keeps classic presentation unchanged', () => {
@@ -181,4 +182,47 @@ it('highlights only the selected cluster and time interval without changing plot
   expect(focused.match(/선택한 관측 구간/g)).toHaveLength(1);
   expect(focused).toContain('opacity="0.18"');
   expect(focused).toContain('읽던 제안으로 돌아가기');
+});
+
+it('preserves all execution states alongside a previous published partial report', () => {
+  const states = ['queued', 'running', 'retry_wait', 'succeeded', 'failed', 'cancelled', 'expired'];
+  const views = incidentViews(
+    states.map((status, i) => ({
+      id: String(i),
+      occurred_at: `2026-10-29T0${i}:00:00Z`,
+      target: { title: `SXID ${100 + i} PCI:0000:c5:00.0`, cluster_id: 'a', k8s_node_name: 'node' },
+      rca_summary: {
+        latest_job: { job_id: 'new-' + i, status },
+        latest_published: { job_id: 'old-' + i, result_status: 'partial' },
+      },
+    })),
+  );
+  for (const execution of states)
+    expect(
+      console2Filter(views, new URLSearchParams({ execution, quality: 'partial' })),
+    ).toHaveLength(1);
+  expect(console2Filter(views, new URLSearchParams('kind=gpu'))).toHaveLength(0);
+  expect(console2Filter(views, new URLSearchParams('kind=switch&code=sxid%3A100'))).toHaveLength(1);
+  expect(console2Filter(views, new URLSearchParams('sort=oldest'))[0].id).toBe('0');
+  expect(console2Filter(views, new URLSearchParams('sort=error'))[0].code).toBe('sxid:100');
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <IncidentTable views={views} />
+    </MemoryRouter>,
+  );
+  for (const label of [
+    '실행 대기',
+    '실행 중',
+    '재시도 대기',
+    '실행 완료',
+    '실행 실패',
+    '취소 완료',
+    '기한 만료',
+    '부분 산출',
+    '이전 발행 보고서',
+  ])
+    expect(html).toContain(label);
+  expect(html).not.toContain('알림 수신');
+  expect(html).toContain('/analyses/old-0');
+  expect(html).toContain('/incidents/0');
 });
