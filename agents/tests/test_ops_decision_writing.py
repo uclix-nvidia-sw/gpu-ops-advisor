@@ -281,7 +281,13 @@ async def test_semantic_writing_errors_repair_only_the_affected_item(
     repair = llm.complete.call_args.args[1]
     assert [a["fact_id"] for a in repair["summary_repair"]] == [item["fact_id"]]
     assert repair["summary_repair"][0]["validation_error"].startswith(code + ":")
-    assert result["quality"]["report"]["failures"] == [{"attempt": 1, "reason": code}]
+    assert result["quality"]["report"]["failures"] == [
+        {
+            "attempt": 1,
+            "reason": code,
+            "topic_failures": [{"topic_id": "namespace_usage", "reason": code}],
+        }
+    ]
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["narrative_status"] == "complete"
     assert result["topics"] == before
@@ -880,7 +886,16 @@ async def test_workload_activity_repair_keeps_the_gpu_as_measurement_subject():
     ):
         assert original_context.get(key) == patched_context.get(key)
     assert result["quality"]["report"]["failures"] == [
-        {"attempt": 1, "reason": "unsupported_workload_activity_attribution"}
+        {
+            "attempt": 1,
+            "reason": "unsupported_workload_activity_attribution",
+            "topic_failures": [
+                {
+                    "topic_id": "namespace_usage",
+                    "reason": "unsupported_workload_activity_attribution",
+                }
+            ],
+        }
     ]
     assert result["narrative_status"] == "complete" and result["topics"] == before
 

@@ -146,6 +146,7 @@ async def test_prose_diagnostics_store_only_fixed_provenance_codes(
             "topic_id": topic_id,
             "field": field,
             "violation_kind": kind,
+            "topic_failures": [{"topic_id": topic_id, "reason": "unsupported_prose"}],
         }
         for attempt in (1, 2)
     ]
@@ -236,3 +237,84 @@ async def test_advice_full_retry_collects_all_topics_as_complete(result):
     assert diagnostic["reason"] == "repaired"
     assert diagnostic["namespace_advice_version"] == VERSION
     assert "topic_statuses" not in diagnostic
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize("namespace_initially_failed", [False, True])
+async def test_repeated_echo_records_every_failed_topic_and_preserves_namespace(
+    result, field, namespace_initially_failed
+):
+    from ops_agent.report_interpretation import INCIDENT_EXAMPLE
+    from test_namespace_advice import topic
+
+    result["topics"][0] = topic()
+    result["topics"].reverse()
+    payload = payload_for(result)
+    valid = reply_for(payload)
+    expected = validate_sections(valid, payload, result)
+    present_advice(expected)
+    first = deepcopy(valid)
+    first["sections"][0][field] = INCIDENT_EXAMPLE[field]
+    second = {"sections": [deepcopy(first["sections"][0])]}
+    if namespace_initially_failed:
+        first["sections"][1]["advice"][0]["summary"] = ""
+        second["advice"] = [deepcopy(valid["sections"][1]["advice"][0])]
+    original = deepcopy(result["topics"])
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [first, second]
+    await interpret_report(result, llm)
+    diagnostic = result["quality"]["report"]
+    failures = diagnostic["failures"]
+    incident_failure = {"topic_id": "incident_summary", "reason": "template_echo"}
+    assert [f["reason"] for f in failures] == ["template_echo", "template_echo"]
+    assert failures[0]["topic_failures"][0] == incident_failure
+    assert len(failures[0]["topic_failures"]) == (
+        2 if namespace_initially_failed else 1
+    )
+    if namespace_initially_failed:
+        assert failures[0]["topic_failures"][1] == {
+            "topic_id": "namespace_usage",
+            "reason": "invalid_namespace_advice_text",
+        }
+    assert failures[1]["topic_failures"] == [incident_failure]
+    assert diagnostic["method"] == "partial_interpretation"
+    assert diagnostic["topic_statuses"] == {
+        "incident_summary": "failed",
+        "namespace_usage": "complete",
+    }
+    assert result["narrative"][1] == expected[1]
+    assert result["narrative"][0]["interpretation_source"] == "deterministic_fallback"
+    assert result["topics"] == original and llm.complete.call_count == 2
+    assert not any(
+        value in json.dumps(diagnostic, ensure_ascii=False)
+        for value in INCIDENT_EXAMPLE.values()
+        if value
+    )
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize("value", ["", " "])
+def test_empty_incident_writer_fields_are_rejected(result, field, value):
+    payload = payload_for(result)
+    reply = reply_for(payload)
+    reply["sections"][1][field] = value
+    with pytest.raises(ValueError, match="^invalid_section_text$"):
+        validate_sections(reply, payload, result)
+
+
+def test_topic_failure_codes_exclude_raw_exception_text(result, monkeypatch):
+    import ops_agent.report_interpretation as module
+
+    payload = payload_for(result)
+    reply = reply_for(payload)
+
+    def fail(*args):
+        raise ValueError("private-secret/token=abc")
+
+    monkeypatch.setattr(module, "_validate_sections", fail)
+    with pytest.raises(ValueError) as caught:
+        validate_sections(reply, payload, result)
+    assert caught.value.topic_failures == [
+        {"topic_id": topic["topic_id"], "reason": "model_response_unavailable"}
+        for topic in payload["topics"]
+    ]

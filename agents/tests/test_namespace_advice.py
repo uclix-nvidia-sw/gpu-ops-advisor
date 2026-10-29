@@ -63,6 +63,12 @@ async def test_reference_failure_details_do_not_store_model_text(origin, problem
             "attempt": attempt,
             "reason": "namespace_summary_tokens_required",
             "reference_errors": expected,
+            "topic_failures": [
+                {
+                    "topic_id": "namespace_usage",
+                    "reason": "namespace_summary_tokens_required",
+                }
+            ],
         }
         for attempt in (1, 2)
     ]
@@ -1163,7 +1169,13 @@ async def test_batch_repair_targets_failure_in_both_origins(origin, claim, code)
     assert "summary_repair" in llm.complete.call_args_list[1].args[1]
     assert "topics" not in llm.complete.call_args_list[1].args[1]
     assert "hourly_pair" not in feedback["instruction"]
-    assert result["quality"]["report"]["failures"] == [{"attempt": 1, "reason": code}]
+    assert result["quality"]["report"]["failures"] == [
+        {
+            "attempt": 1,
+            "reason": code,
+            "topic_failures": [{"topic_id": "namespace_usage", "reason": code}],
+        }
+    ]
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["narrative_status"] == "complete"
     assert result["topics"] == before["topics"]
@@ -1354,7 +1366,16 @@ async def test_observed_zero_nonuse_claim_repairs_without_changing_metrics(origi
     assert result["topics"][0]["metrics"] == before["topics"][0]["metrics"]
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["quality"]["report"]["failures"] == [
-        {"attempt": 1, "reason": "observed_zero_is_not_proof_of_nonuse"}
+        {
+            "attempt": 1,
+            "reason": "observed_zero_is_not_proof_of_nonuse",
+            "topic_failures": [
+                {
+                    "topic_id": "namespace_usage",
+                    "reason": "observed_zero_is_not_proof_of_nonuse",
+                }
+            ],
+        }
     ]
     assert result["topics"] == before["topics"]
     assert "미사용" not in json.dumps(result["narrative"], ensure_ascii=False)
@@ -2031,7 +2052,9 @@ async def test_namespace_writing_list_does_not_replace_incident_section_contract
     from ops_agent.report_interpretation import INCIDENT_EXAMPLE
 
     assert set(inc) == {"topic_id", "fact_ids", "observation", "meaning", "next_check"}
-    assert {key: inc[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+    assert {key: inc[key] for key in INCIDENT_EXAMPLE} == dict.fromkeys(
+        INCIDENT_EXAMPLE, ""
+    )
     assert INCIDENT_RULES in system
     assert inc["observation"] == ""
     assert "fact_ids도 코드가 정하므로 응답 값은 쓰이지 않습니다" in system
@@ -2322,7 +2345,16 @@ async def test_repeated_scheduling_condition_failure_keeps_calculated_report(pro
     diagnostic = result["quality"]["report"]
     assert diagnostic["method"] == "deterministic_fallback"
     assert diagnostic["failures"] == [
-        {"attempt": n, "reason": "reason_only_namespace_summary_required"}
+        {
+            "attempt": n,
+            "reason": "reason_only_namespace_summary_required",
+            "topic_failures": [
+                {
+                    "topic_id": "namespace_usage",
+                    "reason": "reason_only_namespace_summary_required",
+                }
+            ],
+        }
         for n in (1, 2)
     ]
     repair = llm.complete.call_args_list[1].args[1]["summary_repair"][0]

@@ -183,7 +183,13 @@ async def test_reference_feedback_reaches_repair_without_changing_guards(
     assert allowed in feedback and "allowed_ids" in feedback
     assert "namespace_usage.value" not in feedback
     assert len(feedback.encode()) < 2048
-    assert result["quality"]["report"]["failures"] == [{"attempt": 1, "reason": code}]
+    assert result["quality"]["report"]["failures"] == [
+        {
+            "attempt": 1,
+            "reason": code,
+            "topic_failures": [{"topic_id": "incident_summary", "reason": code}],
+        }
+    ]
     assert result["narrative_status"] == "complete"
     assert result["topics"] == before
 
@@ -930,10 +936,14 @@ async def test_incident_template_echo_uses_one_repair(
             "incident-node-2",
         ]
         example = request["response_shape"]["sections"][1]
-        assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+        assert {key: example[key] for key in INCIDENT_EXAMPLE} == dict.fromkeys(
+            INCIDENT_EXAMPLE, ""
+        )
         repair = llm.complete.call_args.args[1]
         example = repair["response_shape"]["sections"][0]
-        assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+        assert {key: example[key] for key in INCIDENT_EXAMPLE} == dict.fromkeys(
+            INCIDENT_EXAMPLE, ""
+        )
         assert len(repair["section_repair"]) == 1
 
 
@@ -1147,11 +1157,17 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     await interpret_report(concentrated_result, llm)
     assert concentrated_result["narrative_status"] == "complete"
     assert concentrated_result["quality"]["report"]["failures"] == [
-        {"attempt": 1, "reason": "incident_meaning_required"}
+        {
+            "attempt": 1,
+            "reason": "incident_meaning_required",
+            "topic_failures": [
+                {"topic_id": "incident_summary", "reason": "incident_meaning_required"}
+            ],
+        }
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-names-v8"
+        == "ops-interpretation-incident-repair-v9"
     )
     section = next(
         s
@@ -1367,7 +1383,13 @@ async def test_incident_rca_repair_preserves_focus_and_valid_namespace(
     assert first["topics"][1]["focus"] == repair["section_repair"][0]["topic"]["focus"]
     assert concentrated_result["narrative"][0] == baseline["narrative"][0]
     assert concentrated_result["quality"]["report"]["failures"] == [
-        {"attempt": 1, "reason": "incident_rca_reference"}
+        {
+            "attempt": 1,
+            "reason": "incident_rca_reference",
+            "topic_failures": [
+                {"topic_id": "incident_summary", "reason": "incident_rca_reference"}
+            ],
+        }
     ]
     assert concentrated_result["narrative_status"] == "complete"
 
