@@ -100,6 +100,16 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
     assert "topics" not in request
     assert len(request.get("summary_repair", [])) == (broken != "incident")
     assert len(request.get("section_repair", [])) == (broken != "namespace")
+    initial_incident = next(
+        t
+        for t in llm.complete.call_args_list[0].args[1]["topics"]
+        if t["topic_id"] == "incident_summary"
+    )
+    assert initial_incident["focus"]["check_context"]["type_previous_count"] == 0
+    if broken != "namespace":
+        repaired_incident = request["section_repair"][0]["topic"]
+        assert repaired_incident["focus"] == initial_incident["focus"]
+    assert len(json.dumps(request, ensure_ascii=False).encode()) < 32_000
     assert result["narrative"] == expected
     assert result["topics"] == original["topics"]
     assert result["report_origin"] == origin

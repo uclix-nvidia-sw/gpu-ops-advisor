@@ -13,6 +13,9 @@ from ops_agent.report_interpretation import (
 )
 
 
+INCIDENT_LIMIT = "저장 알림 기록이며 시험 알림이 섞일 수 있고 원인·같은 GPU 반복·복구는 확정하지 않습니다."
+
+
 @pytest.fixture
 def result():
     def topic(name, value, unit):
@@ -1167,7 +1170,7 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-repair-v9"
+        == "ops-interpretation-incident-check-v10"
     )
     section = next(
         s
@@ -1201,6 +1204,7 @@ def test_incident_source_labels_and_check_context_are_separate(concentrated_resu
         "rca_count": 5,
         "same_type_fact_ids": ["incident-node-0", "incident-node-1"],
         "other_alert_fact_ids": ["incident-node-2"],
+        "type_previous_count": 0,
     }
     reply = concentration_reply(payload)
     reply["sections"][1].update(
@@ -1514,3 +1518,281 @@ async def test_incident_short_names_complete_without_repair(
     assert "건수·발생 중 건수·공개 RCA 수는 반복하지 마세요" in system
     assert "실제 선택된 근거에 있는 이름만" in system
     assert "다른 주제의 이름 직접 작성 금지는 유지" in system
+
+
+@pytest.mark.parametrize("previous_count", [0, 2])
+@pytest.mark.parametrize(
+    "scope", ["match", "other_type", "other_cluster", "single", "no_node"]
+)
+def test_incident_previous_context_has_exact_type_and_cluster_scope(
+    previous_count, scope
+):
+    from ops_agent.incident_findings import incident_focus
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    if scope == "single":
+        records = records[:1]
+    if scope == "no_node":
+        for record in records:
+            record["target"] = {}
+    report = concentration_report(records)
+    facts = payload_for(report)["topics"][0]["findings"]
+    original = deepcopy(facts)
+    for fact in facts:
+        if not fact["fact_id"].startswith("incident-top-type-"):
+            continue
+        for metric in fact["values"]:
+            if ".top_type_previous_count." in metric["metric_id"]:
+                metric["value"] = previous_count
+        if scope == "other_type":
+            fact["target"]["alert_type"] = "another-type"
+        if scope == "other_cluster":
+            fact["target"]["cluster_id"] = "another-cluster"
+    before = deepcopy(facts)
+    focus = incident_focus(facts)
+    assert facts == before
+    if scope == "no_node":
+        assert focus["check_context"] is None
+        assert focus["check_target"] == ""
+    else:
+        assert focus["check_context"]["type_previous_count"] == (
+            previous_count if scope == "match" else None
+        )
+        assert focus["check_context"]["fact_id"] == "incident-node-0"
+    # Previous counts do not participate in selection or alter tokenized observation.
+    if scope == "match":
+        baseline = incident_focus(original)
+        for key in ("ids", "observation", "check_target"):
+            assert focus[key] == baseline[key]
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+@pytest.mark.parametrize("rca_count", [0, 1, 5])
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "공개 RCA 결과로 원인이 확인된 사건입니다.",
+        "RCA 조사가 모두 완료된 대상입니다.",
+        "RCA 본문에서 확인된 원인과 알림 시각을 대조하세요.",
+    ],
+)
+def test_incident_rca_source_claims_are_rejected_for_any_coverage(
+    field, rca_count, claim
+):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    for i, record in enumerate(records[:5]):
+        record["result_id"] = f"published-{i}" if i < rca_count else None
+    report = concentration_report(records)
+    payload = payload_for(report)
+    reply = reply_for(payload)
+    reply["sections"][0][field] = claim
+    with pytest.raises(ValueError, match="^incident_overreach:"):
+        validate_sections(reply, payload, report)
+
+
+@pytest.mark.parametrize("rca_count", [0, 1, 5])
+@pytest.mark.parametrize(
+    "field,text",
+    [
+        ("meaning", "원인은 확인되지 않았습니다."),
+        ("meaning", "RCA 조사가 완료되지 않았는지는 별도 확인 사항입니다."),
+        ("next_check", "RCA 작업이 완료됐는지 상태를 확인하세요."),
+        ("next_check", "RCA 조사가 완료됐는지 상태를 확인하세요."),
+        ("next_check", "원인이 확인됐는지 조사 기록을 확인하세요."),
+    ],
+)
+def test_incident_rca_negative_and_check_proposals_remain_valid(rca_count, field, text):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    for i, record in enumerate(records[:5]):
+        record["result_id"] = f"published-{i}" if i < rca_count else None
+    report = concentration_report(records)
+    payload = payload_for(report)
+    reply = reply_for(payload)
+    reply["sections"][0][field] = text
+    assert validate_sections(reply, payload, report)[0][field] == text
+
+
+@pytest.mark.parametrize("rca_count", [1, 5])
+def test_incident_published_rca_time_comparison_is_a_proposal(rca_count):
+    from test_aggregate_report import concentration_records, concentration_report
+
+    records = concentration_records()
+    for i, record in enumerate(records[:5]):
+        record["result_id"] = f"published-{i}" if i < rca_count else None
+    report = concentration_report(records)
+    payload = payload_for(report)
+    reply = reply_for(payload)
+    text = "공개된 RCA 결과가 이 알림 시각을 다루는지 대조하세요."
+    reply["sections"][0]["next_check"] = text
+    assert validate_sections(reply, payload, report)[0]["next_check"] == text
+
+
+def test_incident_rules_scope_purpose_without_names_or_rank_examples():
+    from ops_agent.incident_findings import INCIDENT_RULES
+    from ops_agent.report_interpretation import SYSTEM, ADVICE_SYSTEM
+
+    for system in (SYSTEM, ADVICE_SYSTEM):
+        assert INCIDENT_RULES in system
+        assert "type_previous_count" in system
+        assert "노드별 이전 기록이 아닙니다" in system
+        assert "0이면 기간 중 알림" in system
+        assert "앞으로 확인할 자료" in system
+        assert "관측 사실을 다시 열거하지 말고" in system
+        assert "공개 결과와의 대조 목적을 빠짐없이" in system
+        assert INCIDENT_LIMIT in system
+        assert "meaning은 두 문장" in system
+        assert "meaning에 쓰지 말고" in system
+        assert "코드가 별도 한계를 표시해도 이 둘째 문장은 생략하지 마세요" in system
+        assert "한계 문장만 단독으로 반환하지 마세요" in system
+        assert "숫자를 한글 수사로 바꿔 쓰지 마세요" in system
+        assert (
+            "next_check에서 같은 노드의 다른 알림이나 같은 종류의 다른 노드" in system
+        )
+        assert "원인 한계는 '확인되지 않았습니다'" not in system
+        assert "각각을 모두 설명할 의무는 없습니다" in system
+        assert "핵심 이유 하나" in system
+        assert "때문에·때문이다" in system
+        assert "부정문·한계 문장에서도 쓰지" in system
+        assert "'~이 있어', '~이므로'" in system
+        assert "meaning의 확인 목적은 '~했는지·~됐는지' 대신 '~ 여부'" in system
+        assert "선후·연쇄·시간 겹침을 사실로 단정하지" in system
+        assert "후보 선정 순위·위험도·심각도" in system
+        assert "dgx01·dgx02에서 XID 79가 기록됐습니다" not in system
+        assert "INCIDENT_RULES" not in system
+
+
+def test_mixed_topic_shape_guidance_is_scoped_to_full_responses():
+    from ops_agent.report_interpretation import SYSTEM, ADVICE_SYSTEM
+
+    guidance = "부분 보완이 아니면 JSON 객체의 sections 배열에"
+    assert guidance in ADVICE_SYSTEM
+    assert guidance not in SYSTEM
+    assert "주제 ID를 최상위 키로 쓰거나 같은 topic_id를 반복" in ADVICE_SYSTEM
+    assert "Namespace 후보는 namespace_usage 항목의 advice 배열에" in ADVICE_SYSTEM
+    assert "부분 보완은 요청한 항목만 반환" in ADVICE_SYSTEM
+
+
+@pytest.mark.parametrize(
+    "field,text,reason,violation",
+    [
+        ("meaning", "이전 기록이 있어 확인이 필요합니다.", None, None),
+        ("meaning", "저장 범위가 제한적이므로 확인이 필요합니다.", None, None),
+        ("meaning", "원인은 확인되지 않았습니다.", None, None),
+        ("meaning", "원인·같은 GPU 반복 장애·복구는 확정하지 않습니다.", None, None),
+        ("meaning", "해제 여부를 확인할 필요가 있습니다.", None, None),
+        ("next_check", "해제됐는지 상태를 확인하세요.", None, None),
+        (
+            "meaning",
+            "있기 때문에 확인이 필요합니다.",
+            "unsupported_prose",
+            "forbidden_expression",
+        ),
+        (
+            "meaning",
+            "원인으로 판단할 수 없습니다.",
+            "unsupported_prose",
+            "forbidden_expression",
+        ),
+        (
+            "meaning",
+            "복구 완료를 뜻하지 않습니다.",
+            "unsupported_prose",
+            "forbidden_expression",
+        ),
+        (
+            "meaning",
+            "해결됐다고 볼 수 없습니다.",
+            "unsupported_prose",
+            "forbidden_expression",
+        ),
+        (
+            "meaning",
+            "해제됐는지 확인할 필요가 있습니다.",
+            "incident_meaning_required",
+            None,
+        ),
+        ("meaning", "원인이 확인된 것은 아닙니다.", "incident_overreach", None),
+    ],
+)
+def test_incident_prompt_wording_matches_existing_validator(
+    concentrated_result, field, text, reason, violation
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1][field] = text
+    if reason is None:
+        assert validate_sections(reply, payload, concentrated_result)[1][field] == text
+    else:
+        with pytest.raises(ValueError, match=f"^{reason}:") as caught:
+            validate_sections(reply, payload, concentrated_result)
+        if violation:
+            assert caught.value.topic_id == "incident_summary"
+            assert caught.value.field == field
+            assert caught.value.violation_kind == violation
+
+
+def test_incident_fixed_limit_is_not_an_instruction_placeholder():
+    from ops_agent.incident_findings import INCIDENT_RULES
+    from ops_agent.report_interpretation import INCIDENT_EXAMPLE
+
+    assert INCIDENT_RULES.count(INCIDENT_LIMIT) == 1
+    assert INCIDENT_LIMIT not in INCIDENT_EXAMPLE.values()
+
+
+@pytest.mark.parametrize(
+    "suffix,reason,violation",
+    [
+        ("", None, None),
+        (" 13건입니다.", "unsupported_prose", "number"),
+        (" 때문에 확인이 필요합니다.", "unsupported_prose", "forbidden_expression"),
+        (" XID79 기록입니다.", "unsupported_prose", "number"),
+    ],
+)
+def test_incident_fixed_limit_keeps_existing_prose_guards(
+    concentrated_result, suffix, reason, violation
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    meaning = (
+        "이 확인 대상의 알림 시각이 기존 기록에 포함되는지는 미확인입니다. "
+        + INCIDENT_LIMIT
+        + suffix
+    )
+    reply["sections"][1]["meaning"] = meaning
+    if reason is None:
+        assert (
+            validate_sections(reply, payload, concentrated_result)[1]["meaning"]
+            == meaning
+        )
+    else:
+        with pytest.raises(ValueError, match=f"^{reason}:") as caught:
+            validate_sections(reply, payload, concentrated_result)
+        assert caught.value.violation_kind == violation
+
+
+@pytest.mark.parametrize("field", ["meaning", "next_check"])
+def test_incident_exact_names_remain_valid_despite_writing_guidance(
+    concentrated_result, field
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1][field] = "XID 79 기록을 확인할 대상입니다."
+    assert (
+        validate_sections(reply, payload, concentrated_result)[1][field]
+        == reply["sections"][1][field]
+    )
+
+
+@pytest.mark.parametrize("text", [INCIDENT_LIMIT, "저장 알림은 열세 건입니다."])
+def test_current_validator_limit_allows_limit_only_or_hangul_counts(
+    concentrated_result, text
+):
+    payload = payload_for(concentrated_result)
+    reply = concentration_reply(payload)
+    reply["sections"][1]["meaning"] = text
+    assert validate_sections(reply, payload, concentrated_result)[1]["meaning"] == text
