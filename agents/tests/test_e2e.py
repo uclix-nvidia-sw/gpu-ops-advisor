@@ -209,6 +209,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-workload-v1",
                         "ops-interpretation-workload-v2",
                         "ops-interpretation-incident-names-v8",
+                        "ops-interpretation-incident-repair-v9",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3025,7 +3026,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-names-v8"
+        == "ops-interpretation-incident-repair-v9"
     )
     assert incident_section["meaning"] == meaning
     assert body["quality"]["report"]["attempts"] == 1
@@ -3866,7 +3867,16 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
     assert body["quality"]["report"]["attempts"] == (1 if failure == "http" else 2)
     if failure == "raw_action":
         assert body["quality"]["report"]["failures"] == [
-            {"attempt": n, "reason": "reason_only_namespace_summary_required"}
+            {
+                "attempt": n,
+                "reason": "reason_only_namespace_summary_required",
+                "topic_failures": [
+                    {
+                        "topic_id": "namespace_usage",
+                        "reason": "reason_only_namespace_summary_required",
+                    }
+                ],
+            }
             for n in (1, 2)
         ]
     if failure == "http":
@@ -4556,6 +4566,9 @@ def test_aggregate_partial_interpretation_publishes_other_topic(
                     "topic_id": "incident_summary",
                     "field": "meaning",
                     "violation_kind": "number",
+                    "topic_failures": [
+                        {"topic_id": failed_topic, "reason": "unsupported_prose"}
+                    ],
                 }
                 for n in (1, 2)
             ]

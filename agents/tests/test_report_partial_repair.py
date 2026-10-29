@@ -76,6 +76,26 @@ async def test_partial_repair_preserves_valid_topics_and_namespace_sentences(
     llm.complete.side_effect = [invalid, patches]
     await interpret_report(result, llm)
     request = llm.complete.call_args.args[1]
+    instruction = request["instruction"]
+    assert "INCIDENT_RULES" not in instruction
+    for call in llm.complete.call_args_list:
+        for text in (call.args[0], call.args[1].get("instruction", "")):
+            assert not any(
+                name in text
+                for name in ("INCIDENT_RULES", "INCIDENT_EXAMPLE", "ADVICE_SYSTEM")
+            )
+    if broken != "namespace":
+        assert "incident_summary 작성:" in llm.complete.call_args.args[0]
+        assert "validation_error가 지적한 부분을 고쳐" in instruction
+        assert "지적되지 않은 정상 내용은 유지" in instruction
+    assert ("summary_repair의 Namespace summary" in instruction) == (
+        broken != "incident"
+    )
+    assert ("prose_max_chars" in instruction) == (broken != "incident")
+    assert ("system의 incident_summary 작성 규칙" in instruction) == (
+        broken != "namespace"
+    )
+    assert ("focus.check_context" in instruction) == (broken != "namespace")
     assert set(request["response_shape"]) == set(patches)
     assert "topics" not in request
     assert len(request.get("summary_repair", [])) == (broken != "incident")
@@ -167,6 +187,8 @@ async def test_mixed_repair_above_legacy_limit_preserves_all_context(repair_case
     example = request["response_shape"]["sections"][0]
     from ops_agent.report_interpretation import INCIDENT_EXAMPLE
 
-    assert {key: example[key] for key in INCIDENT_EXAMPLE} == INCIDENT_EXAMPLE
+    assert {key: example[key] for key in INCIDENT_EXAMPLE} == dict.fromkeys(
+        INCIDENT_EXAMPLE, ""
+    )
     assert result["quality"]["report"]["reason"] == "repaired"
     assert result["topics"] == original and llm.complete.call_count == 2

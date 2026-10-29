@@ -27,7 +27,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-names-v8"
+VERSION = "ops-interpretation-incident-repair-v9"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -1113,6 +1113,13 @@ class ProseValidationError(ValueError):
         self.violation_kind = violation_kind
 
 
+def failure_reason(reason):
+    # Persist bounded codes only; exception messages may include model prose.
+    if isinstance(reason, str) and re.fullmatch(r"[a-z_]{1,80}", reason):
+        return reason
+    return "model_response_unavailable"
+
+
 def validate_sections(reply, payload, result):
     sections = reply.get("sections") if isinstance(reply, dict) else None
     if (
@@ -1126,7 +1133,7 @@ def validate_sections(reply, payload, result):
     ):
         # An ambiguous response cannot establish a topic's provenance.
         return _validate_sections(reply, payload, result)
-    valid, errors = [], []
+    valid, errors, topic_failures = [], [], []
     for section, topic in zip(sections, payload["topics"]):
         try:
             valid.extend(
@@ -1134,7 +1141,14 @@ def validate_sections(reply, payload, result):
             )
         except (ValueError, TypeError, KeyError) as exc:
             errors.append(exc)
+            topic_failures.append(
+                {
+                    "topic_id": topic["topic_id"],
+                    "reason": failure_reason(str(exc).partition(":")[0]),
+                }
+            )
     if errors:
+        errors[0].topic_failures = topic_failures
         errors[0].valid_sections = valid
         raise errors[0]
     return valid
@@ -1398,11 +1412,28 @@ async def interpret_report(result, llm):
     def request_payload():
         if repair is not None:
             items, sections, _ = repair
+            instructions = [
+                "정상 항목은 바꾸지 말고 response_shape만 JSON으로 반환하세요."
+            ]
+            if items:
+                instructions.append(
+                    "summary_repair의 Namespace summary: 이전 관측 현상과 판단 이유만 보완하세요. 수치·대상명·시간·참조 토큰·근거 문장은 빼고 prose_max_chars 이내로 쓰세요. 점검 목적·행동·필수 확인 조건은 코드가 붙이므로 다시 작성하지 마세요. writing_checks와 관측의 한계를 유지하며 설명을 비우지 마세요."
+                )
+            if sections:
+                instructions.append(
+                    "section_repair: 각 주제의 validation_error를 고치고 기존 참조 규칙을 유지하세요."
+                )
+            if any(
+                item["topic"]["topic_id"] == "incident_summary" for item in sections
+            ):
+                instructions.append(
+                    "incident_summary는 system의 incident_summary 작성 규칙에 따라 validation_error가 지적한 부분을 고쳐 meaning·next_check를 반환하세요. 지적되지 않은 정상 내용은 유지하세요. previous_section의 거절된 문장을 반복하지 마세요. next_check에는 focus.check_context의 확인 대상에서 무엇을 어떤 기록과 대조할지 쓰세요."
+                )
             return {
                 **({"summary_repair": items} if items else {}),
                 **({"section_repair": sections} if sections else {}),
                 "value_meanings": VALUE_MEANINGS,
-                "instruction": "이전 summary의 관측 현상과 판단 이유만 보완하고 정상 항목은 바꾸지 마세요. 수치·대상명·시간·참조 토큰·근거 문장은 빼고 prose_max_chars 이내의 자연스러운 설명을 쓰세요. 점검 목적·행동·필수 확인 조건은 코드가 붙이므로 다시 작성하지 마세요. writing_checks와 관측의 한계를 유지하며 설명을 비우지 마세요. section_repair의 다른 주제는 기존 참조 규칙을 유지하세요. response_shape만 JSON으로 반환하세요.",
+                "instruction": "\n".join(instructions),
                 "response_shape": {
                     **(
                         {
@@ -1426,7 +1457,7 @@ async def interpret_report(result, llm):
                                         item["topic"]["findings"][0]["fact_id"]
                                     ],
                                     **(
-                                        INCIDENT_EXAMPLE
+                                        dict.fromkeys(FIELDS, "")
                                         if item["topic"]["topic_id"]
                                         == "incident_summary"
                                         else {
@@ -1490,7 +1521,7 @@ async def interpret_report(result, llm):
                     else {
                         "topic_id": t["topic_id"],
                         "fact_ids": [t["findings"][0]["fact_id"]],
-                        **INCIDENT_EXAMPLE,
+                        **dict.fromkeys(FIELDS, ""),
                     }
                     for t in payload["topics"]
                 ]
@@ -1534,8 +1565,7 @@ async def interpret_report(result, llm):
 
     def record_failure(attempt, reason, **details):
         # Persist only bounded codes; upstream text can contain credentials or evidence.
-        if not isinstance(reason, str) or not re.fullmatch(r"[a-z_]{1,80}", reason):
-            reason = "model_response_unavailable"
+        reason = failure_reason(reason)
         diagnostic.setdefault("failures", []).append(
             {"attempt": attempt + 1, "reason": reason, **details}
         )
@@ -1632,6 +1662,11 @@ async def interpret_report(result, llm):
             record_failure(
                 attempt,
                 error.partition(":")[0],
+                **(
+                    {"topic_failures": exc.topic_failures}
+                    if getattr(exc, "topic_failures", None)
+                    else {}
+                ),
                 **(
                     {
                         "topic_id": exc.topic_id,
