@@ -41,6 +41,7 @@ import { downloadReader } from '../lib/readerExport';
 import { AggregateReportForm } from './AggregateReportForm';
 import { Schedules } from './Schedules';
 import { NewReviews } from './NewReviews';
+import { ReportExports } from './Results';
 import './new-workspace.css';
 
 export const incidentTitle = (i: Row) =>
@@ -599,6 +600,7 @@ function Incident({ id }: { id: string }) {
   );
 }
 function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }) {
+  const modern = useApp().mode === 'operations';
   const [evidence, setEvidence] = useState<string | null>(null);
   const q = useResource(`/analyses/${id}`, undefined, true),
     job = obj(q.data),
@@ -621,7 +623,12 @@ function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }
             <Status job={{ ...job, result_status: result.result_status }} />
             {job.result_ref && Object.keys(result).length ? (
               <>
-                <RcaNarrative result={result} reader onEvidence={setEvidence} />
+                <RcaNarrative
+                  result={result}
+                  reader
+                  decisionSummary={modern}
+                  onEvidence={setEvidence}
+                />
                 {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
                 {!rows(result.narrative).length && (
                   <>
@@ -968,6 +975,7 @@ function ReportActions({ job }: { job: Row }) {
   );
 }
 function Report({ id }: { id: string }) {
+  const modern = useApp().mode === 'operations';
   const q = useResource(`/reports/${id}`, undefined, true),
     job = obj(q.data),
     result = obj(job.result);
@@ -978,6 +986,7 @@ function Report({ id }: { id: string }) {
   const location = useLocation(),
     navigate = useNavigate();
   const [exportError, setExportError] = useState('');
+  const [evidence, setEvidence] = useState<string | null>(null);
   return (
     <>
       <Back fallback="/reports" />
@@ -990,16 +999,26 @@ function Report({ id }: { id: string }) {
         <div id="new-report-document" className="report-workspace new-report-document">
           <div className="new-detail-meta">
             <ReportScope job={result.scope ? result : job} />
-            {!aggregatePublished && <ReportPeriod value={result.time_range || job.time_range} />}
+            {(!aggregatePublished || modern) && (
+              <ReportPeriod value={result.time_range || job.time_range} />
+            )}
             <Status job={{ ...job, result_status: result.result_status }} />
             <ReportOrigin value={job.report_origin} />
           </div>
-          <ReportActions job={job} />
+          {modern ? (
+            <details className="c2-report-management">
+              <summary>보고서 관리</summary>
+              <ReportActions job={job} />
+            </details>
+          ) : (
+            <ReportActions job={job} />
+          )}
           {job.deletion ? (
             <ReportDeletionNotice job={job} />
           ) : job.result_ref && Object.keys(result).length ? (
             <>
               <div className="new-print">
+                {modern && <ReportExports id={id} />}
                 <button
                   className="button"
                   onClick={() => {
@@ -1041,7 +1060,11 @@ function Report({ id }: { id: string }) {
                 }}
               >
                 {obj(result.quality).report_format === 'report-aggregate-v1' ? (
-                  <AggregateReport value={result} />
+                  <AggregateReport
+                    value={result}
+                    reader={modern}
+                    onEvidence={modern ? setEvidence : undefined}
+                  />
                 ) : (
                   <LegacyReport value={result} />
                 )}
@@ -1057,6 +1080,7 @@ function Report({ id }: { id: string }) {
             />
           )}
         </div>
+        {evidence && <RcaEvidenceDialog id={evidence} onClose={() => setEvidence(null)} />}
         <NewReviews id={id} subject="job" scope={obj(job.scope)} />
       </QueryState>
     </>
@@ -1262,24 +1286,25 @@ export function NewWorkspace() {
         );
       }}
     >
-      {['reports', 'schedules', 'operator-guide'].includes(section) && (
-        <nav className="tabs new-report-nav" aria-label="운영 보고서 메뉴">
-          {[
-            { to: '/reports', label: '보고서 목록', section: 'reports' },
-            { to: '/schedules', label: '자동 보고서 설정', section: 'schedules' },
-            { to: '/operator-guide', label: '보고서 읽는 방법', section: 'operator-guide' },
-          ].map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={reportSection === item.section ? 'active' : ''}
-              aria-current={reportSection === item.section ? 'location' : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      )}
+      {['reports', 'schedules', 'operator-guide'].includes(section) &&
+        !(app.mode === 'operations' && section === 'schedules') && (
+          <nav className="tabs new-report-nav" aria-label="운영 보고서 메뉴">
+            {[
+              { to: '/reports', label: '보고서 목록', section: 'reports' },
+              { to: '/schedules', label: '자동 보고서 설정', section: 'schedules' },
+              { to: '/operator-guide', label: '보고서 읽는 방법', section: 'operator-guide' },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={reportSection === item.section ? 'active' : ''}
+                aria-current={reportSection === item.section ? 'location' : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       {content}
     </div>
   );

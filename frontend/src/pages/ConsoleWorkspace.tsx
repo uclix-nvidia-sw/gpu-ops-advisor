@@ -563,7 +563,15 @@ export function OperatorIncidentList({ items, from }: { items: Row[]; from: stri
   );
 }
 
-export function OperatorReportList({ items, from }: { items: Row[]; from: string }) {
+export function OperatorReportList({
+  items,
+  from,
+  compact = false,
+}: {
+  items: Row[];
+  from: string;
+  compact?: boolean;
+}) {
   return (
     <div className="console-report-list">
       {items.map((j) => (
@@ -580,7 +588,16 @@ export function OperatorReportList({ items, from }: { items: Row[]; from: string
             </h3>
             <ReportPeriod value={j.time_range} />
             <ReportScope job={j} />
-            {!!j.result_ref && !j.deletion && <ReportPreview value={obj(j.report_preview)} />}
+            {!!j.result_ref &&
+              !j.deletion &&
+              (compact ? (
+                <details className="c2-report-preview">
+                  <summary>저장된 주요 변화·한계 보기</summary>
+                  <ReportPreview value={obj(j.report_preview)} />
+                </details>
+              ) : (
+                <ReportPreview value={obj(j.report_preview)} />
+              ))}
           </div>
           <div className="console-report-result">
             <Badge status={str(j.status) || 'unknown'} />
@@ -647,7 +664,7 @@ function ReportPreview({ value }: { value: Row }) {
   );
 }
 
-function OperatorConsole() {
+export function OperatorConsole({ compact = false }: { compact?: boolean }) {
   const app = useApp(),
     location = useLocation(),
     [params, setParams] = useSearchParams();
@@ -841,7 +858,7 @@ function OperatorConsole() {
               emptyTitle="조회된 보고서가 없습니다."
               emptyDescription="필터를 확인하거나 ‘보고서 만들기’에서 분석 기간과 범위를 선택하세요."
             >
-              <OperatorReportList items={reports.items} from={from} />
+              <OperatorReportList items={reports.items} from={from} compact={compact} />
             </QueryState>
           )}
           {reportsOnly && <More query={reports} />}
