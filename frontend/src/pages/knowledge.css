@@ -1,0 +1,97 @@
+.runbook-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 12px;
+  padding: 0 24px 16px;
+}
+.runbook-categories button {
+  text-align: left;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+.runbook-categories button[aria-pressed='true'] {
+  background: var(--soft-green);
+  border-color: var(--green);
+  box-shadow: inset 0 3px var(--green);
+}
+.runbook-categories strong {
+  display: block;
+  font-size: 26px;
+  margin: 10px 0 6px;
+}
+.runbook-categories small {
+  color: var(--muted);
+}
+.runbook-category-note,
+.runbook-list-status {
+  padding: 0 24px 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.runbook-list-status {
+  padding-top: 14px;
+}
+.runbook-category-note button {
+  margin-right: 12px;
+}
+.knowledge-page .knowledge-live-grid {
+  align-items: stretch;
+  gap: 16px;
+}
+.knowledge-page .knowledge-live-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px;
+  border-radius: 10px;
+  font-family: inherit;
+  color: inherit;
+}
+.knowledge-page .knowledge-live-card > div {
+  align-items: center;
+}
+.knowledge-page .knowledge-live-card h3 {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.65;
+  margin: 15px 0 8px;
+}
+.knowledge-page .knowledge-live-card p {
+  font-size: 13px;
+  line-height: 1.8;
+  -webkit-line-clamp: 2;
+  min-height: 3.6em;
+  margin: 0 0 18px;
+}
+.knowledge-page .runbook-card-footer {
+  margin-top: auto;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+.runbook-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.runbook-tags > span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dark-green);
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+@media (max-width: 620px) {
+  .runbook-categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-inline: 12px;
+  }
+  .knowledge-page .knowledge-live-card {
+    padding: 18px;
+  }
+}

@@ -44,7 +44,7 @@ it('keeps day-old firing records in the main paged list and firing filter', () =
   expect(html).toContain('51–60 / 60건');
   expect(html).toContain('href="/analyses/job-55#final-report"');
   expect(html).toContain('발생 알림 수신');
-  expect(html).toContain('현재 장애 지속·복구 여부를 판단하지 않습니다');
+  expect(html).not.toContain('알림이 들어온 장애와 RCA 장애 보고서를 한 줄에서 봅니다');
   expect(html).not.toContain('oh-stale');
   expect(html).not.toContain('확인 필요');
 });
@@ -65,6 +65,10 @@ it('pages incidents by 50 and links each title to its RCA report', () => {
 });
 
 it('asks the Backend for the chosen days, a single day, or every incident', () => {
+  render();
+  expect(fixture.calls.at(-1)).toEqual([null, undefined]);
+  render('?period=14');
+  expect(fixture.calls.at(-1)?.[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   render('?from=2026-10-13&to=2026-10-20');
   expect(fixture.calls.at(-1)).toEqual(['2026-10-13', '2026-10-20']);
   render('?from=2026-10-20');
