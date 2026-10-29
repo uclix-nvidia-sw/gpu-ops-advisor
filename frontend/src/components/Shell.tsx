@@ -25,6 +25,7 @@ import { QueryState } from './live';
 import { Empty, Field, Modal, NavTabs, PageHead } from './ui';
 import { NewWorkspace } from '../pages/NewWorkspace';
 import { ConsoleWorkspace } from '../pages/ConsoleWorkspace';
+import { Console2 } from '../pages/Console2';
 import { ViewMode } from './ViewMode';
 import { ApiInspector, DeveloperContext } from './DeveloperContext';
 const nav = [
@@ -81,7 +82,7 @@ export function Shell() {
             ]
           : nav.map((n) => n.label);
   const menus =
-    app.mode === 'classic'
+    app.mode === 'classic' || app.mode === 'operations'
       ? consoleNav
       : app.mode === 'new'
         ? [
@@ -155,7 +156,7 @@ export function Shell() {
           <span className={app.ready ? 'pulse-dot' : ''} />
           <span>
             {app.ready
-              ? app.mode === 'new' || app.mode === 'classic'
+              ? app.mode === 'new' || app.mode === 'classic' || app.mode === 'operations'
                 ? '조회 API 연결됨'
                 : '로컬 API 연결'
               : '연결 확인 중'}
@@ -175,7 +176,9 @@ export function Shell() {
     </>
   );
   return (
-    <div className={`app-shell view-${app.mode}${consoleMode ? ' console-shell' : ''}`}>
+    <div
+      className={`app-shell view-${app.mode}${consoleMode ? ' console-shell' : ''}${app.mode === 'operations' ? ' console2-shell' : ''}`}
+    >
       <a href="#main-content" className="skip-link">
         본문으로 이동
       </a>
@@ -199,7 +202,7 @@ export function Shell() {
             <span>
               {app.mode === 'workbench'
                 ? 'DEVELOPER'
-                : app.mode === 'classic'
+                : app.mode === 'classic' || app.mode === 'operations'
                   ? 'OPERATIONS'
                   : 'Workspace'}
             </span>
@@ -211,7 +214,8 @@ export function Shell() {
           </div>
         </header>
         {!isGuide &&
-          ((app.mode !== 'new' && app.mode !== 'classic') ||
+          ((app.mode !== 'new' && app.mode !== 'classic' && app.mode !== 'operations') ||
+            (app.mode === 'operations' && isJobHistory) ||
             ['/dashboard', '/cases', '/reports', '/reports/new', '/schedules'].includes(
               location.pathname,
             )) && (
@@ -264,6 +268,7 @@ export function Shell() {
                     {!isJobHistory &&
                       app.mode !== 'workbench' &&
                       app.mode !== 'classic' &&
+                      app.mode !== 'operations' &&
                       !location.pathname.startsWith('/reports') &&
                       (app.mode !== 'new' ||
                         ['/dashboard', '/cases'].includes(location.pathname)) && (
@@ -335,6 +340,8 @@ export function Shell() {
                     }
                   />
                 </div>
+              ) : app.mode === 'operations' ? (
+                <Console2 />
               ) : consoleMode ? (
                 <ConsoleWorkspace />
               ) : (
@@ -346,12 +353,12 @@ export function Shell() {
         </main>
         <footer className="app-footer">
           <span>
-            {app.mode === 'new' || app.mode === 'classic'
+            {app.mode === 'new' || app.mode === 'classic' || app.mode === 'operations'
               ? 'GPU Ops Advisor'
               : 'GPU Ops Advisor · Go API · PostgreSQL'}
           </span>
           <span>
-            {consoleMode
+            {consoleMode || app.mode === 'operations'
               ? 'Asia/Seoul · 저장된 관측 자료 기준'
               : '관측에서 근거로, 근거에서 판단으로.'}
           </span>

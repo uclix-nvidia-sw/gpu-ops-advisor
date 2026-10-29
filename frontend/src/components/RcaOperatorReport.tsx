@@ -83,7 +83,7 @@ export function RcaOperatorReport({
   const missing = strings(result.missing_inputs);
   const ai = aiFailure(result);
   const [identity, timing, telemetry, repeat] = v?.findings || [];
-  const facts = paragraphs('problem').length
+  const savedFacts = paragraphs('problem').length
     ? paragraphs('problem')
     : rows(result.facts).length
       ? rows(result.facts)
@@ -92,6 +92,14 @@ export function RcaOperatorReport({
       : v
         ? [identity.verdict, timing.verdict, telemetry.verdict, repeat.verdict]
         : [];
+  // Stored prose can start with another device's logs; lead with the alert-scoped view.
+  const facts = v
+    ? [
+        `${v.codes.join(', ')} · ${v.node}${v.alertPci ? ` · PCI ${v.alertPci}` : ''}${v.currentReasons.length ? ` · ${v.currentReasons.map((r) => r.label).join(' · ')}` : ''}`,
+        `${v.eventTime ? `${formatRcaTime(v.eventTime)} ${v.eventLabel} — ` : ''}${timing.verdict}`,
+        ...savedFacts,
+      ]
+    : savedFacts;
   const gaps = [
     ...new Set([
       ...missing.map(
@@ -125,6 +133,7 @@ export function RcaOperatorReport({
     : `1·3장의 요약과 30분 로그·지표 비교는 XID/SXID 오류에만 만듭니다${used}. 2·4·5·6장을 확인하세요.`;
   const podText = (w: { name: string; gpus: string; gpuCount: number }) =>
     `${w.name} (${w.gpus}${w.gpuCount > 1 ? ` · ${w.gpuCount}개 함께 사용` : ''})`;
+  const Glance = decisionSummary ? 'details' : 'section';
   return (
     <section
       id="final-report"
@@ -189,7 +198,11 @@ export function RcaOperatorReport({
       </header>
 
       {decisionSummary && (
-        <section className="rca-decision-summary" aria-label="사건 판단 요약">
+        <section
+          id={decisionSummary ? 'c2-rca-decision' : undefined}
+          className="rca-decision-summary"
+          aria-label="사건 판단 요약"
+        >
           <h4>사건 판단</h4>
           <div className="rca-decision-grid">
             <article>
@@ -214,11 +227,7 @@ export function RcaOperatorReport({
                 items={
                   noteTexts.length
                     ? noteTexts.slice(0, 2)
-                    : [
-                        v?.causeNote
-                          ? `발행 Runbook의 일반 조사 방향: ${v.causeNote}`
-                          : '저장된 원인 후보가 없습니다.',
-                      ]
+                    : ['저장된 원인 후보가 없습니다. 대응 순서에서 대상 Runbook 지침을 확인하세요.']
                 }
               />
               <a href="#rca-analysis-detail">분석과 근거 확인</a>
@@ -263,7 +272,8 @@ export function RcaOperatorReport({
       )}
 
       {v && (
-        <section className="rca-glance" aria-label="사건 핵심 요약">
+        <Glance className="rca-glance" aria-label="사건 핵심 요약">
+          {decisionSummary && <summary>사건 대상·시각과 관련 관측 자세히 보기</summary>}
           <h4>
             1. 한눈에 보기 · {v.node} · {v.codes.join(', ') || '장애 알림'}
           </h4>
@@ -317,7 +327,7 @@ export function RcaOperatorReport({
                 : []),
             ]}
           />
-        </section>
+        </Glance>
       )}
       {!v && (
         <section className="rca-glance" aria-label="사건 핵심 요약">
@@ -604,7 +614,10 @@ export function RcaOperatorReport({
         </details>
       </section>
 
-      <section className="rca-narrative-section">
+      <section
+        id={decisionSummary ? 'c2-rca-history' : undefined}
+        className="rca-narrative-section"
+      >
         <h4>5. 이전 사건 이력</h4>
         {v && v.devices.length > 0 && (
           <figure className="rca-bars" aria-label="장치별 같은 오류 사건 수">
@@ -626,7 +639,10 @@ export function RcaOperatorReport({
         <RcaHostHistory result={result} embedded />
       </section>
 
-      <section className="rca-narrative-section">
+      <section
+        id={decisionSummary ? 'c2-rca-references' : undefined}
+        className="rca-narrative-section"
+      >
         <h4>6. 참고 자료</h4>
         <ul>
           {[
