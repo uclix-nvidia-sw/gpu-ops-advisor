@@ -107,9 +107,7 @@ export function OperatorCases() {
   const set = (key: string, value: string) => update({ [key]: value });
   const picked = DAY.test(params.get('from') || '') ? params.get('from')! : '',
     pickedTo = DAY.test(params.get('to') || '') ? params.get('to')! : '';
-  const period = picked
-    ? ''
-    : PERIODS.find((p) => p[0] === params.get('period'))?.[0] || String(WINDOW_DAYS);
+  const period = picked ? '' : PERIODS.find((p) => p[0] === params.get('period'))?.[0] || 'all';
   const first = picked || (period === 'all' ? null : windowDays(new Date(), Number(period))[0]);
   const last = picked ? (pickedTo > picked ? pickedTo : picked) : undefined;
   const { query, views, now, truncated } = useRecentIncidents(first, last);
@@ -181,11 +179,6 @@ export function OperatorCases() {
         <div>
           <div className="oh-eyebrow">GPU OPERATIONS</div>
           <h1 tabIndex={-1}>RCA 조사</h1>
-          <p className="oh-sub">
-            알림이 들어온 장애와 RCA 장애 보고서를 한 줄에서 봅니다. 제목을 누르면 보고서가
-            열립니다. 수신 기록으로 현재 장애 지속·복구 여부를 판단하지 않습니다. {rangeText} · 기준{' '}
-            {dateTimeText(now)} KST
-          </p>
         </div>
       </div>
       <div className="oh-chips">
@@ -222,7 +215,7 @@ export function OperatorCases() {
         <Seg
           value={period}
           options={PERIODS}
-          onChange={(v) => update({ period: v === String(WINDOW_DAYS) ? '' : v, from: '', to: '' })}
+          onChange={(v) => update({ period: v === 'all' ? '' : v, from: '', to: '' })}
         />
         정렬
         <Seg value={sort} options={SORTS} onChange={(v) => set('sort', v)} />

@@ -1,4 +1,85 @@
 @import '@fontsource-variable/jetbrains-mono';
+.rca-related-scroll,
+.rca-timeline-scroll {
+  max-height: 240px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.rca-timeline-scroll {
+  max-height: 260px;
+}
+.rca-history-table.rca-log-scroll {
+  max-height: 320px;
+}
+.rca-operator-report .rca-related-details {
+  margin: 4px 0 0;
+}
+.rca-related-details > summary {
+  color: var(--green);
+  width: fit-content;
+}
+.rca-related-details .rca-when-open,
+.rca-related-details[open] > summary .rca-when-closed {
+  display: none;
+}
+.rca-related-details[open] > summary .rca-when-open {
+  display: inline;
+}
+.rca-related-note {
+  margin: 8px 0;
+}
+.rca-related-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.rca-related-list > li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rca-glance .rca-related-list {
+  counter-reset: related-error;
+}
+.rca-glance .rca-related-list > li {
+  counter-increment: related-error;
+  position: relative;
+  padding-left: 2.5em;
+}
+.rca-glance .rca-related-list > li::before {
+  content: counter(related-error);
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 1.8em;
+  height: 1.8em;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rca-related-counts {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rca-related-counts th,
+.rca-related-counts td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.rca-related-counts th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+}
+.rca-related-counts th:last-child,
+.rca-related-counts td:last-child {
+  text-align: right;
+}
 .rca-narrative {
   min-width: 0;
   border: 1px solid var(--border);

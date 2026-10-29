@@ -4408,7 +4408,7 @@ def test_scheduled_and_manual_attribution_quality_is_published(
     "extra_sources,reason",
     [
         (0, "transition_query_budget_exhausted"),
-        (29, "transition_query_budget_reserved"),
+        (53, "transition_query_budget_reserved"),
     ],
 )
 def test_scheduled_and_manual_query_skip_reason_is_exported(
@@ -4461,6 +4461,14 @@ def test_scheduled_and_manual_query_skip_reason_is_exported(
         evidence = original_fixture(*args, **kwargs)
         for point in evidence[2]["snapshot"]["series"][0]["values"]:
             point[1] = "2"
+        # Two GPU batches per hour exceed even the daily 96-call transition cap.
+        for index in (0, 2):
+            original = deepcopy(evidence[index]["snapshot"]["series"])
+            for gpu in range(1, 17):
+                extra = deepcopy(original)
+                for row in extra:
+                    row["metric"]["UUID"] = f"budget-gpu-{gpu}"
+                evidence[index]["snapshot"]["series"].extend(extra)
         return evidence
 
     monkeypatch.setattr(test_aggregate_report, "fixture", changed)
@@ -4489,7 +4497,7 @@ def test_scheduled_and_manual_query_skip_reason_is_exported(
         artifact = next(a for a in result["artifacts"] if a["format"] == "html")
         html = Path(stack["env"]["ARTIFACT_DIR"], artifact["object_key"]).read_text()
         assert escape(REASONS[reason]) in html
-        assert result["quality"]["query_count"] <= 80
+        assert result["quality"]["query_count"] <= 128
 
 
 @pytest.mark.e2e

@@ -398,7 +398,7 @@ def test_collector_uses_bounded_instant_queries_and_saves_no_raw_samples(failure
     assert "series" not in out[0]["snapshot"]
     rows, _ = summarize(evidence + out, DATA["time_range"])
     assert named(rows)["valid_hours"] == (23 if failure else 24)
-    c.transition_calls = 31
+    c.transition_calls = c.transition_limit - 1
     assert (
         asyncio.run(
             c.check_transitions(
@@ -424,9 +424,9 @@ def test_unchanged_hours_do_not_trigger_raw_queries():
     )
 
 
-def test_many_changed_hours_stop_at_verification_budget():
+def test_twenty_four_changed_hours_fit_daily_verification_budget():
     evidence, gpu, pods, at = transition_fixture()
-    # Repeat ambiguity over a day: at most 16 two-query verifications, never 24 raw hours.
+    # All 24 changed hours fit the daily transition budget.
     for sample in evidence[2]["snapshot"]["series"][0]["values"]:
         sample[1] = "2"
     calls = []
@@ -441,7 +441,7 @@ def test_many_changed_hours_stop_at_verification_budget():
             [(DATA["scope"]["clusters"][0], DATA["time_range"], "mimir", evidence)]
         )
     )
-    assert len(calls) == 32 and len(out) == 16
+    assert len(calls) == 48 and len(out) == 24
     assert all(not e["snapshot"]["checks"] for e in out)
 
 

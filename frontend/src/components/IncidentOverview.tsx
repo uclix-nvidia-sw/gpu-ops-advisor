@@ -171,7 +171,7 @@ export function IncidentRow({
         ) : (
           <ErrorTitle v={v} />
         )}
-        {(v.reason || v.label?.detail) && (
+        {(v.reason || (v.label?.detail && !/Unused|미사용/i.test(v.label.detail))) && (
           <span className="oh-detail">{v.reason || v.label?.detail}</span>
         )}
         <small title={v.raw}>원문: {v.raw}</small>

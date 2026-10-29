@@ -213,7 +213,7 @@ export function RcaTriageObservations({
               />
             ))}
           </div>
-          <ol>
+          <ol className="rca-timeline-scroll" tabIndex={0} aria-label="사건 타임라인 목록">
             {v.timeline.map((item, i) => (
               <li key={i}>
                 <span className={`rca-dot tone-${item.tone}`} aria-hidden="true" />
@@ -244,7 +244,12 @@ export function RcaTriageObservations({
           {links(r.evidence_refs)}
         </p>
       ))}
-      <div className="rca-history-table">
+      <div
+        className="rca-history-table rca-log-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label="오류 로그 목록"
+      >
         <table>
           <caption>오류 로그 · 같은 내용은 묶고 처음·마지막 보고 시각을 표시합니다.</caption>
           <thead>

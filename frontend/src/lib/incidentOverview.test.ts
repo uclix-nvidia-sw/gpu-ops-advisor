@@ -8,6 +8,8 @@ import {
   errorRepeats,
   fullDate,
   incidentLabel,
+  incidentName,
+  titleText,
   shortDate,
   incidentView,
   incidentViews,
@@ -34,6 +36,22 @@ const incident = (over: Record<string, unknown>) => ({
 });
 
 describe('incident overview', () => {
+  it('uses readable meanings and received mnemonics without inventing unused-code names', () => {
+    const view = (title: string) => incidentView(incident({ target: { title } }));
+    expect(
+      incidentName(
+        view('XID 52 SILENT_RUNNING_LEVEL_TRANS_DUE_TO_TEMP_RISE detected on GPU PCI:0000:4e:00'),
+      ),
+    ).toBe('SILENT RUNNING LEVEL TRANS DUE TO TEMP RISE');
+    expect(
+      incidentName(
+        view('XID 42 ROBUST_CHANNEL_VIC_ERROR Video processor exception detected on GPU'),
+      ),
+    ).toBe('ROBUST CHANNEL VIC ERROR');
+    expect(titleText(view('XID 6 detected on GPU'))).toBe('XID 6');
+    expect(incidentName(view('XID 48 detected on GPU'))).toBe('Double Bit ECC Error');
+    expect(incidentName(view('XID 99999 detected on GPU'))).toBe('런북 미등록 코드');
+  });
   it('names the error, device and NVIDIA action from the Runbook labels', () => {
     const v = incidentView(incident({}));
     expect(v.code).toBe('xid:79');

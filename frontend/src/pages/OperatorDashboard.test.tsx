@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { incidentViews } from '../lib/incidentOverview';
 import { OperatorDashboard } from './OperatorDashboard';
 
-vi.mock('../components/OpsUsage', () => ({ OpsUsage: () => null }));
+vi.mock('../components/OpsUsage', () => ({
+  OpsUsage: () => <section>preserved-ops-usage</section>,
+}));
 vi.mock('../lib/live', async (original) => ({
   ...(await original<typeof import('../lib/live')>()),
   useResource: () => ({ data: { items: [] } }),
@@ -42,4 +44,8 @@ it('counts received states without inferring ongoing faults or stale alerts', ()
   expect(html).not.toContain('지금 발생 중');
   expect(html).not.toContain('확인 필요');
   expect(html).not.toContain('해제 신호 없음');
+  expect(html.indexOf('preserved-ops-usage')).toBeLessThan(html.indexOf('class="oh-kpis"'));
+  expect(html).toContain('oh-received-incidents');
+  expect(html).toContain('aria-controls="received-incidents"');
+  expect(html).toContain('/cases?focus=firing&amp;period=14');
 });

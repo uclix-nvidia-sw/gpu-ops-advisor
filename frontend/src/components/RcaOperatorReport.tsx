@@ -268,6 +268,7 @@ export function RcaOperatorReport({
             1. 한눈에 보기 · {v.node} · {v.codes.join(', ') || '장애 알림'}
           </h4>
           <RcaPoints
+            compactRelated
             items={[
               `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
               ...(v.currentReasons.length
@@ -542,7 +543,7 @@ export function RcaOperatorReport({
                   <ToneBadge tone={f.tone} label={f.label} />
                 </header>
                 <p className="rca-verdict">{f.verdict}</p>
-                <RcaPoints items={f.points} />
+                <RcaPoints items={f.points} compactRelated />
                 {f.key === 'telemetry' && !v.multiGpu && v.metrics.length > 0 && (
                   <div className="rca-history-table">
                     <table>

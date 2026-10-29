@@ -1,5 +1,14 @@
 /* Classic cases list and dashboard: same type and colours as the RCA operator report. */
 @import '@fontsource-variable/jetbrains-mono';
+.oh-received-incidents {
+  max-height: 300px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.oh-received-incidents.is-expanded {
+  max-height: none;
+}
 .oh-page {
   /* Same type as the RCA report: body font from :root, codes and IDs in JetBrains Mono. */
   --font-mono: 'JetBrains Mono Variable', 'Noto Sans KR Variable', ui-monospace, monospace;
