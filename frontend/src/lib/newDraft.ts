@@ -4,7 +4,7 @@ import { useApp } from './store';
 // Tab-scoped drafts survive switching comparison modes; successful saves remove them.
 export function useNewDraft<T>(key: string, initial: T) {
   const mode = useApp().mode;
-  const enabled = mode === 'new' || mode === 'classic';
+  const enabled = mode === 'new' || mode === 'classic' || mode === 'operations';
   const [value, update] = useState<T>(() => {
     try {
       const saved = enabled && sessionStorage.getItem(`new-draft:${key}`);

@@ -20,6 +20,7 @@ export function AggregateReportForm() {
     command = useCommand(),
     navigate = useNavigate();
   const [params] = useSearchParams();
+  const reader = app.mode === 'new' || app.mode === 'operations';
   const draftKey = `report/${params.get('schedule') || 'manual'}`;
   const [dirty, setDirty] = useNewDraft(`${draftKey}/dirty`, false);
   const [scheduled, setScheduled] = useNewDraft(
@@ -64,7 +65,7 @@ export function AggregateReportForm() {
         idempotent: true,
       });
       if (response) {
-        if (app.mode === 'new') clearNewDraft(draftKey);
+        if (reader) clearNewDraft(draftKey);
         navigate(
           scheduled
             ? `/schedules/${str(response.id, str(response.schedule_id))}`
@@ -79,14 +80,10 @@ export function AggregateReportForm() {
     <div className="page aggregate-form">
       <PageHead
         eyebrow=""
-        title={app.mode === 'new' && scheduled ? '자동 보고서 일정 추가' : '보고서 요청'}
+        title={reader && scheduled ? '자동 보고서 일정 추가' : '보고서 요청'}
         description="Namespace별 GPU 활동과 기간 내 사건을 이전 기간과 비교합니다."
       />
-      <form
-        data-dirty={app.mode === 'new' && dirty}
-        onChange={() => setDirty(true)}
-        onSubmit={submit}
-      >
+      <form data-dirty={reader && dirty} onChange={() => setDirty(true)} onSubmit={submit}>
         <Panel
           title="분석 범위와 기간"
           description="상단에서 선택한 클러스터·Namespace 범위로 분석합니다."
@@ -178,16 +175,12 @@ export function AggregateReportForm() {
           >
             {scheduled ? '자동 보고서 등록' : '요청 보내기'}
           </button>
-          <Link to={app.mode === 'new' && scheduled ? '/schedules' : '/reports'}>
-            {app.mode === 'new'
-              ? scheduled
-                ? '자동 보고서 설정 목록으로'
-                : '보고서 목록으로'
-              : '목록으로'}
+          <Link to={reader && scheduled ? '/schedules' : '/reports'}>
+            {reader ? (scheduled ? '자동 보고서 설정 목록으로' : '보고서 목록으로') : '목록으로'}
           </Link>
         </div>
       </form>
-      {app.mode !== 'new' && (
+      {!reader && (
         <details>
           <summary>이전 분석 방식</summary>
           <p>기존 주제별 분석과 과거 보고서는 이전 계산 기준을 유지합니다.</p>

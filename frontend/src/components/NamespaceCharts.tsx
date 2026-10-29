@@ -4,6 +4,7 @@ import { reportRequestTime } from '../lib/reportPeriod';
 import { Notice } from './ui';
 
 export type NamespaceGroup = { key: string; cluster: string; namespace: string; models: Row[] };
+export type NamespaceFocus = { cluster: string; namespace: string; windows: Row[]; origin: string };
 // Validated categorical palette (dataviz skill: lightness band, chroma floor, CVD and normal-vision separation).
 const colors = [
   '#2a78d6',
@@ -80,6 +81,7 @@ type ChartSeries = {
   color: string;
   dash: string;
   points: ReturnType<typeof activityPoints>;
+  faded?: boolean;
 };
 function TimeChart({
   series,
@@ -88,6 +90,7 @@ function TimeChart({
   label,
   maximum = 100,
   unit = '%',
+  focus,
 }: {
   series: ChartSeries[];
   start: number;
@@ -95,6 +98,7 @@ function TimeChart({
   label: string;
   maximum?: number;
   unit?: string;
+  focus?: NamespaceFocus | null;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   // One crosshair column per observed hour; the tooltip lists every visible series at that X.
@@ -155,11 +159,31 @@ function TimeChart({
             </text>
           </g>
         ))}
+        {focus &&
+          Number.isFinite(start) &&
+          end > start &&
+          focus.windows.map((period, i) => {
+            const a = Math.max(start, Date.parse(str(period.start))),
+              b = Math.min(end, Date.parse(str(period.end)));
+            return Number.isFinite(a) && Number.isFinite(b) && b > a ? (
+              <rect
+                key={i}
+                x={48 + ((a - start) / (end - start)) * 876}
+                y="30"
+                width={((b - a) / (end - start)) * 876}
+                height="190"
+                fill="#76b900"
+                fillOpacity="0.1"
+              >
+                <title>선택한 관측 구간</title>
+              </rect>
+            ) : null;
+          })}
         {hover !== null && (
           <line x1={hover} x2={hover} y1="30" y2="222" className="aggregate-crosshair" />
         )}
         {series.map((s) => (
-          <g key={s.key} aria-label={s.name}>
+          <g key={s.key} aria-label={s.name} opacity={s.faded ? 0.18 : undefined}>
             <path
               d={s.points.map((p) => `${p.move ? 'M' : 'L'}${p.x},${p.y}`).join(' ')}
               fill="none"
@@ -237,12 +261,18 @@ export function NamespaceCharts({
   hidden,
   onToggle,
   onSetCluster,
+  reader = false,
+  focus,
+  onClearFocus,
 }: {
   groups: NamespaceGroup[];
   headingNumber?: string;
   hidden: Set<string>;
   onToggle: (key: string) => void;
   onSetCluster: (keys: string[], visible: boolean) => void;
+  reader?: boolean;
+  focus?: NamespaceFocus | null;
+  onClearFocus?: () => void;
 }) {
   const [memoryFields, setMemoryFields] = useState<Record<string, string>>({});
   const hasMemory = groups.some((g) => g.models.some((r) => r.gpu_memory != null));
@@ -254,8 +284,39 @@ export function NamespaceCharts({
   const dashOf = (model: string) =>
     dashes[modelNames.indexOf(model)] ?? `${12 + modelNames.indexOf(model) * 2} 4 2 4`;
   return (
-    <div className="aggregate-cluster-charts">
+    <div
+      id={reader ? 'c2-namespace-charts' : undefined}
+      tabIndex={reader ? -1 : undefined}
+      className="aggregate-cluster-charts"
+    >
       <h3 className="aggregate-subheading">{headingNumber}. 클러스터별 Namespace 시간대 비교</h3>
+      {focus && (
+        <div className="c2-chart-focus">
+          <b>
+            {focus.cluster} / {focus.namespace}
+          </b>
+          <span>선택한 대상·관측 구간 강조</span>
+          <button className="button" onClick={onClearFocus}>
+            강조 해제
+          </button>
+          <button
+            className="text-link"
+            onClick={() => {
+              const target = document.getElementById(focus.origin);
+              if (target) {
+                target.tabIndex = -1;
+                target.focus({ preventScroll: true });
+                target.scrollIntoView({ block: 'center' });
+              }
+            }}
+          >
+            읽던 제안으로 돌아가기 ↑
+          </button>
+          {!groups.some((g) => g.cluster === focus.cluster && g.namespace === focus.namespace) && (
+            <p>이 대상의 시간대 그래프 자료가 없습니다. 저장된 제안의 원문 근거를 확인하세요.</p>
+          )}
+        </div>
+      )}
       <p>
         각 그래프에서 비교할 Namespace를 선택하세요. 선택은 해당 그래프에만 적용됩니다. 모두
         해제하면 선과 점만 숨겨집니다. 색은 Namespace, 선 모양은 GPU 모델이며 빈 구간은 산출
@@ -293,6 +354,8 @@ export function NamespaceCharts({
                   name: `${g.namespace} / ${str(r.gpu_model) || '모델 미확인'}`,
                   color: colorOf(g.namespace),
                   dash: dashOf(str(r.gpu_model)),
+                  faded:
+                    !!focus && (g.cluster !== focus.cluster || g.namespace !== focus.namespace),
                   points: isMemory
                     ? activityPoints(
                         rows(obj(r.gpu_memory).hours).map((h) => ({
@@ -344,6 +407,7 @@ export function NamespaceCharts({
                     start={start}
                     end={end}
                     label={`${cluster} Namespace별 ${title}`}
+                    focus={focus?.cluster === cluster ? focus : null}
                   />
                   <div className="aggregate-chart-controls">
                     <div className="aggregate-chart-actions">

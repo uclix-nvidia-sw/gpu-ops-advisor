@@ -63,15 +63,18 @@ it.each(['classic', 'operations', 'developer'])(
     expect(html).not.toContain('class="scopebar"');
   },
 );
-it('allows reading before cluster registration without opening report execution', () => {
-  app.mode = 'classic';
-  app.connection.isError = false;
-  expect(render()).toContain('일일·주간 운영 보고서로 시작하세요');
-  expect(render()).not.toContain('11개 소주제를 담습니다');
-  expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
-  expect(render('/reports')).not.toContain('report-content-marker');
-  expect(render('/reports')).toContain('href="/operator-guide"');
-});
+it.each(['classic', 'operations'])(
+  'allows reading before cluster registration without opening report execution in %s',
+  (mode) => {
+    app.mode = mode;
+    app.connection.isError = false;
+    expect(render()).toContain('일일·주간 운영 보고서로 시작하세요');
+    expect(render()).not.toContain('11개 소주제를 담습니다');
+    expect(render('/reports')).toContain('등록된 클러스터가 없습니다');
+    expect(render('/reports')).not.toContain('report-content-marker');
+    expect(render('/reports')).toContain('href="/operator-guide"');
+  },
+);
 
 it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
   'shows only the selected guide section for %s',
@@ -88,9 +91,9 @@ it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
   },
 );
 
-// The unified console shows Ops reports as the former Ops console did; comparison modes keep this bar.
+// The developer comparison keeps the global bar; console2 renders saved scope inside the report.
 it('uses the saved report scope and keeps global controls on new requests', () => {
-  app.mode = 'operations';
+  app.mode = 'developer';
   const saved = render('/reports/saved');
   expect(saved).toContain('이 보고서의 분석 범위');
   expect(saved).toContain('saved-cluster');

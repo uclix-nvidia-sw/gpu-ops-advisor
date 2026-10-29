@@ -6,7 +6,7 @@ export function ViewMode() {
       {(
         [
           ['classic', '통합 콘솔'],
-          ['operations', '운영'],
+          ['operations', '신규 콘솔2'],
           ['developer', '개발자'],
           ['new', '신규'],
           ['workbench', '개발 콘솔'],
