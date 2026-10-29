@@ -36,6 +36,8 @@ Python 검사 job은 Worker 패키지 설치와 Go 바이너리 빌드·공식 M
 
 런북 263개 일괄 등록 E2E는 해당 테스트의 격리 DB에서만 요청 한도를 1,000회/분으로 올리고 종료 시 원래 설정을 복원합니다. 전체 등록·조회/hash·재실행 중복 방지·RCA 소비 검증은 유지합니다. 실제 Backend의 429와 `Retry-After: 60`은 낮은 테스트 한도로 즉시 확인하고, CLI의 대기·동일 요청 재시도는 기존 단위 테스트에서 실제 대기 없이 검사합니다. 운영 기본 한도와 CLI 재시도 동작은 변경하지 않습니다.
 
+Agent 프로세스 E2E는 각 테스트가 시작한 Backend·Worker를 테스트 종료 시(실패 시 포함) 종료하고 회수한다. 모듈 공통 JC·Incident·MCP는 유지하며, 테스트별 Backend DB pool이 누적되지 않게 한다. 종료 신호에 응답하지 않는 프로세스는 kill 후 wait로 회수한다.
+
 Agent E2E는 `AGENT_E2E_DATABASE_URL`을 주면 외부 테스트 DB에 임시 schema를 생성하고 종료 시 삭제합니다. 해당 사용자는 schema 생성 권한이 필요합니다. Windows 로컬에서는 변수를 생략하면 기존 native PostgreSQL을 띄우는 방식을 유지합니다. 테스트 경로/바이너리는 [Agent QA](../agents/QA.md)를 참고하세요.
 
 ## 산출물

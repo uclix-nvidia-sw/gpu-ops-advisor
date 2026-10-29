@@ -5,6 +5,7 @@ No production metrics or model-quality claims are made by this suite.
 """
 
 from rca_report_fixture import report_reply
+from e2e_processes import process_scope, stop_processes
 
 from evaluation_fixtures import (
     interpretation_reply as rca_interpretation_reply,
@@ -782,16 +783,13 @@ def stack():
             incident=incident_url,
             env=worker_env,
             spawn=spawn,
+            processes=processes,
             profile=profile,
         )
     finally:
         upstream.shutdown()
         upstream.server_close()
-        for p in reversed(processes):
-            if p.poll() is None:
-                p.terminate()
-                with contextlib.suppress(subprocess.TimeoutExpired):
-                    p.wait(5)
+        stop_processes(processes)
         for f in files:
             f.close()
         if external_url:
@@ -807,6 +805,17 @@ def stack():
                 capture_output=True,
                 creationflags=flags,
             )
+
+
+@pytest.fixture(autouse=True)
+def test_process_scope(request):
+    # Module services survive; per-test backends/workers release their DB pools.
+    if "stack" not in request.fixturenames:
+        yield
+        return
+    stack = request.getfixturevalue("stack")
+    with process_scope(stack["processes"]):
+        yield
 
 
 def submit(stack, kind, data, *, execution_profile="local-v1"):
