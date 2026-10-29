@@ -106,6 +106,11 @@ def matrix(response):
 class ReportQueries:
     def __init__(self, tools, data, deadline):
         self.tools, self.data, self.deadline = tools, data, deadline
+        daily = (
+            timestamp(data["time_range"]["end"])
+            - timestamp(data["time_range"]["start"])
+        ) == 86400
+        self.query_limit, self.transition_limit = (128, 96) if daily else (80, 32)
         self.discovery = Discovery(self.call)
         self.calls = 0
         self.bytes_received = 0
@@ -116,8 +121,10 @@ class ReportQueries:
 
     async def call(self, name, args):
         self.calls += 1
-        if self.calls > 80:
+        if self.calls > self.query_limit:
             raise ValueError("report_query_limit_exceeded")
+        if self.bytes_received > MAX_BYTES:
+            raise ValueError("report_response_limit_exceeded")
         async with asyncio.timeout_at(min(self.deadline, time.monotonic() + 30)):
             response = unwrap(await self.tools[name](args))
         self.bytes_received += len(json.dumps(response).encode())
@@ -242,16 +249,19 @@ class ReportQueries:
                 batch = gpu_ids[offset : offset + 16]
                 entry = dict(hour_end=iso(at), gpu_ids=batch, status="not_checked")
                 audit.append(entry)
-                if self.transition_calls + 2 > 32:
+                if self.transition_calls + 2 > self.transition_limit:
                     entry["reason"] = "transition_query_budget_exhausted"
                     continue
                 if time.monotonic() >= self.transition_deadline:
                     entry["reason"] = "transition_deadline_exhausted"
                     continue
-                if reserved_calls and self.calls + 2 + reserved_calls > 80:
+                if (
+                    reserved_calls
+                    and self.calls + 2 + reserved_calls > self.query_limit
+                ):
                     entry["reason"] = (
                         "report_query_limit_exceeded"
-                        if self.calls + 2 > 80
+                        if self.calls + 2 > self.query_limit
                         else "transition_query_budget_reserved"
                     )
                     continue

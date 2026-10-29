@@ -413,6 +413,7 @@ async def run(tools):
         result["limitations"].extend(diagnostics.get("unattributed_messages", []))
     result["llm_usage"] = ctx["llm"].usage
     result["quality"]["query_count"] = collector.calls
+    result["quality"]["bytes_received"] = collector.bytes_received
     if len(json.dumps(result, ensure_ascii=False).encode()) > MAX_BYTES:
         raise ValueError("report_result_limit_exceeded")
     return {"result": result, "evidence": evidence}
