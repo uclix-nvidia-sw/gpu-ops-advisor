@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Badge, Field, Modal, PageHead, Panel, SearchBox, Notice } from '../components/ui';
 import { CommandError, DataView, More, QueryState } from '../components/live';
 import {
@@ -14,6 +14,22 @@ import {
 } from '../lib/live';
 import { useApp } from '../lib/store';
 import { RunbookContent } from '../components/RunbookContent';
+import {
+  RUNBOOK_CATEGORIES,
+  runbookCategories,
+  type RunbookCategory,
+} from '../lib/runbookCategories';
+import './knowledge.css';
+
+function useCatalog(path: string | null) {
+  const q = useList(path);
+  const { hasNextPage, isFetching, isError, fetchNextPage } = q;
+  const pages = q.data?.pages.length || 0;
+  useEffect(() => {
+    if (hasNextPage && !isFetching && !isError && pages < 20) void fetchNextPage();
+  }, [hasNextPage, isFetching, isError, pages, fetchNextPage]);
+  return q;
+}
 
 /** State transitions offered for a revision; unpublished ones can be discarded too. */
 export function knowledgeActions(state: string): string[][] {
@@ -28,18 +44,36 @@ export function knowledgeActions(state: string): string[][] {
 
 export function Knowledge() {
   const app = useApp();
-  const [state, setState] = useState('draft'),
+  const [state, setState] = useState('published'),
     [kind, setKind] = useState(''),
     [search, setSearch] = useState(''),
     [filter, setFilter] = useState(''),
     [open, setOpen] = useState<Row | null>(null);
-  const q = useList(
+  const [category, setCategory] = useState<RunbookCategory | ''>('');
+  const q = useCatalog(
     app.ready
-      ? queryPath('/knowledge', { scope: app.scope, state, kind, symptom: filter, limit: 30 })
+      ? queryPath('/knowledge', { scope: app.scope, state, kind, symptom: filter, limit: 200 })
       : null,
   );
+  const catalog = useCatalog(
+    app.ready
+      ? queryPath('/knowledge', {
+          scope: app.scope,
+          state: 'published',
+          kind: 'runbook',
+          limit: 200,
+        })
+      : null,
+  );
+  const shown = q.items.filter((k) => !category || runbookCategories(k).includes(category));
+  const count = (c: RunbookCategory) =>
+    new Set(
+      catalog.items
+        .filter((k) => runbookCategories(k).includes(c))
+        .map((k) => str(k.knowledge_id, str(k.id))),
+    ).size;
   return (
-    <div className="page">
+    <div className="page knowledge-page">
       <PageHead
         eyebrow="KNOWLEDGE LIBRARY"
         title="지식·Runbook"
@@ -52,6 +86,44 @@ export function Knowledge() {
           )
         }
       />
+      <Panel title="Runbook 현황">
+        <QueryState
+          query={catalog}
+          empty={!catalog.items.length}
+          emptyTitle="발행된 Runbook이 없습니다."
+        >
+          <div className="runbook-categories">
+            {RUNBOOK_CATEGORIES.filter((c) => c !== '기타' || count(c) || category === c).map(
+              (c) => (
+                <button
+                  type="button"
+                  key={c}
+                  aria-pressed={category === c}
+                  onClick={() => setCategory(category === c ? '' : c)}
+                >
+                  <span>{c}</span>
+                  <strong>
+                    {count(c)}
+                    {catalog.hasNextPage ? '+' : ''}
+                  </strong>
+                  <small>발행 Runbook</small>
+                </button>
+              ),
+            )}
+          </div>
+        </QueryState>
+        <div className="runbook-category-note">
+          {category && (
+            <button type="button" className="text-link" onClick={() => setCategory('')}>
+              분류 선택 해제
+            </button>
+          )}
+          코드 계열과 구성요소 분류는 중복될 수 있습니다. 현황은 Runbook별, 목록은 revision별로
+          표시합니다. 기타는 분류 외·분류 미지정 자료입니다.
+          {catalog.hasNextPage && <span> 불러온 자료 기준이며 추가 자료가 있습니다.</span>}
+        </div>
+        <More query={catalog} />
+      </Panel>
       <Panel title="지식 목록">
         <form
           className="live-toolbar"
@@ -86,9 +158,20 @@ export function Knowledge() {
           <SearchBox value={search} onChange={setSearch} placeholder="지식 내용 검색" />
           <button className="button">검색</button>
         </form>
-        <QueryState query={q} empty={!q.items.length}>
+        <div className="runbook-list-status" aria-live="polite">
+          {category || '전체 분류'} · {shown.length}개{q.hasNextPage ? ' (추가 자료 있음)' : ''}
+        </div>
+        <QueryState
+          query={q}
+          empty={!shown.length}
+          emptyTitle={
+            q.hasNextPage
+              ? '현재 불러온 자료에 일치하는 지식이 없습니다.'
+              : '조건에 맞는 지식이 없습니다.'
+          }
+        >
           <div className="knowledge-live-grid">
-            {q.items.map((k) => (
+            {shown.map((k) => (
               <button className="knowledge-live-card" key={str(k.id)} onClick={() => setOpen(k)}>
                 <div>
                   <Badge status={str(k.state)} />
@@ -98,7 +181,14 @@ export function Knowledge() {
                 </div>
                 <h3>{str(obj(k.content).title, '제목 없음')}</h3>
                 <p>{str(obj(k.content).description, str(obj(k.content).text))}</p>
-                <small>{str(k.visibility) === 'common' ? '공통 지식' : '범위 지정 지식'}</small>
+                <div className="runbook-card-footer">
+                  <span className="runbook-tags">
+                    {runbookCategories(k).map((c) => (
+                      <span key={c}>{c}</span>
+                    ))}
+                  </span>
+                  <small>{str(k.visibility) === 'common' ? '공통 지식' : '범위 지정 지식'}</small>
+                </div>
               </button>
             ))}
           </div>

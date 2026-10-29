@@ -83,6 +83,7 @@ export function OperatorDashboard() {
   const { query, views, now, truncated } = useRecentIncidents();
   const modules = useResource('/service-status');
   const [repeatBy, setRepeatBy] = useState<'device' | 'error' | 'time'>('device');
+  const [expandIncidents, setExpandIncidents] = useState(false);
   const days = windowDays(now, WINDOW_DAYS);
   const today = dayKey(now);
   const firing = views.filter((v) => v.firing);
@@ -120,6 +121,7 @@ export function OperatorDashboard() {
           RCA 조사 보기 →
         </Link>
       </div>
+      <OpsUsage />
       <QueryState query={query}>
         {truncated && (
           <p className="muted">
@@ -127,7 +129,7 @@ export function OperatorDashboard() {
           </p>
         )}
         <div className="oh-kpis">
-          <Link className="oh-kpi" to="/cases?focus=firing">
+          <Link className="oh-kpi" to={`/cases?focus=firing&period=${WINDOW_DAYS}`}>
             <span>
               <i className="oh-dot red" />
               발생 알림 수신
@@ -135,7 +137,7 @@ export function OperatorDashboard() {
             <strong>{firing.length}</strong>
             <small>발생 알림 기록 · 현재 상태는 별도 확인</small>
           </Link>
-          <Link className="oh-kpi" to="/cases?focus=resolved">
+          <Link className="oh-kpi" to={`/cases?focus=resolved&period=${WINDOW_DAYS}`}>
             <span>
               <i className="oh-dot" />
               해제 알림 수신
@@ -143,7 +145,7 @@ export function OperatorDashboard() {
             <strong>{resolved.length}</strong>
             <small>과거 해제 알림 기록 · 복구 확정 아님</small>
           </Link>
-          <Link className="oh-kpi" to="/cases?focus=today">
+          <Link className="oh-kpi" to="/cases?focus=today&period=1">
             <span>
               <i className="oh-dot green" />
               오늘 사건
@@ -151,7 +153,7 @@ export function OperatorDashboard() {
             <strong>{todays.length}</strong>
             <small>{categorySummary(todays) || '오늘 사건 없음'}</small>
           </Link>
-          <Link className="oh-kpi" to="/cases?sort=device">
+          <Link className="oh-kpi" to={`/cases?sort=device&period=${WINDOW_DAYS}`}>
             <span>
               <i className="oh-dot" />
               반복 장치 ({WINDOW_DAYS}일 3회 이상)
@@ -262,8 +264,22 @@ export function OperatorDashboard() {
                 보고서에서 확인합니다.
               </p>
             </div>
+            <button
+              className="text-link"
+              aria-expanded={expandIncidents}
+              aria-controls="received-incidents"
+              onClick={() => setExpandIncidents(!expandIncidents)}
+            >
+              {expandIncidents ? '높이 제한으로 보기' : '전체 펼치기'}
+            </button>
           </div>
-          <div className="oh-card-b">
+          <div
+            id="received-incidents"
+            className={`oh-card-b oh-received-incidents${expandIncidents ? ' is-expanded' : ''}`}
+            role="region"
+            aria-label="발생 알림이 수신된 사건 목록"
+            tabIndex={0}
+          >
             {firing.length ? (
               firing.map((v) => (
                 <article className="oh-now" key={v.id}>
@@ -284,7 +300,7 @@ export function OperatorDashboard() {
                     {v.kind !== 'host' && (
                       <Link
                         className="oh-btn line"
-                        to={`/cases?device=${encodeURIComponent(v.deviceKey)}`}
+                        to={`/cases?device=${encodeURIComponent(v.deviceKey)}&period=${WINDOW_DAYS}`}
                       >
                         이 {kindText(v.kind)} 사건 이력
                       </Link>
@@ -320,7 +336,7 @@ export function OperatorDashboard() {
           <div className="oh-card-b oh-bars">
             {repeatBy === 'error'
               ? byError.map((e) => (
-                  <Link className="b" key={e.code} to="/cases?sort=error">
+                  <Link className="b" key={e.code} to={`/cases?sort=error&period=${WINDOW_DAYS}`}>
                     <span>
                       <CodeBadge code={e.code} text={e.codeText} /> <b>{e.name}</b>{' '}
                       <small>
@@ -335,7 +351,11 @@ export function OperatorDashboard() {
                   </Link>
                 ))
               : deviceRows.slice(0, 10).map((d) => (
-                  <Link className="b" key={d.key} to={`/cases?device=${encodeURIComponent(d.key)}`}>
+                  <Link
+                    className="b"
+                    key={d.key}
+                    to={`/cases?device=${encodeURIComponent(d.key)}&period=${WINDOW_DAYS}`}
+                  >
                     <span>
                       <b>{d.node}</b> {kindText(d.kind)} <code className="oh-code">{d.device}</code>{' '}
                       <CodeBadge code={d.code} text={d.codeText} />{' '}
@@ -379,7 +399,10 @@ export function OperatorDashboard() {
                 {nodeStats(views).map((n) => (
                   <tr key={n.node}>
                     <td>
-                      <Link className="oh-node" to={`/cases?node=${encodeURIComponent(n.node)}`}>
+                      <Link
+                        className="oh-node"
+                        to={`/cases?node=${encodeURIComponent(n.node)}&period=${WINDOW_DAYS}`}
+                      >
                         {n.node}
                       </Link>
                     </td>
@@ -418,7 +441,6 @@ export function OperatorDashboard() {
           </div>
         </section>
       </QueryState>
-      <OpsUsage />
       <section className="oh-card oh-foot" aria-label="내부 서비스 상태">
         {(
           [

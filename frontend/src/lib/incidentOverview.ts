@@ -37,11 +37,20 @@ export interface IncidentView {
 const LABELS = labels as Record<string, IncidentLabel>;
 const HOUR = 3600_000;
 
-/** "XID 79 · GPU 연결 끊김"; components show their Korean name only. */
+/** Prefer the catalog meaning; unused codes keep the identifier actually received. */
+export function incidentName(v: IncidentView): string {
+  if (/^s?xid:/.test(v.code)) {
+    const mnemonic = v.raw.match(/\bS?XID[\s:]*\d+\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/)?.[1];
+    if (v.label?.detail && !/Unused|미사용/i.test(v.label.detail)) return v.label.detail;
+    if (mnemonic) return mnemonic.replaceAll('_', ' ');
+    if (/Unused|미사용/i.test(v.label?.name || '')) return '';
+  }
+  return v.label?.name || (v.code ? '런북 미등록 코드' : v.raw || '알림');
+}
+
+/** Code plus readable error name; components retain their existing Korean name. */
 export const titleText = (v: IncidentView) =>
-  [v.codeText, v.label?.name || (v.codeText ? '런북 미등록 코드' : v.raw || '알림')]
-    .filter(Boolean)
-    .join(' · ');
+  [v.codeText, incidentName(v)].filter(Boolean).join(' · ');
 
 export function incidentLabel(code: string): IncidentLabel | null {
   return LABELS[code] || null;

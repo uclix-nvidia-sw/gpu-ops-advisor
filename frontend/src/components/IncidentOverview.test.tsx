@@ -91,3 +91,16 @@ it('does not interpret an absent or unknown alarm state as resolved', () => {
     expect(html).not.toContain('발생 알림 수신');
   }
 });
+
+it('omits unused labels from the incident title and subtitle', () => {
+  const html = render([
+    {
+      ...base,
+      id: 'unused',
+      occurred_at: now.toISOString(),
+      target: { title: 'XID 6 ROBUST_CHANNEL_FIFO_ERROR_PARSE_ERR detected on GPU' },
+    },
+  ]);
+  expect(html).toContain('ROBUST CHANNEL FIFO ERROR PARSE ERR');
+  expect(html).not.toMatch(/Unused|미사용/);
+});
