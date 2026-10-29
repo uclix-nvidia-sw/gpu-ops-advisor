@@ -40,6 +40,48 @@ it('preserves additional limits and shows absent findings without a healthy asse
   expect(html).not.toContain('정상 관측');
 });
 
+it('leads with the alert device even when saved prose starts with another device', () => {
+  const result = {
+    quality: {
+      triage_observations: {
+        schema: 'rca-triage-observations/1',
+        target: { node: 'dgx01', title: 'XID 52 PCI:0000:4e:00' },
+        logs: [
+          {
+            code: 'xid:2',
+            device: '0000:bd:00',
+            first: '2026-10-29T01:00:00Z',
+            last: '2026-10-29T01:00:00Z',
+            reports: 1,
+          },
+          {
+            code: 'xid:52',
+            device: '0000:4e:00',
+            first: '2026-10-29T02:00:00Z',
+            last: '2026-10-29T02:00:00Z',
+            reports: 1,
+          },
+        ],
+      },
+    },
+    narrative: [{ id: 'problem', text: '다른 GPU의 XID 2 관측 원문' }],
+  };
+  const html = renderToStaticMarkup(<RcaOperatorReport result={result} decisionSummary />);
+  const summary = html.slice(html.indexOf('id="c2-rca-decision"'));
+  expect(summary.indexOf('XID:52 · dgx01')).toBeLessThan(summary.indexOf('<details>'));
+  expect(summary.indexOf('다른 GPU의 XID 2 관측 원문')).toBeGreaterThan(
+    summary.indexOf('<details>'),
+  );
+  const glance = html.slice(
+    html.indexOf('class="rca-glance"'),
+    html.indexOf('<section id="rca-response-reference"'),
+  );
+  expect(glance).toContain('1개 코드 관측');
+  expect(glance).toContain('class="rca-related-scroll"');
+  expect(glance).toContain('XID:2');
+  expect(glance).not.toContain('같은 노드의 관련 오류');
+});
+
 it('keeps every saved fact and next-check paragraph accessible after the two-item preview', () => {
   const facts = [
     '첫 번째 관측 원문',

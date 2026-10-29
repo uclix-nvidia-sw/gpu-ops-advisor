@@ -391,7 +391,7 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
   return (
     <Modal title="일정 실행 조건 편집" onClose={onClose}>
       <form
-        data-dirty={app.mode === 'new' && dirty}
+        data-dirty={(app.mode === 'new' || app.mode === 'operations') && dirty}
         onChange={() => setDirty(true)}
         className="stack"
         onSubmit={async (e) => {
@@ -409,7 +409,7 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
               { method: 'PATCH', version: num(initial.version) },
             )
           ) {
-            if (app.mode === 'new') clearNewDraft(draftKey);
+            if (app.mode === 'new' || app.mode === 'operations') clearNewDraft(draftKey);
             onClose();
           }
         }}

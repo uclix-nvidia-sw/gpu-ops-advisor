@@ -6,7 +6,7 @@ import { Badge, Notice, TextLink } from './ui';
 import { reportRequestTime } from '../lib/reportPeriod';
 import './aggregate-report.css';
 import '../lib/advice-colors.css';
-import { memoryPercent, NamespaceCharts } from './NamespaceCharts';
+import { memoryPercent, NamespaceCharts, type NamespaceFocus } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
 import { WorkloadContext } from './WorkloadContext';
 
@@ -140,7 +140,15 @@ function InterpretationText({ text }: { text: string }) {
   );
 }
 
-function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: string) => void }) {
+function AdviceSummary({
+  item,
+  onEvidence,
+  onFocus,
+}: {
+  item: Row;
+  onEvidence?: (id: string) => void;
+  onFocus?: (item: Row) => void;
+}) {
   const parts = obj(item.summary_parts);
   const decision = str(parts.decision);
   const evidence = str(parts.evidence);
@@ -153,7 +161,10 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
   const target = obj(item.target);
   const { title, basis, trial, windows, models } = advicePresentation(item);
   return (
-    <li data-advice-id={str(item.fact_id)}>
+    <li
+      data-advice-id={str(item.fact_id)}
+      id={onFocus ? `c2-advice-${encodeURIComponent(str(item.fact_id))}` : undefined}
+    >
       <div className="aggregate-advice-heading">
         <h5 className="advice-kind" data-kind={str(item.kind)}>
           {title}
@@ -194,6 +205,27 @@ function AdviceSummary({ item, onEvidence }: { item: Row; onEvidence?: (id: stri
         <p className="aggregate-advice-scope">
           과거 관측입니다. 향후 시간대 변경은 반복성과 실행 조건을 확인한 뒤 판단하세요.
         </p>
+      )}
+      {onFocus && (
+        <div className="c2-advice-facts">
+          <p>
+            <strong>관측 근거</strong>
+            <InterpretationText
+              text={separated ? evidence : str(item.observation) || '저장된 관측 문장이 없습니다.'}
+            />
+          </p>
+          {str(item.conditions) && (
+            <p>
+              <strong>적용 조건</strong>
+              {str(item.conditions)}
+            </p>
+          )}
+          {str(target.cluster_id) && str(target.namespace) && (
+            <button className="button" onClick={() => onFocus(item)}>
+              이 대상·구간을 그래프에서 확인 →
+            </button>
+          )}
+        </div>
       )}
       <details className="aggregate-advice-evidence">
         <summary>
@@ -368,10 +400,12 @@ function TopicInterpretation({
   topic,
   narrative,
   onEvidence,
+  onFocus,
 }: {
   topic: Row;
   narrative: Row[];
   onEvidence?: (id: string) => void;
+  onFocus?: (item: Row) => void;
 }) {
   const section = narrative.find((item) => item.topic_id === topic.topic_id);
   if (section?.interpretation_source === 'deterministic_fallback') {
@@ -438,6 +472,7 @@ function TopicInterpretation({
                         key={str(item.fact_id, String(i))}
                         item={item}
                         onEvidence={onEvidence}
+                        onFocus={onFocus}
                       />
                     ))}
                   </ul>
@@ -531,9 +566,11 @@ function TopicInterpretation({
 export function AggregateReport({
   value,
   onEvidence,
+  reader = false,
 }: {
   value: Row;
   onEvidence?: (id: string) => void;
+  reader?: boolean;
 }) {
   const topics = rows(value.topics);
   const usage = topics.find((t) => t.topic_id === 'namespace_usage');
@@ -557,6 +594,28 @@ export function AggregateReport({
     models[0];
   const hours = rows(active?.hours);
   const [hiddenNamespaces, setHiddenNamespaces] = useState<Set<string>>(() => new Set());
+  const [graphFocus, setGraphFocus] = useState<NamespaceFocus | null>(null);
+  const focusAdvice = (item: Row) => {
+    const target = obj(item.target);
+    const key = JSON.stringify([str(target.cluster_id), str(target.namespace)]);
+    setSelection(key);
+    setHiddenNamespaces((previous) => {
+      const next = new Set(previous);
+      for (const metric of ['activity', 'memory']) next.delete(JSON.stringify([metric, key]));
+      return next;
+    });
+    setGraphFocus({
+      cluster: str(target.cluster_id),
+      namespace: str(target.namespace),
+      windows: advicePresentation(item).windows.map((w) => w.period),
+      origin: `c2-advice-${encodeURIComponent(str(item.fact_id))}`,
+    });
+    requestAnimationFrame(() => {
+      const chart = document.getElementById('c2-namespace-charts');
+      chart?.focus({ preventScroll: true });
+      chart?.scrollIntoView({ block: 'start' });
+    });
+  };
   const toggleNamespace = (key: string) =>
     setHiddenNamespaces((previous) => {
       const next = new Set(previous);
@@ -586,23 +645,99 @@ export function AggregateReport({
       aria-label="운영 분석 보고서"
     >
       {/* Same card frame as the RCA report: a fixed heading above the stored sections. */}
-      <header className="rca-narrative-header">
-        <h3>운영 분석 보고서</h3>
-        <ReportPeriod value={value.time_range} />
-        <p>직전 같은 길이의 기간과 비교합니다. 모든 시각은 한국 시간 기준입니다.</p>
-      </header>
-      <nav className="rca-narrative-nav" aria-label="보고서 목차">
-        {usage && <a href="#namespace-summary-title">1. Namespace별 GPU 활동 현황</a>}
-        {incident && <a href="#incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</a>}
-        <a href="#report-evidence">집계 기준과 근거</a>
-      </nav>
+      {!reader && (
+        <header className="rca-narrative-header">
+          <h3>운영 분석 보고서</h3>
+          <ReportPeriod value={value.time_range} />
+          <p>직전 같은 길이의 기간과 비교합니다. 모든 시각은 한국 시간 기준입니다.</p>
+        </header>
+      )}
+      {!reader && (
+        <nav className="rca-narrative-nav" aria-label="보고서 목차">
+          {usage && <a href="#namespace-summary-title">1. Namespace별 GPU 활동 현황</a>}
+          {incident && (
+            <a href="#incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</a>
+          )}
+          <a href="#report-evidence">집계 기준과 근거</a>
+        </nav>
+      )}
+      {reader && (
+        <section id="c2-report-summary" className="c2-report-summary">
+          <h3>주요 변화와 확인할 사항</h3>
+          <p>
+            저장된 주제별 내용의 첫 항목입니다. 위험도 순위가 아니며 전체 제안과 적용 조건은 해당
+            주제에서 확인하세요.
+          </p>
+          <div className="c2-summary-grid">
+            {topics
+              .filter((t) => ['namespace_usage', 'incident_summary'].includes(str(t.topic_id)))
+              .map((topic) => {
+                const section = rows(value.narrative).find((n) => n.topic_id === topic.topic_id);
+                const advice = rows(section?.advice);
+                const first = advice[0];
+                const text = first
+                  ? str(first.summary) || str(first.observation)
+                  : str(section?.observation) || str(section?.summary_text) || str(section?.text);
+                const calculated =
+                  section?.interpretation_source === 'deterministic_fallback' || calculatedSummary;
+                return (
+                  <article key={str(topic.topic_id)}>
+                    <small>
+                      {calculated
+                        ? '계산 결과 요약'
+                        : aiInterpreted && section
+                          ? '저장된 AI 해석'
+                          : aiSelected
+                            ? 'AI가 선택한 계산 결과'
+                            : '저장된 내용 · 작성 방식 미확인'}
+                    </small>
+                    <h4>{topic.topic_id === 'namespace_usage' ? 'Namespace 활동' : '장애 알림'}</h4>
+                    <Badge status={str(topic.status) || null} />
+                    <p>{text || '저장된 요약이 없습니다. 아래 관측 자료와 한계를 확인하세요.'}</p>
+                    {first && str(first.conditions) && (
+                      <p className="aggregate-static-note">
+                        <strong>적용 조건</strong> {str(first.conditions)}
+                      </p>
+                    )}
+                    {str(section?.interpretation_limit) && (
+                      <p className="aggregate-static-note">{str(section?.interpretation_limit)}</p>
+                    )}
+                    <a
+                      href={
+                        topic.topic_id === 'namespace_usage'
+                          ? '#namespace-summary-title'
+                          : '#incident-summary-title'
+                      }
+                    >
+                      {advice.length
+                        ? `전체 제안 ${advice.length}개와 관측 보기`
+                        : '주제의 관측과 근거 보기'}{' '}
+                      →
+                    </a>
+                  </article>
+                );
+              })}
+          </div>
+          {diagnosticMessages.length > 0 && (
+            <div className="c2-warning">
+              <b>활동률 산출·기간 비교에 제한이 있습니다.</b>
+              <ul>
+                {strings(observationDiagnostics.summary).map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+              <a href="#namespace-summary-title">대상·기간별 제외 사유 확인 →</a>
+            </div>
+          )}
+        </section>
+      )}
       {partialInterpretation && (
         <Notice>
           일부 주제의 AI 해석을 작성하지 못했습니다. 검증을 통과한 주제의 AI 해석은 유지하고,
           나머지는 계산 결과 요약으로 표시합니다.
         </Notice>
       )}
-      {!aiInterpreted && rows(value.narrative).length > 0 && (
+      {!reader && !aiInterpreted && rows(value.narrative).length > 0 && (
         <section
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
           aria-labelledby="report-summary-title"
@@ -659,6 +794,7 @@ export function AggregateReport({
               topic={usage}
               narrative={rows(value.narrative)}
               onEvidence={onEvidence}
+              onFocus={reader ? focusAdvice : undefined}
             />
           )}
           <h3 className="aggregate-subheading">1.1. Namespace별 비교</h3>
@@ -742,6 +878,9 @@ export function AggregateReport({
               )}
               <NamespaceCharts
                 headingNumber="1.2"
+                reader={reader}
+                focus={graphFocus}
+                onClearFocus={() => setGraphFocus(null)}
                 groups={groups}
                 hidden={hiddenNamespaces}
                 onToggle={toggleNamespace}
@@ -905,7 +1044,9 @@ export function AggregateReport({
               </details>
             </>
           )}
-          <h3 className="aggregate-subheading">1.4. GPU 작업 대기·완료 (보조 관측)</h3>
+          <h3 id={reader ? 'c2-workloads' : undefined} className="aggregate-subheading">
+            1.4. GPU 작업 대기·완료 (보조 관측)
+          </h3>
           <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />
           {str(usage.workload_unavailable_reason) && (
             <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>

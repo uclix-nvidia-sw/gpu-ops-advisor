@@ -85,7 +85,7 @@ beforeEach(() => {
 it('puts the unified console first, then three comparison modes and the developer console', () => {
   const html = renderToStaticMarkup(<ViewMode />);
   expect(html.match(/<button/g)).toHaveLength(5);
-  expect(html.indexOf('통합 콘솔')).toBeLessThan(html.indexOf('운영'));
+  expect(html.indexOf('통합 콘솔')).toBeLessThan(html.indexOf('신규 콘솔2'));
   expect(html.indexOf('신규')).toBeLessThan(html.indexOf('개발 콘솔'));
   expect(html).not.toContain('기존');
   expect(html).not.toContain('운영 콘솔');
