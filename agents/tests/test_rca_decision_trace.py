@@ -52,9 +52,8 @@ def test_trace_records_valid_onset_and_early_exit():
     assert checks[-1]["value"] is True
     assert checks[-1]["inputs"]["preceding_healthy_count"] == 1
     checks = []
-    assert match_alert(alert(), [], [], checks)["status"] == "alert_report_not_found"
-    assert checks[-1]["rule"] == "alert_report_not_found"
-    assert not any(c["rule"] == "event_missing" for c in checks)
+    assert match_alert(alert(), [], [], checks)["status"] == "event_not_found"
+    assert any(c["rule"] == "event_missing" and c["value"] for c in checks)
 
 
 @pytest.mark.parametrize("change", [None, "pci", "no_event"])

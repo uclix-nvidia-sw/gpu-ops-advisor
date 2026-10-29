@@ -1,10 +1,10 @@
-# Incident 모듈 · Go · 기본 접수 1.3 / 선택적 에피소드 접수 1.4
+# Incident 모듈 · Go · 기본 firing 접수 1.5 / 선택적 에피소드 접수 1.4
 
 ## R 없는 기본 접수 — 2026-10-02
 
-기본 사건 revision 경로는 입력 계약 1.5를 사용한다. `purpose_ids`를 보내지 않으며 RCA가 Runbook으로 계획한다. 기존 알람 정책은 접수 대상·의미 증거와 revision을 정하는 데 사용한다. 기본 정책 revision은 `gpu-alert-runbook-v1`이다. 기존 설정의 `purpose_ids`는 읽기 호환만 유지하며 새 요청에는 전달하지 않는다. `episode_policy`의 1.4 생명주기는 그대로다. 아래 이전 R01/R02 설명은 1.3 과거 기록이다.
+기본 firing 접수 경로는 입력 계약 1.5를 사용한다. `purpose_ids`를 보내지 않으며 RCA가 Runbook으로 계획한다. 기존 알람 정책은 접수 대상과 최초 snapshot의 정책 revision을 정하는 데 사용한다. 기본 정책 revision은 `gpu-alert-runbook-v1`이다. 기존 설정의 `purpose_ids`는 읽기 호환만 유지하며 새 요청에는 전달하지 않는다. `episode_policy`의 1.4 생명주기는 그대로다. 아래 이전 R01/R02 설명은 1.3 과거 기록이다.
 
-새 JC·Worker를 먼저 배포해야 한다. 신규 1.5 요청은 구형 Worker에 배분되지 않는다. 기존 outbox·snapshot·hash는 재작성하지 않고 원래 계약으로 전송한다. 정책 revision 변경은 새 분석을 유발할 수 있으므로 배포 시 기존 사건·backlog를 확인한다. 이번 작업은 로컬 코드이며 운영 설정·DB를 변경하지 않는다.
+새 JC·Worker를 먼저 배포해야 한다. 신규 1.5 요청은 구형 Worker에 배분되지 않는다. 기존 outbox·snapshot·hash는 재작성하지 않고 원래 계약으로 전송한다. 기본 접수는 정책 revision이 바뀌어도 같은 알람 발생 구간의 RCA를 추가 생성하지 않는다. 이번 작업은 로컬 코드이며 운영 설정·DB를 변경하지 않는다.
 
 ## 분석 구간 밀리초 경계 (2026-10-01)
 
@@ -12,11 +12,11 @@
 
 ## Fleet target 투영 호환 (2026-09-30)
 
-새 RCA 입력 target에 label의 `machine_id/component/k8s_node_name`을 보존하고 노드명은 annotation fallback도 지원한다. 노드 label/annotation 충돌은 `conflicting_node_name`으로 거부한다. 기존 1.3 event key와 의미 evidence hash는 추가 target 필드를 제외한 기존 식별 기준을 유지한다. 정책의 evidence label 비교는 유지한다. 투영만 추가된 반복 alert는 새 incident/outbox/snapshot을 만들지 않으며 기존 snapshot/hash/target을 소급 변경하지 않는다. episode 모드도 공통 parse 투영을 재사용한다. DB migration은 없다.
+새 RCA 입력 target에 label의 `machine_id/component/k8s_node_name`을 보존하고 노드명은 annotation fallback도 지원한다. 노드 label/annotation 충돌은 `conflicting_node_name`으로 거부한다. 과거 1.3 event key와 evidence hash는 저장된 값을 보존하며, 현재 기본 접수의 중복 기준은 아래 발생 구간 정책을 따른다. 투영만 추가된 반복 alert는 새 incident/outbox/snapshot을 만들지 않으며 기존 snapshot/hash/target을 소급 변경하지 않는다. episode 모드도 공통 parse 투영을 재사용한다. DB migration은 없다.
 
 이 target은 수신 단서다. RCA에서 관측의 동일 대상·시각 의미·freshness를 검증해야 fact로 쓸 수 있다. [RCA 실행 계약](../rcca-agent/README.md)을 따른다.
 
-[13번 설계서](../docs/specs/incident/13_Incident_모듈_설계서.md)를 기준으로 개발하는 독립 프로세스입니다. 기존 1.3 연동은 기본으로 유지하며, 1.4 에피소드 생산 경로는 소비자 업그레이드 후 설정으로 전환합니다.
+[13번 설계서](../docs/specs/incident/13_Incident_모듈_설계서.md)를 기준으로 개발하는 독립 프로세스입니다. 기본 접수는 1.5이며, 1.4 에피소드 생산 경로는 소비자 업그레이드 후 설정으로 전환합니다.
 
 **Grafana → Incident → PostgreSQL outbox → Job Controller → RCA Agent** 흐름을 사용합니다. Backend는 같은 DB에서 사건과 연결된 RCA job을 읽고, 메모·검토·사건 상태 변경만 Incident로 전달합니다. 인증은 현재 범위에서 제외했습니다.
 
@@ -53,7 +53,7 @@ Go 1.26와 PostgreSQL을 사용합니다. Docker가 없어도 저장소 루트�
 }
 ```
 
-- `episode_policy` 생략/null: 기존 1.3 정책·증거 revision·source_key 유지. 객체 지정: 1.4 에피소드 경로. `revision`과 실제 Grafana 반복 주기를 명시하며 K ≥ 2 × repeat_interval이어야 시작합니다. 정책 내용을 바꾸면 새 revision을 사용합니다. 기존 에피소드의 K와 최초 snapshot은 유지합니다.
+- `episode_policy` 생략/null: 아래 기본 firing 단일 접수 경로. 객체 지정: 1.4 에피소드 경로. `revision`과 실제 Grafana 반복 주기를 명시하며 K ≥ 2 × repeat_interval이어야 시작합니다. 정책 내용을 바꾸면 새 revision을 사용합니다. 기존 에피소드의 K와 최초 snapshot은 유지합니다.
 - 완전한 신원은 source/cluster_id/machine_id/component로 묶습니다. reason·fingerprint가 다른 알람도 같은 연속 구간에서는 사건과 최초 RCA가 하나입니다. machine_id/component가 부족하면 생명주기별로 격리하고 `identity_incomplete`를 보존합니다. 그룹 키는 2,000바이트 이하입니다.
 - 1.4의 `k8s_node_name`은 labels에서 읽고 없으면 annotations를 사용합니다. 양쪽 값이 다르면 `conflicting_node_name`으로 거부합니다. 이 표시 이름으로 machine/GPU 신원을 추정하지 않으며 원문·hash와 기존 1.3 dedup은 유지합니다.
 - snapshot은 revision=1, 요청 키는 `incident:<id>:first`입니다. 신규 입력에는 `purpose_ids`, `analysis_profile_revision`을 넣지 않습니다. GPUAlert 외 이름도 접수하며 DatasourceNoData/DatasourceError는 별도 사건으로 기록하고 `analysis_excluded`로 분석을 생략합니다.
@@ -73,6 +73,12 @@ Go 1.26와 PostgreSQL을 사용합니다. Docker가 없어도 저장소 루트�
 5. 새 생명주기를 기록한 source를 1.3 생산자로 되돌리는 시작은 거절합니다. 문제 발생 시 신규 수신을 멈추고 호환 생산자로 전진 수정하며 pending을 보존합니다. SQL 삭제·snapshot 변환·PVC 재생성으로 복구하지 않습니다. DB 백업 복원은 별도 운영 절차로 검수해야 합니다.
 
 현재 수신 쓰기는 기존 전역 트랜잭션 잠금을 유지하고 정렬한 그룹 잠금·생명주기·에피소드 순서로 처리합니다. 수신량이 커지면 전역 잠금 제거를 별도로 검토합니다. [검증 기록](QA.md)은 실제 PostgreSQL/기존 JC 검사와 1.4 테스트 수신기 검사를 구분합니다.
+
+### 기본 firing 단일 접수 배포
+
+DB 스키마 migration이나 기존 데이터 일괄 수정은 없습니다. 기본 생산자의 config revision에 `firing-once-v1`을 포함해 구·신규 생성 정책 혼용을 차단합니다. 모든 Incident 복제본을 새 버전으로 교체하고 `INCIDENT_APPLY_CONFIG=true`로 새 revision을 적용합니다. 자동 적용을 끈 환경은 승인된 설정 적용을 먼저 수행해야 하며 구 replica를 다시 시작해 revision을 되돌리지 않습니다. 기존 snapshot·보고서·pending outbox는 보존합니다. 과거 누락분 일괄 생성은 포함하지 않습니다. 롤백하면 구 중복·resolved 차단 정책도 돌아오므로 수신을 중지한 상태에서 버전·설정을 함께 전환해야 합니다.
+
+Grafana가 firing만 보내도 새 `startsAt`은 새 사건입니다. 동일 fingerprint/startsAt은 한 발생 구간이며, 별도 resolved 수신을 재발 조건으로 요구하지 않습니다. 해제 알림이 없다는 이유로 장애 지속이나 복구를 판단하지 않습니다. 선택적 `episode_policy` 경로는 기존 관측 에피소드 계약을 유지하며 이 정책의 대상이 아닙니다.
 
 ## Grafana 연결
 
@@ -107,16 +113,17 @@ GPU UUID는 입력 라벨에 있을 때만 보존합니다. node/pod/namespace �
 
 ## 수신·증거·전달 정책
 
-아래 정책의 alertname 매핑·새 증거 revision은 기본 1.3 경로입니다. 1.4는 위 에피소드 정책을 따릅니다.
+아래 정책은 기본 1.5 firing 접수 경로입니다. 1.4는 위 에피소드 정책을 따릅니다.
 
 - alerts 배열 전체를 한 DB 트랜잭션으로 처리합니다. 잘못된 자식은 위치·이유·원문으로 보존하고 다른 정상 자식은 접수합니다. 정상 JSON인데 alerts 배열 자체가 잘못된 요청은 receipt와 함께 422, JSON 문법/인코딩 오류는 400, 본문·배열 한도 초과는 413입니다.
-- 같은 source/원본 body SHA-256은 같은 receipt를 반환합니다. alert별 원장도 source/cluster/fingerprint/startsAt/payload hash로 중복을 막습니다. 정확한 webhook 바이트는 raw_body, 조회용 원문은 raw_payload에 보존합니다. PostgreSQL JSON이 표현하지 못하는 NUL이 포함된 자식은 encoded JSON으로 보존합니다.
+- 같은 source/원본 body SHA-256은 같은 receipt를 반환합니다. 기본 경로는 재수신된 유효 firing의 미접수 여부를 재확인하므로, 과거 차단된 알람도 현재 적격이고 요청 이력이 없으면 한 번 접수합니다. 기존 receipt 응답·원문은 변경하지 않으며 처리 현황은 사건 상세에서 확인합니다. alert별 원장도 source/cluster/fingerprint/startsAt/payload hash로 중복을 막습니다. 정확한 webhook 바이트는 raw_body, 조회용 원문은 raw_payload에 보존합니다. PostgreSQL JSON이 표현하지 못하는 NUL이 포함된 자식은 encoded JSON으로 보존합니다.
 - truncatedAlerts가 있으면 `grafana_truncated_alerts` 경고를 반환합니다. 받지 못한 알람을 정상/해제로 추정하지 않습니다.
-- 사건 키는 알람 생명주기와 실제 대상에 연결됩니다. heartbeat 수준의 반복 수치·summary 변경으로 evidence revision이나 RCA를 늘리지 않습니다.
-- 등록 정책의 evidence_labels/evidence_annotations 또는 policy revision이 달라진 적격 firing만 새 증거 revision과 RCA outbox를 만듭니다. 기본 의미 있는 필드는 severity/error_code이며 실제 운영 정책에 맞춰 지정합니다.
-- 24시간보다 오래된 알람, 아직 미래인 알람, resolved 또는 closed 사건은 보존만 합니다. 허용된 시계 오차보다 미래인 timestamp는 invalid입니다. 기간·한도는 설정할 수 있습니다.
+- 기본 사건 신원은 `source/cluster_id/fingerprint/startsAt`입니다. 같은 발생 구간의 대상 보강·내용·정책 변경은 새 사건이나 RCA를 만들지 않습니다. 기존 target 기반 사건 키는 알람 원장으로 찾아 재사용하며 저장된 키·snapshot·hash는 바꾸지 않습니다.
+- 기존 사건과 Namespace 범위가 다른 입력은 `identity_conflict`로 기록하고 RCA를 요청하지 않습니다. 이후 원래 범위의 적격 firing은 최초 요청을 만들 수 있습니다.
+- 적격 firing에 대해 해당 발생 구간의 RCA outbox가 없을 때만 최초 요청을 만듭니다. 대기·접수·실패 outbox 모두 중복 방지에 포함합니다. 증거 선택 필드는 설정·과거 snapshot 읽기 호환으로 유지하며, 내용이나 정책 revision 변경으로 재분석하지 않습니다. 실행 실패는 기존 JC 재시도 정책을 따르며 반복 알림으로 새 작업을 만들지 않습니다.
+- resolved 알림은 보존만 하고 작업을 만들지 않습니다. firing은 저장된 resolved/closed 상태와 무관하게 최초 RCA 요청을 만들 수 있습니다. 24시간보다 오래된 알람·아직 미래인 알람·정책 미등록 알람의 기존 제외 조건은 유지합니다. 허용된 시계 오차보다 미래인 timestamp는 invalid입니다. 기간·한도는 설정할 수 있습니다.
 - 사건 state와 alarm_status는 분리됩니다. Grafana resolved는 alarm_status만 바꾸고 사건을 resolved/closed나 장비·업무 회복으로 자동 판정하지 않습니다. 같은 생명주기의 늦은 firing은 resolved를 되돌리지 않습니다.
-- snapshot에는 완전한 RCA input과 원본 alert·정책을 고정하고 hash를 저장합니다. JC는 input·snapshot·hash를 실제 검증합니다. source_key는 `incident:<id>:evidence:<version>:profile:<revision>`입니다.
+- snapshot에는 완전한 RCA input과 원본 alert·정책을 고정하고 hash를 저장합니다. JC는 input·snapshot·hash를 실제 검증합니다. 신규 source_key는 `incident:<id>:first`이며 입력 계약은 1.5입니다. 과거 revision/profile 키의 outbox도 이미 요청한 것으로 간주하고 원래 envelope로 전달합니다.
 - RCA는 snapshot의 `alert`를 원본 증거로 읽으며 이미 저장된 snapshot을 변환하거나 hash를 다시 쓰지 않습니다. 실제 RCA 실행까지의 회귀 검증은 [Agent 통합 테스트](../agents/tests/test_e2e.py)의 Grafana webhook 경로에 포함됩니다.
 - 5초 전달 루프는 자기 outbox 행만 잠그고 같은 envelope로 재전송합니다. JC 응답 유실·기한 경과 시 receipt를 먼저 확인합니다. JC가 내려가 있어도 Webhook은 로컬 영속 저장 후 202를 반환합니다. 마감 뒤 JC receipt 조회마저 실패하면 pending을 유지합니다.
 - RCA Agent가 없으면 JC 접수는 queued입니다. 실제 GPU 조사·LLM 추론을 Incident가 수행하지 않습니다.

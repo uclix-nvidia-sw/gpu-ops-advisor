@@ -35,7 +35,7 @@ const incident = (over: Record<string, unknown>) => ({
 
 describe('incident overview', () => {
   it('names the error, device and NVIDIA action from the Runbook labels', () => {
-    const v = incidentView(incident({}), now);
+    const v = incidentView(incident({}));
     expect(v.code).toBe('xid:79');
     expect(v.codeText).toBe('XID 79');
     expect(v.label?.action).toBe('호스트 재시작 (RESTART_BM)');
@@ -52,7 +52,6 @@ describe('incident overview', () => {
           title: 'SXID 11001(ingress invalid command) detected on PCI:0000:c8:00.0',
         },
       }),
-      now,
     );
     expect([sxid.code, sxid.kind, sxid.device]).toEqual(['sxid:11001', 'switch', '0000:c8:00.0']);
     const disk = incidentView(
@@ -63,7 +62,6 @@ describe('incident overview', () => {
           title: 'filesystem remounted as read-only due to errors',
         },
       }),
-      now,
     );
     expect([disk.code, disk.kind, disk.reason]).toEqual([
       'component:disk',
@@ -73,14 +71,14 @@ describe('incident overview', () => {
     expect(disk.label?.name).toBeTruthy();
   });
 
-  it('separates stale firing alerts, notices and RCA skipped by an early resolve', () => {
-    const fresh = incidentView(incident({ alarm_status: 'firing', alarm_resolved_at: null }), now);
-    expect([fresh.firing, fresh.stale]).toEqual([true, false]);
+  it('keeps old firing receipts visible without inferring current health', () => {
+    const fresh = incidentView(incident({ alarm_status: 'firing', alarm_resolved_at: null }));
+    expect([fresh.firing, fresh.resolved]).toEqual([true, false]);
     const stale = incidentView(
       incident({ alarm_status: 'firing', occurred_at: '2026-10-23T08:48:10Z' }),
-      now,
     );
-    expect(stale.stale).toBe(true);
+    expect(stale.firing).toBe(true);
+    expect(stale.resolved).toBe(false);
     const notice = incidentView(
       incident({
         rca_summary: {},
@@ -90,36 +88,30 @@ describe('incident overview', () => {
           title: '[Warning] XID 13 Graphics Engine Exception',
         },
       }),
-      now,
     );
     expect(notice.rca).toBe('notice');
-    expect(incidentView(incident({ rca_summary: {} }), now).rca).toBe('none');
+    expect(incidentView(incident({ rca_summary: {} })).rca).toBe('none');
     expect(
-      incidentView(
-        incident({ rca_summary: { latest_job: { job_id: 'j', status: 'running' } } }),
-        now,
-      ).rca,
+      incidentView(incident({ rca_summary: { latest_job: { job_id: 'j', status: 'running' } } }))
+        .rca,
     ).toBe('running');
   });
 
   it('counts repeats per device, per day and per node', () => {
-    const views = incidentViews(
-      [
-        incident({ id: 'a', occurred_at: '2026-10-24T01:00:00Z' }),
-        incident({ id: 'b', occurred_at: '2026-10-25T01:00:00Z' }),
-        incident({ id: 'c' }),
-        incident({
-          id: 'd',
-          alarm_status: 'firing',
-          target: {
-            k8s_node_name: 'dgx02',
-            component: 'disk',
-            title: 'filesystem remounted as read-only due to errors',
-          },
-        }),
-      ],
-      now,
-    );
+    const views = incidentViews([
+      incident({ id: 'a', occurred_at: '2026-10-24T01:00:00Z' }),
+      incident({ id: 'b', occurred_at: '2026-10-25T01:00:00Z' }),
+      incident({ id: 'c' }),
+      incident({
+        id: 'd',
+        alarm_status: 'firing',
+        target: {
+          k8s_node_name: 'dgx02',
+          component: 'disk',
+          title: 'filesystem remounted as read-only due to errors',
+        },
+      }),
+    ]);
     expect(views.map((v) => [v.id, v.nth])).toEqual([
       ['d', 1],
       ['c', 3],
@@ -159,20 +151,17 @@ describe('incident overview', () => {
     expect(shortDate('2026-10-25')).toBe('10.25 (일)');
     // 16:30 UTC is already the next day in KST.
     expect(dateTimeText(new Date('2026-10-26T16:30:00Z'))).toBe('2026.10.27. (화) 01:30');
-    const views = incidentViews(
-      [
-        incident({ id: 'a', occurred_at: '2026-10-24T01:00:00Z' }),
-        incident({
-          id: 'b',
-          target: { k8s_node_name: 'dgx02', title: 'XID 79 detected on GPU PCI:0000:07:00' },
-        }),
-        incident({
-          id: 'c',
-          target: { k8s_node_name: 'dgx02', title: 'SXID 11001 detected on PCI:0000:c8:00.0' },
-        }),
-      ],
-      now,
-    );
+    const views = incidentViews([
+      incident({ id: 'a', occurred_at: '2026-10-24T01:00:00Z' }),
+      incident({
+        id: 'b',
+        target: { k8s_node_name: 'dgx02', title: 'XID 79 detected on GPU PCI:0000:07:00' },
+      }),
+      incident({
+        id: 'c',
+        target: { k8s_node_name: 'dgx02', title: 'SXID 11001 detected on PCI:0000:c8:00.0' },
+      }),
+    ]);
     expect(errorRepeats(views).map((e) => [e.codeText, e.count, e.devices])).toEqual([
       ['XID 79', 2, 2],
       ['SXID 11001', 1, 1],

@@ -155,7 +155,7 @@ const incidentFields: Record<string, [string, string]> = {
   container: ['컨테이너', '알람에 기록된 컨테이너 이름입니다.'],
   alarm_status: [
     '알람 상태',
-    '발생 중은 알람 조건이 활성화된 상태, 해제됨은 해제 알림을 수신한 상태입니다. 사건 종결과는 별개입니다.',
+    '사건에 저장된 알림 수신 상태입니다. 발생 알림만 수신할 수 있으므로 현재 장애 지속·복구 여부를 뜻하지 않습니다. 사건 종결과는 별개입니다.',
   ],
   alarm_resolved_at: [
     '알람 해제 시각',
@@ -416,7 +416,7 @@ export function DataView({
   if (field === 'namespaces' && value === null) return <span>전체 Namespace</span>;
   if (value === null || value === undefined) return <span className="muted">미확인</span>;
   if (typeof value === 'boolean') return <span>{value ? '예 (true)' : '아니요 (false)'}</span>;
-  if (field === 'alarm_status' && value === 'resolved') return <span>해제됨</span>;
+  if (field === 'alarm_status' && value === 'resolved') return <span>해제 알림 수신</span>;
   if (typeof value !== 'object')
     return (
       <span className="data-text">

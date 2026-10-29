@@ -73,13 +73,17 @@ Incident·JC 변경을 함께 포함한 별도 PR 작업 트리 `C:/Temp/gpu-ops
 - 개발 Incident 서버 `127.0.0.1:8091` 실행, `/internal/v1/health/ready` 200 및 pending_outbox=0 확인.
 - 이 작업에서 추가·수정한 소스/설정/문서의 CRLF 확인.
 
-## E2E 범위
+## 기본 firing 접수 E2E 범위
+
+2026-10-28, main `32a386c` 기반 로컬 변경. Windows·Go 1.26.2·CGO/GCC·전용 로컬 PostgreSQL에서 `go test -race -tags=e2e ./tests -v -count=1 -timeout=10m` 전체 통과. 실제 Incident·JC HTTP와 Backend 바이너리를 사용했다. shared·Incident·JC·Backend의 vet/race/build도 통과했다. 저장소 경로의 대괄호를 피해 동일 소스를 별도 검증 폴더에 복사했고 PostgreSQL은 영문 경로의 새 데이터 디렉터리에서 실행 후 종료했다. 새 정책의 테스트는 [firing_test.go](tests/firing_test.go)에 있다. 운영 DB·배포·실제 Grafana/LLM·Worker 결과 공개 검증은 포함하지 않는다.
 
 1. 혼합 배치에서 유효/잘못된 자식 각각 보존, 동일 배치 receipt 복구, 12개 동시 재전송 중복 방지.
 2. JC가 RCA를 커밋한 뒤 응답을 잃어도 전달 마감 이후 receipt로 같은 job 복구. Worker가 없을 때 queued/worker_unavailable. 테스트 Worker가 실제 claim으로 완전한 RCA input과 snapshot을 수신하며 누락된 GPU UUID를 생성하지 않음.
-3. 수치 heartbeat는 새 RCA를 만들지 않고 등록된 error_code 변경은 새 증거 revision·job 생성. snapshot DB 수정 차단. resolved와 늦은 firing은 회복/재분석으로 오인하지 않음.
+3. 동일 발생 구간의 수치·error_code·severity·대상·정책 변경은 추가 RCA를 만들지 않음. resolved/firing 혼합 배치의 두 순서 모두 요청 1개. 내용이 다른 최초 firing 12개 동시 수신도 사건·snapshot·outbox·JC job 각 1개. 새 startsAt은 해제 수신 없이 새 사건·요청 생성.
 4. 실제 Backend에서 사건·RCA 연결 조회, Incident로 PATCH 전달, 동일 명령/이전 If-Match 재전송, 변경된 명령 409. acknowledged/closed 처리와 메모 변경은 분석 실행을 만들지 않음.
 5. JC 장애 중 webhook 영속 접수, receipt 조회 불가 시 pending 유지, 미접수 마감 건의 failed 처리. 미등록 정책·오래된 알람·잘못된 시각·NUL 포함 자식 보존, 정상 형제 알람 처리, 본문 한도 413.
+6. 과거 target 기반 키·resolved/closed 사건의 미접수 firing은 동일 원문 재수신에서도 요청 1개를 생성하고 기존 receipt·snapshot/hash를 보존. 기존 revision/profile outbox가 실패해도 추가 생성하지 않음. 구 생산자 config revision 차단·명시적 적용·반복 시작 확인. 선택적 에피소드와 과거 다중 사건 귀속 거절 회귀도 통과.
+7. 같은 발생 구간에서 Namespace가 달라진 입력은 `identity_conflict`로 기록하고 outbox를 만들지 않음. 원래 Namespace의 firing이 뒤이어 오면 최초 요청·실제 JC job 생성.
 
 테스트는 임시 schema와 임시 Backend 프로세스를 사용하고 종료 시 해당 자원만 정리합니다. 기존 개발 Backend/JC 프로세스는 재시작하지 않았습니다. 현재 실행 중인 Backend는 Incident URL이 아직 적용되지 않아 service-status에서 Incident 미연결로 표시됩니다. 갱신된 `backend/scripts/dev-server.ps1`로 다음 기동 시 8091을 연결합니다.
 

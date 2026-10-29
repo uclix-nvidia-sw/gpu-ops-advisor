@@ -99,8 +99,7 @@ func (s *Server) parse(raw any, now time.Time) (alert, string) {
 		}
 	}
 	// Fingerprint+start identify the alarm lifecycle; target is explicit, never invented.
-	a.eventKey = Hash(Object{"source": s.Config.Source, "cluster": a.cluster, "fingerprint": a.fingerprint, "starts_at": a.starts, "target": a.target})
-	// Keep the deployed 1.3 identity stable; Fleet fields enrich new snapshots only.
+	a.eventKey = Hash(Object{"source": s.Config.Source, "cluster": a.cluster, "fingerprint": a.fingerprint, "starts_at": a.starts})
 	for _, key := range []string{"machine_id", "component", "k8s_node_name"} {
 		value := a.labels[key]
 		if key == "k8s_node_name" {
@@ -160,7 +159,7 @@ func (s *Server) ingest(ctx context.Context, b Object, raw []byte) (Object, int,
 		e := tx.QueryRow(ctx, "SELECT id,response,http_status FROM incident_webhook_receipts WHERE source=$1 AND body_hash=$2", s.Config.Source, hash).Scan(&receipt, &old, &oldStatus)
 		if e == nil {
 			result, status = old, oldStatus
-			if s.Config.Episodes == nil || bad || oldStatus != 202 {
+			if bad || oldStatus != 202 {
 				return nil
 			}
 		}
@@ -192,6 +191,12 @@ func (s *Server) ingest(ctx context.Context, b Object, raw []byte) (Object, int,
 				if s.Config.Episodes != nil {
 					item, e = s.episodeChild(ctx, tx, now, receipt, i, rawAlert, counted)
 				} else {
+					if replay {
+						a, reason := s.parse(rawAlert, now)
+						if reason != "" || a.status != "firing" {
+							continue
+						}
+					}
 					item, e = s.child(ctx, tx, now, receipt, i, rawAlert)
 				}
 				if e != nil {
@@ -231,21 +236,30 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 		}
 	}
 	if reason != "" {
+		old, e := one(ctx, tx, "SELECT jsonb_build_object('alert_event_id',id,'incident_id',incident_id,'disposition',disposition,'reason',reason) FROM alert_events WHERE receipt_id=$1 AND alert_index=$2 LIMIT 1", receipt, index)
+		if e == nil {
+			return old, nil
+		}
+		if !missing(e) {
+			return nil, e
+		}
 		if raw == nil {
 			raw = json.RawMessage("null")
 		}
 		id := ID()
-		_, e := tx.Exec(ctx, "INSERT INTO alert_events(id,source,payload_hash,raw_payload,observed_at,receipt_id,alert_index,disposition,reason) VALUES($1,$2,$3,$4,$5,$6,$7,'invalid',$8)", id, s.Config.Source, payloadHash, safeJSON(raw), now, receipt, index, reason)
+		_, e = tx.Exec(ctx, "INSERT INTO alert_events(id,source,payload_hash,raw_payload,observed_at,receipt_id,alert_index,disposition,reason) VALUES($1,$2,$3,$4,$5,$6,$7,'invalid',$8)", id, s.Config.Source, payloadHash, safeJSON(raw), now, receipt, index, reason)
 		return Object{"index": index, "alert_event_id": id, "disposition": "invalid", "reason": reason}, e
 	}
 	old, e := one(ctx, tx, "SELECT jsonb_build_object('id',id,'incident_id',incident_id,'disposition',disposition,'reason',reason) FROM alert_events WHERE source=$1 AND cluster_id=$2 AND fingerprint=$3 AND starts_at=$4 AND payload_hash=$5", s.Config.Source, a.cluster, a.fingerprint, a.starts, payloadHash)
-	if e == nil {
-		return Object{"index": index, "alert_event_id": old["id"], "incident_id": old["incident_id"], "disposition": old["disposition"], "reason": old["reason"], "duplicate": true}, nil
-	}
-	if !missing(e) {
+	duplicate := e == nil
+	if e != nil && !missing(e) {
 		return nil, e
 	}
-	j, e := one(ctx, tx, "SELECT to_jsonb(i) FROM incidents i WHERE event_key=$1 FOR UPDATE", a.eventKey)
+	// Find old target-based keys through the immutable alert ledger, without rewriting history.
+	j, e := one(ctx, tx, `SELECT to_jsonb(i) FROM incidents i WHERE i.dedup_group IS NULL AND
+	 (i.event_key=$1 OR i.id IN (SELECT incident_id FROM alert_events
+	 WHERE source=$2 AND cluster_id=$3 AND fingerprint=$4 AND starts_at=$5))
+	 ORDER BY i.created_at,i.id LIMIT 1 FOR UPDATE`, a.eventKey, s.Config.Source, a.cluster, a.fingerprint, a.starts)
 	if e != nil && !missing(e) {
 		return nil, e
 	}
@@ -262,55 +276,54 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 	}
 	id := String(j, "id")
 	eventID := ID()
+	if duplicate {
+		eventID = String(old, "id")
+	}
+	var requested bool
+	if e = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM enqueue_outbox WHERE source_module='incident' AND kind='rca'
+	 AND (input_snapshot->'input'->>'incident_id'=$1 OR input_snapshot->'input'->>'incident_id' IN
+	 (SELECT incident_id::text FROM alert_events WHERE source=$2 AND cluster_id=$3 AND fingerprint=$4 AND starts_at=$5)))`,
+		id, s.Config.Source, a.cluster, a.fingerprint, a.starts).Scan(&requested); e != nil {
+		return nil, e
+	}
+	if duplicate && (requested || a.status != "firing") {
+		return Object{"index": index, "alert_event_id": old["id"], "incident_id": old["incident_id"], "disposition": old["disposition"], "reason": old["reason"], "duplicate": true}, nil
+	}
 	alarmStatus := a.status
 	if j["alarm_status"] == "resolved" {
 		alarmStatus = "resolved"
 	}
+	originalScope, e := ParseScope(j["scope"])
+	if e != nil {
+		return nil, e
+	}
 	reason = ""
-	if a.policy == nil {
+	if !Contains(a.scope, originalScope) || !Contains(originalScope, a.scope) {
+		reason = "identity_conflict"
+	} else if a.policy == nil {
 		reason = "analysis_policy_unconfigured"
-	} else if alarmStatus == "resolved" {
+	} else if a.status != "firing" {
 		reason = "alarm_resolved"
-	} else if j["state"] == "closed" {
-		reason = "incident_closed"
 	} else if a.starts.Before(now.Add(-time.Duration(s.Config.MaxAgeSeconds) * time.Second)) {
 		reason = "stale_alert"
 	} else if a.starts.After(now) {
 		reason = "future_timestamp"
 	}
 	eligible := reason == ""
-	// Projection-only upgrades must not enqueue another RCA for a legacy lifecycle.
-	identityTarget := Object{}
-	for key, value := range a.target {
-		if !Has([]string{"machine_id", "component", "k8s_node_name", "title", "test_alarm"}, key) {
-			identityTarget[key] = value
-		}
-	}
-	meaningful := Object{"target": identityTarget}
-	if a.policy != nil {
-		meaningful["policy_revision"] = a.policy.Revision
-		fields := Object{}
-		for _, key := range a.policy.EvidenceLabels {
-			fields["label:"+key] = a.labels[key]
-		}
-		for _, key := range a.policy.EvidenceAnnotations {
-			fields["annotation:"+key] = a.annotations[key]
-		}
-		meaningful["evidence"] = fields
-	}
-	evidenceHash := Hash(meaningful)
 	revision := Number(j, "evidence_version")
-	changed := revision == 0 || (eligible && (j["last_evidence_hash"] != evidenceHash || String(j, "rca_eligibility_reason") != ""))
+	changed := !requested && (revision == 0 || eligible)
 	disposition := "recorded"
 	if !eligible {
 		disposition = "ineligible"
 	}
 	if !changed && eligible {
-		reason = "repeated_evidence"
+		reason = "analysis_already_requested"
 	}
-	_, e = tx.Exec(ctx, "INSERT INTO alert_events(id,source,cluster_id,fingerprint,starts_at,status,payload_hash,raw_payload,observed_at,receipt_id,alert_index,incident_id,disposition,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,''))", eventID, s.Config.Source, a.cluster, a.fingerprint, a.starts, a.status, payloadHash, raw, now, receipt, index, id, disposition, reason)
-	if e != nil {
-		return nil, e
+	if !duplicate {
+		_, e = tx.Exec(ctx, "INSERT INTO alert_events(id,source,cluster_id,fingerprint,starts_at,status,payload_hash,raw_payload,observed_at,receipt_id,alert_index,incident_id,disposition,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,''))", eventID, s.Config.Source, a.cluster, a.fingerprint, a.starts, a.status, payloadHash, raw, now, receipt, index, id, disposition, reason)
+		if e != nil {
+			return nil, e
+		}
 	}
 	var outbox any
 	if changed {
@@ -333,12 +346,12 @@ func (s *Server) child(ctx context.Context, tx pgx.Tx, now time.Time, receipt st
 		if e != nil {
 			return nil, e
 		}
-		_, e = tx.Exec(ctx, "UPDATE incidents SET evidence_version=$2,last_evidence_hash=$3,analysis_profile_revision=$4,version=version+1 WHERE id=$1", id, revision, evidenceHash, policyRevision)
+		_, e = tx.Exec(ctx, "UPDATE incidents SET evidence_version=$2,analysis_profile_revision=$3,version=version+1 WHERE id=$1", id, revision, policyRevision)
 		if e != nil {
 			return nil, e
 		}
 		if eligible {
-			source := fmt.Sprintf("incident:%s:evidence:%d:profile:%s", id, revision, a.policy.Revision)
+			source := fmt.Sprintf("incident:%s:first", id)
 			oid := ID()
 			outbox = oid
 			deadline := now.Add(time.Duration(s.Config.DispatchSeconds) * time.Second)

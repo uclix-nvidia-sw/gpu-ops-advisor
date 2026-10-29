@@ -265,7 +265,7 @@ func TestIncidentEndToEnd(t *testing.T) {
 		}
 		call(t, r.queueURL, "POST", "/internal/v1/jobs/"+String(cl, "job_id")+"/fail", Object{"attempt_no": cl["attempt_no"], "claim_token": cl["claim_token"], "code": "insufficient_data", "retryable": false, "remote_call_state": "not_started"}, 200)
 	})
-	t.Run("heartbeat_vs_meaningful_evidence_and_resolved", func(t *testing.T) {
+	t.Run("single_analysis_despite_evidence_and_resolved", func(t *testing.T) {
 		a["values"] = Object{"A": 91}
 		v := call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
 		if Number(item(v, 0), "evidence_version") != 1 || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 1 {
@@ -278,12 +278,12 @@ func TestIncidentEndToEnd(t *testing.T) {
 		}
 		a["annotations"].(map[string]any)["error_code"] = "Xid79"
 		v = call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
-		if Number(item(v, 0), "evidence_version") != 2 {
+		if Number(item(v, 0), "evidence_version") != 1 {
 			t.Fatal(v)
 		}
 		r.deliver(t)
-		if r.count(t, "SELECT count(*) FROM jobs") != 2 {
-			t.Fatal("new evidence not delivered")
+		if r.count(t, "SELECT count(*) FROM jobs") != 1 {
+			t.Fatal("new evidence duplicated the analysis")
 		}
 		_, e := r.db.Exec(ctx, "UPDATE incident_evidence_versions SET snapshot='{}' WHERE incident_id=$1", id)
 		if e == nil {
@@ -293,7 +293,7 @@ func TestIncidentEndToEnd(t *testing.T) {
 		a["endsAt"] = time.Now().UTC().Format(time.RFC3339Nano)
 		call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
 		state := call(t, r.incidentURL, "GET", "/internal/v1/incidents/"+id, nil, 200)
-		if state["state"] != "open" || state["alarm_status"] != "resolved" || Number(state, "evidence_version") != 2 {
+		if state["state"] != "open" || state["alarm_status"] != "resolved" || Number(state, "evidence_version") != 1 {
 			t.Fatal("resolved inferred recovery/reanalysis", state)
 		}
 		a["status"] = "firing"
@@ -301,13 +301,13 @@ func TestIncidentEndToEnd(t *testing.T) {
 		a["values"] = Object{"A": 92}
 		call(t, r.incidentURL, "POST", "/webhooks/grafana", batch(a), 202)
 		state = call(t, r.incidentURL, "GET", "/internal/v1/incidents/"+id, nil, 200)
-		if state["alarm_status"] != "resolved" || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 2 {
+		if state["alarm_status"] != "resolved" || r.count(t, "SELECT count(*) FROM enqueue_outbox") != 1 {
 			t.Fatal("late firing regressed lifecycle")
 		}
 	})
 	t.Run("real_Backend_read_patch_receipt_no_execution_side_effect", func(t *testing.T) {
 		v := call(t, r.backendURL, "GET", "/api/v1/incidents/"+id, nil, 200)
-		if len(v["analyses"].([]any)) != 2 {
+		if len(v["analyses"].([]any)) != 1 {
 			t.Fatal("Backend did not expose RCA jobs")
 		}
 		h := []string{"Idempotency-Key", ID(), "If-Match", fmt.Sprint(Number(v, "version"))}
@@ -321,7 +321,7 @@ func TestIncidentEndToEnd(t *testing.T) {
 		call(t, r.backendURL, "PATCH", "/api/v1/incidents/"+id, b, 409, h...)
 		call(t, r.backendURL, "PATCH", "/api/v1/incidents/"+id, Object{"state": "resolved"}, 422, "Idempotency-Key", ID(), "If-Match", fmt.Sprint(Number(second, "version")))
 		call(t, r.backendURL, "PATCH", "/api/v1/incidents/"+id, Object{"state": "closed"}, 200, "Idempotency-Key", ID(), "If-Match", fmt.Sprint(Number(second, "version")))
-		if r.count(t, "SELECT count(*) FROM jobs") != 2 || r.count(t, "SELECT count(*) FROM incident_evidence_versions") != 2 {
+		if r.count(t, "SELECT count(*) FROM jobs") != 1 || r.count(t, "SELECT count(*) FROM incident_evidence_versions") != 1 {
 			t.Fatal("metadata triggered analysis")
 		}
 		status := call(t, r.backendURL, "GET", "/api/v1/service-status", nil, 200)

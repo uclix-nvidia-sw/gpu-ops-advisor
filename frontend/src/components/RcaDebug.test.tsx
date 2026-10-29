@@ -157,7 +157,7 @@ describe('RCA diagnostics', () => {
     expect(html).toContain('알람 상태');
     expect(html).toContain('사건 종결과는 별개');
     expect(html).toContain('<code>alarm_status</code>');
-    expect(html).toContain('해제됨');
+    expect(html).toContain('해제 알림 수신');
     expect(html).not.toContain('해결됨');
     expect(html).toContain('>0</span>');
     expect(html).toContain('미확인');
@@ -173,7 +173,7 @@ describe('RCA diagnostics', () => {
         }}
       />,
     );
-    expect(html).toContain('해제됨');
+    expect(html).toContain('해제 알림 수신');
     expect(html).toContain('열림');
     expect(html).toContain('검토 중');
     expect(html).not.toContain('해결됨');

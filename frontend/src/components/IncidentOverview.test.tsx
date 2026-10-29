@@ -14,7 +14,7 @@ const base = {
   },
 };
 const render = (records: Record<string, unknown>[]) => {
-  const [v] = incidentViews(records, now);
+  const [v] = incidentViews(records);
   return renderToStaticMarkup(
     <MemoryRouter>
       <IncidentRow v={v} now={now} />
@@ -36,7 +36,7 @@ it('shows the error, device repeat, alert state, NVIDIA action and the report li
   expect(html).toContain('dgx02 · NVSwitch');
   expect(html).toContain('0000:c8:00.0');
   expect(html).toContain('이 스위치 2번째');
-  expect(html).toContain('해제됨');
+  expect(html).toContain('해제 알림 수신');
   // Resolve time with the date and weekday in KST.
   expect(html).toContain('2026.10.26. (월) 13:27');
   expect(html).toContain('치명 가능 SXID (FM 표 23)');
@@ -49,7 +49,7 @@ it('shows the error, device repeat, alert state, NVIDIA action and the report li
   expect(html).not.toContain('href="/incidents/');
 });
 
-it('marks a day-old firing alert for checking and a component by its Korean name', () => {
+it('shows old firing receipts in the main list without inferring a persistent fault', () => {
   const stale = render([
     {
       ...base,
@@ -59,8 +59,11 @@ it('marks a day-old firing alert for checking and a component by its Korean name
       rca_summary: {},
     },
   ]);
-  expect(stale).toContain('oh-row stale');
-  expect(stale).toContain('확인 필요');
+  expect(stale).toContain('oh-row firing');
+  expect(stale).not.toContain('oh-row stale');
+  expect(stale).toContain('발생 알림 수신');
+  expect(stale).not.toContain('확인 필요');
+  expect(stale).not.toContain('해제 신호 없음');
   expect(stale).toContain('<span class="oh-rca none">—</span>');
   const disk = render([
     {
@@ -78,4 +81,13 @@ it('marks a day-old firing alert for checking and a component by its Korean name
   expect(disk).toContain('읽기 전용 재마운트');
   expect(disk).not.toContain('disk · ');
   expect(disk).not.toContain('번째');
+});
+
+it('does not interpret an absent or unknown alarm state as resolved', () => {
+  for (const alarm_status of [null, 'unknown']) {
+    const html = render([{ ...base, id: 'unknown', occurred_at: now.toISOString(), alarm_status }]);
+    expect(html).toContain('알림 상태 미확인');
+    expect(html).not.toContain('해제 알림 수신');
+    expect(html).not.toContain('발생 알림 수신');
+  }
 });

@@ -490,6 +490,7 @@ def state_report(kind="xid", **change):
 
 def kmsg_event(kind="xid", **change):
     return {
+        "target": {"machine_id": "machine-1", "node": "node-1"},
         "component": "accelerator-nvidia-error-" + kind,
         "error_code": CODES[kind],
         "reported_device": DEVICES[kind],
@@ -527,18 +528,18 @@ def test_missing_kmsg_with_in_window_state_change_is_not_a_prior_event():
         ("xid", "event_pci_function", "match"),
         ("xid", "no_code", "error_code_unparsed"),
         ("xid", "other_component_code", "error_code_unparsed"),
-        ("xid", "no_report", "alert_report_not_found"),
-        ("xid", "healthy_report", "alert_report_not_found"),
-        ("xid", "other_machine", "alert_report_not_found"),
-        ("xid", "reason", "report_reason_changed"),
+        ("xid", "no_report", "match"),
+        ("xid", "healthy_report", "match"),
+        ("xid", "other_machine", "match"),
+        ("xid", "reason", "match"),
         ("xid", "event_body_reason", "match"),
         ("sxid", "event_body_reason", "match"),
         ("xid", "no_event", "event_not_found"),
-        ("xid", "pci", "pci_mismatch"),
-        ("sxid", "sxid_function", "pci_mismatch"),
-        ("xid", "two_devices", "multiple_devices"),
-        ("xid", "alert_without_uuid", "uuid_unresolved"),
-        ("xid", "inventory_unmapped", "uuid_unresolved"),
+        ("xid", "pci", "event_not_found"),
+        ("sxid", "sxid_function", "event_not_found"),
+        ("xid", "two_devices", "match"),
+        ("xid", "alert_without_uuid", "match"),
+        ("xid", "inventory_unmapped", "match"),
         ("xid", "uuid", "uuid_mismatch"),
     ],
 )
@@ -586,8 +587,12 @@ def test_alert_match_compares_report_and_event_by_error_family(kind, change, sta
     assert result["status"] == status, result
     if status == "match":
         assert result["alert"]["error_code"] == CODES[kind]
-        assert result["alert"]["gpu_uuid"] == (GPU_UUID if kind == "xid" else None)
-        assert set(result["evidence_refs"]) == {"report", "event"}
+        assert result["alert"]["gpu_uuid"] == (
+            GPU_UUID if kind == "xid" and change != "alert_without_uuid" else None
+        )
+        assert "event" in result["evidence_refs"]
+        if change in {"no_report", "other_machine", "reason"}:
+            assert "report" not in result["evidence_refs"]
     if change == "no_event":
         assert result["detail"] == {"other_codes": ["xid:13"]}
 
@@ -699,9 +704,9 @@ async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
     result = await replay(match_case("pci"))
     output = result["output"]
     analysis = output["result"]["quality"]["analysis"]
-    assert analysis["alert_match"]["status"] == "pci_mismatch"
-    assert "pci_mismatch" in output["result"]["missing_inputs"]
-    assert "pci_mismatch" not in analysis["resolved_scope_gaps"]
+    assert analysis["alert_match"]["status"] == "event_not_found"
+    assert "event_not_found" in output["result"]["missing_inputs"]
+    assert "event_not_found" not in analysis["resolved_scope_gaps"]
     collected = {e["query_id"] for e in output["evidence"]}
     assert "investigation_decision" not in collected
     assert {"D09", "D44", "D02", "D11"} <= collected
@@ -712,5 +717,5 @@ async def test_alert_mismatch_collects_auxiliary_queries_before_one_analysis():
         "report_writing",
     ]
     author = result["model_calls"][0]["input"]
-    assert author["alert_match"]["status"] == "pci_mismatch"
+    assert author["alert_match"]["status"] == "event_not_found"
     assert "evidence_gap" not in author

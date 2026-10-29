@@ -124,9 +124,9 @@ export function Cases() {
                           status={str(i.alarm_status, 'unknown')}
                           label={
                             i.alarm_status === 'resolved'
-                              ? '해제됨'
+                              ? '해제 알림 수신'
                               : i.alarm_status === 'firing'
-                                ? '발생 중'
+                                ? '발생 알림 수신'
                                 : undefined
                           }
                         />

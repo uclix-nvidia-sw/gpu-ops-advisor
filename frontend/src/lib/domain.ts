@@ -31,7 +31,7 @@ export const labels: Record<string, string> = {
   delayed: '수신 지연',
   open: '열림',
   acknowledged: '확인됨',
-  firing: '발생 중',
+  firing: '발생 알림 수신',
   unreviewed: '미검토',
   reviewing: '검토 중',
   investigating: '조사 중',
