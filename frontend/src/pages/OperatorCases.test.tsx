@@ -38,12 +38,12 @@ beforeEach(() => {
   fixture.status = 'resolved';
 });
 
-it('keeps day-old firing records in the main paged list and firing filter', () => {
+it('keeps old incidents visible and ignores obsolete receipt filters', () => {
   fixture.status = 'firing';
   const html = render('?focus=firing&page=2');
   expect(html).toContain('51–60 / 60건');
   expect(html).toContain('href="/analyses/job-55#final-report"');
-  expect(html).toContain('발생 알림 수신');
+  expect(html).not.toContain('발생 알림 수신');
   expect(html).not.toContain('알림이 들어온 장애와 RCA 장애 보고서를 한 줄에서 봅니다');
   expect(html).not.toContain('oh-stale');
   expect(html).not.toContain('확인 필요');

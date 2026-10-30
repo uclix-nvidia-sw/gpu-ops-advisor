@@ -1,5 +1,5 @@
-// Operator overview of stored incidents: received alert states, device repeats
-// and the RCA report link. Received states do not establish current health.
+// Operator overview of stored incidents: received alert content, device repeats
+// and the RCA report link. Stored incidents do not establish current health.
 // Both pages use the same pure functions over the /incidents list.
 import labels from './incidentLabels.json';
 import { matchedReasons } from './componentReasons';
@@ -26,9 +26,6 @@ export interface IncidentView {
   device: string;
   kind: DeviceKind;
   deviceKey: string;
-  firing: boolean;
-  resolved: boolean;
-  resolvedAt: Date | null;
   rca: RcaState;
   jobId: string;
   executionStatus?: string;
@@ -36,25 +33,29 @@ export interface IncidentView {
   publishedStatus?: string;
   publishedJobId?: string;
   nth: number;
+  uuid?: string;
+  component?: string;
 }
 
 const LABELS = labels as Record<string, IncidentLabel>;
 const HOUR = 3600_000;
 
-/** Prefer the catalog meaning; unused codes keep the identifier actually received. */
+// List identity comes from the received alert, never from a Runbook translation.
 export function incidentName(v: IncidentView): string {
+  let text = v.raw.replace(/^\s*\[[^\]]+\]\s*/, '');
+  text = text.replace(/^(?!S?XID:)[a-z][a-z0-9-]*:\s*/i, '');
+  text = text.replace(/^\s*\[[^\]]+\]\s*/, '');
   if (/^s?xid:/.test(v.code)) {
-    const mnemonic = v.raw.match(/\bS?XID[\s:]*\d+\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/)?.[1];
-    if (v.label?.detail && !/Unused|미사용/i.test(v.label.detail)) return v.label.detail;
-    if (mnemonic) return mnemonic.replaceAll('_', ' ');
-    if (/Unused|미사용/i.test(v.label?.name || '')) return '';
+    text = text.replace(/^S?XID[\s:]*\d+\s*/i, '');
+    text = text.replace(/\s+detected on\b.*$/i, '').replace(/^detected on\b.*$/i, '');
+    text = text.replace(/^\((.*)\)$/, '$1');
+    // A received mnemonic stays verbatim unless the alert also provides prose.
+    text = text.replace(/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\s+(?=\S)/, '');
   }
-  return v.label?.name || (v.code ? '런북 미등록 코드' : v.raw || '알림');
+  return text.trim();
 }
-
-/** Code plus readable error name; components retain their existing Korean name. */
 export const titleText = (v: IncidentView) =>
-  [v.codeText, incidentName(v)].filter(Boolean).join(' · ');
+  [v.codeText, incidentName(v)].filter(Boolean).join(' · ') || '알림 내용 미확인';
 
 export function incidentLabel(code: string): IncidentLabel | null {
   return LABELS[code] || null;
@@ -70,11 +71,19 @@ export function incidentView(record: Row): IncidentView {
     : component
       ? `component:${component}`
       : '';
-  const pci = (raw.match(/PCI:([0-9a-f:.]+)/i) || [])[1]?.toLowerCase() || '';
-  const kind: DeviceKind = !pci ? 'host' : code.startsWith('sxid:') ? 'switch' : 'gpu';
-  const node = str(target.k8s_node_name) || str(target.node);
+  const pci = (raw.match(/PCI:\s*([0-9a-f:.]+)/i) || [])[1] || '';
+  const uuid = str(target.gpu_uuid) || raw.match(/UUID:\s*(GPU-[a-z0-9-]+)/i)?.[1] || '';
+  const kind: DeviceKind =
+    code.startsWith('sxid:') || component.endsWith('-sxid')
+      ? 'switch'
+      : code.startsWith('xid:') ||
+          component.startsWith('accelerator-nvidia') ||
+          uuid ||
+          /\bGPU\b/i.test(raw)
+        ? 'gpu'
+        : 'host';
+  const node = str(target.k8s_node_name) || str(target.node) || str(target.machine_id);
   const at = new Date(str(record.occurred_at) || str(record.first_seen) || str(record.created_at));
-  const firing = record.alarm_status === 'firing';
   const summary = obj(record.rca_summary);
   const published = obj(summary.latest_published);
   const job = obj(summary.latest_job);
@@ -93,7 +102,6 @@ export function incidentView(record: Row): IncidentView {
           : ['failed', 'expired', 'cancelled'].includes(jobStatus)
             ? 'failed'
             : 'none';
-  const resolved = str(record.alarm_resolved_at);
   const reasons = component && !named ? matchedReasons(component, raw) : [];
   return {
     id: str(record.id),
@@ -105,12 +113,16 @@ export function incidentView(record: Row): IncidentView {
     raw,
     node,
     cluster: str(target.cluster_id) || str(record.cluster_id),
-    device: pci,
+    device: pci || uuid,
+    uuid,
+    component,
     kind,
-    deviceKey: `${node}|${code}|${pci}`,
-    firing,
-    resolved: record.alarm_status === 'resolved',
-    resolvedAt: resolved ? new Date(resolved) : null,
+    deviceKey: JSON.stringify([
+      str(target.cluster_id) || str(record.cluster_id),
+      node,
+      code,
+      (pci || uuid).toLowerCase(),
+    ]),
     rca,
     jobId: str(published.job_id) || str(job.job_id),
     executionStatus: jobStatus,
@@ -310,8 +322,6 @@ export function nodeStats(views: IncidentView[]) {
         CATEGORIES.map((c) => [c.key, list.filter((v) => category(v) === c.key).length]),
       ) as Record<Category, number>,
       devices: new Set(list.filter((v) => v.kind !== 'host').map((v) => v.deviceKey)).size,
-      firing: list.filter((v) => v.firing).length,
-      resolved: list.filter((v) => v.resolved).length,
       last: list[0].at,
     };
   });

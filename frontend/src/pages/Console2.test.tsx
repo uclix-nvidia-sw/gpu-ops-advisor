@@ -226,3 +226,29 @@ it('preserves all execution states alongside a previous published partial report
   expect(html).toContain('/analyses/old-0');
   expect(html).toContain('/incidents/0');
 });
+
+it('separates received identity from guidance and escapes untrusted alert text', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <IncidentTable
+        views={incidentViews([
+          {
+            id: 'raw',
+            occurred_at: '2026-10-29T01:00:00Z',
+            target: {
+              title: 'XID 103 <script>alert(1)</script> detected on GPU PCI:0000:bd:00',
+              k8s_node_name: 'dgx02',
+            },
+          },
+        ])}
+      />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  expect(html).not.toContain('NVJPG5 Error');
+  expect(html).toContain('PCI 0000:bd:00');
+  expect(html).toContain('클러스터 미확인');
+  expect(html).toContain('실행 기록 없음');
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).toContain('<th>런북 참고</th>');
+});

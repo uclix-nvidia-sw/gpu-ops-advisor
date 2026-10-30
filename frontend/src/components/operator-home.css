@@ -557,7 +557,7 @@
 .oh-row {
   display: grid;
   grid-template-columns:
-    62px minmax(0, 1.7fr) minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.2fr)
+    62px minmax(0, 1.7fr) minmax(0, 1.25fr) minmax(0, 1.2fr)
     112px;
   gap: 12px;
   align-items: center;
@@ -576,9 +576,6 @@
 }
 .oh-row:last-child {
   border-bottom: 0;
-}
-.oh-row.firing {
-  border-left-color: var(--oh-red);
 }
 .oh-t {
   font-size: 15px;
@@ -616,9 +613,6 @@
 .oh-st b {
   display: inline-flex;
   align-items: center;
-}
-.oh-st.resolved b {
-  font-weight: 500;
 }
 .oh-st small {
   color: var(--oh-muted);

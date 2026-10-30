@@ -296,9 +296,9 @@ it('shows incident content and cannot turn missing GPU identity into no repetiti
   expect(html).toContain('XID 79 · GPU 연결 끊김 알림');
   expect(html).not.toContain('알림 원문');
   expect(html).toContain('<th>클러스터</th><th>노드</th><th>알림 내용</th>');
-  expect(html).toContain('badge-firing');
-  expect(html).toContain('알림 상태<span>작성 기준</span>');
-  expect(html).toContain('현재 상태와 다를 수 있습니다');
+  expect(html).not.toContain('badge-firing');
+  expect(html).not.toContain('알림 상태<span>작성 기준</span>');
+  expect(html).toContain('현재 장비 상태를 나타내지 않습니다');
   expect(html).toContain('2026. 10. 13. 15:29:46 KST');
   expect(html).toContain('<td>cpc-1</td><td>dgx01</td>');
   expect(html).toContain('<td>cpc-1</td><td>미확인</td>');
@@ -351,7 +351,7 @@ it('does not invent a status timestamp for an older stored report', () => {
     </MemoryRouter>,
   );
   expect(html).toContain('기준 시각: 미저장');
-  expect(html).toContain('현재 상태와 다를 수 있습니다');
+  expect(html).toContain('현재 장비 상태를 나타내지 않습니다');
   expect(html).not.toContain('badge-firing');
 });
 

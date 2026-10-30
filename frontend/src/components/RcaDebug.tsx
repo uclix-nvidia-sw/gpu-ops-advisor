@@ -34,19 +34,6 @@ export function IncidentStates({ incident }: { incident: Row }) {
   return (
     <div className="rca-states">
       <span>
-        알람{' '}
-        <Badge
-          status={str(incident.alarm_status) || null}
-          label={
-            incident.alarm_status === 'resolved'
-              ? '해제 알림 수신'
-              : incident.alarm_status === 'firing'
-                ? '발생 알림 수신'
-                : undefined
-          }
-        />
-      </span>
-      <span>
         사건 <Badge status={str(incident.state, str(incident.status)) || null} />
       </span>
       <span>

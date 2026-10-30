@@ -5091,3 +5091,20 @@ td small {
   border: 1px solid var(--border);
   border-radius: 4px;
 }
+
+.app-shell .brand .brand-icon.turtle-brand {
+  background: #f3f2ec;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 8px;
+  padding: 4px;
+}
+.brand .turtle-brand img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.app-shell .main-nav {
+  margin-top: 16px;
+}

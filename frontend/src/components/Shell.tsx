@@ -1,5 +1,4 @@
 import {
-  ArrowUpRight,
   BookOpen,
   ChartNoAxesCombined,
   ChevronDown,
@@ -122,8 +121,8 @@ export function Shell() {
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
-        <span className="brand-icon">
-          <ArrowUpRight size={25} />
+        <span className="brand-icon turtle-brand">
+          <img src="/turtle-mark.png" alt="" />
         </span>
         <div>
           <strong>GPU Ops Advisor</strong>
@@ -137,7 +136,7 @@ export function Shell() {
           <small>Infrastructure operations</small>
         </div>
       </div>
-      <div className="nav-label">{app.mode === 'developer' ? 'INSPECT' : 'WORKSPACE'}</div>
+
       <nav className="main-nav" aria-label="주 메뉴">
         {menus.map((n) => (
           <Link

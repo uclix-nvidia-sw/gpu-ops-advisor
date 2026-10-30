@@ -100,7 +100,7 @@ export function Cases() {
                 <thead>
                   <tr>
                     <th scope="col">알람 · 발생 대상</th>
-                    <th scope="col">알람</th>
+
                     <th scope="col">사건</th>
                     <th scope="col">검토</th>
                     <th scope="col">발생 시각</th>
@@ -119,18 +119,7 @@ export function Cases() {
                         </Link>
                         <small className="cell-sub">사건 ID · {str(i.id)}</small>
                       </td>
-                      <td>
-                        <Badge
-                          status={str(i.alarm_status, 'unknown')}
-                          label={
-                            i.alarm_status === 'resolved'
-                              ? '해제 알림 수신'
-                              : i.alarm_status === 'firing'
-                                ? '발생 알림 수신'
-                                : undefined
-                          }
-                        />
-                      </td>
+
                       <td>
                         <Badge status={str(i.state, str(i.status, 'unknown'))} />
                       </td>

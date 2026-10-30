@@ -18,7 +18,6 @@ export function RcaOperatorReport({
   result,
   decisionSummary = false,
   onEvidence,
-  alarm,
 }: {
   result: Row;
   decisionSummary?: boolean;
@@ -161,16 +160,6 @@ export function RcaOperatorReport({
           </p>
         )}
         <div className="rca-chips">
-          {alarm?.alarm_status === 'firing' && (
-            <ToneBadge tone="alert" label="발생 알림 수신 · 현재 상태 미확인" />
-          )}
-          {alarm?.alarm_status === 'resolved' && (
-            <ToneBadge
-              tone="ok"
-              label={`해제 알림 수신${str(alarm.alarm_resolved_at) ? ` · ${formatRcaTime(str(alarm.alarm_resolved_at))}` : ''}`}
-            />
-          )}
-          {v?.ongoing && <ToneBadge tone="alert" label="조회 종료 시점에도 보고 중" />}
           {v && v.sameDeviceCount > 1 && (
             <ToneBadge
               tone="alert"
@@ -190,6 +179,12 @@ export function RcaOperatorReport({
             <ToneBadge tone="unknown" label="시작 시각 미확인" />
           )}
         </div>
+        {v && (
+          <p className="rca-muted">
+            마지막 오류 기록: {v.lastReport ? formatRcaTime(v.lastReport) : '시각 미확인'}
+            {' · '}저장된 분석 구간 기준이며 현재 지속·복구 여부는 판단하지 않습니다.
+          </p>
+        )}
         {missing.includes('synthesis_failed') && (
           <p className="rca-muted">
             {`AI가 쓰는 해석 문장만 빠졌습니다${ai.reason ? ` — ${ai.reason}` : ''}. 아래 표와 판정은 수집한 로그·지표를 코드로 계산한 결과입니다.`}

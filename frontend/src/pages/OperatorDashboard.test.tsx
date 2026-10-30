@@ -31,14 +31,15 @@ vi.mock('../components/IncidentOverview', async (original) => ({
   }),
 }));
 
-it('counts received states without inferring ongoing faults or stale alerts', () => {
+it('counts recorded incidents without receipt-state filters', () => {
   const html = renderToStaticMarkup(
     <MemoryRouter>
       <OperatorDashboard />
     </MemoryRouter>,
   );
-  expect(html).toMatch(/focus=firing[\s\S]*?<strong>1<\/strong>/);
-  expect(html).toMatch(/focus=resolved[\s\S]*?<strong>1<\/strong>/);
+  expect(html).not.toContain('focus=firing');
+  expect(html).toContain('<strong>3</strong>');
+  expect(html).not.toContain('focus=resolved');
   expect(html).toContain('href="/analyses/report#final-report"');
   expect(html).toContain('현재 장애 지속·복구 여부를 판단하지 않습니다');
   expect(html).not.toContain('지금 발생 중');
@@ -47,5 +48,5 @@ it('counts received states without inferring ongoing faults or stale alerts', ()
   expect(html.indexOf('preserved-ops-usage')).toBeLessThan(html.indexOf('class="oh-kpis"'));
   expect(html).toContain('oh-received-incidents');
   expect(html).toContain('aria-controls="received-incidents"');
-  expect(html).toContain('/cases?focus=firing&amp;period=14');
+  expect(html).toContain('/cases?period=14');
 });

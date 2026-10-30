@@ -42,15 +42,15 @@ describe('incident overview', () => {
       incidentName(
         view('XID 52 SILENT_RUNNING_LEVEL_TRANS_DUE_TO_TEMP_RISE detected on GPU PCI:0000:4e:00'),
       ),
-    ).toBe('SILENT RUNNING LEVEL TRANS DUE TO TEMP RISE');
+    ).toBe('SILENT_RUNNING_LEVEL_TRANS_DUE_TO_TEMP_RISE');
     expect(
       incidentName(
         view('XID 42 ROBUST_CHANNEL_VIC_ERROR Video processor exception detected on GPU'),
       ),
-    ).toBe('ROBUST CHANNEL VIC ERROR');
+    ).toBe('Video processor exception');
     expect(titleText(view('XID 6 detected on GPU'))).toBe('XID 6');
-    expect(incidentName(view('XID 48 detected on GPU'))).toBe('Double Bit ECC Error');
-    expect(incidentName(view('XID 99999 detected on GPU'))).toBe('런북 미등록 코드');
+    expect(incidentName(view('XID 48 detected on GPU'))).toBe('');
+    expect(incidentName(view('XID 99999 detected on GPU'))).toBe('');
   });
   it('names the error, device and NVIDIA action from the Runbook labels', () => {
     const v = incidentView(incident({}));
@@ -89,14 +89,13 @@ describe('incident overview', () => {
     expect(disk.label?.name).toBeTruthy();
   });
 
-  it('keeps old firing receipts visible without inferring current health', () => {
+  it('ignores legacy receipt states while preserving RCA progress', () => {
     const fresh = incidentView(incident({ alarm_status: 'firing', alarm_resolved_at: null }));
-    expect([fresh.firing, fresh.resolved]).toEqual([true, false]);
+    expect(fresh).not.toHaveProperty('firing');
     const stale = incidentView(
       incident({ alarm_status: 'firing', occurred_at: '2026-10-23T08:48:10Z' }),
     );
-    expect(stale.firing).toBe(true);
-    expect(stale.resolved).toBe(false);
+    expect(stale).not.toHaveProperty('resolved');
     const notice = incidentView(
       incident({
         rca_summary: {},
@@ -144,9 +143,9 @@ describe('incident overview', () => {
       day: '2026-10-26',
       counts: { gpu: 1, link: 0, net: 0, server: 1 },
     });
-    expect(nodeStats(views).map((n) => [n.node, n.total, n.devices, n.firing])).toEqual([
-      ['dgx01', 3, 1, 0],
-      ['dgx02', 1, 0, 1],
+    expect(nodeStats(views).map((n) => [n.node, n.total, n.devices])).toEqual([
+      ['dgx01', 3, 1],
+      ['dgx02', 1, 0],
     ]);
     expect(categorySummary(views)).toBe('GPU 자체 3 · 서버 1');
   });
@@ -185,4 +184,47 @@ describe('incident overview', () => {
       ['SXID 11001', 1, 1],
     ]);
   });
+});
+
+it('uses alert prose and explicit identity without catalog substitution', () => {
+  const target = {
+    cluster_id: 'cpc-a',
+    k8s_node_name: 'node-a',
+    component: 'accelerator-nvidia-error-xid',
+    title:
+      '[Warning] accelerator-nvidia-error-xid: XID 103 ROBUST_CHANNEL_NVJPG5_ERROR Custom received description detected on GPU PCI:0000:BD:00 UUID:GPU-abc-123',
+  };
+  const v = incidentView({ target });
+  expect(titleText(v)).toBe('XID 103 · Custom received description');
+  expect(v.device).toBe('0000:BD:00');
+  expect(v.uuid).toBe('GPU-abc-123');
+  expect(v.raw).toBe(target.title);
+  expect(v.deviceKey).not.toBe(
+    incidentView({ target: { ...target, cluster_id: 'other' } }).deviceKey,
+  );
+  expect(
+    incidentView({
+      target: {
+        component: 'accelerator-nvidia-error-sxid',
+        title: 'SXID 999 unknown received message',
+      },
+    }).kind,
+  ).toBe('switch');
+  expect(titleText(incidentView({ target: { title: 'SXID 999 unknown received message' } }))).toBe(
+    'SXID 999 · unknown received message',
+  );
+  const missing = incidentView({ target: { component: 'disk', title: 'Raw disk warning' } });
+  expect(missing.device).toBe('');
+  expect(titleText(missing)).toBe('Raw disk warning');
+  expect(titleText(incidentView({}))).toBe('알림 내용 미확인');
+  expect(titleText(incidentView({ target: { title: 'XID:103 NVJPG5 Error' } }))).toBe(
+    'XID 103 · NVJPG5 Error',
+  );
+  expect(
+    titleText(
+      incidentView({
+        target: { title: 'SXID: 15001(route buffer over/underflow) detected on PCI:0000:c5:00.0' },
+      }),
+    ),
+  ).toBe('SXID 15001 · route buffer over/underflow');
 });

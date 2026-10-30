@@ -104,7 +104,9 @@ it('answers the operator questions from collected evidence only', () => {
   const [identity, timing, telemetry, repeat, gaps] = v.findings;
   expect(identity.tone).toBe('ok');
   expect(identity.points.join()).toContain(`PCI 0000:4e:00.0 = ${gpu}`);
-  expect(timing.tone).toBe('alert');
+  expect(timing.tone).toBe('unknown');
+  expect(timing.verdict).toContain('마지막 오류 기록:');
+  expect(timing.verdict).toContain('현재 지속·복구 여부를 판단할 수 없습니다');
   expect(timing.points[0]).toContain('정상→오류 전환도 없습니다');
   expect(telemetry.tone).toBe('warn');
   expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.short).toContain('사건 뒤 0 % 관측');
@@ -119,6 +121,27 @@ it('answers the operator questions from collected evidence only', () => {
   expect(JSON.stringify(v.findings)).not.toMatch(
     /정상(입니다|으로 판단|으로 회복|으로 보입니다| 상태)/,
   );
+});
+
+it('does not infer persistence or recovery from the last log proximity or missing timestamps', () => {
+  for (const last of ['2026-10-22T03:28:46Z', '2026-10-22T02:59:00Z', '', 'invalid']) {
+    const v = operatorView({
+      ...result,
+      quality: {
+        triage_observations: {
+          ...result.quality.triage_observations,
+          logs: [{ code: 'xid:79', first: last, last, reports: 1 }],
+        },
+      },
+    })!;
+    expect(v).not.toHaveProperty('ongoing');
+    const timing = v.findings.find((f) => f.key === 'timing')!;
+    expect(timing.tone).toBe('unknown');
+    expect(timing.verdict).toContain('판단할 수 없습니다');
+    expect(timing.verdict).toContain(
+      last && last !== 'invalid' ? '마지막 오류 기록:' : '시각을 확인하지 못했습니다',
+    );
+  }
 });
 
 it('names supporting metrics the worker could not fetch without judging from them', () => {
@@ -500,13 +523,7 @@ it('builds the same report sections for component alerts from stored Fleet repor
     },
   })!;
   const [identity, timing, telemetry, repeat, gaps] = v.findings;
-  expect([v.family, v.codes, v.node, v.reports, v.ongoing]).toEqual([
-    'component',
-    ['disk'],
-    'dgx01',
-    2,
-    true,
-  ]);
+  expect([v.family, v.codes, v.node, v.reports]).toEqual(['component', ['disk'], 'dgx01', 2]);
   expect(v.onsetText).toContain('(마지막 정상 보고)');
   expect(identity).toMatchObject({ tone: 'ok', label: '일치' });
   expect(timing.points.join()).toContain('보고 2건');

@@ -3,9 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { queryPath, useList } from '../lib/live';
 import { useApp } from '../lib/store';
 import {
-  ago,
   clock,
-  dateTimeText,
   dayKey,
   fullDate,
   incidentViews,
@@ -72,35 +70,11 @@ export function CodeBadge({ code, text }: { code: string; text: string }) {
 }
 
 export function RepeatBadge({ v }: { v: IncidentView }) {
-  if (v.kind === 'host') return null;
+  if (v.kind === 'host' || v.nth < 2) return null;
   return (
     <span className={`oh-rep ${v.nth >= 3 ? 'hot' : ''}`} title="조회한 기간 중">
       이 {v.kind === 'switch' ? '스위치' : 'GPU'} {v.nth}번째
     </span>
-  );
-}
-
-/** Colour lives in the dot only; the words stay in the body colour. */
-export function AlarmState({ v, now }: { v: IncidentView; now: Date }) {
-  if (v.firing)
-    return (
-      <div className="oh-st">
-        <b>
-          <i className="oh-dot red" />
-          발생 알림 수신
-        </b>
-        <small>{ago(v.at, now)} 전 시작</small>
-      </div>
-    );
-  if (!v.resolved) return <div className="oh-st">알림 상태 미확인</div>;
-  return (
-    <div className="oh-st resolved">
-      <b>
-        <i className="oh-dot" />
-        해제 알림 수신
-      </b>
-      <small>{v.resolvedAt ? dateTimeText(v.resolvedAt) : '해제 시각 미확인'}</small>
-    </div>
   );
 }
 
@@ -145,7 +119,6 @@ export function ErrorTitle({ v }: { v: IncidentView }) {
 
 export function IncidentRow({
   v,
-  now,
   showDate = false,
 }: {
   v: IncidentView;
@@ -154,7 +127,7 @@ export function IncidentRow({
 }) {
   const location = useLocation();
   return (
-    <div className={`oh-row ${v.firing ? 'firing' : ''}`}>
+    <div className="oh-row">
       <div className="oh-t">
         {clock(v.at)}
         {showDate && <small>{fullDate(dayKey(v.at)).slice(5)}</small>}
@@ -171,9 +144,6 @@ export function IncidentRow({
         ) : (
           <ErrorTitle v={v} />
         )}
-        {(v.reason || (v.label?.detail && !/Unused|미사용/i.test(v.label.detail))) && (
-          <span className="oh-detail">{v.reason || v.label?.detail}</span>
-        )}
         <small title={v.raw}>원문: {v.raw}</small>
       </div>
       <div className="oh-where">
@@ -182,7 +152,6 @@ export function IncidentRow({
           <RepeatBadge v={v} />
         </small>
       </div>
-      <AlarmState v={v} now={now} />
       <div className="oh-act">{v.label?.action || '런북 순서대로 확인'}</div>
       <RcaLink v={v} />
     </div>
@@ -195,8 +164,7 @@ export function IncidentHead() {
       <span>시각</span>
       <span>무슨 장애</span>
       <span>어디</span>
-      <span>수신된 알림 상태</span>
-      <span>NVIDIA 즉시 조치 분류</span>
+      <span>런북 안내</span>
       <span>RCA</span>
     </div>
   );

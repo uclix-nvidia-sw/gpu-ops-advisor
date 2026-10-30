@@ -173,7 +173,7 @@ describe('RCA diagnostics', () => {
         }}
       />,
     );
-    expect(html).toContain('해제 알림 수신');
+    expect(html).not.toContain('해제 알림 수신');
     expect(html).toContain('열림');
     expect(html).toContain('검토 중');
     expect(html).not.toContain('해결됨');

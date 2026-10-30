@@ -92,7 +92,7 @@ function groupIncidents(list: IncidentView[], sort: string, today: string): Grou
   }));
 }
 
-/** Classic-mode cases: one line per incident with alert state, NVIDIA action and RCA report. */
+/** Classic-mode cases: received alert content, Runbook guidance and RCA report. */
 export function OperatorCases() {
   const [params, setParams] = useSearchParams();
   const update = (values: Record<string, string>) => {
@@ -113,7 +113,9 @@ export function OperatorCases() {
   const { query, views, now, truncated } = useRecentIncidents(first, last);
   const node = params.get('node') || '',
     kind = params.get('kind') || '',
-    focus = params.get('focus') || '',
+    focus = ['today', 'repeat', 'notice'].includes(params.get('focus') || '')
+      ? params.get('focus')!
+      : '',
     device = params.get('device') || '',
     sort = params.get('sort') || '';
   const today = dayKey(now);
@@ -141,8 +143,6 @@ export function OperatorCases() {
       .map((d) => d.key),
   );
   const focusTest: Record<string, (v: IncidentView) => boolean> = {
-    firing: (v) => v.firing,
-    resolved: (v) => v.resolved,
     today: (v) => dayKey(v.at) === today,
     repeat: (v) => hot.has(v.deviceKey),
     notice: (v) => v.rca === 'notice',
@@ -164,8 +164,6 @@ export function OperatorCases() {
     window.scrollTo(0, 0);
   };
   const chips: [string, string, number, string][] = [
-    ['firing', '발생 알림 수신', scoped.filter(focusTest.firing).length, 'red'],
-    ['resolved', '해제 알림 수신', scoped.filter(focusTest.resolved).length, ''],
     ['', '조회 기간 전체', scoped.length, ''],
     ['today', '오늘', scoped.filter(focusTest.today).length, ''],
     ['repeat', '3회 이상 반복 장치', hot.size, ''],

@@ -1325,3 +1325,144 @@
   height: 10px;
   border-radius: 2px;
 }
+
+.view-operations.console2-shell .brand {
+  padding: 22px 16px;
+  min-height: 86px;
+}
+.view-operations.console2-shell .main-nav {
+  padding-top: 18px;
+}
+.c2-case-table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+.c2-case-table th:nth-child(1) {
+  width: 29%;
+}
+.c2-case-table th:nth-child(2) {
+  width: 24%;
+}
+.c2-case-table th:nth-child(3) {
+  width: 17%;
+}
+.c2-case-table th:nth-child(4) {
+  width: 16%;
+}
+.c2-case-table th:nth-child(5) {
+  width: 14%;
+}
+.c2-case-table td {
+  vertical-align: top;
+  padding: 18px 16px;
+}
+.c2-case-table .c2-title-link {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.c2-device-cell b {
+  font-size: 13px;
+}
+.c2-device-cell code {
+  display: block;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+}
+.c2-case-table small {
+  font-size: 11px;
+  margin-top: 6px;
+}
+.c2-guidance {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.c2-expand {
+  display: block;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  padding: 0;
+  margin-top: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.c2-result-quality {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+}
+.c2-result-quality.warning {
+  color: #916018;
+}
+.c2-row-open td {
+  background: #f1f6e9;
+}
+.c2-detail-row[hidden] {
+  display: none;
+}
+.c2-detail-row > td {
+  background: #f8faf6;
+  padding: 20px;
+}
+.c2-case-detail {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 32px;
+}
+.c2-case-detail h3 {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.c2-case-detail p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.c2-alert-raw {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+.c2-case-detail dl {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  font-size: 12px;
+  gap: 6px;
+}
+.c2-case-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.c2-advanced-filters {
+  padding: 0 20px;
+}
+.c2-advanced-filters summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 12px;
+  padding: 10px 0;
+}
+.c2-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 20px;
+}
+.c2-filter-chip {
+  border: 1px solid #cbd8ba;
+  background: #f0f5e8;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.c2-filter-period {
+  padding-top: 12px;
+}
+@media (max-width: 760px) {
+  .c2-case-detail {
+    grid-template-columns: 1fr;
+  }
+}
