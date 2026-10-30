@@ -153,8 +153,8 @@ it('names supporting metrics the worker could not fetch without judging from the
     },
   })!;
   const gaps = v.findings[4].points.join('\n');
-  expect(gaps).toContain('가져오지 못한 보조 지표: GPU 전력');
-  expect(gaps).toContain('판단에는 쓰지 않았습니다');
+  expect(gaps).toContain('추가 대조 자료: GPU 전력');
+  expect(gaps).toContain('판단 근거에 포함되지 않았습니다');
   expect(gaps).not.toContain('D11');
 });
 
@@ -208,6 +208,33 @@ it('scopes the report to the alert code and device; other node errors stay conte
   const moved = view('SXID 11001(ingress invalid command) detected on PCI:0000:c7:00.0');
   expect(moved.findings[0].tone).toBe('warn');
   expect(moved.reports).toBe(2);
+});
+
+it('distinguishes unregistered collection, missing server binding and a completed empty query', () => {
+  const source = {
+    ...result,
+    quality: {
+      ...result.quality,
+      collection_checks: [
+        { title: 'Fabric Manager 원본', status: 'connection_required', query_ids: [] },
+        {
+          title: '보조 로그 문맥',
+          status: 'connection_required',
+          query_ids: ['D13'],
+          reasons: ['binding_scope_unavailable'],
+        },
+        { title: '조회 자료', status: 'empty', query_ids: ['D09'] },
+      ],
+      optional_unavailable: [{ query_id: 'D13', name: '업무 영향·성과' }],
+    },
+  };
+  const original = JSON.stringify(source);
+  const points = operatorView(source)!.findings[4].points.join('\n');
+  expect(points).toContain('조회가 등록되어 있지 않습니다');
+  expect(points).toContain('이번 서버·클러스터에 사용할 조회 연결이 없어 실행되지 않았습니다');
+  expect(points).toContain('조회는 완료했으며 해당 대상·기간의 자료는 0건');
+  expect(points).not.toContain('업무 영향·성과');
+  expect(JSON.stringify(source)).toBe(original);
 });
 
 it('returns null for results without triage observations', () => {
@@ -400,12 +427,14 @@ it('names GPUs that share a verdict instead of listing every series', () => {
   ]);
   expect(v.gpuRows[0].lines).toContain('NVLink 수신량·송신량: 272.7 MB/s → 0 B/s');
   // D47 codes are read with the DCGM Fabric Manager status names.
-  expect(v.gpuCommon).toEqual(['Fabric Manager 상태: 상태 코드 0 (미지원) 유지']);
+  expect(v.gpuCommon).toEqual([
+    'Fabric Manager 상태: 조회 값 0 — 해당 GPU는 이 지표로 FM 상태를 제공하지 않음. FM 서비스 실행 여부·오류 내용은 서비스 로그로 확인',
+  ]);
   expect(v.findings[2].verdict).toBe(
     '사건 직후 GPU 7번 NVLink 수신량·송신량 0 관측, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
   );
   expect(v.findings[2].points).toContain(
-    'FM 서비스·로그 확인: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 (미지원) 유지',
+    'FM 상태 제공 대상 아님: GPU 4개 모두 Fabric Manager 상태 — 조회 값 0 — 해당 GPU는 이 지표로 FM 상태를 제공하지 않음. FM 서비스 실행 여부·오류 내용은 서비스 로그로 확인',
   );
   expect(v.findings[2].points.join('\n')).not.toMatch(/\d{7,} B\/s/);
   // Fleet NVLink series carry no pod labels: the report must not claim "no pods".
@@ -849,7 +878,7 @@ it('distinguishes empty switch measurements from unsuccessful collection without
     expect(text).toContain('Fabric Manager 오류 기록과 포트 상태');
     expect(text).not.toContain('startsAt');
     expect(text).not.toContain('Incident');
-    if (status === 'empty') expect(text).toContain('해당하는 측정값은 0건');
+    if (status === 'empty') expect(text).toContain('주소 0000:c6:00.0가 붙은 측정 자료는 0건');
     if (status === 'unavailable') {
       expect(text).toContain('측정값 조회가 완료되지 않았습니다');
       expect(text).not.toContain('측정값은 0건');

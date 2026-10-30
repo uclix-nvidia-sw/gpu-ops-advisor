@@ -376,6 +376,12 @@ export function RcaOperatorReport({
                   <div className="rca-step-head">
                     <strong>{str(c.title)}</strong>
                   </div>
+                  {str(c.text).includes('계획된 자동 수집:') && (
+                    <p>
+                      아래는 이 오류의 수집 대상 안내입니다. 이번 실행의 수집 완료 목록은 아니며,
+                      실제 값·시각·대상은 3장 관련 로그·메트릭에서 확인합니다.
+                    </p>
+                  )}
                   <RcaStepPoints items={sentences(str(c.text))} branches={branches} />
                   {figures.get(str(c.title)) && (
                     <InspectionFigures ids={figures.get(str(c.title))!} />
@@ -694,6 +700,12 @@ export function RcaOperatorReport({
               <div key={j}>
                 <dt>{str(r.title)}</dt>
                 <dd>
+                  {str(r.text).includes('계획된 자동 수집:') && (
+                    <p>
+                      아래는 이 오류의 수집 대상 안내입니다. 이번 실행의 수집 완료 목록은 아니며,
+                      실제 값·시각·대상은 3장 관련 로그·메트릭에서 확인합니다.
+                    </p>
+                  )}
                   <RcaPoints items={sentences(str(r.text))} />
                 </dd>
               </div>

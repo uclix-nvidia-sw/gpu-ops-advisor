@@ -28,10 +28,51 @@ ACTIONS = {
 }
 # Fabric Manager User Guide SXID tables.
 FM_TABLES = {
-    "22": "비치명 SXID (FM 표 22)",
-    "23": "치명 가능 SXID (FM 표 23)",
-    "24": "항상 치명 SXID (FM 표 24)",
-    "25": "기타 주의 SXID (FM 표 25)",
+    "22": "비치명 분류 · 오류별 통신·작업 영향 확인",
+    "23": "치명 가능 · 오류 포트와 연결된 GPU·작업 영향 확인",
+    "24": "전체 GPU 연결망에 치명적 · 작업 중단·시스템 복구 준비",
+    "25": "동반 오류와 해당 장치 영향 확인",
+}
+# Fabric Manager User Guide 2.6, Tables 22–25 (2026-10-30).
+# Table 22 includes exceptions that stall traffic; do not equate non-fatal with
+# no workload impact. Table 23 recovery depends on the affected port/platform.
+SXID_CHECKS = {
+    **dict.fromkeys(
+        (
+            11012,
+            11021,
+            11022,
+            11023,
+            12021,
+            12023,
+            15008,
+            15011,
+            19049,
+            19055,
+            19057,
+            19059,
+            19062,
+            19065,
+            19068,
+            19071,
+            24001,
+            24002,
+            24003,
+        ),
+        "비치명 · 하드웨어가 메모리 오류 자동 정정 · 별도 복구 불필요",
+    ),
+    11004: "비치명 분류이나 작업 중단 가능 · GPU 통신 경로 설정 점검",
+    12028: "비치명 분류이나 GPU 통신 정지·작업 중단 가능 · 영향 범위 확인",
+    19084: "치명 오류 동반 가능 · 함께 발생한 SXID와 연결 GPU 확인",
+    20001: "비치명 · 패킷 재전송으로 통신 성능 저하 가능",
+    22013: "비치명 · 별도 조치 불필요",
+    20012: "연결 불일치·비정상 종료 확인 · 종료와 무관하면 물리 연결 점검",
+    20034: "치명 가능 · 동작 중 링크 끊김 · 장비 모델별 복구 절차 확인",
+    10001: "비치명 · 뒤따르는 치명 오류 여부 확인",
+    10002: "비치명 · 뒤따르는 치명 오류 여부 확인",
+    10003: "치명적 · 전체 GPU·NVSwitch 초기화 전 작업 영향 확인",
+    10004: "과열 · 냉각 상태 점검 · NVLink 속도 저하 가능",
+    10005: "과열 이벤트 종료 · 냉각 상태 점검",
 }
 
 # Investigation summaries, not unconditional recovery commands. The Xid catalog
@@ -67,7 +108,10 @@ def action(entry, steps):
     if immediate in ACTIONS:
         return ACTIONS[immediate]
     if (entry or {}).get("fm_sxid_table") in FM_TABLES:
-        return FM_TABLES[entry["fm_sxid_table"]] + " · 런북 판단"
+        code = str(entry.get("code", "")).removeprefix("sxid:")
+        return SXID_CHECKS.get(
+            int(code) if code.isdigit() else -1, FM_TABLES[entry["fm_sxid_table"]]
+        )
     judged = next((s for s in steps if s.startswith("판단")), "")
     return (
         CHECKS.get((entry or {}).get("code"))

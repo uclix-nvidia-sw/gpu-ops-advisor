@@ -39,7 +39,7 @@ it('shows the alert text, device repeat, reference guidance and the report link'
   expect(html).not.toContain('해제 알림 수신');
   // Resolve time with the date and weekday in KST.
   expect(html).not.toContain('2026.10.26. (월) 13:27');
-  expect(html).toContain('치명 가능 SXID (FM 표 23)');
+  expect(html).toContain('치명 가능 · 오류 포트와 연결된 GPU·작업 영향 확인');
   expect(html).toContain('href="/analyses/job-1#final-report"');
   expect(html).toContain('보고서 열기');
   // Result quality labels stay in the report, not the list.

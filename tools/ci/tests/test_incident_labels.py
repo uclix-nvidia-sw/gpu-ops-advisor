@@ -10,6 +10,15 @@ GENERATOR = runpy.run_path(str(ROOT / "tools/generate_incident_labels.py"))
 
 
 class IncidentLabelsTest(unittest.TestCase):
+    def test_sxid_nonfatal_exceptions_preserve_workload_impact(self):
+        labels = GENERATOR["build"]()
+        self.assertIn("자동 정정", labels["sxid:11021"]["action"])
+        self.assertIn("작업 중단", labels["sxid:11004"]["action"])
+        self.assertIn("성능 저하", labels["sxid:20001"]["action"])
+        self.assertIn("별도 조치 불필요", labels["sxid:22013"]["action"])
+        self.assertIn("오류 포트", labels["sxid:11019"]["action"])
+        self.assertIn("전체 GPU 연결망", labels["sxid:23017"]["action"])
+
     def test_xid173_official_identity_and_c2c_checks_are_distinct_from_recovery(self):
         row = json.loads(
             (ROOT / "rcca-agent/runbooks/xid/RB-XID-173.json").read_text("utf-8")
@@ -168,11 +177,12 @@ class IncidentLabelsTest(unittest.TestCase):
     def test_operator_facing_fields(self):
         labels = GENERATOR["build"]()
         self.assertEqual(labels["xid:79"]["action"], "호스트 재시작 (RESTART_BM)")
-        self.assertTrue(labels["sxid:11001"]["action"].startswith("치명 가능 SXID"))
+        self.assertTrue(labels["sxid:11001"]["action"].startswith("치명 가능"))
         self.assertIn("component:disk", labels)
         for code, label in labels.items():
             with self.subTest(code=code):
                 self.assertTrue(label["name"] and label["action"] and label["steps"])
+                self.assertNotIn("런북 판단", label["action"])
                 self.assertFalse(
                     any(s.startswith("알림이 가리키는") for s in label["steps"])
                 )
