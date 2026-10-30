@@ -63,6 +63,30 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D31",
+        "priority": 3,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU별 PCIe 수신 속도(bytes/s)를 재전송 누적값의 변화와 함께 비교한다. 전송량 0은 유휴 상태일 수 있으며 링크 단절·협상 속도·대역폭 포화 판정으로 바꾸지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D32",
+        "priority": 4,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU별 PCIe 송신 속도(bytes/s)를 재전송 누적값의 변화와 함께 비교한다. 전송량 0은 유휴 상태일 수 있으며 링크 단절·협상 속도·대역폭 포화 판정으로 바꾸지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -262,6 +286,22 @@
           ],
           "required": false,
           "expected_effect": "사건 전후 같은 노드 GPU의 PCIe replay 누적값을(를) 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D31",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 서버 GPU별 PCIe 수신 속도(bytes/s)를 재전송 누적값의 변화와 함께 비교한다. 전송량 0은 유휴 상태일 수 있으며 링크 단절·협상 속도·대역폭 포화 판정으로 바꾸지 않는다."
+        },
+        {
+          "query_id": "D32",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 서버 GPU별 PCIe 송신 속도(bytes/s)를 재전송 누적값의 변화와 함께 비교한다. 전송량 0은 유휴 상태일 수 있으며 링크 단절·협상 속도·대역폭 포화 판정으로 바꾸지 않는다."
         }
       ]
     }

@@ -142,6 +142,42 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D61",
+        "priority": 11,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU의 열 제한 누적 시간을 장애 전후로 비교한다. GPU별 증가량과 카운터 초기화를 구분하고 NVSwitch의 온도·냉각 상태로 대신 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D45",
+        "priority": 12,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU의 클록 제한 사유 코드를 장애 전후로 비교한다. 비트별 공식 의미를 적용하며 NVSwitch 자체의 제한 사유로 대신 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
+      },
+      {
+        "query_id": "D11",
+        "priority": 13,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU의 소비 전력(W)을 장애 전후 온도·제한 시간과 함께 비교한다. 소비 전력만으로 전원 공급 장치 고장이나 열 오류의 원인을 확정하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "sources": [
