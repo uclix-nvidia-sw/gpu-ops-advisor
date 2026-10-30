@@ -3229,22 +3229,19 @@ def test_aggregate_report_transition_verification_is_published(
         ("topic_wrapper_valid", None),
         ("json", "repeated_activity"),
         ("json", "relative_activity"),
-        ("schedule_condition", "schedule_candidate"),
+        ("code_action_medium", "schedule_candidate"),
         ("pending_target", "schedule_candidate"),
-        ("missing_prerequisite", "schedule_candidate"),
+        ("code_action", "schedule_candidate"),
         ("partial_placement", "queue_review"),
         ("partial_placement_causal", "queue_review"),
         ("partial_placement_conjunction", "queue_review"),
         ("partial_placement_nominal", "queue_review"),
         ("empty_namespace_heading", "queue_review"),
         ("schedule_order", "relative_activity"),
-        ("relative_memory", "relative_activity"),
-        ("relative_observed_memory", "relative_activity"),
-        ("observed_prerequisite", "schedule_candidate"),
-        ("judgment_repair", "schedule_candidate"),
+        ("code_action", "relative_activity"),
         ("possessive_activity", "schedule_candidate"),
         ("internal_field", "queue_review"),
-        ("weak_capacity_purpose", "capacity_review"),
+        ("code_action", "capacity_review"),
         ("presumed_capacity", "capacity_review"),
         ("repeated_trial", "schedule_candidate"),
         ("renamed_trial", "schedule_candidate"),
@@ -3256,21 +3253,13 @@ def test_aggregate_report_transition_verification_is_published(
         ("inherited_purpose_valid", "capacity_review"),
     ],
 )
-def test_scheduled_and_manual_reports_repair_same_data(
+def test_scheduled_and_manual_reports_publish_valid_or_repaired_advice(
     stack, monkeypatch, failure, pattern
 ):
     from agent_common.artifacts import render
     from test_aggregate_report import DATA
 
-    code_condition_cases = {
-        "schedule_condition",
-        "missing_prerequisite",
-        "judgment_repair",
-        "observed_prerequisite",
-        "relative_memory",
-        "relative_observed_memory",
-        "weak_capacity_purpose",
-    }
+    code_action_cases = {"code_action", "code_action_medium"}
 
     backend = f"http://127.0.0.1:{port()}/api/v1"
     extension = ".exe" if sys.platform == "win32" else ""
@@ -3292,10 +3281,10 @@ def test_scheduled_and_manual_reports_repair_same_data(
     send = Upstream.send
     corrupted = []
     before = len(Upstream.requests)
-    if failure == "schedule_condition":
+    if failure == "code_action_medium":
         monkeypatch.setitem(stack["env"], "OPS_LLM_MEDIUM_EFFORT", "true")
 
-    def send_with_one_malformed_reply(self, body, status=200):
+    def send_with_initial_reply(self, body, status=200):
         if pattern and urlparse(self.path).path.endswith("/api/v1/query_range"):
             query = parse_qs(urlparse(self.path).query)
             start, end = float(query["start"][0]), float(query["end"][0])
@@ -3340,22 +3329,6 @@ def test_scheduled_and_manual_reports_repair_same_data(
         if (
             self.path == "/v1/chat/completions"
             and body.get("choices")
-            and corrupted
-            and failure == "judgment_repair"
-        ):
-            reply = json.loads(body["choices"][0]["message"]["content"])
-            reply["advice"][0]["summary"] = (
-                "작업 일부의 시범 실행을 검토하려면 마감·예약·대기·가용 GPU를 확인한 뒤에만 변경 여부를 판단하세요."
-            )
-            body = {
-                **body,
-                "choices": [
-                    {"finish_reason": "stop", "message": {"content": json.dumps(reply)}}
-                ],
-            }
-        if (
-            self.path == "/v1/chat/completions"
-            and body.get("choices")
             and not corrupted
         ):
             corrupted.append(True)
@@ -3368,7 +3341,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                         summary = item["advice"][0]["summary"]
                         item["advice"][0]["summary"] = (
                             summary
-                            if failure in code_condition_cases
+                            if failure in code_action_cases
                             else "작업을 옮깁니다."
                             if failure == "raw_action"
                             else "시범 실행을 검토 대상으로 삼습니다."
@@ -3383,8 +3356,6 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "possessive_activity"
                             else "target의 period에 " + summary
                             if failure == "internal_field"
-                            else summary.replace("자원 부족 여부를 확인하고 ", "")
-                            if failure == "weak_capacity_purpose"
                             else "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족을 확인하고 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요."
                             if failure == "presumed_capacity"
                             else "시작 시각 조정을 검토하되, 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
@@ -3396,19 +3367,6 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             else "자원 부족은 확인되지 않았으므로, "
                             + summary.replace("자원 부족 여부", "부족 여부")
                             if failure == "inherited_purpose_valid"
-                            else summary.replace("마감·", "")
-                            if failure in {"missing_prerequisite", "judgment_repair"}
-                            else "대기 관측도 완전했습니다. "
-                            + summary.replace("대기·", "")
-                            if failure == "observed_prerequisite"
-                            else (
-                                "메모리 점유는 낮았으며, "
-                                if failure == "relative_observed_memory"
-                                else ""
-                            )
-                            + "마감·예약·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
-                            if failure
-                            in {"relative_memory", "relative_observed_memory"}
                             else "노드 미배정이 없음을 관측했으며, " + summary
                             if failure == "partial_placement_nominal"
                             else "노드 미배정은 없었으며, " + summary
@@ -3439,7 +3397,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
             }
         return send(self, body, status)
 
-    monkeypatch.setattr(Upstream, "send", send_with_one_malformed_reply)
+    monkeypatch.setattr(Upstream, "send", send_with_initial_reply)
     spec = {k: v for k, v in DATA.items() if k not in ("time_range", "timezone")}
     spec["scope"] = SCOPE
     with httpx.Client(base_url=backend, timeout=30) as client:
@@ -3535,7 +3493,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 )
     for result in (scheduled, manual):
         assert result["narrative_status"] == "complete"
-        if failure in code_condition_cases | {
+        if failure in code_action_cases | {
             "conditional_absence_valid",
             "inherited_purpose_valid",
         }:
@@ -3551,23 +3509,12 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 else {"topic_sections_required"}
                 if failure
                 in {"topic_wrapper", "topic_wrapper_valid", "empty_namespace_heading"}
-                else {"conditional_scheduling_review_required"}
-                if failure == "schedule_condition"
                 else {"reason_only_namespace_summary_required"}
                 if failure in {"raw_action", "advice_classification", "queue_duplicate"}
                 else {"unsupported_resource_shortage_claim"}
                 if failure == "shortage_claim"
                 else {"unobserved_pending_target"}
                 if failure == "pending_target"
-                else {"namespace_prerequisites_required"}
-                if failure
-                in {
-                    "missing_prerequisite",
-                    "judgment_repair",
-                    "observed_prerequisite",
-                    "relative_memory",
-                    "relative_observed_memory",
-                }
                 else {"partial_placement_is_not_absence"}
                 if failure
                 in {
@@ -3583,7 +3530,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                 else {"internal_context_leak"}
                 if failure == "internal_field"
                 else {"reason_only_namespace_summary_required"}
-                if failure in {"weak_capacity_purpose", "presumed_capacity"}
+                if failure == "presumed_capacity"
                 else {"reason_only_namespace_summary_required"}
                 if failure in {"repeated_trial", "renamed_trial"}
                 else {"namespace_summary_tokens_required", "unsupported_prose"}
@@ -3645,7 +3592,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
         ]
         assert len(calls) == 2  # One initial response per origin; no model rewrite.
         assert all(r["quality"]["report"]["attempts"] == 1 for r in (scheduled, manual))
-    if failure in code_condition_cases:
+    if failure in code_action_cases:
         calls = [
             body
             for path, body in Upstream.requests[before:]
@@ -3737,7 +3684,9 @@ def test_scheduled_and_manual_pending_pod_transition_is_published(
         return body, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
-    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    test_scheduled_and_manual_reports_publish_valid_or_repaired_advice(
+        stack, monkeypatch, "json", None
+    )
     assert len(published) == 2
     for origin, result in zip(("scheduled", "manual"), published):
         usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
@@ -3800,7 +3749,9 @@ def test_scheduled_and_manual_partial_diagnostics_are_published(
         return body, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
-    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    test_scheduled_and_manual_reports_publish_valid_or_repaired_advice(
+        stack, monkeypatch, "json", None
+    )
     assert len(published) == 2
     for result in published:
         assert result["result_status"] == "partial"
@@ -4396,7 +4347,9 @@ def test_scheduled_and_manual_attribution_quality_is_published(
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
-    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    test_scheduled_and_manual_reports_publish_valid_or_repaired_advice(
+        stack, monkeypatch, "json", None
+    )
     assert len(published) == 2
     for result in published:
         usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
@@ -4494,7 +4447,9 @@ def test_scheduled_and_manual_query_skip_reason_is_exported(
         return result, evidence
 
     monkeypatch.setattr(sys.modules[__name__], "worker_result", capture)
-    test_scheduled_and_manual_reports_repair_same_data(stack, monkeypatch, "json", None)
+    test_scheduled_and_manual_reports_publish_valid_or_repaired_advice(
+        stack, monkeypatch, "json", None
+    )
     assert len(published) == 2
     for result in published:
         usage = next(t for t in result["topics"] if t["topic_id"] == "namespace_usage")
