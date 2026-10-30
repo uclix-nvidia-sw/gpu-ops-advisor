@@ -49,7 +49,7 @@ CHECKS = {
     "xid:170": "기밀 컴퓨팅 모드와 같은 시각 NVLink 오류 확인",
     "xid:171": "XID 48 동반 여부와 DRAM 정정 불가 오류 확인",
     "xid:172": "XID 48 동반 여부와 SRAM 정정 불가 오류 확인",
-    "xid:173": "GPU·CPU 양쪽 C2C 연결 오류 로그 보존·공급사 문의",
+    "xid:173": "C2C 연결 상태·오류 증가와 양 끝 장치 로그 확인",
     "sxid:20009": "NVSwitch 수신 오류 반복·증가와 링크 상태 확인",
 }
 WORKFLOWS = {
@@ -120,7 +120,8 @@ def build():
             # Reviewed exceptions to the received Reserved label. Keep source
             # aliases and stored alert text untouched; expose catalog guidance.
             if code.startswith("xid:") and (
-                entries.get(key, {}).get("source_status") == "unused_or_legacy"
+                code == "xid:173"
+                or entries.get(key, {}).get("source_status") == "unused_or_legacy"
                 or any(
                     any(
                         f"Fleet 고정 카탈로그: {value};" in line
@@ -132,7 +133,16 @@ def build():
                 labels[code]["official"] = {
                     "name": name,
                     "meaning": content["operator_guidance"]["meaning"],
-                    "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
+                    "source": (
+                        next(
+                            s["url"]
+                            for s in content["sources"]
+                            if "/NVIDIA/open-gpu-kernel-modules/" in s["url"]
+                            and "/nverror.h" in s["url"]
+                        )
+                        if code == "xid:173"
+                        else "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+                    ),
                 }
     return dict(sorted(labels.items()))
 

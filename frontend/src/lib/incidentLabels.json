@@ -2747,9 +2747,9 @@
     ]
   },
   "xid:173": {
-    "name": "C2C 링크 오류",
+    "name": "C2C 칩 간 연결의 치명적 오류",
     "detail": "C2C Fatal Link Failure",
-    "action": "GPU·CPU 양쪽 C2C 연결 오류 로그 보존·공급사 문의",
+    "action": "C2C 연결 상태·오류 증가와 양 끝 장치 로그 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2757,7 +2757,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "C2C 칩 간 연결의 치명적 오류",
+      "meaning": "XID 173은 NVIDIA 공식 드라이버에서 C2C 칩 간 연결의 치명적 오류로 정의합니다. C2C는 칩과 칩을 직접 잇는 연결이며, 연결 상대는 장비 구성을 기준으로 확인합니다. 같은 장치의 커널 오류 원문과 C2C 연결 상태·오류 카운터, 작업 중단 여부를 함께 확인하고 재시작 전에 진단 자료를 보존합니다. 시험 로그 주입은 실제 연결 장애와 구분합니다. 복구 방식은 장비·드라이버 버전에 맞는 공급사 절차로 결정합니다.",
+      "source": "https://github.com/NVIDIA/open-gpu-kernel-modules/blob/ca2d03e6fafd4d4b56b383497d931c25b283bfcf/src/common/sdk/nvidia/inc/nverror.h#L168"
+    }
   },
   "xid:18": {
     "name": "현재 공식 카탈로그의 미사용 코드",

@@ -6,6 +6,25 @@ import { xidDefinition } from './xidDefinition';
 import { RcaOperatorReport } from '../components/RcaOperatorReport';
 import labels from './incidentLabels.json';
 
+it('shows the official driver source for XID 173 while retaining the stored explanation', () => {
+  const result = {
+    quality: {
+      triage_observations: {
+        schema: 'rca-triage-observations/1',
+        target: { title: 'XID 173 C2C Fatal Link Failure', node: 'example' },
+        logs: [],
+      },
+      runbook_guidance: [{ guidance: { meaning: '기존 수집기 설명 원문' } }],
+    },
+  };
+  const saved = JSON.stringify(result);
+  const html = renderToStaticMarkup(<RcaOperatorReport result={result} />);
+  expect(html).toContain('NVIDIA 공식 드라이버');
+  expect(html).toContain('/NVIDIA/open-gpu-kernel-modules/blob/ca2d03e6');
+  expect(html).toContain('기존 수집기 설명 원문');
+  expect(JSON.stringify(result)).toBe(saved);
+});
+
 const codes = [87, 90, 91, 108, 126, 127, 128, 129, 130, 131, 132, 134, 135, 136, 138, 139, 141];
 
 it.each(codes)(

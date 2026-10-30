@@ -10,6 +10,30 @@ GENERATOR = runpy.run_path(str(ROOT / "tools/generate_incident_labels.py"))
 
 
 class IncidentLabelsTest(unittest.TestCase):
+    def test_xid173_official_identity_and_c2c_checks_are_distinct_from_recovery(self):
+        row = json.loads(
+            (ROOT / "rcca-agent/runbooks/xid/RB-XID-173.json").read_text("utf-8")
+        )
+        content = row["content"]
+        definition = GENERATOR["build"]()["xid:173"]["official"]
+        self.assertIn(
+            "/NVIDIA/open-gpu-kernel-modules/blob/ca2d03e6", definition["source"]
+        )
+        self.assertIn("치명적 오류", definition["meaning"])
+        self.assertNotIn("소스에만", definition["meaning"])
+        self.assertIn(
+            "nvidia-smi c2c -i", content["operator_guidance"]["next_checks"][0]["text"]
+        )
+        self.assertIn(
+            "카운터가 초기화", content["operator_guidance"]["next_checks"][4]["text"]
+        )
+        self.assertIn(
+            "일괄 재부팅 명령으로 해석하지",
+            content["operator_guidance"]["next_checks"][3]["text"],
+        )
+        self.assertEqual(content["search"]["aliases"], ["C2C Fatal Link Failure"])
+        self.assertTrue(content["investigation_only"])
+
     def test_entire_official_unused_set_and_exceptions(self):
         # NVIDIA Xid catalog Table 1, checked 2026-10-30. Keep independent
         # of manifest classification so accidentally omitted codes fail here.

@@ -19639,7 +19639,7 @@
       {
         "file": "xid/RB-XID-173.json",
         "before_content_sha256": "20809976f94c5640698fb53500a9a3e664ffa8b2e4e1d00407276fa05cce20b0",
-        "after_content_sha256": "0d49772e8a36a24da612d12a827bbb9770b3cf296a65763293c169165af65954",
+        "after_content_sha256": "cabbd765af88249dac7c1631af76a4c54377be6e445dfdad744cd2450e8b49da",
         "restore": [
           {
             "path": [
@@ -19671,6 +19671,186 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              5
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              6
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "section"
+            ],
+            "existed": true,
+            "value": "Table 1 Xids: 173; Table 3 Resolution Buckets"
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-10-22"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 173 C2C Fatal Link Failure · C2C 링크 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 173: C2C Fatal Link Failure."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 173은 현재 NVIDIA Xid 카탈로그(172번까지)에 없고 Fleet·GPUd 고정 소스에만 'C2C Fatal Link Failure'로 정의된 코드입니다. 적용 제품과 조치는 문헌으로 확정되지 않습니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "cause_note"
+            ],
+            "existed": true,
+            "value": "Grace CPU와의 C2C 링크 오류(신호·펌웨어)가 주요 원인 후보입니다."
+          },
+          {
+            "path": [
+              "limitations",
+              2
+            ],
+            "existed": true,
+            "value": "코드 소스에만 정의가 있다. 해당 버전의 공식 조치 근거를 추가 확인한다."
+          },
+          {
+            "path": [
+              "analysis_guidance",
+              1
+            ],
+            "existed": true,
+            "value": "판단: 같은 시각 C2C로 연결된 다른 GPU의 동반 오류와 이전 사건 이력의 반복 여부를 대조한다."
+          },
+          {
+            "path": [
+              "analysis_guidance",
+              3
+            ],
+            "existed": true,
+            "value": "고정 Fleet/GPUd에는 C2C Fatal Link Failure로 정의되지만 이번 NVIDIA Xid 표의 범위는 172까지다. C2C 양 끝 장치·드라이버·원문과 벤더별 지원 자료를 확보하고 121의 corrected 분기를 적용하지 않는다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "next_checks",
+              0,
+              "text"
+            ],
+            "existed": true,
+            "value": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 173 줄을 확인하고, nvidia-smi nvlink -s(링크 상태)와 nvidia-smi nvlink -e(오류 카운터)로 해당 GPU의 링크를 봅니다. NVSwitch 시스템이면 Fabric Manager 로그의 같은 시각 SXID 줄도 확인하고, 중단된 작업을 작업 소유자에게 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "next_checks",
+              1,
+              "text"
+            ],
+            "existed": true,
+            "value": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. C2C 링크 양 끝(GPU·Grace CPU) 로그와 VBIOS 버전(nvidia-smi -q)을 함께 기록합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "next_checks",
+              2,
+              "text"
+            ],
+            "existed": true,
+            "value": "같은 시각 C2C로 연결된 다른 GPU의 동반 오류와 이전 사건 이력의 반복 여부를 대조합니다."
+          },
+          {
+            "path": [
+              "recommendations",
+              0,
+              "text"
+            ],
+            "existed": true,
+            "value": "오류별 판단 기준: 같은 시각 C2C로 연결된 다른 GPU의 동반 오류와 이전 사건 이력의 반복 여부를 대조합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "next_checks",
+              3,
+              "text"
+            ],
+            "existed": true,
+            "value": "NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+          },
+          {
+            "path": [
+              "recommendations",
+              1,
+              "text"
+            ],
+            "existed": true,
+            "value": "복구 조치: NVIDIA 카탈로그에 즉시 조치 분류가 비어 있습니다. 위 발생 조건 설명을 기준으로 판단합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "next_checks",
+              4,
+              "text"
+            ],
+            "existed": true,
+            "value": "링크가 모두 정상이고 nvidia-smi nvlink -e의 오류 카운터와 3장 표의 NVLink 오류 누적값이 더 늘지 않는지, dcgmi diag -r 2가 통과하는지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              4
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              1,
+              "text"
+            ],
+            "existed": true,
+            "value": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
           }
         ]
       },
