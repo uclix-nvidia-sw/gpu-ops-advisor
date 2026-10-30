@@ -92,7 +92,7 @@ it('shows both report topics before details, preserves stored statements and kee
     quality: { report: { method: 'llm_interpreted' } },
     topics: [
       { topic_id: 'namespace_usage', status: 'partial', rows: [] },
-      { topic_id: 'incident_summary', status: 'ready', rows: [] },
+      { topic_id: 'incident_summary', status: 'ready', rows: [], summary: { count: 0 } },
     ],
     narrative: [
       {
@@ -134,6 +134,8 @@ it('shows both report topics before details, preserves stored statements and kee
     modern.indexOf('id="namespace-summary-title"'),
   );
   expect(modern).toContain('추가 할당 가능 여부 미확인');
+  expect(modern).toContain('기간 내 0건 · 비교 기간 미확인');
+  expect(modern).toContain('<details class="c2-saved-interpretation">');
   expect(modern).toContain('이 대상·구간을 그래프에서 확인');
   expect(classic).not.toContain('c2-report-summary');
   expect(classic).not.toContain('이 대상·구간을 그래프에서 확인');

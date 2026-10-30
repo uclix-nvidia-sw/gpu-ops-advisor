@@ -20,6 +20,7 @@ const tabs = [
   { to: '/settings/backend', label: '백엔드 연결' },
 ];
 export function Settings({ view }: { view: string }) {
+  const modern = useApp().mode === 'operations';
   return (
     <div className="page">
       <PageHead
@@ -27,7 +28,9 @@ export function Settings({ view }: { view: string }) {
         title="연결·설정"
         description="서버에 저장된 모델 연결, 라우팅을 관리합니다."
       />
-      <NavTabs items={tabs} />
+      <NavTabs
+        items={modern ? [...tabs, { to: '/fleet/assets', label: '저장 관측 자료' }] : tabs}
+      />
       {view === 'models' ? <Models /> : view === 'routing' ? <Routing /> : <DataSettings />}
     </div>
   );

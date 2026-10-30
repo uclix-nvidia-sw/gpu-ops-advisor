@@ -601,7 +601,8 @@ export function AggregateReport({
     setSelection(key);
     setHiddenNamespaces((previous) => {
       const next = new Set(previous);
-      for (const metric of ['activity', 'memory']) next.delete(JSON.stringify([metric, key]));
+      for (const metric of ['activity', 'memory', 'both'])
+        next.delete(JSON.stringify([metric, key]));
       return next;
     });
     setGraphFocus({
@@ -693,15 +694,27 @@ export function AggregateReport({
                     </small>
                     <h4>{topic.topic_id === 'namespace_usage' ? 'Namespace 활동' : '장애 알림'}</h4>
                     <Badge status={str(topic.status) || null} />
-                    <p>{text || '저장된 요약이 없습니다. 아래 관측 자료와 한계를 확인하세요.'}</p>
-                    {first && str(first.conditions) && (
-                      <p className="aggregate-static-note">
-                        <strong>적용 조건</strong> {str(first.conditions)}
-                      </p>
-                    )}
-                    {str(section?.interpretation_limit) && (
-                      <p className="aggregate-static-note">{str(section?.interpretation_limit)}</p>
-                    )}
+                    <p className="c2-topic-fact">
+                      {topic.topic_id === 'namespace_usage'
+                        ? `${groups.length}개 Namespace 분석 대상`
+                        : typeof summary.count === 'number' && Number.isFinite(summary.count)
+                          ? `기간 내 ${summary.count}건 · 비교 기간 ${typeof summary.previous_count === 'number' && Number.isFinite(summary.previous_count) ? `${summary.previous_count}건` : '미확인'}`
+                          : '기간 내 알림 집계 미확인'}
+                    </p>
+                    <details className="c2-saved-interpretation">
+                      <summary>저장된 해석·적용 조건 펼치기</summary>
+                      <p>{text || '저장된 요약이 없습니다. 아래 관측 자료와 한계를 확인하세요.'}</p>
+                      {first && str(first.conditions) && (
+                        <p className="aggregate-static-note">
+                          <strong>적용 조건</strong> {str(first.conditions)}
+                        </p>
+                      )}
+                      {str(section?.interpretation_limit) && (
+                        <p className="aggregate-static-note">
+                          {str(section?.interpretation_limit)}
+                        </p>
+                      )}
+                    </details>
                     <a
                       href={
                         topic.topic_id === 'namespace_usage'

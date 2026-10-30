@@ -7,6 +7,7 @@ import { RcaNarrative } from '../components/RcaNarrative';
 import { ReportStatements } from '../components/ReportContent';
 import type { Row } from '../lib/live';
 const data = vi.hoisted(() => ({
+  mode: 'new',
   paths: [] as string[],
   incident: {} as Row,
   job: {} as Row,
@@ -15,7 +16,7 @@ const data = vi.hoisted(() => ({
 }));
 vi.mock('../lib/store', () => ({
   useApp: () => ({
-    mode: 'new',
+    mode: data.mode,
     ready: true,
     canOperate: true,
     scope: { clusters: [{ cluster_id: 'c1', namespaces: null }] },
@@ -52,6 +53,7 @@ const render = (route: string) =>
     </MemoryRouter>,
   );
 beforeEach(() => {
+  data.mode = 'new';
   data.paths = [];
   data.error = false;
   data.items = [];
@@ -97,6 +99,16 @@ it('distinguishes absent compatibility field from no investigation', () => {
   expect(summaryState({ rca_summary: { latest_job: null, latest_published: null } })).toBe(
     '조사 기록 없음',
   );
+});
+it('uses consistent report menu labels only in Console2 and reserves saved pages for the reader', () => {
+  expect(render('/reports/new')).toContain('보고서 읽는 방법');
+  data.mode = 'operations';
+  const form = render('/reports/new');
+  expect(form).toContain('보고서 이력');
+  expect(form).toContain('운영자 가이드');
+  expect(render('/reports/published')).not.toContain('aria-label="운영 보고서 메뉴"');
+  data.mode = 'new';
+  expect(render('/reports/published')).toContain('aria-label="운영 보고서 메뉴"');
 });
 it('uses the publication summary while the latest investigation runs', () => {
   const html = render('/incidents/i1');

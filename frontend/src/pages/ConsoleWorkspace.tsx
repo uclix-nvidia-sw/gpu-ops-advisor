@@ -580,7 +580,10 @@ export function OperatorReportList({
               </Link>
             </h3>
             <ReportPeriod value={j.time_range} />
-            <ReportScope job={j} />
+            <ReportScope job={j} compact={compact} />
+            {compact && (
+              <small className="c2-created">요청 접수 {formatDate(str(j.created_at))}</small>
+            )}
             {!!j.result_ref &&
               !j.deletion &&
               (compact ? (

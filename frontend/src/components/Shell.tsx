@@ -81,15 +81,19 @@ export function Shell() {
             ]
           : nav.map((n) => n.label);
   const menus =
-    app.mode === 'classic' || app.mode === 'operations'
+    app.mode === 'operations'
       ? consoleNav
-      : app.mode === 'new'
-        ? [
-            { ...nav[0], label: '운영 현황' },
-            { ...nav[2], label: '사건 분석' },
-            { ...nav[3], label: '운영 보고서' },
-          ]
-        : nav.map((n, i) => ({ ...n, label: names[i] }));
+          .filter((n) => n.to !== '/fleet/assets')
+          .map((n) => (n.to === '/reports' ? { ...n, label: '운영 보고서' } : n))
+      : app.mode === 'classic'
+        ? consoleNav
+        : app.mode === 'new'
+          ? [
+              { ...nav[0], label: '운영 현황' },
+              { ...nav[2], label: '사건 분석' },
+              { ...nav[3], label: '운영 보고서' },
+            ]
+          : nav.map((n, i) => ({ ...n, label: names[i] }));
   const [mobile, setMobile] = useState(false),
     [scopeOpen, setScopeOpen] = useState(false),
     [draft, setDraft] = useState(app.scope),
@@ -117,7 +121,10 @@ export function Shell() {
   const active = (to: string) =>
     location.pathname.startsWith(to.split('/').slice(0, 2).join('/')) ||
     (to === '/cases' && /analyses|incidents/.test(location.pathname)) ||
-    (to === '/reports' && (isGuide || location.pathname.startsWith('/schedules')));
+    (to === '/reports' && (isGuide || location.pathname.startsWith('/schedules'))) ||
+    (app.mode === 'operations' &&
+      to === '/settings/models' &&
+      location.pathname.startsWith('/fleet/'));
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
@@ -126,7 +133,7 @@ export function Shell() {
         </span>
         <div>
           <strong>GPU Ops Advisor</strong>
-          <span>GPU OPERATIONS</span>
+          <span>{app.mode === 'operations' ? '운영자' : 'GPU OPERATIONS'}</span>
         </div>
       </Link>
       <div className="workspace-label">
