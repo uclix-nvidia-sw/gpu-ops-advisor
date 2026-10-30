@@ -1133,6 +1133,11 @@ export function NewWorkspace() {
     const jump = () => {
       const target = document.getElementById(id);
       if (!target || !root.contains(target)) return false;
+      if (app.mode === 'operations') {
+        for (let element: HTMLElement | null = target; element; element = element.parentElement)
+          if (element instanceof HTMLDetailsElement) element.open = true;
+        target.tabIndex = -1;
+      }
       frame = requestAnimationFrame(() => {
         target.scrollIntoView({ block: 'start' });
         target.focus({ preventScroll: true });
@@ -1147,7 +1152,7 @@ export function NewWorkspace() {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [location.pathname, location.hash, location.key]);
+  }, [location.pathname, location.hash, location.key, app.mode]);
   // Save list scroll by full filter URL; mode switches keep the same location.
   useEffect(() => {
     if (location.hash || ['/cases', '/reports'].includes(location.pathname)) return;

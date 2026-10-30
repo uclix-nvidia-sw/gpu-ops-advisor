@@ -78,6 +78,14 @@ it('returns nothing to chart for a report without Namespace usage', () => {
   expect(opsUsage({}).items).toEqual([]);
 });
 
+it('omits incomparable prior activity only from the Console2 snapshot', () => {
+  expect(opsUsage(result, true).items[0].previous).toBeNull();
+  expect(opsUsage(result).items[0].previous).toBe(39.6);
+  const comparable = structuredClone(result);
+  Object.assign(comparable.topics[1].rows![1], { comparison_status: 'comparable' });
+  expect(opsUsage(comparable, true).items[0].previous).toBe(39.6);
+});
+
 it('selects published snapshots by analysis end, excluding deleted and unpublished reports', () => {
   const report = {
     status: 'succeeded',

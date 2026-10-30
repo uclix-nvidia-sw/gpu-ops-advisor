@@ -54,7 +54,7 @@ const hourText = (iso: string) =>
   }).format(new Date(iso));
 
 /** Namespace rows of a stored Ops report; model-level rows without a Namespace are skipped. */
-export function opsUsage(result: Row) {
+export function opsUsage(result: Row, comparableOnly = false) {
   const topics = rows(result.topics);
   const usage = topics.find((t) => t.topic_id === 'namespace_usage');
   const incidents = obj(topics.find((t) => t.topic_id === 'incident_summary')?.summary);
@@ -74,7 +74,10 @@ export function opsUsage(result: Row) {
       cluster: str(r.cluster_id),
       model: str(r.gpu_model),
       activity: value(r.activity_percent),
-      previous: value(r.previous_activity_percent),
+      previous:
+        !comparableOnly || r.comparison_status === 'comparable'
+          ? value(r.previous_activity_percent)
+          : null,
       gpus: value(r.observed_gpu_count),
       pending: pending.get(`${str(r.cluster_id)}/${str(r.namespace)}`) ?? null,
       hourly: Object.fromEntries(
@@ -136,7 +139,7 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
   const available =
     !snapshot ||
     (report.data?.status === 'succeeded' && report.data?.result_ref && !report.data?.deletion);
-  const { items, hours, alerts } = opsUsage(available ? obj(report.data?.result) : {});
+  const { items, hours, alerts } = opsUsage(available ? obj(report.data?.result) : {}, snapshot);
   const color = new Map(items.map((u, i) => [u.key, SERIES[i % SERIES.length]]));
   const measured = items.filter((u) => u.activity !== null);
   const missing = items.filter((u) => u.activity === null);
@@ -365,33 +368,64 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
                       <b>GPU 연결 분포</b>
                       <small>Namespace별 연결 GPU · 동시 사용 대수 아님</small>
                     </figcaption>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={slices}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={48}
-                          outerRadius={78}
-                          stroke="#fff"
-                          strokeWidth={2}
-                        >
-                          {slices.map((s) => (
-                            <Cell key={s.name} fill={s.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(v) => `${v}대`} />
-                        <Legend
-                          formatter={(name, entry) => `${name} ${obj(entry.payload).value}대`}
-                          wrapperStyle={{ fontSize: 12 }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {snapshot ? (
+                      <div className="aggregate-table-scroll">
+                        <table className="c2-gpu-observed-table">
+                          <caption className="sr-only">기간 중 Namespace·모델별 관측 GPU</caption>
+                          <thead>
+                            <tr>
+                              <th>Namespace / 모델</th>
+                              <th>관측 GPU</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {byGpus.map((u) => (
+                              <tr key={u.key}>
+                                <th>
+                                  {u.label}
+                                  <small>
+                                    {u.cluster} · {u.model}
+                                  </small>
+                                </th>
+                                <td>{u.gpus}대</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                          <Pie
+                            data={slices}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={48}
+                            outerRadius={78}
+                            stroke="#fff"
+                            strokeWidth={2}
+                          >
+                            {slices.map((s) => (
+                              <Cell key={s.name} fill={s.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => `${v}대`} />
+                          <Legend
+                            formatter={(name, entry) => `${name} ${obj(entry.payload).value}대`}
+                            wrapperStyle={{ fontSize: 12 }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </figure>
                   <figure>
                     <figcaption>
                       <b>대기 Pod 최대</b>
-                      <small>활동률이 높은데 대기 Pod도 있으면 자원 부족을 확인하세요</small>
+                      <small>
+                        {snapshot
+                          ? '관측한 시간대의 최대값 · 대기 원인은 별도 확인'
+                          : '활동률이 높은데 대기 Pod도 있으면 자원 부족을 확인하세요'}
+                      </small>
                     </figcaption>
                     {waiting.length ? (
                       <ResponsiveContainer
@@ -418,7 +452,13 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="muted">분석 기간에 대기 Pod가 관측되지 않았습니다.</p>
+                      <p className="muted">
+                        {snapshot && !items.some((u) => u.pending !== null)
+                          ? '대기 관측 자료가 없습니다.'
+                          : snapshot
+                            ? '관측된 시간대에 대기 Pod가 없었습니다.'
+                            : '분석 기간에 대기 Pod가 관측되지 않았습니다.'}
+                      </p>
                     )}
                   </figure>
                 </>

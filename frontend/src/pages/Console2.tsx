@@ -585,7 +585,7 @@ function Cases() {
       });
   }, [location.state, query.isPending]);
   return (
-    <div className="c2-page">
+    <div className="c2-page c2-cases-page">
       <Heading
         title="RCA 조사"
         note="수신한 사건과 대상 장비를 확인하고, 분석 결과와 런북 안내를 살펴봅니다."
@@ -825,6 +825,7 @@ function Cases() {
   );
 }
 const reportSections = [
+  ['c2-ops-insights', '관측 요약'],
   ['c2-report-summary', '지표 비교'],
   ['c2-rca-visual', '관측 비교'],
   ['c2-rca-decision', '사건 판단'],
@@ -834,9 +835,10 @@ const reportSections = [
   ['c2-rca-history', '발생 이력'],
   ['c2-rca-references', '참고 자료'],
   ['namespace-summary-title', 'Namespace 활동'],
+  ['c2-hourly-overview', '시간대 요약'],
   ['c2-namespace-charts', '시간대 그래프'],
   ['c2-workloads', '작업 대기·완료'],
-  ['incident-summary-title', '장애 알림'],
+  ['incident-summary-title', '사건 기록'],
   ['report-evidence', '집계 근거'],
   ['new-investigation-history', '조사 이력'],
   ['new-incident-state', '처리 상태'],

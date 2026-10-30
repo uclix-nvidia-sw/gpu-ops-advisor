@@ -11,7 +11,13 @@ function StoredTime({ value }: { value: string }) {
   );
 }
 
-export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
+export function WorkloadCharts({
+  workloads,
+  compact = false,
+}: {
+  workloads: Row[];
+  compact?: boolean;
+}) {
   return (
     <div className="aggregate-workload-charts">
       <h4>클러스터별 작업 대기·완료</h4>
@@ -41,6 +47,17 @@ export function WorkloadCharts({ workloads }: { workloads: Row[] }) {
         });
         pendingHighlights.sort((a, b) => b.peak - a.peak || a.namespace.localeCompare(b.namespace));
         const shownPendingHighlights = pendingHighlights.slice(0, 3);
+        if (compact && !pendingHighlights.length && !jobs.length) {
+          const observed = clusterWorkloads.some((w) =>
+            rows(w.hours).some((h) => h.pending_peak === 0),
+          );
+          return (
+            <p className="c2-workload-empty" key={cluster}>
+              <b>{cluster}</b> · {observed ? '관측된 대기 최대 0개' : '대기 자료 없음'} · 확인된
+              완료 표본 없음
+            </p>
+          );
+        }
         return (
           <section
             key={cluster}

@@ -9,7 +9,8 @@ import '../lib/advice-colors.css';
 import { memoryPercent, NamespaceCharts, type NamespaceFocus } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
 import { WorkloadContext } from './WorkloadContext';
-import { ReportVisualSummary } from './Console2Charts';
+import { IncidentBreakdown, ReportVisualSummary } from './Console2Charts';
+import { HourlyOverview, OperationalInsights } from './OperationalInsights';
 
 export const aggregateReasons: Record<string, string> = {
   unobserved_hour: '이 시간대 관측 없음',
@@ -402,11 +403,13 @@ function TopicInterpretation({
   narrative,
   onEvidence,
   onFocus,
+  reader = false,
 }: {
   topic: Row;
   narrative: Row[];
   onEvidence?: (id: string) => void;
   onFocus?: (item: Row) => void;
+  reader?: boolean;
 }) {
   const section = narrative.find((item) => item.topic_id === topic.topic_id);
   if (section?.interpretation_source === 'deterministic_fallback') {
@@ -426,13 +429,30 @@ function TopicInterpretation({
     strings(section.source_fact_ids).includes(str(fact.id)),
   );
   if (topic.topic_id === 'incident_summary' && 'check_target' in section) {
-    return (
+    const interpretation = (
       <IncidentInterpretation
         topic={topic}
         section={section}
         facts={facts}
         onEvidence={onEvidence}
       />
+    );
+    const historical =
+      reader &&
+      /발생\s*중|해제|이후[^.]{0,30}알림\s*상태/.test(
+        ['meaning', 'next_check', 'check_target'].map((key) => str(section[key])).join(' '),
+      );
+    return historical ? (
+      <details className="c2-historical-interpretation">
+        <summary>과거 알림 상태를 포함한 저장 해석 원문</summary>
+        <Notice>
+          한 번 수신된 사건 기록입니다. 원문의 발생·해제 표현으로 현재 지속·복구 상태를 판단하지
+          않습니다.
+        </Notice>
+        {interpretation}
+      </details>
+    ) : (
+      interpretation
     );
   }
   const advice = rows(section.advice);
@@ -633,6 +653,7 @@ export function AggregateReport({
     (value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted') ||
     partialInterpretation;
   const incidentNumber = usage ? 2 : 1;
+  const IncidentDetails = reader ? 'details' : 'div';
   const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
   const calculatedSummary = summaryMethod === 'deterministic_fallback';
   const summaryTitle = aiSelected
@@ -684,7 +705,12 @@ export function AggregateReport({
           <a href="#report-evidence">집계 기준과 근거</a>
         </nav>
       )}
-      {reader && <ReportVisualSummary value={value} />}
+      {reader && (
+        <>
+          <OperationalInsights value={value} />
+          <ReportVisualSummary value={value} />
+        </>
+      )}
       {partialInterpretation && (
         <Notice>
           일부 주제의 AI 해석을 작성하지 못했습니다. 검증을 통과한 주제의 AI 해석은 유지하고,
@@ -721,7 +747,6 @@ export function AggregateReport({
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
           <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
-          {reader && groups.length > 0 && namespaceCharts}
           {diagnosticMessages.length > 0 && (
             <section aria-label="부분 산출 원인">
               <h3>활동률 산출·기간 비교의 제한</h3>
@@ -752,6 +777,8 @@ export function AggregateReport({
               onFocus={reader ? focusAdvice : undefined}
             />
           )}
+          {reader && <HourlyOverview value={value} />}
+          {reader && groups.length > 0 && namespaceCharts}
           <h3 className="aggregate-subheading">{reader ? '1.2' : '1.1'}. Namespace별 비교</h3>
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
@@ -1038,7 +1065,7 @@ export function AggregateReport({
                   </tbody>
                 </table>
               </div>
-              <WorkloadCharts workloads={rows(usage.workloads)} />
+              <WorkloadCharts workloads={rows(usage.workloads)} compact={reader} />
             </section>
           )}
 
@@ -1067,59 +1094,66 @@ export function AggregateReport({
       )}
       {incident && (
         <section className="aggregate-major-topic" aria-labelledby="incident-summary-title">
-          <h2 id="incident-summary-title">{incidentNumber}. 기간 내 장애 알림 현황</h2>
+          <h2 id="incident-summary-title">
+            {incidentNumber}. {reader ? '기간 내 사건 기록' : '기간 내 장애 알림 현황'}
+          </h2>
+          {reader && <IncidentBreakdown summary={summary} />}
           {aiInterpreted && (
             <TopicInterpretation
               topic={incident}
+              reader={reader}
               narrative={rows(value.narrative)}
               onEvidence={onEvidence}
             />
           )}
-          <h3 className="aggregate-subheading">{incidentNumber}.1. 장애 종류별 발생 현황</h3>
-          {rows(incident.findings)
-            .filter((f) => !str(f.id).startsWith('incident-node-'))
-            .map((f) => (
-              <p key={str(f.id)}>{str(f.text)}</p>
-            ))}
-          {rows(summary.categories).length > 0 && (
-            <div className="aggregate-table-scroll">
-              <table className="aggregate-incident-types">
-                <caption className="sr-only">
-                  장애 종류별 발생 현황 · 동일 원인을 의미하지 않습니다
-                </caption>
-                <thead>
-                  <tr>
-                    <th>클러스터 / 장애 종류</th>
-                    <th>발생 노드</th>
-                    <th>이번 기간</th>
-                    <th>이전 기간</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows(summary.categories).map((category) => (
-                    <tr key={`${category.cluster_id}/${category.name}`}>
-                      <th scope="row">
-                        <span>{str(category.cluster_id)}</span>
-                        {str(category.name)}
-                      </th>
-                      <td>
-                        {category.count === 0
-                          ? '이번 기간 발생 없음'
-                          : strings(category.nodes).join(', ') || '노드 미확인'}
-                      </td>
-                      <td className="aggregate-number">
-                        {String(category.count)}건
-                        {Number(category.test_count) > 0 && (
-                          <small>시험 표시 {String(category.test_count)}건 포함</small>
-                        )}
-                      </td>
-                      <td className="aggregate-number">{String(category.previous_count)}건</td>
+          <IncidentDetails className={reader ? 'c2-incident-details' : undefined}>
+            {reader && <summary>전체 오류 종류별 수치와 저장 집계 설명</summary>}
+            <h3 className="aggregate-subheading">{incidentNumber}.1. 장애 종류별 발생 현황</h3>
+            {rows(incident.findings)
+              .filter((f) => !str(f.id).startsWith('incident-node-'))
+              .map((f) => (
+                <p key={str(f.id)}>{str(f.text)}</p>
+              ))}
+            {rows(summary.categories).length > 0 && (
+              <div className="aggregate-table-scroll">
+                <table className="aggregate-incident-types">
+                  <caption className="sr-only">
+                    장애 종류별 발생 현황 · 동일 원인을 의미하지 않습니다
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th>클러스터 / 장애 종류</th>
+                      <th>발생 노드</th>
+                      <th>이번 기간</th>
+                      <th>이전 기간</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {rows(summary.categories).map((category) => (
+                      <tr key={`${category.cluster_id}/${category.name}`}>
+                        <th scope="row">
+                          <span>{str(category.cluster_id)}</span>
+                          {str(category.name)}
+                        </th>
+                        <td>
+                          {category.count === 0
+                            ? '이번 기간 발생 없음'
+                            : strings(category.nodes).join(', ') || '노드 미확인'}
+                        </td>
+                        <td className="aggregate-number">
+                          {String(category.count)}건
+                          {Number(category.test_count) > 0 && (
+                            <small>시험 표시 {String(category.test_count)}건 포함</small>
+                          )}
+                        </td>
+                        <td className="aggregate-number">{String(category.previous_count)}건</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </IncidentDetails>
           {Number(summary.unclassified_count) > 0 && (
             <p className="aggregate-data-note">
               장비·증상 식별이 부족한 {String(summary.unclassified_count)}건은 같은 GPU의 반복

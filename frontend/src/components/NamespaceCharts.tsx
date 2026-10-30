@@ -334,6 +334,24 @@ export function NamespaceCharts({
           ...allHours.map((h) => Date.parse(str(h.end))).filter(Number.isFinite),
         );
         const memoryField = memoryFields[cluster] || 'used_gib_per_gpu';
+        if (
+          reader &&
+          !clusterGroups.some((g) =>
+            g.models.some(
+              (r) =>
+                activityPoints(rows(r.hours), start, end).length ||
+                rows(obj(r.gpu_memory).hours).some((h) => memoryPercent(h) !== null),
+            ),
+          )
+        )
+          return (
+            <div className="c2-cluster-empty" key={cluster}>
+              <b>{cluster} 클러스터</b>
+              <p>활동률·메모리를 비교할 유효 관측이 없습니다.</p>
+              <a href="#c2-observation-coverage">대상별 자료 범위 확인 →</a>
+            </div>
+          );
+
         return (
           <section
             key={cluster}
@@ -414,73 +432,75 @@ export function NamespaceCharts({
                       focus={focus?.cluster === cluster ? focus : null}
                     />
                   )}
-                  <div className="aggregate-chart-controls">
-                    <div className="aggregate-chart-actions">
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => onSetCluster(clusterGroups.map(selectionKey), true)}
-                      >
-                        전체 선택
-                      </button>
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => onSetCluster(clusterGroups.map(selectionKey), false)}
-                      >
-                        전체 해제
-                      </button>
-                    </div>
-                    <fieldset className="aggregate-chart-legend">
-                      <legend>
-                        {selected.length
-                          ? `표시할 Namespace · ${selected.length}/${clusterGroups.length} 선택`
-                          : '선택 없음 · 선과 점 숨김'}
-                      </legend>
-                      {clusterGroups.map((g) => (
-                        <label key={g.key}>
-                          <input
-                            type="checkbox"
-                            checked={!hidden.has(selectionKey(g))}
-                            onChange={() => onToggle(selectionKey(g))}
-                            aria-label={`${cluster} ${g.namespace} ${title} 표시`}
-                          />
-                          <span
-                            className="aggregate-color-key"
-                            style={{ backgroundColor: colorOf(g.namespace) }}
-                          />
-                          <span>{g.namespace}</span>
-                        </label>
-                      ))}
-                    </fieldset>
-                    <div
-                      className="aggregate-model-legend"
-                      aria-label={`${cluster} ${title} 모델 선 모양`}
-                    >
-                      {[
-                        ...new Set(
-                          clusterGroups.flatMap((g) => g.models.map((r) => str(r.gpu_model))),
-                        ),
-                      ]
-                        .sort()
-                        .map((model) => (
-                          <span key={model}>
-                            <svg viewBox="0 0 40 12" aria-hidden="true">
-                              <line
-                                x1="0"
-                                x2="40"
-                                y1="6"
-                                y2="6"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeDasharray={dashOf(model)}
-                              />
-                            </svg>
-                            {model || '모델 미확인'}
-                          </span>
+                  {(!reader || !isMemory) && (
+                    <div className="aggregate-chart-controls">
+                      <div className="aggregate-chart-actions">
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={() => onSetCluster(clusterGroups.map(selectionKey), true)}
+                        >
+                          전체 선택
+                        </button>
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={() => onSetCluster(clusterGroups.map(selectionKey), false)}
+                        >
+                          전체 해제
+                        </button>
+                      </div>
+                      <fieldset className="aggregate-chart-legend">
+                        <legend>
+                          {selected.length
+                            ? `표시할 Namespace · ${selected.length}/${clusterGroups.length} 선택`
+                            : '선택 없음 · 선과 점 숨김'}
+                        </legend>
+                        {clusterGroups.map((g) => (
+                          <label key={g.key}>
+                            <input
+                              type="checkbox"
+                              checked={!hidden.has(selectionKey(g))}
+                              onChange={() => onToggle(selectionKey(g))}
+                              aria-label={`${cluster} ${g.namespace} ${title} 표시`}
+                            />
+                            <span
+                              className="aggregate-color-key"
+                              style={{ backgroundColor: colorOf(g.namespace) }}
+                            />
+                            <span>{g.namespace}</span>
+                          </label>
                         ))}
+                      </fieldset>
+                      <div
+                        className="aggregate-model-legend"
+                        aria-label={`${cluster} ${title} 모델 선 모양`}
+                      >
+                        {[
+                          ...new Set(
+                            clusterGroups.flatMap((g) => g.models.map((r) => str(r.gpu_model))),
+                          ),
+                        ]
+                          .sort()
+                          .map((model) => (
+                            <span key={model}>
+                              <svg viewBox="0 0 40 12" aria-hidden="true">
+                                <line
+                                  x1="0"
+                                  x2="40"
+                                  y1="6"
+                                  y2="6"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeDasharray={dashOf(model)}
+                                />
+                              </svg>
+                              {model || '모델 미확인'}
+                            </span>
+                          ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </section>
               );
             })}
