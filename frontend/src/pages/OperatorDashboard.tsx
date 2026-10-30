@@ -290,7 +290,7 @@ export function OperatorDashboard() {
                       <RepeatBadge v={v} />
                     </div>
                     <div className="act">
-                      런북 안내: <b>{v.label?.action || '런북 순서대로 확인'}</b>
+                      런북 안내: <b>{v.label?.action || '원문·발생 장치와 작업 영향 확인'}</b>
                     </div>
                   </div>
                   <div className="oh-actions">

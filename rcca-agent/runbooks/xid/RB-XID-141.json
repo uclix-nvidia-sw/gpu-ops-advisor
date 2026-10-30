@@ -87,7 +87,7 @@
         "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 141; Table 3 Resolution Buckets",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-30"
       },
       {
         "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
@@ -110,8 +110,8 @@
       "오류 보고의 코드·시각·대상을 먼저 제시하고, 실제 장치 신원과 현재 상태를 별도의 관측으로 연결한다. 원인 및 조치는 해당 근거와 실행 조건이 충족된 항목에 한해 제시하며, 보고 원문만 있는 경우에는 보고 사실과 다음 수집 항목을 구분한다.",
       "자동 수집 지표는 GPU 활동·메모리·전력 등 관측된 상태를 보여 준다. 애플리케이션과 하드웨어 원인 구분에는 해당 작업의 PID, CUDA 오류 원문, 입력과 재현 결과 및 반복 패턴을 추가 연결한다. 작업별 자료는 운영자와 작업 소유자가 확보하며 GPU 지표만으로 원인을 단정하지 않는다."
     ],
-    "title": "XID 141 CUDA Fast Path Error · 애플리케이션·엔진 오류 조사",
-    "description": "XID 141: CUDA Fast Path Error.",
+    "title": "XID 141 CUDA 빠른 처리 경로 오류 · CUDA 빠른 처리 경로 오류 조사",
+    "description": "XID 141: CUDA 빠른 처리 경로 오류.",
     "claim": "XID 141 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "GPU_SOFTWARE",
@@ -181,7 +181,7 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "XID 141: CUDA 빠른 처리 경로 오류 보고입니다. XID 141(ROBUST_CHANNEL_FAST_PATH_ERROR)는 NVIDIA Xid 카탈로그에서 'CUDA Fast Path Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다.",
+      "meaning": "XID 141은 CUDA 작업의 빠른 처리 경로에서 보고하는 오류입니다. NVIDIA 공식 명칭은 CUDA Fast Path Error이며 적용 제품은 H100·B100·GB200입니다(A100 제외). 공식 즉시 조치 분류는 IGNORE로 이 코드만으로 작업·GPU·노드를 재시작하지 않습니다. 실제 작업 영향과 동반 오류를 대조하고 원인 조사가 필요하면 공급사에 자료를 전달합니다.",
       "cause_note": "애플리케이션의 잘못된 메모리 접근·명령이나 CUDA 사용 오류가 가장 흔하고, 같은 GPU에서만 반복되면 하드웨어 가능성도 있습니다.",
       "next_checks": [
         {
@@ -230,6 +230,15 @@
           "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 GPU 메모리 사용량, GPU 전력, GPU 사용률. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
           "source_indices": [
             4
+          ]
+        },
+        {
+          "title": "수집 원문과 공식 오류 이름",
+          "text": "수집 도구의 고정 정의는 Reserved(예약 코드)입니다. 화면의 오류 이름과 의미는 NVIDIA 공식 카탈로그를 따르며 수집 원문·장치 주소·코드는 변경하지 않습니다.",
+          "source_indices": [
+            0,
+            1,
+            2
           ]
         }
       ]

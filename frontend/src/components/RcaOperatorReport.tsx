@@ -647,6 +647,9 @@ export function RcaOperatorReport({
               [
                 ...refs,
                 { url: TRIAGE_URL, section: 'NVIDIA GPU Node Triage' },
+                ...(v?.officialDefinition
+                  ? [{ url: v.officialDefinition.source, section: 'NVIDIA Xid 공식 오류 정의' }]
+                  : []),
                 ...(v?.family === 'nvswitch'
                   ? [{ url: FM_URL, section: 'NVIDIA Fabric Manager User Guide' }]
                   : []),
@@ -662,12 +665,29 @@ export function RcaOperatorReport({
               </li>
             ))}
         </ul>
+        {v?.officialDefinition && (
+          <dl className="rca-reference-guide">
+            <div>
+              <dt>{v.codes.join(', ')} 공식 오류 의미</dt>
+              <dd>{v.officialDefinition.meaning}</dd>
+            </div>
+          </dl>
+        )}
         {guidance.map((g, i) => (
           <dl key={i} className="rca-reference-guide">
             {str(obj(g.guidance).meaning) && (
               <div>
                 <dt>오류 의미</dt>
-                <dd>{str(obj(g.guidance).meaning)}</dd>
+                <dd>
+                  {v?.officialDefinition ? (
+                    <details>
+                      <summary>저장 당시 오류 설명 원문</summary>
+                      <p>{str(obj(g.guidance).meaning)}</p>
+                    </details>
+                  ) : (
+                    str(obj(g.guidance).meaning)
+                  )}
+                </dd>
               </div>
             )}
             {rows(obj(g.guidance).references).map((r, j) => (

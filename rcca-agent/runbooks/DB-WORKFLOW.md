@@ -53,6 +53,8 @@ Runbook 284건(XID·SXID 266건, Fleet 컴포넌트 17건, 일반 조사 1건)�
 
 R코드·D코드도 기존 콘텐츠/실행 프로필의 식별자이며 테이블을 추가하지 않는다. Backend의 기존 JSON 검증과 `search.codes` 조회를 사용한다. DB 스키마 호환성과 운영 적용 가능성은 별개이며, 빈 compatibility 초안은 저장할 수 있어도 승인·발행할 수 없다.
 
+Reserved 표시 17종·수집기 Unused 15종과 공식 Unused 63종(중복 제외 78종)은 NVIDIA Xid 카탈로그(2026-10-30 대조)의 오류 이름·의미·제품 적용 범위로 작성 원본을 보강했다. Fleet 원문 정의·검색 별칭·수집 계획·대응 단계는 보존한다. 목록의 Reserved·Unused 대체 이름과 저장 RCA의 공식 설명은 작성 원본에서 생성한 표시 자료를 사용하며, 원문과 저장 당시 설명을 함께 보존한다. 신규 RCA 작성에 반영하려면 위 절차로 해당 78개 Runbook의 새 revision을 발행해야 한다. 운영 DB와 기존 결과를 소급 수정하지 않는다.
+
 ## 2. 출처를 사용하는 기준
 
 기존 [근거자료 카탈로그](../../docs/specs/rca-agent/references/runbook-source-catalog.md)와 [Fleet·GPUd 오류 카탈로그](../../docs/specs/rca-agent/references/fleet-gpud-error-catalog.md)를 먼저 읽는다. Fleet 소스가 없는 것이 아니다. 기존 분석 commit은 Fleet `84f99beef3e633071ad0998b10629b01fb294eaf`, GPUd `9606bb8f6813fdd944cc9a349566e35075917805`다. 이번 추가 GPUd 대조는 `0857190a63e3a01ee45dcaaae715e9f063f9eb5f`를 고정했다. 이들 commit과 실제 Fleet image/source revision이 같은지는 미확인이다.

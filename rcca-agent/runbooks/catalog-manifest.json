@@ -14122,7 +14122,7 @@
       {
         "file": "xid/RB-XID-1.json",
         "before_content_sha256": "aada7883130b2f9d2090f9caac21de6371c2f1951bad46faef6d8c6b7c7b909d",
-        "after_content_sha256": "fb3f284755a9573e45543e8aab7a24df670ad889f9587535cb6a142d6196bd69",
+        "after_content_sha256": "9076de3aa857c74195d82719d819b3a06d0ce84835bf764598361ef8a03bd972",
         "restore": [
           {
             "path": [
@@ -14154,13 +14154,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 1 Invalid or corrupted push buffer stream (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 1: Invalid or corrupted push buffer stream."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 1(ROBUST_CHANNEL_FIFO_ERROR_FIFO_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer stream'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-10.json",
         "before_content_sha256": "fc741c352a198ac69f9c2e0815e9fe276368fa4df6ae69176ffbabd6f44db96a",
-        "after_content_sha256": "1cde0cbcaef807d015c97712e6c091428d1465729dabef4d287dcbda179d0747",
+        "after_content_sha256": "49ce7ed293a96d26e18ce92454bc9ee3c0bf0952e7bc939c1ebc7b99c8611243",
         "restore": [
           {
             "path": [
@@ -14192,6 +14231,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 10 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 10: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 10(ROBUST_CHANNEL_GR_ERROR_SINGLE_STEP)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -14906,7 +14984,7 @@
       {
         "file": "xid/RB-XID-108.json",
         "before_content_sha256": "e478f465a6c5805d3b483de782b02cd7d3fd72e5856dbe09be08cf0fac6d219c",
-        "after_content_sha256": "08dab394dad2f28701160b9538fec20261237fe609e3bccedd8070b7fc60a8c4",
+        "after_content_sha256": "840037fffb27b920fe15ea174700d03dafd7ba1d5de713cdd1168dcf3378ccb6",
         "restore": [
           {
             "path": [
@@ -14938,6 +15016,60 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 108 Reserved (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 108: Reserved."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 108(NVLINK_REMOTE_TRANSLATION_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Reserved'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 108 현재 공식 카탈로그의 미사용 코드 · 현재 공식 카탈로그의 미사용 코드 조사"
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 108은 현재 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신된 코드와 원문을 보존하고 GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조한 뒤, 실제 장애가 동반되면 공급사에 원문과 진단 자료를 전달합니다."
           }
         ]
       },
@@ -15098,7 +15230,7 @@
       {
         "file": "xid/RB-XID-111.json",
         "before_content_sha256": "7342dd0004a3edb2a55d1dc426ef58b641206fde23cfc030cd01a770a7ba6bc6",
-        "after_content_sha256": "bba92425d7d0720f714421c1c09c30a55029b644ea9334645235869f6f1034a4",
+        "after_content_sha256": "5fc715b9db4ba391665873b33465a16e67f4c72f891dc56215cca60bfcc5a7b5",
         "restore": [
           {
             "path": [
@@ -15130,13 +15262,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 111 Display Bundle Error Event (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 111: Display Bundle Error Event."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 111(BUNDLE_ERROR_EVENT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Bundle Error Event'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-112.json",
         "before_content_sha256": "b50be7888e7bfee74960be8a30d68926611b1d98d03d05c9b2ad6cb6f2af12e7",
-        "after_content_sha256": "9683d93af0544d2cbb9223458e6315401c1000c81ed5fccb4e551f2bc1e8a49c",
+        "after_content_sha256": "88f51f5e1a969589e6ef8096672f7a1c2ac082bb140fe23f891eee94087d222e",
         "restore": [
           {
             "path": [
@@ -15168,13 +15339,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 112 Display Supervisor Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 112: Display Supervisor Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 112(DISP_SUPERVISOR_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Supervisor Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-113.json",
         "before_content_sha256": "a8a800ad96f161f17e31a0da18718e1462cd30ef23c701114e325bf2be34ac00",
-        "after_content_sha256": "63534bea7742f2cd2d642a96324a1aef4631ee12077b4400994fd50d8fe10510",
+        "after_content_sha256": "c3583ac8f652ed2b42adac0ac6739d1c590272c1895b60e91cbfd4b0b17cfa04",
         "restore": [
           {
             "path": [
@@ -15206,13 +15416,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 113 DP Link Training Erro (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 113: DP Link Training Erro."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 113(DP_LT_FAILURE)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'DP Link Training Erro'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-114.json",
         "before_content_sha256": "ef35ddb2eb68e34c77934a45de42c9a6e7f451fba1b7c3751f504b238a0b58b7",
-        "after_content_sha256": "948b408f4d498fe46792f22d932d7f450d5185ffe0f01f6fe7d5a196bee892a7",
+        "after_content_sha256": "0f64b731c74720b2a8fbcfdd56c1781488ab3324b1b9fcafd0ce84e62ce78128",
         "restore": [
           {
             "path": [
@@ -15244,13 +15493,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 114 Display Pipeline Underflow Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 114: Display Pipeline Underflow Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 114(HEAD_RG_UNDERFLOW)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Pipeline Underflow Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-115.json",
         "before_content_sha256": "55b801c283f9383a7a3d419ae484e70cece7bcd6dfcd07ef185380b87dbd3bfa",
-        "after_content_sha256": "ffc52bd4617f0b0e9f4afaa6c118ae903354a7771b02d9ea320522692406efba",
+        "after_content_sha256": "214c198d0261d0dde52e15042cb972e5cb1c6dbb181beb1b79d1202a6b5cbd90",
         "restore": [
           {
             "path": [
@@ -15282,13 +15570,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 115 Display Core Channel Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 115: Display Core Channel Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 115(CORE_CHANNEL_REGS)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Core Channel Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-116.json",
         "before_content_sha256": "edaa0bd778a39cefeb1f3c3eb4a18b5b5a964735060e8fe2a1c5147c4e15fbd8",
-        "after_content_sha256": "8767c1825cb7094cec60c9be58adf2898ac23fc8a2f90ef9f3a1730a7e24382a",
+        "after_content_sha256": "c2c0701bfc8ed8ab1868eabb166e046d0f7b447f105375f06f2937f049e59b0a",
         "restore": [
           {
             "path": [
@@ -15320,13 +15647,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 116 Display Window Channel Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 116: Display Window Channel Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 116(WINDOW_CHANNEL_REGS)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Window Channel Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-117.json",
         "before_content_sha256": "d810a6b034d69dbed0e9942bd8d06b9d7d9eaa3dc6c52d4acdd375820aff00b0",
-        "after_content_sha256": "547e199f9728845430546ff82ea200373b0dfa50abb0be57a66a962ac31a44bc",
+        "after_content_sha256": "273008fc6aa201c30a3b11218abf3d858656408accb5df4d8684d62bca0ce777",
         "restore": [
           {
             "path": [
@@ -15358,13 +15724,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 117 Display Cursor Channel Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 117: Display Cursor Channel Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 117(CURSOR_CHANNEL_REGS)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Cursor Channel Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-118.json",
         "before_content_sha256": "c8f65c5da1bfc33ee8c39000ee2e35a273912b8b288db550858e86f574f6eff1",
-        "after_content_sha256": "b34454393da4f8eae7c84e484245437489603174dd0b86630fc701233fe6e027",
+        "after_content_sha256": "81bf4fc6fe6e762d69da391ccd663f4db22aab740a20eb7f279651f9c89b8a2d",
         "restore": [
           {
             "path": [
@@ -15396,6 +15801,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 118 Display Pixel Pipeline Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 118: Display Pixel Pipeline Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 118(HEAD_REGS)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Pixel Pipeline Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -15448,7 +15892,7 @@
       {
         "file": "xid/RB-XID-12.json",
         "before_content_sha256": "85bc9ca5df0786d87f647dd0a09ac9bf440eb4afd3c95e4fbd0997d7d3ecfd4d",
-        "after_content_sha256": "87c137ae0d5758fbf32bb1f47bde8f12de1569055966aeca685c4b3540379915",
+        "after_content_sha256": "08029daf0fb746d3f03ab3cba46886f8539a8abc12be44a87153335da4ba3b04",
         "restore": [
           {
             "path": [
@@ -15480,6 +15924,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 12 Driver error handling GPU exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 12: Driver error handling GPU exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 12(ROBUST_CHANNEL_GR_ERROR_SW_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Driver error handling GPU exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -15570,7 +16053,7 @@
       {
         "file": "xid/RB-XID-122.json",
         "before_content_sha256": "46daf2db082872a0e5a439d5b0b741adf5ad44716ef7ac067381ebca1bcf37c6",
-        "after_content_sha256": "2a2d91e0a3a25ae81560fc3faccda51e12c6f0da40a22af9366055ed5022b853",
+        "after_content_sha256": "d529f1c2d1ee5edf026f79696c2e9261f60635610902dad2e3f9af0a8ae17464",
         "restore": [
           {
             "path": [
@@ -15602,13 +16085,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 122 SPI PMU RPC Read Failure (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 122: SPI PMU RPC Read Failure."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 122(SPI_PMU_RPC_READ_FAIL)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'SPI PMU RPC Read Failure'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-123.json",
         "before_content_sha256": "e416b7685bf6e79f948e4ab5d654e87234c24cbe95749debd37d598d0eb8aa86",
-        "after_content_sha256": "531a0ba4185fa90ada2d20717a84f373818669297b065eb513d326faadb9fa4a",
+        "after_content_sha256": "aba5f86b81edee7d315c796dc96c1aaaac37d13586ba86b65acf6a20d14162d7",
         "restore": [
           {
             "path": [
@@ -15640,13 +16162,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 123 SPI PMU RPC Write Failure (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 123: SPI PMU RPC Write Failure."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 123(SPI_PMU_RPC_WRITE_FAIL)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'SPI PMU RPC Write Failure'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              4
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-124.json",
         "before_content_sha256": "36a58036e894853a4f8c80cb9633710cfdf82a9eb848477c8645cc6e856e7af4",
-        "after_content_sha256": "19b32c393457b25dd586161e3272dc32324ee50fa988d8bd53cf6654b94dd7d5",
+        "after_content_sha256": "bd866defa9520e6c3982df0f05ed988ebed2e99f3d263d38ae72d7dc07b2b5c8",
         "restore": [
           {
             "path": [
@@ -15678,13 +16239,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 124 SPI PMU RPC Erase Failure (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 124: SPI PMU RPC Erase Failure."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 124(SPI_PMU_RPC_ERASE_FAIL)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'SPI PMU RPC Erase Failure'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-125.json",
         "before_content_sha256": "8d08ced05c815d65082a1e9dbc42125d8698bd765162f2502c53d3a2b8e30683",
-        "after_content_sha256": "8b6cdf9386df1908ff2deacce747b758786d9305ade4c73108147b095f2107b5",
+        "after_content_sha256": "249b9ee207b6baa6393c0c8b1490a2f4e0ae5f7e51f749a09f1651f5d9ac29ab",
         "restore": [
           {
             "path": [
@@ -15716,13 +16316,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 125 Inforom FS Failure (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 125: Inforom FS Failure."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 125(INFOROM_FS_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Inforom FS Failure'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-126.json",
         "before_content_sha256": "325cdc48f1b0fcec9e6f041f79b1e9709c5b586ce8cde8a01102b6a8ebbf9664",
-        "after_content_sha256": "da2aa96a4bd87fc7ff45b45da3e81014368c650fbe2550334a1d9812e67bdaf0",
+        "after_content_sha256": "a6e499172d133ccab8cf2155519f9291f7785fcbdeb475d62a1fe4ca776a191f",
         "restore": [
           {
             "path": [
@@ -15770,13 +16409,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 126 CE10: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 126: CE10: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 126: GPU 데이터 복사 엔진 CE10에서 보고된 오류 보고입니다. XID 126(ROBUST_CHANNEL_CE10_ERROR)는 NVIDIA Xid 카탈로그에서 'CE10: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-127.json",
         "before_content_sha256": "90a0eee4a65825c9f996a072e108f21823bf7aea94b9341dbea3eeddace96eab",
-        "after_content_sha256": "c496286f065d9001d40e0173fb607a92eeda027f969b65a130d1df0bf2c388ca",
+        "after_content_sha256": "1ebddfb1981c1180cb10f3b65ab13821f99fe4753803f9506b252e58313db626",
         "restore": [
           {
             "path": [
@@ -15824,13 +16502,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 127 CE11: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 127: CE11: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 127: GPU 데이터 복사 엔진 CE11에서 보고된 오류 보고입니다. XID 127(ROBUST_CHANNEL_CE11_ERROR)는 NVIDIA Xid 카탈로그에서 'CE11: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-128.json",
         "before_content_sha256": "6c4f772f6802d0bf7d63fc47603a3f8ba222d248235ab9bb8542a481bae1aff4",
-        "after_content_sha256": "34fa074ded43c8f3bee733790c381556967f3b55126604371f9be519afbf2595",
+        "after_content_sha256": "35e3bb711b965c0d2beacefbe7bfdb4ed777512765290492bb705fac0d33452b",
         "restore": [
           {
             "path": [
@@ -15878,13 +16595,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 128 CE12: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 128: CE12: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 128: GPU 데이터 복사 엔진 CE12에서 보고된 오류 보고입니다. XID 128(ROBUST_CHANNEL_CE12_ERROR)는 NVIDIA Xid 카탈로그에서 'CE12: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-129.json",
         "before_content_sha256": "06fb6cad4714ddcb6fb4a4d1eadadc6f98cc59eb61cb5ca3e1464006b317e04c",
-        "after_content_sha256": "1eda85acd60c775164c847d5248b22f6665589dc7f01896ecb794db73fed23c3",
+        "after_content_sha256": "3fe66a78b014f49bd86f1be1eb4e82bfbd45715d216f4241d70bdea2a8050b73",
         "restore": [
           {
             "path": [
@@ -15932,6 +16688,45 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 129 CE13: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 129: CE13: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 129: GPU 데이터 복사 엔진 CE13에서 보고된 오류 보고입니다. XID 129(ROBUST_CHANNEL_CE13_ERROR)는 NVIDIA Xid 카탈로그에서 'CE13: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -15984,7 +16779,7 @@
       {
         "file": "xid/RB-XID-130.json",
         "before_content_sha256": "5e9668c0977995a3bc6d240f8b6ef4dff6228b2eea8addaef766953a410a39ba",
-        "after_content_sha256": "cd76b83c4f02e75976d2eba7eae66c7ec7c5fc3bd487f375cb780ed5d90d8abd",
+        "after_content_sha256": "7c21f9c27d92922bb9a54387e6f977043ceada38acfb0be2dd0e0381640f7110",
         "restore": [
           {
             "path": [
@@ -16032,13 +16827,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 130 CE14: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 130: CE14: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 130: GPU 데이터 복사 엔진 CE14에서 보고된 오류 보고입니다. XID 130(ROBUST_CHANNEL_CE14_ERROR)는 NVIDIA Xid 카탈로그에서 'CE14: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-131.json",
         "before_content_sha256": "a6998451201351851a2811a4936d13358968db7fd1b373a6e96ed27b82aad233",
-        "after_content_sha256": "3b3736682106d186ac895601d1decc5b9fa0b5e6d9ddba5d6dba8297775bffb0",
+        "after_content_sha256": "b6a82eb3648ee41f74f6be802fde162212440e22f7e50a2db420866682bf1227",
         "restore": [
           {
             "path": [
@@ -16086,13 +16920,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 131 CE15: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 131: CE15: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 131: GPU 데이터 복사 엔진 CE15에서 보고된 오류 보고입니다. XID 131(ROBUST_CHANNEL_CE15_ERROR)는 NVIDIA Xid 카탈로그에서 'CE15: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-132.json",
         "before_content_sha256": "e508cec736ab68f0f4025be0fdf027c2f6ea658c27d3d0b82f08cd121de97ce7",
-        "after_content_sha256": "5b9e9cf763e7f0ef7345ae2419eb42f8404ef275c4ed46e38bfbb24514fa271f",
+        "after_content_sha256": "a29905c0af10e03d9dec101fd5ddaad44623334d39ebce2ed11257e272dfe9f8",
         "restore": [
           {
             "path": [
@@ -16140,6 +17013,45 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 132 CE16: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 132: CE16: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 132: GPU 데이터 복사 엔진 CE16에서 보고된 오류 보고입니다. XID 132(ROBUST_CHANNEL_CE16_ERROR)는 NVIDIA Xid 카탈로그에서 'CE16: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -16200,7 +17112,7 @@
       {
         "file": "xid/RB-XID-134.json",
         "before_content_sha256": "c399923e8c7d5e9baf896b969372d8067a2d7c3021eeb3637d7d64d59fd2f2f8",
-        "after_content_sha256": "e301e0eef775b329d70e1fda8ae8feed1c22acbfe94249f0d437d6c86134ccd1",
+        "after_content_sha256": "ad0e5230289d1905db2df39ffda37ea2b9dca43bf49ce708105bef15133bce5b",
         "restore": [
           {
             "path": [
@@ -16248,13 +17160,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 134 CE18: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 134: CE18: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 134: GPU 데이터 복사 엔진 CE18에서 보고된 오류 보고입니다. XID 134(ROBUST_CHANNEL_CE18_ERROR)는 NVIDIA Xid 카탈로그에서 'CE18: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-135.json",
         "before_content_sha256": "4df2623f46d8c7c931a7cdc7cb07a84131a49b4a935476f8bb307bee31d3dc8f",
-        "after_content_sha256": "f07ecaf6e5429ccfcd20ffeceed04b36a3b4707632e557a54c0d742e7e79b4c2",
+        "after_content_sha256": "80e0a5cbb60ffc20b64afe7125e8e53020162eb8c2434974e6b475e581983df0",
         "restore": [
           {
             "path": [
@@ -16302,13 +17253,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 135 CE19: Unknown Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 135: CE19: Unknown Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 135: GPU 데이터 복사 엔진 CE19에서 보고된 오류 보고입니다. XID 135(ROBUST_CHANNEL_CE19_ERROR)는 NVIDIA Xid 카탈로그에서 'CE19: Unknown Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-136.json",
         "before_content_sha256": "9245b1805ea3f2b7be90543ae00dcb25b789b5f292d2ae780a2ef38c218d568f",
-        "after_content_sha256": "45e5ec8833ea190b3f0084e1ccdef4cb826b3fe8a768cd0c4040a854c18f6f6d",
+        "after_content_sha256": "8685a42fb0fda6f8427aafce3ef9439e735674a9de65d9ebc700b08c2dd0bd68",
         "restore": [
           {
             "path": [
@@ -16356,6 +17346,45 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 136 Link Training Failed · NVLink 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 136: Link Training Failed."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 136: 링크 초기 연결 협상 실패 보고입니다. XID 136(ALI_TRAINING_FAIL)는 NVIDIA Xid 카탈로그에서 'Link Training Failed'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              4
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -16416,7 +17445,7 @@
       {
         "file": "xid/RB-XID-138.json",
         "before_content_sha256": "558c453940d87a1b986858bd0e703a7bebb2310c4bda7a847f4dabc0c1437a7f",
-        "after_content_sha256": "a4fdad09adfea54090f5e2bd6d5dfa06418237fd836954a43a220565923ca146",
+        "after_content_sha256": "217c6803f49ca2e2c3b257e387124a804257aff1abf0c933a15d03f13071f325",
         "restore": [
           {
             "path": [
@@ -16448,13 +17477,67 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 138 Reserved (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 138: Reserved."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 138(ROBUST_CHANNEL_DLA_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Reserved'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 138 현재 공식 카탈로그의 미사용 코드 · 현재 공식 카탈로그의 미사용 코드 조사"
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 138은 현재 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신된 코드와 원문을 보존하고 GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조한 뒤, 실제 장애가 동반되면 공급사에 원문과 진단 자료를 전달합니다."
           }
         ]
       },
       {
         "file": "xid/RB-XID-139.json",
         "before_content_sha256": "3a21c9c26f9c98a542d76919cd4ac1602ddc0a57502a10ff31f4648786a06e49",
-        "after_content_sha256": "a155cbe6f78f1a36d572b34650ff1e8cce6ef6bd32abd7f5af16345f398ceb99",
+        "after_content_sha256": "995eba489b22337a7d70321820265ac9fd47aa01ae8e11f0a6d7c2e9c8176726",
         "restore": [
           {
             "path": [
@@ -16502,13 +17585,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 139 OFA1 Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 139: OFA1 Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 139: 광학 흐름 가속기(OFA1) 오류 보고입니다. XID 139(ROBUST_CHANNEL_OFA1_ERROR)는 NVIDIA Xid 카탈로그에서 'OFA1 Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-14.json",
         "before_content_sha256": "176e20646e91839f037f1845f17be6d82efc38093e762b11896cd364185bbd01",
-        "after_content_sha256": "63d705ed7bec828785db561ee0383449c182618a422e412dcece928dff0b487f",
+        "after_content_sha256": "1cc8d67f6198026e801d6b784b550ed78936ec87c57c23e84b9753f02d8f2bae",
         "restore": [
           {
             "path": [
@@ -16540,6 +17662,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 14 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 14: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 14(ROBUST_CHANNEL_FAKE_ERROR)는 NVIDIA Xid 카탈로그에서 사용자 공간에서 주입한 가짜(fake) 오류로 정의됩니다. 실제 GPU 장애가 아니라 오류 주입 시험이나 도구가 만든 기록입니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -16600,7 +17761,7 @@
       {
         "file": "xid/RB-XID-141.json",
         "before_content_sha256": "8031a2794525cf9e9ab929fd9df40dbabb1394a10d7f7e1bfd8a9da7db7e8578",
-        "after_content_sha256": "c2e99b380ba2ec146f0ae1bdca080a47a7fda6f734fbc9f56bf698cd7aed157f",
+        "after_content_sha256": "ac24e15efec00750531f9c1423ce2b848d26eee48dfe395fb2483e2662a4c36b",
         "restore": [
           {
             "path": [
@@ -16648,6 +17809,45 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 141 CUDA Fast Path Error · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 141: CUDA Fast Path Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 141: CUDA 빠른 처리 경로 오류 보고입니다. XID 141(ROBUST_CHANNEL_FAST_PATH_ERROR)는 NVIDIA Xid 카탈로그에서 'CUDA Fast Path Error'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -17078,7 +18278,7 @@
       {
         "file": "xid/RB-XID-15.json",
         "before_content_sha256": "4c922527dbd56d17b04f62d7e3e0e9e7556e29be9538308a686ca45a9ec98cfe",
-        "after_content_sha256": "4a88307e34197b012bc394f87de92502f331d4067171bbcf2b5f15388ec16e28",
+        "after_content_sha256": "65de325be6f2769f33e4d1bc8a1b6fdca16d11ea26c71aabf4a3d23d38ab6a97",
         "restore": [
           {
             "path": [
@@ -17110,6 +18310,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 15 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 15: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 15(ROBUST_CHANNEL_SCANLINE_TIMEOUT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -17616,7 +18855,7 @@
       {
         "file": "xid/RB-XID-16.json",
         "before_content_sha256": "8f821641540010e5b65b57400feb322c41c03d7c173f276f83777df957116a5b",
-        "after_content_sha256": "d51bf1a658d89e1e016df7d662b513a550fbce7674b854070d313da1a8c53cf0",
+        "after_content_sha256": "e1ff364003d5018914a8f656657c27f8c56cc8ea0a5c36dc98cd5018ed1b5967",
         "restore": [
           {
             "path": [
@@ -17648,6 +18887,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 16 Display engine hung (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 16: Display engine hung."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 16(ROBUST_CHANNEL_VBLANK_CALLBACK_TIMEOUT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display engine hung'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -18138,7 +19416,7 @@
       {
         "file": "xid/RB-XID-17.json",
         "before_content_sha256": "f9a8f62c1ecead6b24d65f5349303c7926b228dd86852644aa2a73ada95ff138",
-        "after_content_sha256": "92f29003247b0b3af2c4d03e2a00191a8ac65966bf1d35039fb9d025044e3cc0",
+        "after_content_sha256": "5b97628d600eba0e6a87e64dd2635a8a791d91a5673826d8711625dd32ca315f",
         "restore": [
           {
             "path": [
@@ -18170,6 +19448,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 17 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 17: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 17(ROBUST_CHANNEL_PARAMETER_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -18360,7 +19677,7 @@
       {
         "file": "xid/RB-XID-18.json",
         "before_content_sha256": "816952a6ebb04a97e62863be6fee260ae3a7e0604ab3455b749bbcc2fdd0854e",
-        "after_content_sha256": "78726980c4c7c969fb714551a0985e67af85a361fd99fe9be8d1afb173976380",
+        "after_content_sha256": "c5593f79307e0c3a716b2bd2eeff57a96108a7e0e4a2331c4e121caec089e50e",
         "restore": [
           {
             "path": [
@@ -18392,13 +19709,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 18 Bus mastering disabled in PCI Config Space (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 18: Bus mastering disabled in PCI Config Space."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 18(ROBUST_CHANNEL_BUS_MASTER_TIMEOUT_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Bus mastering disabled in PCI Config Space'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-19.json",
         "before_content_sha256": "4af87f1edc534140492c9ec1efc9b0e801cf4c93e2eca990cf43b95b29739aaf",
-        "after_content_sha256": "ba9c0f78fe6f37070de5374c5bda9c606a24c2bce05263928ac5693940256215",
+        "after_content_sha256": "8af6ddb3c40d17b47b46bcea35f668901b2aa73e5899a8e2794f7c0e926ad698",
         "restore": [
           {
             "path": [
@@ -18430,13 +19786,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 19 Display Engine error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 19: Display Engine error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 19(ROBUST_CHANNEL_DISP_MISSED_NOTIFIER)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Engine error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-2.json",
         "before_content_sha256": "fd6c72360f755ad4764454a47bcdbd305a027a77bbe73c070d819be623d24eb6",
-        "after_content_sha256": "bb5b1f47a340295dca5a55c5156944037943c394af446ccd49c69cb9dd99fc83",
+        "after_content_sha256": "d03d63774018b1c6fd829d3c4426a17b0e8428e75231e900815539dee095bad2",
         "restore": [
           {
             "path": [
@@ -18468,13 +19863,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 2 Invalid or corrupted push buffer stream (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 2: Invalid or corrupted push buffer stream."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 2(ROBUST_CHANNEL_FIFO_ERROR_SW_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer stream'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-20.json",
         "before_content_sha256": "5aef5b0007eb8293efe75c3b2338173aea7559a0d33b6525be6afdab57ef7523",
-        "after_content_sha256": "cb585a4beae48c8ff8f102a1a44c3cd01b176124561ea4470d3271834e04eb03",
+        "after_content_sha256": "e51cd67519c98f8c3dfd7e676750707856e526f18e5df6dbc72328c9667863e5",
         "restore": [
           {
             "path": [
@@ -18506,13 +19940,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 20 Invalid or corrupted Mpeg push buffer (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 20: Invalid or corrupted Mpeg push buffer."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 20(ROBUST_CHANNEL_MPEG_ERROR_SW_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted Mpeg push buffer'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-21.json",
         "before_content_sha256": "4f2d4e7937a7d98631d86f466e7f61075a3b12ca7f71b442e8d3bfbb36c90f7f",
-        "after_content_sha256": "0e06a74fb192f7e132aa20145a011247ba1fdafcfbb441aaad9a35503751aace",
+        "after_content_sha256": "d187024c77f73f9a0b0515041cf4e5ab3c0fd9a8860608092538f482804f1b19",
         "restore": [
           {
             "path": [
@@ -18544,13 +20017,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 21 Invalid or corrupted Motion Estimation push buffer (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 21: Invalid or corrupted Motion Estimation push buffer."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 21(ROBUST_CHANNEL_ME_ERROR_SW_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted Motion Estimation push buffer'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-22.json",
         "before_content_sha256": "efa788311bfa9d3b7032811b70ae6d932f20b666258eb653138542a39e7c03e8",
-        "after_content_sha256": "5e1985d3becbebae2c46a6181146327399c68fc476b7cb7e9b8972e07dff110d",
+        "after_content_sha256": "3b613e310f7d2f5a16b1e3d9c3868f3a5bc2bcaf7f425c72b00ae810766c8ff1",
         "restore": [
           {
             "path": [
@@ -18582,13 +20094,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 22 Invalid or corrupted Video Processor push buffer (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 22: Invalid or corrupted Video Processor push buffer."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 22(ROBUST_CHANNEL_VP_ERROR_SW_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted Video Processor push buffer'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-23.json",
         "before_content_sha256": "022f4d261a4f681c698a28e1ab5ba64d6ba6874c49cfee44870a740d3ee384e9",
-        "after_content_sha256": "4febce2662b80bb5870e1909c59a845ea7a2d2593218d2524106a82ba483c0c0",
+        "after_content_sha256": "24047669c75d4591371586e25a103dcc52fa6d76ddcf4b604ba582096040943b",
         "restore": [
           {
             "path": [
@@ -18620,13 +20171,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 23 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 23: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 23(ROBUST_CHANNEL_RC_LOGGING_ENABLED)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-24.json",
         "before_content_sha256": "0eb4fa720430b2a8df9aec2bdfc50ef482cc4350f3b002a206a054bc46383d77",
-        "after_content_sha256": "3cecccb1604c79086d0fce438f632d506e7255a99fafa213ac0023257912200d",
+        "after_content_sha256": "50f798a5848b021b26edd12b5e8927da94d9f279dfc8e43cb4f3e8a513dd4946",
         "restore": [
           {
             "path": [
@@ -18658,6 +20248,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 24 GPU semaphore timeout (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 24: GPU semaphore timeout."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 24(ROBUST_CHANNEL_GR_SEMAPHORE_TIMEOUT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'GPU semaphore timeout'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -18718,7 +20347,7 @@
       {
         "file": "xid/RB-XID-26.json",
         "before_content_sha256": "d52440fd890752877b1a628e8274c200062de2f7a8bb854cc94c32f2123d8080",
-        "after_content_sha256": "81b19e2a372761db374762a84cf7cd1af2e77a623436780f3a29d137c7954cef",
+        "after_content_sha256": "c84e7a421596a66428df25fbe7a9aecee71a0d34048a0393eaccb57011dd9daa",
         "restore": [
           {
             "path": [
@@ -18750,13 +20379,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 26 Framebuffer timeout (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 26: Framebuffer timeout."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 26(ROBUST_CHANNEL_FIFO_ERROR_FBISTATE_TIMEOUT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Framebuffer timeout'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-27.json",
         "before_content_sha256": "c6e4b5cc9c9cbcb9ec3e7a9407bc36963cd0c7ab37fce4449a02727d9d90c6ae",
-        "after_content_sha256": "91feb47be18664e22e2d214dc8272644a6373e9f6343c493fae5a3ebf8d92975",
+        "after_content_sha256": "abf721922d503f1fb8875d94f26b9ebea21dc6b324cc1b7a9d30b70493c6c02c",
         "restore": [
           {
             "path": [
@@ -18788,13 +20456,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 27 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 27: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 27(ROBUST_CHANNEL_VP_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-28.json",
         "before_content_sha256": "1b3668b54ebc6aabb9944a3793e0a17afa0733530a3eba80956a84f6f0b2a3a3",
-        "after_content_sha256": "3776afc038634405b9bbbb45e37c4a647957358232e4a77accbdc45903d5dfb9",
+        "after_content_sha256": "2a70d1fa2424088d834316ae733032ad15458e9d49b6970a0b3894ed3cc826ca",
         "restore": [
           {
             "path": [
@@ -18826,13 +20533,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 28 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 28: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 28(ROBUST_CHANNEL_VP2_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-29.json",
         "before_content_sha256": "b7b49e6985399f476779927b2ff49cfe8f9e7fd554afe22d0d6fcfe45403506e",
-        "after_content_sha256": "61e48fad3f812f46c34e0bc7b3f352ce63dab7e9670e087b66b3266041a0b22f",
+        "after_content_sha256": "65c7b96ada39c41e7a6dc6b2f28222f84f02c362010694559306c5bd7ea9de6b",
         "restore": [
           {
             "path": [
@@ -18864,13 +20610,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 29 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 29: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 29(ROBUST_CHANNEL_BSP_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-3.json",
         "before_content_sha256": "45e70def91f5adaa4badfc201b62fad37763e653f7ac6f26779002924aa93e65",
-        "after_content_sha256": "63e649080ac6d6b25edc8ca29231b043f7c54b59cb04e3963b74449b2c4dbd31",
+        "after_content_sha256": "cdfd13282d14832ae5f12ab6eabe7d142ed92dbddcfd214df52110aff2726de8",
         "restore": [
           {
             "path": [
@@ -18902,13 +20687,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 3 Invalid or corrupted push buffer stream (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 3: Invalid or corrupted push buffer stream."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 3(ROBUST_CHANNEL_FIFO_ERROR_UNK_METHOD)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer stream'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-30.json",
         "before_content_sha256": "44e9a951c753604a76639211c3704eaf95e64b6350ea895b6ce44cbc2f7a2e13",
-        "after_content_sha256": "0f44c8d8e0d8f8c779bcd28e67d5bac3860be65dd0511bc60bb689cc2c00f773",
+        "after_content_sha256": "8ffeb9d551f44dbac1033af0cf97ee2e5479ad23871a3a20da85e4453a5141e1",
         "restore": [
           {
             "path": [
@@ -18940,6 +20764,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 30 GPU semaphore access error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 30: GPU semaphore access error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 30(ROBUST_CHANNEL_BAD_ADDR_ACCESS)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'GPU semaphore access error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -19046,7 +20909,7 @@
       {
         "file": "xid/RB-XID-33.json",
         "before_content_sha256": "5bd8e1f7ddf37509c50a5b01b9fdbb927265a4f5ac890559acdbe08c6a44c08e",
-        "after_content_sha256": "7bfe5a07e827b6c0c6b9443a15fda45d2ba5f72811802b5de6eb07d236d41980",
+        "after_content_sha256": "15eda714b6954894012f29e7d01d47dc2459be5a9d49190482222a4e84464371",
         "restore": [
           {
             "path": [
@@ -19078,13 +20941,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 33 Internal micro-controller error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 33: Internal micro-controller error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 33(ROBUST_CHANNEL_SEC_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Internal micro-controller error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-34.json",
         "before_content_sha256": "35edac373550c01cfbd651dd94a9448a334b163d845b285fe775f977b41ffc7a",
-        "after_content_sha256": "0925a4f733bb998f0ddc6f361651f8be28bb2aef666107ca8dec320332c444ab",
+        "after_content_sha256": "b50db7aa4aadbb2f6c3f2f9c2ab7ba4ba985e65c9ad83ba8853a0f8e6f55a5c6",
         "restore": [
           {
             "path": [
@@ -19116,13 +21018,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 34 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 34: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 34(ROBUST_CHANNEL_MSVLD_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-35.json",
         "before_content_sha256": "6a39ef641d7db0f813430a046501b7990dfb94b6fd9424b1d74620556108c743",
-        "after_content_sha256": "eec1456cd2b3b269d3fac134c692c8de95ab94d850fb3e414ec0df7b787127c9",
+        "after_content_sha256": "f997200e396aebe489686d9717d4bf30d87026a255d3fcf378cda5f8e5c97adf",
         "restore": [
           {
             "path": [
@@ -19154,13 +21095,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 35 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 35: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 35(ROBUST_CHANNEL_MSPDEC_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-36.json",
         "before_content_sha256": "616f9f72889a85c9796fbe5d0fe10ff9217773f030b6123eac60a4220e347121",
-        "after_content_sha256": "3d508962222386425e3578c27d3e3a5e1259950ebc0e5ccdd2d47ca94bc08060",
+        "after_content_sha256": "50ce6ddb8fb9083683888499e8d11ffa089e338e231141a6718febf3b4e63b16",
         "restore": [
           {
             "path": [
@@ -19192,6 +21172,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 36 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 36: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 36(ROBUST_CHANNEL_MSPPP_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -19306,7 +21325,7 @@
       {
         "file": "xid/RB-XID-39.json",
         "before_content_sha256": "3a4d4ec12e48cd4112a52db2452d25760fe5e684634cc47d9971daa8d3370d99",
-        "after_content_sha256": "8cea7ee60745a900af71db3a1da52f87efc2988484606077287571e07da148b0",
+        "after_content_sha256": "71b972c5efb52f9bfba22119c2eded42edfd08890dea926a3bc64b450844f277",
         "restore": [
           {
             "path": [
@@ -19354,13 +21373,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 39 Copy Engine Exception · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 39: Copy Engine Exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 39: GPU 내부 데이터 복사 엔진의 예외 보고입니다. XID 39(ROBUST_CHANNEL_CE0_ERROR)는 NVIDIA Xid 카탈로그에서 'Copy Engine Exception'로 정의됩니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-4.json",
         "before_content_sha256": "a2c47989e26e0f2cc2eedc0cbfc402c90c269eb91db61c2e1a8c963b46141364",
-        "after_content_sha256": "643019fa5b29a3ed2d6cafdfa0f29001f6813bd7498152679d48e382d9a37d00",
+        "after_content_sha256": "695d437720c0c675844eac1b3645beb300fcc799da5b4b2753697e988893811d",
         "restore": [
           {
             "path": [
@@ -19392,13 +21450,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 4 Invalid or corrupted push buffer stream (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 4: Invalid or corrupted push buffer stream."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 4(ROBUST_CHANNEL_FIFO_ERROR_CHANNEL_BUSY)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer stream'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-40.json",
         "before_content_sha256": "10d9f9efaafdbbd89801207ed8004c052ae788c27959981c2b018b344fee52e6",
-        "after_content_sha256": "71b8568354b5df9e346e6f2883b7a7511e63ff2440eb1a052af403026d6a8041",
+        "after_content_sha256": "504081a8260cb3717fed29359adb67963cf6d495ad427e6be704b0fbfbad0478",
         "restore": [
           {
             "path": [
@@ -19446,13 +21543,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 40 Copy Engine Exception · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 40: Copy Engine Exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 40: GPU 내부 데이터 복사 엔진의 예외 보고입니다. XID 40(ROBUST_CHANNEL_CE1_ERROR)는 NVIDIA Xid 카탈로그에서 'Copy Engine Exception'로 정의됩니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-41.json",
         "before_content_sha256": "ed78dbb9ecc930d9d1995713a206eb0ced8bb3a859e6b00d7cf4bafba233f458",
-        "after_content_sha256": "30fd38291f04fff682c4ede1f08f2b87645c1f2fc6c5f0433ff8808c70544022",
+        "after_content_sha256": "a4ca33bf7b8bd45e6cb79efc2d297de0e8e82266d756d6ebf903df0aa928590d",
         "restore": [
           {
             "path": [
@@ -19500,13 +21636,52 @@
               4
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 41 Copy Engine Exception · 애플리케이션·엔진 오류 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 41: Copy Engine Exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 41: GPU 내부 데이터 복사 엔진의 예외 보고입니다. XID 41(ROBUST_CHANNEL_CE2_ERROR)는 NVIDIA Xid 카탈로그에서 'Copy Engine Exception'로 정의됩니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-42.json",
         "before_content_sha256": "9c5cc3411cf964a92daa03accd6589d997a998b6688e793f63ccf6b3d394b32f",
-        "after_content_sha256": "ecff490850b6aae76284bbce2a8a5c87b63c302358cf75a3896b9779f72d2a8d",
+        "after_content_sha256": "e73022ee4086a60747dfd1cae13a31a4c778e3802e2349cd9487ac6963f9cb55",
         "restore": [
           {
             "path": [
@@ -19538,6 +21713,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 42 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 42: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 42(ROBUST_CHANNEL_VIC_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -19736,7 +21950,7 @@
       {
         "file": "xid/RB-XID-47.json",
         "before_content_sha256": "67d98474e5b8d3e484a98980d7701a2443c39b63435b3cf161e4ac17d2380485",
-        "after_content_sha256": "b13db960f1fa359796c63e5e2bc39a916ddc70ccda34fc4661984ad2436b7f52",
+        "after_content_sha256": "fc7b198bf79b33e91d0ab9a0ee75118130d4d0813adc47aa3e41fd8778400d38",
         "restore": [
           {
             "path": [
@@ -19768,6 +21982,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 47 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 47: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 47(ROBUST_CHANNEL_NVENC0_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -19828,7 +22081,7 @@
       {
         "file": "xid/RB-XID-49.json",
         "before_content_sha256": "cba22b4a0849d2e57d3a1cb093e9ecbe5d4fe20c4c909b15d985fee763175bb8",
-        "after_content_sha256": "3ad548c1f9be712c1f45a690fc3be49cb99cee8f8cc118c6b1120d3b2afa3f12",
+        "after_content_sha256": "1dacd73cdbda40154450a7dc09d06fd64ac091ec8c7d7ad1eb7c9fc5b6a8ba9b",
         "restore": [
           {
             "path": [
@@ -19860,13 +22113,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 49 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 49: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 49(SILENT_RUNNING_CONSTANT_LEVEL_SET_BY_REGISTRY)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-5.json",
         "before_content_sha256": "8d8b703d64e3566a8fa50d09599b6e538cf73af5fd59d2312258231f993e0211",
-        "after_content_sha256": "ac8a2e61f2e3abefa8f1c08809adcefbc86fad4b408c2db49685e0f6d1249dee",
+        "after_content_sha256": "e64585e51076cdf4a1398dd8935f3782adbf323661895bf52726d873185143ec",
         "restore": [
           {
             "path": [
@@ -19898,13 +22190,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 5 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 5: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 5(ROBUST_CHANNEL_FIFO_ERROR_RUNOUT_OVERFLOW)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-50.json",
         "before_content_sha256": "fba3be8a44ee19da0420f37855aa64b580a5aaef86d9ff3e837e597f3d703c69",
-        "after_content_sha256": "c40d82b4a2959126aa942156fc93e3d15ef3986d57a2d664c685bc3359579cda",
+        "after_content_sha256": "289663866c50e17007e722ce57738a8c31e9ef8828d72d1cf7f812d4ae7dc129",
         "restore": [
           {
             "path": [
@@ -19936,13 +22267,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 50 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 50: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 50(SILENT_RUNNING_LEVEL_TRANSITION_DUE_TO_RC_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-51.json",
         "before_content_sha256": "c85fe882e76e84167a17a5e594e837f2436b343bef0695509958ae369cf04ddf",
-        "after_content_sha256": "9035f778ca3596bf05f21daebc92bf07fd8bf834a0a032ca89f89ee1d40dbadf",
+        "after_content_sha256": "4541899c4dbad2c8e05201208d0a882531c4adff04ea2623de4f6b9591a22b0d",
         "restore": [
           {
             "path": [
@@ -19974,13 +22344,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 51 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 51: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 51(SILENT_RUNNING_STRESS_TEST_FAILURE)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-52.json",
         "before_content_sha256": "1b63a8cf49efb37387b42a82854ca698b14fe6bbfb8e1b2c41124345b0c1f961",
-        "after_content_sha256": "8b1c6d1a9d8da62ca5c84a3e355dd71c31ee29b2f886b474f9a78c70ef0df9d6",
+        "after_content_sha256": "7fd446884d1f05bd04e6a29441963bcd60bad014255731edd5b1ed66b23b88b2",
         "restore": [
           {
             "path": [
@@ -20012,13 +22421,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 52 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 52: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 52(SILENT_RUNNING_LEVEL_TRANS_DUE_TO_TEMP_RISE)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-53.json",
         "before_content_sha256": "d0c919ee97eae0be85501964f9e21bd4de632766d43196dacc9860811b0a6094",
-        "after_content_sha256": "1654338b7ba6e1232a52b063cc1b90eadc5be932d273106ebd77a873ad37fad3",
+        "after_content_sha256": "98021ef8e94ca39b33a813f7f8f1dbccf9db3499a59e5d704c613989e581b5f0",
         "restore": [
           {
             "path": [
@@ -20050,6 +22498,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 53 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 53: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 53(SILENT_RUNNING_TEMP_REDUCED_CLOCKING)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -20102,7 +22589,7 @@
       {
         "file": "xid/RB-XID-55.json",
         "before_content_sha256": "587fcccb02f2bf5f3cb87083029e9c56577ef5aa34ce72e19aa8740af1ba6a56",
-        "after_content_sha256": "b15b9e5dd72437556fae244f0bb6c15d105547ae17e4111b71d788ac530941ff",
+        "after_content_sha256": "b8eb7d105bb363dc266d7e968cdad1d7a0dc84c7b549022ec356c15f8d690c2f",
         "restore": [
           {
             "path": [
@@ -20134,13 +22621,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 55 Unused (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 55: Unused."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 55(SILENT_RUNNING_TEMPERATURE_READ_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unused'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-56.json",
         "before_content_sha256": "bdca702cd3d1b4ed5bd31a1b174a2e1e226292221a384d3abd904bd123abd87f",
-        "after_content_sha256": "fb4d188a77e4a4189f21803a60e0476fce7e911031f8a32b05f0a081fb76f7d8",
+        "after_content_sha256": "2446e3b1645185fee24a2b005740a554a1f575c1728212475cf42762a1943877",
         "restore": [
           {
             "path": [
@@ -20172,13 +22698,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 56 Display Engine error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 56: Display Engine error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 56(DISPLAY_CHANNEL_EXCEPTION)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Display Engine error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-57.json",
         "before_content_sha256": "866e41619ac612b3fc1f32f8dda4cc46803014417dbc5249e644ba9e16284e92",
-        "after_content_sha256": "c94793c0d073c1c672bd50dfb47d4d0b1c6163d6b848cbd9e5e76bb9186cdc39",
+        "after_content_sha256": "1dad84dd807ff1d5cd55123835823561d9a5557b86ac11215b25024fb0e4ad1e",
         "restore": [
           {
             "path": [
@@ -20210,13 +22775,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 57 Error programming video memory interface (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 57: Error programming video memory interface."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 57(FB_LINK_TRAINING_FAILURE_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Error programming video memory interface'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-58.json",
         "before_content_sha256": "a64e851b303de0838db12507cace07a2c2b59aa0f8228415cd2e0d40880b9590",
-        "after_content_sha256": "ce01aa5459c74aba59e0e79aa50ac4566f2f401f2d183c9c0186faabb9197e22",
+        "after_content_sha256": "6fb40eff2e18cd814a6ab31dcfc38fc40cb40b64af6ff27d3db78d53659e0bbf",
         "restore": [
           {
             "path": [
@@ -20248,13 +22852,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 58 Unstable video memory interface detected (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 58: Unstable video memory interface detected."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 58(FB_MEMORY_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Unstable video memory interface detected'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-59.json",
         "before_content_sha256": "8394b5f9984475b0b57b8477037950bdd4dd79da4685fbdd3fabbe7e10cf5eef",
-        "after_content_sha256": "2bc1941577407a11ddb1d43fc4826ad6b1ada48b563e582fd6fd8c5b193e0c48",
+        "after_content_sha256": "c3a199992e7bdce78fe394ea0ff964fc7c20365aa68d26d8aafb69697fa26a22",
         "restore": [
           {
             "path": [
@@ -20286,13 +22929,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 59 Internal micro-controller error (older drivers) (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 59: Internal micro-controller error (older drivers)."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 59(PMU_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Internal micro-controller error (older drivers)'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-6.json",
         "before_content_sha256": "efcbbbe45143c1fa7edf674762432245a3debaddfad7182360ee9db5b91f75e7",
-        "after_content_sha256": "84f6ef2d72fefcf2996b979fe27e67a266804a2b324359ea7c7756954cd7e309",
+        "after_content_sha256": "84ec8200c624fdfb4b46a126d633f8e1a2f6a868263a1bdb42b3156bad92e731",
         "restore": [
           {
             "path": [
@@ -20324,6 +23006,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 6 Invalid or corrupted push buffer stream (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 6: Invalid or corrupted push buffer stream."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 6(ROBUST_CHANNEL_FIFO_ERROR_PARSE_ERR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer stream'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -20384,7 +23105,7 @@
       {
         "file": "xid/RB-XID-61.json",
         "before_content_sha256": "9f8271a94cba355419afa89d954f2ee75d6a4c61041b1daa33540456424735aa",
-        "after_content_sha256": "0be7aff54a09c9f767e21736cd9a90c40b5082decc85ff2a4d41b6fddbad0fab",
+        "after_content_sha256": "6c114541f04f670ed7c53573c264cd8b346df3b9b6a349d412ab128e0ada84d8",
         "restore": [
           {
             "path": [
@@ -20416,6 +23137,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 61 Internal micro-controller breakpoint/warning (newer drivers) (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 61: Internal micro-controller breakpoint/warning (newer drivers)."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 61(PMU_BREAKPOINT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Internal micro-controller breakpoint/warning (newer drivers)'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              4
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -20560,7 +23320,7 @@
       {
         "file": "xid/RB-XID-65.json",
         "before_content_sha256": "45261193dfa4030aa850e884cdec8fef3354633114e8f518b513e1426605ee9b",
-        "after_content_sha256": "049d8e07169fe0393bdaef1f095372773de8b28ac564e741b62d199612045a75",
+        "after_content_sha256": "9747b294c75116e8f153c1df5b1991b209c0ce696db87b722c8e9fb5779ea163",
         "restore": [
           {
             "path": [
@@ -20592,6 +23352,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 65 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 65: Video processor exception."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 65(ROBUST_CHANNEL_NVENC1_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Video processor exception'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -20814,7 +23613,7 @@
       {
         "file": "xid/RB-XID-7.json",
         "before_content_sha256": "feb4a14ce2978e21c410be47226250ccaa9f06a1be0ccbbf13a6844ec032a1da",
-        "after_content_sha256": "cf6b5b2e4d0ce21f855802bb04e364ad4f1ed9498a22486cd9a5977ce7d026a7",
+        "after_content_sha256": "946c6549fb88e63d0cb8b7c168ce545c2f54230d9540a830a4185f69a2d61910",
         "restore": [
           {
             "path": [
@@ -20846,6 +23645,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 7 Invalid or corrupted push buffer address (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 7: Invalid or corrupted push buffer address."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 7(ROBUST_CHANNEL_FIFO_ERROR_PTE_ERR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Invalid or corrupted push buffer address'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -21014,7 +23852,7 @@
       {
         "file": "xid/RB-XID-73.json",
         "before_content_sha256": "9df9df34431faed6966a07101589fc6471327a82113140e7d9f92c687cb1a180",
-        "after_content_sha256": "80be60ee73dc85110d844827b498c224643f7e5d0d938ba4c6b5f3ed1d662158",
+        "after_content_sha256": "df1681552ee991a20647d19b5753ab1f732f646acf658a347dd11ba0da10e7a7",
         "restore": [
           {
             "path": [
@@ -21046,6 +23884,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 73 NVENC2 Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 73: NVENC2 Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 73(ROBUST_CHANNEL_NVENC2_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'NVENC2 Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -21444,7 +24321,7 @@
       {
         "file": "xid/RB-XID-81.json",
         "before_content_sha256": "e745a95445437492da2d375db8ee5b386d1f94c6b839f2d4f1ebe67cdd795c7d",
-        "after_content_sha256": "9119544523b5a3ece072e04e92e5f13699dcf91947e6ab25ec9fcd3e006204f9",
+        "after_content_sha256": "9dc8410a6587ba00611e1ed2d953b75dd68c0977ec10159b7f62bd7e9479c917",
         "restore": [
           {
             "path": [
@@ -21476,6 +24353,45 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 81 VGA Subsystem Error (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 81: VGA Subsystem Error."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 81(ROBUST_CHANNEL_VGA_SUBSYSTEM_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'VGA Subsystem Error'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
@@ -21752,7 +24668,7 @@
       {
         "file": "xid/RB-XID-87.json",
         "before_content_sha256": "cb60425b287a84c6e00f79d9325c9ad5e5143cdfff6c523981c757d5e95bcc99",
-        "after_content_sha256": "3e6295e235e293b8ef72f9722bfa28fb1a2d6b2e56a9e57ce741ce3c39dad908",
+        "after_content_sha256": "bedb2b7103919c6f767a2777bb6963d33937c70ccf8a378414940ea707774c08",
         "restore": [
           {
             "path": [
@@ -21784,6 +24700,60 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 87 Reserved (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 87: Reserved."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 87(NVTELEMETRY_DRIVER_REPORT)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Reserved'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 87 현재 공식 카탈로그의 미사용 코드 · 현재 공식 카탈로그의 미사용 코드 조사"
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 87은 현재 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신된 코드와 원문을 보존하고 GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조한 뒤, 실제 장애가 동반되면 공급사에 원문과 진단 자료를 전달합니다."
           }
         ]
       },
@@ -21898,7 +24868,7 @@
       {
         "file": "xid/RB-XID-9.json",
         "before_content_sha256": "d89acb8b03192d0552ce96de6a0cb38f215d539be3290a310f017a2e8e3bf45a",
-        "after_content_sha256": "7225f7e1d50f070eb73dfb3e3a2c8613f05f045743515443f51616561ac54b07",
+        "after_content_sha256": "a2ad31e6b7c26dc74f273effe50c3dae06eaba28aea81d0cd10b64078cfc3fc1",
         "restore": [
           {
             "path": [
@@ -21930,13 +24900,52 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 9 Driver error programming GPU (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 9: Driver error programming GPU."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 9(ROBUST_CHANNEL_GR_ERROR_INSTANCE)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Driver error programming GPU'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
           }
         ]
       },
       {
         "file": "xid/RB-XID-90.json",
         "before_content_sha256": "af0cf6d7552f4c0818f2c521df71f1e56279ff217dcdc86f1a5f3c81e7964edb",
-        "after_content_sha256": "207e4e5319cd405613bf333e34b6e4f639b156b32778b691fb48a5b513a15649",
+        "after_content_sha256": "e3e2ab8018c8f3b932b532f4f2e098cd979d3734930cf19a5ad14f8bb5f81c78",
         "restore": [
           {
             "path": [
@@ -21968,13 +24977,67 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 90 Reserved (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 90: Reserved."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 90(LTC_ERROR)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Reserved'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 90 현재 공식 카탈로그의 미사용 코드 · 현재 공식 카탈로그의 미사용 코드 조사"
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 90은 현재 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신된 코드와 원문을 보존하고 GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조한 뒤, 실제 장애가 동반되면 공급사에 원문과 진단 자료를 전달합니다."
           }
         ]
       },
       {
         "file": "xid/RB-XID-91.json",
         "before_content_sha256": "6a6a80687cae4d0254ad98aa491677db73571b7fcbdfa8f5912acfa2f685145f",
-        "after_content_sha256": "5dcacde6bd81b53b29b478adaa8d6e48d7f388140a6143c34966f92794d8f8ac",
+        "after_content_sha256": "5f50770052606b50df0f7017ffd5edcb03ea4e677b2f1b45111276ba70dbec33",
         "restore": [
           {
             "path": [
@@ -22006,6 +25069,60 @@
               5
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 91 Reserved (미사용 코드) · 미사용·구세대 코드 조사"
+          },
+          {
+            "path": [
+              "description"
+            ],
+            "existed": true,
+            "value": "XID 91: Reserved."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 91(RESERVED_XID)는 현재 NVIDIA Xid 카탈로그에서 미사용(Unused)으로 표시된 코드입니다. Fleet·GPUd 고정 정의는 'Reserved'입니다. 최신 드라이버에서는 보고되지 않아야 하므로 실제로 수신됐다면 드라이버 버전과 원문을 먼저 확인합니다."
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "references",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "sources",
+              2,
+              "checked_at"
+            ],
+            "existed": true,
+            "value": "2026-09-28"
+          },
+          {
+            "path": [
+              "title"
+            ],
+            "existed": true,
+            "value": "XID 91 현재 공식 카탈로그의 미사용 코드 · 현재 공식 카탈로그의 미사용 코드 조사"
+          },
+          {
+            "path": [
+              "operator_guidance",
+              "meaning"
+            ],
+            "existed": true,
+            "value": "XID 91은 현재 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신된 코드와 원문을 보존하고 GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조한 뒤, 실제 장애가 동반되면 공급사에 원문과 진단 자료를 전달합니다."
           }
         ]
       },
