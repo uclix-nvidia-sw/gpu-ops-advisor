@@ -64,7 +64,7 @@ it('keeps historical receipts as incidents without live receipt badges', () => {
   expect(stale).not.toContain('발생 알림 수신');
   expect(stale).not.toContain('확인 필요');
   expect(stale).not.toContain('해제 신호 없음');
-  expect(stale).toContain('<span class="oh-rca none">—</span>');
+  expect(stale).toContain('<span class="oh-rca none">상태 미확인</span>');
   const disk = render([
     {
       ...base,

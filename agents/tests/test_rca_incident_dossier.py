@@ -61,7 +61,7 @@ async def test_workflow_collects_metrics_despite_matching_alert_and_no_model_bud
     assert "decision_policy" not in case["attempt"]["context"]["runbooks"][0]["content"]
     calls = result["query_calls"]
     logs = [c for c in calls if c["tool"] == "query_loki_logs"]
-    assert len(logs) == 1
+    assert len(logs) == (2 if kind == "sxid" else 1)
     assert any(c["matched"] for c in logs), logs
     expected = case["attempt"]["context"]["runbooks"][0]["content"]["required_queries"]
     evidence = result["output"]["evidence"]
@@ -512,8 +512,8 @@ def test_gpu_series_split_by_workload_labels_become_one_metric_with_workloads():
     other = operator_view(data, [logs, fleet], {"targets": [target]}, health)
     assert other["gpus"] == [{"gpu_uuid": target["gpu"], "model": "H100"}]
     assert other["workloads"] == [] and other["workload_label_source"] is None
-    assert view["onset"]["last_healthy_at"] == "2026-01-01T00:00:00Z"
-    assert view["onset"]["first_unhealthy_at"] == "2026-01-01T00:01:00Z"
+    # Component-wide state reports do not bracket this PCI device's onset.
+    assert view["onset"] is None
 
 
 async def test_transient_gateway_error_is_retried_once_and_recorded():
@@ -610,7 +610,16 @@ def test_error_type_keeps_class_and_limit_hint_only():
     assert error_type(Response({"error": "plain"})) is None
 
 
-async def test_numeric_findings_get_one_repair_request_in_combined_author():
+@pytest.mark.parametrize(
+    "statement,repair_key",
+    [
+        ("같은 GPU에서 사건이 34건 반복됐습니다.", "numeric_repair"),
+        ("장치에서 unexpectedfailure가 보고됐습니다.", "validation_repair"),
+    ],
+)
+async def test_invalid_findings_get_one_repair_request_in_combined_author(
+    statement, repair_key
+):
     from rca_replay_cases import reply
 
     def author(statement):
@@ -639,7 +648,7 @@ async def test_numeric_findings_get_one_repair_request_in_combined_author():
     case["empty_unscripted_queries"] = True
     case["attempt"]["profile"].setdefault("rca", {})["generation_mode"] = "combined"
     case["responses"]["synthesis"] = [
-        author("같은 GPU에서 사건이 34건 반복됐습니다."),
+        author(statement),
         author("노드에서 오류가 보고되었습니다."),
     ]
     case["responses"].pop("analysis_review", None)
@@ -649,7 +658,7 @@ async def test_numeric_findings_get_one_repair_request_in_combined_author():
         for e in result["output"]["evidence"]
         if e["query_id"] == "rca_synthesis"
     )
-    assert record["diagnostics"]["numeric_repair"] == "applied"
+    assert record["diagnostics"][repair_key] == "applied"
     assert record["diagnostics"]["adoption"] == "validated_response"
     assert [c["stage"] for c in result["model_calls"]][:2] == ["synthesis"] * 2
 

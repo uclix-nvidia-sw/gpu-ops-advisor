@@ -30,6 +30,15 @@ NUMERIC_REPAIR = (
     "report counts, times and host-history totals only through the incident_brief "
     "value tokens. Keep the same evidence references."
 )
+VALIDATION_REPAIR = (
+    "Rewrite the response using the same supplied evidence only. Use Korean prose; "
+    "keep technical names only when they occur in the supplied material. "
+    "Interpretation evidence_refs must be exact members of input_evidence_refs; "
+    "hypothesis references must be exact members of observation_refs. Never invent "
+    "or translate IDs and never cite query IDs as evidence. Use supplied value tokens "
+    "for quantities. Do not turn concurrent errors or repeated reports into causation. "
+    "If evidence cannot support a hypothesis, return an empty hypotheses list."
+)
 
 COMBINED = (
     SYNTHESIS_CONTEXT
@@ -406,9 +415,23 @@ async def generate(llm, payload, diagnostics):
             interpretation, candidates, limitations, errors = validate_author(
                 response, view, semantic_criteria(payload), details, dropped
             )
-            if errors and any(d.get("rule") == "numeric" for d in dropped):
+            if errors and any(
+                d.get("rule") in {"numeric", "non_korean", "unknown_reference"}
+                for d in dropped + details
+            ):
                 # One repair request with fixed feedback; the same view is revalidated.
-                repair = {**view, "repair_feedback": NUMERIC_REPAIR}
+                numeric = any(d.get("rule") == "numeric" for d in dropped)
+                repair_key = "numeric_repair" if numeric else "validation_repair"
+                diagnostics["repair_validation_failures"] = {
+                    "attempt": 1,
+                    "reasons": errors,
+                    "details": details,
+                    "dropped_items": deepcopy(dropped),
+                }
+                repair = {
+                    **view,
+                    "repair_feedback": NUMERIC_REPAIR if numeric else VALIDATION_REPAIR,
+                }
                 llm.request_attempt_limit = 1
                 try:
                     retry = await complete_once(
@@ -416,7 +439,7 @@ async def generate(llm, payload, diagnostics):
                     )
                 finally:
                     llm.request_attempt_limit = request_limit
-                diagnostics["numeric_repair"] = "failed"
+                diagnostics[repair_key] = "failed"
                 if retry is not None:
                     retry_details, retry_dropped = [], []
                     result = validate_author(
@@ -429,12 +452,21 @@ async def generate(llm, payload, diagnostics):
                     if not result[3]:
                         interpretation, candidates, limitations, errors = result
                         details, dropped[:] = retry_details, retry_dropped
-                        diagnostics["numeric_repair"] = "applied"
+                        diagnostics[repair_key] = "applied"
+                        adopted_attempt = 2
             if errors:
                 diagnostics["error_code"] = "invalid_author_response"
                 diagnostics["validation_failures"] = [
                     {"attempt": 1, "reasons": errors, "details": details}
                 ]
+    adopted_attempt = (
+        2
+        if any(
+            diagnostics.get(key) == "applied"
+            for key in ("numeric_repair", "validation_repair")
+        )
+        else 1
+    )
     valid = interpretation is not None and not errors
     trace.update(
         interpretation="validated_response"
@@ -453,7 +485,7 @@ async def generate(llm, payload, diagnostics):
         input_view_hash=content_hash(view),
         input_evidence_refs=view["input_evidence_refs"],
         context_selection=view["context_selection"],
-        response_attempt=1 if interpretation is not None else None,
+        response_attempt=adopted_attempt if interpretation is not None else None,
         interpretation_status="complete" if interpretation is not None else "failed",
         adoption="validated_response"
         if valid

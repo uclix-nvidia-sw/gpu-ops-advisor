@@ -114,10 +114,16 @@
         "revision": "9fae2867e6e5264fa0fca22a07dc898d591baa21 (DCGM v4.6.x line)",
         "section": "DCGM_FR_FALLEN_OFF_BUS message and next step",
         "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "limitations": [
-      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "판단에 사용할 근거는 필수 오류 원문, 같은 대상의 장치 신원과 버전, 같은 시각의 동반 사건이다. 이 자료를 대조한 범위 안에서 원인과 대응 조건을 제시한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "오류 보고 식별 결과와 조건부 대응을 제시한다. 장치 신원·현재 상태·원인·회복 판단은 각각의 관측 근거로 구분한다."
     ],
@@ -280,6 +286,13 @@
           "source_indices": [
             1,
             2
+          ]
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 PCIe 재전송 누적 횟수, GPU 사용률, GPU 전력. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
+          "source_indices": [
+            7
           ]
         }
       ]

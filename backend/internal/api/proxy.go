@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -173,7 +174,7 @@ func (s *Server) status(w http.ResponseWriter, q *Request) error {
 func (s *Server) incidents(w http.ResponseWriter, q *Request, parts []string) error {
 	if q.R.Method == "GET" {
 		if len(parts) == 1 {
-			if e := onlyQuery(q, "scope", "status", "from", "to", "limit", "cursor", "sort"); e != nil {
+			if e := onlyQuery(q, "scope", "status", "from", "to", "limit", "cursor", "sort", "q"); e != nil {
 				return e
 			}
 			sc, e := s.listScope(q)
@@ -181,7 +182,12 @@ func (s *Server) incidents(w http.ResponseWriter, q *Request, parts []string) er
 				return e
 			}
 			v := q.R.URL.Query()
-			return s.page(w, q, "incidents", "dsx_scope_contains($1,scope) AND ($2='' OR COALESCE(state,status)=$2 OR ($2='unclosed' AND COALESCE(state,status) IN ('open','acknowledged'))) AND ($3='' OR COALESCE(occurred_at,first_seen)>=NULLIF($3,'')::timestamptz) AND ($4='' OR COALESCE(occurred_at,first_seen)<NULLIF($4,'')::timestamptz)", []any{sc, v.Get("status"), v.Get("from"), v.Get("to")}, nil, func(items []Object) error { return s.incidentSummaries(q, items) })
+			if len([]rune(v.Get("q"))) > 200 {
+				return Fail(422, "validation_error", "검색어는 200자 이하여야 합니다.")
+			}
+			search := strings.ToLower(strings.Join(strings.Fields(v.Get("q")), ""))
+			search = strings.NewReplacer(":", "", ".", "", "_", "", "-", "").Replace(search)
+			return s.page(w, q, "incidents", "dsx_scope_contains($1,scope) AND ($2='' OR COALESCE(state,status)=$2 OR ($2='unclosed' AND COALESCE(state,status) IN ('open','acknowledged'))) AND ($3='' OR COALESCE(occurred_at,first_seen)>=NULLIF($3,'')::timestamptz) AND ($4='' OR COALESCE(occurred_at,first_seen)<NULLIF($4,'')::timestamptz) AND ($5='' OR strpos(regexp_replace(lower(concat_ws(' ',target->>'title',target->>'reason',target->>'alertname',target->>'component')), '[[:space:]:._-]+', '', 'g'),$5)>0)", []any{sc, v.Get("status"), v.Get("from"), v.Get("to"), search}, nil, func(items []Object) error { return s.incidentSummaries(q, items) })
 		}
 		if len(parts) == 2 {
 			v, e := s.resource(q, "incidents", parts[1], false)

@@ -96,6 +96,7 @@ Backend 프로세스마다 `/knowledge`와 `/knowledge/…`의 변경 요청을 
 ### 콘솔 목록 검색과 보고서 미리보기
 
 - `GET /incidents?status=unclosed`는 저장된 사건 상태가 `open` 또는 `acknowledged`인 사건을 함께 조회한다. `state`가 없는 과거 사건은 `status`를 사용한다. `from/to`를 생략하면 발생일과 무관하게 미종결 사건을 페이지로 읽는다. 명시한 `from/to`와 기존 단일 상태 필터는 그대로 적용한다.
+- `GET /incidents?q=SXID11021`은 사건 제목·사유·알림 이름·컴포넌트에서 부분 문자열을 검색한다(최대 200자). 영문 대소문자, 공백, `:._-` 차이를 무시하며 SQL 와일드카드를 실행하지 않는다. scope·status·from/to와 AND 결합하고 DB 페이지 조회 전에 검색한다. 빈 검색어는 기존 목록과 같다.
 - `GET /jobs?node=...`는 저장된 `input_snapshot.target.node` 또는 `node_uid`의 정확한 일치로 찾는다. 최대 253자이며 기존 scope·접수일·작업 종류·사건 필터와 조합한다. 현재 자산 신원 검증 없이 저장 작업을 검색하며, 기존 `target` 필터의 관측 검증 의미는 바꾸지 않는다. 새 필터는 `/jobs` 전용이다.
 - `GET /reports?analysis_from=...&analysis_to=...`는 저장된 보고서 분석 기간과 검색 기간이 겹치는 보고서를 찾는다. RFC3339 timestamp를 쓰고 한쪽 경계만 지정할 수도 있다. `[start,end)` 기준으로 보고서 `end > analysis_from`, `start < analysis_to`이며 두 검색 경계가 있으면 from < to여야 한다. 누락·잘못된 과거 기간은 날짜 검색에 포함하지 않는다. 기존 `from/to`는 **요청 접수일**이고 분석 기간과 함께 지정하면 두 조건을 모두 적용한다. 이 새 필터는 `/reports` 전용이며 cursor에 결합된다.
 - `/reports`의 발행된 `quality.report_format=report-aggregate-v1` 결과에는 선택적 `report_preview`를 제공한다. 해당 작업의 `published_result_id`가 가리키는 같은 종류·작업의 저장 결과만 읽는다. 과거 형식·미발행 결과에는 필드를 추가하지 않으며 삭제된 보고서는 기존처럼 목록에서 제외한다.

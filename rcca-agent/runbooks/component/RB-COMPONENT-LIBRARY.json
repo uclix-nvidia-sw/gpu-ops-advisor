@@ -66,6 +66,12 @@
         "revision": "Undated page (GPU Operator latest); mutable upstream document",
         "checked_at": "2026-10-22",
         "section": "Driver daemonset logs; validator; device plugin"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "analysis_guidance": [
@@ -115,6 +121,13 @@
           "text": "드라이버 파드 문제는 nvidia-driver-ctr 컨테이너 로그로, Init:Error는 k8s-driver-manager 로그로 확인합니다. 변경 뒤에는 gpu-operator 네임스페이스의 모든 파드가 Running 또는 Completed여야 합니다.",
           "source_indices": [
             1
+          ]
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. 노드·장치·마운트·인터페이스 등 각 지표의 대상이 같은 표본끼리 비교합니다. 알림 사유와 같은 시각의 실제 관측을 먼저 연결한 뒤 아래 조건별 대응을 적용합니다. 현장 대조 자료는 대응 순서의 진단 자료 보존 단계에 기재된 원본 로그와 장치별 점검 결과를 사용합니다.",
+          "source_indices": [
+            2
           ]
         }
       ]

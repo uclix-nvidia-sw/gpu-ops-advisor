@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { queryPath, useList } from '../lib/live';
 import { useApp } from '../lib/store';
+import { labels } from '../lib/domain';
 import {
   clock,
   dayKey,
@@ -23,7 +24,7 @@ const MAX_PAGES = 5;
  * Incidents in the selected scope, refreshed every minute: by default the last two weeks;
  * `first`/`last` are inclusive KST days, and `first: null` means from the beginning.
  */
-export function useRecentIncidents(first?: string | null, last?: string) {
+export function useRecentIncidents(first?: string | null, last?: string, search = '') {
   const app = useApp();
   // timeRange changes on the header refresh, which also moves the window forward.
   const now = useMemo(() => new Date(), [app.timeRange]);
@@ -38,6 +39,7 @@ export function useRecentIncidents(first?: string | null, last?: string) {
           from: start ? midnight(start) : undefined,
           to: last ? midnight(last, 86_400_000) : undefined,
           limit: LIMIT,
+          q: search.trim(),
         })
       : null,
   );
@@ -84,13 +86,29 @@ export const reportPath = (v: IncidentView) =>
     ? `/analyses/${v.jobId}#final-report`
     : '';
 
-/** The report when one exists; no result-quality labels on the list. */
+/** Keep the latest execution distinct from an earlier published result. */
 export function RcaLink({ v, button = false }: { v: IncidentView; button?: boolean }) {
   const report = reportPath(v);
-  const running = ['running', 'failed'].includes(v.rca) && v.jobId;
   // "목록으로" on the report returns to this list with its dates and page.
   const location = useLocation();
   const state = { from: location.pathname + location.search };
+  const latest = v.latestJobId;
+  const status = v.executionStatus;
+  const separate = latest && latest !== v.publishedJobId;
+  const executionLabel = status === 'running' ? 'RCA 실행 중' : labels[status || ''];
+  if (!button && latest && (!report || separate))
+    return (
+      <span>
+        <Link className="oh-rca quiet" to={`/jobs/${latest}`} state={state}>
+          {status === 'succeeded' ? '실행 완료 · 미발행' : executionLabel || '상태 미확인'}
+        </Link>
+        {report && (
+          <Link className="oh-rca quiet" to={report} state={state}>
+            이전 보고서 열기
+          </Link>
+        )}
+      </span>
+    );
   if (report)
     return (
       <Link className={button ? 'oh-btn' : 'oh-rca'} to={report} state={state}>
@@ -98,13 +116,7 @@ export function RcaLink({ v, button = false }: { v: IncidentView; button?: boole
       </Link>
     );
   if (button) return null;
-  if (running)
-    return (
-      <Link className="oh-rca quiet" to={`/jobs/${v.jobId}`} state={state}>
-        {v.rca === 'running' ? 'RCA 실행 중' : '실행 이력'}
-      </Link>
-    );
-  return <span className="oh-rca none">{v.rca === 'notice' ? '알림만' : '—'}</span>;
+  return <span className="oh-rca none">{v.rca === 'notice' ? '알림만' : '상태 미확인'}</span>;
 }
 
 /** Code badge and the Korean name; list rows link it to the RCA report. */

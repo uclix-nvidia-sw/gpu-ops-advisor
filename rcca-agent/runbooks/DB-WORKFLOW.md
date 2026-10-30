@@ -279,3 +279,68 @@ python -m rcca_agent.runbook_admin retire "$RcaPrefix-published.json" --profile 
 과거 `decision_policy`와 goal은 발행 JSON 구조 호환을 위해 읽지만, 현재 모든 런북의 수집·분석·종료를 제어하지 않는다. D09만으로 목적 달성을 평가해 나머지 조회를 생략하는 절차는 폐기했다. 새 revision은 위의 전체 content 교체 절차로 발행한다.
 
 검수에서는 선택된 revision/hash, 계획된 조회 실행, 로그·메트릭·DB 이력을 함께 사용한 분석, 보고서 공개와 원문 연결을 확인한다. 장애 여부의 재판정이나 원인 확정은 생성 성공 조건이 아니다. 기존 발행본과 과거 결과는 수정하지 않는다. 현재 실행은 [RCA README](../README.md#현재-실행-흐름)를 따른다.
+
+
+## 추가 수집 연결 운영 절차
+
+이 절은 운영자가 직접 수행할 인계 절차다. 저장소 변경/PR만으로 서버 수집 설정, 실행 프로필, 발행 런북이 적용되지는 않는다. 기존 6단 보고서 형식은 유지한다. Ops Worker·Ops 보고서·Grafana 알림 규칙은 변경 대상이 아니다.
+
+### 어디에서 무엇을 변경하는가
+
+| 작업 위치 | 변경 대상 | 목적 |
+|---|---|---|
+| Fleet 클러스터 관리 서버 | 기존 Fleet/Alloy 배포 원본 및 수집 설정 | GPU 서버의 원본 로그·직접 지표를 기존 Loki/Mimir로 전달 |
+| GPU 서버 dgx01·dgx02 | 실제 로그 위치, 서비스, exporter 제공 항목 확인 | 파일 경로·장비 지원·포트 식별 정보를 추측하지 않고 확정 |
+| Grafana Explore | 읽기 전용 조회 | 전달된 데이터의 노드·장비·시각·단위를 검증 |
+| gpu-ops-advisor 관리 서버 | RCA 전용 실행 프로필과 RCA 이미지, RCA 런북 새 revision | 검증된 수집원만 보고서 근거로 연결 |
+
+먼저 Fleet 관리 서버에서 아래 읽기 전용 명령으로 실제 리소스 이름과 설정 참조를 확인한다. 출력은 로컬에 보관하며 Secret, 토큰, 전체 환경 변수는 공유하지 않는다.
+
+```bash
+kubectl get pods -n fleet-intelligence -o wide
+kubectl get daemonsets,deployments,configmaps -n fleet-intelligence
+kubectl get pods -A -o wide | grep -Ei 'alloy|otel|dcgm|node-exporter'
+kubectl get daemonsets -n fleet-intelligence -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .spec.template.spec.containers[*]}{.name}{" image="}{.image}{"\n"}{range .volumeMounts[*]}{.name}{" -> "}{.mountPath}{"\n"}{end}{end}{range .spec.template.spec.volumes[*]}{.name}{" configMap="}{.configMap.name}{" hostPath="}{.hostPath.path}{"\n"}{end}{end}'
+```
+
+확인된 ConfigMap 이름으로 `kubectl get configmap <이름> -n <네임스페이스> -o yaml`을 실행해 수집 설정을 확인한다. Helm/GitOps로 관리한다면 그 values/manifest 원본을 수정한다. 일회성 파드 내부 수정은 재시작하면 사라지므로 사용하지 않는다. 기존 저장소 주소와 인증을 유지하고 credentials를 문서·Git에 복사하지 않는다.
+
+### 추가할 수집원과 완료 조건
+
+| 근거 | 수집 쪽에서 할 일 | RCA에 넘길 최소 정보·확인 기준 |
+|---|---|---|
+| Fabric Manager 원본 로그 | 두 GPU 서버에서 `systemctl status nvidia-fabricmanager --no-pager`, `journalctl -u nvidia-fabricmanager --since '30 minutes ago' --no-pager`로 실제 출력 위치 확인. 파일 출력이면 서비스 설정의 실제 로그 경로 확인. 기존 Alloy/OTel에 해당 파일 또는 journal 입력을 추가하고 기존 Loki 전송 경로에 연결 | cluster_id, 노드, machine_id, 원본 이벤트 시각, 원문, SXID, 스위치 PCI. 서비스 로그와 Fleet의 상태 요약을 구분. 같은 사건의 원본 한 줄이 Loki에서 동일하게 조회돼야 함 |
+| 커널 원본 로그 | `journalctl -k --since '30 minutes ago' --no-pager`로 원문·시각 확인 후 기존 journal 수집에 커널 입력 연결 | 호스트·boot 식별자와 원본 시각 보존. Loki 수신 시각을 장애 발생 시각으로 바꾸지 않음 |
+| NVSwitch·NVLink 포트 연결 | 지원되는 장비에서 `nvidia-smi topo -m`, `nvidia-smi nvlink --status` 및 설치된 Fabric Manager/DCGM의 포트 조회 결과 확보. 지원 출력/수집기부터 확인 | 스위치 PCI ↔ 포트 ↔ GPU UUID, 장비 모델·버전·수집 시각. GPU 번호만으로 스위치나 영향 작업을 연결하지 않음 |
+| InfiniBand | 기존 node exporter/RDMA 수집기가 포트 상태·링크 속도·오류 누적값을 제공하는지 확인. 미제공이면 해당 지원 collector를 배포 원본에서 활성화 | 노드·HCA·포트·단위·누적값 초기화 여부. 단절/오류 증가는 동일 포트의 장애 전후 표본으로 비교 |
+| 파일시스템·디스크 | 기존 node exporter의 mount별 read-only·용량·장치 오류 항목 확인. SMART/NVMe/RAID는 실제 설치 수집기에서 지원하는 항목만 추가 | 노드·장치·mount 연결, 읽기 전용 값의 의미, 디스크 건강 상태와 원본 오류. 용량 부족과 디스크 고장을 구분 |
+| 전원·냉각 | 기존 BMC/Redfish/IPMI 수집 경로에서 PSU 상태·팬 회전·흡기 온도 전달 | 노드/섀시·센서·단위·상태 값 정의. GPU 전력·온도를 PSU/흡기 센서로 대신하지 않음. 새 BMC 권한은 별도 관리 |
+| NCCL 작업 로그 | 기존 컨테이너 로그 수집에서 해당 작업의 NCCL 로그 및 완료/실패 결과를 Loki로 전달 | cluster·namespace·pod UID·container·작업 식별자·시각. 동일 노드라는 이유만으로 작업 피해를 확정하지 않음. 진단 로그 수준 변경은 작업 소유자와 조율 |
+| C2C | 실제 C2C 지원 장비 및 설치 DCGM/Fleet 버전에서 오류 카운터와 endpoint 정보를 확인 | GPU UUID·endpoint·지원 여부·카운터 의미. A100 라벨로 반환된 0만으로 C2C 정상 판단 금지 |
+
+수집기 추가 시 전체 로그를 무제한 전송하지 않는다. 해당 서비스·노드·컨테이너로 범위를 제한하고 원문 크기·회전·보관 기간을 설정한다. 기존 tenant와 cluster 구분을 유지한다. 기존 로그/지표 필드를 제거하거나 같은 이름의 다른 의미로 덮어쓰지 않는다.
+
+### Grafana에서 확인할 것
+
+1. 기존 Operations Loki/Mimir 데이터소스에서 동일 노드와 좁은 시간 구간을 조회한다. 로그의 실제 라벨을 확인하고, JSON 안에 있는 노드 필드는 JSON 필터로 제한한다. 인덱스 라벨이라고 가정하지 않는다.
+2. Fabric Manager 원본과 커널 원본을 각각 확인하고 원본 시각·스위치 주소를 GPU 서버 출력과 대조한다. 수신 성공만으로 원본 시각의 의미가 입증되지는 않는다.
+3. 지표는 이름, 단위, GPU UUID/PCI 또는 HCA/포트, 지원 장비, 표본 간격을 기록한다. 장애 전후 값과 누적값 초기화를 확인한다. 빈 조회, 실행 실패, 다른 장비 결과를 구분한다.
+4. 현재 확인된 NVLink GPU 지표·Fabric Manager 상태 필드는 스위치 직접 측정값이나 서비스 원본 로그를 대신하지 않는다. 새 수집원은 이 확인을 통과한 뒤에만 RCA 프로필에 등록한다.
+
+### RCA 쪽 연결과 적용 순서
+
+RCA 관리 서버에서 다음 명령으로 현재 마운트와 설정 참조를 찾는다. 실제 배포 이름은 첫 명령 결과를 사용한다.
+
+```bash
+kubectl get deployments,configmaps -n gpu-ops-advisor
+kubectl get deployment gpu-ops-rcca-agent -n gpu-ops-advisor -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{" image="}{.image}{"\n"}{range .volumeMounts[*]}{.name}{" -> "}{.mountPath}{"\n"}{end}{range .env[*]}{.name}{" configMap="}{.valueFrom.configMapKeyRef.name}{" key="}{.valueFrom.configMapKeyRef.key}{"\n"}{end}{end}{range .spec.template.spec.volumes[*]}{.name}{" configMap="}{.configMap.name}{"\n"}{end}'
+```
+
+- `AGENT_CONFIG_FILE`이 가리키는 전체 실행 프로필과 배포 원본을 백업한다. RCA/Ops가 같은 ConfigMap을 사용한다면 공유 객체를 수정하지 말고 **RCA 전용 복사본과 마운트**를 준비한다. 공통 Helm `configuration.agents` 전체 교체로 Ops까지 바뀌게 하지 않는다.
+- 이미 등록된 조회는 런북의 observation_plan에 연결한다. 새 수집원은 프로필의 query/binding에 실제 생산자·selector·target label·단위·시간 기준·지원 범위·제한을 등록하고 필요한 parser를 구현·검증해야 한다. **이번 PR은 위 신규 수집원용 exporter 설정이나 새 parser/binding을 제공하지 않는다. 수집만 추가하면 자동 해석되는 것은 아니다.** 수집 결과/계약 확인 후 연결 코드가 필요한 항목은 별도 변경으로 완료한다.
+- 프로필은 객체 전체 교체 방식이다. 일부 필드만 `--set`으로 넣지 않는다. 소스 예제 변경 시 `agents/config.example.json`과 Helm mirror를 같이 검증하되, 실제 적용은 RCA 전용 설정만 대상으로 한다.
+- CI가 통과한 RCA 이미지와 검증된 프로필을 먼저 배포한다. 그 다음 이 문서의 기존 등록·검토·발행 절차로 RCA 런북의 새 revision을 발행한다. 저장된 이전 보고서/발행 revision은 수정하지 않는다.
+- 신규 분석 한 건에서 JC가 고정한 런북 revision/hash, 저장 evidence의 조회 입력·대상·기간·결과, 6개 보고서 구역의 근거 참조를 확인한다. 정상 조회·0건·실패·다른 장비 결과를 각각 점검한다. 새 수집 데이터가 대응 설명까지 연결돼야 완료다.
+- 롤백은 변경한 수집 설정과 RCA 프로필/이미지를 백업본으로 복원하고 신규 런북 revision의 선택을 되돌리는 순서로 준비한다. PVC/DB를 삭제하거나 Ops를 재배포하지 않는다. 저장 근거는 보존한다.
+
+운영자가 전달할 검증 자료는 수집기/이미지 버전, 비밀값을 제거한 해당 입력·전송 설정, 장비·시간이 일치하는 최소 샘플, metric HELP/TYPE·단위·라벨, 정상/빈 결과/실패 예시다. 비밀번호·개인키·Secret·전체 서버 로그는 필요하지 않다.

@@ -110,7 +110,8 @@ export function OperatorCases() {
   const period = picked ? '' : PERIODS.find((p) => p[0] === params.get('period'))?.[0] || 'all';
   const first = picked || (period === 'all' ? null : windowDays(new Date(), Number(period))[0]);
   const last = picked ? (pickedTo > picked ? pickedTo : picked) : undefined;
-  const { query, views, now, truncated } = useRecentIncidents(first, last);
+  const search = params.get('q') || '';
+  const { query, views, now, truncated } = useRecentIncidents(first, last, search);
   const node = params.get('node') || '',
     kind = params.get('kind') || '',
     focus = ['today', 'repeat', 'notice'].includes(params.get('focus') || '')
@@ -224,6 +225,24 @@ export function OperatorCases() {
           </button>
         )}
       </div>
+      <form className="oh-case-search" onSubmit={(e) => e.preventDefault()} role="search">
+        <label htmlFor="case-search">코드명 · 오류 이름 · 제목 검색</label>
+        <div>
+          <input
+            id="case-search"
+            type="search"
+            value={search}
+            maxLength={200}
+            placeholder="예: SXID11021, Single bit, 제목 일부"
+            onChange={(e) => set('q', e.target.value)}
+          />
+          {search && (
+            <button type="button" className="oh-btn" onClick={() => set('q', '')}>
+              지우기
+            </button>
+          )}
+        </div>
+      </form>
       <QueryState
         query={query}
         empty={!shown.length}

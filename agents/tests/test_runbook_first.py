@@ -204,6 +204,22 @@ def test_packaged_fallback_matches_authored_general_runbook():
     content = json.loads(
         (root / "runbooks/RB-GENERAL-GPU-NODE.json").read_text("utf-8")
     )["content"]
+    current = next(
+        e
+        for e in json.loads(
+            (root / "runbooks/catalog-manifest.json").read_text("utf-8")
+        )["content_review"]["entries"]
+        if e["file"] == "RB-GENERAL-GPU-NODE.json"
+    )
+    for change in reversed(current["restore"]):
+        parent = content
+        for key in change["path"][:-1]:
+            parent = parent[key]
+        key = change["path"][-1]
+        if change["existed"]:
+            parent[key] = change["value"]
+        else:
+            del parent[key]
     review = next(
         e
         for e in json.loads(

@@ -113,6 +113,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D47",
+        "priority": 7,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 노드 GPU가 보고하는 Fabric Manager 상태 코드를 사건 전후로 비교한다. 0은 해당 GPU의 상태 지표 미지원 값이며 서비스 실행 여부는 Fabric Manager 서비스와 로그로 대조한다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -164,6 +176,12 @@
         "revision": "Last updated on Oct 04, 2026; mutable upstream document",
         "section": "Flowcharts; Table 1; Table 2; Reporting a GPU Issue (information to provide)",
         "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "analysis_guidance": [
@@ -193,7 +211,7 @@
         },
         {
           "title": "복구 확인",
-          "text": "systemctl status nvidia-fabricmanager가 active이고 Fabric Manager 로그에 새 오류가 없는지, nvidia-smi nvlink -s에서 모든 링크가 Active인지 확인합니다. dcgmi diag -r 2로 점검하고 필요하면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다."
+          "text": "systemctl status nvidia-fabricmanager가 active이고 Fabric Manager 로그에 새 오류가 없는지, nvidia-smi nvlink -s에서 모든 링크가 Active인지 확인합니다. dcgmi diag -r 2로 점검하고 필요하면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다. 활성 링크 수는 장비 토폴로지와 사용하도록 구성한 포트를 기준으로 대조합니다. 미사용 포트의 비활성 상태를 장애로 세지 않습니다."
         },
         {
           "title": "공급사 전달",
@@ -237,6 +255,13 @@
             5,
             6,
             7
+          ]
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 NVLink 수신량, NVLink 송신량, NVLink CRC 오류 누적값, NVLink 복구 오류 누적값, NVLink 재전송 오류 누적값, GPU별 Fabric Manager 상태 코드. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. 노드·장치·마운트·인터페이스 등 각 지표의 대상이 같은 표본끼리 비교합니다. 알림 사유와 같은 시각의 실제 관측을 먼저 연결한 뒤 아래 조건별 대응을 적용합니다. 현장 대조 자료는 대응 순서의 진단 자료 보존 단계에 기재된 원본 로그와 장치별 점검 결과를 사용합니다.",
+          "source_indices": [
+            8
           ]
         }
       ]
@@ -337,6 +362,14 @@
           ],
           "required": false,
           "expected_effect": "같은 노드 GPU의 NVLink 재전송 오류 누적값(링크 합계)을 사건 전후로 비교한다. 어느 링크인지는 알 수 없으며 증가만으로 원인을 확정하지 않는다."
+        },
+        {
+          "query_id": "D47",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 노드 GPU가 보고하는 Fabric Manager 상태 코드를 사건 전후로 비교한다. 0은 해당 GPU의 상태 지표 미지원 값이며 서비스 실행 여부는 Fabric Manager 서비스와 로그로 대조한다."
         }
       ]
     }

@@ -811,3 +811,19 @@
   color: #b4bcb6;
   cursor: default;
 }
+.oh-case-search {
+  margin: 16px 0 24px;
+}
+.oh-case-search label {
+  display: block;
+  margin-bottom: 6px;
+}
+.oh-case-search > div {
+  display: flex;
+  gap: 8px;
+}
+.oh-case-search input {
+  min-width: 0;
+  flex: 1;
+  font: inherit;
+}

@@ -137,6 +137,12 @@
         "revision": "Linux kernel documentation 7.3.0; mutable upstream document",
         "section": "struct rtnl_link_stats64: rx/tx errors and dropped; sysfs statistics",
         "checked_at": "2026-10-25"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "analysis_guidance": [
@@ -200,6 +206,13 @@
           "text": "rx_errors는 수신한 불량 패킷 수, tx_errors는 송신 문제 수, rx_dropped는 수신했지만 처리하지 못한 패킷 수(자원 부족·미지원 프로토콜 등), tx_dropped는 송신 중 버린 패킷 수입니다. 이 통계는 인터페이스를 내렸다 올려도 유지됩니다.",
           "source_indices": [
             3
+          ]
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 이더넷 링크 상태, 이더넷 수신 오류 누적값, 이더넷 송신 오류 누적값, 이더넷 수신 폐기 누적값, 이더넷 송신 폐기 누적값. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. 노드·장치·마운트·인터페이스 등 각 지표의 대상이 같은 표본끼리 비교합니다. 알림 사유와 같은 시각의 실제 관측을 먼저 연결한 뒤 아래 조건별 대응을 적용합니다. 현장 대조 자료는 대응 순서의 진단 자료 보존 단계에 기재된 원본 로그와 장치별 점검 결과를 사용합니다.",
+          "source_indices": [
+            4
           ]
         }
       ]

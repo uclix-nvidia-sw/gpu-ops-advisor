@@ -119,7 +119,7 @@ it('explains SXID11001 without GPU failure or XID restart guidance', () => {
       }}
     />,
   );
-  expect(html).toContain('수신(ingress) 측의 잘못된 명령 보고');
+  expect(html).toContain('NVSwitch 입력 경로에서 유효하지 않은 명령');
   expect(html).toContain('access 포트');
   expect(html).toContain('trunk 포트');
   expect(html).not.toContain('B200/B300이 아닌 플랫폼이면');

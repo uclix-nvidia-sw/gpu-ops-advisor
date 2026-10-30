@@ -76,7 +76,7 @@ it('leads with the alert device even when saved prose starts with another device
     html.indexOf('class="rca-glance"'),
     html.indexOf('<section id="rca-response-reference"'),
   );
-  expect(glance).toContain('1개 코드 관측');
+  expect(glance).toContain('1종의 오류 코드');
   expect(glance).toContain('class="rca-related-scroll"');
   expect(glance).toContain('XID:2');
   expect(glance).not.toContain('같은 노드의 관련 오류');
@@ -201,6 +201,15 @@ it('names the component reason, target, Fleet event time and live alert state', 
   expect(text).toContain('가능한 사유 8가지: 읽기 전용 재마운트(이번) · RAID 배열 실패');
   expect(text).toContain('대상 디스크·파티션 이름은 Fleet 보고에 없습니다');
   expect(text).toContain('Fleet 커널 이벤트 기록');
+  for (const heading of [
+    '1. 한눈에 보기',
+    '2. 대응 순서',
+    '3. 관련 로그·메트릭',
+    '4. 분석 및 해석',
+    '5. 이전 사건 이력',
+    '6. 참고 자료',
+  ])
+    expect(text).toContain(heading);
   expect(text).toContain('▶ 읽기 전용 재마운트:');
   expect(text).not.toContain('▶ RAID 배열 실패:');
   expect(text).not.toContain('분기(오류 영역·사유)');

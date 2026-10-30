@@ -21,7 +21,7 @@ RULES = {
 INCIDENT = json.loads((ROOT / "incident/config.example.json").read_text("utf-8"))
 
 FM_PHRASE = {
-    "22": "잠재적 비치명",
+    "22": "비치명(Non-Fatal, NVIDIA Fabric Manager 표 22)",
     "23": "잠재적 치명",
     "24": "항상 치명",
     "25": "기타 주요",
@@ -51,10 +51,18 @@ class AlertRuleCatalogTests(unittest.TestCase):
                 entry["fleet_event_type"], found and found.group(1), entry["code"]
             )
             if entry["code"].startswith("sxid:"):
-                meaning = content["operator_guidance"]["meaning"]
+                # Classification lives in the cited reference, while meaning
+                # explains the specific error without a fixed sentence template.
+                references = [
+                    reference
+                    for reference in content["operator_guidance"]["references"]
+                    if reference["title"] == "Fabric Manager 가이드 분류"
+                ]
+                self.assertEqual(len(references), 1, entry["code"])
+                self.assertTrue(references[0]["source_indices"], entry["code"])
                 self.assertIn(
-                    f"Fabric Manager 가이드 분류는 {FM_PHRASE[entry['fm_sxid_table']]}",
-                    meaning,
+                    FM_PHRASE[entry["fm_sxid_table"]],
+                    references[0]["text"],
                     entry["code"],
                 )
 

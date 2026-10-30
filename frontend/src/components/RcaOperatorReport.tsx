@@ -275,7 +275,7 @@ export function RcaOperatorReport({
           <RcaPoints
             compactRelated
             items={[
-              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning)[0] || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
+              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning).slice(0, 2).join(' ') || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
               ...(v.currentReasons.length
                 ? [
                     `이번 사유: ${v.currentReasons.map((r) => r.label).join(' · ')} (Fleet 원문: ${v.message})`,
@@ -298,7 +298,7 @@ export function RcaOperatorReport({
                       .map(podText)
                       .join(
                         ', ',
-                      )}${v.family === 'nvswitch' ? ' — NVSwitch가 연결하는 노드 GPU의 작업' : ''} (DCGM 지표 라벨 기준)`,
+                      )}${v.family === 'nvswitch' ? ' — 같은 노드 GPU에서 관측한 작업 목록 (스위치 연결·피해 범위 판정과 별도)' : ''} (DCGM 지표 라벨 기준)`,
                   ]
                 : v.family === 'component'
                   ? [

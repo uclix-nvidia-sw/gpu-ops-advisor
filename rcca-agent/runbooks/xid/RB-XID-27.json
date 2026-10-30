@@ -88,14 +88,20 @@
         "revision": "Retrieved 2026-10-22; mutable upstream document",
         "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
         "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "limitations": [
-      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "판단에 사용할 근거는 필수 오류 원문, 같은 대상의 장치 신원과 버전, 같은 시각의 동반 사건이다. 이 자료를 대조한 범위 안에서 원인과 대응 조건을 제시한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "현행 표는 Unused다. 배포 버전의 의미 확인 전 조치를 선택하지 않는다.",
       "Fleet 주입 시험과 실제 오류는 같은 수집 경로를 사용할 수 있다. 코드·예제 PCI 주소·신원 불일치만으로 합성 여부를 단정하지 않으며, 로그 기록 시각과 실제 오류 시각 및 현재 상태를 각각 검증한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
+      "오류 보고의 코드·시각·대상을 먼저 제시하고, 실제 장치 신원과 현재 상태를 별도의 관측으로 연결한다. 원인 및 조치는 해당 근거와 실행 조건이 충족된 항목에 한해 제시하며, 보고 원문만 있는 경우에는 보고 사실과 다음 수집 항목을 구분한다.",
       "현재 NVIDIA 카탈로그상 미사용·구세대 코드라 배포 드라이버의 정의를 확인하기 전에는 원인·심각도·복구 조치를 판정하지 않는다."
     ],
     "title": "XID 27 Video processor exception (미사용 코드) · 미사용·구세대 코드 조사",
@@ -212,6 +218,13 @@
             1
           ],
           "text": "Fleet 고정 정의: event_type=Fatal, 기본 action=REBOOT_SYSTEM. 정적 분류이며 이번 사건의 판정이나 동시 실행 지시가 아닙니다."
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 GPU 사용률, GPU 메모리 사용량. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
+          "source_indices": [
+            5
+          ]
         }
       ]
     }

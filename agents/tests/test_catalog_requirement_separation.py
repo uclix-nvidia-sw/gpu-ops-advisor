@@ -96,6 +96,12 @@ WORDING_REVIEW = {
 }
 ROWS = [json.loads((CATALOG / e["file"]).read_text("utf-8")) for e in REVIEW["entries"]]
 CODE_ROWS = [r for r in ROWS if r["knowledge_key"] != "RB-GENERAL-GPU-NODE"]
+CURRENT_REVIEW = {
+    e["file"]: e
+    for e in json.loads((CATALOG / "catalog-manifest.json").read_text("utf-8"))
+    .get("content_review", {})
+    .get("entries", [])
+}
 
 
 @pytest.mark.parametrize("row", CODE_ROWS, ids=lambda r: r["knowledge_key"])
@@ -144,6 +150,28 @@ def test_review_covers_every_source_and_preserves_general_adapter_boundary():
                 separators=(",", ":"),
             ).encode()
         ).hexdigest()
+        current = CURRENT_REVIEW.get(e["file"])
+        if current:
+            assert digest == current["after_content_sha256"]
+            row = deepcopy(row)
+            for change in reversed(current["restore"]):
+                parent = row["content"]
+                for key in change["path"][:-1]:
+                    parent = parent[key]
+                key = change["path"][-1]
+                if change["existed"]:
+                    parent[key] = deepcopy(change["value"])
+                else:
+                    del parent[key]
+            digest = hashlib.sha256(
+                json.dumps(
+                    row["content"],
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            assert digest == current["before_content_sha256"]
         # Newest review first: GPU lost name, plain query names, batch 4, evidence wording, batch 3, batch 2, metric coverage, memory
         # guidance, wording,
         # catalog actions, triage, then the report review.

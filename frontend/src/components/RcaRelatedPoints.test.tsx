@@ -10,7 +10,7 @@ it('groups other errors only, retaining every note and the visible core facts', 
   const items = ['대상: GPU 3', ...notes, '누구에게 영향: 파드 A', '우선 대응: 원문 보존'];
   const html = renderToStaticMarkup(<RcaPoints items={items} compactRelated />);
   expect(html.match(/<details/g)).toHaveLength(1);
-  expect(html).toContain('27개 코드 관측');
+  expect(html).toContain('27종의 오류 코드');
   for (const note of notes) {
     for (const part of note.replace('같은 노드 다른 오류: ', '').split(' · ')) {
       expect(html).toContain(part);
@@ -18,7 +18,7 @@ it('groups other errors only, retaining every note and the visible core facts', 
   }
   expect(html.indexOf('누구에게 영향')).toBeGreaterThan(html.indexOf('</details>'));
   expect(html).not.toContain('<details open');
-  expect(html.match(/같은 노드 다른 오류/g)).toHaveLength(1);
+  expect(html.match(/같은 서버의 다른 오류/g)).toHaveLength(1);
   expect(items).toHaveLength(30);
 });
 
