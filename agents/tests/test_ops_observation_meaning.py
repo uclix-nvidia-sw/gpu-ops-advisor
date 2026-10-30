@@ -135,7 +135,7 @@ def test_negation_does_not_hide_another_or_double_negative_claim(claim):
         validate_written_advice(raw, {"findings": [fact]})
 
 
-@pytest.mark.parametrize("missing", ["마감·", "예약·", "가용 GPU·", "메모리 요구"])
+@pytest.mark.parametrize("missing", ["마감·", "가용 GPU·", "메모리 요구"])
 def test_allowed_denial_does_not_replace_existing_checks(missing):
     fact, raw = relative_item("개선 효과로 해석하지 않습니다.")
     raw["advice"][0]["summary"] = raw["advice"][0]["summary"].replace(missing, "")

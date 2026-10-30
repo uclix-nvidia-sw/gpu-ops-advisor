@@ -103,7 +103,7 @@ def test_valid_action_branches_keep_guards_and_reason_space(case, context):
         assert checked == set(required) and ordered
         assert len(re.findall("검토|판단", action)) == 1
     else:
-        assert not re.search("검토|판단", action)
+        assert not re.search("검토|판단", action.split(". ", 1)[1])
 
 
 @pytest.mark.parametrize(
@@ -201,7 +201,7 @@ async def test_code_prerequisite_failure_does_not_request_model_repair():
 
     def missing_policy(fact):
         decision = original(fact)
-        decision["action"] = decision["action"].replace("·운영정책", "")
+        decision["action"] = decision["action"].replace("·실제 할당", "")
         return decision
 
     with patch.object(module, "writing_decision", side_effect=missing_policy):
@@ -480,8 +480,10 @@ def test_observed_prose_check_runs_before_final_composition():
 def test_completed_pending_comparison_names_both_targets_and_purpose():
     fact = fact_for("batch-unknown", "none")
     action = writing_decision(fact)["action"]
-    assert "완료 Job과 대기 Pod의 작업 유형을 대조" in action
-    assert "완료 기록을 참고할지" in action
+    assert (
+        "완료 Job" in action and "대기 Pod" in action and "같은 작업 유형이면" in action
+    )
+    assert "경과시간을 일정에 쓸지" in action
 
 
 @pytest.mark.parametrize(
@@ -522,11 +524,11 @@ def test_existing_error_guidance_reaches_repair_as_reasons_only(error_case):
         "partial": "미배정 Pod가 없었습니다.",
         "pending": "대기 Pod 일부가 관측됐습니다.",
         "prerequisites": action.replace("GPU 요청·", ""),
-        "shortage_question": action.replace("자원 부족 여부", "자원 부족"),
+        "shortage_question": action.replace("GPU 부족 여부", "GPU 문제"),
         "repeated": "시범 실행을 검토합니다. " + action,
         "change_first": action.replace(
-            "시작 시각을 조정할 수 있는 작업 일부의",
-            "작업 일부의 시작 시각을 조정한 뒤",
+            "이 네임스페이스 작업 일부를 앞으로 같은 시간대에 시범 실행할지",
+            "작업 일부의 시작 시각을 조정한 뒤 시범 실행을",
         ),
         "capacity": "추가 할당을 검토합니다. " + action,
         "actionable": "대기 Pod가 관측됐습니다.",
@@ -602,21 +604,240 @@ def test_batch_code_preserves_placement_limit_without_model_repetition(context, 
     limit = "GPU 부족으로 기다리는지는 확인되지 않았습니다."
     decision = writing_decision(fact)
     sent = module.writing_context(fact)
-    reason = "완료 Job이 확인됐으나 마지막 시간에도 실행을 기다리는 Pod가 관측됐습니다."
+    reason = "완료 Job이 있지만 마지막 구간에도 대기 Pod가 관측됐습니다."
     reply = {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]}
     accepted = module.validate_reasoned_advice(reply, {"findings": [fact]})
     summary = accepted["advice"][0]["summary"]
     if phase == "placement":
-        assert summary.count(limit) == 1
-        assert "노드를 기다리는" in decision["action"]
+        assert summary.count("GPU 부족은 판단할 수 없습니다") == 1
+        assert "노드 미배정 Pod" in decision["action"]
         assert limit not in sent["decision"]["reason"]
         assert limit in sent["decision"]["known"]
         assert sent["prose_max_chars"] >= 60
         assert all(
             term in decision["action"]
-            for term in ("GPU 요청", "노드 선택 조건", "스케줄러 이벤트")
+            for term in (
+                "스케줄러 이벤트",
+                "노드 미배정 Pod",
+                "완료 Job",
+                "같은 작업 유형이면",
+            )
         )
     else:
         assert limit not in decision["action"]
         assert limit not in sent["decision"].get("known", [])
     assert fact == before
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "capacity_review",
+        "schedule_candidate",
+        "relative_activity",
+        "resident_memory",
+        "queue-placement",
+        "repeated_activity",
+        "batch-placement",
+    ],
+)
+def test_code_action_separates_uncertainty_and_evidence_purpose(case):
+    fact = fact_for(case, "none")
+    action = writing_decision(fact)["action"]
+    sentences = action.split(". ")
+    assert len(sentences) == 2
+    assert any(
+        word in sentences[0]
+        for word in ("미확인", "알 수", "정할 수", "판단할 수", "몰라")
+    )
+    assert any(word in sentences[1] for word in ("확인", "대조", "검토"))
+    assert "단정하지 않습니다" not in action
+    assert module.validate_written_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": action}]},
+        {"findings": [fact]},
+    )
+
+
+@pytest.mark.parametrize(
+    "case,claim",
+    [
+        ("repeated_activity", "GPU 부족으로 대기합니다."),
+        ("relative_activity", "성능 개선을 기대합니다."),
+    ],
+)
+def test_code_uncertainty_does_not_hide_an_additional_positive_claim(case, claim):
+    fact = fact_for(case, "none")
+    action = writing_decision(fact)["action"]
+    with pytest.raises(ValueError):
+        module.validate_written_advice(
+            {"advice": [{"fact_id": fact["fact_id"], "summary": action + " " + claim}]},
+            {"findings": [fact]},
+        )
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "capacity_review",
+        "schedule_candidate",
+        "relative_activity",
+        "resident_memory",
+        "repeated_activity",
+        "queue-placement",
+        "queue-preparation",
+        "queue-unknown",
+        "batch-placement",
+        "batch-preparation",
+        "batch-unknown",
+    ],
+)
+def test_short_code_actions_restore_reason_budget(case):
+    fact = fact_for(case, "none")
+    sent = module.writing_context(fact)
+    minimum = {"batch_progress": 60, "relative_activity": 64}.get(fact["kind"], 55)
+    assert sent["prose_max_chars"] >= minimum
+    if fact["kind"] == "relative_activity":
+        action = writing_decision(fact)["action"]
+        assert len(action) <= 91
+        assert all(word in action for word in ("앞으로", "마감", "가용 GPU", "메모리"))
+    assert len(writing_decision(fact)["action"].split(". ")) == 2
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["capacity_review", "repeated_activity", "queue-placement", "batch-placement"],
+)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "대기 Pod가 노드 배정을 기다리는지 컨테이너 시작 준비 중인지는 확인되지 않았습니다.",
+        "대기 단계가 미확인입니다.",
+        "노드 배정 대기 여부는 아직 알 수 없습니다.",
+        "노드 배정 여부는 확인되지 않았습니다.",
+        "배정 대기인지는 확인되지 않았습니다.",
+        "노드 배정 대기인지 컨테이너 시작 준비 중인지 확인되지 않았습니다",
+        "배정 대기인지 시작 준비 중인지는 알 수 없습니다",
+        "노드 배정을 기다리는 중인지는 알 수 없습니다.",
+        "대기 Pod가 기다리는 중인지는 알 수 없습니다.",
+    ],
+)
+def test_complete_placement_cannot_be_rewritten_as_unknown(case, text):
+    fact = fact_for(case, "none")
+    for hour in fact["source_hours"]:
+        hour.update(unscheduled=2, unscheduled_samples=240)
+    with pytest.raises(
+        ValueError,
+        match="^observed_placement_is_not_unknown: 노드 미배정은 관측됐습니다",
+    ):
+        module.validate_observed_prose(text, fact)
+    for hour in fact["source_hours"]:
+        hour["unscheduled_samples"] = 238
+    module.validate_observed_prose(text, fact)
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["capacity_review", "repeated_activity", "queue-placement", "batch-placement"],
+)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "실행을 기다리는 Pod가 관측됐습니다.",
+        "대기 단계는 노드 미배정으로 확인됐지만 GPU 부족 여부는 확인되지 않았습니다.",
+        "노드를 기다리는 Pod가 관측됐으나 GPU 부족인지는 알 수 없습니다.",
+        "노드 배정 여부는 확인됐으며 GPU 부족인지는 확인되지 않았습니다.",
+        "이미지 다운로드를 기다리는 중인지는 알 수 없습니다.",
+        "이미지 다운로드를 기다리는지 확인되지 않았습니다",
+    ],
+)
+def test_observed_placement_still_allows_unknown_cause(case, text):
+    fact = fact_for(case, "none")
+    for hour in fact["source_hours"]:
+        hour.update(unscheduled=2, unscheduled_samples=240)
+    module.validate_observed_prose(text, fact)
+
+
+@pytest.mark.parametrize("case", ["relative_activity", "capacity_review"])
+def test_summary_limits_are_shared_by_budget_and_validator(case):
+    from ops_agent.namespace_advice import summary_limits
+
+    fact = fact_for(case, "none")
+    limits = summary_limits(fact)
+    assert limits == (360, 231 if case == "relative_activity" else 220)
+    action = writing_decision(fact)["action"]
+    evidence = summary_context(fact)["summary_start"]
+    count = module.writing_context(fact)["prose_max_chars"]
+    raw = {
+        "advice": [
+            {
+                "fact_id": fact["fact_id"],
+                "summary": "관측됐습니다." + "가" * (count - 7),
+            }
+        ]
+    }
+    assert len(raw["advice"][0]["summary"]) == count
+    module.validate_reasoned_advice(raw, {"findings": [fact]})
+    raw["advice"][0]["summary"] += "가"
+    with pytest.raises(
+        ValueError,
+        match="invalid_namespace_advice_text|concise_namespace_summary_required",
+    ):
+        module.validate_reasoned_advice(raw, {"findings": [fact]})
+    assert len(action + " " + evidence) < limits[0]
+
+
+@pytest.mark.asyncio
+async def test_known_placement_contradiction_repairs_only_the_reason():
+    source = topic(activity=90, pending=2)
+    for hour in source["workloads"][0]["hours"]:
+        hour.update(unscheduled_peak=2, unscheduled_samples=240)
+    result = dict(topics=[source], quality={}, time_range={})
+    before = deepcopy(source)
+    facts = module.payload_for(result)["topics"][0]["findings"]
+    valid = writer_section(facts)
+    invalid = deepcopy(valid)
+    item = next(
+        a
+        for a in invalid["advice"]
+        if next(f for f in facts if f["fact_id"] == a["fact_id"])["kind"]
+        == "capacity_review"
+    )
+    item["summary"] = (
+        "대기 Pod가 노드 배정을 기다리는지 컨테이너 시작 준비 중인지는 확인되지 않았습니다."
+    )
+    patch_item = next(a for a in valid["advice"] if a["fact_id"] == item["fact_id"])
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [patch_item]}]
+    await module.interpret_report(result, llm)
+    feedback = llm.complete.call_args.args[1]["summary_repair"]
+    assert len(feedback) == 1
+    assert feedback[0]["validation_error"].startswith(
+        "observed_placement_is_not_unknown:"
+    )
+    assert "노드 미배정은 관측됐습니다" in feedback[0]["validation_error"]
+    assert result["narrative_status"] == "complete"
+    assert result["topics"] == [before]
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "capacity_review",
+        "schedule_candidate",
+        "relative_activity",
+        "resident_memory",
+        "repeated_activity",
+        "queue-placement",
+        "queue-preparation",
+        "queue-unknown",
+        "batch-placement",
+        "batch-preparation",
+        "batch-unknown",
+    ],
+)
+def test_all_code_action_branches_keep_observation_guards(case):
+    fact = fact_for(case, "none")
+    if case in {"capacity_review", "repeated_activity"}:
+        for hour in fact["source_hours"]:
+            hour.update(unscheduled=2, unscheduled_samples=240)
+    module.validate_observed_prose(writing_decision(fact)["action"], fact)

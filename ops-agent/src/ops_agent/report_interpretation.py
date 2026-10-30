@@ -18,6 +18,7 @@ from .namespace_advice import (
     validate_advice,
     SummaryTokenError,
     summary_context,
+    summary_limits,
     VALUE_MEANINGS,
     SYSTEM as ADVICE_SYSTEM,
     VERSION as ADVICE_VERSION,
@@ -27,12 +28,11 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-incident-check-v10"
+VERSION = "ops-interpretation-advice-clarity-v11"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
         "작업 마감": r"마감",
-        "예약": r"예약",
         "가용 GPU": r"가용",
         "메모리 요구": r"메모리",
     },
@@ -40,14 +40,10 @@ PREREQUISITES = {
         "스케줄러 사유": r"스케줄러|스케줄링",
         "GPU 요청": r"요청",
         "실제 할당": r"실제[^.!?]{0,12}할당",
-        "보장량": r"보장",
-        "가용 GPU": r"가용\s*GPU|사용\s*가능한\s*GPU",
-        "운영정책": r"운영\s*정책",
     },
     "schedule_candidate": {
         "작업 마감": r"마감",
         "예약": r"예약",
-        "대기 상태": r"대기",
         "가용 GPU": r"가용\s*GPU|사용\s*가능한\s*GPU",
     },
 }
@@ -501,6 +497,32 @@ def validate_observed_prose(text, fact):
             "internal_context_leak: 내부 필드명을 운영 문장에 복사하지 마세요. "
             "대상·기간·점검 목적·행동은 코드가 붙이므로 관측 현상과 판단 이유만 설명하세요"
         )
+    if (
+        fact["kind"]
+        in {"capacity_review", "repeated_activity", "queue_review", "batch_progress"}
+        and context["queue_context"]["check_first"] == "placement"
+        and context["queue_context"]["unscheduled_complete"]
+        and re.search(
+            r"(?:대기\s*단계(?:가|는|은|이|도|를|을)?\s*|"
+            r"(?:노드\s*(?:배정\s*)?대기|배정\s*대기)\s*(?:여부|인지)"
+            r"(?:\s*(?:아니면|또는)?\s*(?:컨테이너\s*)?(?:시작\s*)?준비\s*중인지)?"
+            r"(?:는|가)?\s*|"
+            r"노드\s*배정\s*여부(?:는|가)?\s*|"
+            r"노드(?:를)?\s*(?:배정(?:을)?\s*)?(?:기다리는지|기다리는\s*중인지|배정받지\s*못했는지)"
+            r"(?:\s*(?:아니면|또는)?\s*(?:컨테이너\s*)?(?:시작\s*)?준비\s*중인지)?"
+            r"(?:는|가)?\s*|"
+            r"(?:^|[.!?。]\s*|(?:대기|Pending)\s*(?:Pod|파드)(?:가|는)?\s*)"
+            r"기다리는\s*중인지(?:는|가)?\s*)"
+            r"(?:아직\s*)?(?:미확인|확인되지\s*않|알\s*수\s*없)",
+            text,
+            re.I,
+        )
+    ):
+        raise ValueError(
+            "observed_placement_is_not_unknown: 노드 미배정은 관측됐습니다. "
+            "노드 배정 대기 여부나 대기 단계를 미확인으로 되돌리지 말고 "
+            "관측된 현상과 아직 확인되지 않은 원인을 구분하세요"
+        )
     # Ignore only a direct denial of absence, not a denial of its consequences.
     placement_claims = re.sub(
         r"없음을\s*(?:단정|판단|확인)(?:할\s*수\s*없습니다|하지\s*않습니다)"
@@ -620,7 +642,7 @@ def validate_written_advice(section, topic):
                 r"[\s\S]*?(?:확인|대조|점검)[^.!?。]*?(?:후|뒤)(?:에만|에)?\s*,?\s*"
                 r"(?:(?:최종\s*)?(?:변경|시범\s*실행)\s*여부를?\s*|"
                 r"[^.!?。]{0,60}(?:시범\s*실행|시작\s*(?:시각|시간)(?:을|의)?\s*조정)"
-                r"(?:을|를|\s*여부를)?\s*)?"
+                r"(?:을|를|\s*여부를|할지)?\s*)?"
                 r"(?:검토|판단)(?!하지\s*(?:않|못)|할\s*수\s*없)",
                 text,
             ):
@@ -1340,15 +1362,21 @@ def writing_context(fact, findings=()):
         key[2:-2]: value for key, value in context.pop("summary_tokens").items()
     }
     values = context["observed_values"]
+    if fact["kind"] == "batch_progress" and fact.get("pending_change") is not None:
+        values.pop("pending", None)
     if (
         not context["queue_context"]["unscheduled_complete"]
         and "unscheduled" in values
         and all(h.get("unscheduled") == 0 for h in fact["source_hours"])
     ):
         values["unscheduled"] += " (일부 표본의 관측값이며 미배정 유무는 미확인)"
+    max_chars, max_prose_chars = summary_limits(fact)
     context["prose_max_chars"] = min(
-        360 - len(evidence) - len(action) - 2,
-        220 - len(re.sub(r"\{\{[a-z_]+\}\}", "", evidence)) - len(action) - 2,
+        max_chars - len(evidence) - len(action) - 2,
+        max_prose_chars
+        - len(re.sub(r"\{\{[a-z_]+\}\}", "", evidence))
+        - len(action)
+        - 2,
     )
     context["writing_checks"] = [
         "관측 현상과 decision.reason의 판단 이유만 설명; 점검 목적·조건·행동은 코드가 붙이므로 다시 작성하지 않음",

@@ -203,3 +203,19 @@ func TestPartialInterpretationHTMLKeepsAIAndLabelsCalculatedFallback(t *testing.
 		t.Fatal("partial AI success described as a fully calculated report")
 	}
 }
+
+func TestAggregateReportLimitationsFollowNarrativeAndPrecedeMetrics(t *testing.T) {
+	body := Object{"result_status": "partial", "limitations": []any{"부분 관측 안내"},
+		"narrative": []any{map[string]any{"title": "계산 결과 요약", "text": "보고서 본문"}}}
+	out := httptest.NewRecorder()
+	if err := exportMetrics(out, "preview", "html", body, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	text := out.Body.String()
+	narrative := strings.Index(text, "<h2>최종 보고서</h2>")
+	limits := strings.Index(text, "<h2>아직 판단할 수 없는 내용·해석 제한</h2>")
+	metrics := strings.Index(text, "<h2>주요 수치</h2>")
+	if narrative < 0 || limits <= narrative || metrics <= limits {
+		t.Fatal("unexpected report section order")
+	}
+}

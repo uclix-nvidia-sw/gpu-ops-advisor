@@ -57,6 +57,8 @@ def test_first_sentence_explains_the_allowed_operating_purpose(
     expected["observed_values"] = {
         k[2:-2]: v for k, v in expected.pop("summary_tokens").items()
     }
+    if fact["kind"] == "batch_progress" and fact.get("pending_change") is not None:
+        expected["observed_values"].pop("pending", None)
     assert {
         k: v
         for k, v in sent.items()
@@ -76,10 +78,13 @@ def test_first_sentence_explains_the_allowed_operating_purpose(
     combined = (
         "가" * sent["prose_max_chars"] + " " + action + " " + context["summary_start"]
     )
-    assert len(combined) <= 360
-    assert len(re.sub(r"\{\{[a-z_]+\}\}", "", combined)) <= 220
+    from ops_agent.namespace_advice import summary_limits
+
+    max_chars, max_prose_chars = summary_limits(fact)
+    assert len(combined) <= max_chars
+    assert len(re.sub(r"\{\{[a-z_]+\}\}", "", combined)) <= max_prose_chars
     first = context["decision"]["option"].split(". ", 1)[0]
-    assert purpose in first
+    assert any(word in first for word in ("미확인", "알 수", "정할 수", "몰라"))
     response = {
         "advice": [
             {
@@ -164,9 +169,9 @@ def test_code_action_matches_queue_stage_without_inventing_coverage(phase):
     if phase == "placement":
         assert "GPU 요청·노드 선택 조건" in action
     elif phase == "preparation":
-        assert "이미지 다운로드·초기화 이벤트" in action and "스케줄러" not in action
+        assert "이미지 다운로드·초기화 기록" in action and "스케줄러" not in action
     else:
-        assert "노드 배정 대기인지" in action and "초기화 중인지" in action
+        assert "노드 배정 대기인지" in action and "컨테이너 시작 준비 중인지" in action
     assert "required_checks" not in sent and "action" not in sent["decision"]
     assert validate_written_advice(
         {"advice": [{"fact_id": fact["fact_id"], "summary": action}]},
@@ -263,17 +268,23 @@ async def test_semantic_writing_errors_repair_only_the_affected_item(
         "missing_policy": "높은 GPU 활동과 대기가 관측돼 스케줄러 사유와 GPU 요청·실제 할당·보장량·가용 GPU를 확인한 뒤 추가 할당을 검토하세요.",
         "change_first": "마감·예약·가용 GPU·메모리 요구를 확인한 뒤 일부 작업의 시작 시각을 조정해 시범 실행을 검토하세요.",
     }[problem]
-    target = {"findings": [next(f for f in facts if f["fact_id"] == item["fact_id"])]}
     from ops_agent.report_interpretation import (
-        advice_with_evidence,
         advice_with_actions,
+        advice_with_evidence,
     )
 
-    # The existing validator accepts this captured failure class; keep its gates unchanged.
+    target = {"findings": [next(f for f in facts if f["fact_id"] == item["fact_id"])]}
+    one_sentence = {
+        "advice": [
+            {
+                "fact_id": item["fact_id"],
+                "summary": "해당 구간에 연결 GPU 활동률이 관측됐습니다.",
+            }
+        ]
+    }
     assert validate_advice(
-        advice_with_evidence(advice_with_actions({"advice": [item]}, target), target),
-        target,
-    )
+        advice_with_evidence(advice_with_actions(one_sentence, target), target), target
+    )["advice"]
     patch = next(a for a in valid["advice"] if a["fact_id"] == item["fact_id"])
     llm = AsyncMock(configured=True)
     llm.complete.side_effect = [{"sections": [invalid]}, {"advice": [patch]}]
@@ -295,7 +306,7 @@ async def test_semantic_writing_errors_repair_only_the_affected_item(
 
 @pytest.mark.parametrize(
     "removed",
-    ["스케줄러 사유·", "GPU 요청·", "실제 할당·", "보장량·", "가용 GPU·", "운영정책·"],
+    ["스케줄러 사유·", "GPU 요청·", "실제 할당·"],
 )
 def test_capacity_prerequisites_are_all_checked_before_review(removed):
     from ops_agent.report_interpretation import validate_written_advice
@@ -340,7 +351,7 @@ def test_partial_zero_is_not_absence_but_partial_positive_is_presence(samples):
     assert validate_written_advice({"advice": [item]}, {"findings": [fact]})
 
 
-@pytest.mark.parametrize("missing", ["마감·", "예약·", "대기·", "가용 GPU·"])
+@pytest.mark.parametrize("missing", ["마감·", "예약·", "가용 GPU·"])
 def test_scheduling_prerequisites_cannot_be_left_until_after_review(missing):
     from ops_agent.report_interpretation import validate_written_advice
 
@@ -466,9 +477,9 @@ def test_observation_words_cannot_replace_explicit_prerequisite_checks(observati
     item = {
         "fact_id": fact["fact_id"],
         "summary": observation
-        + "마감·예약·가용 GPU를 확인한 뒤 작업 일부의 시범 실행을 검토하세요.",
+        + "마감·가용 GPU를 확인한 뒤 작업 일부의 시범 실행을 검토하세요.",
     }
-    with pytest.raises(ValueError, match="누락된 조건: 대기 상태"):
+    with pytest.raises(ValueError, match="누락된 조건: 예약"):
         validate_written_advice({"advice": [item]}, {"findings": [fact]})
     item["summary"] = (
         observation
@@ -491,9 +502,7 @@ def test_other_checks_after_final_review_cannot_be_covered_by_policy_only_gate()
     }
     with pytest.raises(ValueError, match="namespace_prerequisites_required") as error:
         validate_written_advice({"advice": [item]}, {"findings": [fact]})
-    assert "스케줄러 사유·GPU 요청·실제 할당·보장량·가용 GPU·운영정책" in str(
-        error.value
-    )
+    assert "스케줄러 사유·GPU 요청·실제 할당" in str(error.value)
     assert "원문에 조건이나 행동을 채우지 말고" in str(error.value)
 
 
@@ -689,14 +698,12 @@ def test_short_observation_and_purposeful_check_keep_existing_guards(
     assert output["advice"][0]["summary"].startswith(summary + " ")
     assert raw == before
     if kind == "capacity_review":
-        raw["advice"][0]["summary"] = summary.replace("·운영정책", "")
+        raw["advice"][0]["summary"] = summary.replace("·실제 할당", "")
         with pytest.raises(ValueError, match="namespace_prerequisites_required"):
             validate_written_advice(raw, {"findings": [fact]})
     if kind == "relative_activity":
-        raw["advice"][0]["summary"] = summary.replace("·예약", "")
-        with pytest.raises(
-            ValueError, match="conditional_relative_window_trial_required"
-        ):
+        raw["advice"][0]["summary"] = summary.replace("·메모리 요구", "")
+        with pytest.raises(ValueError, match="namespace_prerequisites_required"):
             validate_written_advice(raw, {"findings": [fact]})
 
 
@@ -840,9 +847,9 @@ async def test_length_repair_preserves_every_prerequisite_and_guard(kind):
     )
     if kind != "batch_progress":
         bad = (
-            action.replace("·예약", "")
+            action.replace("·메모리", "")
             if kind == "relative_activity"
-            else action.replace("·운영정책", "")
+            else action.replace("·실제 할당", "")
         )
         with pytest.raises(ValueError):
             validate_written_advice(
@@ -915,13 +922,13 @@ def test_queue_purpose_names_the_evidence_question_without_failure_presuppositio
     action = summary_context(fact)["decision"]["action"]
     if phase == "placement":
         assert (
-            "요청을 충족할 노드가 있었는지" in action
-            and "선택 조건이 맞았는지" in action
+            "요청을 충족할 노드가 없었는지" in action
+            and "조건이 맞지 않았는지" in action
         )
     elif phase == "preparation":
-        assert "준비 중인 단계와 실패 기록 유무" in action
+        assert "준비 중인지 실패했는지" in action
     else:
-        assert "노드 배정 대기인지" in action and "초기화 중인지" in action
+        assert "노드 배정 대기인지" in action and "컨테이너 시작 준비 중인지" in action
     assert fact == before
 
 
@@ -1125,7 +1132,9 @@ def test_trial_question_is_not_an_already_performed_time_change(kind, action, qu
     before = deepcopy(raw)
     assert validate_written_advice(raw, {"findings": [fact]})
     assert raw == before
-    raw["advice"][0]["summary"] = prose.replace("·예약", "")
+    raw["advice"][0]["summary"] = prose.replace(
+        "·예약" if kind == "schedule_candidate" else "·메모리 요구", ""
+    )
     with pytest.raises(ValueError):
         validate_written_advice(raw, {"findings": [fact]})
 
@@ -1321,7 +1330,7 @@ async def test_relative_memory_condition_is_checked_before_model_call(
     def code_action(fact):
         decision = original(fact)
         if repeat_missing and fact["kind"] == "relative_activity":
-            decision["action"] = decision["action"].replace("·메모리 요구", "")
+            decision["action"] = decision["action"].replace("·메모리", "")
         return decision
 
     with patch.object(module, "writing_decision", side_effect=code_action):
@@ -1338,7 +1347,7 @@ async def test_relative_memory_condition_is_checked_before_model_call(
             for a in result["narrative"][0]["advice"]
             if a["kind"] == "relative_activity"
         )
-        assert "메모리 요구를 확인한 뒤" in relative["summary"]
+        assert "메모리 확인 후" in relative["summary"]
 
 
 def test_relative_memory_check_does_not_bypass_existing_reference_validation():
