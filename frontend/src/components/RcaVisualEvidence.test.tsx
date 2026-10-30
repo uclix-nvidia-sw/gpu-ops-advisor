@@ -40,7 +40,8 @@ it('keeps zero, missing windows and sample counts distinct without changing save
   const html = visual(value);
   expect(html).toContain('<strong>0 %</strong>');
   expect(html).toContain('2개 표본');
-  expect(html).toContain('사건 후: 표본 없음·확인 불가');
+  expect(html).toContain('<span>사건 후</span><strong>표본 없음·확인 불가</strong>');
+  expect(html).not.toContain('class="c2-rca-range"');
   expect(html).not.toContain('NaN');
   expect(JSON.stringify(value)).toBe(saved);
 });
@@ -166,4 +167,28 @@ it('uses the same device/code filter for the history chart and incident table', 
   );
   expect(renderToStaticMarkup(<RcaHostHistory result={value} visual />)).toContain('선택 조건 2건');
   expect(renderToStaticMarkup(<RcaHostHistory result={value} />)).not.toContain('날짜별 등록 사건');
+});
+
+it('collapses identical timestamps while preserving each source and keeps distinct times on a timeline', () => {
+  const view = operatorView(result())!;
+  const shared = '2026-10-30T00:20:00Z';
+  const same = {
+    ...view,
+    eventTime: shared,
+    firstReport: shared,
+    lastReport: shared,
+    boundary: shared,
+  };
+  const html = renderToStaticMarkup(<RcaVisualEvidence view={same} />);
+  expect(html).toContain('공통 기준 시각');
+  expect(html).toContain('시각 근거 보기');
+  const missingPeriod = renderToStaticMarkup(
+    <RcaVisualEvidence view={{ ...same, periodStart: '', periodEnd: '' }} />,
+  );
+  expect(missingPeriod).not.toContain('조회 구간 밖');
+  expect(missingPeriod).toContain('유효한 조회 구간이 없어');
+  expect(html).not.toContain('class="c2-rca-timeline"');
+  expect(
+    renderToStaticMarkup(<RcaVisualEvidence view={{ ...same, firstReport: period.start }} />),
+  ).toContain('class="c2-rca-timeline"');
 });

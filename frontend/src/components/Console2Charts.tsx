@@ -31,7 +31,6 @@ export function IncidentCharts({
   const peak = Math.max(1, ...daily.map((d) => Object.values(d.counts).reduce((a, b) => a + b, 0)));
   const top = peak <= 4 ? 4 : Math.ceil(peak / 4) * 4;
   const step = 820 / Math.max(1, days.length);
-  let offset = 0;
   return (
     <div className="c2-charts-row">
       <section className="c2-chart-card" aria-labelledby="c2-trend-title">
@@ -135,52 +134,27 @@ export function IncidentCharts({
             <p>선택 기간의 유형별 분포</p>
           </div>
         </header>
-        <div className="c2-distribution">
-          <svg
-            viewBox="0 0 180 180"
-            role="img"
-            aria-label={CATEGORIES.map((c, i) => `${c.name} ${counts[i]}건`).join(', ')}
-          >
-            <circle cx="90" cy="90" r="67" fill="none" stroke="#edf0ee" strokeWidth="21" />
-            {CATEGORIES.map((c, i) => {
-              const share = views.length ? (counts[i] / views.length) * 100 : 0;
-              const start = offset;
-              offset += share;
-              return share > 0 ? (
-                <circle
-                  key={c.key}
-                  cx="90"
-                  cy="90"
-                  r="67"
-                  pathLength="100"
-                  fill="none"
-                  stroke={categoryColors[i]}
-                  strokeWidth="21"
-                  strokeDasharray={`${share} ${100 - share}`}
-                  strokeDashoffset={-start}
-                  transform="rotate(-90 90 90)"
-                />
-              ) : null;
-            })}
-            <text x="90" y="88" textAnchor="middle" fontSize="32" fontWeight="600" fill="#202b25">
-              {views.length}
-            </text>
-            <text x="90" y="112" textAnchor="middle" fontSize="13" fill="#68746c">
-              수신 사건
-            </text>
-          </svg>
-          <div>
-            {CATEGORIES.map((c, i) => (
+        <div
+          className="c2-category-bars"
+          role="group"
+          aria-label={CATEGORIES.map((c, i) => `${c.name} ${counts[i]}건`).join(', ')}
+        >
+          {CATEGORIES.map((c, i) => ({ ...c, count: counts[i], color: categoryColors[i] }))
+            .sort((a, b) => b.count - a.count)
+            .map((c) => (
               <Link key={c.key} to={`/cases?period=${period}&category=${c.key}`}>
-                <i style={{ background: categoryColors[i] }} />
                 <span>{c.name}</span>
-                <strong>
-                  {counts[i]}
-                  <small>건</small>
-                </strong>
+                <strong>{c.count}건</strong>
+                <span className="c2-count-track" aria-hidden="true">
+                  <i
+                    style={{
+                      width: `${(c.count / Math.max(1, ...counts)) * 100}%`,
+                      background: c.color,
+                    }}
+                  />
+                </span>
               </Link>
             ))}
-          </div>
         </div>
       </section>
     </div>
@@ -258,7 +232,6 @@ export function ReportVisualSummary({ value }: { value: Row }) {
   const summary = obj(incident?.summary);
   const current = count(summary.count),
     previous = count(summary.previous_count);
-  const max = Math.max(current ?? 0, previous ?? 0, 1);
   const delta = current !== null && previous !== null ? current - previous : null;
   if (!usage && !incident) return null;
   return (
@@ -353,41 +326,101 @@ export function ReportVisualSummary({ value }: { value: Row }) {
                     : `이전 기간 대비 ${delta > 0 ? '+' : ''}${delta}건`}
                 </span>
               </div>
-              <svg
-                viewBox="0 0 360 104"
-                role="img"
-                aria-label={`현재 기간 ${current ?? '미확인'}건, 이전 기간 ${previous ?? '미확인'}건`}
-              >
-                {[
-                  { label: '현재', n: current, color: '#76b900' },
-                  { label: '이전', n: previous, color: '#b1bbb4' },
-                ].map((v, i) => (
-                  <g key={v.label}>
-                    <text x="0" y={29 + i * 46} fill="#5f6f64" fontSize="13">
-                      {v.label}
-                    </text>
-                    <rect x="44" y={12 + i * 46} width="250" height="24" rx="3" fill="#eff2f0" />
-                    {v.n !== null && (
-                      <rect
-                        x="44"
-                        y={12 + i * 46}
-                        width={(v.n / max) * 250}
-                        height="24"
-                        rx="3"
-                        fill={v.color}
-                      />
-                    )}
-                    <text x="356" y={29 + i * 46} textAnchor="end" fill="#26372c" fontSize="14">
-                      {v.n ?? '미확인'}
-                    </text>
-                  </g>
-                ))}
-              </svg>
+              <p className="c2-chart-note">
+                현재 기간 {current ?? '미확인'}건, 이전 기간 {previous ?? '미확인'}건
+              </p>
               <a href="#incident-summary-title">장애 종류·노드별 내역 →</a>
             </div>
           </section>
         )}
       </div>
     </section>
+  );
+}
+
+export function IncidentBreakdown({ summary }: { summary: Row }) {
+  const changes = rows(summary.categories)
+    .flatMap((r) => {
+      const now = count(r.count),
+        before = count(r.previous_count);
+      return now === null || before === null
+        ? []
+        : [{ cluster_id: str(r.cluster_id), name: str(r.name), delta: now - before, now, before }];
+    })
+    .filter((r) => r.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const maxChange = Math.max(1, ...changes.map((r) => Math.abs(r.delta)));
+  const nodes = new Map<string, { name: string; count: number }>();
+  const seen = new Set<string>();
+  for (const r of rows(summary.incidents)) {
+    const id = str(r.id);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const name = `${str(r.cluster_id) || '클러스터 미확인'} / ${str(obj(r.target).node) || '노드 미확인'}`;
+    const previous = nodes.get(name);
+    nodes.set(name, { name, count: (previous?.count || 0) + 1 });
+  }
+  const ranked = [...nodes.values()].sort((a, b) => b.count - a.count);
+  const maxNode = Math.max(1, ...ranked.map((n) => n.count));
+  return (
+    <div id="c2-incident-evidence" className="c2-incident-evidence">
+      <section className="c2-chart-card">
+        <h3>어떤 오류 종류가 늘거나 줄었나</h3>
+        <p className="c2-chart-note">
+          직전 같은 길이의 기간 대비 · 변화 폭 상위 6개 · 수신 기록 기준
+        </p>
+        <div className="c2-category-bars">
+          {changes.slice(0, 6).map((r) => (
+            <div key={`${r.cluster_id}/${r.name}`}>
+              <span>
+                {str(r.name)}{' '}
+                <small>
+                  {str(r.cluster_id)} · {r.before} → {r.now}건
+                </small>
+              </span>
+              <strong>
+                {r.delta > 0 ? '+' : ''}
+                {r.delta}건
+              </strong>
+              <span className="c2-count-track" aria-hidden="true">
+                <i
+                  style={{
+                    width: `${(Math.abs(r.delta) / maxChange) * 100}%`,
+                    background: r.delta > 0 ? '#397fc2' : '#72837a',
+                  }}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+        {!changes.length && (
+          <p>
+            비교 가능한 증감이 없습니다. 전체 종류별 표에서 동일 값과 비교 자료 유무를 확인하세요.
+          </p>
+        )}
+      </section>
+      <section className="c2-chart-card">
+        <h3>어느 노드의 기록을 확인할까</h3>
+        <p className="c2-chart-note">
+          저장된 사건 내역 {seen.size}건 · 상위 6개 · 현재 장애 수가 아닙니다.
+        </p>
+        <div className="c2-category-bars">
+          {ranked.slice(0, 6).map((n) => (
+            <div key={n.name}>
+              <span>{n.name}</span>
+              <strong>{n.count}건</strong>
+              <span className="c2-count-track" aria-hidden="true">
+                <i style={{ width: `${(n.count / maxNode) * 100}%`, background: '#76a900' }} />
+              </span>
+            </div>
+          ))}
+        </div>
+        {!ranked.length && <p>노드별로 대조할 사건 내역이 없습니다.</p>}
+        <p className="c2-chart-note">
+          시험 알림 여부와 관련 RCA를 대조하세요. 수신 건수만으로 위험도·동일 원인을 판정하지
+          않습니다.
+        </p>
+      </section>
+    </div>
   );
 }

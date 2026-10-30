@@ -53,6 +53,25 @@
   display: block;
   min-width: 740px;
 }
+.c2-rca-chart-scroll > .c2-rca-timeline {
+  height: 210px;
+}
+.c2-rca-common-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  font-size: 13px;
+}
+.c2-rca-common-time > span {
+  color: #657568;
+}
+.c2-rca-common-time details {
+  flex-basis: 100%;
+}
+.c2-rca-metric .c2-rca-values {
+  margin: 10px 0 6px;
+}
 .c2-rca-metrics-heading {
   margin-top: 24px;
 }

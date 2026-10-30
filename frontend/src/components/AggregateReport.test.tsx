@@ -9,6 +9,33 @@ import {
 } from './AggregateReport';
 import { aggregatePeriod } from '../pages/AggregateReportForm';
 
+it('folds historical alarm-state prose only in Console2 while preserving the original', () => {
+  const value = {
+    narrative_status: 'complete',
+    quality: { report: { method: 'llm_interpreted' } },
+    topics: [{ topic_id: 'incident_summary', summary: { count: 1 }, findings: [] }],
+    narrative: [
+      {
+        topic_id: 'incident_summary',
+        observation: '저장된 사건 1건',
+        meaning: '발생 중인 알림 기록이 있습니다.',
+        next_check: '해제를 확인하세요.',
+        check_target: 'node-a',
+      },
+    ],
+  };
+  const render = (reader: boolean) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport value={value} reader={reader} />
+      </MemoryRouter>,
+    );
+  expect(render(true)).toContain('<details class="c2-historical-interpretation">');
+  expect(render(true)).toContain('해제를 확인하세요.');
+  expect(render(false)).not.toContain('c2-historical-interpretation');
+  expect(render(false)).toContain('해제를 확인하세요.');
+});
+
 it.each(['ops-observation-diagnostics-v1', 'ops-observation-diagnostics-v2'])(
   'shows saved %s causes independently of AI and preserves legacy uncertainty',
   (version) => {

@@ -2,6 +2,19 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { WorkloadCharts } from './WorkloadCharts';
 describe('WorkloadCharts', () => {
+  it('compacts observed zero separately from missing or invalid pending observations', () => {
+    for (const pending of [null, -1, Number.NaN, 0]) {
+      const html = renderToStaticMarkup(
+        <WorkloadCharts
+          compact
+          workloads={[{ cluster_id: 'c1', hours: [{ pending_peak: pending }] }]}
+        />,
+      );
+      expect(html).toContain(pending === 0 ? '관측된 대기 최대 0개' : '대기 자료 없음');
+      expect(html).toContain('확인된');
+      expect(html).not.toContain('<svg');
+    }
+  });
   it('keeps count and elapsed units distinct and includes earlier jobs', () => {
     const html = renderToStaticMarkup(
       <WorkloadCharts

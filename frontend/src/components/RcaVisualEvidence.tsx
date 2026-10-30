@@ -36,6 +36,7 @@ function MetricComparison({
         { label: '사건 후', value: metric.after, text: metric.afterText },
       ];
   const valid = windows.map((w) => w.value).filter(validWindow);
+  const changes = new Set(valid.flatMap((w) => [w.min, w.max, w.last])).size > 1;
   const minimum = Math.min(...valid.map((w) => w.min));
   const maximum = Math.max(...valid.map((w) => w.max));
   const zoom = metric.kind === 'gauge' && metric.unit !== '%' && maximum > minimum;
@@ -76,7 +77,7 @@ function MetricComparison({
           </div>
         ))}
       </div>
-      {!discrete && valid.length > 0 && (
+      {!discrete && changes && (
         <svg
           className="c2-rca-range"
           viewBox={`0 0 300 ${windows.length * 30 + 24}`}
@@ -161,6 +162,8 @@ export function RcaVisualEvidence({
   ];
   const x = (at: string) => 190 + ((Date.parse(at) - start) / (end - start)) * 420;
   const inside = (at: string) => hasPeriod && Date.parse(at) >= start && Date.parse(at) <= end;
+  const times = events.map((e) => Date.parse(e.at)).filter(Number.isFinite);
+  const sameTime = times.length === events.length && new Set(times).size === 1;
   return (
     <section id="c2-rca-visual" className="c2-rca-visual" aria-label="RCA 관측 비교">
       <h4>관측 비교</h4>
@@ -171,10 +174,27 @@ export function RcaVisualEvidence({
         </header>
         <p className="c2-rca-note">
           {v.codes.join(', ')} · {v.node}
-          {v.alertPci && ` · PCI ${v.alertPci}`} · 점은 저장된 시각입니다. 점 사이를 장애 지속
-          시간으로 해석하지 않습니다.
+          {v.alertPci && ` · PCI ${v.alertPci}`} · 저장된 기록 시각입니다. 현재 장애 지속·복구를
+          나타내지 않습니다.
         </p>
-        {hasPeriod ? (
+        {sameTime ? (
+          <div className="c2-rca-common-time">
+            <strong>공통 기준 시각 {formatRcaTime(events[0].at)}</strong>
+            <span>원본 이벤트·첫/마지막 오류 기록·지표 기준이 같습니다.</span>
+            {hasPeriod && !inside(events[0].at) && <span>조회 구간 밖의 시각입니다.</span>}
+            <details>
+              <summary>시각 근거 보기</summary>
+              <dl className="c2-rca-time-list">
+                {events.map((e) => (
+                  <div key={e.label}>
+                    <dt>{e.label}</dt>
+                    <dd>{formatRcaTime(e.at)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          </div>
+        ) : hasPeriod && new Set(times).size > 1 ? (
           <div className="c2-rca-chart-scroll">
             <svg
               className="c2-rca-timeline"

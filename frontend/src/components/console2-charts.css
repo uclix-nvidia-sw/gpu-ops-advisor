@@ -1,3 +1,276 @@
+.c2-category-bars > a,
+.c2-category-bars > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 16px;
+  color: #314238;
+  text-decoration: none;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.c2-category-bars small {
+  color: #69776e;
+  font-size: 11px;
+  margin-left: 8px;
+}
+.c2-count-track {
+  grid-column: 1 / -1;
+  height: 8px;
+  background: #edf0ee;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.c2-count-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.c2-category-bars > a:hover {
+  color: #527e05;
+}
+.c2-chart-note {
+  color: #66746a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.c2-ops-insights {
+  margin: 0 0 24px;
+  color: #28382e;
+}
+.c2-ops-insights > header,
+.c2-hourly-overview > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.c2-ops-insights > header h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.c2-ops-insights > header > span {
+  font-size: 12px;
+  color: #6a766d;
+}
+.c2-coverage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.c2-coverage-strip a {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: #465b4b;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 9px 12px;
+  border: 1px solid #dbe3d7;
+  border-radius: 5px;
+  background: #f7faf5;
+}
+.c2-coverage-strip strong {
+  font-size: 11px;
+  color: #77633c;
+}
+.c2-insight-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+}
+.c2-insight-list article {
+  background: white;
+  padding: 16px;
+  border: 1px solid #dce3df;
+  border-top: 3px solid #76a900;
+  border-radius: 6px;
+  min-width: 0;
+}
+.c2-insight-kind {
+  font-size: 15px;
+  font-weight: 650;
+}
+.c2-insight-list h3 {
+  font-size: 11px;
+  color: #647168;
+  font-weight: 400;
+  margin: 8px 0 12px;
+  overflow-wrap: anywhere;
+}
+.c2-insight-list p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 8px 0;
+}
+.c2-insight-list a {
+  font-size: 12px;
+  color: #517b10;
+}
+.c2-insight-list details {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  color: #66746a;
+}
+.c2-insight-list summary {
+  cursor: pointer;
+}
+.c2-hourly-overview {
+  margin: 22px 0;
+  padding: 16px;
+  border: 1px solid #dce3df;
+  border-radius: 6px;
+  background: white;
+}
+.c2-hourly-overview h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.c2-hourly-overview header p,
+.c2-hourly-overview label,
+.c2-coverage-details p {
+  font-size: 12px;
+  color: #66746a;
+}
+.c2-heatmap-scroll {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.c2-heatmap {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  min-width: 800px;
+  table-layout: fixed;
+}
+.c2-heatmap caption {
+  text-align: left;
+  font-size: 11px;
+  color: #68776b;
+  margin-bottom: 8px;
+}
+.c2-heatmap th {
+  font-size: 11px;
+  padding: 3px;
+  color: #54665a;
+  border: 0;
+}
+.c2-heatmap th:first-child {
+  width: 210px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.c2-heatmap th small {
+  display: block;
+  font-size: 10px;
+  color: #788279;
+  font-weight: 400;
+}
+.c2-heatmap td {
+  padding: 0;
+  border: 0;
+}
+.c2-heat-cell {
+  display: block;
+  width: 100%;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0;
+}
+.c2-heat-cell.c2-heat-overlap {
+  box-shadow: inset 0 0 0 2px #397fc2;
+}
+.c2-heat-tip {
+  display: none;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: min(400px, calc(100vw - 48px));
+  padding: 12px 16px;
+  background: #22372b;
+  color: white;
+  font-size: 13px;
+  line-height: 1.8;
+  border-radius: 6px;
+  z-index: 120;
+  pointer-events: none;
+  text-align: left;
+}
+.c2-heat-cell:hover .c2-heat-tip,
+.c2-heat-cell:focus .c2-heat-tip {
+  display: block;
+}
+.c2-coverage-details {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.c2-coverage-details table {
+  width: 100%;
+  min-width: 650px;
+}
+.c2-coverage-details th,
+.c2-coverage-details td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e7ece8;
+}
+.c2-incident-evidence {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.c2-incident-evidence h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.c2-historical-interpretation,
+.c2-incident-details {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid #dce3df;
+  border-radius: 6px;
+}
+.c2-cluster-empty,
+.c2-workload-empty {
+  padding: 12px 16px;
+  border: 1px solid #dce3df;
+  border-radius: 5px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.c2-cluster-empty p {
+  display: inline;
+  margin: 0 12px;
+}
+.c2-cluster-empty a {
+  color: #517b10;
+}
+.c2-gpu-observed-table {
+  width: 100%;
+  font-size: 12px;
+}
+.c2-gpu-observed-table th,
+.c2-gpu-observed-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e4e9e4;
+  text-align: left;
+}
+.c2-gpu-observed-table small {
+  display: block;
+  font-size: 11px;
+  color: #6c786f;
+  font-weight: 400;
+}
+@media (max-width: 900px) {
+  .c2-incident-evidence {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .c2-charts-row,
 .c2-report-visual-grid {
   display: grid;
@@ -255,4 +528,45 @@
   .c2-chart-legend {
     gap: 8px 14px;
   }
+}
+
+/* Override shared report typography only for the compact evidence blocks. */
+.report-workspace .aggregate-report > .c2-ops-insights {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.report-workspace .aggregate-report .c2-insight-list h3 {
+  font-size: 12px;
+  font-weight: 400;
+  color: #647168;
+  margin: 8px 0 12px;
+}
+.report-workspace .aggregate-report .c2-insight-list p {
+  font-size: 13px;
+  margin: 8px 0 12px;
+}
+.report-workspace .aggregate-report .c2-heatmap {
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+.report-workspace .aggregate-report .c2-heatmap th {
+  font-size: 11px;
+  padding: 3px;
+  border: 0;
+}
+.report-workspace .aggregate-report .c2-heatmap td {
+  padding: 0;
+  border: 0;
+  vertical-align: middle;
+}
+.report-workspace .aggregate-report .c2-heatmap small {
+  font-size: 10px;
+}
+.report-workspace .aggregate-report .c2-heatmap .c2-heat-tip {
+  display: none;
+  color: white;
+}
+.report-workspace .aggregate-report .c2-heat-cell:hover .c2-heat-tip,
+.report-workspace .aggregate-report .c2-heat-cell:focus .c2-heat-tip {
+  display: block;
 }
