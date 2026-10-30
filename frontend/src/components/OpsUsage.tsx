@@ -121,7 +121,7 @@ export function snapshotReports(items: Row[]) {
 }
 export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
   const [selected, setSelected] = useState('');
-  const [chartsOpen, setChartsOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(true);
   const app = useApp();
   const list = useList(
     app.ready ? queryPath('/reports', { scope: app.scope, status: 'succeeded', limit: 20 }) : null,
@@ -181,7 +181,9 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
       <div className="oh-card-b">
         {snapshot && (
           <div className="c2-snapshot-meta">
-            <p>아래 사건 조회 기간과 별개인 저장 결과입니다. 실시간 지표가 아닙니다.</p>
+            <p>
+              사건 조회 기간과 별개인 저장 결과입니다. 아래에 표시된 분석 기간을 기준으로 읽으세요.
+            </p>
             {latest && <ReportScope job={latest} compact />}
             <details>
               <summary>다른 보고서 선택</summary>

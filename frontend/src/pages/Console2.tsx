@@ -6,17 +6,15 @@ import { QueryState } from '../components/live';
 import { RangeCalendar } from '../components/RangeCalendar';
 import { Badge, NavTabs } from '../components/ui';
 import { OpsUsage } from '../components/OpsUsage';
+import { IncidentCharts } from '../components/Console2Charts';
 import { obj, queryPath, rows, str, useList, useResource } from '../lib/live';
 import { useApp } from '../lib/store';
 import {
   CATEGORIES,
   category,
   kindText,
-  dailyCounts,
   dateTimeText,
   dayKey,
-  fullDate,
-  shortDate,
   titleText,
   windowDays,
   type IncidentView,
@@ -170,7 +168,7 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
                       }
                       state={back}
                     >
-                      {titleText(v)}
+                      <span>{titleText(v)}</span>
                       <ArrowUpRight size={14} />
                     </Link>
                   </td>
@@ -314,8 +312,6 @@ function Overview() {
   );
   const publishedReports = reports.items.filter((j) => !!j.result_ref && !j.deletion);
   const days = windowDays(now, Number(period));
-  const daily = dailyCounts(views, days);
-  const max = Math.max(1, ...daily.map((d) => Object.values(d.counts).reduce((a, b) => a + b, 0)));
   const repeats = console2Repeats(views);
   const [repeatMode, setRepeatMode] = useState('device');
   const repeatGroups =
@@ -333,14 +329,13 @@ function Overview() {
     ? '불러온 사건 기준 · 추가 자료 확인 중 또는 조회 한도 도달'
     : '선택 범위의 저장 사건 기준';
   return (
-    <div className="c2-page">
+    <div className="c2-page c2-dashboard">
       <Heading title="운영 개요" note={`최근 ${period}일 · ${dateTimeText(now)} 기준`}>
         <PeriodButtons period={period} onChange={(v) => setParams({ period: v })} />
         <Link className="button primary" to="/reports/new">
           <FileText size={16} /> 보고서 만들기
         </Link>
       </Heading>
-      <OpsUsage snapshot />
       <QueryState query={query}>
         <div className="c2-context">
           <Activity size={15} />
@@ -383,14 +378,31 @@ function Overview() {
             </Link>
           ))}
         </div>
-        <div className="c2-execution" aria-label="사건의 최신 보고서 생성 상태">
-          {executionStates.map((status) => (
-            <Link key={status} to={`/cases?period=${period}&execution=${status}`}>
-              <span>{labels[status]}</span>
-              <strong>{views.filter((v) => v.executionStatus === status).length}</strong>
-            </Link>
-          ))}
-        </div>
+        <section className="c2-execution-panel" aria-label="사건의 최신 보고서 생성 상태">
+          <header>
+            <h2>RCA 보고서 생성</h2>
+            <span>선택 기간 사건의 최신 실행 기록 · 상태를 선택해 확인</span>
+          </header>
+          <div className="c2-execution">
+            {[...executionStates, 'none'].map((status) => {
+              const total = views.filter((v) => (v.executionStatus || 'none') === status).length;
+              return (
+                <Link
+                  key={status}
+                  to={`/cases?period=${period}&execution=${status}`}
+                  className={`c2-exec-${status}`}
+                >
+                  <span>
+                    <i />
+                    {status === 'none' ? '실행 기록 없음' : labels[status]}
+                  </span>
+                  <strong>{total}</strong>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+        <IncidentCharts views={views} days={days} period={period} />
         <div className="c2-overview-grid">
           <Surface
             title="최근 수신된 사건"
@@ -457,66 +469,6 @@ function Overview() {
             </Link>
           </Surface>
         </div>
-        <div className="c2-overview-grid">
-          <Surface title="유형별 사건 추이" note="날짜를 선택하면 해당 날짜의 사건으로 이동">
-            <div className="c2-trend-legend">
-              {CATEGORIES.map((c) => (
-                <span key={c.key}>
-                  <i className={`c2-cat-${c.key}`} />
-                  {c.name}
-                </span>
-              ))}
-            </div>
-            <div
-              className="c2-trend"
-              style={{ gridTemplateColumns: `repeat(${days.length},minmax(20px,1fr))` }}
-            >
-              {daily.map((d) => {
-                const count = Object.values(d.counts).reduce((a, b) => a + b, 0);
-                return (
-                  <Link
-                    key={d.day}
-                    to={`/cases?from=${d.day}&to=${d.day}`}
-                    aria-label={`${fullDate(d.day)} 사건 ${count}건`}
-                  >
-                    <span>{count}</span>
-                    <i className="c2-trend-stack" style={{ height: `${(count / max) * 120}px` }}>
-                      {CATEGORIES.map((c) => (
-                        <span
-                          key={c.key}
-                          className={`c2-cat-${c.key}`}
-                          style={{ flex: d.counts[c.key] }}
-                          title={`${c.name} ${d.counts[c.key]}건`}
-                        />
-                      ))}
-                    </i>
-                    <small>{shortDate(d.day).slice(0, 5)}</small>
-                  </Link>
-                );
-              })}
-            </div>
-          </Surface>
-          <Surface title="유형별 사건 비교" note="오늘 / 선택 기간 · 현재 장비 상태와 구분">
-            <div className="c2-categories">
-              {CATEGORIES.map((c) => {
-                const n = views.filter((v) => category(v) === c.key).length;
-                return (
-                  <div key={c.key}>
-                    <Link to={`/cases?period=${period}&category=${c.key}`}>{c.name}</Link>
-                    <b>
-                      {
-                        views.filter((v) => category(v) === c.key && dayKey(v.at) === dayKey(now))
-                          .length
-                      }{' '}
-                      / {n}건
-                    </b>
-                    <i style={{ width: `${views.length ? (n / views.length) * 100 : 0}%` }} />
-                  </div>
-                );
-              })}
-            </div>
-          </Surface>
-        </div>
         <Surface
           title="노드별 사건 분포"
           note="클러스터·노드별로 구분합니다. 노드를 선택하면 사건을 좁혀 봅니다."
@@ -547,6 +499,7 @@ function Overview() {
           </div>
         </Surface>
       </QueryState>
+      <OpsUsage snapshot />
       <Surface
         title="최근 발행된 Ops 보고서"
         note="저장된 분석 기간의 결과 · 현재 관측과 구분"
@@ -872,7 +825,8 @@ function Cases() {
   );
 }
 const reportSections = [
-  ['c2-report-summary', '핵심 요약'],
+  ['c2-report-summary', '지표 비교'],
+  ['c2-rca-visual', '관측 비교'],
   ['c2-rca-decision', '사건 판단'],
   ['rca-response-reference', '대응 순서'],
   ['rca-observation-detail', '로그·지표'],
@@ -944,7 +898,9 @@ function Reader({ children }: { children: ReactNode }) {
     target.scrollIntoView({ block: 'start' });
   };
   return (
-    <div className="c2-reader-layout">
+    <div
+      className={`c2-reader-layout${location.pathname.startsWith('/reports/') ? ' c2-ops-reader' : ''}`}
+    >
       <aside className="c2-toc" aria-label="보고서 탐색">
         <b>목차</b>
         <select aria-label="보고서 구역 이동" value={active} onChange={(e) => jump(e.target.value)}>

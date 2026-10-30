@@ -86,7 +86,7 @@ it('filters published quality without inferring current health from legacy alarm
     1,
   );
 });
-it('shows both report topics before details, preserves stored statements and keeps classic presentation unchanged', () => {
+it('shows visual comparisons before details, preserves visible interpretations and keeps classic presentation unchanged', () => {
   const value = {
     narrative_status: 'complete',
     quality: { report: { method: 'llm_interpreted' } },
@@ -130,12 +130,13 @@ it('shows both report topics before details, preserves stored statements and kee
     );
   const modern = render(true),
     classic = render(false);
-  expect(modern.indexOf('XID 48 수신')).toBeLessThan(
+  expect(modern.indexOf('기간 내 사건 비교')).toBeLessThan(
     modern.indexOf('id="namespace-summary-title"'),
   );
   expect(modern).toContain('추가 할당 가능 여부 미확인');
-  expect(modern).toContain('기간 내 0건 · 비교 기간 미확인');
-  expect(modern).toContain('<details class="c2-saved-interpretation">');
+  expect(modern).toContain('현재 기간 0건, 이전 기간 미확인건');
+  expect(modern).toContain('XID 48 수신');
+  expect(modern).not.toContain('c2-saved-interpretation');
   expect(modern).toContain('이 대상·구간을 그래프에서 확인');
   expect(classic).not.toContain('c2-report-summary');
   expect(classic).not.toContain('이 대상·구간을 그래프에서 확인');

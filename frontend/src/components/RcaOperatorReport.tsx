@@ -8,6 +8,7 @@ import { InspectionFigures } from './InspectionFigures';
 import { Ids, RcaPoints, RcaStepPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
+import { RcaVisualEvidence } from './RcaVisualEvidence';
 
 const TRIAGE_URL = 'https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html';
 const FM_URL = 'https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html';
@@ -192,6 +193,7 @@ export function RcaOperatorReport({
         )}
       </header>
 
+      {decisionSummary && v && <RcaVisualEvidence view={v} onEvidence={onEvidence} />}
       {decisionSummary && (
         <section
           id={decisionSummary ? 'c2-rca-decision' : undefined}
@@ -631,7 +633,7 @@ export function RcaOperatorReport({
             ))}
           </figure>
         )}
-        <RcaHostHistory result={result} embedded />
+        <RcaHostHistory result={result} embedded visual={decisionSummary} />
       </section>
 
       <section

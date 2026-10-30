@@ -979,6 +979,14 @@ function Report({ id }: { id: string }) {
     navigate = useNavigate();
   const [exportError, setExportError] = useState('');
   const [evidence, setEvidence] = useState<string | null>(null);
+  const actions = modern ? (
+    <details className="c2-report-management">
+      <summary>보고서 관리</summary>
+      <ReportActions job={job} />
+    </details>
+  ) : (
+    <ReportActions job={job} />
+  );
   return (
     <>
       <Back fallback="/reports" />
@@ -997,19 +1005,13 @@ function Report({ id }: { id: string }) {
             <Status job={{ ...job, result_status: result.result_status }} />
             <ReportOrigin value={job.report_origin} />
           </div>
-          {modern ? (
-            <details className="c2-report-management">
-              <summary>보고서 관리</summary>
-              <ReportActions job={job} />
-            </details>
-          ) : (
-            <ReportActions job={job} />
-          )}
+          {(!modern || job.deletion || !job.result_ref || !Object.keys(result).length) && actions}
           {job.deletion ? (
             <ReportDeletionNotice job={job} />
           ) : job.result_ref && Object.keys(result).length ? (
             <>
               <div className="new-print">
+                {modern && actions}
                 {modern && <ReportExports id={id} />}
                 <button
                   className="button"

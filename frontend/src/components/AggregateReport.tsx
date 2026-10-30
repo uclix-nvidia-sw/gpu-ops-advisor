@@ -2,13 +2,14 @@ import { adviceGroups, advicePresentation, adviceTime } from '../lib/namespaceAd
 import { useState } from 'react';
 import { obj, rows, str, strings, type Row } from '../lib/live';
 import { ReportPeriod } from './ReportMeta';
-import { Badge, Notice, TextLink } from './ui';
+import { Notice, TextLink } from './ui';
 import { reportRequestTime } from '../lib/reportPeriod';
 import './aggregate-report.css';
 import '../lib/advice-colors.css';
 import { memoryPercent, NamespaceCharts, type NamespaceFocus } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
 import { WorkloadContext } from './WorkloadContext';
+import { ReportVisualSummary } from './Console2Charts';
 
 export const aggregateReasons: Record<string, string> = {
   unobserved_hour: '이 시간대 관측 없음',
@@ -639,6 +640,27 @@ export function AggregateReport({
     : calculatedSummary
       ? '계산 결과 요약'
       : '저장된 주요 변화';
+  const namespaceCharts = (
+    <NamespaceCharts
+      headingNumber={reader ? '1.1' : '1.2'}
+      reader={reader}
+      focus={graphFocus}
+      onClearFocus={() => setGraphFocus(null)}
+      groups={groups}
+      hidden={hiddenNamespaces}
+      onToggle={toggleNamespace}
+      onSetCluster={(keys, visible) =>
+        setHiddenNamespaces((previous) => {
+          const next = new Set(previous);
+          keys.forEach((key) => {
+            if (visible) next.delete(key);
+            else next.add(key);
+          });
+          return next;
+        })
+      }
+    />
+  );
   return (
     <section
       id="final-report"
@@ -662,95 +684,14 @@ export function AggregateReport({
           <a href="#report-evidence">집계 기준과 근거</a>
         </nav>
       )}
-      {reader && (
-        <section id="c2-report-summary" className="c2-report-summary">
-          <h3>주요 변화와 확인할 사항</h3>
-          <p>
-            저장된 주제별 내용의 첫 항목입니다. 위험도 순위가 아니며 전체 제안과 적용 조건은 해당
-            주제에서 확인하세요.
-          </p>
-          <div className="c2-summary-grid">
-            {topics
-              .filter((t) => ['namespace_usage', 'incident_summary'].includes(str(t.topic_id)))
-              .map((topic) => {
-                const section = rows(value.narrative).find((n) => n.topic_id === topic.topic_id);
-                const advice = rows(section?.advice);
-                const first = advice[0];
-                const text = first
-                  ? str(first.summary) || str(first.observation)
-                  : str(section?.observation) || str(section?.summary_text) || str(section?.text);
-                const calculated =
-                  section?.interpretation_source === 'deterministic_fallback' || calculatedSummary;
-                return (
-                  <article key={str(topic.topic_id)}>
-                    <small>
-                      {calculated
-                        ? '계산 결과 요약'
-                        : aiInterpreted && section
-                          ? '저장된 AI 해석'
-                          : aiSelected
-                            ? 'AI가 선택한 계산 결과'
-                            : '저장된 내용 · 작성 방식 미확인'}
-                    </small>
-                    <h4>{topic.topic_id === 'namespace_usage' ? 'Namespace 활동' : '장애 알림'}</h4>
-                    <Badge status={str(topic.status) || null} />
-                    <p className="c2-topic-fact">
-                      {topic.topic_id === 'namespace_usage'
-                        ? `${groups.length}개 Namespace 분석 대상`
-                        : typeof summary.count === 'number' && Number.isFinite(summary.count)
-                          ? `기간 내 ${summary.count}건 · 비교 기간 ${typeof summary.previous_count === 'number' && Number.isFinite(summary.previous_count) ? `${summary.previous_count}건` : '미확인'}`
-                          : '기간 내 알림 집계 미확인'}
-                    </p>
-                    <details className="c2-saved-interpretation">
-                      <summary>저장된 해석·적용 조건 펼치기</summary>
-                      <p>{text || '저장된 요약이 없습니다. 아래 관측 자료와 한계를 확인하세요.'}</p>
-                      {first && str(first.conditions) && (
-                        <p className="aggregate-static-note">
-                          <strong>적용 조건</strong> {str(first.conditions)}
-                        </p>
-                      )}
-                      {str(section?.interpretation_limit) && (
-                        <p className="aggregate-static-note">
-                          {str(section?.interpretation_limit)}
-                        </p>
-                      )}
-                    </details>
-                    <a
-                      href={
-                        topic.topic_id === 'namespace_usage'
-                          ? '#namespace-summary-title'
-                          : '#incident-summary-title'
-                      }
-                    >
-                      {advice.length
-                        ? `전체 제안 ${advice.length}개와 관측 보기`
-                        : '주제의 관측과 근거 보기'}{' '}
-                      →
-                    </a>
-                  </article>
-                );
-              })}
-          </div>
-          {diagnosticMessages.length > 0 && (
-            <div className="c2-warning">
-              <b>활동률 산출·기간 비교에 제한이 있습니다.</b>
-              <ul>
-                {strings(observationDiagnostics.summary).map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-              <a href="#namespace-summary-title">대상·기간별 제외 사유 확인 →</a>
-            </div>
-          )}
-        </section>
-      )}
+      {reader && <ReportVisualSummary value={value} />}
       {partialInterpretation && (
         <Notice>
           일부 주제의 AI 해석을 작성하지 못했습니다. 검증을 통과한 주제의 AI 해석은 유지하고,
           나머지는 계산 결과 요약으로 표시합니다.
         </Notice>
       )}
-      {!reader && !aiInterpreted && rows(value.narrative).length > 0 && (
+      {!aiInterpreted && rows(value.narrative).length > 0 && (
         <section
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
           aria-labelledby="report-summary-title"
@@ -780,6 +721,7 @@ export function AggregateReport({
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
           <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
+          {reader && groups.length > 0 && namespaceCharts}
           {diagnosticMessages.length > 0 && (
             <section aria-label="부분 산출 원인">
               <h3>활동률 산출·기간 비교의 제한</h3>
@@ -810,7 +752,7 @@ export function AggregateReport({
               onFocus={reader ? focusAdvice : undefined}
             />
           )}
-          <h3 className="aggregate-subheading">1.1. Namespace별 비교</h3>
+          <h3 className="aggregate-subheading">{reader ? '1.2' : '1.1'}. Namespace별 비교</h3>
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
             있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
@@ -885,29 +827,12 @@ export function AggregateReport({
                   메모리 사용 비율은 사용량 ÷ (사용량 + 여유량) × 100입니다. 보조 수치는 GPU당 평균
                   사용량 / 전체 용량(GiB)입니다. 전체 용량은 관측된 사용량과 여유량의 합입니다. 연결
                   GPU의 관측값이며 Namespace의 전용 사용량이나 할당량이 아닙니다. 활동률과 메모리는
-                  각각 확인된 구간의 평균이므로 반영 구간이 다를 수 있습니다. 시간대별 비교는 아래
+                  각각 확인된 구간의 평균이므로 반영 구간이 다를 수 있습니다. 시간대별 비교는{' '}
+                  {reader ? '위' : '아래'}
                   그래프에서 확인하세요. 여러 모델은 모델별 평균 범위를 표시합니다.
                 </p>
               )}
-              <NamespaceCharts
-                headingNumber="1.2"
-                reader={reader}
-                focus={graphFocus}
-                onClearFocus={() => setGraphFocus(null)}
-                groups={groups}
-                hidden={hiddenNamespaces}
-                onToggle={toggleNamespace}
-                onSetCluster={(keys, visible) =>
-                  setHiddenNamespaces((previous) => {
-                    const next = new Set(previous);
-                    keys.forEach((key) => {
-                      if (visible) next.delete(key);
-                      else next.add(key);
-                    });
-                    return next;
-                  })
-                }
-              />
+              {!reader && namespaceCharts}
               <h3 className="aggregate-subheading">1.3. 세부 수치와 사용 패턴</h3>
               <details className="aggregate-model-detail">
                 <summary>세부 수치와 자료 상태</summary>
