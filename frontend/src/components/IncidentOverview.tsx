@@ -176,7 +176,7 @@ export function IncidentHead() {
       <span>시각</span>
       <span>무슨 장애</span>
       <span>어디</span>
-      <span>런북 안내</span>
+      <span>오류 영향·대응 안내</span>
       <span>RCA</span>
     </div>
   );

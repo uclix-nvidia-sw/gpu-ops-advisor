@@ -210,7 +210,7 @@ const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
         : 1.5
       : m.tag === IDLE
         ? 4
-        : ['변화 없음', 'FM 서비스·로그 확인'].includes(m.tag) && m.kind === 'enum'
+        : ['변화 없음', 'FM 상태 제공 대상 아님'].includes(m.tag) && m.kind === 'enum'
           ? 5
           : m.tone === 'ok' || m.tag === '유지'
             ? 3
@@ -538,7 +538,7 @@ export function operatorView(result: Row) {
   if (metricGpus.length)
     idPoints.push(
       view.metric_scope === 'node_gpu_context'
-        ? `지표 범위: 같은 노드 GPU ${metricGpus.length}개 전체 — ${family === 'nvswitch' ? '스위치 자체 지표가 아니라 연결 GPU 쪽 관측입니다' : '알림 GPU만의 값이 아닙니다'}.`
+        ? `지표 범위: 같은 노드 GPU ${metricGpus.length}개 전체 — ${family === 'nvswitch' ? '같은 서버 GPU의 측정값이며 오류 포트와의 연결 관계는 별도로 대조합니다' : '알림 GPU만의 값이 아닙니다'}.`
         : `지표 GPU: ${metricGpus.map(gpuLabel).join(', ')} → ${alertUuid && metricGpus.every((u) => u === alertUuid) ? '알림 GPU와 같은 장치' : '알림 GPU와 대조 필요'}`,
     );
   if (alertPci && family === 'gpu') {
@@ -553,7 +553,7 @@ export function operatorView(result: Row) {
     const device = strings(r.reported_pci).join(', ');
     const finding =
       r.status === 'empty'
-        ? `조회 기간에 스위치 ${device}에 해당하는 측정값은 0건입니다.`
+        ? `조회한 지표 저장소·기간에서 스위치 주소 ${device}가 붙은 측정 자료는 0건입니다.`
         : r.status === 'ok'
           ? `조회된 측정값 중 스위치 ${device}와 장비·기간이 일치하는 자료는 0건입니다.`
           : `스위치 ${device}의 측정값 조회가 완료되지 않았습니다. 수집 연결과 조회 실행 상태를 점검하세요.`;
@@ -713,13 +713,16 @@ export function operatorView(result: Row) {
       } else {
         enumChange = `상태 코드 ${code(c)} 유지`;
         [tag, short] = [
-          fm && c === 0 ? 'FM 서비스·로그 확인' : '변화 없음',
+          fm && c === 0 ? 'FM 상태 제공 대상 아님' : '변화 없음',
           fm
             ? c === 0
               ? `${enumChange} — 이 GPU는 Fabric Manager 상태를 이 지표로 제공하지 않습니다. 해당 노드의 Fabric Manager 서비스 실행 상태와 오류 로그를 확인합니다`
               : enumChange
             : `${enumChange} (코드 의미는 원문 기준)`,
         ];
+        if (fm && c === 0)
+          enumChange =
+            '조회 값 0 — 해당 GPU는 이 지표로 FM 상태를 제공하지 않음. FM 서비스 실행 여부·오류 내용은 서비스 로그로 확인';
         tone = fm && c === 3 ? 'ok' : fm && c === 4 ? 'warn' : 'unknown';
       }
       const flag = STATE_FLAGS[q];
@@ -1098,16 +1101,29 @@ export function operatorView(result: Row) {
   );
   rows(quality.collection_checks)
     .filter((c) => str(c.status) && c.status !== 'collected')
-    .forEach((c) =>
-      gapPoints.push(
-        `${str(c.title)}: ${c.status === 'connection_required' ? '수집 경로가 연결되지 않아 조회하지 못했습니다' : `수집 상태 ${str(c.status)}`}`,
-      ),
-    );
+    .forEach((c) => {
+      const connection = !strings(c.query_ids).length
+        ? '이번 조사에 이 자료를 가져오는 조회가 등록되어 있지 않습니다. 해당 서버·발생 시각의 원본 자료를 확보해 대조해야 합니다'
+        : strings(c.reasons).includes('binding_scope_unavailable')
+          ? '이번 서버·클러스터에 사용할 조회 연결이 없어 실행되지 않았습니다. 해당 서버의 로그 조회 연결을 설정해야 합니다'
+          : '이번 조사에서 사용할 수집 연결이 준비되지 않았습니다. 해당 서버·발생 시각의 원본 자료를 확보해 대조해야 합니다';
+      const status: Record<string, string> = {
+        connection_required: connection,
+        plan_required: '조회 연결은 있으나 이번 조사 대상에 포함되지 않았습니다',
+        not_collected: '이번 실행에서 조회가 수행되지 않았습니다',
+        empty: '조회는 완료했으며 해당 대상·기간의 자료는 0건입니다',
+        failed: '조회 요청이 실패했습니다. 연결 상태를 점검한 뒤 다시 조회해야 합니다',
+        partial: '조회 응답의 일부만 수집됐습니다. 원본 자료의 범위를 대조해야 합니다',
+      };
+      gapPoints.push(`${str(c.title)}: ${status[str(c.status)] || `수집 상태 ${str(c.status)}`}`);
+    });
   // Supporting metrics the worker could not fetch; the report itself stays complete.
-  const optionalMissing = rows(quality.optional_unavailable).map((m) => str(m.name));
+  const optionalMissing = rows(quality.optional_unavailable).map((m) =>
+    m.query_id === 'D13' ? '보조 로그 문맥' : str(m.name),
+  );
   if (optionalMissing.length)
     gapPoints.push(
-      `가져오지 못한 보조 지표: ${optionalMissing.join(', ')} — 보고서 판단에는 쓰지 않았습니다. 필요하면 직접 확인하세요.`,
+      `추가 대조 자료: ${optionalMissing.join(', ')} — 이번 보고서의 판단 근거에 포함되지 않았습니다. 해당 서버·발생 시각의 원본을 대조하세요.`,
     );
   if (noAfter.length && metrics.length)
     gapPoints.push(
@@ -1129,7 +1145,7 @@ export function operatorView(result: Row) {
   );
   const gaps: Finding = {
     key: 'gaps',
-    question: '아직 확인되지 않은 것은 무엇인가요?',
+    question: '조치 전에 추가로 대조할 자료는 무엇인가요?',
     tone: 'unknown',
     verdict:
       result.result_status === 'partial'

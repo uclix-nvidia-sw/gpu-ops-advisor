@@ -127,6 +127,7 @@ it('explains SXID11001 without GPU failure or XID restart guidance', () => {
   expect(html).toContain('B200·B300에는 이 지침을 적용하지 않습니다');
   expect(html).not.toContain('XID154');
   expect(html).not.toContain('GPU가 PCIe 연결을 통해');
+  expect(html).toContain('이번 실행의 수집 완료 목록은 아니며');
 });
 it('does not invent catalog details for unknown or unrecorded guidance', () => {
   const html = renderToStaticMarkup(
