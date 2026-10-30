@@ -44,9 +44,20 @@ export function ReportPeriod({ value }: { value: unknown }) {
   );
 }
 
-export function ReportScope({ job }: { job: Row }) {
+export function ReportScope({ job, compact = false }: { job: Row; compact?: boolean }) {
   const clusters = reportScopeClusters(job);
   if (!clusters.length) return <span>분석 대상 미확인</span>;
+  if (compact)
+    return (
+      <ul className="c2-scope" aria-label="클러스터별 분석 대상">
+        {clusters.map(({ cluster, namespaces }, index) => (
+          <li key={index}>
+            <strong>{cluster}</strong>
+            <span>{namespaces}</span>
+          </li>
+        ))}
+      </ul>
+    );
   return (
     <ul className="report-scope" aria-label="클러스터별 분석 대상">
       {clusters.map(({ cluster, namespaces }, index) => (

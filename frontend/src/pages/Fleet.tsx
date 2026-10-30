@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge, Field, Modal, NavTabs, PageHead, Panel } from '../components/ui';
 import { DataView, More, QueryState } from '../components/live';
 import { obj, queryPath, str, useList, useResource, type Row } from '../lib/live';
@@ -19,6 +20,7 @@ export function assetTarget(row: Row): Row {
 }
 export function Fleet({ view }: { view: string }) {
   const app = useApp();
+  const modern = app.mode === 'operations';
   const [chosen, setChosen] = useState(''),
     [chosenNamespace, setNamespace] = useState(''),
     [kind, setKind] = useState(view === 'workloads' ? 'pod' : 'node'),
@@ -55,8 +57,19 @@ export function Fleet({ view }: { view: string }) {
     <div className="page">
       <PageHead
         eyebrow="FLEET & OBSERVABILITY"
-        title="자산·관측"
-        description="수집된 식별 이력과 저장된 관측을 조회합니다."
+        title={modern ? '저장 관측 자료' : '자산·관측'}
+        description={
+          modern
+            ? '저장된 장비 식별·관측 자료를 확인합니다. 실시간 장비 목록이나 건강 상태가 아닙니다.'
+            : '수집된 식별 이력과 저장된 관측을 조회합니다.'
+        }
+        actions={
+          modern && (
+            <Link className="button" to="/settings/data">
+              데이터 연결 확인 →
+            </Link>
+          )
+        }
       />
       <NavTabs
         items={[
@@ -110,7 +123,22 @@ export function Fleet({ view }: { view: string }) {
               </Field>
             )}
           </div>
-          <QueryState query={assets} empty={!items.length}>
+          <QueryState
+            query={assets}
+            empty={!items.length}
+            {...(modern
+              ? {
+                  emptyTitle: '이 범위에 저장된 관측 자료가 없습니다.',
+                  emptyDescription:
+                    '보고서에 등장하는 장비와 이 목록의 저장 자료는 별개입니다. 다른 범위를 선택하거나 데이터 연결을 확인하세요.',
+                  emptyAction: (
+                    <Link className="button" to="/settings/data">
+                      데이터 연결 확인
+                    </Link>
+                  ),
+                }
+              : {})}
+          >
             <div className="table-wrap">
               <table>
                 <thead>

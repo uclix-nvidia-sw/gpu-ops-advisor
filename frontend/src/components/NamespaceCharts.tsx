@@ -318,8 +318,10 @@ export function NamespaceCharts({
         </div>
       )}
       <p>
-        각 그래프에서 비교할 Namespace를 선택하세요. 선택은 해당 그래프에만 적용됩니다. 모두
-        해제하면 선과 점만 숨겨집니다. 색은 Namespace, 선 모양은 GPU 모델이며 빈 구간은 산출
+        {reader
+          ? '비교할 Namespace를 선택하세요. 활동률과 메모리 그래프에 함께 적용됩니다.'
+          : '각 그래프에서 비교할 Namespace를 선택하세요. 선택은 해당 그래프에만 적용됩니다.'}{' '}
+        모두 해제하면 선과 점만 숨겨집니다. 색은 Namespace, 선 모양은 GPU 모델이며 빈 구간은 산출
         불가입니다.
       </p>
       {[...new Set(groups.map((g) => g.cluster))].map((cluster) => {
@@ -346,7 +348,8 @@ export function NamespaceCharts({
               const title = isMemory
                 ? `GPU 메모리 ${memoryField === 'used_gib_per_gpu' ? '사용' : '여유'} 비율`
                 : 'GPU 활동률';
-              const selectionKey = (g: NamespaceGroup) => JSON.stringify([metric, g.key]);
+              const selectionKey = (g: NamespaceGroup) =>
+                JSON.stringify([reader ? 'both' : metric, g.key]);
               const selected = clusterGroups.filter((g) => !hidden.has(selectionKey(g)));
               const series = selected.flatMap((g) =>
                 g.models.map((r) => ({
@@ -402,13 +405,15 @@ export function NamespaceCharts({
                         : '선택한 Namespace에 활동률을 계산할 수 있는 시간대가 없습니다. 하위 상세에서 자료 부족 사유를 확인하세요.'}
                     </Notice>
                   )}
-                  <TimeChart
-                    series={series}
-                    start={start}
-                    end={end}
-                    label={`${cluster} Namespace별 ${title}`}
-                    focus={focus?.cluster === cluster ? focus : null}
-                  />
+                  {(!reader || !selected.length || series.some((s) => s.points.length)) && (
+                    <TimeChart
+                      series={series}
+                      start={start}
+                      end={end}
+                      label={`${cluster} Namespace별 ${title}`}
+                      focus={focus?.cluster === cluster ? focus : null}
+                    />
+                  )}
                   <div className="aggregate-chart-controls">
                     <div className="aggregate-chart-actions">
                       <button

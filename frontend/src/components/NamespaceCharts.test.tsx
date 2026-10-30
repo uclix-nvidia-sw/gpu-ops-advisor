@@ -157,3 +157,38 @@ it('derives memory share only from valid used and free observations', () => {
     expect(memoryPercent({ used_gib_per_gpu: used, free_gib_per_gpu: free })).toBeNull();
   }
 });
+
+it('links reader selections across both metrics and replaces unavailable plots with an explanation', () => {
+  const data: NamespaceGroup[] = [
+    group('cpc-1', 'dept-a', ['A100']),
+    group('cpc-2', 'dept-a', ['A100']),
+  ].map((g) => ({
+    ...g,
+    models: g.models.map((m) => ({
+      ...m,
+      gpu_memory: { hours: [{ ...hour(0, 0), used_gib_per_gpu: 0, free_gib_per_gpu: 80 }] },
+    })),
+  }));
+  const renderReader = (hidden: Set<string>, items = data) =>
+    renderToStaticMarkup(
+      <NamespaceCharts
+        reader
+        groups={items}
+        hidden={hidden}
+        onToggle={() => {}}
+        onSetCluster={() => {}}
+      />,
+    );
+  const selected = renderReader(new Set());
+  expect((selected.match(/checked=""/g) || []).length).toBe(4);
+  expect(selected).toContain('0.00%');
+  const hidden = renderReader(new Set([JSON.stringify(['both', data[0].key])]));
+  expect((hidden.match(/checked=""/g) || []).length).toBe(2);
+  expect((hidden.match(/<g aria-label="dept-a \/ A100"/g) || []).length).toBe(2);
+  const missing = renderReader(new Set(), [
+    { ...data[0], models: [{ gpu_model: 'A100', hours: [], gpu_memory: { hours: [] } }] },
+  ]);
+  expect(missing).toContain('활동률을 계산할 수 있는 시간대가 없습니다');
+  expect(missing).toContain('확인된 GPU 메모리 자료가 없습니다');
+  expect(missing).not.toContain('role="img"');
+});

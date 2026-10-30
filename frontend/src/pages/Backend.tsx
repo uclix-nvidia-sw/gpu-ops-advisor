@@ -3,6 +3,7 @@ import { CheckCircle2, Database, RefreshCw, Server, Unplug } from 'lucide-react'
 import { Link } from 'react-router-dom';
 import { Badge, NavTabs, Notice, PageHead, Panel } from '../components/ui';
 import { apiRequest, ApiError } from '../lib/api';
+import { useApp } from '../lib/store';
 
 type Health = { status: string; request_id: string };
 type Module = { module: string; status: string };
@@ -16,6 +17,7 @@ const message = (error: unknown) =>
     : '백엔드에 연결할 수 없습니다. 서버 실행 상태를 확인해 주세요.';
 
 export function Backend() {
+  const modern = useApp().mode === 'operations';
   const client = useQueryClient();
   const health = useQuery({
     queryKey: ['api', 'health'],
@@ -49,6 +51,7 @@ export function Backend() {
           { to: '/settings/routing', label: '질의·Agent별 모델 지정' },
           { to: '/settings/data', label: '데이터 연결' },
           { to: '/settings/backend', label: '백엔드 연결' },
+          ...(modern ? [{ to: '/fleet/assets', label: '저장 관측 자료' }] : []),
         ]}
       />
       <Notice>

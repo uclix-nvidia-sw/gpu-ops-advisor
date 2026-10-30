@@ -28,6 +28,7 @@ import {
 import { formatDate, labels } from '../lib/domain';
 import { reportTitle } from '../lib/workflow';
 import { reportReceivedRange } from '../lib/reportPeriod';
+import { reportTabs } from '../lib/reportNavigation';
 import {
   metricName,
   metricTarget,
@@ -518,8 +519,11 @@ function Incident({ id }: { id: string }) {
         <section id="new-incident-state" tabIndex={-1} aria-label="사건 처리 상태 변경">
           <Panel title="사건 처리 상태">
             <p className="live-padding">
-              알림 해제, 검토 완료, 사건 종결은 별개입니다. 기록을 저장해도 아래 상태는 바뀌지
-              않습니다. <a href="#new-review-records">이 사건에 남긴 기록 확인</a>
+              {app.mode === 'operations'
+                ? '검토 완료와 사건 종결은 별개입니다.'
+                : '알림 해제, 검토 완료, 사건 종결은 별개입니다.'}{' '}
+              기록을 저장해도 아래 상태는 바뀌지 않습니다.{' '}
+              <a href="#new-review-records">이 사건에 남긴 기록 확인</a>
             </p>
             <div className="live-padding head-actions">
               {['open', 'acknowledged', 'closed'].map((state) => (
@@ -601,7 +605,7 @@ function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }
         <>
           <div className="new-reader">
             <p className="muted">선택한 조사 접수 {formatDate(str(job.created_at))} · 한국 시간</p>
-            <ReportScope job={job} />
+            <ReportScope job={job} compact={modern} />
             {job.time_range != null && <ReportPeriod value={job.time_range} />}
             <Status job={{ ...job, result_status: result.result_status }} />
             {job.result_ref && Object.keys(result).length ? (
@@ -741,6 +745,7 @@ function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }
   );
 }
 function Analysis({ id }: { id: string }) {
+  const modern = useApp().mode === 'operations';
   const q = useResource(`/analyses/${id}`, undefined, true),
     job = obj(q.data),
     incidentId = str(job.incident_id);
@@ -751,7 +756,11 @@ function Analysis({ id }: { id: string }) {
       <PageHead
         eyebrow="RCA REPORT"
         title="저장된 사건 분석"
-        description="선택한 조사의 저장 결과와 당시 범위입니다. 최신 조사 결과나 상단의 현재 선택 범위와 다를 수 있습니다."
+        description={
+          modern
+            ? '선택한 조사의 저장 결과입니다. 아래 분석 대상과 기간을 기준으로 읽으세요.'
+            : '선택한 조사의 저장 결과와 당시 범위입니다. 최신 조사 결과나 상단의 현재 선택 범위와 다를 수 있습니다.'
+        }
       />
       <QueryState query={q}>
         {incidentId ? (
@@ -981,7 +990,7 @@ function Report({ id }: { id: string }) {
       <QueryState query={q}>
         <div id="new-report-document" className="report-workspace new-report-document">
           <div className="new-detail-meta">
-            <ReportScope job={result.scope ? result : job} />
+            <ReportScope job={result.scope ? result : job} compact={modern} />
             {(!aggregatePublished || modern) && (
               <ReportPeriod value={result.time_range || job.time_range} />
             )}
@@ -1270,7 +1279,10 @@ export function NewWorkspace() {
       }}
     >
       {['reports', 'schedules', 'operator-guide'].includes(section) &&
-        !(app.mode === 'operations' && section === 'schedules') && (
+        !(
+          app.mode === 'operations' &&
+          (section === 'schedules' || (section === 'reports' && id && id !== 'new'))
+        ) && (
           <nav className="tabs new-report-nav" aria-label="운영 보고서 메뉴">
             {[
               { to: '/reports', label: '보고서 목록', section: 'reports' },
@@ -1283,7 +1295,9 @@ export function NewWorkspace() {
                 className={reportSection === item.section ? 'active' : ''}
                 aria-current={reportSection === item.section ? 'location' : undefined}
               >
-                {item.label}
+                {app.mode === 'operations'
+                  ? reportTabs.find((tab) => tab.to === item.to)?.label || item.label
+                  : item.label}
               </Link>
             ))}
           </nav>

@@ -173,7 +173,6 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
                       {titleText(v)}
                       <ArrowUpRight size={14} />
                     </Link>
-                    <small>수신 alert 기준</small>
                   </td>
                   <td className="c2-device-cell">
                     <b>
@@ -341,6 +340,7 @@ function Overview() {
           <FileText size={16} /> 보고서 만들기
         </Link>
       </Heading>
+      <OpsUsage snapshot />
       <QueryState query={query}>
         <div className="c2-context">
           <Activity size={15} />
@@ -573,7 +573,6 @@ function Overview() {
           </div>
         </QueryState>
       </Surface>
-      <OpsUsage snapshot />
       <footer className="c2-service">
         <span>조회 서비스</span>
         {['incident', 'job_controller'].map((name) => {
@@ -885,6 +884,8 @@ const reportSections = [
   ['c2-workloads', '작업 대기·완료'],
   ['incident-summary-title', '장애 알림'],
   ['report-evidence', '집계 근거'],
+  ['new-investigation-history', '조사 이력'],
+  ['new-incident-state', '처리 상태'],
   ['new-review-records', '검토·조치 기록'],
 ];
 function Reader({ children }: { children: ReactNode }) {
@@ -944,9 +945,8 @@ function Reader({ children }: { children: ReactNode }) {
   };
   return (
     <div className="c2-reader-layout">
-      <aside className="c2-toc">
-        <span>IN THIS REPORT</span>
-        <b>보고서 목차</b>
+      <aside className="c2-toc" aria-label="보고서 탐색">
+        <b>목차</b>
         <select aria-label="보고서 구역 이동" value={active} onChange={(e) => jump(e.target.value)}>
           {sections.map(([id, label]) => (
             <option key={id} value={id}>
@@ -965,16 +965,11 @@ function Reader({ children }: { children: ReactNode }) {
             </button>
           ))}
         </nav>
-        <p>
-          저장된 관측과
-          <br />
-          판단 한계를 함께 읽으세요.
-        </p>
         <button
           className="text-link"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-          보고서 처음으로 ↑
+          처음으로 ↑
         </button>
       </aside>
       <div ref={root} className="c2-reader-content">

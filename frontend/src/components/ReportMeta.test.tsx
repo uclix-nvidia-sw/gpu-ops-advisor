@@ -59,6 +59,26 @@ it('separates clusters from Namespace scope and preserves all, selected, empty a
   expect(renderToStaticMarkup(<ReportScope job={{}} />)).toContain('분석 대상 미확인');
 });
 
+it('keeps selected, all, and unknown scopes distinct in the compact reader', () => {
+  const job = {
+    scope: {
+      clusters: [
+        { cluster_id: 'cpc-1', namespaces: ['training'] },
+        { cluster_id: 'cpc-2', namespaces: null },
+        { cluster_id: 'cpc-3' },
+      ],
+    },
+  };
+  const html = renderToStaticMarkup(<ReportScope job={job} compact />);
+  const blocks = html.split('<li>').slice(1);
+  expect(blocks).toHaveLength(3);
+  expect(blocks[0]).toContain('training');
+  expect(blocks[1]).toContain('전체 Namespace');
+  expect(blocks[2]).toContain('Namespace 범위 미확인');
+  expect(renderToStaticMarkup(<ReportScope job={{}} compact />)).toContain('분석 대상 미확인');
+  expect(renderToStaticMarkup(<ReportScope job={job} />)).not.toContain('c2-scope');
+});
+
 const executionJob = {
   status: 'succeeded',
   attempt_no: 1,

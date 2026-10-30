@@ -121,6 +121,7 @@ export function snapshotReports(items: Row[]) {
 }
 export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
   const [selected, setSelected] = useState('');
+  const [chartsOpen, setChartsOpen] = useState(false);
   const app = useApp();
   const list = useList(
     app.ready ? queryPath('/reports', { scope: app.scope, status: 'succeeded', limit: 20 }) : null,
@@ -160,7 +161,7 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
       <div className="oh-card-h">
         <div>
           <h2 id="ops-usage-title">
-            {snapshot ? '저장된 Ops 보고서 요약' : 'GPU 사용 현황 · Ops 보고서'}
+            {snapshot ? '저장된 운영 보고서 요약' : 'GPU 사용 현황 · Ops 보고서'}
           </h2>
           <p>
             {latest
@@ -180,33 +181,37 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
       <div className="oh-card-b">
         {snapshot && (
           <div className="c2-snapshot-meta">
-            <p>
-              사건 조회 기간과 별개인 저장 결과이며 실시간 지표가 아닙니다. 불러온 보고서 중 분석
-              종료일 최신순입니다.
-            </p>
-            {snapshots.length > 0 && (
-              <label>
-                요약할 보고서
-                <select value={id} onChange={(e) => setSelected(e.target.value)}>
-                  {snapshots.map((r) => (
-                    <option key={str(r.id)} value={str(r.id)}>
-                      {reportTitle(r)} ·{' '}
-                      {reportPeriodLabel(str(obj(r.time_range).start), str(obj(r.time_range).end))}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {latest && <ReportScope job={latest} />}
-            {list.hasNextPage && (
-              <button
-                className="button"
-                disabled={list.isFetchingNextPage}
-                onClick={() => void list.fetchNextPage()}
-              >
-                이전 보고서 더 불러오기
-              </button>
-            )}
+            <p>아래 사건 조회 기간과 별개인 저장 결과입니다. 실시간 지표가 아닙니다.</p>
+            {latest && <ReportScope job={latest} compact />}
+            <details>
+              <summary>다른 보고서 선택</summary>
+              <p>불러온 보고서 중 분석 종료일 최신순입니다.</p>
+              {snapshots.length > 0 && (
+                <label>
+                  요약할 보고서
+                  <select value={id} onChange={(e) => setSelected(e.target.value)}>
+                    {snapshots.map((r) => (
+                      <option key={str(r.id)} value={str(r.id)}>
+                        {reportTitle(r)} ·{' '}
+                        {reportPeriodLabel(
+                          str(obj(r.time_range).start),
+                          str(obj(r.time_range).end),
+                        )}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {list.hasNextPage && (
+                <button
+                  className="button"
+                  disabled={list.isFetchingNextPage}
+                  onClick={() => void list.fetchNextPage()}
+                >
+                  이전 보고서 더 불러오기
+                </button>
+              )}
+            </details>
           </div>
         )}
         <QueryState
@@ -265,129 +270,157 @@ export function OpsUsage({ snapshot = false }: { snapshot?: boolean }) {
                 </small>
               </div>
             </div>
-            <div className="ops-usage-grid">
-              <figure>
-                <figcaption>
-                  <b>Namespace별 GPU 활동률</b>
-                  <small>분석 기간 평균과 비교 기간 평균</small>
-                </figcaption>
-                <ResponsiveContainer
-                  width="100%"
-                  height={Math.max(160, byActivity.length * 34 + 60)}
-                >
-                  <BarChart data={byActivity} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <CartesianGrid horizontal={false} stroke="#e1e0d9" />
-                    <XAxis type="number" domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="label" width={200} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => pct(v)} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar
-                      dataKey="activity"
-                      name="분석 기간"
-                      fill="#2a78d6"
-                      radius={[0, 4, 4, 0]}
-                      barSize={9}
-                    />
-                    <Bar
-                      dataKey="previous"
-                      name="비교 기간"
-                      fill={OTHER}
-                      radius={[0, 4, 4, 0]}
-                      barSize={9}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-                {missing.length > 0 && (
-                  <small className="muted">
-                    관측 부족(0%가 아님): {missing.map((u) => u.label).join(', ')}
-                  </small>
-                )}
-              </figure>
-              <figure>
-                <figcaption>
-                  <b>시간대별 활동률</b>
-                  <small>1시간 평균 · 활동률 상위 {lines.length}개 Namespace · KST</small>
-                </figcaption>
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={hourly} margin={{ left: 0, right: 16 }}>
-                    <CartesianGrid vertical={false} stroke="#e1e0d9" />
-                    <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />
-                    <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} width={44} />
-                    <Tooltip formatter={(v, key) => [pct(v), label(String(key))]} />
-                    <Legend
-                      formatter={(key) => label(String(key))}
-                      wrapperStyle={{ fontSize: 12 }}
-                    />
-                    {lines.map((u, i) => (
-                      <Line
-                        key={u.key}
-                        dataKey={u.key}
-                        stroke={color.get(u.key)}
-                        strokeWidth={2}
-                        strokeDasharray={['', '5 3', '2 2'][i]}
-                        dot={false}
-                        connectNulls={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </figure>
-              <figure>
-                <figcaption>
-                  <b>GPU 연결 분포</b>
-                  <small>Namespace별 연결 GPU · 동시 사용 대수 아님</small>
-                </figcaption>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={slices}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={48}
-                      outerRadius={78}
-                      stroke="#fff"
-                      strokeWidth={2}
+            {snapshot && (
+              <button
+                className="button c2-chart-toggle"
+                aria-expanded={chartsOpen}
+                aria-controls="c2-usage-charts"
+                onClick={() => setChartsOpen(!chartsOpen)}
+              >
+                {chartsOpen ? '그래프 접기' : '활동률·연결 GPU·작업 대기 그래프 보기'}
+              </button>
+            )}
+            <div
+              className="ops-usage-grid"
+              id={snapshot ? 'c2-usage-charts' : undefined}
+              hidden={snapshot && !chartsOpen}
+            >
+              {(!snapshot || chartsOpen) && (
+                <>
+                  <figure>
+                    <figcaption>
+                      <b>Namespace별 GPU 활동률</b>
+                      <small>분석 기간 평균과 비교 기간 평균</small>
+                    </figcaption>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={Math.max(160, byActivity.length * 34 + 60)}
                     >
-                      {slices.map((s) => (
-                        <Cell key={s.name} fill={s.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => `${v}대`} />
-                    <Legend
-                      formatter={(name, entry) => `${name} ${obj(entry.payload).value}대`}
-                      wrapperStyle={{ fontSize: 12 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </figure>
-              <figure>
-                <figcaption>
-                  <b>대기 Pod 최대</b>
-                  <small>활동률이 높은데 대기 Pod도 있으면 자원 부족을 확인하세요</small>
-                </figcaption>
-                {waiting.length ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(120, waiting.length * 34 + 40)}
-                  >
-                    <BarChart data={waiting} layout="vertical" margin={{ left: 8, right: 16 }}>
-                      <CartesianGrid horizontal={false} stroke="#e1e0d9" />
-                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="label" width={200} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => `${v}개`} />
-                      <Bar
-                        dataKey="pending"
-                        name="대기 Pod"
-                        fill="#eda100"
-                        radius={[0, 4, 4, 0]}
-                        barSize={12}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="muted">분석 기간에 대기 Pod가 관측되지 않았습니다.</p>
-                )}
-              </figure>
+                      <BarChart data={byActivity} layout="vertical" margin={{ left: 8, right: 16 }}>
+                        <CartesianGrid horizontal={false} stroke="#e1e0d9" />
+                        <XAxis type="number" domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          type="category"
+                          dataKey="label"
+                          width={200}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip formatter={(v) => pct(v)} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar
+                          dataKey="activity"
+                          name="분석 기간"
+                          fill="#2a78d6"
+                          radius={[0, 4, 4, 0]}
+                          barSize={9}
+                        />
+                        <Bar
+                          dataKey="previous"
+                          name="비교 기간"
+                          fill={OTHER}
+                          radius={[0, 4, 4, 0]}
+                          barSize={9}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    {missing.length > 0 && (
+                      <small className="muted">
+                        관측 부족(0%가 아님): {missing.map((u) => u.label).join(', ')}
+                      </small>
+                    )}
+                  </figure>
+                  <figure>
+                    <figcaption>
+                      <b>시간대별 활동률</b>
+                      <small>1시간 평균 · 활동률 상위 {lines.length}개 Namespace · KST</small>
+                    </figcaption>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <LineChart data={hourly} margin={{ left: 0, right: 16 }}>
+                        <CartesianGrid vertical={false} stroke="#e1e0d9" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />
+                        <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} width={44} />
+                        <Tooltip formatter={(v, key) => [pct(v), label(String(key))]} />
+                        <Legend
+                          formatter={(key) => label(String(key))}
+                          wrapperStyle={{ fontSize: 12 }}
+                        />
+                        {lines.map((u, i) => (
+                          <Line
+                            key={u.key}
+                            dataKey={u.key}
+                            stroke={color.get(u.key)}
+                            strokeWidth={2}
+                            strokeDasharray={['', '5 3', '2 2'][i]}
+                            dot={false}
+                            connectNulls={false}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </figure>
+                  <figure>
+                    <figcaption>
+                      <b>GPU 연결 분포</b>
+                      <small>Namespace별 연결 GPU · 동시 사용 대수 아님</small>
+                    </figcaption>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={slices}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={48}
+                          outerRadius={78}
+                          stroke="#fff"
+                          strokeWidth={2}
+                        >
+                          {slices.map((s) => (
+                            <Cell key={s.name} fill={s.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v) => `${v}대`} />
+                        <Legend
+                          formatter={(name, entry) => `${name} ${obj(entry.payload).value}대`}
+                          wrapperStyle={{ fontSize: 12 }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </figure>
+                  <figure>
+                    <figcaption>
+                      <b>대기 Pod 최대</b>
+                      <small>활동률이 높은데 대기 Pod도 있으면 자원 부족을 확인하세요</small>
+                    </figcaption>
+                    {waiting.length ? (
+                      <ResponsiveContainer
+                        width="100%"
+                        height={Math.max(120, waiting.length * 34 + 40)}
+                      >
+                        <BarChart data={waiting} layout="vertical" margin={{ left: 8, right: 16 }}>
+                          <CartesianGrid horizontal={false} stroke="#e1e0d9" />
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                          <YAxis
+                            type="category"
+                            dataKey="label"
+                            width={200}
+                            tick={{ fontSize: 11 }}
+                          />
+                          <Tooltip formatter={(v) => `${v}개`} />
+                          <Bar
+                            dataKey="pending"
+                            name="대기 Pod"
+                            fill="#eda100"
+                            radius={[0, 4, 4, 0]}
+                            barSize={12}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="muted">분석 기간에 대기 Pod가 관측되지 않았습니다.</p>
+                    )}
+                  </figure>
+                </>
+              )}
             </div>
             <p className="muted ops-usage-note">
               활동률은 Namespace에 연결된 GPU의 관측 표본 평균이며 실제 소비량·할당 효율이 아닙니다.
