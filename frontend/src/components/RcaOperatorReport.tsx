@@ -1,3 +1,4 @@
+import { useApp } from '../lib/store';
 import { num, obj, rows, str, strings, type Row } from '../lib/live';
 import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperatorView';
 import { gapMeaning } from '../lib/rcaGuidance';
@@ -26,6 +27,7 @@ export function RcaOperatorReport({
   /** The incident as it is now; the report itself is a snapshot from its query window. */
   alarm?: Row;
 }) {
+  const classic = useApp()?.mode === 'classic';
   const quality = obj(result.quality);
   const v = operatorView(result);
   // Judgment-step labels for the reason this alert reported (component Runbooks).
@@ -193,6 +195,17 @@ export function RcaOperatorReport({
         )}
       </header>
 
+      {classic && (
+        <nav className="rca-classic-toc" aria-label="RCA 보고서 목차">
+          <a href="#rca-glance">1. 한눈에 보기</a>
+          <a href="#rca-response-reference">2. 대응 순서</a>
+          <a href="#rca-observation-detail">3. 관련 로그·메트릭</a>
+          <a href="#rca-analysis-detail">4. 분석 및 해석</a>
+          <a href={decisionSummary ? '#c2-rca-history' : '#rca-history'}>5. 이전 사건 이력</a>
+          <a href={decisionSummary ? '#c2-rca-references' : '#rca-references'}>6. 참고 자료</a>
+        </nav>
+      )}
+
       {decisionSummary && v && <RcaVisualEvidence view={v} onEvidence={onEvidence} />}
       {decisionSummary && (
         <section
@@ -269,7 +282,7 @@ export function RcaOperatorReport({
       )}
 
       {v && (
-        <Glance className="rca-glance" aria-label="사건 핵심 요약">
+        <Glance id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
           {decisionSummary && <summary>사건 대상·시각과 관련 관측 자세히 보기</summary>}
           <h4>
             1. 한눈에 보기 · {v.node} · {v.codes.join(', ') || '장애 알림'}
@@ -327,7 +340,7 @@ export function RcaOperatorReport({
         </Glance>
       )}
       {!v && (
-        <section className="rca-glance" aria-label="사건 핵심 요약">
+        <section id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
           <h4>1. 한눈에 보기</h4>
           <p className="rca-muted">{noSummary}</p>
         </section>
@@ -618,7 +631,7 @@ export function RcaOperatorReport({
       </section>
 
       <section
-        id={decisionSummary ? 'c2-rca-history' : undefined}
+        id={decisionSummary ? 'c2-rca-history' : 'rca-history'}
         className="rca-narrative-section"
       >
         <h4>5. 이전 사건 이력</h4>
@@ -643,7 +656,7 @@ export function RcaOperatorReport({
       </section>
 
       <section
-        id={decisionSummary ? 'c2-rca-references' : undefined}
+        id={decisionSummary ? 'c2-rca-references' : 'rca-references'}
         className="rca-narrative-section"
       >
         <h4>6. 참고 자료</h4>
