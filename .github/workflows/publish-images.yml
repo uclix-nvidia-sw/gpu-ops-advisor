@@ -1,0 +1,67 @@
+name: Publish built images
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        type: string
+        required: true
+      image-tag:
+        type: string
+        required: true
+      namespace:
+        type: string
+        required: true
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    name: Publish / ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: built-image-${{ matrix.component }}
+          path: staged
+      - name: Load and verify current-run image
+        env:
+          IMAGE: ghcr.io/${{ inputs.namespace }}/gpu-ops-advisor-${{ matrix.component }}:${{ inputs.image-tag }}
+        run: |
+          docker load --input staged/image.tar
+          revision=$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
+          test "$revision" = "$GITHUB_SHA"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish without rebuilding and record registry digest
+        env:
+          COMPONENT: ${{ matrix.component }}
+          IMAGE: ghcr.io/${{ inputs.namespace }}/gpu-ops-advisor-${{ matrix.component }}:${{ inputs.image-tag }}
+        run: |
+          docker push "$IMAGE"
+          mkdir -p dist/images
+          docker image inspect "$IMAGE" > dist/image-inspect.json
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          image = os.environ['IMAGE']
+          info = json.loads(Path('dist/image-inspect.json').read_text())[0]
+          prefix = image.rsplit(':', 1)[0] + '@'
+          digests = {ref[len(prefix):] for ref in info['RepoDigests'] if ref.startswith(prefix)}
+          if len(digests) != 1 or not re.fullmatch(r'sha256:[0-9a-f]{64}', next(iter(digests))):
+              raise SystemExit('Missing or ambiguous published digest')
+          record = dict(component=os.environ['COMPONENT'], image=image, digest=digests.pop(), published='true')
+          Path('dist/images/' + record['component'] + '.json').write_text(json.dumps(record))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.component }}
+          path: dist/images/*.json
+          if-no-files-found: error
+          retention-days: 14

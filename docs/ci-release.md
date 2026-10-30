@@ -6,23 +6,40 @@
 
 ## 실행 흐름
 
-`ci.yml`에서 PR은 테스트와 이미지 7개 빌드를 병렬 실행합니다. 둘 다 성공하면 Helm 패키징과 `CI required`가 이어집니다. main·태그·수동 실행은 기존처럼 테스트 → 이미지 → Helm 순서입니다. main·태그 이미지 발행은 테스트 통과 후에만 가능합니다. 마지막 `CI required`는 해당 이벤트에서 사용하지 않는 이미지 job 하나만 `skipped`를 허용하며, 필요한 단계의 실패·취소·건너뛰기는 모두 실패로 처리합니다. Branch protection에서 이 check를 필수로 등록하면 됩니다. 문서 변경도 같은 검증을 거쳐 조건별 skip 때문에 필수 check가 대기하지 않습니다.
+`ci.yml`은 모든 PR에서 먼저 Git 변경 범위를 계산한다. workflow 자체를 경로 필터로 건너뛰지 않으며, 마지막 `CI required`는 항상 실행한다. PR 비교는 base SHA와 검사 대상 merge SHA 사이의 전체 차이를 사용하며 삭제·이동의 이전 경로도 포함한다. 비교 대상 누락·빈 비교·분류하지 않은 경로는 전체 검증으로 처리한다.
+
+| PR 변경 범위 | 모듈 검사 | 이미지 빌드 | Helm/CI 계약·문서 링크 |
+| --- | --- | --- | --- |
+| `frontend/**`만 변경(아래 설명 문서 포함 가능) | Frontend | Frontend 1개 | 항상 실행 |
+| 설명 문서만 변경 | 생략 | 생략 | 항상 실행 |
+| 서버·Worker·공유 코드·계약·설정·CI·그 밖의 경로 | Go 4개·Agent·Frontend 전체 | 7개 | 항상 실행 |
+
+설명 문서는 `docs/**/*.md`, 루트의 `README.md`/`QA.md`, 기존 모듈 바로 아래의 `README.md`/`QA.md`만 허용한다. YAML·JSON·스크립트·알 수 없는 새 모듈은 전체 검증이다. Frontend 밖의 런타임 의존성은 아직 세분화하지 않는다. `main`·버전 태그·수동 실행은 이전 성공 결과에 의존하지 않고 전체 검증을 유지한다.
+
+PR과 main 모두 테스트와 이미지 빌드를 metadata 뒤에서 병렬 실행한다. 빌드 단계는 registry 쓰기 권한과 로그인이 없으며 `push: false`로 Docker archive를 만든다. 모든 이미지의 archive를 실제로 load하고 revision label이 현재 `GITHUB_SHA`와 같은지 검사한다. PR에서는 필요한 이미지만 검사하며 발행하지 않는다.
+
+main·태그는 빌드한 이미지 7개의 archive를 현재 workflow 실행의 임시 artifact(1일 보관, 압축 없음)로 전달한다. 별도 발행 작업이 **전체 테스트와 이미지 빌드 모두 성공한 후** archive를 다시 load하고 현재 SHA를 확인한 다음 로그인·push한다. 재빌드는 하지 않는다. 발행 후 registry digest를 기록하고, 7개가 모두 성공해야 digest를 고정한 Helm chart를 발행한다. archive 전송·적재·SHA 검증·push·digest 기록 실패도 CI 실패다. 일부 이미지 발행 후 다른 이미지가 실패할 수 있지만 해당 실행의 chart는 발행하지 않는다.
 
 | 이벤트 | 테스트 / 이미지 빌드 | GHCR 이미지 | Helm artifact | OCI chart |
 | --- | --- | --- | --- | --- |
-| Pull request | 실행 | 미발행 | 검토용 `1.3.0-ci.<run>.<attempt>` | 미발행 |
-| main push 또는 PR merge | 실행 | `sha-<full-commit-sha>` | 동일 CI 버전, 이미지 digest 고정 | CI 버전으로 발행 |
-| `v1.3.0` 버전 태그 push | 실행 | `v1.3.0` | `1.3.0`, 이미지 digest 고정 | 발행 |
-| workflow_dispatch | 실행 | 미발행 | 검토용 CI 버전 | 미발행 |
+| Frontend/문서 한정 PR | 위 표의 영향 범위 | 미발행 | 전체 이미지가 없어 생략; 공통 계약 검사는 실행 | 미발행 |
+| 전체 검증 PR | 전체 병렬 | 미발행 | 검토용 `1.3.0-ci.<run>.<attempt>` | 미발행 |
+| main push 또는 PR merge | 전체 병렬 | 테스트 성공 후 `sha-<full-commit-sha>` 발행 | 동일 CI 버전, registry digest 고정 | CI 버전으로 발행 |
+| `v1.3.0` 버전 태그 push | 전체 병렬 | 테스트 성공 후 `v1.3.0` 발행 | `1.3.0` | 발행 |
+| workflow_dispatch | 전체 병렬 | 미발행 | 검토용 CI 버전 | 미발행 |
+
+선택된 검사에 대한 별도 `Planned tests required`가 Go/Agent/Frontend/Helm의 실패·취소·예상 밖 skip을 검사한다. 마지막 `CI required`는 metadata의 명시적인 계획과 각 단계의 결과가 일치해야 통과한다. 계획이 없거나 필요한 단계가 skip된 경우 통과하지 않는다. Branch protection의 필수 check 이름은 `CI required`를 유지한다.
+
+이 변경은 PR 검사 결과를 main에서 재사용하지 않는다. main의 검사는 계속 수행하지만 빌드 대기를 겹친다. 따라서 Frontend PR은 무관한 Go/Agent 검사를 기다리지 않게 되며, main 단축 폭은 테스트·빌드 시간과 archive 전송 비용에 따라 달라진다. 실제 속도 개선은 적용 후 GitHub 실행으로 측정한다.
 
 이미지 위치: `ghcr.io/<lowercase-github-owner>/gpu-ops-advisor-<component>:<tag>`.
 Chart 위치: `oci://ghcr.io/<lowercase-github-owner>/charts/gpu-ops-advisor`.
 
-`main`의 성공한 실행은 이미지와 Helm chart를 모두 GitHub Packages에 발행합니다. chart는 `1.3.0-ci.<run>.<attempt>` 형태의 고유 버전을 쓰며, 버전 태그 실행은 `1.3.0` 같은 정식 버전을 씁니다. Actions의 `helm-chart-<version>` 다운로드 산출물도 계속 유지합니다. OCI에서 CI 버전을 받을 때는 `helm pull ... --version 1.3.0-ci.<run>.<attempt>`처럼 해당 버전을 지정합니다.
+main의 성공 실행은 고유한 `1.3.0-ci.<run>.<attempt>` chart와 이미지들을 발행한다. 버전 태그는 정식 버전을 사용하며 Actions의 chart 다운로드 산출물도 유지한다. Kubernetes 배포는 수행하지 않는다.
 
-`frontend`만 `frontend/`를 Docker context로 쓰고, Go 서비스·Agent·MCP는 저장소 루트를 사용합니다. Linux/amd64 이미지 7개를 각각 빌드합니다. PR·수동 실행도 OCI image exporter로 실제 이미지 생성까지 검사하지만 레지스트리에 올리지는 않습니다.
+`frontend`만 `frontend/`를 Docker context로 쓰고, Go 서비스·Agent·MCP는 저장소 루트를 사용한다. 현재 플랫폼은 Linux/amd64 하나다. main에서 변경되지 않은 이미지도 모두 새 커밋 태그로 발행하므로 기존의 7개 이미지 metadata·chart 계약은 유지한다.
 
-BuildKit의 GitHub Actions 캐시는 빌드 가속용이다. `cache-to`의 `ignore-error=true`로 캐시 업로드 실패만 허용한다. 실제 이미지 빌드·OCI 출력/레지스트리 발행·digest 기록·chart 패키징 실패는 계속 CI 실패로 처리한다. 옵션 의미는 [Docker 공식 문서](https://docs.docker.com/build/cache/backends/gha/)를 따른다.
+BuildKit의 GitHub Actions 캐시는 빌드 가속용이다. `cache-to`의 `ignore-error=true`는 캐시 업로드 실패만 허용한다. 실제 빌드·archive 검증·발행·digest·chart 실패는 계속 차단한다. [Docker 캐시 문서](https://docs.docker.com/build/cache/backends/gha/)와 [job 사이 이미지 전달](https://docs.docker.com/build/ci/github-actions/share-image-jobs/)을 따른다.
 
 ## 검증 범위
 

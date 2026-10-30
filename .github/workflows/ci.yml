@@ -18,7 +18,11 @@ jobs:
   metadata:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.release.outputs.matrix }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      backend: ${{ steps.plan.outputs.backend }}
+      frontend: ${{ steps.plan.outputs.frontend }}
+      images: ${{ steps.plan.outputs.images }}
+      package: ${{ steps.plan.outputs.package }}
       image-tag: ${{ steps.release.outputs.image_tag }}
       chart-version: ${{ steps.release.outputs.chart_version }}
       namespace: ${{ steps.release.outputs.namespace }}
@@ -26,47 +30,53 @@ jobs:
       publish-chart: ${{ steps.release.outputs.publish_chart }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - id: release
         run: python tools/ci/release_metadata.py
+      - id: plan
+        run: python tools/ci/change_plan.py
 
   tests:
+    needs: metadata
     uses: ./.github/workflows/tests.yml
-
-  pr-images:
-    if: github.event_name == 'pull_request'
-    needs: [metadata]
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/container-images.yml
     with:
-      matrix: ${{ needs.metadata.outputs.matrix }}
-      image-tag: ${{ needs.metadata.outputs.image-tag }}
-      namespace: ${{ needs.metadata.outputs.namespace }}
-      publish: false
+      backend: ${{ needs.metadata.outputs.backend == 'true' }}
+      frontend: ${{ needs.metadata.outputs.frontend == 'true' }}
 
   images:
-    if: github.event_name != 'pull_request'
-    needs: [metadata, tests]
-    permissions:
-      contents: read
-      packages: write
+    if: needs.metadata.outputs.images == 'true'
+    needs: metadata
     uses: ./.github/workflows/container-images.yml
     with:
       matrix: ${{ needs.metadata.outputs.matrix }}
       image-tag: ${{ needs.metadata.outputs.image-tag }}
       namespace: ${{ needs.metadata.outputs.namespace }}
-      publish: ${{ needs.metadata.outputs.publish-images == 'true' }}
+      stage: ${{ needs.metadata.outputs.publish-images == 'true' }}
+
+  publish:
+    if: github.event_name == 'push' && needs.metadata.outputs.publish-images == 'true'
+    needs: [metadata, tests, images]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-images.yml
+    with:
+      matrix: ${{ needs.metadata.outputs.matrix }}
+      image-tag: ${{ needs.metadata.outputs.image-tag }}
+      namespace: ${{ needs.metadata.outputs.namespace }}
 
   chart:
     if: >-
       ${{ !cancelled() && needs.metadata.result == 'success' &&
-          needs.tests.result == 'success' &&
-          (needs.images.result == 'success' || needs.pr-images.result == 'success') }}
-    needs: [metadata, tests, images, pr-images]
+          needs.metadata.outputs.package == 'true' && needs.tests.result == 'success' &&
+          needs.images.result == 'success' &&
+          (needs.publish.result == 'success' ||
+           (needs.metadata.outputs.publish-images == 'false' && needs.publish.result == 'skipped')) }}
+    needs: [metadata, tests, images, publish]
     permissions:
       contents: read
       packages: write
@@ -80,20 +90,26 @@ jobs:
   required:
     name: CI required
     if: always()
-    needs: [metadata, tests, images, pr-images, chart]
+    needs: [metadata, tests, images, publish, chart]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every gate
+      - name: Require every planned gate
         env:
           RESULTS: ${{ toJSON(needs) }}
-          EVENT: ${{ github.event_name }}
         run: |
           python - <<'PY'
           import json, os
           results = json.loads(os.environ['RESULTS'])
-          inactive = 'images' if os.environ['EVENT'] == 'pull_request' else 'pr-images'
-          failed = [name for name, job in results.items()
-                    if job['result'] != ('skipped' if name == inactive else 'success')]
+          outputs = results['metadata'].get('outputs', {})
+          for flag in ('backend', 'frontend'):
+              if outputs.get(flag) not in ('true', 'false'):
+                  raise SystemExit('Missing or invalid test plan: ' + flag)
+          expected = {'metadata': 'success', 'tests': 'success'}
+          for job, flag in [('images', 'images'), ('publish', 'publish-images'), ('chart', 'package')]:
+              if outputs.get(flag) not in ('true', 'false'):
+                  raise SystemExit('Missing or invalid plan: ' + flag)
+              expected[job] = 'success' if outputs[flag] == 'true' else 'skipped'
+          failed = [name for name, status in expected.items() if results[name]['result'] != status]
           if failed:
-              raise SystemExit('Failed or skipped gates: ' + ', '.join(failed))
+              raise SystemExit('Failed or unexpectedly skipped gates: ' + ', '.join(failed))
           PY

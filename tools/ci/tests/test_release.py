@@ -61,15 +61,15 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             metadata(self.env, "1.3.0")
 
-    def test_parallel_pr_build_and_required_gate(self):
+    def test_parallel_build_and_required_gate(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
-        self.assertEqual(jobs["pr-images"]["needs"], ["metadata"])
-        self.assertEqual(jobs["pr-images"]["if"], "github.event_name == 'pull_request'")
-        self.assertIs(jobs["pr-images"]["with"]["publish"], False)
-        self.assertEqual(jobs["images"]["needs"], ["metadata", "tests"])
-        self.assertEqual(jobs["images"]["if"], "github.event_name != 'pull_request'")
+        self.assertEqual(jobs["images"]["needs"], "metadata")
+        self.assertEqual(jobs["tests"]["needs"], "metadata")
+        self.assertEqual(jobs["publish"]["needs"], ["metadata", "tests", "images"])
+        self.assertIn("github.event_name == 'push'", jobs["publish"]["if"])
+        self.assertNotIn("always()", jobs["publish"]["if"])
         self.assertEqual(
-            set(jobs["chart"]["needs"]), {"metadata", "tests", "images", "pr-images"}
+            set(jobs["chart"]["needs"]), {"metadata", "tests", "images", "publish"}
         )
         gate = jobs["required"]
         self.assertEqual(gate["if"], "always()")
@@ -77,32 +77,204 @@ class ReleaseTests(unittest.TestCase):
         script = (
             gate["steps"][0]["run"].split("python - <<'PY'\n", 1)[1].rsplit("PY", 1)[0]
         )
-        for event in ("pull_request", "push", "workflow_dispatch"):
-            inactive = "images" if event == "pull_request" else "pr-images"
-            results = {
-                name: {"result": "skipped" if name == inactive else "success"}
-                for name in gate["needs"]
+        for images, publish, package in [
+            (False, False, False),
+            (True, False, False),
+            (True, False, True),
+            (True, True, True),
+        ]:
+            results = {name: {"result": "success"} for name in gate["needs"]}
+            results["metadata"]["outputs"] = {
+                "backend": "true",
+                "frontend": "true",
+                "images": str(images).lower(),
+                "publish-images": str(publish).lower(),
+                "package": str(package).lower(),
             }
-            variants = [("all required jobs passed", results, 0)]
-            for name in results:
-                for status in ("success", "failure", "cancelled", "skipped"):
-                    if status == results[name]["result"]:
-                        continue
-                    changed = copy.deepcopy(results)
-                    changed[name]["result"] = status
-                    variants.append((f"{name}: {status}", changed, 1))
-            for label, candidate, expected in variants:
-                with self.subTest(event=event, result=label):
-                    result = subprocess.run(
-                        [sys.executable, "-c", script],
-                        env={
-                            **os.environ,
-                            "EVENT": event,
-                            "RESULTS": json.dumps(candidate),
-                        },
-                        capture_output=True,
+            for name, run in [
+                ("images", images),
+                ("publish", publish),
+                ("chart", package),
+            ]:
+                results[name]["result"] = "success" if run else "skipped"
+            self.assert_gate(script, results, {})
+            broken = copy.deepcopy(results)
+            del broken["metadata"]["outputs"]["images"]
+            self.assertNotEqual(self.run_gate(script, broken, {}).returncode, 0)
+
+    def run_gate(self, script, results, env):
+        return subprocess.run(
+            [sys.executable, "-c", script],
+            env={**os.environ, **env, "RESULTS": json.dumps(results)},
+            capture_output=True,
+        )
+
+    def assert_gate(self, script, results, env):
+        self.assertEqual(self.run_gate(script, results, env).returncode, 0)
+        for name in results:
+            for status in ("success", "failure", "cancelled", "skipped"):
+                if status == results[name]["result"]:
+                    continue
+                changed = copy.deepcopy(results)
+                changed[name]["result"] = status
+                with self.subTest(job=name, status=status, env=env):
+                    self.assertNotEqual(
+                        self.run_gate(script, changed, env).returncode, 0
                     )
-                    self.assertEqual(result.returncode, expected, result.stderr)
+
+    def test_planned_test_gate_rejects_unexpected_skips_and_failures(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/tests.yml").read_text())[
+            "jobs"
+        ]
+        self.assertEqual(jobs["go"]["if"], "inputs.backend")
+        self.assertEqual(jobs["agents"]["if"], "inputs.backend")
+        self.assertEqual(jobs["frontend"]["if"], "inputs.frontend")
+        self.assertNotIn("if", jobs["chart"])
+        gate = jobs["required"]
+        self.assertEqual(gate["if"], "always()")
+        self.assertEqual(set(gate["needs"]), set(jobs) - {"required"})
+        script = (
+            gate["steps"][0]["run"].split("python - <<'PY'\n", 1)[1].rsplit("PY", 1)[0]
+        )
+        for backend, frontend in [(True, True), (False, True), (False, False)]:
+            env = {"BACKEND": str(backend).lower(), "FRONTEND": str(frontend).lower()}
+            results = {
+                name: {"result": "success" if run else "skipped"}
+                for name, run in [
+                    ("go", backend),
+                    ("agents", backend),
+                    ("frontend", frontend),
+                    ("chart", True),
+                ]
+            }
+            self.assert_gate(script, results, env)
+
+    def test_build_has_no_registry_write_and_publication_never_rebuilds(self):
+        build = yaml.safe_load(
+            (ROOT / ".github/workflows/container-images.yml").read_text()
+        )
+        self.assertEqual(build["permissions"], {"contents": "read"})
+        steps = build["jobs"]["build"]["steps"]
+        self.assertFalse(
+            any(s.get("uses", "").startswith("docker/login") for s in steps)
+        )
+        image = next(s for s in steps if s.get("id") == "image")
+        self.assertIs(image["with"]["push"], False)
+        self.assertIn("type=docker", image["with"]["outputs"])
+        publish = yaml.safe_load(
+            (ROOT / ".github/workflows/publish-images.yml").read_text()
+        )
+        steps = publish["jobs"]["publish"]["steps"]
+        self.assertFalse(any("build-push" in s.get("uses", "") for s in steps))
+        verify = next(
+            s for s in steps if s.get("name") == "Load and verify current-run image"
+        )["run"]
+        self.assertIn('test "$revision" = "$GITHUB_SHA"', verify)
+        self.assertIn("docker load", verify)
+        self.assertLess(
+            next(
+                i
+                for i, s in enumerate(steps)
+                if s.get("name") == "Load and verify current-run image"
+            ),
+            next(
+                i
+                for i, s in enumerate(steps)
+                if s.get("uses", "").startswith("docker/login")
+            ),
+        )
+
+    def test_export_and_import_reject_wrong_commit_or_load_failure(self):
+        build = yaml.safe_load(
+            (ROOT / ".github/workflows/container-images.yml").read_text()
+        )["jobs"]["build"]["steps"]
+        publish = yaml.safe_load(
+            (ROOT / ".github/workflows/publish-images.yml").read_text()
+        )["jobs"]["publish"]["steps"]
+        for steps, name in [
+            (build, "Verify exported image can be loaded"),
+            (publish, "Load and verify current-run image"),
+        ]:
+            script = next(s for s in steps if s.get("name") == name)["run"]
+            for bad in ("", "load", "revision"):
+                stub = 'docker() { if [ "$1" = load ]; then return "${LOAD_STATUS:-0}"; else printf "%s\\n" "$REVISION"; fi; }\n'
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "--noprofile",
+                        "--norc",
+                        "-eo",
+                        "pipefail",
+                        "-c",
+                        stub + script,
+                    ],
+                    env={
+                        **os.environ,
+                        "IMAGE": "example:tag",
+                        "GITHUB_SHA": "a" * 40,
+                        "REVISION": "b" * 40 if bad == "revision" else "a" * 40,
+                        "LOAD_STATUS": "17" if bad == "load" else "0",
+                    },
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode == 0, not bad, result.stderr)
+
+    def test_publication_script_preserves_push_failure_and_requires_registry_digest(
+        self,
+    ):
+        steps = yaml.safe_load(
+            (ROOT / ".github/workflows/publish-images.yml").read_text()
+        )["jobs"]["publish"]["steps"]
+        script = next(
+            s
+            for s in steps
+            if s.get("name") == "Publish without rebuilding and record registry digest"
+        )["run"]
+        image = "ghcr.io/example/frontend:sha-test"
+        valid = "ghcr.io/example/frontend@sha256:" + "b" * 64
+        for bad, digests in [
+            ("", [valid]),
+            ("push", [valid]),
+            ("missing", []),
+            ("other", ["ghcr.io/other/frontend@sha256:" + "b" * 64]),
+            ("ambiguous", [valid, "ghcr.io/example/frontend@sha256:" + "c" * 64]),
+        ]:
+            with self.subTest(bad=bad), tempfile.TemporaryDirectory() as folder:
+                stub = """docker() {
+                  if [ "$1" = push ]; then return "$PUSH_STATUS"; fi
+                  printf '%s\\n' "$INSPECT_JSON"
+                }
+                python() { "$PYTHON_EXE" "$@"; }
+                """
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "--noprofile",
+                        "--norc",
+                        "-eo",
+                        "pipefail",
+                        "-c",
+                        stub + script,
+                    ],
+                    cwd=folder,
+                    env={
+                        **os.environ,
+                        "IMAGE": image,
+                        "COMPONENT": "frontend",
+                        "PYTHON_EXE": sys.executable.replace("\\", "/"),
+                        "PUSH_STATUS": "17" if bad == "push" else "0",
+                        "INSPECT_JSON": json.dumps([{"RepoDigests": digests}]),
+                    },
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode == 0, not bad, result.stderr)
+                record = Path(folder) / "dist/images/frontend.json"
+                if not bad:
+                    self.assertEqual(
+                        json.loads(record.read_text())["digest"], "sha256:" + "b" * 64
+                    )
+                else:
+                    self.assertFalse(record.exists())
 
     def test_agent_preparation_overlaps_and_preserves_failures(self):
         steps = yaml.safe_load((ROOT / ".github/workflows/tests.yml").read_text())[
