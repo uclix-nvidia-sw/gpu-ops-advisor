@@ -124,13 +124,6 @@ function IncidentCards({ items }: { items: Row[] }) {
             <div>
               <div className="new-status">
                 <Badge status={str(i.state, str(i.status)) || null} />
-                <span>
-                  {i.alarm_status === 'firing'
-                    ? '발생 알림 수신'
-                    : i.alarm_status === 'resolved'
-                      ? '해제 알림 수신'
-                      : '알림 상태 미확인'}
-                </span>
               </div>
               <h3>
                 <Link to={`/incidents/${encodeURIComponent(str(i.id))}`} state={back}>
@@ -447,18 +440,6 @@ function Incident({ id }: { id: string }) {
             <span>사건 처리</span>
             <Badge status={str(incident.state, str(incident.status)) || null} />
           </div>
-          {app.mode !== 'operations' && (
-            <div>
-              <span>알림 상태</span>
-              <strong>
-                {incident.alarm_status === 'resolved'
-                  ? '해제 알림 수신'
-                  : incident.alarm_status === 'firing'
-                    ? '발생 알림 수신'
-                    : '미확인'}
-              </strong>
-            </div>
-          )}
           <div>
             <span>최근 조사</span>
             <strong>{summaryState(incident)}</strong>

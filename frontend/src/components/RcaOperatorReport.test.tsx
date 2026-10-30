@@ -194,8 +194,9 @@ it('names the component reason, target, Fleet event time and live alert state', 
     />,
   );
   const text = html.replace(/<[^>]+>/g, '');
-  expect(text).toContain('발생 알림 수신 · 현재 상태 미확인');
-  expect(text).toContain('조회 종료 시점에도 보고 중');
+  expect(text).not.toContain('발생 알림 수신');
+  expect(text).not.toContain('조회 종료 시점에도 보고 중');
+  expect(text).toContain('마지막 오류 기록:');
   expect(text).toContain('이번 사유: 읽기 전용 재마운트 (Fleet 원문:');
   expect(text).toContain('가능한 사유 8가지: 읽기 전용 재마운트(이번) · RAID 배열 실패');
   expect(text).toContain('대상 디스크·파티션 이름은 Fleet 보고에 없습니다');

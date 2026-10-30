@@ -86,8 +86,6 @@ export function OperatorDashboard() {
   const [expandIncidents, setExpandIncidents] = useState(false);
   const days = windowDays(now, WINDOW_DAYS);
   const today = dayKey(now);
-  const firing = views.filter((v) => v.firing);
-  const resolved = views.filter((v) => v.resolved);
   const todays = views.filter((v) => dayKey(v.at) === today);
   const repeats = deviceRepeats(views, days);
   const hot = repeats.filter((d) => d.count >= 3);
@@ -129,21 +127,21 @@ export function OperatorDashboard() {
           </p>
         )}
         <div className="oh-kpis">
-          <Link className="oh-kpi" to={`/cases?focus=firing&period=${WINDOW_DAYS}`}>
-            <span>
-              <i className="oh-dot red" />
-              발생 알림 수신
-            </span>
-            <strong>{firing.length}</strong>
-            <small>발생 알림 기록 · 현재 상태는 별도 확인</small>
+          <Link className="oh-kpi" to={`/cases?period=${WINDOW_DAYS}`}>
+            <span>기록된 사건</span>
+            <strong>{views.length}</strong>
+            <small>선택 기간의 수신 사건</small>
           </Link>
-          <Link className="oh-kpi" to={`/cases?focus=resolved&period=${WINDOW_DAYS}`}>
-            <span>
-              <i className="oh-dot" />
-              해제 알림 수신
-            </span>
-            <strong>{resolved.length}</strong>
-            <small>과거 해제 알림 기록 · 복구 확정 아님</small>
+          <Link className="oh-kpi" to={`/cases?period=${WINDOW_DAYS}`}>
+            <span>RCA 실행 중·대기</span>
+            <strong>
+              {
+                views.filter((v) =>
+                  ['queued', 'running', 'retry_wait'].includes(v.executionStatus || ''),
+                ).length
+              }
+            </strong>
+            <small>사건별 최신 작업 기준</small>
           </Link>
           <Link className="oh-kpi" to="/cases?focus=today&period=1">
             <span>
@@ -258,7 +256,7 @@ export function OperatorDashboard() {
         <section className="oh-card">
           <div className="oh-card-h">
             <div>
-              <h2>발생 알림이 수신된 사건</h2>
+              <h2>기록된 사건</h2>
               <p>
                 수신 기록으로 현재 장애 지속·복구 여부를 판단하지 않습니다. 대응 순서와 근거는 RCA
                 보고서에서 확인합니다.
@@ -277,11 +275,11 @@ export function OperatorDashboard() {
             id="received-incidents"
             className={`oh-card-b oh-received-incidents${expandIncidents ? ' is-expanded' : ''}`}
             role="region"
-            aria-label="발생 알림이 수신된 사건 목록"
+            aria-label="기록된 사건 목록"
             tabIndex={0}
           >
-            {firing.length ? (
-              firing.map((v) => (
+            {views.length ? (
+              views.map((v) => (
                 <article className="oh-now" key={v.id}>
                   <div>
                     <h3>
@@ -292,7 +290,7 @@ export function OperatorDashboard() {
                       <RepeatBadge v={v} />
                     </div>
                     <div className="act">
-                      NVIDIA 즉시 조치 분류: <b>{v.label?.action || '런북 순서대로 확인'}</b>
+                      런북 안내: <b>{v.label?.action || '런북 순서대로 확인'}</b>
                     </div>
                   </div>
                   <div className="oh-actions">
@@ -309,7 +307,7 @@ export function OperatorDashboard() {
                 </article>
               ))
             ) : (
-              <p className="muted">조회 기간에 발생 알림 수신으로 기록된 사건이 없습니다.</p>
+              <p className="muted">조회 기간에 기록된 사건이 없습니다.</p>
             )}
           </div>
         </section>
@@ -389,9 +387,8 @@ export function OperatorDashboard() {
                       {c.name}
                     </th>
                   ))}
-                  <th scope="col">오류 난 장치</th>
-                  <th scope="col">발생 알림 수신</th>
-                  <th scope="col">해제 알림 수신</th>
+                  <th scope="col">사건 대상 장치</th>
+
                   <th scope="col">마지막 사건</th>
                 </tr>
               </thead>
@@ -413,26 +410,6 @@ export function OperatorDashboard() {
                       <td key={c.key}>{n.counts[c.key]}</td>
                     ))}
                     <td>{n.devices}</td>
-                    <td>
-                      {n.firing ? (
-                        <b>
-                          <i className="oh-dot red" />
-                          {n.firing}
-                        </b>
-                      ) : (
-                        0
-                      )}
-                    </td>
-                    <td>
-                      {n.resolved ? (
-                        <b>
-                          <i className="oh-dot" />
-                          {n.resolved}
-                        </b>
-                      ) : (
-                        0
-                      )}
-                    </td>
                     <td>{dateTimeText(n.last)}</td>
                   </tr>
                 ))}

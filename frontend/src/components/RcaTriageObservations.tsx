@@ -185,7 +185,7 @@ export function RcaTriageObservations({
             <th>어떻게</th>
             <td>
               보고 {v.reports}건 ·{' '}
-              {v.ongoing ? <mark>조회 종료까지 계속 보고됨</mark> : '마지막 보고 뒤 추가 보고 없음'}
+              {v.lastReport ? `마지막 기록 ${formatDate(v.lastReport)}` : '마지막 기록 시각 미확인'}
               {v.telemetryHeadline &&
                 ` · ${v.telemetryHeadline}${v.multiGpu ? ' (아래 GPU별 표)' : ''}`}
             </td>

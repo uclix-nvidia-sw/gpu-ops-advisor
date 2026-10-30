@@ -355,8 +355,8 @@ export function BasicReport({ topics }: { topics: Row[] }) {
         <section className="result-section" id="report-area-O05">
           <h3>장애·조사·처리 현황</h3>
           <p>
-            분석 기간에 발생한 사건의 저장 상태입니다. 알람 해제·RCA 조사 완료·실제 조치 수행은 서로
-            다릅니다. 상태는 자료 기준 시각의 기록이며 실시간 상태가 아닙니다.
+            분석 기간에 발생한 사건의 저장 상태입니다. RCA 조사 완료·실제 조치 수행은 서로 다릅니다.
+            상태는 자료 기준 시각의 기록이며 실시간 상태가 아닙니다.
           </p>
           {incidents.length > 0 ? (
             <div className="table-wrap">
@@ -364,7 +364,7 @@ export function BasicReport({ topics }: { topics: Row[] }) {
                 <thead>
                   <tr>
                     <th>사건</th>
-                    <th>알람 기록</th>
+
                     <th>공개 RCA</th>
                     <th>처리 확인</th>
                   </tr>
@@ -377,17 +377,7 @@ export function BasicReport({ topics }: { topics: Row[] }) {
                           {metricTarget(finding)} · 사건 상세
                         </a>
                       </td>
-                      <td>
-                        {(
-                          { firing: '발생 알림 수신', resolved: '해제 알림 수신' } as Record<
-                            string,
-                            string
-                          >
-                        )[str(finding.alarm_status)] || '미확인'}
-                        {str(finding.status_as_of) && (
-                          <p className="muted">{formatDate(str(finding.status_as_of))} 기준</p>
-                        )}
-                      </td>
+
                       <td>
                         {strings(finding.rca_result_ids).length > 0
                           ? `${strings(finding.rca_result_ids).length}건 연결됨`

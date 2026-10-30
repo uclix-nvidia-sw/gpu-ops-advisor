@@ -479,7 +479,6 @@ export function operatorView(result: Row) {
   const cadence =
     reports > 1 && firstReport ? (t(lastReport) - t(firstReport)) / (reports - 1) : 60000;
   const sinceLast = periodEnd - t(lastReport);
-  const ongoing = !!lastReport && !isNaN(sinceLast) && sinceLast <= Math.max(120000, cadence * 2);
 
   const refsOf = (items: Row[]) => [...new Set(items.flatMap((r) => strings(r.evidence_refs)))];
 
@@ -620,15 +619,11 @@ export function operatorView(result: Row) {
     timePoints.push(`알림 시작: ${fmt(str(view.alert_time))} (Incident에 저장된 startsAt)`);
   const timing: Finding = {
     key: 'timing',
-    question: '언제 시작됐고, 지금도 계속되나요?',
-    tone: ongoing ? 'alert' : 'unknown',
-    verdict: !lastReport
-      ? '오류 보고 시각을 확인하지 못했습니다.'
-      : ongoing
-        ? `조회 종료 직전(${intervalLabel(sinceLast)} 전)까지 같은 오류가 계속 보고됐습니다. 해소됐다는 근거는 없습니다.`
-        : isNaN(sinceLast)
-          ? '조회 종료 시각이 없어 오류가 계속되는지 판단할 수 없습니다.'
-          : `마지막 보고 뒤 ${intervalLabel(sinceLast)} 동안 추가 보고가 없습니다. 해소 여부는 후속 상태로 확인하세요.`,
+    question: '분석 구간에서 언제 관측됐나요?',
+    tone: 'unknown',
+    verdict: lastReport
+      ? `마지막 오류 기록: ${fmt(lastReport)}. 이 저장 보고서만으로 현재 지속·복구 여부를 판단할 수 없습니다.`
+      : '오류 기록 시각을 확인하지 못했습니다. 현재 상태를 판단할 수 없습니다.',
     points: timePoints,
     refs: refsOf(logs),
   };
@@ -1236,7 +1231,6 @@ export function operatorView(result: Row) {
     firstReport,
     lastReport,
     reports,
-    ongoing,
     boundary: isNaN(boundary) ? '' : str(view.event_boundary),
     periodStart: str(period.start),
     periodEnd: str(period.end),

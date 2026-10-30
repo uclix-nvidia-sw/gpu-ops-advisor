@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, FileText, ScanSearch, Activity } from 'lucide-react';
 import { useRecentIncidents } from '../components/IncidentOverview';
@@ -11,6 +11,7 @@ import { useApp } from '../lib/store';
 import {
   CATEGORIES,
   category,
+  kindText,
   dailyCounts,
   dateTimeText,
   dayKey,
@@ -102,7 +103,6 @@ function Heading({ title, note, children }: { title: string; note: string; child
   return (
     <header className="c2-heading">
       <div>
-        <span className="c2-eyebrow">GPU OPS / CONSOLE 02</span>
         <h1 tabIndex={-1}>{title}</h1>
         <p>{note}</p>
       </div>
@@ -137,80 +137,139 @@ function Surface({
 export function IncidentTable({ views }: { views: IncidentView[] }) {
   const location = useLocation();
   const from = location.pathname + location.search;
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <div className="c2-table-scroll">
-      <table className="c2-table">
-        <caption className="sr-only">사건별 대상, 최신 실행 상태와 공개 RCA 결과</caption>
+      <table className="c2-table c2-case-table">
+        <caption className="sr-only">수신 alert의 사건·대상과 별도의 실행 상태·공개 결과</caption>
         <thead>
           <tr>
-            <th>사건 / 대상</th>
-            <th>보고서 생성</th>
-            <th>RCA 결과</th>
+            <th>사건</th>
+            <th>대상 장비</th>
+            <th>런북 참고</th>
+            <th>보고서</th>
             <th>발생 시각 · KST</th>
           </tr>
         </thead>
         <tbody>
-          {views.map((v) => (
-            <tr key={v.id} id={`c2-incident-${v.id}`}>
-              <td>
-                <Link
-                  className="c2-title-link"
-                  to={
-                    v.jobId && ['ready', 'partial', 'blocked'].includes(v.rca)
-                      ? `/analyses/${encodeURIComponent(v.jobId)}`
-                      : `/incidents/${encodeURIComponent(v.id)}`
-                  }
-                  state={{ from, returnState: { row: v.id } }}
-                >
-                  {titleText(v)}
-                  <ArrowUpRight size={14} />
-                </Link>
-                <small>
-                  {v.cluster || '클러스터 미확인'} / {v.node || '노드 미확인'}
-                  {v.device && (
-                    <>
-                      {' '}
-                      · <code>{v.device}</code>
-                    </>
-                  )}
-                </small>
-              </td>
-              <td>
-                <Link
-                  to={`/incidents/${encodeURIComponent(v.id)}`}
-                  state={{ from, returnState: { row: v.id } }}
-                >
-                  <span
-                    className={`c2-status ${['queued', 'running', 'retry_wait'].includes(v.executionStatus || '') ? 'attention' : 'neutral'}`}
-                  >
-                    {labels[v.executionStatus || ''] || v.executionStatus || '실행 기록 없음'}
-                  </span>
-                </Link>
-              </td>
-              <td>
-                <span
-                  className={`c2-status ${['partial', 'blocked', 'failed'].includes(v.rca) ? 'warning' : 'neutral'}`}
-                >
-                  {qualityLabels[publishedQuality(v)] || publishedQuality(v)}
-                </span>
-                {v.publishedJobId && (
-                  <Link
-                    className="c2-result-link"
-                    to={`/analyses/${encodeURIComponent(v.publishedJobId)}`}
-                    state={{ from, returnState: { row: v.id } }}
-                  >
-                    {v.latestJobId && v.latestJobId !== v.publishedJobId
-                      ? '이전 발행 보고서'
-                      : '보고서 열기'}{' '}
-                    →
-                  </Link>
-                )}
-              </td>
-              <td>
-                <time>{dateTimeText(v.at)}</time>
-              </td>
-            </tr>
-          ))}
+          {views.map((v) => {
+            const back = { from, returnState: { row: v.id } };
+            const reportId =
+              v.publishedJobId || (['ready', 'partial', 'blocked'].includes(v.rca) ? v.jobId : '');
+            const open = expanded === v.id;
+            return (
+              <Fragment key={v.id}>
+                <tr id={`c2-incident-${v.id}`} className={open ? 'c2-row-open' : ''}>
+                  <td>
+                    <Link
+                      className="c2-title-link"
+                      to={
+                        reportId
+                          ? `/analyses/${encodeURIComponent(reportId)}`
+                          : `/incidents/${encodeURIComponent(v.id)}`
+                      }
+                      state={back}
+                    >
+                      {titleText(v)}
+                      <ArrowUpRight size={14} />
+                    </Link>
+                    <small>수신 alert 기준</small>
+                  </td>
+                  <td className="c2-device-cell">
+                    <b>
+                      {kindText(v.kind)} · {v.node || '노드 미확인'}
+                    </b>
+                    <small>{v.cluster || '클러스터 미확인'}</small>
+                    <code>
+                      {v.device
+                        ? `${v.device.startsWith('GPU-') ? 'UUID' : 'PCI'} ${v.device}`
+                        : '장치 식별 정보 없음'}
+                    </code>
+                  </td>
+                  <td>
+                    <span className="c2-guidance">
+                      {v.label?.action.replace(/\s*\([A-Z_]+\)/g, '') || '등록된 안내 없음'}
+                    </span>
+                    <button
+                      className="c2-expand"
+                      aria-expanded={open}
+                      aria-controls={`c2-detail-${v.id}`}
+                      onClick={() => setExpanded(open ? null : v.id)}
+                    >
+                      {open ? '접기' : '원문·런북 안내'} {open ? '−' : '+'}
+                    </button>
+                  </td>
+                  <td>
+                    <Link
+                      className="c2-execution-link"
+                      to={`/incidents/${encodeURIComponent(v.id)}`}
+                      state={back}
+                    >
+                      <span
+                        className={`c2-status ${['queued', 'running', 'retry_wait'].includes(v.executionStatus || '') ? 'attention' : ['failed', 'cancelled', 'expired'].includes(v.executionStatus || '') ? 'warning' : 'neutral'}`}
+                      >
+                        {labels[v.executionStatus || ''] || v.executionStatus || '실행 기록 없음'}
+                      </span>
+                    </Link>
+                    <span
+                      className={`c2-result-quality ${['partial', 'blocked'].includes(publishedQuality(v)) ? 'warning' : ''}`}
+                    >
+                      {qualityLabels[publishedQuality(v)] || publishedQuality(v)}
+                    </span>
+                    {reportId && (
+                      <Link
+                        className="c2-result-link"
+                        to={`/analyses/${encodeURIComponent(reportId)}`}
+                        state={back}
+                      >
+                        {v.latestJobId && v.latestJobId !== reportId
+                          ? '이전 발행 보고서'
+                          : '보고서 열기'}{' '}
+                        →
+                      </Link>
+                    )}
+                  </td>
+                  <td>
+                    <time dateTime={v.at.toISOString()}>{dateTimeText(v.at)}</time>
+                  </td>
+                </tr>
+                <tr id={`c2-detail-${v.id}`} hidden={!open} className="c2-detail-row">
+                  <td colSpan={5}>
+                    {open && (
+                      <div className="c2-case-detail">
+                        <section>
+                          <h3>수신 alert 원문</h3>
+                          <p className="c2-alert-raw">{v.raw || '수신 내용 없음'}</p>
+                          <dl>
+                            <dt>컴포넌트</dt>
+                            <dd>{v.component || '미확인'}</dd>
+                            <dt>GPU UUID</dt>
+                            <dd>{v.uuid || '수신 정보 없음'}</dd>
+                          </dl>
+                        </section>
+                        <section>
+                          <h3>런북 코드별 참고 안내</h3>
+                          <p>
+                            일반 지침이며 이 사건의 RCA 결론이나 수행 완료 기록이 아닙니다. 실제
+                            적용 조건과 절차는 보고서에서 확인하세요.
+                          </p>
+                          {v.label ? (
+                            <>
+                              <b>{v.label.action}</b>
+                              <p>{v.label.steps.join(' → ')}</p>
+                            </>
+                          ) : (
+                            <p>해당 코드에 등록된 참고 안내가 없습니다.</p>
+                          )}
+                          <Link to="/knowledge">지식·Runbook 열기 →</Link>
+                        </section>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -575,7 +634,10 @@ function Cases() {
   }, [location.state, query.isPending]);
   return (
     <div className="c2-page">
-      <Heading title="RCA 조사" note="사건을 찾고, 저장된 분석과 다음 확인을 읽습니다." />
+      <Heading
+        title="RCA 조사"
+        note="수신한 사건과 대상 장비를 확인하고, 분석 결과와 런북 안내를 살펴봅니다."
+      />
       <section className="c2-surface">
         <form
           className="c2-search"
@@ -593,19 +655,7 @@ function Cases() {
           />
           <button className="button primary">검색</button>
         </form>
-        <div className="c2-filters">
-          <label>
-            클러스터
-            <select
-              value={params.get('cluster') || ''}
-              onChange={(e) => update({ cluster: e.target.value, node: '' })}
-            >
-              <option value="">전체</option>
-              {[...new Set(views.map((v) => v.cluster).filter(Boolean))].sort().map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
+        <div className="c2-filters c2-basic-filters">
           <label>
             노드
             <select
@@ -628,31 +678,6 @@ function Cases() {
             </select>
           </label>
           <label>
-            반복 발생
-            <select
-              value={params.get('focus') || ''}
-              onChange={(e) => update({ focus: e.target.value })}
-            >
-              <option value="">전체</option>
-              <option value="repeat">3회 이상 반복</option>
-            </select>
-          </label>
-          <label>
-            RCA 결과
-            <select
-              value={params.get('quality') || ''}
-              onChange={(e) => update({ quality: e.target.value })}
-            >
-              <option value="">전체</option>
-              <option value="limited">부분 산출·판단 보류</option>
-              {Object.entries(qualityLabels).map(([v, label]) => (
-                <option key={v} value={v}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             보고서 생성
             <select
               value={params.get('execution') || ''}
@@ -668,18 +693,6 @@ function Cases() {
             </select>
           </label>
           <label>
-            장치 유형
-            <select
-              value={params.get('kind') || ''}
-              onChange={(e) => update({ kind: e.target.value })}
-            >
-              <option value="">전체</option>
-              <option value="gpu">GPU</option>
-              <option value="switch">NVSwitch</option>
-              <option value="host">호스트</option>
-            </select>
-          </label>
-          <label>
             정렬
             <select
               value={params.get('sort') || ''}
@@ -691,25 +704,107 @@ function Cases() {
               <option value="error">오류 코드별</option>
             </select>
           </label>
-          <label>
-            오류 유형
-            <select
-              value={params.get('category') || ''}
-              onChange={(e) => update({ category: e.target.value })}
-            >
-              <option value="">전체</option>
-              {CATEGORIES.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {params.get('code') && (
-            <button className="button" onClick={() => update({ code: '' })}>
-              코드 {params.get('code')} 해제
-            </button>
-          )}
+        </div>
+        <details className="c2-advanced-filters">
+          <summary>추가 필터</summary>
+          <div className="c2-filters">
+            <label>
+              클러스터
+              <select
+                value={params.get('cluster') || ''}
+                onChange={(e) => update({ cluster: e.target.value, node: '' })}
+              >
+                <option value="">전체</option>
+                {[...new Set(views.map((v) => v.cluster).filter(Boolean))].sort().map((n) => (
+                  <option key={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              장치 유형
+              <select
+                value={params.get('kind') || ''}
+                onChange={(e) => update({ kind: e.target.value })}
+              >
+                <option value="">전체</option>
+                <option value="gpu">GPU</option>
+                <option value="switch">NVSwitch</option>
+                <option value="host">호스트</option>
+              </select>
+            </label>
+            <label>
+              오류 유형
+              <select
+                value={params.get('category') || ''}
+                onChange={(e) => update({ category: e.target.value })}
+              >
+                <option value="">전체</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              RCA 결과
+              <select
+                value={params.get('quality') || ''}
+                onChange={(e) => update({ quality: e.target.value })}
+              >
+                <option value="">전체</option>
+                <option value="limited">부분 산출·판단 보류</option>
+                {Object.entries(qualityLabels).map(([v, label]) => (
+                  <option key={v} value={v}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              반복 발생
+              <select
+                value={params.get('focus') || ''}
+                onChange={(e) => update({ focus: e.target.value })}
+              >
+                <option value="">전체</option>
+                <option value="repeat">3회 이상 반복</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <div className="c2-active-filters">
+          {[
+            ['cluster', '클러스터'],
+            ['kind', '장치'],
+            ['category', '오류 유형'],
+            ['quality', '결과'],
+            ['focus', '반복'],
+            ['code', '코드'],
+          ]
+            .filter(([key]) => params.get(key) && (key !== 'focus' || params.get(key) === 'repeat'))
+            .map(([key, label]) => (
+              <button
+                key={key}
+                className="c2-filter-chip"
+                onClick={() => update({ [key]: '', ...(key === 'cluster' ? { node: '' } : {}) })}
+              >
+                {label}:{' '}
+                {(key === 'category' && CATEGORIES.find((c) => c.key === params.get(key))?.name) ||
+                  qualityLabels[params.get(key)!] ||
+                  (
+                    {
+                      gpu: 'GPU',
+                      switch: 'NVSwitch',
+                      host: '호스트',
+                      repeat: '3회 이상',
+                      limited: '부분 산출·판단 보류',
+                    } as Record<string, string>
+                  )[params.get(key)!] ||
+                  params.get(key)}{' '}
+                ×
+              </button>
+            ))}
         </div>
         <div className="c2-filter-period">
           <PeriodButtons

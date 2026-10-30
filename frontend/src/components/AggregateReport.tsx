@@ -359,9 +359,9 @@ function IncidentInterpretation({
                   </p>
                   <p className="aggregate-advice-basis">
                     <strong>해석 기준</strong> 같은 종류의 여러 노드 발생, 같은 노드의 다른 종류,
-                    작성 당시 저장된 알림 상태, 이전 비교기간 기록 유무를 확인합니다. 발생 알림 수신
-                    건수, 같은 종류의 발생 노드 수, 건수 순으로 확인 대상을 선정합니다. 선정된
-                    내역으로 전체 분포나 원인을 단정하지 않습니다.
+                    이전 비교기간 기록 등을 사용한 작성 당시의 선정 결과입니다. 과거 보고서의
+                    선정에는 당시 알림 상태가 사용됐을 수 있으며 현재 장애·복구 상태를 뜻하지
+                    않습니다. 선정된 내역으로 전체 분포나 원인을 단정하지 않습니다.
                   </p>
                   <p>
                     <strong>해석 범위</strong> {str(section.interpretation_limit)}
@@ -390,7 +390,7 @@ function IncidentInterpretation({
         본문은 AI 작성 · 관측 근거와 확인 대상은 자동 집계·선정
       </p>
       <p className="aggregate-interpretation-limit">
-        알림 상태는 보고서 작성 당시 기준입니다. 확인 제안은 실제 조치나 장애 원인 판정이 아닙니다.
+        저장된 사건 자료를 기준으로 합니다. 확인 제안은 실제 조치나 장애 원인 판정이 아닙니다.
       </p>
     </section>
   );
@@ -1155,7 +1155,6 @@ export function AggregateReport({
                     <th>발생 노드</th>
                     <th>이번 기간</th>
                     <th>이전 기간</th>
-                    <th>작성 시 발생 알림 기록</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1177,7 +1176,6 @@ export function AggregateReport({
                         )}
                       </td>
                       <td className="aggregate-number">{String(category.previous_count)}건</td>
-                      <td className="aggregate-number">{String(category.firing_count)}건</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1206,8 +1204,8 @@ export function AggregateReport({
             rows(summary.incidents).length > 0 && (
               <div>
                 <p className="aggregate-data-note aggregate-static-note">
-                  <strong>알림 상태 기준</strong>
-                  알림 상태는 보고서 작성 중 조회한 당시 기준이며, 현재 상태와 다를 수 있습니다.
+                  <strong>자료 기준 시각</strong>
+                  보고서 작성 중 조회한 저장 자료입니다. 현재 장비 상태를 나타내지 않습니다.
                   <br />
                   기준 시각:{' '}
                   {str(summary.status_as_of)
@@ -1223,9 +1221,7 @@ export function AggregateReport({
                         <th>클러스터</th>
                         <th>노드</th>
                         <th>알림 내용</th>
-                        <th>
-                          알림 상태<span>작성 기준</span>
-                        </th>
+
                         <th>상세 보기</th>
                       </tr>
                     </thead>
@@ -1253,15 +1249,7 @@ export function AggregateReport({
                                 <small>시험 알림으로 표시됨</small>
                               )}
                             </td>
-                            <td>
-                              {row.alarm_status === 'firing' ? (
-                                <Badge status="firing" label="발생 알림 수신" />
-                              ) : (
-                                <span>
-                                  {row.alarm_status === 'resolved' ? '해제 알림 수신' : '미확인'}
-                                </span>
-                              )}
-                            </td>
+
                             <td>
                               <TextLink to={`/incidents/${encodeURIComponent(str(row.id))}`}>
                                 {row.result_id ? 'RCA 보기' : '사건 보기'}

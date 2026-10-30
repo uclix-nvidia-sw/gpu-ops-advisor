@@ -503,13 +503,6 @@ export function OperatorIncidentList({ items, from }: { items: Row[]; from: stri
           <article className="console-incident" key={str(i.id)}>
             <div className="console-incident-state">
               <Badge status={str(i.state) || 'unknown'} />
-              <span>
-                {i.alarm_status === 'firing'
-                  ? '발생 알림 수신'
-                  : i.alarm_status === 'resolved'
-                    ? '해제 알림 수신'
-                    : '알림 미확인'}
-              </span>
             </div>
             <div className="console-incident-body">
               <h3>

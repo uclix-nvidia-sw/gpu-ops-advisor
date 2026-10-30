@@ -28,7 +28,7 @@ export function OperationCaseList({ items }: { items: Row[] }) {
     <div className="ops-case-list">
       {items.map((i) => (
         <Link className="ops-case" key={str(i.id)} to={`/incidents/${str(i.id)}`}>
-          <span className={`ops-signal ${i.alarm_status === 'firing' ? 'attention' : ''}`} />
+          <span className="ops-signal" />
           <div>
             <AlarmIdentity record={i} />
             <IncidentStates incident={i} />
