@@ -99,6 +99,18 @@
         "binding": "execution_profile",
         "time_range": "incident",
         "freshness": "query_contract"
+      },
+      {
+        "query_id": "D04",
+        "priority": 6,
+        "required": false,
+        "fact_names": [
+          "observations"
+        ],
+        "purpose": "같은 서버 GPU의 온도(섭씨)를 장애 전후 소비 전력·전력 제한 기록과 함께 비교한다. GPU 온도를 전원 공급 장치나 흡기 온도로 대신 해석하지 않는다.",
+        "binding": "execution_profile",
+        "time_range": "incident",
+        "freshness": "query_contract"
       }
     ],
     "recommendations": [],
@@ -335,6 +347,14 @@
           ],
           "required": false,
           "expected_effect": "같은 노드 GPU의 전력 제한 누적 시간(나노초 누적값, 사건 전후 증가량만 읽음)을(를) 사건 전후로 비교한다. 빈 결과와 공백을 0·정상으로 바꾸지 않으며 이 값만으로 원인이나 회복을 판정하지 않는다."
+        },
+        {
+          "query_id": "D04",
+          "criterion_ids": [
+            "bounded_conclusion"
+          ],
+          "required": false,
+          "expected_effect": "같은 서버 GPU의 온도(섭씨)를 장애 전후 소비 전력·전력 제한 기록과 함께 비교한다. GPU 온도를 전원 공급 장치나 흡기 온도로 대신 해석하지 않는다."
         }
       ]
     }

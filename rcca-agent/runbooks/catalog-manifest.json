@@ -5282,7 +5282,7 @@
       {
         "file": "component/RB-COMPONENT-DCGM-PCIE.json",
         "before_content_sha256": "5efa372d68f79552e6cd01a711e955d1917d3fd1345b5bf65b7b54d4fef7f783",
-        "after_content_sha256": "7739ccc7de0483e18fd6348b270ac20844b5a4dc30a1f0991415d3eda0c63f10",
+        "after_content_sha256": "e528f34cd733e63a48319fee4faa76b9cf14cf822104564ec1a8795d722d42ac",
         "restore": [
           {
             "path": [
@@ -5308,13 +5308,43 @@
               7
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              2
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              3
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "decision_policy",
+              "followup_links",
+              2
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "decision_policy",
+              "followup_links",
+              3
+            ],
+            "existed": false
           }
         ]
       },
       {
         "file": "component/RB-COMPONENT-DCGM-POWER.json",
         "before_content_sha256": "59a088d2a181da0fa0d3782d8c5522014642e9ea42dbf3dfead44372d66cd479",
-        "after_content_sha256": "836ffa8f100116b12bbee9d9faeae42e41828eb656b3fc3e1edd5cc4eca096c7",
+        "after_content_sha256": "2b13318c0ee982c5a7650bcc0be1862b66cf8b58c03d6d3b430708e4f2496dec",
         "restore": [
           {
             "path": [
@@ -5328,6 +5358,21 @@
             "path": [
               "sources",
               8
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              5
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "decision_policy",
+              "followup_links",
+              5
             ],
             "existed": false
           }
@@ -5336,7 +5381,7 @@
       {
         "file": "component/RB-COMPONENT-DCGM-THERMAL.json",
         "before_content_sha256": "5e661df580e7e8a5ce531096d6a90c8cc4336de1ab681b762d923a6b986a43f5",
-        "after_content_sha256": "cb7e764ec33b8c343fe57332c6906ae50be6870ac65ccbac6456284ab92fc2fd",
+        "after_content_sha256": "42a9f43cf46c954654cbbcf3d8d267727de362221f6252bb37d7151e15e3b1ae",
         "restore": [
           {
             "path": [
@@ -5350,6 +5395,21 @@
             "path": [
               "sources",
               8
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              5
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "decision_policy",
+              "followup_links",
+              5
             ],
             "existed": false
           }
@@ -5926,7 +5986,7 @@
       {
         "file": "sxid/RB-SXID-10004.json",
         "before_content_sha256": "f9314a6eba287a53fb1a14ae563c9e366bc01c3a3daf40f36457c53bb0a794df",
-        "after_content_sha256": "b6f78f6b22130d09f0f467c3cd13f81fb4e4658de8faacf9fc5c7a8df0f82cc0",
+        "after_content_sha256": "97107d5df58fec5f16e3af308858ac55150197060e1bbd074e02c3c539ce617a",
         "restore": [
           {
             "path": [
@@ -6024,13 +6084,34 @@
               6
             ],
             "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              10
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              11
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              12
+            ],
+            "existed": false
           }
         ]
       },
       {
         "file": "sxid/RB-SXID-10005.json",
         "before_content_sha256": "37739486114addb5f8795f3328f0de685d9cd15507407f8d2e8136290ebf8bef",
-        "after_content_sha256": "b84d656add5c52c2d48f7258a859e7e51342c52e69d089d0492bce7b92700058",
+        "after_content_sha256": "360566b35401ce4b7f5ff485fceec1661555fbdc7e65a9b9b498c8cca1b2fcbb",
         "restore": [
           {
             "path": [
@@ -6126,6 +6207,27 @@
             "path": [
               "sources",
               6
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              10
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              11
+            ],
+            "existed": false
+          },
+          {
+            "path": [
+              "observation_plan",
+              12
             ],
             "existed": false
           }
@@ -22904,10 +23006,14 @@
           "source_review": "공식 제품 문서·생산자 알림 정의 대조",
           "query_ids": [
             "D09",
-            "D44"
+            "D44",
+            "D31",
+            "D32"
           ],
           "metric_names": [
-            "PCIe replay 누적값"
+            "PCIe replay 누적값",
+            "GPU PCIe 수신 속도",
+            "GPU PCIe 송신 속도"
           ],
           "source_fields_checked": false,
           "registered_binding_check": "passed",
@@ -22924,13 +23030,15 @@
             "D11",
             "D48",
             "D45",
-            "D62"
+            "D62",
+            "D04"
           ],
           "metric_names": [
             "GPU 전력",
             "적용 전력 한도",
             "클록 제한 사유 비트마스크",
-            "전력 제한 누적 시간"
+            "전력 제한 누적 시간",
+            "GPU 온도"
           ],
           "source_fields_checked": false,
           "registered_binding_check": "passed",
@@ -22947,13 +23055,15 @@
             "D04",
             "D23",
             "D45",
-            "D61"
+            "D61",
+            "D11"
           ],
           "metric_names": [
             "GPU 온도",
             "GPU 메모리 온도",
             "클록 제한 사유 비트마스크",
-            "열 제한 누적 시간"
+            "열 제한 누적 시간",
+            "GPU 전력"
           ],
           "source_fields_checked": false,
           "registered_binding_check": "passed",
@@ -23224,7 +23334,10 @@
             "D55",
             "D56",
             "D57",
-            "D13"
+            "D13",
+            "D61",
+            "D45",
+            "D11"
           ],
           "metric_names": [
             "GPU별 Fabric Manager 상태 코드",
@@ -23234,7 +23347,10 @@
             "GPU 사용률",
             "NVLink CRC 오류 누적값",
             "NVLink 복구 오류 누적값",
-            "NVLink 재전송 오류 누적값"
+            "NVLink 재전송 오류 누적값",
+            "열 제한 누적 시간",
+            "클록 제한 사유 비트마스크",
+            "GPU 전력"
           ],
           "source_fields_checked": true,
           "registered_binding_check": "passed",
@@ -23256,7 +23372,10 @@
             "D55",
             "D56",
             "D57",
-            "D13"
+            "D13",
+            "D61",
+            "D45",
+            "D11"
           ],
           "metric_names": [
             "GPU별 Fabric Manager 상태 코드",
@@ -23266,7 +23385,10 @@
             "GPU 사용률",
             "NVLink CRC 오류 누적값",
             "NVLink 복구 오류 누적값",
-            "NVLink 재전송 오류 누적값"
+            "NVLink 재전송 오류 누적값",
+            "열 제한 누적 시간",
+            "클록 제한 사유 비트마스크",
+            "GPU 전력"
           ],
           "source_fields_checked": true,
           "registered_binding_check": "passed",

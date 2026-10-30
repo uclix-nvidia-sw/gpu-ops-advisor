@@ -283,6 +283,23 @@ python -m rcca_agent.runbook_admin retire "$RcaPrefix-published.json" --profile 
 
 ## 추가 수집 연결 운영 절차
 
+### 기존 Grafana 데이터부터 연결
+
+Grafana에 있고 실행 프로필에 검증된 조회가 등록된 데이터는 Fleet/Alloy 설정을 바꾸지 않는다. 해당 RCA 런북의 `observation_plan`에 조회를 추가하고 새 revision을 검토·발행하면 된다. 보고서 비교 표가 지원하지 않던 조회는 RCA 전용 표시 연결도 함께 추가한다. 저장소 JSON 수정만으로 이미 발행된 런북이나 과거 보고서가 바뀌지는 않는다.
+
+| 런북 | 기존 조회로 추가하는 근거 | 보고서에서 읽는 범위 |
+|---|---|---|
+| SXID 10004·10005 | GPU 열 제한 누적 시간(D61), 클록 제한 사유(D45), 소비 전력(D11) | 기존 GPU 온도·NVLink 송수신과 같은 서버 GPU별로 비교. NVSwitch 온도·냉각 센서나 포트 측정값으로 바꾸지 않음 |
+| DCGM PCIe | GPU PCIe 수신·송신 속도(D31·D32) | 기존 PCIe 재전송 누적값과 나란히 비교. 낮은 전송량만으로 링크 단절이나 협상 속도 저하를 판정하지 않음 |
+| DCGM 열 점검 | GPU 소비 전력(D11) | 기존 온도·열 제한 시간과 비교. 전력 변화와 열 문제의 인과관계는 별도 근거 필요 |
+| DCGM 전력 점검 | GPU 온도(D04) | 기존 소비 전력·적용 전력 한도·제한 시간과 비교. PSU 또는 흡기 온도를 대신하지 않음 |
+
+위 10개 추가 계획은 선택 조회다. 기존 필수 근거와 대응 절차를 보존하고, 선택 조회 실패만으로 보고서를 부분 산출로 바꾸지 않는다. 공통 프로필·Ops 계획·Fleet Helm values·Alloy·Grafana 알림 규칙은 변경하지 않는다. 실행 프로필에 D04/D11/D31/D32/D45/D61이 이미 검증되어 있어야 하며, 등록되지 않은 환경에는 그대로 발행하지 않는다.
+
+2026-10-30 읽기 전용 확인에서 기존 Mimir의 최근 1시간 Fleet 메트릭 96종이 반환됐다. 추가 계획과 관련된 13종은 두 GPU 서버의 16개 GPU에서 각각 반환되어 총 208개 시계열을 확인했다. Loki에도 Fleet의 SXID/NVSwitch 컴포넌트 보고가 반환됐다. 이는 기존 수집 경로의 데이터 존재 확인이며, 새 런북의 운영 실행·발행 검증과 구분한다. GPU UUID/노드별 값은 스위치 PCI/포트 직접 측정이 아니다. GPU별 Fabric Manager 상태 코드 0도 NVSwitch 정상 근거로 해석하지 않는다.
+
+수집 확대는 아래 표의 원본이 기존 Grafana에 없다는 것이 확인된 항목에만 적용한다. 이미 있는 지표의 이름만 늘리거나, 지원하지 않는 장비의 0 값을 정상 근거로 추가하지 않는다. 공식 의미는 [Fabric Manager SXID 지침](https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html)과 [DCGM 필드 정의](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-field-ids.html)를 따른다.
+
 이 절은 운영자가 직접 수행할 인계 절차다. 저장소 변경/PR만으로 서버 수집 설정, 실행 프로필, 발행 런북이 적용되지는 않는다. 기존 6단 보고서 형식은 유지한다. Ops Worker·Ops 보고서·Grafana 알림 규칙은 변경 대상이 아니다.
 
 ### 어디에서 무엇을 변경하는가
