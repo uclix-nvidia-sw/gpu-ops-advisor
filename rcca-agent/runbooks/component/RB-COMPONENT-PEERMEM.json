@@ -83,6 +83,12 @@
         "revision": "84f99beef3e633071ad0998b10629b01fb294eaf",
         "section": "CheckLsmodPeermemModule: requires root, runs sudo lsmod",
         "checked_at": "2026-10-26"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "analysis_guidance": [
@@ -91,7 +97,7 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "모니터링 에이전트(Fleet)가 nvidia-peermem 모듈 상태를 확인하지 못했다는 보고이며, GPUDirect RDMA 경로의 오류나 하드웨어 고장 보고가 아닙니다. nvidia-peermem의 'ERROR detected invalid context' 줄은 Fleet이 이와 별도로 이벤트로만 기록하므로, 같은 시각 커널 로그에 그 줄이 있는지 함께 봅니다.",
+      "meaning": "모니터링 에이전트(Fleet)의 nvidia-peermem 모듈 상태 조회 과정에서 실행 오류가 보고됐습니다. 이 알림은 조회 실행 결과를 뜻하며, GPUDirect RDMA 경로 오류나 하드웨어 고장 여부는 같은 시각의 작업·커널 로그와 별도로 대조합니다. nvidia-peermem의 'ERROR detected invalid context' 줄은 Fleet이 이와 별도로 이벤트로만 기록하므로, 같은 시각 커널 로그에 그 줄이 있는지 함께 봅니다.",
       "cause_note": "Fleet 에이전트가 root로 실행되지 않았거나 sudo lsmod를 실행하지 못한 것(권한·컨테이너 구성)이 주요 원인 후보입니다. 같은 시각 invalid context 줄이 있으면 GPUDirect RDMA를 쓰는 작업의 비정상 종료나 메모리 등록 문제, nvidia-peermem·네트워크 드라이버 구성 문제를 후보로 둡니다.",
       "next_checks": [
         {
@@ -112,7 +118,7 @@
         },
         {
           "title": "복구 확인",
-          "text": "Fleet peermem 보고가 Healthy로 돌아왔는지 확인합니다. 'ibcore is not using peermem module'도 Healthy이며 그 자체로는 오류가 아닙니다."
+          "text": "Fleet peermem 보고가 Healthy로 돌아왔는지 확인합니다. 'ibcore is not using peermem module'도 Healthy이며 그 자체로는 오류가 아닙니다. Fleet 점검 복구와 작업 복구는 각각 확인합니다. 실제 작업 실패가 동반됐으면 같은 구성의 작업 재실행 결과, 작업 소유자가 확인한 진행·완료 상태, 같은 오류의 재발 여부를 함께 기록합니다."
         },
         {
           "title": "공급사 전달",
@@ -141,6 +147,13 @@
           "text": "NCCL_DEBUG=INFO 로그에서 사용한 전송 경로(예: DMA-BUF 사용 가능 여부, 네트워크 종류)를 확인합니다.",
           "source_indices": [
             2
+          ]
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. 노드·장치·마운트·인터페이스 등 각 지표의 대상이 같은 표본끼리 비교합니다. 알림 사유와 같은 시각의 실제 관측을 먼저 연결한 뒤 아래 조건별 대응을 적용합니다. 현장 대조 자료는 대응 순서의 진단 자료 보존 단계에 기재된 원본 로그와 장치별 점검 결과를 사용합니다.",
+          "source_indices": [
+            5
           ]
         }
       ]

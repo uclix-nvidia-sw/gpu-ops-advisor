@@ -82,10 +82,12 @@ JSON은 기존 Backend Knowledge 생성 요청의 필드만 사용한다. 생성
 - 화면은 "다." 또는 "요." 뒤에서만 문장을 나눠 항목으로 보여 준다. 한 문장에 한 동작을 쓰고 "…합니다(…)."처럼 괄호로 끝내지 않는다. 앞 24자 안의 "라벨: "은 굵게 표시된다.
 - 명령은 NVIDIA 문서에서 확인한 형태로 적는다. 예: `nvidia-bug-report.sh --safe-mode --extra-system-data`, `nvidia-smi --query-gpu=gpu_recovery_action --format=csv`. 문서가 폐기를 밝힌 필드는 쓰지 않는다.
 - 장비 세대(A100·Hopper)나 운영 모드(bare metal·공유 NVSwitch 가상화)에 따라 조치가 다르면 bare metal과 세대별 분기를 먼저 적는다. 출처가 서로 다르면 [출처 적용 순서](../../docs/specs/rca-agent/references/runbook-source-catalog.md#21-출처가-서로-다를-때의-적용-순서)를 따른다.
-- XID/SXID 6단 화면이 이미 그리는 대상 확정·공급사 전달 체크리스트·리셋 방식 표는 다시 쓰지 않고 가리킨다. 컴포넌트 Runbook은 6단 화면이 없으므로 리셋 범위 같은 필수 조건을 참고 항목에 직접 적는다.
+- XID/SXID·컴포넌트(파일시스템 포함) 모두 기존 6단 화면을 사용한다. 대상 확정·공급사 전달 체크리스트·리셋 방식 표와 각 런북의 장치별 조건을 함께 보여 준다. 컴포넌트라는 이유로 일부 구역만 제공하지 않으며, 리셋 범위 같은 필수 조건은 참고 항목에도 보존한다.
 - 내용을 바꾸면 파일별 이전 값과 해시를 검토 기록에 남긴다. 최신 기록은 [xid-catalog-action-review-20261023.json](xid-catalog-action-review-20261023.json)이고 해시 사슬은 `test_catalog_requirement_separation.py`가 검사한다.
 
 컴포넌트 Runbook(`component/`)은 schema 1.2의 `decision_policy.applies_when`에 컴포넌트·Unhealthy·생산자만 두고 사유는 넣지 않는다. 기본 프로필의 `health_contracts`에 같은 컴포넌트를 등록해야 지침이 보고서에 표시된다. 선택·표시 계약은 [RCA README](../README.md#비코드-fleet-오류와-평가), 목록은 [CATALOG](CATALOG.md#fleet-컴포넌트-runbook)에 있다.
+
+운영자 작성 원칙은 **확인한 사실 → 의미 → 필요한 대응**이다. 코드·대상·시각과 수집값을 먼저 제시하고, 공식 의미·제품별 조건과 대응을 이어 쓴다. 막연한 불확실성 문구를 반복하지 않고 실제 수집 항목과 현장 대조 자료를 이름으로 표시한다. 개발용 조회 식별자는 운영자 설명에서 쓰지 않는다. 정보량·단계·출처를 줄이거나 삭제하려면 사용자에게 구체적인 변경안을 보여 주고 먼저 확인받는다. 내용 보강은 기존 보고서 6단 구성·형식과 통합 콘솔 폰트를 유지한다.
 
 ## RCA가 사용하는 계약
 

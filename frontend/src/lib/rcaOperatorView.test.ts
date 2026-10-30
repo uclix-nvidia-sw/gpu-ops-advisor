@@ -111,7 +111,7 @@ it('answers the operator questions from collected evidence only', () => {
   expect(telemetry.tone).toBe('warn');
   expect(v.metrics.find((m) => m.name === 'GPU 사용률')!.short).toContain('사건 뒤 0 % 관측');
   // 83 s of silence is within a 300 s collection gap, so absence is not called an outage.
-  expect(v.metrics.find((m) => m.name === 'GPU 전력')!.tag).toBe('판단 보류');
+  expect(v.metrics.find((m) => m.name === 'GPU 전력')!.tag).toBe('사건 전 표본');
   expect(repeat.tone).toBe('alert');
   expect(repeat.points.join('\n')).toContain('(추정) 여러 GPU에서 같은 오류');
   expect(repeat.points.join('\n')).toContain('XID)와 NVSwitch 오류(SXID)');
@@ -405,7 +405,7 @@ it('names GPUs that share a verdict instead of listing every series', () => {
     '사건 직후 GPU 7번 NVLink 수신량·송신량 0 관측, GPU 5번 NVLink 수신량·송신량 급감. 사건 전부터 0: GPU 0번 NVLink 수신량·송신량.',
   );
   expect(v.findings[2].points).toContain(
-    '변화 없음: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 (미지원) 유지',
+    'FM 서비스·로그 확인: GPU 4개 모두 Fabric Manager 상태 — 상태 코드 0 (미지원) 유지',
   );
   expect(v.findings[2].points.join('\n')).not.toMatch(/\d{7,} B\/s/);
   // Fleet NVLink series carry no pod labels: the report must not claim "no pods".
@@ -830,4 +830,30 @@ it('tells an XID 79 GPU that keeps reporting from one that went silent', () => {
   })!;
   expect(v.findings[2].points[0]).toContain('사건 뒤에도 이 GPU 지표가 3회 새로 들어왔습니다');
   expect(v.findings[2].tone).not.toBe('unknown');
+});
+
+it('distinguishes empty switch measurements from unsuccessful collection without internal field names', () => {
+  for (const status of ['empty', 'unavailable', 'ok']) {
+    const view = operatorView({
+      ...result,
+      quality: {
+        ...result.quality,
+        triage_observations: {
+          ...result.quality.triage_observations,
+          switch_pci: [{ status, reported_pci: ['0000:c6:00.0'], observed_pci: [] }],
+        },
+      },
+    })!;
+    const text = view.findings.flatMap((f) => f.points).join(' ');
+    expect(text).toContain('0000:c6:00.0');
+    expect(text).toContain('Fabric Manager 오류 기록과 포트 상태');
+    expect(text).not.toContain('startsAt');
+    expect(text).not.toContain('Incident');
+    if (status === 'empty') expect(text).toContain('해당하는 측정값은 0건');
+    if (status === 'unavailable') {
+      expect(text).toContain('측정값 조회가 완료되지 않았습니다');
+      expect(text).not.toContain('측정값은 0건');
+    }
+    if (status === 'ok') expect(text).toContain('장비·기간이 일치하는 자료는 0건');
+  }
 });

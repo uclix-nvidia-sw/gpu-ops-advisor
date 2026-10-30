@@ -33,12 +33,15 @@ class RunbookContractTests(unittest.TestCase):
             with self.subTest(key=row["knowledge_key"]):
                 self.assertEqual(row["source_refs"], [])
                 plan = validate_runbook(row, QUERIES, ALLOWED, authoring=True)
-                # D09 first; every other planned query is a report metric.
+                # D09 first; remaining queries are metrics or optional raw context.
                 self.assertEqual(plan[0]["query_id"], "D09")
                 self.assertTrue(plan[0]["required"])
                 self.assertLessEqual(
-                    {step["query_id"] for step in plan[1:]}, set(METRICS)
+                    {step["query_id"] for step in plan[1:]}, set(METRICS) | {"D13"}
                 )
+                for step in plan:
+                    if step["query_id"] == "D13":
+                        self.assertFalse(step["required"])
                 if row["knowledge_key"] == "RB-GENERAL-GPU-NODE":
                     self.assertEqual(
                         [step["query_id"] for step in plan],

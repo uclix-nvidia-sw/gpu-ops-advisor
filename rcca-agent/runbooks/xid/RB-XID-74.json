@@ -144,14 +144,20 @@
         "revision": "Retrieved 2026-10-22; mutable upstream document",
         "section": "Table 1 Common XID Messages and Recommended Steps; Table 2 System Reset Capabilities; Reporting a GPU Issue",
         "checked_at": "2026-10-22"
+      },
+      {
+        "url": "https://github.com/uclix-nvidia-sw/gpu-ops-advisor/blob/933427d65ec384620e0dc6de84d594404087d60d/agents/config.example.json",
+        "revision": "933427d65ec384620e0dc6de84d594404087d60d",
+        "section": "queries and verified bindings; the selected subset is this Runbook observation_plan",
+        "checked_at": "2026-10-30"
       }
     ],
     "limitations": [
-      "필수 원문·대상/버전·동반 사건이 확인되지 않으면 판단을 보류한다.",
+      "판단에 사용할 근거는 필수 오류 원문, 같은 대상의 장치 신원과 버전, 같은 시각의 동반 사건이다. 이 자료를 대조한 범위 안에서 원인과 대응 조건을 제시한다.",
       "Volta 이하 및 표에 없는 제품은 해당 세대 문헌으로 적용 여부를 확인한다.",
       "추가 조회는 보조 원본 관측이며 실행 예산에 따라 일부만 선택된다. 노드 inventory를 장애 GPU·PCIe root port·NVLink 상대 장치의 연결 증거로 사용하지 않는다. 같은 장치 매핑이 없으면 비교·영향 범위 판정을 보류한다.",
-      "오류 보고 확인, 실제 장치 신원·현재 상태 확인, 원인 확정 및 조치 조건 충족은 별도 단계다. 보고 사실만 확인되면 조사 결과는 미확정으로 유지한다.",
-      "NVLink 수신·송신량은 처리량일 뿐 링크 번호·연결 상대·오류 카운터가 아니다. nvidia-smi nvlink -e와 원문 레지스터 해석 전에는 전파 방향과 영향 범위를 확정하지 않는다."
+      "오류 보고의 코드·시각·대상을 먼저 제시하고, 실제 장치 신원과 현재 상태를 별도의 관측으로 연결한다. 원인 및 조치는 해당 근거와 실행 조건이 충족된 항목에 한해 제시하며, 보고 원문만 있는 경우에는 보고 사실과 다음 수집 항목을 구분한다.",
+      "NVLink 수신·송신량은 GPU 쪽 처리량이며, 오류 누적값은 별도 CRC·복구·재전송 지표로 비교한다. 링크 번호·연결 상대와 원문 레지스터는 nvidia-smi nvlink -e 및 오류 원문으로 대조한다. 전파 방향과 영향 범위는 같은 링크의 연결 관계와 시각이 일치하는 근거로 제시한다."
     ],
     "title": "XID 74 NVLINK Error · NVLink 오류 조사",
     "description": "XID 74: NVLINK Error.",
@@ -283,6 +289,13 @@
             3
           ],
           "text": "Ampere 이후 NVSwitch 시스템에서 FM이 실행 중이면 GPU를 개별 리셋할 수 있고 FM이 해당 NVSwitch 링크도 리셋합니다. FM이 없으면 NVLink로 연결된 GPU·NVSwitch 전체를 리셋합니다. Hopper 이후는 개별 리셋을 지원합니다. VM 안에서는 GPU 리셋을 지원하지 않으므로 VM을 재시작합니다(Hopper 이후는 하이퍼바이저 권한에 따라 다름)."
+        },
+        {
+          "title": "수집 근거와 대응에 연결하는 방법",
+          "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 NVLink 수신량, NVLink 송신량, GPU별 Fabric Manager 상태 코드, GPU 사용률, NVLink CRC 오류 누적값, NVLink 복구 오류 누적값, NVLink 재전송 오류 누적값. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
+          "source_indices": [
+            4
+          ]
         }
       ]
     }

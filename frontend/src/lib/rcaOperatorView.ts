@@ -10,7 +10,7 @@ export const toneLabels: Record<Tone, string> = {
   alert: '즉시 확인',
   warn: '주의',
   ok: '특이 변화 없음',
-  unknown: '판단 보류',
+  unknown: '관측 내용',
 };
 
 export interface Finding {
@@ -33,7 +33,7 @@ export interface Window {
 }
 export interface MetricRow {
   name: string;
-  /** Short verdict word shown first: 멈춤, 끊김, 판단 보류, 변화 없음 … */
+  /** Short verdict word shown first: 멈춤, 끊김, 사건 전 표본, 변화 없음 … */
   tag: string;
   /** One-line plain reading for the table and Q3. */
   short: string;
@@ -209,7 +209,7 @@ const rank = (m: { tone: Tone; tag: string; kind?: string }) =>
         : 1.5
       : m.tag === IDLE
         ? 4
-        : m.tag === '변화 없음' && m.kind === 'enum'
+        : ['변화 없음', 'FM 서비스·로그 확인'].includes(m.tag) && m.kind === 'enum'
           ? 5
           : m.tone === 'ok' || m.tag === '유지'
             ? 3
@@ -548,10 +548,17 @@ export function operatorView(result: Row) {
       );
   }
   rows(view.switch_pci).forEach((r) => {
-    if (!strings(r.observed_pci).length)
-      idPoints.push(
-        `Grafana에서 스위치 PCI ${strings(r.reported_pci).join(', ')} 라벨의 시계열을 찾지 못했습니다 → NVSwitch 자체 상태는 이 보고서로 확인되지 않습니다.`,
-      );
+    if (strings(r.observed_pci).length) return;
+    const device = strings(r.reported_pci).join(', ');
+    const finding =
+      r.status === 'empty'
+        ? `조회 기간에 스위치 ${device}에 해당하는 측정값은 0건입니다.`
+        : r.status === 'ok'
+          ? `조회된 측정값 중 스위치 ${device}와 장비·기간이 일치하는 자료는 0건입니다.`
+          : `스위치 ${device}의 측정값 조회가 완료되지 않았습니다. 수집 연결과 조회 실행 상태를 점검하세요.`;
+    idPoints.push(
+      `스위치 직접 측정값: ${finding} 같은 서버의 GPU 측정값은 참고 자료입니다. 스위치 상태 판단에는 Fabric Manager 오류 기록과 포트 상태를 함께 확인하세요.`,
+    );
   });
   const identity: Finding = {
     key: 'identity',
@@ -590,7 +597,12 @@ export function operatorView(result: Row) {
     } satisfies Partial<Finding>);
 
   // 2. Timing and persistence. Healthy→Unhealthy reports bound the onset without kmsg.
-  const onset = obj(view.onset);
+  const storedOnset = obj(view.onset);
+  const onset =
+    (!storedOnset.code || codes.includes(str(storedOnset.code))) &&
+    (!storedOnset.pci || !alertPci || normPci(str(storedOnset.pci)) === normPci(alertPci))
+      ? storedOnset
+      : {};
   const healthyAt = str(onset.last_healthy_at);
   const unhealthyAt = str(onset.first_unhealthy_at);
   const onsetText =
@@ -616,7 +628,9 @@ export function operatorView(result: Row) {
       `보고 ${reports}건 — 같은 상태의 반복 보고이며 장애 횟수가 아닙니다${reports > 1 ? ` (약 ${intervalLabel(cadence)} 간격)` : ''}.`,
     );
   if (str(view.alert_time) && (eventTimes[0] || firstReport))
-    timePoints.push(`알림 시작: ${fmt(str(view.alert_time))} (Incident에 저장된 startsAt)`);
+    timePoints.push(
+      `알림 시작 시각: ${fmt(str(view.alert_time))} — 알림에 기록된 시작 시각입니다.`,
+    );
   const timing: Finding = {
     key: 'timing',
     question: '분석 구간에서 언제 관측됐나요?',
@@ -665,7 +679,7 @@ export function operatorView(result: Row) {
         : ['B/s', 'B', 'ns'].includes(u)
           ? `${val(w.min)} ~ ${val(w.max)}`
           : `${fmtNum(w.min)}~${fmtNum(w.max)}${u ? ` ${u}` : ''}`;
-    const once = after?.samples === 1 ? ', 사건 뒤 표본 1회' : '';
+    const once = after && after.samples <= 2 ? `, 사건 뒤 표본 ${after.samples}회` : '';
     const fm = q === 'D47';
     const labels = STATE_CODES[q];
     const code = (c: number) => `${fmtNum(c)}${labels?.[c] ? ` (${labels[c]})` : ''}`;
@@ -698,10 +712,10 @@ export function operatorView(result: Row) {
       } else {
         enumChange = `상태 코드 ${code(c)} 유지`;
         [tag, short] = [
-          '변화 없음',
+          fm && c === 0 ? 'FM 서비스·로그 확인' : '변화 없음',
           fm
             ? c === 0
-              ? `${enumChange} — 이 GPU에서는 이 지표로 Fabric Manager 상태를 판단할 수 없어 FM 서비스·로그로 확인합니다`
+              ? `${enumChange} — 이 GPU는 Fabric Manager 상태를 이 지표로 제공하지 않습니다. 해당 노드의 Fabric Manager 서비스 실행 상태와 오류 로그를 확인합니다`
               : enumChange
             : `${enumChange} (코드 의미는 원문 기준)`,
         ];
@@ -755,8 +769,8 @@ export function operatorView(result: Row) {
         tone = dbe ? 'alert' : 'warn';
       } else if (m.kind !== 'counter' && after.samples === 1) {
         [tag, short] = [
-          '판단 보류',
-          `사건 뒤 1회만 수집 (${range(after)}) — 장치가 응답한다는 증거가 아닙니다`,
+          '사건 뒤 표본 1회',
+          `사건 뒤 1회만 수집 (${range(after)}) — 이후 표본과 장치 응답을 함께 확인합니다`,
         ];
       } else if (m.kind === 'counter' && after.max < before.max) {
         [tag, short] = [
@@ -773,7 +787,7 @@ export function operatorView(result: Row) {
       } else {
         [tag, short] = [
           '값 비교',
-          `${range(before)} → ${range(after)} · 정상 여부를 판정할 기준은 미확인`,
+          `${range(before)} → ${range(after)} · 장비의 정상 운전 범위와 대조합니다`,
         ];
         tone = 'unknown';
       }
@@ -784,8 +798,8 @@ export function operatorView(result: Row) {
       [tag, short] = stopped
         ? ['끊김', `사건 뒤 수집이 끊겼습니다 (${prior}) — 장치 응답을 직접 확인하세요`]
         : [
-            '판단 보류',
-            `사건 뒤 아직 수집 전입니다 (${prior}, 수집 간격 최대 ${intervalLabel(gap || 0)})`,
+            '사건 전 표본',
+            `사건 뒤 첫 표본의 수집 주기 대기 중입니다 (${prior}, 수집 간격 최대 ${intervalLabel(gap || 0)})`,
           ];
       tone = stopped ? 'warn' : 'unknown';
     } else {

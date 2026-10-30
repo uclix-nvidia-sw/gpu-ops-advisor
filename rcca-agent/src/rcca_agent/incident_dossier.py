@@ -11,7 +11,7 @@ from agent_common.contracts import timestamp
 from agent_common.observation import series, usable_observation
 from agent_common.parsers import ERROR_CODE, log_entries
 
-from .fleet_events import object_value, pci
+from .fleet_events import incident_selector, matches_target, object_value, pci
 from .analysis_values import compact_brief, register_values
 
 
@@ -283,7 +283,7 @@ def metric_host_matches(target, labels):
     return bool(node or (machine and labels.get("machine_id") == machine))
 
 
-def state_onset(health, target, codes):
+def state_onset(health, target, codes, selector=None):
     """Bracket the first Unhealthy report by the last Healthy one (Loki record time)."""
     node = target.get("node") or target.get("k8s_node_name")
     for code in codes:
@@ -296,6 +296,7 @@ def state_onset(health, target, codes):
                 and h.get("observed_at")
                 and isinstance(h.get("raw_health"), str)
                 and (not node or h.get("target", {}).get("node") == node)
+                and (not selector or matches_target(h, selector, same_code=False))
             ),
             key=lambda h: timestamp(h["observed_at"]),
         )
@@ -315,6 +316,7 @@ def state_onset(health, target, codes):
         ]
         return {
             "code": code,
+            "pci": selector.get("pci") if selector else None,
             "time_basis": "loki_recorded_at",
             "last_healthy_at": good[-1]["observed_at"] if good else None,
             "first_unhealthy_at": bad[0]["observed_at"],
@@ -506,7 +508,12 @@ def operator_view(data, evidence, comparison, health=()):
         "metrics": metrics,
         "metric_scope": "node_gpu_context" if switch else "reported_gpu",
         "onset": state_onset(
-            health, data["target"], sorted({row["code"] for row in logs})
+            health,
+            data["target"],
+            [incident_selector(data)["error_code"]]
+            if incident_selector(data)
+            else sorted({row["code"] for row in logs}),
+            incident_selector(data),
         ),
         **observed,
     }

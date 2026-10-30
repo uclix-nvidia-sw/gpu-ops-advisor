@@ -55,9 +55,9 @@ function relatedPoints(items: string[]): Point[] {
       );
       const codes = other.details!.map((s) => s.match(/^(S?XID:\d+)/)?.[1]);
       const quantity = codes.every(Boolean)
-        ? `${new Set(codes).size}개 코드`
+        ? `${new Set(codes).size}종의 오류 코드`
         : `${codes.length}개 항목`;
-      other.text = `같은 노드 다른 오류: ${quantity} 관측.`;
+      other.text = `같은 서버의 다른 오류: 조회 기간에 이번 오류 외에 ${quantity}가 기록됐습니다.`;
       continue;
     }
     const excluded = text.startsWith('오류 로그 장치: ') ? text.indexOf(' (같은 노드의 ') : -1;

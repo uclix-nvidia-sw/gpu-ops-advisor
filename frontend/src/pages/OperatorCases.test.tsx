@@ -66,21 +66,28 @@ it('pages incidents by 50 and links each title to its RCA report', () => {
 
 it('asks the Backend for the chosen days, a single day, or every incident', () => {
   render();
-  expect(fixture.calls.at(-1)).toEqual([null, undefined]);
+  expect(fixture.calls.at(-1)).toEqual([null, undefined, '']);
   render('?period=14');
   expect(fixture.calls.at(-1)?.[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   render('?from=2026-10-13&to=2026-10-20');
-  expect(fixture.calls.at(-1)).toEqual(['2026-10-13', '2026-10-20']);
+  expect(fixture.calls.at(-1)).toEqual(['2026-10-13', '2026-10-20', '']);
   render('?from=2026-10-20');
-  expect(fixture.calls.at(-1)).toEqual(['2026-10-20', '2026-10-20']);
+  expect(fixture.calls.at(-1)).toEqual(['2026-10-20', '2026-10-20', '']);
   // A reversed or malformed end keeps the single picked day.
   render('?from=2026-10-20&to=2026-10-01');
-  expect(fixture.calls.at(-1)).toEqual(['2026-10-20', '2026-10-20']);
+  expect(fixture.calls.at(-1)).toEqual(['2026-10-20', '2026-10-20', '']);
   const all = render('?period=all');
-  expect(fixture.calls.at(-1)).toEqual([null, undefined]);
+  expect(fixture.calls.at(-1)).toEqual([null, undefined, '']);
   expect(all).toContain('전체 기간');
   render('?from=wrong');
   expect(fixture.calls.at(-1)?.[1]).toBeUndefined();
+});
+
+it('restores the search term from the URL and sends it with the date range', () => {
+  const html = render('?q=SXID%3A11021&from=2026-10-29');
+  expect(fixture.calls.at(-1)).toEqual(['2026-10-29', '2026-10-29', 'SXID:11021']);
+  expect(html).toContain('value="SXID:11021"');
+  expect(html).toContain('role="search"');
 });
 
 it('shows the range on the calendar button and keeps the empty state explicit', () => {
