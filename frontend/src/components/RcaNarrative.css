@@ -1,4 +1,48 @@
 @import '@fontsource-variable/jetbrains-mono';
+
+/* Only the unified console uses the compact, sticky report navigation. */
+.rca-classic-toc {
+  display: none;
+}
+.view-classic .rca-operator-report > .rca-classic-toc {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 20px;
+  padding: 0 28px;
+  background: var(--surface);
+  border-block: 1px solid var(--border);
+  overflow-x: auto;
+}
+.view-classic .rca-classic-toc a {
+  flex: 0 0 auto;
+  padding: 12px 0;
+  color: var(--green);
+  text-underline-offset: 4px;
+}
+.view-classic .rca-classic-toc a:hover {
+  text-decoration: underline;
+}
+.view-classic .rca-operator-report > section[id] {
+  scroll-margin-top: 64px;
+}
+.view-classic .rca-operator-report > #rca-observation-detail > .rca-host-history {
+  padding: 0;
+  border: 0;
+}
+.view-classic .rca-operator-report .rca-timeline-scroll {
+  max-height: 160px;
+}
+.view-classic .rca-operator-report .rca-history-table.rca-log-scroll {
+  max-height: 200px;
+}
+@media (max-width: 640px) {
+  .view-classic .rca-operator-report > .rca-classic-toc {
+    padding-inline: 16px;
+  }
+}
+
 .rca-related-scroll,
 .rca-timeline-scroll {
   max-height: 240px;
