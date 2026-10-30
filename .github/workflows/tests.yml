@@ -1,11 +1,19 @@
 name: Module tests
 on:
   workflow_call:
+    inputs:
+      backend:
+        type: boolean
+        default: true
+      frontend:
+        type: boolean
+        default: true
 permissions:
   contents: read
 
 jobs:
   go:
+    if: inputs.backend
     name: Go / ${{ matrix.module }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -51,6 +59,7 @@ jobs:
           go -C "$MODULE" test -tags=e2e ./... -v -count=1 -timeout=10m
 
   agents:
+    if: inputs.backend
     name: Python / both agents + real MCP E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -132,6 +141,7 @@ jobs:
           retention-days: 14
 
   frontend:
+    if: inputs.frontend
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -183,3 +193,30 @@ jobs:
       - run: python tools/ci/check_chart.py
       - run: python -m unittest discover -s tools/ci/tests -v
       - run: python tools/check_links.py
+
+  required:
+    name: Planned tests required
+    if: always()
+    needs: [go, agents, frontend, chart]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject failed or unexpectedly skipped tests
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          BACKEND: ${{ inputs.backend }}
+          FRONTEND: ${{ inputs.frontend }}
+        run: |
+          python - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          expected = {
+              'go': os.environ['BACKEND'] == 'true',
+              'agents': os.environ['BACKEND'] == 'true',
+              'frontend': os.environ['FRONTEND'] == 'true',
+              'chart': True,
+          }
+          failed = [name for name, run in expected.items()
+                    if results[name]['result'] != ('success' if run else 'skipped')]
+          if failed:
+              raise SystemExit('Failed or unexpectedly skipped tests: ' + ', '.join(failed))
+          PY
