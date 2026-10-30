@@ -2,6 +2,7 @@
 // and the RCA report link. Stored incidents do not establish current health.
 // Both pages use the same pure functions over the /incidents list.
 import labels from './incidentLabels.json';
+import { xidDefinition } from './xidDefinition';
 import { matchedReasons } from './componentReasons';
 import { obj, str, type Row } from './live';
 
@@ -40,18 +41,25 @@ export interface IncidentView {
 const LABELS = labels as Record<string, IncidentLabel>;
 const HOUR = 3600_000;
 
-// List identity comes from the received alert, never from a Runbook translation.
+// Keep received identity; reviewed Reserved names use official catalog wording.
 export function incidentName(v: IncidentView): string {
   let text = v.raw.replace(/^\s*\[[^\]]+\]\s*/, '');
   text = text.replace(/^(?!S?XID:)[a-z][a-z0-9-]*:\s*/i, '');
   text = text.replace(/^\s*\[[^\]]+\]\s*/, '');
   if (/^s?xid:/.test(v.code)) {
-    text = text.replace(/^S?XID[\s:]*\d+\s*/i, '');
+    // Subcode and error status are diagnostic fields, not the error name.
+    // Preserve both in v.raw, including nonzero values used for recovery decisions.
+    text = text.replace(/^S?XID[\s:]*\d+(?:\.\d+)?\s*/i, '');
+    text = text.replace(/^\(err\s+status\s+0x[0-9a-f]+\)\s*/i, '');
     text = text.replace(/\s+detected on\b.*$/i, '').replace(/^detected on\b.*$/i, '');
     text = text.replace(/^\((.*)\)$/, '$1');
     // A received mnemonic stays verbatim unless the alert also provides prose.
     text = text.replace(/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\s+(?=\S)/, '');
   }
+  if (/^(?:Reserved|Unused)(?:\s*\([^)]*\))?$/i.test(text.trim()))
+    return xidDefinition(v.code)?.name || text.trim();
+  if (/^xid:14[4-9]$|^xid:150$/.test(v.code))
+    text = text.replace(/^NVLINK:\s*([A-Z0-9_]+) Error$/i, 'NVLink $1 오류');
   return text.trim();
 }
 export const titleText = (v: IncidentView) =>

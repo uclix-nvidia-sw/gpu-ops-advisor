@@ -137,7 +137,7 @@
         "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 136; Table 3 Resolution Buckets",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-30"
       },
       {
         "url": "https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html",
@@ -160,8 +160,8 @@
       "오류 보고의 코드·시각·대상을 먼저 제시하고, 실제 장치 신원과 현재 상태를 별도의 관측으로 연결한다. 원인 및 조치는 해당 근거와 실행 조건이 충족된 항목에 한해 제시하며, 보고 원문만 있는 경우에는 보고 사실과 다음 수집 항목을 구분한다.",
       "NVLink 수신·송신량은 GPU 쪽 처리량이며, 오류 누적값은 별도 CRC·복구·재전송 지표로 비교한다. 링크 번호·연결 상대와 원문 레지스터는 nvidia-smi nvlink -e 및 오류 원문으로 대조한다. 전파 방향과 영향 범위는 같은 링크의 연결 관계와 시각이 일치하는 근거로 제시한다."
     ],
-    "title": "XID 136 Link Training Failed · NVLink 오류 조사",
-    "description": "XID 136: Link Training Failed.",
+    "title": "XID 136 링크 초기 연결 협상 실패 · 링크 초기 연결 협상 실패 조사",
+    "description": "XID 136: 링크 초기 연결 협상 실패.",
     "claim": "XID 136 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "GPU_INTERCONNECT",
@@ -232,7 +232,7 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "XID 136: 링크 초기 연결 협상 실패 보고입니다. XID 136(ALI_TRAINING_FAIL)는 NVIDIA Xid 카탈로그에서 'Link Training Failed'로 정의됩니다. Fleet·GPUd 고정 정의는 'Reserved'로 NVIDIA 카탈로그와 다르므로 원문 문구로 어느 정의인지 확인합니다.",
+      "meaning": "XID 136은 GPU 링크의 초기 연결 협상이 실패했다는 보고입니다. NVIDIA 공식 명칭은 Link Training Failed이며 적용 제품은 H100입니다(A100·B100·GB200 제외). 해당 제품에서는 링크 상태와 같은 시각의 오류 로그를 대조하고, 작업을 정리한 뒤 공식 GPU 리셋 절차와 링크 신호 품질 점검을 검토합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
       "cause_note": "NVLink 링크·커넥터·케이블 이상, 링크 반대편 GPU·NVSwitch 문제, 신호 품질 저하가 주요 원인 후보입니다.",
       "next_checks": [
         {
@@ -288,6 +288,15 @@
           "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 NVLink 수신량, NVLink 송신량, GPU별 Fabric Manager 상태 코드, GPU 사용률, NVLink CRC 오류 누적값, NVLink 복구 오류 누적값, NVLink 재전송 오류 누적값. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
           "source_indices": [
             4
+          ]
+        },
+        {
+          "title": "수집 원문과 공식 오류 이름",
+          "text": "수집 도구의 고정 정의는 Reserved(예약 코드)입니다. 화면의 오류 이름과 의미는 NVIDIA 공식 카탈로그를 따르며 수집 원문·장치 주소·코드는 변경하지 않습니다.",
+          "source_indices": [
+            0,
+            1,
+            2
           ]
         }
       ]

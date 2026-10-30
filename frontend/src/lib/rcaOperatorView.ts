@@ -4,6 +4,7 @@ import { obj, rows, str, num, strings, type Row } from './live';
 import { formatRcaTime as fmt } from './rcaTime';
 import { rcaReasons } from './rcaLabels';
 import { componentInfo, matchedReasons } from './componentReasons';
+import { xidDefinition } from './xidDefinition';
 
 export type Tone = 'alert' | 'warn' | 'ok' | 'unknown';
 export const toneLabels: Record<Tone, string> = {
@@ -1237,7 +1238,8 @@ export function operatorView(result: Row) {
     currentReasons: component
       ? matchedReasons(component, str(logs[0]?.message) || plainReason(title))
       : [],
-    meaning: str(g0.meaning),
+    meaning: (codes.length === 1 && xidDefinition(codes[0])?.meaning) || str(g0.meaning),
+    officialDefinition: codes.length === 1 ? xidDefinition(codes[0]) : undefined,
     causeNote: str(g0.cause_note),
     targetCheck,
     actionChecks,

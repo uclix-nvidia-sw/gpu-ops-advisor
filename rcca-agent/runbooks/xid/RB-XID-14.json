@@ -99,7 +99,7 @@
         "url": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html",
         "revision": "Page last updated 2026-09-09; mutable upstream",
         "section": "Table 1 Xids: 14; Table 3 Resolution Buckets",
-        "checked_at": "2026-09-28"
+        "checked_at": "2026-10-30"
       },
       {
         "url": "https://docs.nvidia.com/deploy/xid-errors/archive/index.html",
@@ -128,8 +128,8 @@
       "오류 보고의 코드·시각·대상을 먼저 제시하고, 실제 장치 신원과 현재 상태를 별도의 관측으로 연결한다. 원인 및 조치는 해당 근거와 실행 조건이 충족된 항목에 한해 제시하며, 보고 원문만 있는 경우에는 보고 사실과 다음 수집 항목을 구분한다.",
       "현재 NVIDIA 카탈로그상 미사용·구세대 코드라 배포 드라이버의 정의를 확인하기 전에는 원인·심각도·복구 조치를 판정하지 않는다."
     ],
-    "title": "XID 14 Unused (미사용 코드) · 미사용·구세대 코드 조사",
-    "description": "XID 14: Unused.",
+    "title": "XID 14 시험용 오류 주입 코드",
+    "description": "XID 14: 시험용 오류 주입 코드.",
     "claim": "XID 14 관측에 따른 조사. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "GPU_DEVICE",
@@ -200,7 +200,7 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "XID 14(ROBUST_CHANNEL_FAKE_ERROR)는 NVIDIA Xid 카탈로그에서 사용자 공간에서 주입한 가짜(fake) 오류로 정의됩니다. 실제 GPU 장애가 아니라 오류 주입 시험이나 도구가 만든 기록입니다.",
+      "meaning": "XID 14은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 사용자 프로그램이 만든 시험용 오류를 나타내며 A100·H100·B100·GB200에 적용됩니다. 공식 즉시 조치는 별도 복구 조치 없음입니다. 시험 실행 기록과 발생 시각을 대조하고, 실제 작업 실패가 함께 있으면 해당 오류의 원문과 진단 자료를 보존해 공급사에 문의합니다.",
       "cause_note": "사용자 공간의 오류 주입(시험)입니다. 하드웨어·드라이버 장애로 보지 않습니다.",
       "next_checks": [
         {
@@ -249,6 +249,14 @@
           "text": "계획된 자동 수집: Fleet 오류·상태 보고 원문 및 GPU 사용률, GPU 메모리 사용량, GPU 온도, GPU 전력. 실제 수집된 값·시각·대상은 3장 로그와 지표에서 확인합니다. GPU UUID 또는 PCI 주소가 같은 표본끼리 사건 전후를 비교합니다. 오류 보고 시각과 마지막 관측 시각을 구분하고, 누적 오류 수는 증가량과 재설정 여부를 함께 봅니다. 현장 대조 자료: 같은 GPU의 커널 오류 원문, 드라이버·GPU 모델, 작업 기록과 재시작 전 진단 자료를 함께 보존합니다.",
           "source_indices": [
             5
+          ]
+        },
+        {
+          "title": "수집 원문과 공식 오류 이름",
+          "text": "수집 원문의 Unused 표기와 식별자는 보존합니다. XID 14의 운영자용 설명은 NVIDIA 공식 카탈로그의 제품 적용 범위·조치 분류와 함께 읽습니다.",
+          "source_indices": [
+            0,
+            2
           ]
         }
       ]

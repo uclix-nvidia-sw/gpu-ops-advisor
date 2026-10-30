@@ -1084,7 +1084,7 @@
   "sxid:20009": {
     "name": "NVSwitch 오류",
     "detail": "RX Short Error Rate",
-    "action": "런북 순서대로 확인",
+    "action": "NVSwitch 수신 오류 반복·증가와 링크 상태 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -1516,8 +1516,8 @@
     ]
   },
   "xid:1": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer stream",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1526,11 +1526,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 1은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:10": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1539,7 +1544,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 10은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:100": {
     "name": "애플리케이션·엔진 오류",
@@ -1646,8 +1656,8 @@
     ]
   },
   "xid:108": {
-    "name": "미사용·구세대 코드",
-    "detail": "Reserved (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Reserved",
     "action": "조치 불필요 (IGNORE)",
     "steps": [
       "즉시 확인·영향",
@@ -1656,7 +1666,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 108은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 적용 제품은 A100·H100·B100·GB200이며, 공식 즉시 조치는 별도 복구 조치 없음입니다. 추가 조사에는 XID 137 절차가 지정되어 있습니다. 같은 시각 XID 137과 NVLink 오류 원문·작업 영향을 확인하고 해당 조건에 따라 조사합니다. 이 번호만으로 장치 고장이나 정상 상태를 판정하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:109": {
     "name": "GPU 응답 정지",
@@ -1698,8 +1713,8 @@
     ]
   },
   "xid:111": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Bundle Error Event (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Bundle Error Event",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1708,11 +1723,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 111은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:112": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Supervisor Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Supervisor Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1721,11 +1741,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 112은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:113": {
-    "name": "미사용·구세대 코드",
-    "detail": "DP Link Training Erro (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "DP Link Training Erro",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1734,11 +1759,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 113은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:114": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Pipeline Underflow Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Pipeline Underflow Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1747,11 +1777,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 114은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:115": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Core Channel Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Core Channel Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1760,11 +1795,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 115은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:116": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Window Channel Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Window Channel Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1773,11 +1813,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 116은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:117": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Cursor Channel Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Cursor Channel Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1786,11 +1831,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 117은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:118": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Pixel Pipeline Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Pixel Pipeline Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1799,7 +1849,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 118은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:119": {
     "name": "드라이버·펌웨어 오류",
@@ -1815,8 +1870,8 @@
     ]
   },
   "xid:12": {
-    "name": "미사용·구세대 코드",
-    "detail": "Driver error handling GPU exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Driver error handling GPU exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1825,7 +1880,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 12은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:120": {
     "name": "드라이버·펌웨어 오류",
@@ -1854,8 +1914,8 @@
     ]
   },
   "xid:122": {
-    "name": "미사용·구세대 코드",
-    "detail": "SPI PMU RPC Read Failure (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "SPI PMU RPC Read Failure",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1864,11 +1924,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 122은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:123": {
-    "name": "미사용·구세대 코드",
-    "detail": "SPI PMU RPC Write Failure (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "SPI PMU RPC Write Failure",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1877,11 +1942,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 123은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:124": {
-    "name": "미사용·구세대 코드",
-    "detail": "SPI PMU RPC Erase Failure (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "SPI PMU RPC Erase Failure",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1890,11 +1960,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 124은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:125": {
-    "name": "미사용·구세대 코드",
-    "detail": "Inforom FS Failure (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Inforom FS Failure",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -1903,11 +1978,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 125은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:126": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE10: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE10 오류",
+    "detail": "GPU 데이터 복사 엔진 CE10 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1916,11 +1996,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE10 오류",
+      "meaning": "XID 126은 GPU의 데이터 전송을 담당하는 복사 엔진 CE10에서 보고하는 오류입니다. 공식 명칭은 CE10: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:127": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE11: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE11 오류",
+    "detail": "GPU 데이터 복사 엔진 CE11 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1929,11 +2014,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE11 오류",
+      "meaning": "XID 127은 GPU의 데이터 전송을 담당하는 복사 엔진 CE11에서 보고하는 오류입니다. 공식 명칭은 CE11: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:128": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE12: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE12 오류",
+    "detail": "GPU 데이터 복사 엔진 CE12 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1942,11 +2032,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE12 오류",
+      "meaning": "XID 128은 GPU의 데이터 전송을 담당하는 복사 엔진 CE12에서 보고하는 오류입니다. 공식 명칭은 CE12: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:129": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE13: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE13 오류",
+    "detail": "GPU 데이터 복사 엔진 CE13 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1955,7 +2050,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE13 오류",
+      "meaning": "XID 129은 GPU의 데이터 전송을 담당하는 복사 엔진 CE13에서 보고하는 오류입니다. 공식 명칭은 CE13: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:13": {
     "name": "애플리케이션·엔진 오류",
@@ -1971,8 +2071,8 @@
     ]
   },
   "xid:130": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE14: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE14 오류",
+    "detail": "GPU 데이터 복사 엔진 CE14 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1981,11 +2081,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE14 오류",
+      "meaning": "XID 130은 GPU의 데이터 전송을 담당하는 복사 엔진 CE14에서 보고하는 오류입니다. 공식 명칭은 CE14: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:131": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE15: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE15 오류",
+    "detail": "GPU 데이터 복사 엔진 CE15 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -1994,11 +2099,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE15 오류",
+      "meaning": "XID 131은 GPU의 데이터 전송을 담당하는 복사 엔진 CE15에서 보고하는 오류입니다. 공식 명칭은 CE15: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:132": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE16: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE16 오류",
+    "detail": "GPU 데이터 복사 엔진 CE16 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -2007,7 +2117,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE16 오류",
+      "meaning": "XID 132은 GPU의 데이터 전송을 담당하는 복사 엔진 CE16에서 보고하는 오류입니다. 공식 명칭은 CE16: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:133": {
     "name": "애플리케이션·엔진 오류",
@@ -2023,8 +2138,8 @@
     ]
   },
   "xid:134": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE18: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE18 오류",
+    "detail": "GPU 데이터 복사 엔진 CE18 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -2033,11 +2148,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE18 오류",
+      "meaning": "XID 134은 GPU의 데이터 전송을 담당하는 복사 엔진 CE18에서 보고하는 오류입니다. 공식 명칭은 CE18: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:135": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CE19: Unknown Error",
+    "name": "GPU 데이터 복사 엔진 CE19 오류",
+    "detail": "GPU 데이터 복사 엔진 CE19 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -2046,11 +2166,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE19 오류",
+      "meaning": "XID 135은 GPU의 데이터 전송을 담당하는 복사 엔진 CE19에서 보고하는 오류입니다. 공식 명칭은 CE19: Unknown Error이며, 코드 자체는 세부 고장 원인을 구분하지 않습니다. NVIDIA 적용 제품은 B100·GB200이며 A100·H100은 적용 대상이 아닙니다. 해당 제품에서는 오류가 난 작업과 같은 시각의 로그를 대조해 작업 재시작 여부를 판단하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:136": {
-    "name": "NVLink 오류",
-    "detail": "Link Training Failed",
+    "name": "링크 초기 연결 협상 실패",
+    "detail": "링크 초기 연결 협상 실패",
     "action": "GPU 리셋 (RESET_GPU)",
     "steps": [
       "즉시 확인·영향",
@@ -2059,7 +2184,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "링크 초기 연결 협상 실패",
+      "meaning": "XID 136은 GPU 링크의 초기 연결 협상이 실패했다는 보고입니다. NVIDIA 공식 명칭은 Link Training Failed이며 적용 제품은 H100입니다(A100·B100·GB200 제외). 해당 제품에서는 링크 상태와 같은 시각의 오류 로그를 대조하고, 작업을 정리한 뒤 공식 GPU 리셋 절차와 링크 신호 품질 점검을 검토합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:137": {
     "name": "애플리케이션·엔진 오류",
@@ -2075,8 +2205,8 @@
     ]
   },
   "xid:138": {
-    "name": "미사용·구세대 코드",
-    "detail": "Reserved (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Reserved",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2085,11 +2215,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 138은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:139": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "OFA1 Error",
+    "name": "영상 움직임 분석 엔진 OFA1 오류",
+    "detail": "영상 움직임 분석 엔진 OFA1 오류",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
       "즉시 확인·영향",
@@ -2098,11 +2233,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "영상 움직임 분석 엔진 OFA1 오류",
+      "meaning": "XID 139는 연속 영상의 움직임을 계산하는 광학 흐름 가속기 OFA1의 오류 보고입니다. NVIDIA 공식 명칭은 OFA1 Error이며 적용 제품은 B100·GB200입니다(A100·H100 제외). 해당 작업의 오류 로그와 영향 범위를 확인한 뒤 작업 재시작을 검토하고, 반복되면 공급사에 진단 자료를 전달합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:14": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "시험용 오류 주입 코드",
+    "detail": "Unused",
     "action": "조치 불필요 (IGNORE)",
     "steps": [
       "즉시 확인·영향",
@@ -2111,7 +2251,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "시험용 오류 주입 코드",
+      "meaning": "XID 14은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 사용자 프로그램이 만든 시험용 오류를 나타내며 A100·H100·B100·GB200에 적용됩니다. 공식 즉시 조치는 별도 복구 조치 없음입니다. 시험 실행 기록과 발생 시각을 대조하고, 실제 작업 실패가 함께 있으면 해당 오류의 원문과 진단 자료를 보존해 공급사에 문의합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:140": {
     "name": "ECC·메모리 오류",
@@ -2127,8 +2272,8 @@
     ]
   },
   "xid:141": {
-    "name": "애플리케이션·엔진 오류",
-    "detail": "CUDA Fast Path Error",
+    "name": "CUDA 빠른 처리 경로 오류",
+    "detail": "CUDA 빠른 처리 경로 오류",
     "action": "조치 불필요 (IGNORE)",
     "steps": [
       "즉시 확인·영향",
@@ -2137,7 +2282,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "CUDA 빠른 처리 경로 오류",
+      "meaning": "XID 141은 CUDA 작업의 빠른 처리 경로에서 보고하는 오류입니다. NVIDIA 공식 명칭은 CUDA Fast Path Error이며 적용 제품은 H100·B100·GB200입니다(A100 제외). 공식 즉시 조치 분류는 IGNORE로 이 코드만으로 작업·GPU·노드를 재시작하지 않습니다. 실제 작업 영향과 동반 오류를 대조하고 원인 조사가 필요하면 공급사에 자료를 전달합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:142": {
     "name": "미사용·구세대 코드",
@@ -2168,7 +2318,7 @@
   "xid:144": {
     "name": "NVLink 오류",
     "detail": "NVLINK: SAW Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2181,7 +2331,7 @@
   "xid:145": {
     "name": "NVLink 오류",
     "detail": "NVLINK: RLW Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2194,7 +2344,7 @@
   "xid:146": {
     "name": "NVLink 오류",
     "detail": "NVLINK: TLW Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2207,7 +2357,7 @@
   "xid:147": {
     "name": "NVLink 오류",
     "detail": "NVLINK: TREX Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2220,7 +2370,7 @@
   "xid:148": {
     "name": "NVLink 오류",
     "detail": "NVLINK: NVLPW_CTRL Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2233,7 +2383,7 @@
   "xid:149": {
     "name": "NVLink 오류",
     "detail": "NVLINK: NETIR Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2244,8 +2394,8 @@
     ]
   },
   "xid:15": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2254,12 +2404,17 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 15은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:150": {
     "name": "NVLink 오류",
     "detail": "NVLINK: MSE Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK5_ERR)",
+    "action": "세부 오류값·드라이버 버전별 NVLink 조치 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2387,8 +2542,8 @@
     ]
   },
   "xid:16": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display engine hung (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display engine hung",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2397,7 +2552,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 16은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:160": {
     "name": "애플리케이션·엔진 오류",
@@ -2428,7 +2588,7 @@
   "xid:162": {
     "name": "전원·열·전력 평활",
     "detail": "Power Smoothing HW Circuitry capability reengaged",
-    "action": "런북 순서대로 확인",
+    "action": "전력 평활 기능 재활성화와 전력 변동 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2441,7 +2601,7 @@
   "xid:163": {
     "name": "전원·열·전력 평활",
     "detail": "Power Smoothing HW Circuitry capability disengaged",
-    "action": "런북 순서대로 확인",
+    "action": "전력 평활 중단 원인: 온도·시간 초과 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2454,7 +2614,7 @@
   "xid:164": {
     "name": "전원·열·전력 평활",
     "detail": "Power Smoothing HW Circuitry low lifetime reached",
-    "action": "런북 순서대로 확인",
+    "action": "전력 변동과 전력 평활 회로 수명 점검",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2467,7 +2627,7 @@
   "xid:165": {
     "name": "전원·열·전력 평활",
     "detail": "Power Smoothing HW Circuitry lifetime exhausted",
-    "action": "런북 순서대로 확인",
+    "action": "전력 평활 종료에 따른 전력 변동·설비 수용량 점검",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2480,7 +2640,7 @@
   "xid:166": {
     "name": "NVLink 오류",
     "detail": "CC traffic seen prior to link properly being configured for encrypted traffic",
-    "action": "런북 순서대로 확인",
+    "action": "기밀 컴퓨팅 모드와 NVLink 암호화 설정 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2493,7 +2653,7 @@
   "xid:167": {
     "name": "PCIe·버스 오류",
     "detail": "PCIE_FATAL_TIMEOUT",
-    "action": "런북 순서대로 확인",
+    "action": "PCIe 연결·GPU 응답과 커널 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2506,7 +2666,7 @@
   "xid:168": {
     "name": "ECC·메모리 오류",
     "detail": "Errors found in WPR (write protected region)",
-    "action": "런북 순서대로 확인",
+    "action": "ECC 설정과 쓰기 보호 메모리 영역 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2519,7 +2679,7 @@
   "xid:169": {
     "name": "드라이버·펌웨어 오류",
     "detail": "Internal micro-controller halt",
-    "action": "런북 순서대로 확인",
+    "action": "GPU 내부 제어기 중단 로그·드라이버 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2530,8 +2690,8 @@
     ]
   },
   "xid:17": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2540,12 +2700,17 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 17은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:170": {
     "name": "NVLink 오류",
     "detail": "Interrupt seen in CC mode",
-    "action": "런북 순서대로 확인",
+    "action": "기밀 컴퓨팅 모드와 같은 시각 NVLink 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2558,7 +2723,7 @@
   "xid:171": {
     "name": "ECC·메모리 오류",
     "detail": "Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM",
-    "action": "런북 순서대로 확인",
+    "action": "XID 48 동반 여부와 DRAM 정정 불가 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2571,7 +2736,7 @@
   "xid:172": {
     "name": "ECC·메모리 오류",
     "detail": "Additional to Xid 48 providing more details on particulars of fault to differentiate DRAM/SRAM",
-    "action": "런북 순서대로 확인",
+    "action": "XID 48 동반 여부와 SRAM 정정 불가 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2582,9 +2747,9 @@
     ]
   },
   "xid:173": {
-    "name": "C2C 링크 오류",
+    "name": "C2C 칩 간 연결의 치명적 오류",
     "detail": "C2C Fatal Link Failure",
-    "action": "런북 순서대로 확인",
+    "action": "C2C 연결 상태·오류 증가와 양 끝 장치 로그 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -2592,11 +2757,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "C2C 칩 간 연결의 치명적 오류",
+      "meaning": "XID 173은 NVIDIA 공식 드라이버에서 C2C 칩 간 연결의 치명적 오류로 정의합니다. C2C는 칩과 칩을 직접 잇는 연결이며, 연결 상대는 장비 구성을 기준으로 확인합니다. 같은 장치의 커널 오류 원문과 C2C 연결 상태·오류 카운터, 작업 중단 여부를 함께 확인하고 재시작 전에 진단 자료를 보존합니다. 시험 로그 주입은 실제 연결 장애와 구분합니다. 복구 방식은 장비·드라이버 버전에 맞는 공급사 절차로 결정합니다.",
+      "source": "https://github.com/NVIDIA/open-gpu-kernel-modules/blob/ca2d03e6fafd4d4b56b383497d931c25b283bfcf/src/common/sdk/nvidia/inc/nverror.h#L168"
+    }
   },
   "xid:18": {
-    "name": "미사용·구세대 코드",
-    "detail": "Bus mastering disabled in PCI Config Space (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Bus mastering disabled in PCI Config Space",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2605,11 +2775,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 18은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:19": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Engine error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Engine error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2618,11 +2793,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 19은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:2": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer stream",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2631,11 +2811,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 2은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:20": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted Mpeg push buffer (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted Mpeg push buffer",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2644,11 +2829,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 20은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:21": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted Motion Estimation push buffer (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted Motion Estimation push buffer",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2657,11 +2847,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 21은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:22": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted Video Processor push buffer (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted Video Processor push buffer",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2670,11 +2865,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 22은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:23": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2683,11 +2883,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 23은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:24": {
-    "name": "미사용·구세대 코드",
-    "detail": "GPU semaphore timeout (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "GPU semaphore timeout",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2696,7 +2901,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 24은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:25": {
     "name": "애플리케이션·엔진 오류",
@@ -2712,8 +2922,8 @@
     ]
   },
   "xid:26": {
-    "name": "미사용·구세대 코드",
-    "detail": "Framebuffer timeout (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Framebuffer timeout",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2722,11 +2932,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 26은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:27": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2735,11 +2950,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 27은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:28": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2748,11 +2968,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 28은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:29": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2761,11 +2986,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 29은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:3": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer stream",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2774,11 +3004,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 3은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:30": {
-    "name": "미사용·구세대 코드",
-    "detail": "GPU semaphore access error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "GPU semaphore access error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2787,7 +3022,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 30은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:31": {
     "name": "애플리케이션·엔진 오류",
@@ -2816,8 +3056,8 @@
     ]
   },
   "xid:33": {
-    "name": "미사용·구세대 코드",
-    "detail": "Internal micro-controller error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Internal micro-controller error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2826,11 +3066,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 33은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:34": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2839,11 +3084,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 34은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:35": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2852,11 +3102,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 35은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:36": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2865,7 +3120,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 36은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:37": {
     "name": "드라이버·펌웨어 오류",
@@ -2894,7 +3154,7 @@
     ]
   },
   "xid:39": {
-    "name": "애플리케이션·엔진 오류",
+    "name": "GPU 데이터 복사 엔진 CE0 예외",
     "detail": "Copy Engine Exception",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
@@ -2904,11 +3164,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE0 예외",
+      "meaning": "XID 39은 GPU 내부 데이터 복사 엔진 CE0에서 예외가 보고된 코드입니다. NVIDIA 공식 카탈로그의 적용 제품은 A100·H100·B100·GB200입니다. 해당 GPU를 사용하던 작업의 실패 여부와 오류 원문을 확인하고, 공식 즉시 조치에 따라 영향받은 애플리케이션을 재시작합니다. 추가 조사는 공급사 문의로 분류되어 있으므로 재시작 전 원문·드라이버 버전·진단 자료를 보존합니다. 시험 로그를 주입한 경우에는 실제 애플리케이션 실패 여부를 먼저 구분합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:4": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer stream",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2917,10 +3182,15 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 4은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:40": {
-    "name": "애플리케이션·엔진 오류",
+    "name": "GPU 데이터 복사 엔진 CE1 예외",
     "detail": "Copy Engine Exception",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
@@ -2930,10 +3200,15 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE1 예외",
+      "meaning": "XID 40은 GPU 내부 데이터 복사 엔진 CE1에서 예외가 보고된 코드입니다. NVIDIA 공식 카탈로그의 적용 제품은 A100·H100·B100·GB200입니다. 해당 GPU를 사용하던 작업의 실패 여부와 오류 원문을 확인하고, 공식 즉시 조치에 따라 영향받은 애플리케이션을 재시작합니다. 추가 조사는 공급사 문의로 분류되어 있으므로 재시작 전 원문·드라이버 버전·진단 자료를 보존합니다. 시험 로그를 주입한 경우에는 실제 애플리케이션 실패 여부를 먼저 구분합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:41": {
-    "name": "애플리케이션·엔진 오류",
+    "name": "GPU 데이터 복사 엔진 CE2 예외",
     "detail": "Copy Engine Exception",
     "action": "애플리케이션 재시작 (RESTART_APP)",
     "steps": [
@@ -2943,11 +3218,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "GPU 데이터 복사 엔진 CE2 예외",
+      "meaning": "XID 41은 GPU 내부 데이터 복사 엔진 CE2에서 예외가 보고된 코드입니다. NVIDIA 공식 카탈로그의 적용 제품은 A100·H100·B100·GB200입니다. 해당 GPU를 사용하던 작업의 실패 여부와 오류 원문을 확인하고, 공식 즉시 조치에 따라 영향받은 애플리케이션을 재시작합니다. 추가 조사는 공급사 문의로 분류되어 있으므로 재시작 전 원문·드라이버 버전·진단 자료를 보존합니다. 시험 로그를 주입한 경우에는 실제 애플리케이션 실패 여부를 먼저 구분합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:42": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -2956,7 +3236,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 42은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:43": {
     "name": "애플리케이션·엔진 오류",
@@ -2987,7 +3272,7 @@
   "xid:45": {
     "name": "정보성 이벤트",
     "detail": "Preemptive cleanup, due to previous errors – Most likely to see when running multiple cuda applications and hitting a DBE",
-    "action": "조건별 절차 (WORKFLOW_XID_45)",
+    "action": "동반 XID 확인 · 단독 발생이면 Fabric Manager 점검",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -3011,8 +3296,8 @@
     ]
   },
   "xid:47": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3021,12 +3306,17 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 47은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:48": {
     "name": "ECC·메모리 오류",
     "detail": "Double Bit ECC Error",
-    "action": "조건별 절차 (WORKFLOW_XID_48)",
+    "action": "ECC 오류·메모리 재매핑·XID 154 복구 지시 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -3037,8 +3327,8 @@
     ]
   },
   "xid:49": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3047,11 +3337,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 49은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:5": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3060,11 +3355,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 5은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:50": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3073,11 +3373,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 50은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:51": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3086,11 +3391,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 51은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:52": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3099,11 +3409,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 52은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:53": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3112,7 +3427,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 53은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:54": {
     "name": "전원·열·전력 평활",
@@ -3128,8 +3448,8 @@
     ]
   },
   "xid:55": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unused (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unused",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3138,11 +3458,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 55은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:56": {
-    "name": "미사용·구세대 코드",
-    "detail": "Display Engine error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Display Engine error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3151,11 +3476,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 56은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:57": {
-    "name": "미사용·구세대 코드",
-    "detail": "Error programming video memory interface (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Error programming video memory interface",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3164,11 +3494,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 57은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:58": {
-    "name": "미사용·구세대 코드",
-    "detail": "Unstable video memory interface detected (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Unstable video memory interface detected",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3177,11 +3512,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 58은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:59": {
-    "name": "미사용·구세대 코드",
-    "detail": "Internal micro-controller error (older drivers) (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Internal micro-controller error (older drivers)",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3190,11 +3530,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 59은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:6": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer stream (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer stream",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3203,7 +3548,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 6은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:60": {
     "name": "애플리케이션·엔진 오류",
@@ -3219,8 +3569,8 @@
     ]
   },
   "xid:61": {
-    "name": "미사용·구세대 코드",
-    "detail": "Internal micro-controller breakpoint/warning (newer drivers) (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Internal micro-controller breakpoint/warning (newer drivers)",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3229,7 +3579,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 61은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:62": {
     "name": "드라이버·펌웨어 오류",
@@ -3271,8 +3626,8 @@
     ]
   },
   "xid:65": {
-    "name": "미사용·구세대 코드",
-    "detail": "Video processor exception (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Video processor exception",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3281,7 +3636,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 65은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:66": {
     "name": "드라이버·펌웨어 오류",
@@ -3336,8 +3696,8 @@
     ]
   },
   "xid:7": {
-    "name": "미사용·구세대 코드",
-    "detail": "Invalid or corrupted push buffer address (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Invalid or corrupted push buffer address",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3346,7 +3706,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 7은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:70": {
     "name": "애플리케이션·엔진 오류",
@@ -3388,8 +3753,8 @@
     ]
   },
   "xid:73": {
-    "name": "미사용·구세대 코드",
-    "detail": "NVENC2 Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "NVENC2 Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3398,12 +3763,17 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 73은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:74": {
     "name": "NVLink 오류",
     "detail": "NVLINK Error",
-    "action": "조건별 절차 (WORKFLOW_NVLINK_ERR)",
+    "action": "NVLink 연결 상태·상대 장치 오류 확인",
     "steps": [
       "즉시 확인·영향",
       "진단 자료 보존",
@@ -3506,8 +3876,8 @@
     ]
   },
   "xid:81": {
-    "name": "미사용·구세대 코드",
-    "detail": "VGA Subsystem Error (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "VGA Subsystem Error",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3516,7 +3886,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 81은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:82": {
     "name": "애플리케이션·엔진 오류",
@@ -3584,8 +3959,8 @@
     ]
   },
   "xid:87": {
-    "name": "미사용·구세대 코드",
-    "detail": "Reserved (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Reserved",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3594,7 +3969,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 87은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:88": {
     "name": "애플리케이션·엔진 오류",
@@ -3623,8 +4003,8 @@
     ]
   },
   "xid:9": {
-    "name": "미사용·구세대 코드",
-    "detail": "Driver error programming GPU (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Driver error programming GPU",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3633,11 +4013,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 9은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:90": {
-    "name": "미사용·구세대 코드",
-    "detail": "Reserved (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Reserved",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3646,11 +4031,16 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 90은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:91": {
-    "name": "미사용·구세대 코드",
-    "detail": "Reserved (미사용 코드)",
+    "name": "현재 공식 카탈로그의 미사용 코드",
+    "detail": "Reserved",
     "action": "공급사 문의 (CONTACT_SUPPORT)",
     "steps": [
       "즉시 확인·영향",
@@ -3659,7 +4049,12 @@
       "복구 조치",
       "복구 확인",
       "재발 시 진단·공급사 전달"
-    ]
+    ],
+    "official": {
+      "name": "현재 공식 카탈로그의 미사용 코드",
+      "meaning": "XID 91은 NVIDIA 공식 카탈로그에서 미사용(Unused)으로 분류됩니다. 현재 표의 A100·H100·B100·GB200에는 적용하지 않는 코드입니다. 이 번호만으로 특정 부품 고장을 판단하지 않습니다. 수신 원문·GPU 모델·드라이버 버전·시험 로그 주입 여부를 대조하고, 실제 발생한 로그이면 NVIDIA 분류에 따라 원문과 진단 자료를 공급사에 전달합니다. Volta 및 이전 GPU는 해당 제품·드라이버의 이전 문서로 의미를 확인합니다.",
+      "source": "https://docs.nvidia.com/deploy/xid-errors/analyzing-xid-catalog.html"
+    }
   },
   "xid:92": {
     "name": "ECC·메모리 오류",

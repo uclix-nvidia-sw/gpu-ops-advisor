@@ -164,7 +164,7 @@ export function IncidentRow({
           <RepeatBadge v={v} />
         </small>
       </div>
-      <div className="oh-act">{v.label?.action || '런북 순서대로 확인'}</div>
+      <div className="oh-act">{v.label?.action || '원문·발생 장치와 작업 영향 확인'}</div>
       <RcaLink v={v} />
     </div>
   );
