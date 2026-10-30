@@ -342,9 +342,11 @@ def test_relative_trial_wording_preserves_candidates_and_validation():
     choice = decision_context(fact)
     assert "relative_activity는 비교 관측" in SYSTEM
     assert "새 행동을 만들지 마세요" in SYSTEM
-    assert "시범 실행을 검토" in choice["option"]
+    assert "시범 실행할지 검토" in choice["option"]
     assert "앞으로" in choice["option"]
-    assert "시작 시간 조정" in choice["option"]
+    assert "시간 변경은 보류" in choice["option"]
+    assert "이동 후 성능" in choice["option"]
+    assert "비교 구간 작업 일부를 이 시간대에 시범 실행" in choice["option"]
     summary = choice["option"] + " " + summary_context(fact)["summary_start"]
     accepted = validate_advice(
         {"advice": [{"fact_id": fact["fact_id"], "summary": summary}]},

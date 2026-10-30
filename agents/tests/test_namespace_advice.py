@@ -629,7 +629,7 @@ def test_unknown_pending_remains_in_conditions_without_a_false_zero_in_summary()
     )
     output = validate_advice(reply, dict(findings=p))["advice"][0]
     assert "미확인" in output["observation"]
-    assert "대기 상태 확인" in output["conditions"]
+    assert "작업 마감·예약·가용 GPU" in output["conditions"]
     assert "0개" not in output["summary"]
 
 
@@ -2201,7 +2201,7 @@ async def test_operating_choice_reaches_llm_and_stored_result_without_changing_t
     original = deepcopy(t)
     result = dict(topics=[t], quality={}, time_range={})
     fact = payload_for(result)["topics"][0]["findings"][0]
-    summary = "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
+    summary = "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod는 없었습니다."
     llm = AsyncMock(configured=True)
     llm.complete.return_value = {
         "sections": [
@@ -2216,7 +2216,7 @@ async def test_operating_choice_reaches_llm_and_stored_result_without_changing_t
     saved = result["narrative"][0]["advice"][0]["decision"]
     assert sent == {
         **{key: value for key, value in saved.items() if key != "option"},
-        "reason": "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다.",
+        "reason": "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod는 없었습니다.",
     }
     assert saved == decision_context(fact)
     assert result["topics"] == [original]
@@ -2251,23 +2251,31 @@ def test_batch_action_keeps_each_check(phase):
     before = deepcopy(fact)
     action = writing_decision(fact)["action"]
     checks = {
-        "placement": ("스케줄러 이벤트", "GPU 요청", "노드 선택 조건"),
-        "preparation": ("이미지 다운로드", "초기화", "준비 단계", "실패 기록"),
+        "placement": ("스케줄러 이벤트", "노드 미배정 Pod"),
+        "preparation": ("이미지 다운로드", "초기화", "준비", "실패"),
         "unknown": (
             "상태",
             "스케줄러 이벤트",
-            "노드 배정 대기",
-            "컨테이너 초기화",
+            "유형",
             "구분",
         ),
     }
     assert all(word in action for word in checks[phase])
-    assert all(word in action for word in ("완료 Job", "대기 Pod", "작업 유형", "대조"))
+    assert all(
+        word in action
+        for word in (
+            "완료 Job",
+            "노드 미배정 Pod" if phase == "placement" else "대기 Pod",
+            "같은 작업 유형이면",
+            "경과시간",
+            "일정",
+        )
+    )
     if phase == "placement":
-        assert action.count(".") == 2 and action.endswith("대조하세요.")
+        assert action.count(".") == 2 and action.endswith("정하세요.")
     else:
-        assert action.count(".") == 1 and action.endswith("확인하세요.")
-        assert "완료 기록" in action and "참고" in action
+        assert action.count(".") == 2 and action.endswith("정하세요.")
+        assert "완료만으로" in action and "일정" in action
     reply = {
         "advice": [
             {
@@ -2309,7 +2317,7 @@ def test_partial_queue_writing_example_starts_with_the_missing_evidence():
     )
     context = decision_context(fact)
     assert context["scope"] == "targeted_check"
-    assert "대기 상태는 미확인" in context["option"]
+    assert "대기 상태는 일부 또는 전부 미확인" in context["reason"]
     assert "확인한 뒤" in context["option"]
     summary = context["option"] + " " + summary_context(fact)["summary_start"]
     assert validate_advice(
@@ -2654,7 +2662,7 @@ def test_capacity_check_purpose_preserves_all_prerequisites_and_reference_guards
         "summary": "스케줄러 사유에서 GPU 부족 여부를 확인하고, GPU 요청·실제 할당·보장량·가용 GPU·운영정책을 대조한 뒤 추가 할당을 검토하세요.",
     }
     assert validate_written_advice({"advice": [item]}, {"findings": [fact]})
-    item["summary"] = item["summary"].replace("·보장량", "")
+    item["summary"] = item["summary"].replace("·실제 할당", "")
     with pytest.raises(ValueError, match="namespace_prerequisites_required"):
         validate_written_advice({"advice": [item]}, {"findings": [fact]})
     item["summary"] += " {{pending}}"
@@ -2681,7 +2689,7 @@ def test_schedule_writing_reason_preserves_partial_observation_and_stored_decisi
     if samples == 240:
         assert (
             writing["reason"]
-            == "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
+            == "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod는 없었습니다."
         )
     else:
         assert writing["reason"] == saved["reason"]
@@ -2691,3 +2699,72 @@ def test_schedule_writing_reason_preserves_partial_observation_and_stored_decisi
         )
     assert "마감" in writing["action"] and "시범 실행" in writing["action"]
     assert decision_context(fact) == saved and fact == before
+
+
+@pytest.mark.parametrize("pending_text", ["41~51개", "{{pending}}"])
+def test_batch_pending_range_cannot_describe_last_hour(pending_text):
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    for i, hour in enumerate(fact["source_hours"]):
+        hour["pending"] = 51 if i == 0 else 41
+    fact["pending_change"] = [51, 41]
+    before = deepcopy(fact)
+    good = batch_section(fact)
+    validate_advice(good, {"findings": [fact]})
+    broken = deepcopy(good)
+    broken["advice"][0]["summary"] += (
+        f" 마지막 시간에도 대기 Pod가 {pending_text} 관측됐습니다."
+    )
+    with pytest.raises(ValueError, match="^batch_pending_range_not_allowed"):
+        validate_advice(broken, {"findings": [fact]})
+    assert fact == before
+
+
+async def test_batch_pending_range_uses_existing_partial_repair():
+    t = completed_topic()
+    for hour, pending in zip(t["workloads"][0]["hours"], [51, 46, 41]):
+        hour.update(pending_peak=pending, pending_samples=240)
+    result = dict(topics=[t], quality={}, time_range={})
+    original_topics = deepcopy(result["topics"])
+    facts = payload_for(result)["topics"][0]["findings"]
+    reply = {"sections": [writer_section(facts)]}
+    batch = next(f for f in facts if f["kind"] == "batch_progress")
+    item = next(
+        a for a in reply["sections"][0]["advice"] if a["fact_id"] == batch["fact_id"]
+    )
+    item["summary"] = "마지막 시간에도 대기 Pod가 41~51개 관측됐습니다."
+    repaired = "완료 Job이 확인됐지만 마지막 시간에도 대기 Pod가 관측됐습니다."
+    llm = AsyncMock(configured=True)
+    llm.complete.side_effect = [
+        reply,
+        {"advice": [{"fact_id": batch["fact_id"], "summary": repaired}]},
+    ]
+    await interpret_report(result, llm)
+    assert llm.complete.call_count == 2
+    repair = llm.complete.call_args.args[1]
+    error = repair["summary_repair"][0]["validation_error"]
+    assert error.startswith("batch_pending_range_not_allowed:")
+    assert "처음→마지막 대기는 코드가 붙입니다" in error
+    assert result["narrative_status"] == "complete"
+    accepted = next(
+        a for a in result["narrative"][0]["advice"] if a["fact_id"] == batch["fact_id"]
+    )
+    assert accepted["summary"].startswith(repaired)
+    assert "51개 → 41개" in accepted["summary"]
+    assert "41~51개" not in accepted["summary"]
+    assert result["topics"] == original_topics
+
+
+@pytest.mark.parametrize("has_change", [True, False])
+def test_batch_writing_context_omits_whole_window_pending_only_with_change(has_change):
+    fact = next(
+        f for f in candidates(completed_topic()) if f["kind"] == "batch_progress"
+    )
+    if not has_change:
+        fact["pending_change"] = None
+    before = deepcopy(fact)
+    values = writing_context(fact)["observed_values"]
+    assert ("pending" not in values) == has_change
+    assert ("pending_change" in values) == has_change
+    assert fact == before

@@ -46,6 +46,7 @@ observed_values는 읽기 자료입니다. 숫자·단위·대상명·시간·UR
 활동률 문장의 주어는 연결 GPU입니다. 개별 작업·Pod의 활동률이나 Namespace의 실제 할당·여유·성능으로 바꾸지 마세요. 시간대별 최대값은 같은 순간의 상태가 아니며 떨어진 관측은 연속·매일 반복을 증명하지 않습니다. 낮은 활동이나 관측 영은 작업 부재·미사용의 증거가 아닙니다. 현재 대기 Pod가 관측되지 않았으면 대기 작업이 있다고 쓰지 마세요.
 queue_context.unscheduled_complete=false에서 미배치 관측 영은 미배정 없음·배정 완료를 뜻하지 않습니다. 양수 관측은 미배정 Pod가 관측됐다는 근거이며 GPU 부족·배정 실패·지연의 원인을 확정하지 않습니다. 대기 단계가 이미 연결됐으면 미확인으로 되돌리지 마세요.
 decision.known의 작업 유형·GPU 요청·노드 상태는 연결된 일부 작업의 맥락이며 전체 작업으로 확대하지 않습니다. 테스트 유형은 실제 서빙·학습이 아닙니다. 이미 연결된 유형은 현상을 설명하는 맥락으로 쓰고 재확인 지시를 하지 마세요. Job 경과시간은 대기·준비를 포함할 수 있고 완료 표본이 전체 완료·성능 개선·대기 해소를 입증하지 않습니다.
+확인 여부·결정 보류·확인 방법은 코드가 붙이므로 AI는 반복하지 않습니다.
 decision.needed는 참고용 미확인 근거이며 summary에 점검 조건이나 행동을 작성하라는 지시가 아닙니다. decision.scope/choice는 허용된 판단 범위입니다. 관측에 없는 원인·운영 효과·완료·새 행동을 만들지 마세요. repeated_activity는 서로 떨어진 높은 활동·대기 관측이며 연속·지속·재상승·포화·부족·때문 표현을 질문·부정문에도 쓰지 않습니다. relative_activity는 비교 관측이며 가용 자원이나 개선 효과를 뜻하지 않습니다.
 incident_summary 등 다른 주제의 observation·meaning·next_check는 기존 fact_ids와 수치·대상·기간 참조 규칙을 따릅니다. 다른 주제의 필드를 Namespace summary에 복사하지 마세요.
 """
@@ -62,9 +63,9 @@ VALUE_MEANINGS = {
 }
 WRITING_FOCUS = {
     "repeated_activity": "대기 작업을 실행할 방법을 판단하기 위한 사전 점검입니다. 여러 시간대의 높은 활동률과 대기를 이유로, 요청한 GPU와 실제 배정받은 GPU 및 스케줄러의 노드 배정 기록 중 확인할 대상을 제안합니다. 연속 포화·부하 재상승·할당 확대는 주장하지 않습니다.",
-    "relative_activity": "앞으로 이 네임스페이스 작업 일부를 시험할 시간대를 찾는 비교입니다. 같은 Namespace의 관측 시간끼리 비교한 시험 후보이며 실행 시간 변경의 확정 권고가 아닙니다. 작업 준비·선행 작업 때문에 시작 시간을 바꿀 수 있는지와 작업 마감·예약·가용 GPU·메모리 요구를 확인한 뒤 작업 일부의 시범 실행만 검토합니다. 관측 날짜로 앞당겨 실행하거나 Namespace·클러스터를 이전하라는 뜻이 아닙니다. 매일 같은 상태나 성능 개선은 주장하지 않습니다.",
-    "capacity_review": "높은 활동과 대기가 함께 관측된 구간은 현재 할당·보장량과 스케줄러 사유를 확인한 뒤 할당 확대 검토 대상으로 삼습니다.",
-    "schedule_candidate": "낮은 활동 구간의 활용 가능성을 시험하도록 예약·대기·가용 GPU를 확인한 뒤 배치 작업의 시범 실행을 검토합니다.",
+    "relative_activity": "앞으로 이 네임스페이스 작업 일부를 시험할 시간대를 찾는 비교입니다. 같은 Namespace의 관측 시간끼리 비교한 시험 후보이며 실행 시간 변경의 확정 권고가 아닙니다. 작업 준비·선행 작업 때문에 시작 시간을 바꿀 수 있는지와 작업 마감·가용 GPU·메모리 요구를 확인한 뒤 비교 구간 작업 일부를 후보 시간대로 옮겨 부하를 나눌지 시범 실행만 검토합니다. 관측 날짜로 앞당겨 실행하거나 Namespace·클러스터를 이전하라는 뜻이 아닙니다. 매일 같은 상태나 성능 개선은 주장하지 않습니다.",
+    "capacity_review": "대기 단계와 GPU 부족 여부의 미확인으로 추가 할당을 정할 수 없는 이유, 스케줄러 사유·GPU 요청·실제 할당을 대조할 목적을 코드가 설명합니다. 부족 확인과 부서·프로젝트 한도가 정해진 경우에만 추가 할당 검토가 가능합니다.",
+    "schedule_candidate": "관측 GPU는 Namespace Pod에 연결돼 있었으며 다른 작업이 바로 사용할 수 있는지는 미확인입니다. 작업 마감·예약·가용 GPU 확인의 목적과 해당 Namespace의 시범 실행 검토는 코드가 붙입니다.",
     "queue_review": "queue_context에 해당하는 배치·준비 단계의 기록부터 대조해 다음 점검 대상을 좁힙니다.",
     "resident_memory": "새 GPU 작업을 배치할 수 있을지 판단하려면, 연결된 GPU의 메모리를 어떤 작업이 차지하는지와 계속 유지할 필요가 있는지 확인하세요. 서빙·캐시는 유형을 모를 때의 가능한 예시입니다. 낮은 활동과 높은 장치 메모리 점유만으로 해당 Namespace의 독점 사용량이나 GPU 여유를 확정하지 마세요.",
     "batch_progress": "완료된 Job은 일부 표본입니다. Job 경과시간을 순수 실행시간으로 쓰기 전에 해당 Job의 실제 실행 시작 기록을 대조하세요.",
@@ -473,8 +474,8 @@ def candidates(topic):
                     observed += f" 처음/마지막 시간대의 관측 최대 대기 Pod 수 {change[0]}개 → {change[1]}개."
                 observed += f" 이 구간에서 성공 완료가 확인된 Job {len(samples)}건, 대기·준비 포함 Job 경과시간 {numeric_range([j['elapsed_seconds'] for j in samples], 0)}초."
             condition = {
-                "capacity_review": "현재 할당량·보장량, 클러스터 가용 GPU와 스케줄러 대기 사유를 확인한 뒤 확대 여부를 검토합니다. 추가 수량은 산정하지 않습니다.",
-                "schedule_candidate": "해당 Namespace의 시간대 후보이며 클러스터 자원 가용성을 보장하지 않습니다. 작업 마감·예약·상주 메모리와 대기 상태 확인 후 시범 배치를 검토합니다.",
+                "capacity_review": "스케줄러 사유·GPU 요청·실제 할당을 확인한 뒤, 부족이 확인되고 부서 한도가 정해졌을 때만 추가 할당을 검토합니다. 추가 수량은 산정하지 않습니다.",
+                "schedule_candidate": "해당 Namespace의 시간대 후보이며 클러스터 자원 가용성을 보장하지 않습니다. 작업 마감·예약·가용 GPU 확인 후 시범 배치를 검토합니다.",
                 "queue_review": "대기는 자원 부족 외 배치 제약·준비 과정에서도 발생할 수 있습니다. 현재 자료로 할당 확대를 추천하지 않습니다.",
                 "resident_memory": "낮은 연산 활동을 빈 GPU로 해석하지 않습니다. 상주 서빙·캐시·작업 유형을 확인하며 메모리 부족이나 추가 할당을 판정하지 않습니다.",
                 "batch_progress": "같은 Namespace의 시간대별 최대 대기 관측과 성공 완료 Job 표본입니다. 동일 Pod의 대기 시간이나 순수 실행시간이 아니며 완료가 대기 감소의 원인임을 증명하지 않습니다. 경과시간은 각 Job의 전체 시작~완료 범위이며 후보 시간대보다 길 수 있습니다. 전체 작업의 완료·처리량·성능 향상을 판정하지 않습니다.",
@@ -592,7 +593,7 @@ def comparison_patterns(aligned):
                         if envelope["start"] <= h["start"] < envelope["end"]
                         and h not in observed
                     ],
-                    conditions="시간 목록의 관측만 연결합니다. 중간 미관측·제외 시간은 유효 시간으로 채우지 않으며, 연속 포화·부하 재상승·동일 작업의 지속 대기를 뜻하지 않습니다. 요청·실제 할당·보장량·스케줄러 사유를 대조하기 전 GPU 부족이나 확대를 판단하지 않습니다.",
+                    conditions="시간 목록의 관측만 연결합니다. 중간 미관측·제외 시간은 유효 시간으로 채우지 않으며, 연속 포화·부하 재상승·동일 작업의 지속 대기를 뜻하지 않습니다. 요청·실제 할당·스케줄러 사유를 대조하기 전 GPU 부족이나 확대를 판단하지 않습니다.",
                 )
             )
         pairs = []
@@ -660,7 +661,7 @@ def comparison_patterns(aligned):
             ):
                 continue
             option["conditions"] = (
-                "같은 날짜·Namespace·모델·GPU 구성의 두 구간 비교입니다. 비교 시간은 하루 평균이나 평소 부하를 대표하지 않습니다. 마감·예약·가용 GPU·작업 메모리 요구를 확인한 뒤 일부 작업의 시간 변경 시범 실행을 검토합니다. 장치 메모리는 Namespace 전용 사용량이 아니며 자원 여유·매일 반복·효과를 보장하지 않습니다. 절반 이하 기준은 초기 후보 선별값입니다."
+                "같은 날짜·Namespace·모델·GPU 구성의 두 구간 비교입니다. 비교 시간은 하루 평균이나 평소 부하를 대표하지 않습니다. 마감·가용 GPU·작업 메모리 요구를 확인한 뒤 일부 작업의 시간 변경 시범 실행을 검토합니다. 장치 메모리는 Namespace 전용 사용량이 아니며 자원 여유·매일 반복·효과를 보장하지 않습니다. 절반 이하 기준은 초기 후보 선별값입니다."
             )
             kept.append(option)
         patterns.extend(kept)
@@ -842,6 +843,11 @@ def writing_candidates(facts):
     }
 
 
+def summary_limits(fact):
+    """Relative trial boundaries need eleven more prose characters; other caps stay fixed."""
+    return 360, 231 if fact["kind"] == "relative_activity" else 220
+
+
 def summary_values(fact):
     hours = fact["source_hours"]
     values = {
@@ -898,6 +904,83 @@ def queue_context(fact):
     return {"check_first": focus, "unscheduled_complete": complete}
 
 
+def operating_action(fact):
+    """State the unresolved choice, then the evidence needed to make it."""
+    kind = fact["kind"]
+    phase = queue_context(fact)["check_first"]
+    pending_state = {
+        "placement": "노드 미배정 Pod도 있었지만",
+        "preparation": "노드 대기는 관측되지 않았지만",
+        "unknown": "대기 단계가 미확인이고",
+    }[phase]
+    checks = {
+        "placement": "스케줄러 이벤트·GPU 요청·노드 선택 조건을 대조해 요청을 충족할 노드가 없었는지, 조건이 맞지 않았는지 확인하세요.",
+        "preparation": "Pod 이벤트에서 이미지 다운로드·초기화 기록을 대조해 준비 중인지 실패했는지 확인하세요.",
+        "unknown": "대기 Pod의 상태·스케줄러 이벤트를 점검해 노드 배정 대기인지 컨테이너 시작 준비 중인지 구분하세요.",
+    }
+    if kind == "capacity_review":
+        return (
+            pending_state
+            + " GPU 부족 여부가 미확인이라 추가 할당은 아직 정할 수 없습니다. "
+            "스케줄러 사유·GPU 요청·실제 할당을 확인한 뒤, 부족이 확인되고 부서 한도가 정해졌을 때만 추가 할당을 검토하세요."
+        )
+    if kind == "schedule_candidate":
+        return (
+            "관측 GPU는 이 네임스페이스 Pod에 연결돼 있어, 다른 작업이 바로 쓸 수 있는 빈 GPU였는지는 알 수 없습니다. "
+            "마감·예약·가용 GPU를 확인한 뒤 이 네임스페이스 작업 일부를 앞으로 같은 시간대에 시범 실행할지 검토하세요."
+        )
+    if kind == "relative_activity":
+        return (
+            "다른 날 차이·이동 후 성능을 몰라 시간 변경은 보류합니다. "
+            "마감·가용 GPU·메모리 확인 후 앞으로 비교 구간 작업 일부를 이 시간대에 시범 실행할지 검토하세요."
+        )
+    if kind == "resident_memory":
+        return (
+            "메모리 점유 작업과 유지 목적이 미확인이라 새 작업을 함께 실행할지는 아직 정할 수 없습니다. "
+            "상주 작업 기록·메모리 유지 목적·새 작업의 메모리 요구를 대조해 함께 실행할 수 있는지 확인하세요."
+        )
+    if kind == "repeated_activity":
+        stage = (
+            "노드 미배정 Pod도 있었지만 "
+            if phase == "placement"
+            else "노드 대기는 관측되지 않았지만 "
+            if phase == "preparation"
+            else "대기 단계가 미확인이고 "
+        )
+        return (
+            stage + "GPU 부족 여부가 미확인이라 대기 해소 방법은 정할 수 없습니다. "
+            "스케줄러 이벤트·GPU 요청·실제 할당을 대조해 요청을 충족할 노드가 있었는지, 배정 조건이 맞지 않았는지 확인하세요."
+        )
+    if kind == "queue_review":
+        limit = (
+            "준비 단계와 실패 여부가 미확인이라 대기 해소 방법은 정할 수 없습니다. "
+            if phase == "preparation"
+            else "GPU 부족인지 배정 조건 문제인지 미확인이라 대기 해소 방법은 정할 수 없습니다. "
+        )
+        return limit + checks[phase]
+    if (fact.get("pending_change") or [0])[-1] > 0:
+        first = "완료만으로 대기 감소는 알 수 없습니다. "
+        if phase == "placement":
+            return (
+                "완료만으로 대기 감소나 GPU 부족은 판단할 수 없습니다. "
+                "노드 미배정 Pod의 스케줄러 이벤트를 확인하고, 완료 Job과 같은 작업 유형이면 경과시간을 일정 참고로 쓸지 정하세요."
+            )
+        check = (
+            "이미지 다운로드·초기화 기록에서 준비·실패를 확인하고"
+            if phase == "preparation"
+            else "상태·스케줄러 이벤트를 점검해 대기 단계를 구분하고"
+        )
+        return (
+            first
+            + f"대기 Pod의 {check}, 완료 Job과 같은 작업 유형이면 경과시간을 일정에 쓸지 정하세요."
+        )
+
+    return (
+        "완료 Job 표본만으로 다른 작업의 소요시간은 아직 정할 수 없습니다. "
+        "작업 유형·Pod 시작·완료 기록을 대조해 같은 유형의 일정에 Job 경과시간을 참고할지 확인하세요."
+    )
+
+
 def decision_context(fact):
     """Describe the supported operating choice, independently of pattern kind order."""
     kind = fact["kind"]
@@ -907,41 +990,32 @@ def decision_context(fact):
     if kind == "repeated_activity":
         choice = "allocation_evidence_review"
         reason = "서로 떨어진 여러 시간에 GPU 활동률이 높았고 실행을 기다리는 Pod도 관측됐습니다. 관측 사이 시간의 상태는 확인되지 않았습니다."
-        option = "높은 GPU 활동률과 대기가 여러 구간에 관측돼, 이 네임스페이스는 대기 작업의 노드 배정 조건을 점검할 대상입니다. 운영자는 대기 Pod의 GPU 요청·실제 할당과 스케줄러 이벤트를 대조해 실행을 막는 조건을 좁히세요."
         needed = "해당 구간의 요청·실제 할당·보장/제한·스케줄러 기록"
     elif kind == "relative_activity":
         choice = "relative_window_trial"
         scope = "conditional_option"
-        reason = "같은 Namespace에서 비교한 시간보다 GPU 활동률이 낮았습니다. 후보 시간에는 대기 Pod가 관측되지 않았고 GPU 메모리 점유도 높은 수준은 아니었습니다."
-        option = "비교 구간보다 GPU 활동률이 낮아, 앞으로 작업 일부의 시작 시간 조정 시험 후보입니다. 운영자는 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시간을 조정할 수 있는 작업 일부의 해당 시간대 시범 실행을 검토하세요."
-        needed = "작업의 시간 조정 가능 여부·마감·예약·가용 GPU·추가 메모리 요구"
+        reason = "같은 Namespace에서 비교한 시간보다 GPU 활동률이 낮았습니다. 후보 시간에는 대기 Pod가 관측되지 않았고 메모리 사용 비율은 선정 기준보다 낮았습니다."
+        needed = "작업 마감·가용 GPU·메모리 요구"
     elif kind == "capacity_review":
         choice = "allocation_review"
         scope = "conditional_option"
         reason = "같은 관측 시간 구간에 GPU 활동률이 높았고 실행을 기다리는 Pod도 있었습니다."
-        option = "GPU 활동률이 높은 구간에 대기 Pod도 있어, 이 네임스페이스는 추가 할당 검토 대상입니다. 운영자는 GPU 부족 여부를 스케줄러 이벤트에서 확인하고, 실제 할당·부서 보장량·가용 GPU와 운영정책을 대조한 뒤 추가 할당을 검토하세요."
-        needed = "그 구간의 실제 요청·할당·보장량, 가용 GPU와 스케줄러 사유"
+        needed = "스케줄러 사유·GPU 요청·실제 할당"
     elif kind == "schedule_candidate":
         choice = "trial_window"
         complete = fact["selection_basis"]["pending_complete"]
         scope = "conditional_option" if complete else "targeted_check"
         specific = complete
         reason = (
-            "낮은 활동이 연속 관측됐고 대기 관측도 완전합니다."
+            "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod는 없었습니다."
             if complete
             else "낮은 활동은 확인됐지만 대기 상태는 일부 또는 전부 미확인입니다."
         )
-        option = (
-            "GPU 활동률이 낮았던 구간은 이 네임스페이스 작업 일부의 시범 실행 후보입니다. 운영자는 예약·대기·사용 가능한 GPU(가용 GPU)를 확인한 뒤 시작 시간을 조정할 수 있는 작업의 시범 실행을 검토하세요."
-            if complete
-            else "GPU 활동률은 낮지만 대기 상태는 미확인이라, 이 네임스페이스 작업의 시범 실행 가능 여부를 먼저 점검할 대상입니다. 운영자는 예약·대기·사용 가능한 GPU(가용 GPU)를 확인한 뒤 작업 일부의 시범 실행 여부를 검토하세요."
-        )
-        needed = "예약·대기·가용 GPU와 작업 마감 조건"
+        needed = "작업 마감·예약·가용 GPU"
     elif kind == "resident_memory":
         choice = "memory_placement_review"
         reason = "GPU 활동률은 낮았지만 연결된 GPU의 메모리 점유는 높게 관측됐습니다."
-        option = "연결 GPU의 활동률은 낮지만 메모리 점유는 높아, 새 작업 배치 전 점유 목적과 메모리 요구를 점검할 대상입니다. 운영자는 어떤 작업이 연결 GPU의 메모리를 쓰는지, 서빙·캐시처럼 유지할 목적이 있는지 새 작업의 요구량과 대조하세요."
-        needed = "연결 GPU의 메모리 점유 주체·상주 목적과 새 작업의 메모리 요구량. Namespace 독점 사용량은 미확인"
+        needed = "연결 GPU의 메모리 점유 주체·상주 목적과 새 작업의 메모리 요구량. Namespace 독점 사용량과 실제 업무 목적은 미확인"
     else:
         remaining = (fact.get("pending_change") or [0])[-1] > 0
         if kind == "batch_progress" and not remaining:
@@ -949,7 +1023,6 @@ def decision_context(fact):
             scope = "observation_only"
             specific = False
             reason = "완료가 확인된 Job 일부의 기록은 있으나, 작업 일정이나 GPU 할당을 바꿀 근거는 없습니다."
-            option = "이 네임스페이스의 완료 Job 일부는 같은 유형 작업의 일정 계획에 참고할지 살펴볼 기록입니다. 운영자는 작업 유형과 실제 Pod 시작·완료 기록을 대조해 Job 경과시간에 포함된 준비 단계를 확인하세요."
             needed = "작업 유형·실제 Pod 시작 기록. 경과시간으로 제출 변경이나 처리 성능을 판단하지 않음"
         else:
             phase = context["check_first"]
@@ -961,24 +1034,19 @@ def decision_context(fact):
             specific = phase != "unknown"
             if phase == "placement":
                 reason = "아직 노드를 배정받지 못해 실행을 기다리는 Pod가 관측됐습니다. GPU 부족으로 기다리는지는 확인되지 않았습니다."
-                option = "노드를 배정받지 못한 Pod가 있어, 이 네임스페이스는 대기 작업을 실행할 노드 배정 조건 점검이 우선입니다. 운영자는 해당 Pod의 스케줄러 이벤트에서 GPU 요청을 충족할 노드가 없었는지, 노드 선택 조건이 맞지 않았는지 확인하세요."
                 needed = "관측 Pod의 스케줄러 이벤트·요청 자원·노드 선택 제약"
             elif phase == "preparation":
                 reason = "관측이 완전한 구간에 Pending Pod가 있었지만 아직 노드를 배정받지 못한 Pod는 관측되지 않았습니다. 개별 작업의 시작이 지연됐는지는 미확인입니다."
-                option = "대기 Pod는 있었지만 노드를 기다리는 Pod는 관측되지 않아, 이 네임스페이스는 컨테이너 시작 준비 기록부터 점검할 대상입니다. 운영자는 해당 Pod의 이벤트에서 이미지 다운로드·초기화가 준비 중인지, 실패 기록이 있는지 확인하세요."
                 needed = "Pod 이벤트·이미지 다운로드·초기화 기록"
             else:
                 reason = "대기 Pod가 노드를 기다리는지, 컨테이너 시작을 준비 중인지는 확인되지 않았습니다."
-                option = "대기 단계가 미확인이라, 이 네임스페이스는 실행을 위해 점검할 단계를 먼저 정해야 합니다. 운영자는 대기 Pod의 상태·이벤트에서 노드 배정 대기인지 이미지 다운로드·컨테이너 초기화 중인지 구분해 확인하세요."
                 needed = "대기 Pod의 상태·이벤트"
             if kind == "batch_progress":
-                option = option.replace(
-                    "확인하세요.", "확인하고 작업 유형도 대조하세요."
-                )
                 reason = (
                     "완료가 확인된 Job이 있지만 마지막 시간에도 실행을 기다리는 Pod가 관측됐습니다. "
                     + reason
                 )
+    option = operating_action(fact)
     return dict(
         choice=choice,
         scope=scope,
@@ -990,153 +1058,42 @@ def decision_context(fact):
 
 
 def writing_decision(fact):
-    """Explain observations before the supported check; do not change candidate choices."""
+    """Keep the candidate's choice and known context; code owns the operating prose."""
     decision = decision_context(fact)
-    if (
-        fact["kind"] == "schedule_candidate"
-        and fact["selection_basis"]["pending_complete"]
-    ):
-        decision["reason"] = (
-            "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
-        )
     context = fact.get("workload_context", {})
     groups = context.get("groups", [])
-    kind = fact["kind"]
-    phase = queue_context(fact)["check_first"]
-    observations = {
-        "repeated_activity": "여러 관측 구간에 높은 GPU 활동률과 대기가 있어, 이 네임스페이스는 대기 작업의 노드 배정 조건을 점검할 대상입니다.",
-        "relative_activity": "비교 구간보다 GPU 활동률이 낮아, 앞으로 작업 일부의 시작 시간 조정 시험 후보입니다.",
-        "capacity_review": "같은 관측 구간에 높은 GPU 활동률과 대기가 있어, 이 네임스페이스는 추가 할당 검토 대상입니다.",
-        "schedule_candidate": "GPU 활동률이 낮았던 구간은 이 네임스페이스 작업 일부의 시범 실행 후보입니다.",
-        "resident_memory": "연결 GPU의 활동률은 낮지만 메모리 점유는 높아, 새 작업 배치 전 점유 목적과 메모리 요구를 점검할 대상입니다.",
-        "batch_progress": "이 네임스페이스의 완료 Job 일부는 같은 유형 작업의 일정 계획에 참고할지 살펴볼 기록입니다.",
-        "queue_review": {
-            "placement": "GPU를 요청했지만 노드를 배정받지 못한 Pod가 있어, 이 네임스페이스는 대기 작업을 실행할 노드 배정 조건 점검이 우선입니다.",
-            "preparation": "실행 대기 Pod는 있었지만 노드 미배정은 관측되지 않아, 이 네임스페이스는 컨테이너 시작 준비 기록부터 점검할 대상입니다.",
-            "unknown": "대기 단계가 미확인이라, 이 네임스페이스는 실행을 위해 점검할 단계를 먼저 정해야 합니다.",
-        }[phase],
-    }
-    checks = {
-        "placement": "해당 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 대조해 요청을 충족할 노드가 있었는지, 선택 조건이 맞았는지 확인하세요.",
-        "preparation": "해당 Pod의 이미지 다운로드·초기화 이벤트에서 준비 중인 단계와 실패 기록 유무를 확인하세요.",
-        "unknown": "대기 Pod의 상태·스케줄러 이벤트를 점검해 노드 배정 대기인지 이미지 다운로드·컨테이너 초기화 중인지 구분하세요.",
-    }
-    actions = {
-        "repeated_activity": "운영자는 대기 Pod의 GPU 요청·실제 할당과 스케줄러 이벤트(노드 배정 기록)를 대조해 요청을 충족할 노드가 있었는지 확인하세요.",
-        "relative_activity": "작업 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 해당 시간대 시범 실행을 검토하세요.",
-        "capacity_review": "스케줄러 사유와 GPU 요청·실제 할당을 대조해 자원 부족 여부를 확인하고, 보장량·가용 GPU·운영정책을 확인한 뒤 추가 할당을 검토하세요.",
-        "schedule_candidate": "작업 마감·예약·대기 상태·가용 GPU를 확인한 뒤, 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요.",
-        "resident_memory": "새 작업을 실행하려면, 운영자는 어떤 작업이 연결 GPU의 메모리를 쓰는지와 새 작업의 메모리 요구를 대조하세요. 서빙·캐시처럼 메모리를 계속 유지해야 하는 작업인지도 확인하세요.",
-        "batch_progress": "운영자는 작업 유형과 시작·완료 기록을 대조해, 완료 Job의 경과시간을 같은 유형 작업의 일정 계획에 참고할 수 있는지 확인하세요.",
-        "queue_review": checks[phase],
-    }
-    remaining = kind == "batch_progress" and (fact.get("pending_change") or [0])[-1] > 0
-    if remaining:
-        observations[kind] = (
-            "Job 일부의 완료 기록과 마지막 구간의 대기가 있어, 이 네임스페이스는 완료 기록과 별도로 대기 Pod의 배정 단계를 점검할 대상입니다."
-        )
-        actions[kind] = {
-            "placement": "대기 Pod의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하고,",
-            "preparation": "대기 Pod의 이미지 다운로드·초기화 이벤트에서 준비 단계와 실패 기록을 확인하고,",
-            "unknown": "대기 Pod의 상태·스케줄러 이벤트에서 노드 배정 대기인지 이미지 다운로드·컨테이너 초기화 중인지 구분하고,",
-        }[
-            phase
-        ] + " 완료 Job과 대기 Pod의 작업 유형을 대조해 완료 기록을 참고할지 확인하세요."
-    placement_limit = "GPU 부족으로 기다리는지는 확인되지 않았습니다."
-    if remaining and phase == "placement":
-        actions[kind] = (
-            placement_limit
-            + " 노드를 기다리는 Pod의 스케줄러 이벤트·GPU 요청·노드 선택 조건을 확인하고 완료 Job·대기 Pod의 작업 유형도 대조하세요."
-        )
-        decision["reason"] = decision["reason"].removesuffix(" " + placement_limit)
-        decision["known"] = [placement_limit]
-    if kind == "schedule_candidate" and not fact["selection_basis"]["pending_complete"]:
-        observations[kind] = (
-            "GPU 활동률은 낮지만 대기 상태는 미확인이라, 이 네임스페이스 작업의 시범 실행 가능 여부를 먼저 점검할 대상입니다."
-        )
-    if context.get("status") != "partial" or not groups:
-        return {
-            **decision,
-            "option": observations[kind] + " " + actions[kind],
-            "action": actions[kind],
+    known = []
+    if context.get("status") == "partial" and groups:
+        types = {
+            g["workload_type"] for g in groups if g["type_status"] == "declared_test"
         }
-    needed, known = decision["needed"], []
-    types = {g["workload_type"] for g in groups if g["type_status"] == "declared_test"}
-    typed = (
-        next(iter(types))
-        if len(types) == 1 and all(g["type_status"] == "declared_test" for g in groups)
-        else None
-    )
-    known = decision.get("known", []) + [
-        "같은 시간대 일부 Pod의 일반 컨테이너 GPU 요청과 노드 상태가 연결됨"
-    ]
-    known.append(
-        "연결된 일부 Pod의 유형: " + typed
-        if typed
-        else "작업 유형 미확인 또는 여러 유형이 섞임"
-    )
-    pending = any(g["phase"] == "Pending" and not g["node_assigned"] for g in groups)
-    subject = (
-        "일부 배치 테스트 Pod"
-        if typed == "배치 부하 모의 테스트"
-        else "연결된 일부 테스트 Pod"
-        if typed
-        else "연결된 일부 Pod"
-    )
-    if pending:
-        known.append("연결된 Pending Pod 일부는 관측 당시 노드 미배정")
-    if kind == "repeated_activity" and pending:
-        observations[kind] = (
-            f"GPU 활동률이 높은 관측 구간에도 GPU를 요청하고 노드를 기다리는 {subject}가 있어, 이 네임스페이스는 노드 배정 조건 점검이 우선입니다."
+        typed = (
+            next(iter(types))
+            if len(types) == 1
+            and all(g["type_status"] == "declared_test" for g in groups)
+            else None
         )
-        actions[kind] = (
-            "운영자는 해당 Pod의 스케줄러 이벤트(노드 배정 기록)에서 GPU 요청을 충족할 노드가 없었는지, 노드 선택 조건이 맞지 않았는지 확인하세요."
+        known.append(
+            "같은 시간대 일부 Pod의 일반 컨테이너 GPU 요청과 노드 상태가 연결됨"
         )
-        needed = "관측 Pod의 스케줄러 실패 사유·실제 장치 할당. 작업 유형·요청량·노드 상태는 연결 자료 참고"
-    elif kind == "relative_activity" and typed:
-        actions[kind] = (
-            f"작업 마감·예약·가용 GPU·메모리 요구를 확인한 뒤, 시작 시각을 조정할 수 있는 {typed} 작업 일부의 시범 실행을 검토하세요."
+        known.append(
+            "연결된 일부 Pod의 유형: " + typed
+            if typed
+            else "작업 유형 미확인 또는 여러 유형이 섞임"
         )
-        needed = "테스트 시작 시간 조정 가능 여부·마감·예약·가용 GPU·메모리 요구. 실제 서빙 작업으로 확대하지 않음"
-    elif kind == "resident_memory":
-        needed = "실제 메모리 점유 작업과 유지 목적·새 작업의 메모리 요구. 실제 업무 목적은 미확인"
-    elif (
-        kind == "batch_progress"
-        and context.get("completed_type_status") == "declared_test"
+        if any(g["phase"] == "Pending" and not g["node_assigned"] for g in groups):
+            known.append("연결된 Pending Pod 일부는 관측 당시 노드 미배정")
+        if context.get("completed_type_status") == "declared_test":
+            known.append("이 후보의 완료 Job에 테스트 유형이 연결됨")
+    action = operating_action(fact)
+    if (
+        fact["kind"] == "batch_progress"
+        and queue_context(fact)["check_first"] == "placement"
     ):
-        known.append("이 후보의 완료 Job에 테스트 유형이 연결됨")
-        observations[kind] = (
-            "작업 유형이 확인된 테스트 Job 일부는 같은 유형 테스트의 일정 계획에 참고할지 살펴볼 기록입니다."
-        )
-        if remaining:
-            observations[kind] = (
-                "작업 유형이 확인된 테스트 Job 일부가 완료됐지만 대기 Pod도 있어, 남은 대기의 배정 단계를 점검할 대상입니다."
-            )
-            actions[kind] = checks[phase]
-            if phase == "placement":
-                actions[kind] = (
-                    placement_limit
-                    + " 노드를 기다리는 Pod의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하세요."
-                )
-            if phase == "preparation":
-                actions[kind] = "작업 유형이 확인된 완료 Job과 별도로, " + checks[phase]
-            if phase == "placement" and pending:
-                actions[kind] = (
-                    placement_limit
-                    + f" 노드를 기다리는 {subject}의 스케줄러 이벤트에서 GPU 요청을 충족할 노드와 노드 선택 조건을 확인하세요."
-                )
-        else:
-            actions[kind] = (
-                "해당 Job의 실제 Pod 시작·완료 기록을 대조해, Job 경과시간을 같은 작업 유형의 일정 계획에 참고할 수 있는지 확인하세요."
-            )
-        needed = "대기 Pod의 해당 단계 이벤트·실제 Pod 시작 기록. 완료 Job의 유형은 연결 자료 참고"
-    return {
-        **decision,
-        "option": observations[kind] + " " + actions[kind],
-        "action": actions[kind],
-        "needed": needed,
-        **({"known": known} if known else {}),
-    }
+        limit = "GPU 부족으로 기다리는지는 확인되지 않았습니다."
+        decision["reason"] = decision["reason"].removesuffix(" " + limit)
+        known.insert(0, limit)
+    return {**decision, "action": action, **({"known": known} if known else {})}
 
 
 def summary_context(fact):
@@ -1321,7 +1278,8 @@ def validate_advice(section, topic):
         seen.add(item["fact_id"])
         values = summary_values(fact)
         summary = item.get("summary")
-        if not isinstance(summary, str) or len(summary) > 360 or "\n" in summary:
+        max_chars, max_prose_chars = summary_limits(fact)
+        if not isinstance(summary, str) or len(summary) > max_chars or "\n" in summary:
             raise ValueError("concise_namespace_summary_required")
         # The verified token already carries its unit; tolerate only the matching repeated suffix.
         summary = re.sub(
@@ -1359,6 +1317,15 @@ def validate_advice(section, topic):
                 values,
                 tokens,
             )
+        if (
+            fact["kind"] == "batch_progress"
+            and fact.get("pending_change") is not None
+            and "pending" in tokens
+        ):
+            raise ValueError(
+                "batch_pending_range_not_allowed: 전체 기간 대기 범위를 쓰지 마세요. "
+                "처음→마지막 대기는 코드가 붙입니다. 관측 현상과 판단 이유만 설명하세요"
+            )
         if re.search(r"\{\{[a-z_]+\}\}\s*(?:%|개|건|초)", summary):
             raise ValueError(
                 "duplicate_summary_unit: summary_tokens 값에 단위가 포함됩니다. {{completed}} 뒤 건, {{elapsed}} 뒤 초, {{activity}} 뒤 %, {{pending}} 뒤 개를 붙이지 마세요"
@@ -1367,7 +1334,7 @@ def validate_advice(section, topic):
         if (
             not isinstance(text, str)
             or not text.strip()
-            or len(text) > 220
+            or len(text) > max_prose_chars
             or not re.search(r"[가-힣]", text)
         ):
             raise ValueError("invalid_namespace_advice_text")
@@ -1433,15 +1400,18 @@ def validate_advice(section, topic):
                 f"actionable_namespace_summary_required: {item['fact_id']}.summary에는 관측 현상과 판단 이유만 설명하세요. 이 후보의 점검 목적·조건·행동과 근거는 코드가 붙이므로 다시 작성하지 마세요"
             )
         if fact["kind"] == "repeated_activity" and re.search(
-            r"연속|지속|재상승|포화|부족|때문|시간대.*(?:실행|배치)|시범", text
+            r"연속|지속|재상승|포화|부족|때문|시간대.*(?:실행|배치)|시범",
+            text.replace(
+                "GPU 부족 여부가 미확인이라 대기 해소 방법은 정할 수 없습니다.",
+                "",
+            ),
         ):
             raise ValueError("separate_observations_do_not_prove_continuity")
         if fact["kind"] == "relative_activity" and (
             "검토" not in text
             or not re.search(r"확인.*(?:후|뒤)", text)
             or not all(
-                word in text
-                for word in ("마감", "예약", "가용", "메모리", "일부", "시범")
+                word in text for word in ("마감", "가용", "메모리", "일부", "시범")
             )
             or not re.search(r"옮|이동|조정", text)
             or re.search(
@@ -1456,7 +1426,10 @@ def validate_advice(section, topic):
                     r"(?:해석|단정|판단)할\s*수\s*없습니다)"
                     r"(?=\s*(?:[.!?。]|$))",
                     "",
-                    text,
+                    text.replace(
+                        "다른 날 차이·이동 후 성능을 몰라 시간 변경은 보류합니다.",
+                        "",
+                    ),
                 ),
             )
         ):

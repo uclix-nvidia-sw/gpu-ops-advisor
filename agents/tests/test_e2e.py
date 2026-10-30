@@ -212,6 +212,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-incident-names-v8",
                         "ops-interpretation-incident-repair-v9",
                         "ops-interpretation-incident-check-v10",
+                        "ops-interpretation-advice-clarity-v11",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3036,7 +3037,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-incident-check-v10"
+        == "ops-interpretation-advice-clarity-v11"
     )
     assert incident_section["meaning"] == meaning
     assert body["quality"]["report"]["attempts"] == 1
@@ -3207,9 +3208,7 @@ def test_aggregate_report_transition_verification_is_published(
     assert row["activity_percent"] == 60
     assert row["change_percentage_points"] == (None if overlap else 0)
     assert ("gpu_identity_transitions", "ok") in evidence
-    assert (
-        any("연결 변경이 확인된" in f["text"] for f in usage["findings"]) is not overlap
-    )
+    assert all("연결 변경이 확인된" not in f["text"] for f in usage["findings"])
     raw = [
         args
         for path, args in Upstream.requests[before:]
@@ -3392,8 +3391,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "repeated_trial"
                             else "작업 일부의 시범 실행을 검토 대상으로 삼습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
                             if failure == "renamed_trial"
-                            else "미배정 Pod가 없어도 전체 배정 완료를 뜻하지 않습니다. "
-                            + summary
+                            else "미배정 Pod가 없어도 전체 배정 완료를 뜻하지 않습니다."
                             if failure == "conditional_absence_valid"
                             else "자원 부족은 확인되지 않았으므로, "
                             + summary.replace("자원 부족 여부", "부족 여부")
@@ -3673,8 +3671,14 @@ def test_scheduled_and_manual_reports_repair_same_data(
                     "relative_activity",
                     "capacity_review",
                 }:
-                    assert "확인한 뒤" in item["summary_parts"]["decision"]
-                    assert "검토" in item["summary_parts"]["decision"]
+                    decision = item["summary_parts"]["decision"]
+                    prerequisite = (
+                        "마감·가용 GPU·메모리 확인 후"
+                        if item["kind"] == "relative_activity"
+                        else "확인한 뒤"
+                    )
+                    assert prerequisite in decision and "검토" in decision
+                    assert decision.index(prerequisite) < decision.rindex("검토")
 
 
 def pending_transition_fixture(*args, **kwargs):
@@ -3745,7 +3749,7 @@ def test_scheduled_and_manual_pending_pod_transition_is_published(
         assert row["activity_percent"] == 60
         assert result["result_status"] == ("partial" if wrong_node else "ready")
         diagnostics = usage["quality"]["observation_diagnostics"]
-        assert diagnostics["version"] == "ops-observation-diagnostics-v3"
+        assert diagnostics["version"] == "ops-observation-diagnostics-v4"
         assert ("pod_node_unverified" in str(diagnostics)) is wrong_node
         artifact = next(a for a in result["artifacts"] if a["format"] == "html")
         worker_html = Path(

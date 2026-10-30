@@ -466,3 +466,64 @@ def test_transition_rejections_preserve_selected_namespace_scope(namespaces):
         for item in expected
         if namespaces is None or item["namespace"] in namespaces
     ]
+
+
+@pytest.mark.parametrize("current,previous", [(23, 24), (24, 23), (0, 3), (23, 23)])
+def test_insufficient_observation_explains_comparison_without_changing_rows(
+    current, previous
+):
+    from ops_agent.report_diagnostics import observation_diagnostics
+
+    row = dict(
+        cluster_id="cpc-1",
+        namespace="test-project",
+        gpu_model="A100",
+        valid_hours=current,
+        expected_hours=24,
+        previous_valid_hours=previous,
+        previous_expected_hours=24,
+        comparison_status="insufficient_observation",
+    )
+    before = deepcopy(row)
+    diagnostics = observation_diagnostics([], [row], [])
+    assert diagnostics["version"] == "ops-observation-diagnostics-v4"
+    assert f"현재 {current}/24시간·이전 {previous}/24시간" in diagnostics["messages"][0]
+    assert "기간 비교를 보류했습니다" in diagnostics["messages"][0]
+    assert any(
+        "관측 시간이 부족해 비교 보류" in message for message in diagnostics["summary"]
+    )
+    assert row == before
+    row["namespace"] = ""
+    assert not observation_diagnostics([], [row], [])["messages"]
+    row.update(namespace="test-project", comparison_status="comparable")
+    assert not observation_diagnostics([], [row], [])["messages"]
+
+
+def test_specific_transition_reason_replaces_generic_display_count_only():
+    evidence, gpu, pods, at = transition_fixture()
+    original = deepcopy(evidence)
+    evidence[0]["quality"]["transition_verification"] = [
+        dict(
+            gpu_ids=["gpu-1"],
+            hour_end=iso(at),
+            status="checked",
+            reason=None,
+            rejected=[dict(gpu_id="gpu-1", reason="gpu_interval_unverified")],
+        )
+    ]
+    result = result_for(evidence + fixture(previous_period(DATA)))
+    row = next(
+        r
+        for r in diagnostic(result)["rows"]
+        if r["namespace"] and r["period_role"] == "current"
+    )
+    codes = {r["code"]: r["hours"] for r in row["reasons"]}
+    assert codes["gpu_interval_unverified"] > 0
+    assert codes.get("duplicate_or_changed_gpu_identity", 0) == 0
+    assert sum(codes.values()) <= row["expected_hours"]
+    assert evidence[0]["snapshot"] == original[0]["snapshot"]
+    activity_row = next(r for r in result["topics"][0]["rows"] if r["namespace"])
+    assert any(
+        "duplicate_or_changed_gpu_identity" in h["reasons"]
+        for h in activity_row["hours"]
+    )

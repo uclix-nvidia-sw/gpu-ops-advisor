@@ -606,3 +606,60 @@ def test_low_volume_firing_node_survives_six_candidate_limit():
     facts = [f for f in topic["findings"] if f["id"].startswith("incident-node-")]
     assert len(facts) == 6
     assert facts[0]["target"]["node"] == "node-7"
+
+
+@pytest.mark.parametrize(
+    "current,previous,reason",
+    [
+        (23, 24, "현재 기간"),
+        (24, 23, "이전 기간"),
+        (23, 23, "현재·이전 기간"),
+        (24, 24, None),
+        (24, 0, "이전 기간의 대응 관측이 없어"),
+        (0, 3, "현재 기간에는 이 대상에 연결된 GPU 관측이 없습니다"),
+    ],
+)
+def test_namespace_finding_explains_coverage_without_changing_calculations(
+    current, previous, reason
+):
+    from ops_agent.namespace_advice import candidates
+
+    evidence = []
+    for period, count in (
+        (DATA["time_range"], current),
+        (previous_period(DATA), previous),
+    ):
+        group = fixture(period, value=1)
+        for e in group:
+            for s in e["snapshot"]["series"]:
+                s["values"] = s["values"][:count]
+        evidence.extend(group)
+    context = dict(
+        data_cutoff_at=DATA["time_range"]["end"], incidents=[], previous_incidents=[]
+    )
+    claim = dict(
+        job_id=str(uuid4()), kind="report", input=DATA, versions={"criteria": VERSION}
+    )
+    result = build_result(claim, context, evidence)
+    topic = result["topics"][0]
+    rows = compare(
+        summarize(evidence[:3], DATA["time_range"])[0],
+        summarize(evidence[3:], previous_period(DATA))[0],
+    )
+    assert [
+        {k: row[k] for k in expected} for row, expected in zip(topic["rows"], rows)
+    ] == rows
+    assert topic["status"] == (
+        "ready" if current == previous == 24 else "partial" if current else "blocked"
+    )
+    finding = topic["findings"][0]
+    assert (reason in finding["text"]) if reason else ("보류" not in finding["text"])
+    assert ("저활동 시간 수는 보류" in finding["summary_text"]) == (0 < current < 24)
+    if current == 0:
+        assert "신원·관측 조건이 부족해" not in finding["text"]
+    clean = deepcopy(topic)
+    for f in clean["findings"]:
+        f["text"] = ""
+        f["summary_text"] = ""
+    assert candidates(topic) == candidates(clean)
+    validate_result(result, evidence)

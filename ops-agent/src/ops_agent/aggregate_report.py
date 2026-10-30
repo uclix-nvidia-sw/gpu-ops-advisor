@@ -41,6 +41,58 @@ def topic(name, refs):
     )
 
 
+def namespace_finding_text(row):
+    """Describe stored coverage without changing calculated values or eligibility."""
+    scope = f"{row['cluster_id']} / {row['namespace'] or 'Namespace 미표기'} / {row['gpu_model'] or '모델 미확인'}"
+    if row["activity_percent"] is None:
+        text = (
+            f"{scope}: 현재 기간에는 이 대상에 연결된 GPU 관측이 없습니다."
+            if row["comparison_status"] == "current_not_observed"
+            else f"{scope}: 신원·관측 조건이 부족해 활동률 판단을 보류했습니다."
+        )
+    else:
+        text = f"{scope}: 확인된 {row['valid_hours']}개 시간대의 관측 표본 평균 활동률은 {row['activity_percent']:.2f}%입니다."
+        if row["change_percentage_points"] is not None:
+            text += f" 직전 같은 기간보다 {row['change_percentage_points']:+.2f}%p 변했습니다."
+        if row["low_activity_hours"] is not None:
+            text += f" 시간대 평균 5% 미만은 {row['low_activity_hours']}개 시간대입니다. 연속 저활동 시간이나 회수 가능량은 아닙니다."
+        else:
+            text += " 일부 시간이 확인되지 않아 저활동 시간 수는 보류했습니다."
+        if row["comparison_status"] == "previous_not_observed":
+            text += " 이전 기간의 대응 관측이 없어 기간 비교를 보류했습니다."
+        elif row["comparison_status"] == "insufficient_observation":
+            current_short = row["valid_hours"] < row["expected_hours"]
+            previous_short = (
+                row["previous_valid_hours"] < row["previous_expected_hours"]
+            )
+            period = (
+                "현재·이전 기간"
+                if current_short and previous_short
+                else "현재 기간"
+                if current_short
+                else "이전 기간"
+            )
+            text += f" {period}의 관측 시간이 부족해 기간 비교를 보류했습니다."
+    windows = row.get("low_activity_windows", [])
+    summary_text = text
+    if windows:
+
+        def kst(value):
+            return (
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
+                .astimezone(timezone(timedelta(hours=9)))
+                .strftime("%m/%d %H:%M")
+            )
+
+        text += " 낮은 시간대: " + ", ".join(
+            kst(w["start"]) + "~" + kst(w["end"]) for w in windows[:3]
+        )
+        if len(windows) > 3:
+            text += f" 외 {len(windows) - 3}개 구간"
+        text += ". 시간대 평균의 묶음이며 구간 내 모든 순간의 저활동을 뜻하지 않습니다."
+    return text, summary_text
+
+
 def build_result(claim, context, evidence):
     data, previous = claim["input"], previous_period(claim["input"])
     result = base_result(claim, context["data_cutoff_at"])
@@ -149,36 +201,7 @@ def build_result(claim, context, evidence):
                         target,
                         {"start": hour["start"], "end": hour["end"]},
                     )
-                scope = f"{row['cluster_id']} / {row['namespace'] or 'Namespace 미표기'} / {row['gpu_model'] or '모델 미확인'}"
-                if row["activity_percent"] is None:
-                    text = (
-                        f"{scope}: 신원·관측 조건이 부족해 활동률 판단을 보류했습니다."
-                    )
-                else:
-                    text = f"{scope}: 확인된 {row['valid_hours']}개 시간대의 관측 표본 평균 활동률은 {row['activity_percent']:.2f}%입니다."
-                    if row.get("verified_transition_hours"):
-                        text += f" 연결 변경이 확인된 {row['verified_transition_hours']}개 시간대는 해당 Namespace에 연결된 표본만 반영했습니다. 연결 전후의 미표기 표본을 0%로 채우지 않았습니다."
-                    if row["change_percentage_points"] is not None:
-                        text += f" 직전 같은 기간보다 {row['change_percentage_points']:+.2f}%p 변했습니다."
-                    if row["low_activity_hours"] is not None:
-                        text += f" 시간대 평균 5% 미만은 {row['low_activity_hours']}개 시간대입니다. 연속 저활동 시간이나 회수 가능량은 아닙니다."
-                windows = row.get("low_activity_windows", [])
-                summary_text = text
-                if windows:
-
-                    def kst(value):
-                        return (
-                            datetime.fromisoformat(value.replace("Z", "+00:00"))
-                            .astimezone(timezone(timedelta(hours=9)))
-                            .strftime("%m/%d %H:%M")
-                        )
-
-                    text += " 낮은 시간대: " + ", ".join(
-                        kst(w["start"]) + "~" + kst(w["end"]) for w in windows[:3]
-                    )
-                    if len(windows) > 3:
-                        text += f" 외 {len(windows) - 3}개 구간"
-                    text += ". 시간대 평균의 묶음이며 구간 내 모든 순간의 저활동을 뜻하지 않습니다."
+                text, summary_text = namespace_finding_text(row)
                 t["findings"].append(
                     {
                         "id": f"namespace-pattern-{i}",

@@ -312,7 +312,7 @@ def test_connected_writing_examples_pass_existing_guards_without_changing_choice
     expected = {k: v for k, v in original.items() if k not in {"option", "needed"}}
     if kind == "schedule_candidate":
         expected["reason"] = (
-            "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod가 관측되지 않았습니다."
+            "연결 GPU 활동률이 낮았고 후보 구간에 대기 Pod는 없었습니다."
         )
     assert {
         k: v
@@ -322,7 +322,10 @@ def test_connected_writing_examples_pass_existing_guards_without_changing_choice
     assert decision_context(fact) == original
     assert fact == before
     if kind == "repeated_activity":
-        assert "배치 테스트 Pod" in item["summary"] and "GPU 요청" in item["summary"]
+        assert (
+            "배치 부하 모의 테스트" in str(c["decision"]["known"])
+            and "GPU 요청" in item["summary"]
+        )
     if kind == "batch_progress":
         assert "작업 유형도 대조" not in item["summary"]
 
@@ -358,7 +361,7 @@ def test_known_completion_type_does_not_override_existing_pending_stage(phase):
     assert {
         "placement": "스케줄러 이벤트",
         "preparation": "이미지 다운로드",
-        "unknown": "구분하세요",
+        "unknown": "구분하고",
     }[phase] in option
     assert "작업 유형도 대조" not in option
     assert validate_advice(
@@ -388,7 +391,7 @@ def test_unknown_or_mixed_type_never_borrows_serving_or_one_known_type():
         ],
     }
     c = summary_context(f)
-    assert "어떤 작업이 연결 GPU의 메모리" in c["decision"]["option"]
+    assert "메모리 점유 작업과 유지 목적이 미확인" in c["decision"]["option"]
     assert "계속 실행해야 하는 서빙" not in c["decision"]["option"]
     assert "업무 목적은 미확인" in c["decision"]["needed"]
     from ops_agent.namespace_advice import writing_decision
@@ -404,7 +407,7 @@ def test_unknown_or_mixed_type_never_borrows_serving_or_one_known_type():
     )
     d = writing_decision(f)
     assert "배치 테스트 Pod" not in d["option"]
-    assert "연결된 일부 Pod" in d["option"]
+    assert "작업 유형 미확인 또는 여러 유형이 섞임" in d["known"]
 
 
 def test_capacity_wording_is_conditional_and_repeated_observations_stay_checks():
@@ -432,14 +435,16 @@ def test_capacity_wording_is_conditional_and_repeated_observations_stay_checks()
         option = context["decision"]["option"]
         assert "스케줄러" in option
         if kind == "capacity_review":
-            assert "자원 부족 여부를 확인" in option
+            assert "GPU 부족 여부가 미확인" in option
             assert (
-                "운영정책" in option and "뒤" in option and "추가 할당을 검토" in option
+                "한도가 정해졌을 때만" in option
+                and "뒤" in option
+                and "추가 할당을 검토" in option
             )
         else:
-            assert "추가 할당" not in option and "부족" not in option
-            assert "노드 선택 조건" in option and (
-                "맞았는지" in option or "맞지 않았는지" in option
+            assert "추가 할당" not in option and "부족 여부가 미확인" in option
+            assert "배정 조건" in option and (
+                "맞지 않았는지" in option or "맞지 않는" in option
             )
         assert validate_advice(
             {
@@ -477,9 +482,9 @@ def test_pending_check_examples_are_not_observed_failure_causes():
         ],
     }
     option = summary_context(fact)["decision"]["option"]
-    assert "요청을 충족할 노드가 있었는지" in option
-    assert "노드 선택 조건" in option and (
-        "맞았는지" in option or "맞지 않았는지" in option
+    assert "요청을 충족할 노드가 없었는지" in option
+    assert "배정 조건" in option and (
+        "맞지 않았는지" in option or "맞지 않는" in option
     )
     assert "GPU가 부족합니다" not in option and "노드가 없었습니다" not in option
     assert "스케줄러 이벤트" in option

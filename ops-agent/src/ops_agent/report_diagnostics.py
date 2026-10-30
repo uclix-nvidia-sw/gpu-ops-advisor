@@ -181,6 +181,18 @@ def observation_diagnostics(periods, compared, evidence, *, missing_clusters=())
                         and item["reason"] == "duplicate_or_changed_gpu_identity"
                     ):
                         reasons["transition_check_unresolved"].add(at)
+            specific_hours = set().union(
+                *(
+                    hours
+                    for code, hours in reasons.items()
+                    if code
+                    not in {"duplicate_or_changed_gpu_identity", "unobserved_hour"}
+                )
+            )
+            reasons["duplicate_or_changed_gpu_identity"].difference_update(
+                specific_hours
+            )
+            reasons = {code: hours for code, hours in reasons.items() if hours}
             target = (
                 f"{key[0]} / {key[1] or 'Namespace 미표기'} / {key[2] or '모델 미확인'}"
             )
@@ -229,12 +241,33 @@ def observation_diagnostics(periods, compared, evidence, *, missing_clusters=())
                 f"{row['cluster_id']} / {row['namespace'] or 'Namespace 미표기'} / {row['gpu_model'] or '모델 미확인'}: {period_name} 기간의 대응 관측이 없어 기간 비교를 보류했습니다."
             )
             summary.append(f"{period_name} 기간의 대응 관측이 없어 비교 보류")
+        elif (
+            row["namespace"] and row["comparison_status"] == "insufficient_observation"
+        ):
+            current_short = row["valid_hours"] < row["expected_hours"]
+            previous_short = (
+                row["previous_valid_hours"] < row["previous_expected_hours"]
+            )
+            short_period = (
+                "현재·이전 기간"
+                if current_short and previous_short
+                else "현재 기간"
+                if current_short
+                else "이전 기간"
+            )
+            messages.append(
+                f"{row['cluster_id']} / {row['namespace']} / {row['gpu_model'] or '모델 미확인'}: "
+                f"현재 {row['valid_hours']}/{row['expected_hours']}시간·"
+                f"이전 {row['previous_valid_hours']}/{row['previous_expected_hours']}시간을 확인했으며, "
+                f"{short_period}의 관측 시간이 부족해 기간 비교를 보류했습니다."
+            )
+            summary.append(f"{short_period}의 관측 시간이 부족해 비교 보류")
     if messages:
         messages.append(
             "검증 미실행은 신원 충돌 확인을 뜻하지 않습니다. 제외 사유별 시간은 겹칠 수 있으며, 일부 신원의 검증 성공이 해당 시간 전체의 유효성을 뜻하지는 않습니다."
         )
     return dict(
-        version="ops-observation-diagnostics-v3",
+        version="ops-observation-diagnostics-v4",
         clusters_without_current_attribution=list(missing_clusters),
         unattributed_messages=list(dict.fromkeys(unattributed_messages)),
         messages=list(dict.fromkeys(messages)),
