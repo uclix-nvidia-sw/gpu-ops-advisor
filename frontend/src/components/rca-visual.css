@@ -1,0 +1,144 @@
+.c2-rca-visual {
+  margin: 26px 0;
+  color: #283c30;
+}
+.rca-operator-report > .c2-rca-visual {
+  padding: 0;
+  margin: 12px 0 26px;
+}
+.c2-rca-visual h4 {
+  margin: 0 0 16px;
+}
+.c2-rca-visual h5,
+.c2-rca-history-chart h5 {
+  margin: 0;
+  font-size: 15px;
+}
+.c2-rca-time,
+.c2-rca-metric,
+.c2-rca-history-chart {
+  border: 1px solid #dce4de;
+  border-radius: 7px;
+  background: #fff;
+  padding: 18px;
+  min-width: 0;
+}
+.c2-rca-time > header,
+.c2-rca-metrics-heading,
+.c2-rca-history-chart > header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+}
+.c2-rca-time > header a,
+.c2-rca-metrics-heading > span,
+.c2-rca-history-chart > header > span {
+  font-size: 12px;
+}
+.c2-rca-visual .c2-rca-note,
+.c2-rca-history-chart .c2-rca-note {
+  color: #5c6b62;
+  font-size: 12px;
+  line-height: 1.75;
+  margin: 8px 0 12px;
+  overflow-wrap: anywhere;
+}
+.c2-rca-chart-scroll {
+  overflow-x: auto;
+}
+.c2-rca-chart-scroll > svg {
+  width: 100%;
+  display: block;
+  min-width: 740px;
+}
+.c2-rca-metrics-heading {
+  margin-top: 24px;
+}
+.c2-rca-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.c2-rca-metric h5 {
+  overflow-wrap: anywhere;
+}
+.c2-rca-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 8px;
+}
+.c2-rca-values > div {
+  min-width: 0;
+}
+.c2-rca-values span,
+.c2-rca-values strong,
+.c2-rca-values small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.c2-rca-values span {
+  font-size: 12px;
+  color: #5c6b62;
+}
+.c2-rca-values strong {
+  font-size: 18px;
+  font-weight: 650;
+  margin: 5px 0;
+  font-variant-numeric: tabular-nums;
+}
+.c2-rca-values small {
+  font-size: 11px;
+  color: #5c6b62;
+  line-height: 1.6;
+}
+.c2-rca-range {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+}
+.c2-rca-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.c2-rca-evidence button {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: #416d00;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.c2-rca-time-list > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 2fr;
+  gap: 10px;
+  font-size: 13px;
+  margin: 10px 0;
+}
+.c2-rca-time-list dd {
+  margin: 0;
+}
+.c2-rca-empty {
+  padding: 20px;
+  background: #f3f6f3;
+}
+.c2-rca-history-chart {
+  margin: 18px 0;
+}
+@media print {
+  .c2-rca-chart-scroll > svg {
+    min-width: 0;
+  }
+  .c2-rca-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

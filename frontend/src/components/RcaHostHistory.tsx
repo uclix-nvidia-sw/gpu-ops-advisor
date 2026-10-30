@@ -3,8 +3,17 @@ import { obj, rows, str, strings, num, type Row } from '../lib/live';
 import { formatRcaTime as formatDate } from '../lib/rcaTime';
 import { intervalLabel, plainReason } from '../lib/rcaOperatorView';
 import { Ids, ToneBadge } from './RcaReportParts';
+import { RcaHistoryChart } from './RcaVisualEvidence';
 
-export function RcaHostHistory({ result, embedded = false }: { result: Row; embedded?: boolean }) {
+export function RcaHostHistory({
+  result,
+  embedded = false,
+  visual = false,
+}: {
+  result: Row;
+  embedded?: boolean;
+  visual?: boolean;
+}) {
   const history = obj(obj(result.quality).host_incident_history);
   const [days, setDays] = useState(14);
   const [code, setCode] = useState('');
@@ -98,6 +107,14 @@ export function RcaHostHistory({ result, embedded = false }: { result: Row; embe
           </select>
         </label>
       </div>
+      {visual && (
+        <RcaHistoryChart
+          incidents={visible}
+          start={cutoff}
+          end={end}
+          complete={history.complete === true}
+        />
+      )}
       {groups.length > 0 && (
         <div className="rca-history-table">
           <table>
