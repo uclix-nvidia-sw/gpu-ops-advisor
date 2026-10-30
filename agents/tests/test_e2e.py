@@ -3208,9 +3208,7 @@ def test_aggregate_report_transition_verification_is_published(
     assert row["activity_percent"] == 60
     assert row["change_percentage_points"] == (None if overlap else 0)
     assert ("gpu_identity_transitions", "ok") in evidence
-    assert (
-        any("연결 변경이 확인된" in f["text"] for f in usage["findings"]) is not overlap
-    )
+    assert all("연결 변경이 확인된" not in f["text"] for f in usage["findings"])
     raw = [
         args
         for path, args in Upstream.requests[before:]
@@ -3393,8 +3391,7 @@ def test_scheduled_and_manual_reports_repair_same_data(
                             if failure == "repeated_trial"
                             else "작업 일부의 시범 실행을 검토 대상으로 삼습니다. 마감·예약·대기·가용 GPU를 확인한 뒤 시작 시각을 조정할 수 있는 작업 일부의 시범 실행을 검토하세요."
                             if failure == "renamed_trial"
-                            else "미배정 Pod가 없어도 전체 배정 완료를 뜻하지 않습니다. "
-                            + summary
+                            else "미배정 Pod가 없어도 전체 배정 완료를 뜻하지 않습니다."
                             if failure == "conditional_absence_valid"
                             else "자원 부족은 확인되지 않았으므로, "
                             + summary.replace("자원 부족 여부", "부족 여부")
