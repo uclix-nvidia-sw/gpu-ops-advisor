@@ -2,6 +2,10 @@
 
 현행 설계의 데이터 가용성 판단에 필요한 기록과 DCGM Field catalog를 보존한다. 과거 명세·화면 시안·중복 ZIP은 Git 이력으로 확인한다.
 
+- [RCA 전용 수집 원천 계약](rca-source-contracts.md): Fleet GPU 사용률의 단위·대상·표본 경계, 별도 RCA 설정 준비 및 FM 로그·포트 토폴로지의 실제 조회 범위.
+
+- [Fleet Runbook coverage 웹 보기](fleet-runbook-coverage.html): Fleet 로그 타입과 Grafana 주 알림 경로별 284개 Runbook 전체 표, XID Unused/legacy 대조 및 수집 누락 보강 제안. 생성기는 [build_fleet_runbook_coverage.py](build_fleet_runbook_coverage.py)다.
+
 - [2026-10-06 CPC-1/CPC-2 binding 조사](d-binding-cpc-20261006.md): 45개 D × 두 환경의 원본 표본 대조와 활성화 보류 사유. [기계 판독 원장](d-binding-cpc-20261006.json). 실행 가능한 환경 설정이 아니다.
 
 - [Fleet/DCGM 비교 PDF 재검증](fleet-dcgm-pdf-audit-20261006.md): 제공 PDF의 내부 일관성·버전별 생산 정의·현재 런북 대조와 원본 재현 한계.

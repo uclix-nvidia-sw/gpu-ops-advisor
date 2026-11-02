@@ -704,7 +704,17 @@ async def run(tools):
         failed = {
             q
             for q, es in collected.items()
-            if any(e["tool_status"] in ("unavailable", "partial") for e in es)
+            if any(
+                e["tool_status"] in ("unavailable", "partial")
+                or (
+                    e["tool_status"] == "empty"
+                    and (
+                        profile["queries"].get(q, {}).get("kind") == "metric"
+                        or profile["queries"].get(q, {}).get("source") == "mimir"
+                    )
+                )
+                for e in es
+            )
         }
         required = {
             s["query_id"] for b in selected for s in steps(b) if s.get("required")

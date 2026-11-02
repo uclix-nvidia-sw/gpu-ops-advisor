@@ -181,7 +181,7 @@
       "next_checks": [
         {
           "title": "즉시 확인",
-          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d TEMPERATURE,PERFORMANCE로 GPU·메모리 현재 온도, Slowdown·Shutdown 온도, Clocks Event Reasons의 HW Thermal Slowdown·SW Thermal Slowdown 활성 여부를 확인합니다. 같은 노드의 여러 GPU가 함께 뜨거우면 노드·랙 냉각 문제로 보고 시설 담당자에게 흡기 온도와 공기 흐름 확인을 요청합니다."
+          "text": "오류 로그 원문의 extra_info.dcgm_incidents에서 장치(UUID)와 DCGM_FR 코드를 확인합니다. nvidia-smi -q -d TEMPERATURE,PERFORMANCE로 GPU·메모리 현재 온도, Slowdown·Shutdown 온도, Clocks Event Reasons의 HW Thermal Slowdown·SW Thermal Slowdown 활성 여부를 확인합니다. 같은 노드의 여러 GPU가 함께 뜨거우면 공통 부하와 노드·랙 냉각 상태를 대조하고 시설 담당자에게 흡기 온도와 공기 흐름 확인을 요청합니다."
         },
         {
           "title": "진단 자료 보존 (리셋·재부팅 전)",

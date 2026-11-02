@@ -117,12 +117,25 @@ def bounded_context(payload, max_bytes):
         for item in batch
         if item is not None
     ]
+    # Repeated matching events must not consume the view before metric comparisons.
+    # Reserve the first comparison from each query before sibling-device rows;
+    # all originals and explicit omission counters remain in stored evidence.
+    metric_representatives = set()
+    seen_queries = set()
+    for section, row in scheduled:
+        if section == "incident_brief" and row.get("type") == "metric_comparison":
+            query = row.get("query_id")
+            if query and query not in seen_queries:
+                seen_queries.add(query)
+                metric_representatives.add(id(row))
     # Passed format checks carry no incident meaning; admit them only after observations.
     scheduled.sort(
         key=lambda item: (
             item[1] is not primary,
-            not matches_target(item[1], selector, same_code=False),
+            id(item[1]) not in metric_representatives,
+            item[0] != "runbook_plans",
             item[0] != "incident_brief",
+            not matches_target(item[1], selector, same_code=False),
             item[0] == "evidence_checks" and item[1].get("outcome") == "pass",
         )
     )

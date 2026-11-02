@@ -10,9 +10,10 @@ import math
 import re
 from collections import Counter
 from agent_common.parsers import ERROR_CODE as XID
+from .error_text import event_code_text
 
 TOKEN = re.compile(r"[a-z0-9가-힣]+")
-TOKENIZER_REVISION = "gpu-lexical-v3"
+TOKENIZER_REVISION = "gpu-lexical-v4"
 TEXT_FIELDS = (
     "alertname",
     "summary",
@@ -38,7 +39,7 @@ SEARCH_WEIGHTS = {
 
 
 def normalize_text(value):
-    text = str(value or "").lower().replace("_", " ").replace("-", " ")
+    text = event_code_text(str(value or "")).lower().replace("_", " ").replace("-", " ")
     codes = [f"{kind.lower()}:{int(number)}" for kind, number in XID.findall(text)]
     # Keep Xid/SXid namespaces intact; do not match the bare number across them.
     return TOKEN.findall(XID.sub(" ", text)) + codes
@@ -68,9 +69,11 @@ def incident_terms(source):
         for field in TEXT_FIELDS:
             value = obj.get(field)
             if isinstance(value, str):
-                yield value
+                yield event_code_text(value)
             elif isinstance(value, list):
-                yield from (item for item in value if isinstance(item, str))
+                yield from (
+                    event_code_text(item) for item in value if isinstance(item, str)
+                )
         for field in (
             "alert",
             "evidence",
