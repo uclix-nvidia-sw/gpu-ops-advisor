@@ -2,15 +2,23 @@
 
 기준일: 2026-09-28. 이전 PR #15의 대표 오류 3건을 전체 코드 자료 범위로 확장했다. **XID 173건 + SXID 93건 = 오류별 266건**, 일반 GPU 노드 조사까지 **267건**이다. 기존 3건을 유지·보강하고 263건을 추가했다. 2026-10-22에 코드 없는 Fleet 컴포넌트 알림용 **17건**을 더해 전체 **284건**이다. 모든 파일은 기존 Knowledge API의 v1 JSON 봉투이며 새 DB 테이블이나 migration은 없다.
 
+**Fleet → Loki → Grafana → RCA 로그 경로와 284개 Runbook 전체 분류는 [coverage 웹 보기](../../docs/evidence/fleet-runbook-coverage.html)를 참고한다.** 이 페이지는 저장소 규칙 기준 설계 분류이며 운영 배포·발행 상태를 대신 검증하지 않는다.
+
 ## 전체 검수 기준과 수집 경계
 
 작성 원칙은 **확인한 사실 → 의미 → 필요한 대응**이다. 기존 대응 단계·명령·출처를 보존하고, 내용 축소·삭제는 사용자 사전 확인을 받는다. 현재 원본 검수는 `catalog-manifest.json`의 `content_review`(변경 전후 해시와 되돌릴 값) 및 `catalog_audit`(284개 파일별 근거·지표·운영 검증 범위)에 기록한다. 새 발행 revision이나 운영 수집 성공을 뜻하지 않는다.
 
-- XID 172개는 NVIDIA 현행 코드표의 적용 제품·즉시/조사 조치와 대조하며, SXID 92개는 Fabric Manager 표 22~25와 대조한다. XID 173·SXID 20009는 Fleet·GPUd 고정 소스 정의로 구분한다. Fleet·GPUd는 알림 정의의 근거이며 NVIDIA 조치 근거를 대신하지 않는다.
+- XID 172개는 NVIDIA 현행 코드표의 적용 제품·즉시/조사 조치와 대조하며, SXID 92개는 Fabric Manager 표 22~25와 대조한다. XID 173은 NVIDIA 드라이버 nverror.h의 C2C_FATAL_LINK_FAILURE 정의와 대조하며, SXID 20009는 현행 FM 표의 코드별 정의가 없어 Fleet·GPUd 고정 소스 정의와 일반 NVIDIA 조사 지침을 구분한다. Fleet·GPUd는 알림 정의의 근거이며 NVIDIA 조치 근거를 대신하지 않는다.
 - 전체 런북의 참고 자료에 실제 수집 계획의 지표 이름·대상·비교 방법을 표시한다. 운영자 설명에는 내부 조회 식별자를 노출하지 않는다. 행 재매핑·NVLink 오류·InfoROM 체크섬·파일 핸들에 관한 과거 미수집 설명은 현재 계획에 맞게 보강한다.
 - 모든 SXID에 대상 범위를 제한하는 Loki 보조 원문 조회를 계획한다. 직접 Fabric Manager 로그·포트 연결 관계·작업 피해 수집을 대신하지 않는다. DCGM NVLink·NVSwitch에는 GPU별 Fabric Manager 상태 코드를 추가하며, 코드 0은 해당 GPU가 그 상태 지표를 제공하지 않는 값으로 설명한다.
 - InfiniBand 포트별 상태·속도·오류, 파일시스템 읽기 전용 상태·SMART·RAID, BMC 냉각·전원, C2C 링크, 작업별 NCCL 로그·결과는 직접 연결할 수집 계약이 추가로 필요하다. 현장 확보 항목은 해당 런북의 대응 순서에 유지한다. Library·peermem은 일반 GPU 사용률을 붙이는 대신 라이브러리·모듈 조회 결과와 실제 작업 경로를 대조한다.
 - PCIe 복구는 동일 부하 조건과 장비 지원 사양으로 비교하고, NVLink는 토폴로지에서 사용하도록 구성한 포트로 비교한다. NCCL·peermem은 Fleet 점검 정상화와 실제 작업 완료를 별도로 확인한다.
+
+284종의 현재 공식 근거 대조는 `catalog-manifest.json` → `content_review.catalog_audit.current_verification`에서 파일별 내용 hash·대조 항목·근거의 적용 경계를 확인한다. CPU·메모리·디스크·Ethernet·OS 세부 절차는 Linux 공식 문서가 1차 근거이며 NVIDIA GPU Node Triage는 GPU·시스템 대응 맥락으로 사용한다. 공식 코드 정의가 없는 SXID 20009에 코드별 NVIDIA 복구 절차를 만들어 넣지 않는다.
+
+Fleet의 세 예외는 XID 133의 실행 매핑 부재, XID 63·64의 조건부 제외다. 고정 commit `84f99beef3e633071ad0998b10629b01fb294eaf`의 `Match`는 `GetDetail` 실패 시 사건을 만들지 않으며 133은 해당 `details`에 없다. 63·64는 `shouldDiscardRowRemappingXID`가 GPU를 식별하고 그 제품의 RowRemapping 지원을 확인한 경우에만 제외한다. GPU 신원이 없으면 보존한다. 별도 memory 상태가 같은 XID 이벤트를 대체한다고 간주하지 않으며, 이 정적 소스 확인이 배포 이미지 확인을 대신하지 않는다.
+
+운영 검증: 2026-11-02 전수 대조 후 수정 262종의 새 revision을 발행하고, 교체 본문 hash 확인 후 이전 revision 262건을 retired 처리했다. 최종 API의 published 284종은 각각 검수 본문·승인 hash와 일치했다. 과거 사건 보고서는 재생성하지 않았으며 Worker 코드·수집 profile 배포와는 별개다. 자세한 검증 경계는 [Agent QA](../../agents/QA.md)를 따른다.
 
 ## 파일 구성
 

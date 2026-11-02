@@ -7,26 +7,7 @@ from agent_common.observation import series, usable_observation
 
 from .fleet_events import pci
 from .requirement_diagnostics import _scoped_reports
-
-QUERY_NAMES = {
-    "D09": "오류·상태 로그",
-    "D02": "GPU 목록과 사용률",
-    "D03": "GPU 메모리 사용량",
-    "D04": "GPU 온도",
-    "D11": "GPU 전력",
-    "D23": "GPU 메모리 온도",
-    "D36": "정정 가능 ECC(SBE) 휘발성 누적값",
-    "D38": "정정 가능 ECC(SBE) 영구 누적값",
-    "D40": "정정 불가 ECC(DBE) 휘발성 누적값",
-    "D42": "정정 불가 ECC(DBE) 영구 누적값",
-    "D44": "PCIe 재전송 횟수",
-    "D45": "클록 제한 사유 비트마스크",
-    "D48": "적용 전력 한도",
-    "D47": "GPU별 Fabric Manager 상태 코드",
-    "D33": "NVLink 수신량",
-    "D34": "NVLink 송신량",
-    "D13": "보조 원본 로그",
-}
+from .report_labels import query_name
 
 
 def at(value):
@@ -58,7 +39,7 @@ def investigation_summary(data, evidence, health, events):
         "Fleet이 보고한 노드 장애의 경과와 대응 정보를 정리하기 위해, "
         "알림 내용과 같은 서버·조사 시간대에 수집된 기록을 비교했습니다. "
         "이번에 조회한 자료는 "
-        + ", ".join(QUERY_NAMES.get(q, "추가 관측 자료") for q in query_ids)
+        + ", ".join(query_name(q) for q in query_ids)
         + "입니다.",
         [e["id"] for e in collected],
     )

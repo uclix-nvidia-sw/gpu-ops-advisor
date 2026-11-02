@@ -531,7 +531,7 @@ async def test_transient_gateway_error_is_retried_once_and_recorded():
             self.last_failure = "llm_http_error" if status else None
             return None if status else {"ok": True}
 
-    for status in (500, 503):
+    for status in (500, 503, 504):
         diagnostics = {}
         assert await complete_once(
             Model([status, None]), "p", {}, "s", diagnostics
@@ -541,6 +541,12 @@ async def test_transient_gateway_error_is_retried_once_and_recorded():
     model = Model([400])
     assert await complete_once(model, "p", {}, "s", diagnostics) is None
     assert diagnostics == {"http_status": 400} and model.statuses == []
+    # The stored gateway failure persisted after retry; never count it as recovery.
+    diagnostics = {}
+    model = Model([504, 504])
+    assert await complete_once(model, "p", {}, "s", diagnostics) is None
+    assert model.statuses == []
+    assert diagnostics == {"transient_retry_status": 504, "http_status": 504}
 
 
 async def test_gateway_rejection_is_retried_once_with_a_lower_output_cap():
@@ -611,18 +617,20 @@ def test_error_type_keeps_class_and_limit_hint_only():
 
 
 @pytest.mark.parametrize(
-    "statement,repair_key",
+    "statement,repair_key,invalid_ref",
     [
-        ("같은 GPU에서 사건이 34건 반복됐습니다.", "numeric_repair"),
-        ("장치에서 unexpectedfailure가 보고됐습니다.", "validation_repair"),
+        ("같은 GPU에서 사건이 34건 반복됐습니다.", "numeric_repair", False),
+        ("장치에서 unexpectedfailure가 보고됐습니다.", "validation_repair", False),
+        ("노드에서 오류가 보고되었습니다.", "validation_repair", True),
     ],
 )
+@pytest.mark.parametrize("repair_succeeds", [True, False])
 async def test_invalid_findings_get_one_repair_request_in_combined_author(
-    statement, repair_key
+    statement, repair_key, invalid_ref, repair_succeeds
 ):
     from rca_replay_cases import reply
 
-    def author(statement):
+    def author(statement, invalid_ref=False):
         return reply(
             {
                 "interpretation": {
@@ -631,7 +639,9 @@ async def test_invalid_findings_get_one_repair_request_in_combined_author(
                             "id": "observed-report",
                             "statement": statement,
                             "kind": "observed",
-                            "evidence_refs": {"$input": "/observation_refs"},
+                            "evidence_refs": ["not-in-the-input"]
+                            if invalid_ref
+                            else {"$input": "/observation_refs"},
                         }
                     ],
                     "unknowns": [],
@@ -648,8 +658,10 @@ async def test_invalid_findings_get_one_repair_request_in_combined_author(
     case["empty_unscripted_queries"] = True
     case["attempt"]["profile"].setdefault("rca", {})["generation_mode"] = "combined"
     case["responses"]["synthesis"] = [
-        author(statement),
-        author("노드에서 오류가 보고되었습니다."),
+        author(statement, invalid_ref),
+        author("노드에서 오류가 보고되었습니다.")
+        if repair_succeeds
+        else author(statement, invalid_ref),
     ]
     case["responses"].pop("analysis_review", None)
     result = await replay(case)
@@ -658,8 +670,12 @@ async def test_invalid_findings_get_one_repair_request_in_combined_author(
         for e in result["output"]["evidence"]
         if e["query_id"] == "rca_synthesis"
     )
-    assert record["diagnostics"][repair_key] == "applied"
-    assert record["diagnostics"]["adoption"] == "validated_response"
+    assert record["diagnostics"][repair_key] == (
+        "applied" if repair_succeeds else "failed"
+    )
+    assert (
+        record["diagnostics"]["adoption"] == "validated_response"
+    ) is repair_succeeds
     assert [c["stage"] for c in result["model_calls"]][:2] == ["synthesis"] * 2
 
 

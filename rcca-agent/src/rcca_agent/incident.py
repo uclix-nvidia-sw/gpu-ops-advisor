@@ -3,6 +3,7 @@
 import json
 
 from .retrieval import XID
+from .error_text import event_code_text
 
 
 def alert_clues(source):
@@ -33,7 +34,7 @@ def alert_clues(source):
     result["error_codes"] = sorted(
         {
             f"{kind.lower()}:{int(code)}"
-            for kind, code in XID.findall(result.get("reason", ""))
+            for kind, code in XID.findall(event_code_text(result.get("reason", "")))
         }
     )
     raw = result.get("suggested_actions")

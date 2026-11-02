@@ -279,7 +279,7 @@
         },
         {
           "title": "복구 확인",
-          "text": "Fabric Manager가 실행 중(sudo systemctl status nvidia-fabricmanager)이고 nvidia-smi nvlink -s의 링크가 정상인지, 같은 SXID가 다시 나지 않는지 4장 이전 사건 이력으로 확인합니다. 링크 정상 여부는 장비 토폴로지에서 실제 연결·활성화하도록 구성한 포트를 기준으로 대조하며, 미사용 포트까지 활성 상태를 요구하지 않습니다."
+          "text": "Fabric Manager가 실행 중(sudo systemctl status nvidia-fabricmanager)이고 nvidia-smi nvlink -s의 링크가 정상인지, 같은 SXID가 다시 나지 않는지 이전 사건 이력으로 확인합니다. 링크 정상 여부는 장비 토폴로지에서 실제 연결·활성화하도록 구성한 포트를 기준으로 대조하며, 미사용 포트까지 활성 상태를 요구하지 않습니다."
         },
         {
           "title": "추이 관찰",

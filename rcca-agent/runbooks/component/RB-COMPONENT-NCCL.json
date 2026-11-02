@@ -110,7 +110,7 @@
         },
         {
           "title": "판단",
-          "text": "커널 로그가 노드에서 정상으로 읽히고 segfault 줄도 없으면 모니터링 에이전트의 수집 문제이며, 작업·하드웨어 조치는 필요 없습니다. segfault 줄이 있으면: 같은 작업이 여러 노드에서 함께 실패하면 애플리케이션·NCCL 쪽, 이 노드에서만 반복되면 노드(네트워크·GPU) 쪽으로 점검 방향을 잡습니다. 작업 소유자에게 NCCL_DEBUG=INFO와 NCCL_DEBUG_FILE=/tmp/nccl_%h_%p.log로 다시 실행해 프로세스별 로그를 받도록 요청합니다. 초기화 단계에서 멈추면 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET으로 범위를 좁힙니다."
+          "text": "현재 커널 로그가 읽히는지만으로 사건 시각의 원인을 확정하지 않습니다. Fleet의 kmsg 접근 오류와 로그 보존 범위, 작업 실패 기록을 대조합니다. segfault·작업 영향이 확인되지 않으면 작업이나 하드웨어 복구를 먼저 지시하지 않습니다. segfault 줄이 있으면: 같은 작업이 여러 노드에서 함께 실패하면 애플리케이션·NCCL 쪽, 이 노드에서만 반복되면 노드(네트워크·GPU) 쪽으로 점검 방향을 잡습니다. 작업 소유자에게 NCCL_DEBUG=INFO와 NCCL_DEBUG_FILE=/tmp/nccl_%h_%p.log로 다시 실행해 프로세스별 로그를 받도록 요청합니다. 초기화 단계에서 멈추면 NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET으로 범위를 좁힙니다."
         },
         {
           "title": "노드 점검",

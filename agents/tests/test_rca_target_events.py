@@ -11,6 +11,44 @@ from rcca_agent.synthesis_context import bounded_context, encoded_size
 from test_fleet_rca import CODES, DEVICES, alert, kmsg_event, state_report, match_case
 
 
+def test_repeated_target_logs_cannot_starve_metric_families():
+    event = kmsg_event(evidence_refs=["target"], event_time="2026-10-30T06:00:00Z")
+    payload = {
+        "incident_time": event["event_time"],
+        "event_target": event_selector(alert()),
+        "error_events": [
+            dict(event, event_id=str(i), raw="log " * 200) for i in range(40)
+        ],
+        "incident_brief": [
+            {
+                "type": "metric_comparison",
+                "query_id": query,
+                "gpu_uuid": f"GPU-{gpu}",
+                "min": 0,
+                "max": 20,
+                "unit": "percent",
+                "evidence_refs": [query],
+            }
+            for query in ("D02", "D11", "D44", "D55")
+            for gpu in range(8)
+        ],
+        "runbook_plans": [{"knowledge_key": "fixture", "evidence_refs": ["book"]}],
+    }
+    before = deepcopy(payload)
+    view = bounded_context(payload, 8000)
+    assert encoded_size(view) <= 8000
+    assert view["context_selection"]["target_event"] == "retained"
+    assert {r["query_id"] for r in view["incident_brief"]} == {
+        "D02",
+        "D11",
+        "D44",
+        "D55",
+    }
+    assert view["runbook_plans"] == payload["runbook_plans"]
+    assert view["context_selection"]["omitted_observations"]["error_events"] > 0
+    assert payload == before
+
+
 @pytest.mark.parametrize("kind", ["xid", "sxid"])
 def test_target_events_survive_other_devices_codes_and_repeated_occurrences(kind):
     target = kmsg_event(kind, evidence_refs=["target"])

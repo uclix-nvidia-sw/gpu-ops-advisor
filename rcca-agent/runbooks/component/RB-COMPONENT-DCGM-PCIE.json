@@ -167,7 +167,7 @@
         },
         {
           "title": "복구 확인",
-          "text": "nvidia-smi -q의 Link Gen·Width가 Max와 같은지, Replays Since Reset이 더 늘지 않는지 확인합니다. dcgmi diag -r 2로 점검하고 PCIe 문제가 계속 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다. 링크 세대·폭은 GPU와 호스트 슬롯의 지원 사양 및 같은 부하 조건에서 비교합니다. 유휴 상태의 절전으로 낮아진 링크 속도와 오류로 인한 성능 저하를 구분합니다."
+          "text": "nvidia-smi -q의 Link Gen·Width를 GPU와 슬롯의 지원 사양·동일 부하 조건과 비교하고, Replays Since Reset이 더 늘지 않는지 확인합니다. dcgmi diag -r 2로 점검하고 PCIe 문제가 계속 의심되면 dcgmi diag -r 3(약 30분)을 실행합니다. 이상이 없으면 kubectl uncordon <노드>로 작업 배치를 다시 엽니다. 링크 세대·폭은 GPU와 호스트 슬롯의 지원 사양 및 같은 부하 조건에서 비교합니다. 유휴 상태의 절전으로 낮아진 링크 속도와 오류로 인한 성능 저하를 구분합니다."
         },
         {
           "title": "공급사 전달",

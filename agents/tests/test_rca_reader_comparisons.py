@@ -91,7 +91,29 @@ def test_other_node_and_failed_metrics_do_not_support_comparison():
     text = str(investigation_summary(*args))
     assert "추가로 조회한 GPU 지표의 장치 주소" not in text
     args[1][1]["tool_status"] = "unavailable"
-    assert "GPU 목록과 사용률" not in str(investigation_summary(*args))
+    assert "GPU 사용률" not in str(investigation_summary(*args))
+
+
+def test_expanded_metrics_keep_operator_names_and_exclude_unavailable_sources():
+    args = comparison_case()
+    args[1].extend(
+        {**args[1][1], "id": query, "query_id": query}
+        for query in ("D50", "D55", "D56", "D57", "D61")
+    )
+    args[1].append(
+        {**args[1][1], "id": "empty", "query_id": "D62", "tool_status": "empty"}
+    )
+    row = investigation_summary(*args)[0]
+    for name in (
+        "행 재매핑 대기",
+        "NVLink CRC 오류 누적값",
+        "NVLink 복구 오류 누적값",
+        "NVLink 재전송 오류 누적값",
+        "열 제한 누적 시간",
+    ):
+        assert name in row["text"]
+    assert "추가 관측 자료" not in row["text"]
+    assert "empty" not in row["evidence_refs"]
 
 
 def test_later_healthy_report_is_not_recovery_proof():

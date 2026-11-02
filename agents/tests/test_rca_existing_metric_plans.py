@@ -15,6 +15,26 @@ from test_rca_incident_dossier import dossier_case
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.parametrize("required", [False, True])
+async def test_empty_metric_is_named_and_only_required_metric_degrades(required):
+    case = dossier_case("xid")
+    case["token_budget"] = 0
+    book = case["attempt"]["context"]["runbooks"][0]
+    for step in book["content"]["observation_plan"]:
+        if step["query_id"] == "D02":
+            step["required"] = required
+    book["content_hash"] = book["reviewed_content_hash"] = content_hash(book["content"])
+    result = await replay(case)
+    evidence = result["output"]["evidence"]
+    assert any(e["query_id"] == "D02" and e["tool_status"] == "empty" for e in evidence)
+    report = result["output"]["result"]
+    assert ("observation_degraded" in report["missing_inputs"]) is required
+    optional = {
+        r["query_id"] for r in report["quality"].get("optional_unavailable", [])
+    }
+    assert ("D02" in optional) is not required
+
+
 @pytest.mark.parametrize("code", ["10004", "10005"])
 async def test_thermal_sxid_collects_existing_optional_metrics_in_one_round(code):
     case = json.loads(json.dumps(dossier_case("sxid")).replace("11001", code))
