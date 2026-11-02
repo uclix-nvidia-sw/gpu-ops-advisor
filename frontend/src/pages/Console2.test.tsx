@@ -236,7 +236,7 @@ it('preserves all execution states alongside a previous published partial report
 
 it('separates received identity from guidance and escapes untrusted alert text', () => {
   const html = renderToStaticMarkup(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/cases']}>
       <IncidentTable
         views={incidentViews([
           {
@@ -257,5 +257,45 @@ it('separates received identity from guidance and escapes untrusted alert text',
   expect(html).toContain('클러스터 미확인');
   expect(html).toContain('실행 기록 없음');
   expect(html).toContain('aria-expanded="false"');
-  expect(html).toContain('<th>런북 참고</th>');
+  expect(html).toContain('>런북 참고</th>');
+});
+
+it('puts KST time first and highlights received error codes only in the RCA list', () => {
+  const views = incidentViews(
+    [
+      'SXID 24007 (sourcetrack timeout error)',
+      'XID 48 Double Bit ECC',
+      'XID 999',
+      'Node unavailable',
+      '',
+    ].map((title, i) => ({
+      id: String(i),
+      occurred_at: '2026-10-30T15:05:00Z',
+      target: { title },
+    })),
+  );
+  const render = (path: string) =>
+    renderToStaticMarkup(
+      <MemoryRouter initialEntries={[path]}>
+        <IncidentTable views={views} />
+      </MemoryRouter>,
+    );
+  const html = render('/cases?q=error');
+  expect([...html.matchAll(/<th(?:\s[^>]*)?>(.*?)<\/th>/g)].map((match) => match[1])).toEqual([
+    '발생 시각 · KST',
+    '사건',
+    '대상 장비',
+    '런북 참고',
+    '보고서',
+  ]);
+  expect(html).toContain('<b>00:05</b><small>2026.10.31. (토)</small>');
+  expect(html).toContain('class="oh-badge sx">SXID 24007</span> sourcetrack timeout error');
+  expect(html).toContain('>XID 48</span> Double Bit ECC');
+  expect(html).toContain('>XID 999</span> </span>');
+  expect(html).toContain('Node unavailable');
+  expect(html).toContain('알림 내용 미확인');
+  const dashboard = render('/dashboard');
+  expect(dashboard).not.toContain('class="oh-badge');
+  expect(dashboard).toContain('SXID 24007 · sourcetrack timeout error');
+  expect(dashboard.indexOf('>사건</th>')).toBeLessThan(dashboard.indexOf('>발생 시각 · KST</th>'));
 });
