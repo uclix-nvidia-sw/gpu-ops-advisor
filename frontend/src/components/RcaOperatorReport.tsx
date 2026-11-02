@@ -94,14 +94,6 @@ export function RcaOperatorReport({
       : v
         ? [identity.verdict, timing.verdict, telemetry.verdict, repeat.verdict]
         : [];
-  // Stored prose can start with another device's logs; lead with the alert-scoped view.
-  const facts = v
-    ? [
-        `${v.codes.join(', ')} · ${v.node}${v.alertPci ? ` · PCI ${v.alertPci}` : ''}${v.currentReasons.length ? ` · ${v.currentReasons.map((r) => r.label).join(' · ')}` : ''}`,
-        `${v.eventTime ? `${formatRcaTime(v.eventTime)} ${v.eventLabel} — ` : ''}${timing.verdict}`,
-        ...savedFacts,
-      ]
-    : savedFacts;
   const gaps = [
     ...new Set([
       ...missing.map(
@@ -112,9 +104,6 @@ export function RcaOperatorReport({
     ]),
   ];
   const savedChecks = [...paragraphs('action'), ...paragraphs('next')];
-  const nextChecks = savedChecks.length
-    ? savedChecks
-    : (v?.actionChecks || []).map((c) => `${str(c.title)} — ${str(c.text)}`);
   const first = v?.actionChecks[0];
   // Inspection-area figures keyed by the alert code (or component) and step title.
   const figures = inspectionFigures(
@@ -135,6 +124,20 @@ export function RcaOperatorReport({
     : `1·3장의 요약과 30분 로그·지표 비교는 XID/SXID 오류에만 만듭니다${used}. 2·4·5·6장을 확인하세요.`;
   const podText = (w: { name: string; gpus: string; gpuCount: number }) =>
     `${w.name} (${w.gpus}${w.gpuCount > 1 ? ` · ${w.gpuCount}개 함께 사용` : ''})`;
+  const hardware =
+    v && v.family !== 'component' ? (
+      <p>
+        {v.family === 'nvswitch' ? 'NVSwitch' : `GPU${v.gpuIndex ? ` ${v.gpuIndex}` : ''}`} PCI{' '}
+        <code className="rca-id">{v.alertPci || '—'}</code>
+        {v.alertUuid && (
+          <>
+            {' '}
+            · <code className="rca-id">{v.alertUuid}</code>
+          </>
+        )}
+        {[v.gpuModel, v.driver && `드라이버 ${v.driver}`].filter(Boolean).map((x) => ` · ${x}`)}
+      </p>
+    ) : null;
   const Glance = decisionSummary ? 'details' : 'section';
   return (
     <section
@@ -143,25 +146,23 @@ export function RcaOperatorReport({
       aria-label="RCA 최종 보고서"
     >
       <header className="rca-narrative-header">
-        <h3>RCA 장애 보고서{v ? ` · ${v.node} · ${v.codes.join(', ')}` : ''}</h3>
+        {!decisionSummary && (
+          <h3>RCA 장애 보고서{v ? ` · ${v.node} · ${v.codes.join(', ')}` : ''}</h3>
+        )}
         {v?.family === 'component' && (
           <p>
             {v.codes[0]} 컴포넌트 · 노드 {v.node} · {v.targetShort}
           </p>
         )}
-        {v && v.family !== 'component' && (
-          <p>
-            {v.family === 'nvswitch' ? 'NVSwitch' : `GPU${v.gpuIndex ? ` ${v.gpuIndex}` : ''}`} PCI{' '}
-            <code className="rca-id">{v.alertPci || '—'}</code>
-            {v.alertUuid && (
-              <>
-                {' '}
-                · <code className="rca-id">{v.alertUuid}</code>
-              </>
-            )}
-            {[v.gpuModel, v.driver && `드라이버 ${v.driver}`].filter(Boolean).map((x) => ` · ${x}`)}
-          </p>
+        {decisionSummary && hardware ? (
+          <details className="c2-rca-hardware">
+            <summary>장비 상세 · 모델·드라이버·UUID</summary>
+            {hardware}
+          </details>
+        ) : (
+          hardware
         )}
+
         <div className="rca-chips">
           {v && v.sameDeviceCount > 1 && (
             <ToneBadge
@@ -207,79 +208,6 @@ export function RcaOperatorReport({
       )}
 
       {decisionSummary && v && <RcaVisualEvidence view={v} onEvidence={onEvidence} />}
-      {decisionSummary && (
-        <section
-          id={decisionSummary ? 'c2-rca-decision' : undefined}
-          className="rca-decision-summary"
-          aria-label="사건 판단 요약"
-        >
-          <h4>사건 판단</h4>
-          <div className="rca-decision-grid">
-            <article>
-              <h5>확인한 사실</h5>
-              <RcaPoints
-                items={
-                  facts.length ? facts.slice(0, 2) : ['저장된 관측 사실을 확인할 수 없습니다.']
-                }
-              />
-              {facts.length > 2 && (
-                <details>
-                  <summary>나머지 관측 사실 {facts.length - 2}건</summary>
-                  <RcaPoints items={facts.slice(2)} />
-                </details>
-              )}
-              <a href="#rca-observation-detail">로그·지표 확인</a>
-            </article>
-            <article>
-              <h5>원인 후보</h5>
-              <p className="rca-muted">후보는 확정 원인이 아닙니다.</p>
-              <RcaPoints
-                items={
-                  noteTexts.length
-                    ? noteTexts.slice(0, 2)
-                    : ['저장된 원인 후보가 없습니다. 대응 순서에서 대상 Runbook 지침을 확인하세요.']
-                }
-              />
-              <a href="#rca-analysis-detail">분석과 근거 확인</a>
-            </article>
-            <article>
-              <h5>확인하지 못한 사항</h5>
-              <RcaPoints
-                items={
-                  gaps.length
-                    ? gaps.slice(0, 3)
-                    : [
-                        '저장된 제한 사항이 없습니다. 원인 확정이나 현재 정상 상태를 뜻하지 않습니다.',
-                      ]
-                }
-              />
-              {gaps.length > 3 && (
-                <details>
-                  <summary>나머지 제한 {gaps.length - 3}건</summary>
-                  <RcaPoints items={gaps.slice(3)} />
-                </details>
-              )}
-            </article>
-            <article>
-              <h5>다음 확인</h5>
-              <RcaPoints
-                items={
-                  nextChecks.length
-                    ? nextChecks.slice(0, 2)
-                    : ['저장된 확인 제안이 없습니다. 수집된 근거와 미확인 사항부터 검토하세요.']
-                }
-              />
-              {nextChecks.length > 2 && (
-                <details>
-                  <summary>나머지 확인 제안 {nextChecks.length - 2}건</summary>
-                  <RcaPoints items={nextChecks.slice(2)} />
-                </details>
-              )}
-              <a href="#rca-response-reference">전체 확인 순서·공통 절차</a>
-            </article>
-          </div>
-        </section>
-      )}
 
       {v && (
         <Glance id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
@@ -540,9 +468,21 @@ export function RcaOperatorReport({
         ) : (
           paragraphs('action').map((text, i) => <p key={i}>{text}</p>)
         )}
+        {decisionSummary && savedChecks.length > 0 && (
+          <details className="c2-saved-evidence">
+            <summary>저장된 추가 확인 제안</summary>
+            <RcaPoints items={savedChecks} />
+          </details>
+        )}
       </section>
 
       <section id="rca-observation-detail">
+        {decisionSummary && savedFacts.length > 0 && (
+          <details className="c2-saved-evidence">
+            <summary>저장된 관측 사실 {savedFacts.length}건</summary>
+            <RcaPoints items={savedFacts} />
+          </details>
+        )}
         {v ? (
           <RcaTriageObservations result={result} onEvidence={onEvidence} />
         ) : (
@@ -555,6 +495,12 @@ export function RcaOperatorReport({
 
       <section id="rca-analysis-detail" className="rca-narrative-section">
         <h4>4. 분석 및 해석</h4>
+        {decisionSummary && gaps.length > 0 && (
+          <details className="c2-saved-evidence">
+            <summary>자료 부족·해석 제한 {gaps.length}건</summary>
+            <RcaPoints items={gaps} />
+          </details>
+        )}
         {v ? (
           <>
             <p className="rca-muted">

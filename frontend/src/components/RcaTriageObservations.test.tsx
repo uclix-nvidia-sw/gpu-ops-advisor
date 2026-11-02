@@ -41,12 +41,12 @@ it('groups identical summaries without hiding different measurements or GPU iden
   expect(html).toContain('<td>GPU 2개<small>');
   for (const gpu of ['GPU-A', 'GPU-B', 'GPU-C']) expect(html).toContain(gpu);
 });
-it('adds the console decision summary while preserving the main report sections and evidence', () => {
+it('keeps report sections and evidence without the duplicate console decision summary', () => {
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaNarrative result={result} decisionSummary />);
-  expect(html.indexOf('사건 판단 요약')).toBeLessThan(html.indexOf('1. 한눈에 보기'));
-  expect(html.indexOf('원인 후보')).toBeLessThan(html.indexOf('다음 확인'));
-  expect(html.indexOf('기록에 근거한 결론')).toBeLessThan(html.indexOf('진단 자료 보존'));
+  expect(html).not.toContain('사건 판단 요약');
+  expect(html).toContain('기록에 근거한 결론');
+  expect(html).toContain('진단 자료 보존');
   expect(html.indexOf('2. 대응 순서')).toBeLessThan(html.indexOf('3. 관련 로그·메트릭'));
   expect(html).toContain('<section id="rca-response-reference"');
   expect(html.indexOf('4. 분석 및 해석')).toBeLessThan(html.indexOf('6. 참고 자료'));

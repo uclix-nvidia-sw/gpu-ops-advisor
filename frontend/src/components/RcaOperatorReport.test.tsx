@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RcaOperatorReport } from './RcaOperatorReport';
 
-it('leads with saved facts, candidate, limits and the next check without changing the result', () => {
+it('removes the duplicate decision card while preserving facts, limits and checks in their owning sections', () => {
   const result = {
     result_status: 'partial',
     missing_inputs: ['causal_confirmation_evidence'],
@@ -16,11 +16,17 @@ it('leads with saved facts, candidate, limits and the next check without changin
   };
   const before = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaOperatorReport result={result} decisionSummary />);
-  for (const heading of ['확인한 사실', '원인 후보', '확인하지 못한 사항', '다음 확인'])
-    expect(html.indexOf(heading)).toBeLessThan(html.indexOf('4. 분석 및 해석'));
-  for (const section of result.narrative)
-    expect(html.indexOf(section.text)).toBeLessThan(html.indexOf('4. 분석 및 해석'));
-  expect(html).toContain('후보는 확정 원인이 아닙니다.');
+  expect(html).not.toContain('aria-label="사건 판단 요약"');
+  for (const section of result.narrative) expect(html).toContain(section.text);
+  expect(html.indexOf('노드에서 오류가 보고되었습니다.')).toBeGreaterThan(
+    html.indexOf('id="rca-observation-detail"'),
+  );
+  expect(html.indexOf('작업 영향은 확인하지 못했습니다.')).toBeGreaterThan(
+    html.indexOf('id="rca-analysis-detail"'),
+  );
+  expect(html.indexOf('같은 시각의 작업 이력을 확인하세요.')).toBeGreaterThan(
+    html.indexOf('id="rca-response-reference"'),
+  );
   expect(html).toContain('보고된 증상만으로 실제 원인을 확정할 수 없습니다');
   expect(html).toContain('<section id="rca-response-reference"');
   expect(JSON.stringify(result)).toBe(before);
@@ -33,9 +39,8 @@ it('preserves additional limits and shows absent findings without a healthy asse
       decisionSummary
     />,
   );
-  expect(html).toContain('저장된 관측 사실을 확인할 수 없습니다');
-  expect(html).toContain('저장된 원인 후보가 없습니다');
-  expect(html).toContain('나머지 제한 1건');
+  expect(html).not.toContain('사건 판단 요약');
+  expect(html).toContain('자료 부족·해석 제한 4건');
   expect(html).toContain('제한 4');
   expect(html).not.toContain('정상 관측');
 });
@@ -67,10 +72,9 @@ it('leads with the alert device even when saved prose starts with another device
     narrative: [{ id: 'problem', text: '다른 GPU의 XID 2 관측 원문' }],
   };
   const html = renderToStaticMarkup(<RcaOperatorReport result={result} decisionSummary />);
-  const summary = html.slice(html.indexOf('id="c2-rca-decision"'));
-  expect(summary.indexOf('XID:52 · dgx01')).toBeLessThan(summary.indexOf('<details>'));
-  expect(summary.indexOf('다른 GPU의 XID 2 관측 원문')).toBeGreaterThan(
-    summary.indexOf('<details>'),
+  expect(html.indexOf('XID:52')).toBeLessThan(html.indexOf('다른 GPU의 XID 2 관측 원문'));
+  expect(html.indexOf('다른 GPU의 XID 2 관측 원문')).toBeGreaterThan(
+    html.indexOf('id="rca-observation-detail"'),
   );
   const glance = html.slice(
     html.indexOf('class="rca-glance"'),
@@ -82,7 +86,7 @@ it('leads with the alert device even when saved prose starts with another device
   expect(glance).not.toContain('같은 노드의 관련 오류');
 });
 
-it('keeps every saved fact and next-check paragraph accessible after the two-item preview', () => {
+it('keeps every saved fact and next-check paragraph accessible in the corresponding expandable evidence sections', () => {
   const facts = [
     '첫 번째 관측 원문',
     '두 번째 관측 원문',
@@ -99,10 +103,9 @@ it('keeps every saved fact and next-check paragraph accessible after the two-ite
   const original = JSON.stringify(result);
   const html = renderToStaticMarkup(<RcaOperatorReport result={result} decisionSummary />);
   const summary = html.slice(0, html.indexOf('id="rca-analysis-detail"'));
-  expect(summary).toContain('<details><summary>나머지 관측 사실 2건</summary>');
-  expect(summary).toContain('<details><summary>나머지 확인 제안 1건</summary>');
+  expect(summary).toContain('저장된 관측 사실 4건</summary>');
+  expect(summary).toContain('저장된 추가 확인 제안</summary>');
   for (const text of [...facts, ...checks]) expect(summary).toContain(text);
-  expect(summary).toContain('href="#rca-response-reference"');
   expect(html).toContain('<section id="rca-response-reference"');
   expect(JSON.stringify(result)).toBe(original);
 });

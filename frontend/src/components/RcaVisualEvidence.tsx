@@ -37,6 +37,8 @@ function MetricComparison({
       ];
   const valid = windows.map((w) => w.value).filter(validWindow);
   const changes = new Set(valid.flatMap((w) => [w.min, w.max, w.last])).size > 1;
+  const singleSample = valid.some((w) => w.samples === 1);
+  const drawRange = !discrete && changes && !singleSample;
   const minimum = Math.min(...valid.map((w) => w.min));
   const maximum = Math.max(...valid.map((w) => w.max));
   const zoom = metric.kind === 'gauge' && metric.unit !== '%' && maximum > minimum;
@@ -77,7 +79,7 @@ function MetricComparison({
           </div>
         ))}
       </div>
-      {!discrete && changes && (
+      {drawRange && (
         <svg
           className="c2-rca-range"
           viewBox={`0 0 300 ${windows.length * 30 + 24}`}
@@ -127,7 +129,14 @@ function MetricComparison({
           </text>
         </svg>
       )}
-      {zoom && <p className="c2-rca-note">작은 차이를 볼 수 있도록 관측 범위에 맞춘 축입니다.</p>}
+      {drawRange && zoom && (
+        <p className="c2-rca-note">작은 차이를 볼 수 있도록 관측 범위에 맞춘 축입니다.</p>
+      )}
+      {!discrete && singleSample && (
+        <p className="c2-rca-note">
+          표본 1개인 구간은 변화 추이를 판단할 수 없어 값과 표본 수로 비교합니다.
+        </p>
+      )}
       {metric.whole && <p className="c2-rca-note">사건 전후로 나뉘지 않은 저장값입니다.</p>}
       {metric.kind === 'counter' && (
         <p className="c2-rca-note">누적값의 크기는 이번 사건의 발생 건수가 아닙니다.</p>
@@ -167,16 +176,20 @@ export function RcaVisualEvidence({
   return (
     <section id="c2-rca-visual" className="c2-rca-visual" aria-label="RCA 관측 비교">
       <h4>관측 비교</h4>
-      <div className="c2-rca-time">
-        <header>
-          <h5>오류 기록과 지표의 시각 대조</h5>
-          <a href="#rca-observation-detail">로그·지표 상세 ↓</a>
-        </header>
-        <p className="c2-rca-note">
-          {v.codes.join(', ')} · {v.node}
-          {v.alertPci && ` · PCI ${v.alertPci}`} · 저장된 기록 시각입니다. 현재 장애 지속·복구를
-          나타내지 않습니다.
-        </p>
+      <div className={`c2-rca-time${sameTime ? ' c2-rca-time-compact' : ''}`}>
+        {!sameTime && (
+          <>
+            <header>
+              <h5>오류 기록과 지표의 시각 대조</h5>
+              <a href="#rca-observation-detail">로그·지표 상세 ↓</a>
+            </header>
+            <p className="c2-rca-note">
+              {v.codes.join(', ')} · {v.node}
+              {v.alertPci && ` · PCI ${v.alertPci}`} · 저장된 기록 시각입니다. 현재 장애 지속·복구를
+              나타내지 않습니다.
+            </p>
+          </>
+        )}
         {sameTime ? (
           <div className="c2-rca-common-time">
             <strong>공통 기준 시각 {formatRcaTime(events[0].at)}</strong>
@@ -192,6 +205,10 @@ export function RcaVisualEvidence({
                   </div>
                 ))}
               </dl>
+              <p className="c2-rca-note">
+                조회 구간: {formatRcaTime(v.periodStart)} ~ {formatRcaTime(v.periodEnd)}
+                {!hasPeriod && ' · 유효한 조회 구간이 없어 시간축을 표시하지 않습니다.'}
+              </p>
             </details>
           </div>
         ) : hasPeriod && new Set(times).size > 1 ? (
@@ -263,10 +280,12 @@ export function RcaVisualEvidence({
             ))}
           </dl>
         )}
-        <p className="c2-rca-note">
-          조회 구간: {formatRcaTime(v.periodStart)} ~ {formatRcaTime(v.periodEnd)}
-          {!hasPeriod && ' · 유효한 조회 구간이 없어 시간축을 표시하지 않습니다.'}
-        </p>
+        {!sameTime && (
+          <p className="c2-rca-note">
+            조회 구간: {formatRcaTime(v.periodStart)} ~ {formatRcaTime(v.periodEnd)}
+            {!hasPeriod && ' · 유효한 조회 구간이 없어 시간축을 표시하지 않습니다.'}
+          </p>
+        )}
       </div>
       <header className="c2-rca-metrics-heading">
         <h5>사건 전후 지표 비교</h5>

@@ -27,6 +27,7 @@ import {
 } from '../lib/live';
 import { formatDate, labels } from '../lib/domain';
 import { reportTitle } from '../lib/workflow';
+import { incidentView, kindText, titleText } from '../lib/incidentOverview';
 import { reportReceivedRange } from '../lib/reportPeriod';
 import { reportTabs } from '../lib/reportNavigation';
 import {
@@ -68,13 +69,20 @@ export function summaryState(incident: Row) {
   return labels[str(latest.status)] || '조사 상태 미확인';
 }
 function Status({ job }: { job: Row }) {
+  const modern = useApp().mode === 'operations';
   return (
     <div className="new-status">
       <span>
         진행 <Badge status={str(job.status) || null} />
       </span>
       <span>
-        결과 <Badge status={job.result_ref ? str(job.result_status) || null : null} />
+        결과{' '}
+        <Badge
+          status={job.result_ref ? str(job.result_status) || null : null}
+          label={
+            modern && job.result_ref && job.result_status === 'ready' ? '산출 완료' : undefined
+          }
+        />
       </span>
     </div>
   );
@@ -394,6 +402,34 @@ function Cases() {
     </>
   );
 }
+function RcaPageHead({ record }: { record: Row }) {
+  const v = incidentView({
+    ...record,
+    target: record.target || obj(obj(obj(record.result).quality).triage_observations).target,
+  });
+  return (
+    <>
+      <PageHead
+        eyebrow="RCA REPORT"
+        title={v.raw ? titleText(v) : 'RCA 보고서'}
+        description={[
+          kindText(v.kind),
+          v.node,
+          v.cluster,
+          v.device && `${v.device.startsWith('GPU-') ? 'UUID' : 'PCI'} ${v.device}`,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      />
+      {v.raw && (
+        <details className="c2-alert-source">
+          <summary>수신 알림 원문</summary>
+          <p>{v.raw}</p>
+        </details>
+      )}
+    </>
+  );
+}
 function Incident({ id }: { id: string }) {
   const location = useLocation();
   const q = useResource(`/incidents/${id}`, undefined, true),
@@ -420,11 +456,15 @@ function Incident({ id }: { id: string }) {
   return (
     <>
       <Back />
-      <PageHead
-        eyebrow="INCIDENT ANALYSIS"
-        title={incidentTitle(incident)}
-        description={targetLabel(incident)}
-      />
+      {app.mode === 'operations' ? (
+        <RcaPageHead record={incident} />
+      ) : (
+        <PageHead
+          eyebrow="INCIDENT ANALYSIS"
+          title={incidentTitle(incident)}
+          description={targetLabel(incident)}
+        />
+      )}
       <QueryState query={q}>
         <nav className="new-section-nav" aria-label="사건 상세 바로가기">
           <a href="#new-analysis-result">분석 결과 읽기 ↓</a>
@@ -604,10 +644,23 @@ function AnalysisContent({ id, incidentId }: { id: string; incidentId?: string }
       ) : (
         <>
           <div className="new-reader">
-            <p className="muted">선택한 조사 접수 {formatDate(str(job.created_at))} · 한국 시간</p>
-            <ReportScope job={job} compact={modern} />
-            {job.time_range != null && <ReportPeriod value={job.time_range} />}
-            <Status job={{ ...job, result_status: result.result_status }} />
+            {modern ? (
+              <div className="c2-analysis-meta">
+                <ReportScope job={job} compact />
+                <Status job={{ ...job, result_status: result.result_status }} />
+                {job.time_range != null && <ReportPeriod value={job.time_range} />}
+                <small>조사 접수 {formatDate(str(job.created_at))} · KST</small>
+              </div>
+            ) : (
+              <>
+                <p className="muted">
+                  선택한 조사 접수 {formatDate(str(job.created_at))} · 한국 시간
+                </p>
+                <ReportScope job={job} compact={modern} />
+                {job.time_range != null && <ReportPeriod value={job.time_range} />}
+                <Status job={{ ...job, result_status: result.result_status }} />
+              </>
+            )}
             {job.result_ref && Object.keys(result).length ? (
               <>
                 <RcaNarrative
@@ -753,25 +806,39 @@ function Analysis({ id }: { id: string }) {
   return (
     <>
       <Back />
-      <PageHead
-        eyebrow="RCA REPORT"
-        title="저장된 사건 분석"
-        description={
-          modern
-            ? '선택한 조사의 저장 결과입니다. 아래 분석 대상과 기간을 기준으로 읽으세요.'
-            : '선택한 조사의 저장 결과와 당시 범위입니다. 최신 조사 결과나 상단의 현재 선택 범위와 다를 수 있습니다.'
-        }
-      />
+      {modern ? (
+        <RcaPageHead record={job} />
+      ) : (
+        <PageHead
+          eyebrow="RCA REPORT"
+          title="저장된 사건 분석"
+          description="선택한 조사의 저장 결과와 당시 범위입니다. 최신 조사 결과나 상단의 현재 선택 범위와 다를 수 있습니다."
+        />
+      )}
       <QueryState query={q}>
         {incidentId ? (
           <Notice>
-            사건 검토와 수행한 조치는 원래 사건에 기록합니다.{' '}
+            {modern
+              ? '선택한 조사에서 발행된 보고서입니다. '
+              : '사건 검토와 수행한 조치는 원래 사건에 기록합니다. '}
             <Link
               to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-review-records`}
               state={back}
             >
-              이 RCA를 읽은 사건에서 검토·처리하기
+              {modern ? '사건 검토·처리 기록' : '이 RCA를 읽은 사건에서 검토·처리하기'}
             </Link>
+            {modern && (
+              <>
+                {' '}
+                ·{' '}
+                <Link
+                  to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-investigation-history`}
+                  state={back}
+                >
+                  조사 이력
+                </Link>
+              </>
+            )}
           </Notice>
         ) : (
           <Notice>

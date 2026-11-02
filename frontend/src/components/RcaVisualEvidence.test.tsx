@@ -192,3 +192,25 @@ it('collapses identical timestamps while preserving each source and keeps distin
     renderToStaticMarkup(<RcaVisualEvidence view={{ ...same, firstReport: period.start }} />),
   ).toContain('class="c2-rca-timeline"');
 });
+
+it('keeps values and sample counts but omits ranges for a single-sample comparison', () => {
+  const html = visual(
+    result([
+      {
+        name: '전력',
+        query: 'D01',
+        unit: 'W',
+        kind: 'gauge',
+        incident_windows: {
+          before: { ...window, min: 67, max: 69, last_value: 68, samples: 28 },
+          after: { ...window, min: 68, max: 68, last_value: 68, samples: 1 },
+        },
+      },
+    ]),
+  );
+  expect(html).toContain('28개 표본');
+  expect(html).toContain('1개 표본');
+  expect(html).toContain('67 W ~ 69 W');
+  expect(html).not.toContain('class="c2-rca-range"');
+  expect(html).not.toContain('관측 범위에 맞춘 축');
+});

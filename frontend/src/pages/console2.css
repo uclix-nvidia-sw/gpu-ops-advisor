@@ -397,18 +397,13 @@
   font-size: 10px;
   color: #6b7562;
 }
-.c2-title-link {
+.c2-incident-title {
   color: #25351f;
   text-decoration: underline;
   text-decoration-color: #c7d4bd;
   text-underline-offset: 4px;
   font-weight: 600;
   line-height: 1.6;
-}
-.c2-title-link svg {
-  display: inline;
-  vertical-align: middle;
-  margin-left: 5px;
 }
 .c2-table tr:hover td {
   background: #fafcf7;
@@ -700,7 +695,8 @@
   max-width: none;
 }
 .c2-report-list .console-report {
-  padding: 18px 20px;
+  display: grid;
+  padding: 14px 18px;
   grid-template-columns: 30px minmax(0, 1fr) 130px;
 }
 .c2-report-list .console-report h3 {
@@ -892,25 +888,7 @@
 .view-operations.console2-shell .c2-reader-content [id] {
   scroll-margin-top: 90px;
 }
-.c2-reader-content .rca-decision-summary {
-  background: #f3f7ee;
-  border: 1px solid #dbe5d1;
-  border-radius: 6px;
-  padding: 18px;
-}
-.c2-reader-content .rca-decision-grid {
-  gap: 14px;
-}
-.c2-reader-content .rca-decision-grid article {
-  border: 0;
-  border-top: 2px solid #cddcb9;
-  background: transparent;
-  padding: 12px 0;
-}
-.c2-reader-content .rca-decision-grid article h5 {
-  font-size: 14px;
-  color: #506c30;
-}
+
 .c2-reader-content .rca-points {
   font-size: 13px;
   line-height: 1.85;
@@ -1270,12 +1248,7 @@
   .c2-reader-content .new-detail-meta {
     padding: 12px;
   }
-  .c2-reader-content .rca-decision-summary {
-    padding: 14px;
-  }
-  .c2-reader-content .rca-decision-grid {
-    grid-template-columns: 1fr;
-  }
+
   .c2-reader-content .aggregate-major-topic > h2 {
     font-size: 18px;
   }
@@ -1401,7 +1374,22 @@
   grid-template-columns: minmax(0, 2.4fr) minmax(280px, 1fr);
 }
 .c2-dashboard .c2-case-table {
-  min-width: 740px;
+  min-width: 0;
+}
+.c2-dashboard .c2-case-table .c2-incident-column {
+  width: 40%;
+}
+.c2-dashboard .c2-case-table .c2-device-column {
+  width: 25%;
+}
+.c2-dashboard .c2-case-table .c2-report-column {
+  width: 19%;
+}
+.c2-dashboard .c2-case-table .c2-time-column {
+  width: 16%;
+}
+.c2-dashboard .c2-case-table time {
+  white-space: normal;
 }
 .c2-dashboard .c2-case-table td,
 .c2-dashboard .c2-case-table th {
@@ -1498,7 +1486,21 @@
   width: 14%;
 }
 .c2-cases-page .c2-time-column {
-  width: 120px;
+  width: 105px;
+}
+.c2-case-day {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+.c2-case-day h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.c2-case-day small {
+  color: var(--muted);
+  font-size: 12px;
 }
 .c2-cases-page .c2-incident-column {
   width: auto;
@@ -1526,7 +1528,7 @@
   --oh-green-soft: #e8f1ea;
   --oh-green: #156e57;
 }
-.c2-case-table .c2-title-link {
+.c2-case-table .c2-incident-title {
   font-size: 14px;
   line-height: 1.6;
   display: flex;
@@ -1534,12 +1536,9 @@
   white-space: normal;
   align-items: baseline;
 }
-.c2-case-table .c2-title-link > span {
+.c2-case-table .c2-incident-title > span {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-.c2-case-table .c2-title-link > svg {
-  flex-shrink: 0;
 }
 .c2-device-cell b {
   font-size: 13px;
@@ -1755,5 +1754,150 @@
 @media (max-width: 650px) {
   .view-operations.console2-shell .c2-reader-content [id] {
     scroll-margin-top: 80px;
+  }
+}
+
+.c2-alert-source {
+  margin: -8px 0 16px;
+  font-size: 12px;
+  color: #5c6b62;
+}
+.c2-alert-source p {
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.c2-saved-evidence {
+  margin: 12px 0;
+  font-size: 13px;
+}
+.c2-saved-evidence > summary {
+  color: #486341;
+}
+.c2-reader-content .c2-ops-advice {
+  margin: 0 0 26px;
+}
+.c2-ops-advice > h2 {
+  font-size: 21px;
+  margin: 0 0 8px;
+}
+.c2-ops-advice .aggregate-interpretation {
+  margin-top: 12px;
+}
+.c2-ops-advice .aggregate-advice-cluster {
+  padding: 12px 16px;
+}
+.c2-ops-advice .aggregate-advice-card-title,
+.c2-ops-advice .aggregate-advice-time-note {
+  display: none;
+}
+.c2-reader-content .c2-ops-advice details.aggregate-advice-namespace {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #e3e8df;
+}
+.c2-reader-content .c2-ops-advice summary.c2-advice-summary {
+  min-height: 44px;
+  padding: 10px 0;
+  line-height: 1.6;
+  cursor: pointer;
+  font-size: 13px;
+}
+.c2-advice-summary code {
+  color: #52675b;
+  margin-right: 16px;
+  overflow-wrap: anywhere;
+}
+.c2-advice-summary > span {
+  font-weight: 600;
+  color: #29432f;
+}
+.c2-ops-advice details[open] > .aggregate-namespace-summary {
+  margin: 12px 0 0;
+}
+.c2-analysis-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e3e8df;
+  margin-bottom: 12px;
+}
+.c2-analysis-meta > .c2-scope {
+  margin: 0;
+}
+.c2-analysis-meta > .new-status {
+  margin-left: auto;
+}
+.c2-analysis-meta > .report-period {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 0;
+}
+.c2-analysis-meta > small {
+  color: #63736a;
+  font-size: 11px;
+}
+.c2-analysis-meta .report-period details {
+  margin: 0;
+}
+.c2-report-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  align-self: end;
+}
+.c2-report-presets button[aria-pressed='true'] {
+  background: #e8f1dc;
+  border-color: #9ab974;
+  color: #304d14;
+}
+.c2-report-list .console-kicker {
+  display: none;
+}
+.c2-report-list .console-heading {
+  margin-bottom: 12px;
+}
+.c2-report-list .console-section-head {
+  padding: 12px 18px;
+}
+.c2-report-list .console-date-filter {
+  padding-top: 4px;
+}
+.c2-report-list .console-report .report-period {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+}
+.c2-report-list .console-report .report-period details {
+  margin: 0;
+}
+.c2-report-list .console-report .c2-scope {
+  margin: 5px 0;
+  gap: 4px 16px;
+}
+.c2-report-list .console-report .c2-created {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+.c2-report-list .console-report-result {
+  min-width: 0;
+}
+.c2-report-list .c2-report-preview {
+  margin-top: 6px;
+}
+@media (max-width: 680px) {
+  .c2-dashboard .c2-case-table {
+    min-width: 600px;
   }
 }
