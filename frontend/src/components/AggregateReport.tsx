@@ -208,26 +208,12 @@ function AdviceSummary({
           과거 관측입니다. 향후 시간대 변경은 반복성과 실행 조건을 확인한 뒤 판단하세요.
         </p>
       )}
-      {onFocus && (
-        <div className="c2-advice-facts">
-          <p>
-            <strong>관측 근거</strong>
-            <InterpretationText
-              text={separated ? evidence : str(item.observation) || '저장된 관측 문장이 없습니다.'}
-            />
-          </p>
-          {str(item.conditions) && (
-            <p>
-              <strong>적용 조건</strong>
-              {str(item.conditions)}
-            </p>
-          )}
-          {str(target.cluster_id) && str(target.namespace) && (
-            <button className="button" onClick={() => onFocus(item)}>
-              이 대상·구간을 그래프에서 확인 →
-            </button>
-          )}
-        </div>
+      {onFocus && str(target.cluster_id) && str(target.namespace) && (
+        <p>
+          <button className="button" onClick={() => onFocus(item)}>
+            이 대상·구간을 그래프에서 확인 →
+          </button>
+        </p>
       )}
       <details className="aggregate-advice-evidence">
         <summary>

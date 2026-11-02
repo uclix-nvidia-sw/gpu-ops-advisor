@@ -1040,25 +1040,6 @@
 .c2-ops-reader .aggregate-time-chart text {
   font-size: 18px;
 }
-.c2-advice-facts {
-  padding: 12px 14px;
-  background: #f1f5ec;
-  margin: 12px 0;
-  border-radius: 5px;
-  font-size: 12px;
-  line-height: 1.85;
-}
-.c2-advice-facts p {
-  margin: 4px 0;
-}
-.c2-advice-facts strong {
-  font-size: 10px;
-  color: #5d7941;
-  margin-right: 8px;
-}
-.c2-advice-facts .button {
-  margin-top: 9px;
-}
 .c2-chart-focus {
   display: flex;
   flex-wrap: wrap;

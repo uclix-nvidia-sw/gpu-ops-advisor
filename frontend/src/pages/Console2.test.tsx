@@ -133,7 +133,11 @@ it('shows visual comparisons before details, preserves visible interpretations a
   expect(modern.indexOf('기간 내 사건 비교')).toBeLessThan(
     modern.indexOf('id="namespace-summary-title"'),
   );
-  expect(modern).toContain('추가 할당 가능 여부 미확인');
+  expect(modern.match(/추가 할당 가능 여부 미확인/g)).toHaveLength(1);
+  expect(modern).toMatch(
+    /<details class="aggregate-advice-evidence">[\s\S]*추가 할당 가능 여부 미확인[\s\S]*<\/details>/,
+  );
+  expect(modern).not.toContain('c2-advice-facts');
   expect(modern).toContain('현재 기간 0건, 이전 기간 미확인건');
   expect(modern).toContain('XID 48 수신');
   expect(modern).not.toContain('c2-saved-interpretation');
