@@ -134,16 +134,31 @@ def test_partial_zero_input_keeps_values_and_positive_evidence(
     observed = sent["observed_values"]["unscheduled"]
     assert observed.startswith(values["{{unscheduled}}"])
     assert ("일부 표본" in observed) is annotated
+    if annotated:
+        assert observed == values["{{unscheduled}}"] + " (일부 표본에서 관측한 값)"
+        assert "대기 단계를 확인할 수 없다는 한계" in sent["writing_checks"][-1]
+    else:
+        assert observed == values["{{unscheduled}}"]
+        assert len(sent["writing_checks"]) == 2
     assert fact == before and summary_context(fact)["summary_tokens"] == values
 
 
 @pytest.mark.parametrize("origin", ["schedule", "manual"])
 @pytest.mark.parametrize("repeat_error", [False, True])
+@pytest.mark.parametrize("focus", ["mixed", "relative", "partial_zero"])
 async def test_reason_repair_preserves_healthy_reasons_and_code_actions(
-    origin, repeat_error
+    origin, repeat_error, focus
 ):
+    source = (
+        topic(pending=2)
+        if focus == "partial_zero"
+        else pattern_topic([80, 80, 20, 20, 1, 1])
+    )
+    if focus == "partial_zero":
+        for hour in source["workloads"][0]["hours"]:
+            hour.update(unscheduled_peak=0, unscheduled_samples=238)
     result = dict(
-        topics=[pattern_topic([80, 80, 20, 20, 1, 1])],
+        topics=[source],
         quality={},
         time_range={},
         report_origin=origin,
@@ -153,8 +168,14 @@ async def test_reason_repair_preserves_healthy_reasons_and_code_actions(
     facts = payload["topics"][0]["findings"]
     valid = writer_section(facts)
     invalid = deepcopy(valid)
-    bad_id = invalid["advice"][0]["fact_id"]
-    invalid["advice"][0]["summary"] = "작업의 GPU 활동률이 낮았습니다."
+    bad_id = (
+        next(f["fact_id"] for f in facts if f["kind"] == "relative_activity")
+        if focus == "relative"
+        else invalid["advice"][0]["fact_id"]
+    )
+    next(a for a in invalid["advice"] if a["fact_id"] == bad_id)["summary"] = (
+        "작업의 GPU 활동률이 낮았습니다."
+    )
     patch_item = next(
         a
         for a in (invalid if repeat_error else valid)["advice"]
@@ -186,7 +207,17 @@ async def test_reason_repair_preserves_healthy_reasons_and_code_actions(
         in module.ADVICE_SYSTEM
     )
     assert "decision.reason의 관측 한계는 보존" in module.ADVICE_SYSTEM
-    assert "미배치 관측이 일부 표본이라는 이유는 남기세요" in module.ADVICE_SYSTEM
+    assert (
+        "미배치 관측이 일부 표본이라 대기 단계를 확인할 수 없다는 한계"
+        in module.ADVICE_SYSTEM
+    )
+    if focus == "relative":
+        assert "세 관측을 우선" in first["writing_checks"][-1]
+    elif focus == "partial_zero":
+        assert "대기 단계를 확인할 수 없다는 한계" in first["writing_checks"][-1]
+        assert first["observed_values"]["unscheduled"].endswith(
+            " (일부 표본에서 관측한 값)"
+        )
     if repeat_error:
         assert result["narrative_status"] == "failed"
     else:
@@ -910,4 +941,57 @@ def test_batch_input_distinguishes_period_placement_from_last_pending():
     assert "마지막 시간에도 실행을 기다리는 Pod" in sent["decision"]["reason"]
     assert "아직 노드를 배정받지 못해 실행을 기다리는 Pod" in sent["decision"]["reason"]
     assert "구간 중 미배정과 마지막 구간 대기를 같은 시점" in module.ADVICE_SYSTEM
+    assert fact == before
+
+
+@pytest.mark.parametrize("kind", ["capacity_review", "batch-unknown"])
+def test_partial_zero_other_kinds_keep_existing_annotation(kind):
+    fact = fact_for(kind, "none")
+    for hour in fact["source_hours"]:
+        hour.update(unscheduled=0, unscheduled_samples=238)
+    before = deepcopy(fact)
+    sent = module.writing_context(fact)
+    assert sent["observed_values"]["unscheduled"].endswith(
+        " (일부 표본의 관측값이며 미배정 유무는 미확인)"
+    )
+    assert len(sent["writing_checks"]) == 2
+    assert fact == before
+
+
+def test_queue_mixed_zero_positive_observations_keep_placement_context():
+    fact = fact_for("queue-unknown", "none")
+    assert len(fact["source_hours"]) > 1
+    fact["source_hours"][-1]["unscheduled"] = 2
+    before = deepcopy(fact)
+    sent = module.writing_context(fact)
+    assert sent["queue_context"]["check_first"] == "placement"
+    assert sent["observed_values"]["unscheduled"] == "0~2개"
+    assert len(sent["writing_checks"]) == 2
+    assert fact == before
+
+
+@pytest.mark.parametrize(
+    "case,reason",
+    [
+        (
+            "relative_activity",
+            "연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 비율도 선정 기준보다 낮았습니다.",
+        ),
+        (
+            "queue-unknown",
+            "대기 Pod가 관측됐지만 미배정 자료가 일부 표본에 그쳐 대기 단계를 확인할 수 없습니다.",
+        ),
+    ],
+)
+def test_observation_retention_examples_fit_existing_contract(case, reason):
+    fact = fact_for(case, "none")
+    before = deepcopy(fact)
+    sent = module.writing_context(fact)
+    assert len(reason) <= sent["prose_max_chars"]
+    assert len(sent["writing_checks"]) == 3
+    accepted = module.validate_reasoned_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]},
+        {"findings": [fact]},
+    )
+    assert accepted["advice"][0]["summary"].startswith(reason + " ")
     assert fact == before
