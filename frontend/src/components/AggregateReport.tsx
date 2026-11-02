@@ -167,12 +167,19 @@ function AdviceSummary({
       data-advice-id={str(item.fact_id)}
       id={onFocus ? `c2-advice-${encodeURIComponent(str(item.fact_id))}` : undefined}
     >
-      <div className="aggregate-advice-heading">
-        <h5 className="advice-kind" data-kind={str(item.kind)}>
-          {title}
-        </h5>
-        {trial && <span className="aggregate-advice-history">과거 관측</span>}
-      </div>
+      <header className="aggregate-advice-intro">
+        <div className="aggregate-advice-heading">
+          <h5 className="advice-kind" data-kind={str(item.kind)}>
+            {title}
+          </h5>
+          {trial && <span className="aggregate-advice-history">과거 관측</span>}
+        </div>
+        {basis && (
+          <p className="aggregate-advice-basis">
+            <span className="aggregate-advice-basis-label">제안 기준</span> {basis}
+          </p>
+        )}
+      </header>
       {str(item.summary) ? (
         <p className="aggregate-advice-decision">
           <InterpretationText text={separated ? decision : str(item.summary)} />
@@ -223,11 +230,6 @@ function AdviceSummary({
             · {str(target.cluster_id)} / {str(target.namespace)}
           </span>
         </summary>
-        {basis && (
-          <p className="aggregate-advice-basis">
-            <strong>해석 기준</strong> {basis}
-          </p>
-        )}
         <p>
           <strong>관측 근거</strong>{' '}
           <InterpretationText text={separated ? evidence : str(item.observation)} />

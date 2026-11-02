@@ -1,24 +1,30 @@
 import { obj, rows, str, strings, type Row } from './live';
 
 const titles: Record<string, string> = {
-  capacity_review: 'GPU 추가 할당 검토',
-  schedule_candidate: '작업 시간대 시험 검토',
-  relative_activity: '작업 시간대 비교·시험 검토',
-  queue_review: '작업 시작 지연 점검',
-  batch_progress: '배치 완료·남은 대기 점검',
-  resident_memory: 'GPU 메모리 점유 점검',
-  repeated_activity: '여러 시간대의 GPU 활동·대기 점검',
+  capacity_review: '대기 작업에 GPU를 더 할당할지 검토',
+  schedule_candidate: '작업 시작 시간을 바꿔볼지 검토',
+  relative_activity: '작업 시작 시간을 나눠볼지 검토',
+  queue_review: '작업이 시작되지 못한 단계 점검',
+  batch_progress: '완료 기록을 다음 작업 계획에 참고할지 검토',
+  resident_memory: '새 작업 배치 전 GPU 메모리 점유 확인',
+  repeated_activity: '여러 시간대에 나타난 작업 대기 원인 점검',
 };
+// Describe the stored kind's criterion, not an additional observation or model conclusion.
 const bases: Record<string, string> = {
-  capacity_review: 'GPU 활동이 높고 대기 Pod도 관측된 구간입니다.',
+  capacity_review:
+    '높은 GPU 활동과 대기를 함께 보는 기준입니다. GPU 부족이 확인되고 부서·프로젝트 한도가 정해진 경우에만 추가 할당을 검토합니다.',
   schedule_candidate:
-    '정해둔 낮은 활동 기준에 해당한 구간입니다. 다른 구간과의 비교 결과는 아닙니다.',
-  relative_activity: '같은 날의 두 구간을 비교한 시험 후보입니다.',
-  queue_review: '대기 Pod의 노드 배정과 시작 준비 상태를 구분하기 위한 점검입니다.',
-  batch_progress: '해당 기간의 완료 기록과 대기 변화를 함께 봅니다.',
-  resident_memory: 'GPU 활동률은 낮고 메모리 점유는 높았던 구간입니다.',
+    '정해둔 기준보다 GPU 활동률이 낮았던 구간을 살펴봅니다. 향후 같은 네임스페이스 작업의 시작 시간을 시험할 후보이며, 빈 GPU를 뜻하지 않습니다.',
+  relative_activity:
+    '같은 날·같은 네임스페이스의 두 구간을 비교하는 기준입니다. 향후 일부 작업의 시작 시간을 나눠볼 시험 후보이며, 다른 날의 여유나 성능 개선은 보장하지 않습니다.',
+  queue_review:
+    '대기 Pod의 노드 배정과 컨테이너 시작 준비 단계를 구분하는 점검입니다. 실제 단계와 원인은 저장된 관측과 이벤트로 확인해야 합니다.',
+  batch_progress:
+    '완료 Job 기록과 대기 변화를 함께 보는 기준입니다. 같은 유형의 작업인지 확인해야 일정에 참고할 수 있으며, 경과시간은 순수 실행시간이나 다음 작업의 예상시간이 아닙니다.',
+  resident_memory:
+    '낮은 GPU 활동률과 높은 메모리 점유를 함께 보는 기준입니다. 점유 작업과 유지 목적을 확인해야 하며, 서빙·캐시나 회수 가능한 메모리로 단정하지 않습니다.',
   repeated_activity:
-    '여러 관측 구간의 활동과 대기를 봅니다. 구간 사이도 같은 상태였다는 뜻은 아닙니다.',
+    '떨어진 여러 구간의 높은 GPU 활동과 대기를 살펴봅니다. 구간 사이의 상태나 GPU 부족 원인까지 확인된 것은 아닙니다.',
 };
 
 export function advicePresentation(item: Row) {

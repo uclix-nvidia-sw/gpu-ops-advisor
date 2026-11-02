@@ -1014,6 +1014,24 @@
   padding-top: 0;
   border-top: 0;
 }
+.report-workspace .aggregate-advice-intro {
+  margin: 0 0 12px;
+}
+.report-workspace .aggregate-advice-intro .aggregate-advice-basis {
+  margin: 4px 0 0;
+  max-width: none;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.report-workspace .aggregate-advice-basis-label {
+  margin-right: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .report-workspace .aggregate-advice-heading {
   display: flex;
   flex-wrap: wrap;
