@@ -17,6 +17,7 @@ from .namespace_advice import (
     writing_decision,
     validate_advice,
     SummaryTokenError,
+    AdviceValidationError,
     summary_context,
     summary_limits,
     VALUE_MEANINGS,
@@ -28,7 +29,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-observation-retention-v13"
+VERSION = "ops-interpretation-namespace-validation-v14"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -403,10 +404,24 @@ def validate_reasoned_advice(section, topic):
             if not isinstance(item, dict) or not isinstance(item.get("summary"), str):
                 continue
             text = item["summary"]
-            if not text.strip() or not re.search(r"[가-힣]", text):
-                raise ValueError("invalid_namespace_advice_text")
+            fact = facts[item["fact_id"]]
+            if not text.strip():
+                raise AdviceValidationError(
+                    "invalid_namespace_advice_text",
+                    fact,
+                    "raw_reason",
+                    "empty",
+                    "빈 이유문입니다. decision.reason의 관측 사실·한계를 한국어 한 문장으로 쓰세요",
+                )
+            if not re.search(r"[가-힣]", text):
+                raise AdviceValidationError(
+                    "invalid_namespace_advice_text",
+                    fact,
+                    "raw_reason",
+                    "missing_korean",
+                    "이유문에 한국어가 없습니다. 관측 사실·한계를 한국어 한 문장으로 쓰세요",
+                )
             if item.get("fact_id") in retained:
-                fact = facts[item["fact_id"]]
                 validate_reason_prose(text, fact)
                 validate_observed_prose(re.sub(r"\{\{[^{}]*\}\}", "", text), fact)
     return validate_written_advice(advice_with_actions(section, topic), topic)
@@ -1174,6 +1189,9 @@ def validate_sections(reply, payload, result):
             )
     if errors:
         errors[0].topic_failures = topic_failures
+        errors[0].namespace_errors = [
+            exc.advice_error for exc in errors if isinstance(exc, AdviceValidationError)
+        ]
         errors[0].valid_sections = valid
         raise errors[0]
     return valid
@@ -1293,11 +1311,10 @@ def partial_repair(reply, payload, result):
                 error = str(exc)
                 if error == "separate_observations_do_not_prove_continuity":
                     error += ": 서로 떨어진 관측을 연속·지속으로 바꾸지 마세요. 포화·부족·때문 표현은 질문·부정문에서도 빼고 관측 현상과 판단 이유만 설명하세요"
-                elif error in {
-                    "invalid_namespace_advice_text",
-                    "concise_namespace_summary_required",
-                }:
-                    error += f": 설명은 prose_max_chars={context['prose_max_chars']}자 이내여야 합니다. 관측 현상과 판단 이유는 남기고 중복 설명·수집 상태·작성 지시·군더더기를 줄이세요. 행동·필수 조건은 코드가 붙이므로 다시 작성하지 마세요"
+                elif isinstance(exc, AdviceValidationError) and exc.advice_error[
+                    "violation_kind"
+                ] in {"prose_length", "summary_length"}:
+                    error += f" 이유문 한도는 prose_max_chars={context['prose_max_chars']}자입니다. 행동·필수 조건은 코드가 붙이므로 다시 작성하지 마세요"
                 if error.partition(":")[0] in {
                     "namespace_prerequisites_required",
                     "conditional_relative_window_trial_required",
@@ -1709,6 +1726,11 @@ async def interpret_report(result, llm):
                 **(
                     {"topic_failures": exc.topic_failures}
                     if getattr(exc, "topic_failures", None)
+                    else {}
+                ),
+                **(
+                    {"namespace_errors": exc.namespace_errors}
+                    if getattr(exc, "namespace_errors", None)
                     else {}
                 ),
                 **(

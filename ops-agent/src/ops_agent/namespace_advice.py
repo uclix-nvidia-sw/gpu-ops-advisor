@@ -1251,6 +1251,40 @@ class SummaryTokenError(ValueError):
         }
 
 
+class AdviceValidationError(ValueError):
+    """Keep repair instructions separate from bounded, prose-free diagnostics."""
+
+    def __init__(
+        self,
+        code,
+        fact,
+        stage,
+        violation_kind,
+        instruction,
+        *,
+        measured_chars=None,
+        limit_chars=None,
+    ):
+        super().__init__(f"{code}: {instruction}")
+        self.advice_error = {
+            "reason": code,
+            "field": "summary",
+            "stage": stage,
+            "violation_kind": violation_kind,
+        }
+        fact_id = fact.get("fact_id")
+        if isinstance(fact_id, str) and re.fullmatch(
+            r"namespace-advice-[0-9]{1,12}", fact_id
+        ):
+            self.advice_error["fact_id"] = fact_id
+        if fact.get("kind") in WRITING_FOCUS:
+            self.advice_error["kind"] = fact["kind"]
+        if measured_chars is not None:
+            self.advice_error["measured_chars"] = measured_chars
+        if limit_chars is not None:
+            self.advice_error["limit_chars"] = limit_chars
+
+
 def validate_advice(section, topic):
     advice = section.get("advice")
     facts = {f["fact_id"]: f for f in topic["findings"]}
@@ -1274,8 +1308,33 @@ def validate_advice(section, topic):
         values = summary_values(fact)
         summary = item.get("summary")
         max_chars, max_prose_chars = summary_limits(fact)
-        if not isinstance(summary, str) or len(summary) > max_chars or "\n" in summary:
-            raise ValueError("concise_namespace_summary_required")
+        if not isinstance(summary, str):
+            raise AdviceValidationError(
+                "concise_namespace_summary_required",
+                fact,
+                "composed_summary",
+                "not_string",
+                "summary는 한국어 관측 이유를 담은 문자열이어야 합니다",
+            )
+        if len(summary) > max_chars:
+            raise AdviceValidationError(
+                "concise_namespace_summary_required",
+                fact,
+                "composed_summary",
+                "summary_length",
+                "코드 행동·근거를 합친 전체 길이가 한도를 넘었습니다. "
+                "이유문만 prose_max_chars 안으로 줄이고 관측 사실·한계는 보존하세요",
+                measured_chars=len(summary),
+                limit_chars=max_chars,
+            )
+        if "\n" in summary:
+            raise AdviceValidationError(
+                "concise_namespace_summary_required",
+                fact,
+                "composed_summary",
+                "line_break",
+                "줄바꿈 없이 한국어 관측 이유를 한 문장으로 쓰세요",
+            )
         # The verified token already carries its unit; tolerate only the matching repeated suffix.
         summary = re.sub(
             r"\{\{(completed|pending|elapsed|activity|memory)\}\}\s*(건|개|초|%)",
@@ -1326,13 +1385,33 @@ def validate_advice(section, topic):
                 "duplicate_summary_unit: summary_tokens 값에 단위가 포함됩니다. {{completed}} 뒤 건, {{elapsed}} 뒤 초, {{activity}} 뒤 %, {{pending}} 뒤 개를 붙이지 마세요"
             )
         text = re.sub(r"\{\{([a-z_]+)\}\}", "", summary)
-        if (
-            not isinstance(text, str)
-            or not text.strip()
-            or len(text) > max_prose_chars
-            or not re.search(r"[가-힣]", text)
-        ):
-            raise ValueError("invalid_namespace_advice_text")
+        if not text.strip():
+            raise AdviceValidationError(
+                "invalid_namespace_advice_text",
+                fact,
+                "composed_prose",
+                "empty",
+                "빈 설명입니다. decision.reason의 관측 사실·한계를 한국어 한 문장으로 쓰세요",
+            )
+        if len(text) > max_prose_chars:
+            raise AdviceValidationError(
+                "invalid_namespace_advice_text",
+                fact,
+                "composed_prose",
+                "prose_length",
+                "참조를 제외한 코드 행동·근거와 이유문의 합이 한도를 넘었습니다. "
+                "이유문만 prose_max_chars 안으로 줄이고 관측 사실·일부 표본 등 한계는 보존하세요",
+                measured_chars=len(text),
+                limit_chars=max_prose_chars,
+            )
+        if not re.search(r"[가-힣]", text):
+            raise AdviceValidationError(
+                "invalid_namespace_advice_text",
+                fact,
+                "composed_prose",
+                "missing_korean",
+                "한국어 설명이 없습니다. 관측 사실·한계를 한국어 한 문장으로 쓰세요",
+            )
         unsafe = re.search(
             r"\d|[{}<>%]|https?://|test-|runai|vessl|dgx|cpc-|회수|낭비|재배분|증설|복구|원인(?:입니다|이다|으로|인\s*것으로)|고장|효율|대기\s*시간|연산\s*시간|비어|유휴|충분|즉시|추가하세요|늘리세요|줄이세요|보장됩니다",
             text,
@@ -1437,16 +1516,37 @@ def validate_advice(section, topic):
             )
         if re.search(r"작업(?:이|은)?\s*없|실행(?:이|은)?\s*없", summary):
             raise ValueError("activity_is_not_absence_of_jobs")
+        # Exclude only a direct uncertainty about nonuse, never its cause or consequence.
+        # shortcut: bounded Korean clauses; unlisted paraphrases still require review.
+        usage_claims = re.sub(
+            r"(?:미사용(?:\s*상태)?(?:을|으로|이라고|임을|인지(?:는)?|이|은|\s*여부(?:는|를|가)?)?|"
+            r"(?:사용|활동)(?:이|은)?\s*없(?:었)?(?:음을|다고|는지(?:는)?)|"
+            r"(?:사용하지|쓰지)\s*않(?:았다고|는다고|았는지(?:는)?|는지(?:는)?))"
+            r"\s*(?:아직\s*)?(?:(?:단정|판단|확인|해석)할\s*수\s*없습니다|"
+            r"(?:단정|판단|확인|해석)하지\s*않습니다|알\s*수\s*없습니다|"
+            r"확인되지\s*않았습니다|미확인입니다|볼\s*수\s*없습니다|보지\s*않습니다)"
+            r"(?=\s*(?:[.!?。]|$))",
+            "",
+            summary,
+        )
+        # Positive activity keeps the original absence guard.
         if any(
             v > 0 for h in fact["source_hours"] for v in h["activity"]
         ) and re.search(r"활동(?:이|은)?\s*없", summary):
             raise ValueError("low_activity_is_not_zero_activity")
         if re.search(
             r"미사용|사용(?:이|은)?\s*없|사용하지\s*않|쓰지\s*않|활동(?:이|은)?\s*없",
-            summary,
+            usage_claims,
         ):
-            raise ValueError(
-                f"observed_zero_is_not_proof_of_nonuse: {item['fact_id']}.summary에서 관측 활동률이 영이어도 미사용이나 활동 부재를 단정하지 말고, 관측의 한계를 설명하세요. 필수 관측값·참조는 코드가 붙입니다"
+            raise AdviceValidationError(
+                "observed_zero_is_not_proof_of_nonuse",
+                fact,
+                "composed_summary",
+                "nonuse_claim",
+                "관측 활동률만으로 미사용·활동 부재를 단정하지 마세요. "
+                "실제 사용 여부를 판단할 수 없다는 한계는 설명할 수 있습니다. "
+                "미사용이라고 단정한 뒤 원인만 미확인이라고 덧붙이지 마세요. "
+                "필수 관측값·참조는 코드가 붙입니다",
             )
         if fact["kind"] == "queue_review" and re.search(
             r"시간대.*(?:실행|배치)|시범\s*배치", summary
