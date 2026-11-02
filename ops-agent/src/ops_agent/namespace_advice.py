@@ -1119,6 +1119,8 @@ def summary_context(fact):
         "elapsed": "Job 경과시간 범위",
         "pending_change": "처음→마지막 시간대 최대 대기",
     }
+    if fact["kind"] == "relative_activity":
+        labels.update(reference_activity="비교 활동률", pending="시간별 최대 대기")
     observation = ", ".join(
         label + " {{" + key + "}}"
         for key, label in labels.items()

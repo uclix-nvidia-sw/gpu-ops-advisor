@@ -1170,7 +1170,7 @@ async def test_incident_meaning_copy_uses_existing_partial_repair(concentrated_r
     ]
     assert (
         concentrated_result["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-namespace-validation-v14"
+        == "ops-interpretation-relative-budget-v15"
     )
     section = next(
         s

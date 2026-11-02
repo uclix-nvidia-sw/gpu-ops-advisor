@@ -29,7 +29,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-namespace-validation-v14"
+VERSION = "ops-interpretation-relative-budget-v15"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
