@@ -2434,7 +2434,8 @@ def test_related_context_does_not_override_evidence_sensitive_queue_choice(
         assert context["observed_values"]["unscheduled"].startswith(
             expected.pop("unscheduled")
         )
-        assert "미확인" in context["observed_values"]["unscheduled"]
+        assert "일부 표본" in context["observed_values"]["unscheduled"]
+        assert "확인되지 않았습니다" in context["decision"]["reason"]
     assert all(context["observed_values"][k] == v for k, v in expected.items())
 
 

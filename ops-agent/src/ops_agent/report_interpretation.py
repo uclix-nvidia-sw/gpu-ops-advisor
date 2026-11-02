@@ -28,7 +28,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-advice-focus-v12"
+VERSION = "ops-interpretation-observation-retention-v13"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -1364,12 +1364,17 @@ def writing_context(fact, findings=()):
     values = context["observed_values"]
     if fact["kind"] == "batch_progress" and fact.get("pending_change") is not None:
         values.pop("pending", None)
-    if (
+    partial_zero_placement = (
         not context["queue_context"]["unscheduled_complete"]
         and "unscheduled" in values
         and all(h.get("unscheduled") == 0 for h in fact["source_hours"])
-    ):
-        values["unscheduled"] += " (일부 표본의 관측값이며 미배정 유무는 미확인)"
+    )
+    if partial_zero_placement:
+        values["unscheduled"] += (
+            " (일부 표본에서 관측한 값)"
+            if fact["kind"] == "queue_review"
+            else " (일부 표본의 관측값이며 미배정 유무는 미확인)"
+        )
     max_chars, max_prose_chars = summary_limits(fact)
     context["prose_max_chars"] = min(
         max_chars - len(evidence) - len(action) - 2,
@@ -1382,6 +1387,14 @@ def writing_context(fact, findings=()):
         "decision.reason의 서로 다른 관측 사실·한계는 보존하고 같은 내용은 한 번만 설명; 점검 목적·조건·행동은 코드가 붙이므로 다시 작성하지 않음",
         "연결 GPU의 관측과 일부 작업의 유형·요청·상태를 구분; 미확인·부분 관측을 부재나 원인으로 바꾸지 않음; 자료가 연결·수집됐다는 처리 설명이나 판단 근거가 된다는 덧말은 쓰지 않음",
     ]
+    if fact["kind"] == "relative_activity":
+        context["writing_checks"].append(
+            "비교 구간보다 낮은 연결 GPU 활동률·후보 구간의 대기 Pod 미관측·선정 기준보다 낮은 장치 메모리 사용 비율을 모두 설명; 대상·기간 재서술보다 세 관측을 우선하며 가용 메모리나 새 작업 실행 가능으로 확대하지 않음"
+        )
+    elif fact["kind"] == "queue_review" and partial_zero_placement:
+        context["writing_checks"].append(
+            "대기 Pod 관측을 먼저 설명하고 일부 미배치 표본만 있어 대기 단계를 확인할 수 없다는 한계를 한 번만 설명; 미배정 여부 미확인을 따로 나열하지 않음"
+        )
     return context
 
 
