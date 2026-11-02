@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, FileText, ScanSearch, Activity } from 'lucide-react';
-import { useRecentIncidents } from '../components/IncidentOverview';
+import { CodeBadge, useRecentIncidents } from '../components/IncidentOverview';
 import { QueryState } from '../components/live';
 import { RangeCalendar } from '../components/RangeCalendar';
 import { Badge, NavTabs } from '../components/ui';
@@ -14,7 +14,10 @@ import {
   category,
   kindText,
   dateTimeText,
+  clock,
+  fullDate,
   dayKey,
+  incidentName,
   titleText,
   windowDays,
   type IncidentView,
@@ -134,6 +137,7 @@ function Surface({
 }
 export function IncidentTable({ views }: { views: IncidentView[] }) {
   const location = useLocation();
+  const caseList = location.pathname === '/cases';
   const from = location.pathname + location.search;
   const [expanded, setExpanded] = useState<string | null>(null);
   return (
@@ -142,11 +146,12 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
         <caption className="sr-only">수신 alert의 사건·대상과 별도의 실행 상태·공개 결과</caption>
         <thead>
           <tr>
-            <th>사건</th>
-            <th>대상 장비</th>
-            <th>런북 참고</th>
-            <th>보고서</th>
-            <th>발생 시각 · KST</th>
+            {caseList && <th className="c2-time-column">발생 시각 · KST</th>}
+            <th className="c2-incident-column">사건</th>
+            <th className="c2-device-column">대상 장비</th>
+            <th className="c2-guidance-column">런북 참고</th>
+            <th className="c2-report-column">보고서</th>
+            {!caseList && <th className="c2-time-column">발생 시각 · KST</th>}
           </tr>
         </thead>
         <tbody>
@@ -158,6 +163,14 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
             return (
               <Fragment key={v.id}>
                 <tr id={`c2-incident-${v.id}`} className={open ? 'c2-row-open' : ''}>
+                  {caseList && (
+                    <td>
+                      <time className="c2-incident-time" dateTime={v.at.toISOString()}>
+                        <b>{clock(v.at)}</b>
+                        <small>{fullDate(dayKey(v.at))}</small>
+                      </time>
+                    </td>
+                  )}
                   <td>
                     <Link
                       className="c2-title-link"
@@ -168,7 +181,15 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
                       }
                       state={back}
                     >
-                      <span>{titleText(v)}</span>
+                      <span>
+                        {caseList && v.codeText ? (
+                          <>
+                            <CodeBadge code={v.code} text={v.codeText} /> {incidentName(v)}
+                          </>
+                        ) : (
+                          titleText(v)
+                        )}
+                      </span>
                       <ArrowUpRight size={14} />
                     </Link>
                   </td>
@@ -183,7 +204,7 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
                         : '장치 식별 정보 없음'}
                     </code>
                   </td>
-                  <td>
+                  <td className="c2-guidance-column">
                     <span className="c2-guidance">
                       {v.label?.action.replace(/\s*\([A-Z_]+\)/g, '') || '등록된 안내 없음'}
                     </span>
@@ -226,9 +247,11 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
                       </Link>
                     )}
                   </td>
-                  <td>
-                    <time dateTime={v.at.toISOString()}>{dateTimeText(v.at)}</time>
-                  </td>
+                  {!caseList && (
+                    <td>
+                      <time dateTime={v.at.toISOString()}>{dateTimeText(v.at)}</time>
+                    </td>
+                  )}
                 </tr>
                 <tr id={`c2-detail-${v.id}`} hidden={!open} className="c2-detail-row">
                   <td colSpan={5}>

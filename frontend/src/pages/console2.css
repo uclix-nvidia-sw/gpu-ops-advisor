@@ -1482,29 +1482,49 @@
   table-layout: fixed;
   min-width: 900px;
 }
-.c2-case-table th:nth-child(1) {
+.c2-case-table .c2-incident-column {
   width: 39%;
 }
-.c2-case-table th:nth-child(2) {
+.c2-case-table .c2-device-column {
   width: 18%;
 }
-.c2-case-table th:nth-child(3) {
+.c2-case-table th.c2-guidance-column {
   width: 17%;
 }
-.c2-case-table th:nth-child(4) {
+.c2-case-table .c2-report-column {
   width: 12%;
 }
-.c2-case-table th:nth-child(5) {
+.c2-case-table .c2-time-column {
   width: 14%;
+}
+.c2-cases-page .c2-time-column {
+  width: 120px;
+}
+.c2-cases-page .c2-incident-column {
+  width: auto;
 }
 .c2-case-table td {
   vertical-align: top;
   padding: 12px 16px;
   overflow-wrap: anywhere;
 }
-.c2-case-table th:nth-child(3),
-.c2-case-table td:nth-child(3) {
+.c2-case-table th.c2-guidance-column,
+.c2-case-table td.c2-guidance-column {
   padding-right: 32px;
+}
+.c2-case-table .c2-incident-time b {
+  display: block;
+  color: #25351f;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.c2-case-table .c2-incident-time small {
+  white-space: normal;
+}
+.c2-cases-page .oh-badge {
+  --oh-green-soft: #e8f1ea;
+  --oh-green: #156e57;
 }
 .c2-case-table .c2-title-link {
   font-size: 14px;
