@@ -750,7 +750,7 @@ def test_code_uncertainty_does_not_hide_an_additional_positive_claim(case, claim
 def test_short_code_actions_restore_reason_budget(case):
     fact = fact_for(case, "none")
     sent = module.writing_context(fact)
-    minimum = {"batch_progress": 60, "relative_activity": 64}.get(fact["kind"], 55)
+    minimum = {"batch_progress": 60, "relative_activity": 73}.get(fact["kind"], 55)
     assert sent["prose_max_chars"] >= minimum
     if fact["kind"] == "relative_activity":
         action = writing_decision(fact)["action"]
@@ -994,4 +994,54 @@ def test_observation_retention_examples_fit_existing_contract(case, reason):
         {"findings": [fact]},
     )
     assert accepted["advice"][0]["summary"].startswith(reason + " ")
+    assert fact == before
+
+
+@pytest.mark.parametrize(
+    "reason,accepted",
+    [
+        (
+            "연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
+            True,
+        ),
+        (
+            "연결 GPU 활동률은 비교 구간보다 더 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
+            True,
+        ),
+        (
+            "후보 시간의 연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
+            False,
+        ),
+    ],
+)
+def test_relative_evidence_labels_leave_room_for_three_observations(reason, accepted):
+    fact = fact_for("relative_activity", "none")
+    before = deepcopy(fact)
+    context = summary_context(fact)
+    assert module.writing_context(fact)["prose_max_chars"] == 73
+    assert set(context["required_summary_tokens"]) == {
+        "{{target}}",
+        "{{period}}",
+        "{{reference_period}}",
+        "{{reference_activity}}",
+        "{{activity}}",
+        "{{memory}}",
+        "{{pending}}",
+    }
+    assert (
+        "비교 구간 {{reference_period}}, 비교 활동률 {{reference_activity}}"
+        in context["summary_start"]
+    )
+    assert "장치 메모리 사용 비율 {{memory}}" in context["summary_start"]
+    assert "시간별 최대 대기 {{pending}}가 관측됐습니다." in context["summary_start"]
+    section = {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]}
+    if accepted:
+        result = module.validate_reasoned_advice(section, {"findings": [fact]})
+        assert result["advice"][0]["summary"].startswith(reason + " ")
+    else:
+        with pytest.raises(ValueError, match="invalid_namespace_advice_text") as exc:
+            module.validate_reasoned_advice(section, {"findings": [fact]})
+        assert exc.value.advice_error["stage"] == "composed_prose"
+        assert exc.value.advice_error["measured_chars"] == 232
+        assert exc.value.advice_error["limit_chars"] == 231
     assert fact == before
