@@ -213,6 +213,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-incident-repair-v9",
                         "ops-interpretation-incident-check-v10",
                         "ops-interpretation-observation-retention-v13",
+                        "ops-interpretation-namespace-validation-v14",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3037,7 +3038,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-observation-retention-v13"
+        == "ops-interpretation-namespace-validation-v14"
     )
     assert incident_section["meaning"] == meaning
     assert body["quality"]["report"]["attempts"] == 1
@@ -4549,6 +4550,13 @@ def test_aggregate_partial_interpretation_publishes_other_topic(
                 }
                 for n in (1, 2)
             ]
+        else:
+            for failure in diagnostic["failures"]:
+                detail = failure["namespace_errors"][0]
+                assert detail["reason"] == "invalid_namespace_advice_text"
+                assert detail["violation_kind"] == "empty"
+                assert detail["stage"] == "raw_reason"
+                assert detail["fact_id"].startswith("namespace-advice-")
     finally:
         with psycopg.connect(stack["url"]) as conn:
             conn.execute("DELETE FROM incidents WHERE id=%s", (incident_id,))

@@ -1369,6 +1369,16 @@ async def test_observed_zero_nonuse_claim_repairs_without_changing_metrics(origi
         {
             "attempt": 1,
             "reason": "observed_zero_is_not_proof_of_nonuse",
+            "namespace_errors": [
+                {
+                    "reason": "observed_zero_is_not_proof_of_nonuse",
+                    "fact_id": payload["topics"][0]["findings"][0]["fact_id"],
+                    "kind": "schedule_candidate",
+                    "field": "summary",
+                    "stage": "composed_summary",
+                    "violation_kind": "nonuse_claim",
+                }
+            ],
             "topic_failures": [
                 {
                     "topic_id": "namespace_usage",
