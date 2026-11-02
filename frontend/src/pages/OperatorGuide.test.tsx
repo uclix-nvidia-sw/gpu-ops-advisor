@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Shell } from '../components/Shell';
 import { reportKinds } from '../lib/reportKinds';
 import { OperatorGuide } from './OperatorGuide';
+import { advicePresentation } from '../lib/namespaceAdvice';
 
 const app = vi.hoisted(() => ({
   mode: 'classic',
@@ -76,12 +77,12 @@ it.each(['classic', 'operations'])(
   },
 );
 
-it.each(['start', 'topics', 'values', 'missing', 'unknown'])(
+it.each(['start', 'topics', 'advice', 'values', 'missing', 'legacy', 'unknown'])(
   'shows only the selected guide section for %s',
   (key) => {
     const html = render(`/operator-guide#guide-${key}`);
     const selected = key === 'unknown' ? 'start' : key;
-    for (const section of ['start', 'topics', 'values', 'missing']) {
+    for (const section of ['start', 'topics', 'advice', 'values', 'missing', 'legacy']) {
       expect(html.includes(`<section id="guide-${section}" hidden=""`)).toBe(section !== selected);
       expect(html).toContain(
         `aria-pressed="${section === selected}" aria-controls="guide-${section}"`,
@@ -126,10 +127,9 @@ it('explains current aggregate advice order, time windows, AI fallback and all s
   app.mode = 'classic';
   const html = render('/operator-guide#guide-values');
   for (const text of [
-    '클러스터와 네임스페이스는',
-    '이름순이며',
-    '저장된 제안 순서',
-    '계산 요약을 표시합니다',
+    '클러스터·네임스페이스 이름순이며',
+    '저장된 순서',
+    '실패한 주제는 계산 요약을 표시합니다',
     '표본 수로 나눈',
     'KST이며 끝 시각은 포함하지 않습니다',
     '대기 작업에 GPU를 더 할당할지 검토',
@@ -143,4 +143,42 @@ it('explains current aggregate advice order, time windows, AI fallback and all s
     expect(html).toContain(text);
   expect(html).not.toContain('AI는 검증된 문장의 우선순위를 정합니다');
   expect(html).not.toContain('Namespace 비교표에서 대상을 선택하세요');
+});
+
+it('separates current report topics from preserved legacy request guidance', () => {
+  const html = render('/operator-guide#guide-topics');
+  const current = html.match(
+    /<section id="guide-topics"[^>]*>(.*?)<section id="guide-advice"/s,
+  )?.[1];
+  expect(current).toContain('Namespace별 GPU 활동 현황');
+  expect(current).toContain('기간 내 장애 알림 현황');
+  expect(current).not.toContain('guide-kind-picker');
+  expect(current).not.toContain('/reports/new?kind=');
+  expect(html).toContain('<section id="guide-legacy" hidden=""');
+  const legacy = render('/operator-guide#guide-legacy');
+  expect(legacy).not.toContain('<section id="guide-legacy" hidden=""');
+  expect(legacy).toContain('href="/reports/new?kind=namespace"');
+});
+
+it('reuses the report headings and general bases without presenting them as new AI observations', () => {
+  const html = render('/operator-guide#guide-advice');
+  const advice =
+    html.match(/<section id="guide-advice"[^>]*>(.*?)<section id="guide-values"/s)?.[1] || '';
+  for (const kind of [
+    'capacity_review',
+    'repeated_activity',
+    'schedule_candidate',
+    'relative_activity',
+    'queue_review',
+    'resident_memory',
+    'batch_progress',
+  ]) {
+    const presentation = advicePresentation({ kind });
+    expect(advice).toContain(presentation.title);
+    expect(advice).toContain(presentation.basis);
+  }
+  expect(advice).toContain('실제 관측은 보고서 본문과 근거에서 확인하세요');
+  expect(advice).toContain('다른 네임스페이스로 옮기는 제안이 아닙니다');
+  expect(html).toContain('과거 보고서는 생성 당시 기준을 따릅니다');
+  expect(html).not.toContain('서버 HTML 다운로드도 같은 정렬');
 });
