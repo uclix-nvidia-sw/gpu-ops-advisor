@@ -884,16 +884,17 @@ it.each([
     expect(html.indexOf(decision)).toBeLessThan(html.indexOf('aggregate-advice-scope'));
     expect(html.indexOf('aggregate-advice-scope')).toBeLessThan(html.indexOf('<details'));
     const firstView = html.slice(0, html.indexOf('<details'));
-    expect(firstView).toContain('작업 시간대 비교·시험 검토');
+    expect(firstView).toContain('작업 시작 시간을 나눠볼지 검토');
     expect(firstView).toContain('과거 관측');
     expect(firstView).toContain('낮은 활동 구간');
     expect(firstView).toContain('비교 구간');
     expect(firstView.indexOf('<dt>비교 구간</dt>')).toBeLessThan(
       firstView.indexOf('<dt>낮은 활동 구간</dt>'),
     );
-    expect(firstView).not.toContain('같은 날의 두 구간을 비교한 시험 후보입니다.');
-    expect(html.slice(html.indexOf('<details'))).toContain(
-      '같은 날의 두 구간을 비교한 시험 후보입니다.',
+    expect(firstView).toContain('제안 기준');
+    expect(firstView).toContain('같은 날·같은 네임스페이스의 두 구간');
+    expect(html.slice(html.indexOf('<details'))).not.toContain(
+      '같은 날·같은 네임스페이스의 두 구간',
     );
     expect(firstView).toContain('2026. 10. 19. 21:00');
     expect(firstView).toContain('2026. 10. 19. 19:00');
@@ -969,7 +970,9 @@ it.each([
   expect((html.match(/시간 범위 미확인/g) || []).length).toBe(unknownCount);
   expect(html).toContain('원문을 바꾸지 않습니다.');
   expect(html).toContain(
-    kind === 'relative_activity' ? '작업 시간대 비교·시험 검토' : '작업 시간대 시험 검토',
+    kind === 'relative_activity'
+      ? '작업 시작 시간을 나눠볼지 검토'
+      : '작업 시작 시간을 바꿔볼지 검토',
   );
   expect(html).toContain('과거 관측');
   expect(html.includes('<dt>비교 구간</dt>')).toBe(kind === 'relative_activity');
@@ -1316,3 +1319,83 @@ it('puts saved advice before the console 2 observations without duplicating or r
   expect(original).toContain('<section class="aggregate-advice-namespace">');
   expect(JSON.stringify(value)).toBe(before);
 });
+
+it.each([false, true])(
+  'keeps kind guidance separate from saved AI prose and fallback (reader=%s)',
+  (reader) => {
+    const kinds = [
+      'capacity_review',
+      'repeated_activity',
+      'schedule_candidate',
+      'relative_activity',
+      'queue_review',
+      'resident_memory',
+      'batch_progress',
+    ];
+    const advice = kinds.map((kind, i) => ({
+      kind,
+      fact_id: `kind-${i}`,
+      target: { cluster_id: 'cpc-1', namespace: 'batch' },
+      summary: `저장된 AI 문장 ${i}.`,
+      observation: `저장된 근거 ${i}.`,
+      period: { start: '2026-10-21T15:00:00Z', end: '2026-10-22T15:00:00Z' },
+      evidence_refs: [`e-${i}`],
+    }));
+    const section = {
+      topic_id: 'namespace_usage',
+      observation: '관측',
+      meaning: '의미',
+      next_check: '확인',
+      advice,
+    };
+    const value = {
+      narrative_status: 'complete',
+      quality: { report: { method: 'llm_interpreted' } },
+      topics: [{ topic_id: 'namespace_usage', rows: [] }],
+      narrative: [section],
+    };
+    const original = JSON.stringify(value);
+    const render = (v: unknown) =>
+      renderToStaticMarkup(
+        <MemoryRouter>
+          <AggregateReport value={v as typeof value} reader={reader} />
+        </MemoryRouter>,
+      );
+    const html = render(value);
+    expect((html.match(/class="aggregate-advice-basis-label"/g) || []).length).toBe(7);
+    let previous = -1;
+    advice.forEach((item) => {
+      const start = html.indexOf(`data-advice-id="${item.fact_id}"`);
+      expect(start).toBeGreaterThan(previous);
+      previous = start;
+      const card = html.slice(start, html.indexOf('</li>', start));
+      expect(card.indexOf('제안 기준')).toBeLessThan(card.indexOf(item.summary));
+      expect(card.indexOf('</header>')).toBeLessThan(card.indexOf(item.summary));
+      expect(card.split(item.summary)).toHaveLength(2);
+      expect(card.slice(card.indexOf('<details'))).not.toContain('aggregate-advice-basis-label');
+      expect(card).toContain(item.observation);
+    });
+    expect(JSON.stringify(value)).toBe(original);
+    const old = render({
+      ...value,
+      narrative: [{ ...section, advice: [{ summary: '유형과 시각이 없는 옛 원문입니다.' }] }],
+    });
+    expect(old).toContain('유형과 시각이 없는 옛 원문입니다.');
+    expect(old).toContain('시간 범위 미확인');
+    expect(old).not.toContain('aggregate-advice-basis-label');
+    const fallback = render({
+      ...value,
+      narrative_status: 'failed',
+      quality: { report: { method: 'partial_interpretation' } },
+      narrative: [
+        {
+          ...section,
+          interpretation_source: 'deterministic_fallback',
+          text: '저장된 계산 요약입니다.',
+        },
+      ],
+    });
+    expect(fallback).toContain('저장된 계산 요약입니다.');
+    expect(fallback).not.toContain('aggregate-advice-intro');
+  },
+);
