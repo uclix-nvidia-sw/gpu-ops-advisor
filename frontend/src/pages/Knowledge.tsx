@@ -66,6 +66,10 @@ export function Knowledge() {
       : null,
   );
   const shown = q.items.filter((k) => !category || runbookCategories(k).includes(category));
+  if (app.mode === 'operations')
+    shown.sort((a, b) =>
+      str(obj(a.content).title).localeCompare(str(obj(b.content).title), 'ko', { numeric: true }),
+    );
   const count = (c: RunbookCategory) =>
     new Set(
       catalog.items

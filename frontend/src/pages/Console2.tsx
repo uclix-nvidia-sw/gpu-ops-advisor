@@ -140,159 +140,191 @@ export function IncidentTable({ views }: { views: IncidentView[] }) {
   const caseList = location.pathname === '/cases';
   const from = location.pathname + location.search;
   const [expanded, setExpanded] = useState<string | null>(null);
+  const groupByDate =
+    caseList &&
+    !['device', 'error'].includes(new URLSearchParams(location.search).get('sort') || '');
+  const groups = new Map<string, IncidentView[]>();
+  for (const view of views) {
+    const day = groupByDate ? dayKey(view.at) : '';
+    if (!groups.has(day)) groups.set(day, []);
+    groups.get(day)!.push(view);
+  }
   return (
-    <div className="c2-table-scroll">
-      <table className="c2-table c2-case-table">
-        <caption className="sr-only">수신 alert의 사건·대상과 별도의 실행 상태·공개 결과</caption>
-        <thead>
-          <tr>
-            {caseList && <th className="c2-time-column">발생 시각 · KST</th>}
-            <th className="c2-incident-column">사건</th>
-            <th className="c2-device-column">대상 장비</th>
-            <th className="c2-guidance-column">런북 참고</th>
-            <th className="c2-report-column">보고서</th>
-            {!caseList && <th className="c2-time-column">발생 시각 · KST</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {views.map((v) => {
-            const back = { from, returnState: { row: v.id } };
-            const reportId =
-              v.publishedJobId || (['ready', 'partial', 'blocked'].includes(v.rca) ? v.jobId : '');
-            const open = expanded === v.id;
-            return (
-              <Fragment key={v.id}>
-                <tr id={`c2-incident-${v.id}`} className={open ? 'c2-row-open' : ''}>
-                  {caseList && (
-                    <td>
-                      <time className="c2-incident-time" dateTime={v.at.toISOString()}>
-                        <b>{clock(v.at)}</b>
-                        <small>{fullDate(dayKey(v.at))}</small>
-                      </time>
-                    </td>
-                  )}
-                  <td>
-                    <Link
-                      className="c2-title-link"
-                      to={
-                        reportId
-                          ? `/analyses/${encodeURIComponent(reportId)}`
-                          : `/incidents/${encodeURIComponent(v.id)}`
-                      }
-                      state={back}
-                    >
-                      <span>
-                        {caseList && v.codeText ? (
-                          <>
-                            <CodeBadge code={v.code} text={v.codeText} /> {incidentName(v)}
-                          </>
-                        ) : (
-                          titleText(v)
+    <>
+      {[...groups].map(([day, items]) => (
+        <Fragment key={day}>
+          {day && (
+            <header className="c2-case-day">
+              <h2>{fullDate(day)}</h2>
+              <small>이 페이지 {items.length}건</small>
+            </header>
+          )}
+          <div className={`c2-table-scroll${caseList ? ' c2-surface' : ''}`}>
+            <table className="c2-table c2-case-table">
+              <caption className="sr-only">
+                수신 alert의 사건·대상과 별도의 실행 상태·공개 결과
+              </caption>
+              <thead>
+                <tr>
+                  {caseList && <th className="c2-time-column">발생 시각 · KST</th>}
+                  <th className="c2-incident-column">사건</th>
+                  <th className="c2-device-column">대상 장비</th>
+                  {caseList && <th className="c2-guidance-column">런북 참고</th>}
+                  <th className="c2-report-column">보고서</th>
+                  {!caseList && <th className="c2-time-column">발생 시각 · KST</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((v) => {
+                  const back = { from, returnState: { row: v.id } };
+                  const reportId =
+                    v.publishedJobId ||
+                    (['ready', 'partial', 'blocked'].includes(v.rca) ? v.jobId : '');
+                  const open = expanded === v.id;
+                  return (
+                    <Fragment key={v.id}>
+                      <tr id={`c2-incident-${v.id}`} className={open ? 'c2-row-open' : ''}>
+                        {caseList && (
+                          <td>
+                            <time className="c2-incident-time" dateTime={v.at.toISOString()}>
+                              <b>{clock(v.at)}</b>
+                              {!groupByDate && <small>{fullDate(dayKey(v.at))}</small>}
+                            </time>
+                          </td>
                         )}
-                      </span>
-                      <ArrowUpRight size={14} />
-                    </Link>
-                  </td>
-                  <td className="c2-device-cell">
-                    <b>
-                      {kindText(v.kind)} · {v.node || '노드 미확인'}
-                    </b>
-                    <small>{v.cluster || '클러스터 미확인'}</small>
-                    <code>
-                      {v.device
-                        ? `${v.device.startsWith('GPU-') ? 'UUID' : 'PCI'} ${v.device}`
-                        : '장치 식별 정보 없음'}
-                    </code>
-                  </td>
-                  <td className="c2-guidance-column">
-                    <span className="c2-guidance">
-                      {v.label?.action.replace(/\s*\([A-Z_]+\)/g, '') || '등록된 안내 없음'}
-                    </span>
-                    <button
-                      className="c2-expand"
-                      aria-expanded={open}
-                      aria-controls={`c2-detail-${v.id}`}
-                      onClick={() => setExpanded(open ? null : v.id)}
-                    >
-                      {open ? '접기' : '원문·런북 안내'} {open ? '−' : '+'}
-                    </button>
-                  </td>
-                  <td>
-                    <Link
-                      className="c2-execution-link"
-                      to={`/incidents/${encodeURIComponent(v.id)}`}
-                      state={back}
-                    >
-                      <span
-                        className={`c2-status ${['queued', 'running', 'retry_wait'].includes(v.executionStatus || '') ? 'attention' : ['failed', 'cancelled', 'expired'].includes(v.executionStatus || '') ? 'warning' : 'neutral'}`}
-                      >
-                        {labels[v.executionStatus || ''] || v.executionStatus || '실행 기록 없음'}
-                      </span>
-                    </Link>
-                    <span
-                      className={`c2-result-quality ${['partial', 'blocked'].includes(publishedQuality(v)) ? 'warning' : ''}`}
-                    >
-                      {qualityLabels[publishedQuality(v)] || publishedQuality(v)}
-                    </span>
-                    {reportId && (
-                      <Link
-                        className="c2-result-link"
-                        to={`/analyses/${encodeURIComponent(reportId)}`}
-                        state={back}
-                      >
-                        {v.latestJobId && v.latestJobId !== reportId
-                          ? '이전 발행 보고서'
-                          : '보고서 열기'}{' '}
-                        →
-                      </Link>
-                    )}
-                  </td>
-                  {!caseList && (
-                    <td>
-                      <time dateTime={v.at.toISOString()}>{dateTimeText(v.at)}</time>
-                    </td>
-                  )}
-                </tr>
-                <tr id={`c2-detail-${v.id}`} hidden={!open} className="c2-detail-row">
-                  <td colSpan={5}>
-                    {open && (
-                      <div className="c2-case-detail">
-                        <section>
-                          <h3>수신 alert 원문</h3>
-                          <p className="c2-alert-raw">{v.raw || '수신 내용 없음'}</p>
-                          <dl>
-                            <dt>컴포넌트</dt>
-                            <dd>{v.component || '미확인'}</dd>
-                            <dt>GPU UUID</dt>
-                            <dd>{v.uuid || '수신 정보 없음'}</dd>
-                          </dl>
-                        </section>
-                        <section>
-                          <h3>런북 코드별 참고 안내</h3>
-                          <p>
-                            일반 지침이며 이 사건의 RCA 결론이나 수행 완료 기록이 아닙니다. 실제
-                            적용 조건과 절차는 보고서에서 확인하세요.
-                          </p>
-                          {v.label ? (
-                            <>
-                              <b>{v.label.action}</b>
-                              <p>{v.label.steps.join(' → ')}</p>
-                            </>
-                          ) : (
-                            <p>해당 코드에 등록된 참고 안내가 없습니다.</p>
+                        <td>
+                          <Link
+                            className="c2-incident-title"
+                            to={
+                              reportId
+                                ? `/analyses/${encodeURIComponent(reportId)}`
+                                : `/incidents/${encodeURIComponent(v.id)}#new-investigation-history`
+                            }
+                            state={back}
+                          >
+                            <span>
+                              {caseList && v.codeText ? (
+                                <>
+                                  <CodeBadge code={v.code} text={v.codeText} /> {incidentName(v)}
+                                </>
+                              ) : (
+                                titleText(v)
+                              )}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="c2-device-cell">
+                          <b>
+                            {kindText(v.kind)} · {v.node || '노드 미확인'}
+                          </b>
+                          <small>{v.cluster || '클러스터 미확인'}</small>
+                          <code>
+                            {v.device
+                              ? `${v.device.startsWith('GPU-') ? 'UUID' : 'PCI'} ${v.device}`
+                              : '장치 식별 정보 없음'}
+                          </code>
+                        </td>
+                        {caseList && (
+                          <td className="c2-guidance-column">
+                            <span className="c2-guidance">
+                              {v.label?.action.replace(/\s*\([A-Z_]+\)/g, '') || '등록된 안내 없음'}
+                            </span>
+                            <button
+                              className="c2-expand"
+                              aria-expanded={open}
+                              aria-controls={`c2-detail-${v.id}`}
+                              onClick={() => setExpanded(open ? null : v.id)}
+                            >
+                              {open ? '접기' : '원문·런북 안내'} {open ? '−' : '+'}
+                            </button>
+                          </td>
+                        )}
+                        <td>
+                          <span
+                            className={`c2-status ${['queued', 'running', 'retry_wait'].includes(v.executionStatus || '') ? 'attention' : ['failed', 'cancelled', 'expired'].includes(v.executionStatus || '') ? 'warning' : 'neutral'}`}
+                          >
+                            {labels[v.executionStatus || ''] ||
+                              v.executionStatus ||
+                              '실행 기록 없음'}
+                          </span>
+                          <span
+                            className={`c2-result-quality ${['partial', 'blocked'].includes(publishedQuality(v)) ? 'warning' : ''}`}
+                          >
+                            {qualityLabels[publishedQuality(v)] || publishedQuality(v)}
+                          </span>
+                          {(!reportId ||
+                            v.executionStatus !== 'succeeded' ||
+                            (v.latestJobId && v.latestJobId !== reportId)) && (
+                            <Link
+                              className="c2-result-link"
+                              to={`/incidents/${encodeURIComponent(v.id)}#new-investigation-history`}
+                              state={back}
+                            >
+                              {v.executionStatus ? '실행 상세' : '사건 상세'} →
+                            </Link>
                           )}
-                          <Link to="/knowledge">지식·Runbook 열기 →</Link>
-                        </section>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                          {reportId && (
+                            <Link
+                              className="c2-result-link"
+                              to={`/analyses/${encodeURIComponent(reportId)}`}
+                              state={back}
+                            >
+                              {v.latestJobId && v.latestJobId !== reportId
+                                ? '이전 발행 보고서'
+                                : '보고서 열기'}{' '}
+                              →
+                            </Link>
+                          )}
+                        </td>
+                        {!caseList && (
+                          <td>
+                            <time dateTime={v.at.toISOString()}>{dateTimeText(v.at)}</time>
+                          </td>
+                        )}
+                      </tr>
+                      <tr id={`c2-detail-${v.id}`} hidden={!open} className="c2-detail-row">
+                        <td colSpan={caseList ? 5 : 4}>
+                          {open && (
+                            <div className="c2-case-detail">
+                              <section>
+                                <h3>수신 alert 원문</h3>
+                                <p className="c2-alert-raw">{v.raw || '수신 내용 없음'}</p>
+                                <dl>
+                                  <dt>컴포넌트</dt>
+                                  <dd>{v.component || '미확인'}</dd>
+                                  <dt>GPU UUID</dt>
+                                  <dd>{v.uuid || '수신 정보 없음'}</dd>
+                                </dl>
+                              </section>
+                              <section>
+                                <h3>런북 코드별 참고 안내</h3>
+                                <p>
+                                  일반 지침이며 이 사건의 RCA 결론이나 수행 완료 기록이 아닙니다.
+                                  실제 적용 조건과 절차는 보고서에서 확인하세요.
+                                </p>
+                                {v.label ? (
+                                  <>
+                                    <b>{v.label.action}</b>
+                                    <p>{v.label.steps.join(' → ')}</p>
+                                  </>
+                                ) : (
+                                  <p>해당 코드에 등록된 참고 안내가 없습니다.</p>
+                                )}
+                                <Link to="/knowledge">지식·Runbook 열기 →</Link>
+                              </section>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Fragment>
+      ))}
+    </>
   );
 }
 function PeriodButtons({
@@ -379,15 +411,15 @@ function Overview() {
               '/cases?period=1',
             ],
             [
-              '3회 이상 반복',
+              '반복 대상 묶음',
               repeats.length,
-              '같은 클러스터·장치·오류 묶음',
+              '같은 클러스터·장치·오류 3회 이상',
               `/cases?period=${period}&focus=repeat`,
             ],
             [
-              '추가 자료 확인',
+              '자료 보완이 필요한 사건',
               partial.length,
-              '부분 산출·판단 보류 결과',
+              '부분 산출·판단 보류 보고서의 사건 수',
               `/cases?period=${period}&quality=limited`,
             ],
           ].map(([label, value, note, to]) => (
@@ -821,7 +853,7 @@ function Cases() {
         emptyTitle="조건에 맞는 사건이 없습니다."
         emptyDescription="검색어·기간·클러스터 조건을 확인하거나 조건을 초기화하세요."
       >
-        <div className="c2-surface">
+        <div className="c2-case-groups">
           <IncidentTable views={filtered.slice((page - 1) * 25, page * 25)} />
         </div>
         <nav className="c2-pagination" aria-label="사건 페이지">
@@ -848,10 +880,10 @@ function Cases() {
   );
 }
 const reportSections = [
+  ['c2-ops-advice', '운영 해석·제안'],
   ['c2-ops-insights', '관측 요약'],
   ['c2-report-summary', '지표 비교'],
   ['c2-rca-visual', '관측 비교'],
-  ['c2-rca-decision', '사건 판단'],
   ['rca-response-reference', '대응 순서'],
   ['rca-observation-detail', '로그·지표'],
   ['rca-analysis-detail', '분석·근거'],

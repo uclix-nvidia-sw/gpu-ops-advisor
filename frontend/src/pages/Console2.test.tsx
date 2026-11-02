@@ -288,7 +288,10 @@ it('puts KST time first and highlights received error codes only in the RCA list
     '런북 참고',
     '보고서',
   ]);
-  expect(html).toContain('<b>00:05</b><small>2026.10.31. (토)</small>');
+  expect(html).toContain('<h2>2026.10.31. (토)</h2>');
+  expect(html).toContain('이 페이지 5건');
+  expect(html).toContain('<b>00:05</b></time>');
+  expect(html.match(/2026\.10\.31\. \(토\)/g)).toHaveLength(1);
   expect(html).toContain('class="oh-badge sx">SXID 24007</span> sourcetrack timeout error');
   expect(html).toContain('>XID 48</span> Double Bit ECC');
   expect(html).toContain('>XID 999</span> </span>');
@@ -298,4 +301,69 @@ it('puts KST time first and highlights received error codes only in the RCA list
   expect(dashboard).not.toContain('class="oh-badge');
   expect(dashboard).toContain('SXID 24007 · sourcetrack timeout error');
   expect(dashboard.indexOf('>사건</th>')).toBeLessThan(dashboard.indexOf('>발생 시각 · KST</th>'));
+});
+
+it('links the incident title and report action to the same published result, with execution fallback when unpublished', () => {
+  for (const status of ['succeeded', 'running', 'failed']) {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/cases']}>
+        <IncidentTable
+          views={incidentViews([
+            {
+              id: 'event',
+              occurred_at: '2026-10-30T01:00:00Z',
+              target: { title: 'XID 171 test' },
+              rca_summary: {
+                latest_job: { job_id: 'job', status },
+                ...(status === 'succeeded'
+                  ? { latest_published: { job_id: 'job', result_status: 'partial' } }
+                  : {}),
+              },
+            },
+          ])}
+        />
+      </MemoryRouter>,
+    );
+    expect(html).not.toContain('c2-execution-link');
+    expect(html).not.toContain('c2-title-link');
+    if (status === 'succeeded') {
+      expect(html.match(/href="\/analyses\/job"/g)).toHaveLength(2);
+      expect(html).not.toContain('href="/incidents/');
+    } else {
+      expect(html).toContain('실행 상세');
+      expect(html).toContain('href="/incidents/event#new-investigation-history"');
+      expect(html).not.toContain('href="/analyses/');
+    }
+  }
+});
+
+it('groups chronological pages by KST date without changing device or error ordering', () => {
+  const views = incidentViews([
+    { id: 'late', occurred_at: '2026-10-30T15:10:00Z', target: { title: 'XID 48' } },
+    { id: 'midnight', occurred_at: '2026-10-30T15:00:00Z', target: { title: 'XID 48' } },
+    { id: 'previous', occurred_at: '2026-10-30T14:59:00Z', target: { title: 'XID 48' } },
+  ]);
+  const render = (sort: string) =>
+    renderToStaticMarkup(
+      <MemoryRouter initialEntries={[`/cases?sort=${sort}`]}>
+        <IncidentTable views={console2Filter(views, new URLSearchParams({ sort }))} />
+      </MemoryRouter>,
+    );
+  const newest = render('');
+  expect(newest.match(/class="c2-case-day"/g)).toHaveLength(2);
+  expect(newest).toContain('이 페이지 2건');
+  expect(newest).toContain('이 페이지 1건');
+  expect(newest.indexOf('<h2>2026.10.31.')).toBeLessThan(newest.indexOf('<h2>2026.10.30.'));
+  expect(newest.indexOf('<h2>2026.10.31.')).toBeLessThan(newest.indexOf('<table'));
+  const oldest = render('oldest');
+  expect(oldest.indexOf('<h2>2026.10.30.')).toBeLessThan(oldest.indexOf('<h2>2026.10.31.'));
+  for (const sort of ['device', 'error']) {
+    const html = render(sort);
+    expect(html).not.toContain('class="c2-case-day"');
+    expect(html).toContain('<small>2026.10.31. (토)</small>');
+    expect([...html.matchAll(/<tr id="c2-incident-([^"]+)"/g)].map((m) => m[1])).toEqual(
+      console2Filter(views, new URLSearchParams({ sort })).map((v) => v.id),
+    );
+  }
+  expect(views).toHaveLength(3);
 });

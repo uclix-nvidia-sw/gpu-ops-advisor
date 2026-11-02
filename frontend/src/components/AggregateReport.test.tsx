@@ -1272,3 +1272,47 @@ it.each(['namespace_usage', 'incident_summary'])(
     expect(html.match(/<h3>AI 운영 해석<\/h3>/g)).toHaveLength(1);
   },
 );
+
+it('puts saved advice before the console 2 observations without duplicating or rewriting it', () => {
+  const value = {
+    narrative_status: 'complete',
+    quality: { report: { method: 'llm_interpreted' } },
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        rows: [
+          { cluster_id: 'c1', namespace: 'n1', gpu_model: 'A100', activity_percent: 0, hours: [] },
+        ],
+        findings: [],
+      },
+    ],
+    narrative: [
+      {
+        topic_id: 'namespace_usage',
+        observation: '관측 원문',
+        meaning: '의미 원문',
+        next_check: '확인 원문',
+        advice: [
+          {
+            fact_id: 'f1',
+            kind: 'memory_review',
+            target: { cluster_id: 'c1', namespace: 'n1' },
+            summary: '저장된 조건부 제안 문장',
+            conditions: '할당 전 확인 조건',
+          },
+        ],
+      },
+    ],
+  };
+  const before = JSON.stringify(value);
+  const html = renderToStaticMarkup(<AggregateReport value={value} reader />);
+  expect(html.indexOf('id="c2-ops-advice"')).toBeLessThan(html.indexOf('id="c2-ops-insights"'));
+  expect(html.match(/저장된 조건부 제안 문장/g)).toHaveLength(1);
+  expect(html).toContain('<details class="aggregate-advice-namespace">');
+  expect(html).toContain('할당 전 확인 조건');
+  expect(html).toContain('이 대상·구간을 그래프에서 확인');
+  const original = renderToStaticMarkup(<AggregateReport value={value} />);
+  expect(original).not.toContain('id="c2-ops-advice"');
+  expect(original).toContain('<section class="aggregate-advice-namespace">');
+  expect(JSON.stringify(value)).toBe(before);
+});

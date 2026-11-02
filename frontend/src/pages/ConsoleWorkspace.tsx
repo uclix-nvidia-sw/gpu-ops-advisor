@@ -27,6 +27,7 @@ import { rcaReasons } from '../lib/rcaLabels';
 import { reportReason } from '../lib/report';
 import { aggregateReasons } from '../components/AggregateReport';
 import { reportReceivedRange } from '../lib/reportPeriod';
+import { dayKey } from '../lib/incidentOverview';
 import { AlarmIdentity, More, QueryState } from '../components/live';
 import { Badge } from '../components/ui';
 import { ReportOrigin, ReportPeriod, ReportScope } from '../components/ReportMeta';
@@ -424,7 +425,15 @@ function RunDiagnosis({ job, from }: { job: Row; from: string }) {
   );
 }
 
-function DateFilter({ prefix, label }: { prefix: string; label: string }) {
+function DateFilter({
+  prefix,
+  label,
+  quick = false,
+}: {
+  prefix: string;
+  label: string;
+  quick?: boolean;
+}) {
   const [params, setParams] = useSearchParams();
   return (
     <form
@@ -443,6 +452,43 @@ function DateFilter({ prefix, label }: { prefix: string; label: string }) {
         setParams(next);
       }}
     >
+      {quick && (
+        <div className="c2-report-presets" aria-label="분석 기간 빠른 선택">
+          {[
+            ['어제', 1],
+            ['최근 7일', 7],
+            ['전체', 0],
+          ].map(([label, days]) => {
+            const end = dayKey(new Date(Date.now() - 86400000));
+            const start = dayKey(new Date(Date.now() - Number(days) * 86400000));
+            const active = days
+              ? params.get('analysis_from') === start && params.get('analysis_to') === end
+              : !params.has('analysis_from') && !params.has('analysis_to');
+            return (
+              <button
+                key={label}
+                className="button"
+                type="button"
+                aria-pressed={!!active}
+                onClick={() => {
+                  const next = new URLSearchParams(params);
+                  next.delete('inspect');
+                  if (days) {
+                    next.set('analysis_from', start);
+                    next.set('analysis_to', end);
+                  } else {
+                    next.delete('analysis_from');
+                    next.delete('analysis_to');
+                  }
+                  setParams(next);
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <label>
         {label} 시작일
         <input
@@ -573,7 +619,7 @@ export function OperatorReportList({
             <FileText size={24} />
           </div>
           <div className="console-report-body">
-            <ReportOrigin value={j.report_origin} />
+            {!compact && <ReportOrigin value={j.report_origin} />}
             <h3>
               <Link to={`/reports/${encoded(j.id)}`} state={{ from }}>
                 {reportTitle(j)}
@@ -582,7 +628,10 @@ export function OperatorReportList({
             <ReportPeriod value={j.time_range} />
             <ReportScope job={j} compact={compact} />
             {compact && (
-              <small className="c2-created">요청 접수 {formatDate(str(j.created_at))}</small>
+              <div className="c2-created">
+                <ReportOrigin value={j.report_origin} />
+                <span>요청 접수 {formatDate(str(j.created_at))}</span>
+              </div>
             )}
             {!!j.result_ref &&
               !j.deletion &&
@@ -710,7 +759,15 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
       <header className="console-heading">
         <div>
           <span className="console-kicker">GPU OPERATIONS</span>
-          <h1 tabIndex={-1}>{reportsOnly ? 'Ops 보고서' : casesOnly ? 'RCA 사건' : '운영 개요'}</h1>
+          <h1 tabIndex={-1}>
+            {reportsOnly
+              ? compact
+                ? '운영 보고서'
+                : 'Ops 보고서'
+              : casesOnly
+                ? 'RCA 사건'
+                : '운영 개요'}
+          </h1>
           <p>
             {reportsOnly
               ? '분석 대상일로 보고서를 찾고, 주요 변화와 관측 한계를 확인합니다.'
@@ -816,8 +873,12 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
         <section className="console-surface" aria-labelledby="report-list-title">
           <header className="console-section-head">
             <div>
-              <h2 id="report-list-title">기간별 Ops 보고서</h2>
-              <p>접수 최신순 · 분석 기간은 각 보고서에 표시됩니다.</p>
+              <h2 id="report-list-title">{compact ? '분석 기간으로 찾기' : '기간별 Ops 보고서'}</h2>
+              <p>
+                {compact
+                  ? '요청 접수 최신순 · 과거 기간의 재생성 보고서도 위에 표시됩니다.'
+                  : '접수 최신순 · 분석 기간은 각 보고서에 표시됩니다.'}
+              </p>
             </div>
             {!reportsOnly && (
               <Link className="text-link" to="/reports">
@@ -827,7 +888,7 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
           </header>
           {reportsOnly && (
             <>
-              <DateFilter prefix="analysis" label="분석" />
+              <DateFilter prefix="analysis" label="분석" quick={compact} />
               <details
                 className="console-secondary-filters"
                 open={

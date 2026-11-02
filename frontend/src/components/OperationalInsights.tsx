@@ -92,7 +92,7 @@ export function OperationalInsights({ value }: { value: Row }) {
     <section id="c2-ops-insights" className="c2-ops-insights" aria-label="수치로 확인한 관측">
       <header>
         <h2>수치로 확인한 관측</h2>
-        <span>저장된 수치·선별 기준으로 표시 · AI 해석은 아래 운영 제안에서 확인</span>
+        <span>저장된 수치·선별 기준으로 표시 · AI 해석과 구분된 관측 요약</span>
       </header>
       <div className="c2-coverage-strip">
         {[...new Set(evidence.map((e) => str(e.row.cluster_id)))].map((cluster) => {
@@ -162,9 +162,7 @@ export function OperationalInsights({ value }: { value: Row }) {
           </article>
         )}
         {!resident && !burst && evidence.every((e) => percentage(e.row.activity_percent)) && (
-          <p>
-            위 조건으로 강조할 관측은 없습니다. 아래 저장된 운영 해석과 대상별 근거를 확인하세요.
-          </p>
+          <p>위 조건으로 강조할 관측은 없습니다. 저장된 운영 해석과 대상별 근거를 확인하세요.</p>
         )}
       </div>
       <p className="c2-chart-note">

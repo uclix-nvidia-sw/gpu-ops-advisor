@@ -442,6 +442,7 @@ function TopicInterpretation({
     );
   }
   const advice = rows(section.advice);
+  const NamespaceSection = reader ? 'details' : 'section';
   const hasSummary = advice.length > 0 && advice.every((item) => str(item.summary));
   const selection = obj(section.selection);
   const criteria = obj(selection.criteria);
@@ -467,12 +468,21 @@ function TopicInterpretation({
                 구간 시각은 KST 기준이며 끝 시각은 포함하지 않습니다.
               </p>
               {cluster.namespaces.map((ns) => (
-                <section className="aggregate-advice-namespace" key={ns.key}>
-                  <h4 className="aggregate-advice-identity">
-                    <span>네임스페이스</span>
-                    <span aria-hidden="true">:</span>
-                    <code>{ns.namespace || '미확인'}</code>
-                  </h4>
+                <NamespaceSection className="aggregate-advice-namespace" key={ns.key}>
+                  {reader ? (
+                    <summary className="c2-advice-summary">
+                      <code>{ns.namespace || '미확인'}</code>
+                      <span>
+                        {ns.items.map((item) => advicePresentation(item).title).join(' · ')}
+                      </span>
+                    </summary>
+                  ) : (
+                    <h4 className="aggregate-advice-identity">
+                      <span>네임스페이스</span>
+                      <span aria-hidden="true">:</span>
+                      <code>{ns.namespace || '미확인'}</code>
+                    </h4>
+                  )}
                   <ul className="aggregate-namespace-summary">
                     {ns.items.map((item, i) => (
                       <AdviceSummary
@@ -483,7 +493,7 @@ function TopicInterpretation({
                       />
                     ))}
                   </ul>
-                </section>
+                </NamespaceSection>
               ))}
             </section>
           ))}
@@ -693,6 +703,26 @@ export function AggregateReport({
       )}
       {reader && (
         <>
+          {usage && aiInterpreted && (
+            <section
+              id="c2-ops-advice"
+              className="c2-ops-advice"
+              aria-labelledby="c2-ops-advice-title"
+            >
+              <h2 id="c2-ops-advice-title">운영 해석·제안</h2>
+              <p className="rca-muted">
+                분석 기간에 저장된 해석입니다. 제안별 대상·조건을 읽고 해당 시간대의 근거를
+                확인하세요.
+              </p>
+              <TopicInterpretation
+                topic={usage}
+                narrative={rows(value.narrative)}
+                onEvidence={onEvidence}
+                onFocus={focusAdvice}
+                reader
+              />
+            </section>
+          )}
           <OperationalInsights value={value} />
           <ReportVisualSummary value={value} />
         </>
@@ -755,7 +785,7 @@ export function AggregateReport({
               </details>
             </section>
           )}
-          {aiInterpreted && (
+          {aiInterpreted && !reader && (
             <TopicInterpretation
               topic={usage}
               narrative={rows(value.narrative)}

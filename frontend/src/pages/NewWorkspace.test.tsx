@@ -390,3 +390,23 @@ it('preserves existing report sections and diagnostic controls when evidence is 
     '',
   );
 });
+
+it('uses received alert identity for console 2 report titles and keeps other consoles unchanged', () => {
+  data.job.target = {
+    title:
+      '[Warning] accelerator-nvidia-error-xid: XID 171 UNCORRECTABLE_DRAM_ERROR Additional details detected on GPU PCI:0000:47:00 UUID:GPU-test',
+    node: 'dgx02',
+    cluster_id: 'cpc-1',
+  };
+  data.mode = 'operations';
+  const html = render('/analyses/published');
+  expect(html).toContain('XID 171 · Additional details</h1>');
+  expect(html).toContain('GPU · dgx02 · cpc-1 · PCI 0000:47:00');
+  expect(html).toContain('<summary>수신 알림 원문</summary>');
+  expect(html).toContain('사건 검토·처리 기록');
+  expect(html).toContain('#new-investigation-history');
+  data.mode = 'new';
+  const original = render('/analyses/published');
+  expect(original).toContain('저장된 사건 분석</h1>');
+  expect(original).not.toContain('<summary>수신 알림 원문</summary>');
+});
