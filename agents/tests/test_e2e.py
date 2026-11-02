@@ -215,6 +215,7 @@ class Upstream(BaseHTTPRequestHandler):
                         "ops-interpretation-observation-retention-v13",
                         "ops-interpretation-namespace-validation-v14",
                         "ops-interpretation-relative-budget-v15",
+                        "ops-interpretation-reason-budget-v16",
                     }
                     or "summary_repair" in data
                     or "section_repair" in data
@@ -3039,7 +3040,7 @@ def test_aggregate_incident_snapshot_respects_scope_and_period_edges(
     )
     assert (
         body["quality"]["report"]["interpretation_version"]
-        == "ops-interpretation-relative-budget-v15"
+        == "ops-interpretation-reason-budget-v16"
     )
     assert incident_section["meaning"] == meaning
     assert body["quality"]["report"]["attempts"] == 1

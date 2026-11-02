@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+from ops_agent import namespace_advice as advice_module
 from ops_agent import report_interpretation as module
 from ops_agent.namespace_advice import (
     candidates,
@@ -311,13 +312,20 @@ def test_shortage_uncertainty_is_not_an_operating_instruction():
         "resident_memory",
         "repeated_activity",
         "relative_activity",
+        "queue-placement",
+        "queue-preparation",
         "queue-unknown",
         "batch-placement",
+        "batch-preparation",
+        "batch-unknown",
+        "batch-complete",
     ],
 )
-def test_reason_length_uses_exact_remaining_existing_limits(case):
-    fact = fact_for(case, "none")
+@pytest.mark.parametrize("context", ["none", "unknown", "typed"])
+def test_reason_length_uses_exact_reserved_budget(case, context):
+    fact = fact_for(case, context)
     limit = module.writing_context(fact)["prose_max_chars"]
+    assert limit == 100
     for extra in (0, 1):
         item = {"fact_id": fact["fact_id"], "summary": "가" * (limit + extra)}
         if extra:
@@ -750,8 +758,7 @@ def test_code_uncertainty_does_not_hide_an_additional_positive_claim(case, claim
 def test_short_code_actions_restore_reason_budget(case):
     fact = fact_for(case, "none")
     sent = module.writing_context(fact)
-    minimum = {"batch_progress": 60, "relative_activity": 73}.get(fact["kind"], 55)
-    assert sent["prose_max_chars"] >= minimum
+    assert sent["prose_max_chars"] == 100
     if fact["kind"] == "relative_activity":
         action = writing_decision(fact)["action"]
         assert len(action) <= 91
@@ -819,10 +826,15 @@ def test_summary_limits_are_shared_by_budget_and_validator(case):
 
     fact = fact_for(case, "none")
     limits = summary_limits(fact)
-    assert limits == (360, 231 if case == "relative_activity" else 220)
     action = writing_decision(fact)["action"]
     evidence = summary_context(fact)["summary_start"]
     count = module.writing_context(fact)["prose_max_chars"]
+    assert count == 100
+    assert limits[0] >= count + len(action) + len(evidence) + 2
+    assert (
+        limits[1]
+        == count + len(action) + len(re.sub(r"\{\{[a-z_]+\}\}", "", evidence)) + 2
+    )
     raw = {
         "advice": [
             {
@@ -998,27 +1010,18 @@ def test_observation_retention_examples_fit_existing_contract(case, reason):
 
 
 @pytest.mark.parametrize(
-    "reason,accepted",
+    "reason",
     [
-        (
-            "연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
-            True,
-        ),
-        (
-            "연결 GPU 활동률은 비교 구간보다 더 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
-            True,
-        ),
-        (
-            "후보 시간의 연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
-            False,
-        ),
+        "연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
+        "연결 GPU 활동률은 비교 구간보다 더 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
+        "후보 시간의 연결 GPU 활동률은 비교 구간보다 낮았고 대기 Pod는 관측되지 않았으며 메모리 사용 비율도 선정 기준보다 낮았습니다.",
     ],
 )
-def test_relative_evidence_labels_leave_room_for_three_observations(reason, accepted):
+def test_relative_three_observations_fit_reserved_budget(reason):
     fact = fact_for("relative_activity", "none")
     before = deepcopy(fact)
     context = summary_context(fact)
-    assert module.writing_context(fact)["prose_max_chars"] == 73
+    assert module.writing_context(fact)["prose_max_chars"] == 100
     assert set(context["required_summary_tokens"]) == {
         "{{target}}",
         "{{period}}",
@@ -1035,13 +1038,29 @@ def test_relative_evidence_labels_leave_room_for_three_observations(reason, acce
     assert "장치 메모리 사용 비율 {{memory}}" in context["summary_start"]
     assert "시간별 최대 대기 {{pending}}가 관측됐습니다." in context["summary_start"]
     section = {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]}
-    if accepted:
-        result = module.validate_reasoned_advice(section, {"findings": [fact]})
-        assert result["advice"][0]["summary"].startswith(reason + " ")
-    else:
-        with pytest.raises(ValueError, match="invalid_namespace_advice_text") as exc:
-            module.validate_reasoned_advice(section, {"findings": [fact]})
-        assert exc.value.advice_error["stage"] == "composed_prose"
-        assert exc.value.advice_error["measured_chars"] == 232
-        assert exc.value.advice_error["limit_chars"] == 231
+    result = module.validate_reasoned_advice(section, {"findings": [fact]})
+    assert result["advice"][0]["summary"].startswith(reason + " ")
     assert fact == before
+
+
+@pytest.mark.parametrize("field", ["action", "evidence"])
+def test_code_prose_growth_cannot_consume_reserved_reason_space(field):
+    fact = fact_for("relative_activity", "none")
+    context = summary_context(fact)
+    original_limits = advice_module.summary_limits(fact)
+    if field == "action":
+        context["decision"]["action"] += "가" * 80
+    else:
+        context["summary_start"] += "가" * 80
+    with (
+        patch.object(
+            advice_module, "summary_context", side_effect=lambda _: deepcopy(context)
+        ),
+        patch.object(
+            module, "summary_context", side_effect=lambda _: deepcopy(context)
+        ),
+    ):
+        assert module.writing_context(fact)["prose_max_chars"] == 100
+        limits = advice_module.summary_limits(fact)
+        assert limits[0] > 360
+        assert limits[1] == original_limits[1] + 80
