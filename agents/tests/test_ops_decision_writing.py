@@ -880,7 +880,7 @@ async def test_workload_activity_repair_keeps_the_gpu_as_measurement_subject():
     for call in llm.complete.call_args_list:
         system = call.args[0]
         assert "개별 작업·Pod의 활동률" in system
-        assert "관측 현상" in system
+        assert "관측된 현상과 그 의미" in system
         assert "운영 행동은 다시 작성하지 마세요" in system
     original_context = first["topics"][0]["findings"][0]
     patched_context = repair["summary_repair"][0]

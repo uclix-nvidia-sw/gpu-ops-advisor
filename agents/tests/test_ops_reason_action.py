@@ -107,20 +107,25 @@ def test_valid_action_branches_keep_guards_and_reason_space(case, context):
 
 
 @pytest.mark.parametrize(
-    "peak,samples,focus,annotated",
+    "peak,samples,pending_samples,focus,annotated",
     [
-        (0, 238, "unknown", True),
-        (0, 240, "preparation", False),
-        (2, 238, "placement", False),
-        (2, 240, "placement", False),
+        (0, 238, 240, "unknown", True),
+        (0, 240, 240, "preparation", False),
+        (0, 240, 238, "unknown", False),
+        (2, 238, 240, "placement", False),
+        (2, 240, 240, "placement", False),
     ],
 )
 def test_partial_zero_input_keeps_values_and_positive_evidence(
-    peak, samples, focus, annotated
+    peak, samples, pending_samples, focus, annotated
 ):
     source = topic(pending=2)
     for hour in source["workloads"][0]["hours"]:
-        hour.update(unscheduled_peak=peak, unscheduled_samples=samples)
+        hour.update(
+            unscheduled_peak=peak,
+            unscheduled_samples=samples,
+            pending_samples=pending_samples,
+        )
     fact = next(f for f in candidates(source) if f["kind"] == "queue_review")
     before = deepcopy(fact)
     values = summary_context(fact)["summary_tokens"]
@@ -162,6 +167,26 @@ async def test_reason_repair_preserves_healthy_reasons_and_code_actions(
     repair = llm.complete.call_args.args[1]
     assert [a["fact_id"] for a in repair["summary_repair"]] == [bad_id]
     assert "required_checks" not in repair["summary_repair"][0]
+    initial = llm.complete.call_args_list[0].args[1]
+    first = next(f for f in initial["topics"][0]["findings"] if f["fact_id"] == bad_id)
+    retry = repair["summary_repair"][0]
+    context = module.writing_context(
+        next(f for f in facts if f["fact_id"] == bad_id), facts
+    )
+    for key, value in context.items():
+        assert first[key] == retry[key] == value
+    assert "서로 다른 관측 사실·한계는 보존" in first["writing_checks"][0]
+    assert "자료가 연결·수집됐다는 처리 설명" in first["writing_checks"][1]
+    assert all(
+        call.args[0].startswith(module.ADVICE_SYSTEM)
+        for call in llm.complete.call_args_list
+    )
+    assert (
+        "decision.reason에 노드 배정 상태와 GPU 부족 미확인이 함께 있으면"
+        in module.ADVICE_SYSTEM
+    )
+    assert "decision.reason의 관측 한계는 보존" in module.ADVICE_SYSTEM
+    assert "미배치 관측이 일부 표본이라는 이유는 남기세요" in module.ADVICE_SYSTEM
     if repeat_error:
         assert result["narrative_status"] == "failed"
     else:
@@ -609,7 +634,7 @@ def test_batch_code_preserves_placement_limit_without_model_repetition(context, 
     accepted = module.validate_reasoned_advice(reply, {"findings": [fact]})
     summary = accepted["advice"][0]["summary"]
     if phase == "placement":
-        assert summary.count("GPU 부족은 판단할 수 없습니다") == 1
+        assert summary.count("GPU 부족 여부는 미확인입니다") == 1
         assert "노드 미배정 Pod" in decision["action"]
         assert limit not in sent["decision"]["reason"]
         assert limit in sent["decision"]["known"]
@@ -841,3 +866,48 @@ def test_all_code_action_branches_keep_observation_guards(case):
         for hour in fact["source_hours"]:
             hour.update(unscheduled=2, unscheduled_samples=240)
     module.validate_observed_prose(writing_decision(fact)["action"], fact)
+
+
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_queue_action_keeps_checks_without_repeating_reason(phase):
+    fact = fact_for("queue-" + phase, "none")
+    reason = writing_decision(fact)["reason"]
+    accepted = module.validate_reasoned_advice(
+        {"advice": [{"fact_id": fact["fact_id"], "summary": reason}]},
+        {"findings": [fact]},
+    )["advice"][0]["summary"]
+    assert accepted.startswith(reason + " ")
+    action = writing_decision(fact)["action"]
+    assert "GPU 부족" not in action
+    assert "원인을 확인한 뒤" in action
+    assert {
+        "placement": "GPU 요청·노드 선택 조건",
+        "preparation": "이미지 다운로드·초기화 기록",
+        "unknown": "노드 배정 대기인지 컨테이너 시작 준비 중인지",
+    }[phase] in action
+
+
+@pytest.mark.parametrize("change", [[5, 2], [2, 2], [1, 2]])
+@pytest.mark.parametrize("phase", ["placement", "preparation", "unknown"])
+def test_batch_does_not_attribute_pending_change_to_completion(change, phase):
+    fact = fact_for("batch-" + phase, "none")
+    fact["pending_change"] = change
+    before = deepcopy(fact)
+    action = writing_decision(fact)["action"]
+    assert "완료로 대기가 줄었는지" in action
+    assert "미확인입니다" in action
+    assert "완료로 대기가 줄었습니다" not in action
+    assert "완료 Job과 같은 작업 유형이면" in action
+    assert fact == before
+
+
+def test_batch_input_distinguishes_period_placement_from_last_pending():
+    fact = fact_for("batch-placement", "none")
+    fact["source_hours"][-1]["unscheduled"] = 0
+    before = deepcopy(fact)
+    sent = module.writing_context(fact)
+    assert sent["queue_context"]["check_first"] == "placement"
+    assert "마지막 시간에도 실행을 기다리는 Pod" in sent["decision"]["reason"]
+    assert "아직 노드를 배정받지 못해 실행을 기다리는 Pod" in sent["decision"]["reason"]
+    assert "구간 중 미배정과 마지막 구간 대기를 같은 시점" in module.ADVICE_SYSTEM
+    assert fact == before

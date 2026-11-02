@@ -28,7 +28,7 @@ TOPICS = {
     "namespace_usage": "Namespace별 GPU 활동 해석",
     "incident_summary": "기간 내 장애 알림 해석",
 }
-VERSION = "ops-interpretation-advice-clarity-v11"
+VERSION = "ops-interpretation-advice-focus-v12"
 log = logging.getLogger(__name__)
 PREREQUISITES = {
     "relative_activity": {
@@ -1379,8 +1379,8 @@ def writing_context(fact, findings=()):
         - 2,
     )
     context["writing_checks"] = [
-        "관측 현상과 decision.reason의 판단 이유만 설명; 점검 목적·조건·행동은 코드가 붙이므로 다시 작성하지 않음",
-        "연결 GPU의 관측과 일부 작업의 유형·요청·상태를 구분; 미확인·부분 관측을 부재나 원인으로 바꾸지 않음",
+        "decision.reason의 서로 다른 관측 사실·한계는 보존하고 같은 내용은 한 번만 설명; 점검 목적·조건·행동은 코드가 붙이므로 다시 작성하지 않음",
+        "연결 GPU의 관측과 일부 작업의 유형·요청·상태를 구분; 미확인·부분 관측을 부재나 원인으로 바꾸지 않음; 자료가 연결·수집됐다는 처리 설명이나 판단 근거가 된다는 덧말은 쓰지 않음",
     ]
     return context
 

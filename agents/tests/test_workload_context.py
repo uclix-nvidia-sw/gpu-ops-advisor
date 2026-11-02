@@ -483,7 +483,7 @@ def test_pending_check_examples_are_not_observed_failure_causes():
     }
     option = summary_context(fact)["decision"]["option"]
     assert "요청을 충족할 노드가 없었는지" in option
-    assert "배정 조건" in option and (
+    assert "노드 선택 조건" in option and (
         "맞지 않았는지" in option or "맞지 않는" in option
     )
     assert "GPU가 부족합니다" not in option and "노드가 없었습니다" not in option

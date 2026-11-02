@@ -1602,8 +1602,8 @@ def test_prompt_observation_and_branch_check_pass_existing_guards(unscheduled, c
     assert "시간대별 관측 최대 대기" not in SYSTEM
     assert "점검 목적·필수 확인 조건·운영 행동은 다시 작성하지 마세요" in SYSTEM
     assert "짧은 한 문장" in SYSTEM
-    assert "같은 사실·판단을 반복" in SYSTEM
-    assert "관측 현상" in SYSTEM
+    assert "같은 관측 사실·한계는 다른 말로 되풀이하지 말고 한 번만 설명" in SYSTEM
+    assert "관측된 현상과 그 의미" in SYSTEM
     if unscheduled == 2:
         focus = summary_context(fact)["writing_focus"]
         assert "GPU 요청이 충족되지 않았는지" in focus
@@ -2275,7 +2275,7 @@ def test_batch_action_keeps_each_check(phase):
         assert action.count(".") == 2 and action.endswith("정하세요.")
     else:
         assert action.count(".") == 2 and action.endswith("정하세요.")
-        assert "완료만으로" in action and "일정" in action
+        assert "완료로 대기가 줄었는지는" in action and "일정" in action
     reply = {
         "advice": [
             {
