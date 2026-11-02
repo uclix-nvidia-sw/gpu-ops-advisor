@@ -146,7 +146,7 @@ async def test_failure_details_and_repair_follow_the_actual_violation(
         "stage": stage,
         "violation_kind": violation,
         **(
-            {"measured_chars": detail["measured_chars"], "limit_chars": 220}
+            {"measured_chars": detail["measured_chars"], "limit_chars": 252}
             if problem == "length"
             else {}
         ),
