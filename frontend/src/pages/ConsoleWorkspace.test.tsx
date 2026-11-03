@@ -5,6 +5,7 @@ import {
   ConsoleWorkspace,
   DebugRunList,
   OperatorIncidentList,
+  OperatorConsole,
   OperatorReportList,
 } from './ConsoleWorkspace';
 import type { ReactNode } from 'react';
@@ -78,17 +79,20 @@ it('keeps missing publication unknown and never turns successful execution into 
   expect(html).toContain('발행된 RCA 없음');
   expect(html).not.toContain('RCA 확인·처리');
 });
-it('offers progress and deletion history instead of reading unpublished or removed reports', () => {
-  const items: Row[] = [
-    { id: 'pending', status: 'running', result: { summary: 'PRIVATE_CANDIDATE' } },
-    { id: 'deleted', status: 'succeeded', result_ref: 'old', deletion: { status: 'complete' } },
-  ];
-  const html = render(<OperatorReportList from="/reports" items={items} />);
-  expect(html).toContain('작성 현황');
-  expect(html).toContain('삭제 기록');
-  expect(html).not.toContain('보고서 읽기');
-  expect(html).not.toContain('PRIVATE_CANDIDATE');
-});
+it.each([false, true])(
+  'keeps progress/deletion links and hides unpublished bodies (compact=%s)',
+  (compact) => {
+    const items: Row[] = [
+      { id: 'pending', status: 'running', result: { summary: 'PRIVATE_CANDIDATE' } },
+      { id: 'deleted', status: 'succeeded', result_ref: 'old', deletion: { status: 'complete' } },
+    ];
+    const html = render(<OperatorReportList from="/reports" items={items} compact={compact} />);
+    expect(html).toContain('작성 현황');
+    expect(html).toContain('삭제 기록');
+    expect(html).not.toContain('보고서 읽기');
+    expect(html).not.toContain('PRIVATE_CANDIDATE');
+  },
+);
 it('keeps debug destination and list filters together and labels Ops by report scope', () => {
   const html = render(
     <DebugRunList
@@ -254,4 +258,82 @@ it('labels partial interpretation previews without claiming all topics succeeded
   );
   expect(html).toContain('일부 주제 AI 해석·계산 요약');
   expect(html).not.toContain('>AI 해석 요약<');
+});
+
+it('keeps compact table metadata, publication distinctions and saved preview text without detail reads', () => {
+  const items: Row[] = [
+    {
+      id: 'published',
+      status: 'succeeded',
+      result_ref: 'r1',
+      result_status: 'partial',
+      report_origin: 'schedule',
+      created_at: '2026-10-23T07:33:35Z',
+      scope: { clusters: [{ cluster_id: 'cpc-2', namespaces: ['training-long-namespace'] }] },
+      time_range: { start: '2026-10-21T15:00:00Z', end: '2026-10-22T15:00:00Z' },
+      report_preview: {
+        method: 'deterministic_fallback',
+        narrative_status: 'failed',
+        summaries: [{ text: '저장 원문: 활동률 25.7%' }],
+      },
+    },
+    { id: 'old', status: 'succeeded' },
+  ];
+  const saved = JSON.stringify(items);
+  const html = render(
+    <OperatorReportList compact from="/reports?status=succeeded" items={items} />,
+  );
+  expect(html).toContain('<table');
+  expect(html).toContain('보고서 · 분석 기간');
+  expect(html).toContain('정확한 시간 범위');
+  expect(html).toContain('training-long-namespace');
+  expect(html).toContain('2026. 10. 22. 하루 · 1일(24시간)');
+  expect(html).toContain('dateTime="2026-10-23T07:33:35Z"');
+  expect(html).toContain('자동 생성');
+  expect(html).toContain('부분 산출');
+  expect(html).toContain('계산 결과 요약');
+  expect(html).toContain('저장 원문: 활동률 25.7%');
+  expect(html).not.toContain('AI 해석 요약');
+  expect(html).toContain('분석 대상 미확인');
+  expect(html).toContain('생성 방식 미확인');
+  expect(html).toContain('결과 미발행');
+  expect(html).toContain('/reports/old');
+  expect(JSON.stringify(items)).toBe(saved);
+  expect(state.paths).toEqual([]);
+});
+
+it('uses the same scoped report request and date validation in both console layouts', () => {
+  const path =
+    '/reports?status=succeeded&topic=namespace_usage&analysis_from=2026-10-22&analysis_to=2026-10-22&received_from=2026-10-23&received_to=2026-10-24';
+  render(<OperatorConsole />, path);
+  const classicPath = state.paths.at(-1);
+  const html = render(<OperatorConsole compact />, path);
+  expect(state.paths.at(-1)).toBe(classicPath);
+  const query = new URL(state.paths.at(-1)!, 'http://fixture').searchParams;
+  expect(Object.fromEntries(query)).toMatchObject({
+    limit: '30',
+    status: 'succeeded',
+    topic_id: 'namespace_usage',
+    analysis_from: '2026-10-21T15:00:00.000Z',
+    analysis_to: '2026-10-22T15:00:00.000Z',
+    from: '2026-10-22T15:00:00.000Z',
+    to: '2026-10-24T15:00:00.000Z',
+  });
+  expect(JSON.parse(query.get('scope')!)).toEqual({
+    clusters: [{ cluster_id: 'c1', namespaces: null }],
+  });
+  expect(html).toContain('불러온 0건');
+  expect(html).toContain('조회된 보고서가 없습니다.');
+  expect(html).toContain('추가 필터');
+  expect(html).toContain('href="/schedules"');
+  expect(html).toContain('href="/reports/new"');
+  expect(html.indexOf('<h1')).toBeLessThan(html.indexOf('aria-label="하위 메뉴"'));
+  state.paths = [];
+  render(<OperatorConsole compact />, '/reports?analysis_from=2026-10-24&analysis_to=2026-10-22');
+  expect(state.paths).toEqual([]);
+  state.error = true;
+  const error = render(<OperatorConsole compact />, '/reports?status=failed');
+  expect(error).not.toContain('불러온 0건');
+  expect(error).toContain('fixture network error');
+  expect(error).toContain('모든 조건 해제');
 });

@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown, FileText, ScanSearch, Activity } from 'lucid
 import { CodeBadge, useRecentIncidents } from '../components/IncidentOverview';
 import { QueryState } from '../components/live';
 import { RangeCalendar } from '../components/RangeCalendar';
-import { Badge, NavTabs } from '../components/ui';
+import { Badge } from '../components/ui';
 import { OpsUsage } from '../components/OpsUsage';
 import { IncidentCharts } from '../components/Console2Charts';
 import { obj, queryPath, rows, str, useList, useResource } from '../lib/live';
@@ -24,7 +24,7 @@ import {
 } from '../lib/incidentOverview';
 import { labels } from '../lib/domain';
 import { reportTitle } from '../lib/workflow';
-import { numberReportSections, reportTabs } from '../lib/reportNavigation';
+import { numberReportSections } from '../lib/reportNavigation';
 import { ReportPeriod } from '../components/ReportMeta';
 import { OperatorConsole } from './ConsoleWorkspace';
 import { NewWorkspace } from './NewWorkspace';
@@ -1075,7 +1075,6 @@ export function Console2() {
   if (location.pathname === '/reports')
     return (
       <div className="c2-page c2-report-list">
-        <NavTabs items={reportTabs} />
         <OperatorConsole compact />
       </div>
     );
