@@ -268,3 +268,90 @@ async def test_report_cannot_change_rca_conclusion(monkeypatch):
     monkeypatch.setattr(workflow, "write_report", corrupt)
     with pytest.raises(ValueError, match="report changed frozen"):
         await replay(policy_case())
+
+
+@pytest.mark.parametrize(
+    "second", ["valid", "invalid_json", "invalid_content", "http_error"]
+)
+async def test_json_failure_retries_same_evidence_once_and_revalidates(second):
+    case = policy_case()
+    good = deepcopy(case["responses"]["synthesis"][0])
+    bad = {"raw_text": "not json", "usage": {"total_tokens": 100}}
+    following = deepcopy(good)
+    if second == "invalid_json":
+        following = bad
+    elif second == "invalid_content":
+        following["response"]["interpretation"] = {"findings": "invalid"}
+    elif second == "http_error":
+        following = {"http_status": 504}
+    case["responses"]["synthesis"] = [bad, following]
+    result = await replay(case)
+    calls = [c for c in result["model_calls"] if c["stage"] == "synthesis"]
+    assert len(calls) == 2
+    assert calls[0]["input_hash"] == calls[1]["input_hash"]
+    assert calls[0]["system_hash"] == calls[1]["system_hash"]
+    assert sum(len(c["requests"]) for c in calls) == 2
+    record = next(
+        e["snapshot"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "rca_synthesis"
+    )
+    diag = record["diagnostics"]
+    assert diag["json_retry_initial_error"] == "llm_invalid_output"
+    assert [r["attempt"] for r in diag["requests"]] == [1, 2]
+    assert diag["requests"][0]["excluded_reasons"] == ["llm_invalid_output"]
+    assert (
+        diag["requests"][0]["input_view_hash"] == diag["requests"][1]["input_view_hash"]
+    )
+    if second == "valid":
+        assert diag["json_retry"] == "applied"
+        assert diag["response_attempt"] == 2
+        assert "synthesis_failed" not in result["output"]["result"]["missing_inputs"]
+    else:
+        assert diag["json_retry"] in {"failed", "failed_validation"}
+        assert "synthesis_failed" in result["output"]["result"]["missing_inputs"]
+
+
+@pytest.mark.parametrize("exhausted", ["tokens", "deadline"])
+async def test_json_retry_keeps_existing_budget_and_deadline(monkeypatch, exhausted):
+    from rca_replay import ReplayLLM
+
+    from rcca_agent import evaluation
+
+    original = ReplayLLM.complete
+    generate = evaluation.generate
+
+    async def bounded_generate(llm, payload, diagnostics):
+        deadline = llm.deadline
+        try:
+            return await generate(llm, payload, diagnostics)
+        finally:
+            # Isolate synthesis deadline exhaustion from the report-writing stage.
+            llm.deadline = deadline
+
+    monkeypatch.setattr(evaluation, "generate", bounded_generate)
+
+    async def complete(self, system, data, stage="synthesis", max_tokens=None):
+        response = await original(self, system, data, stage, max_tokens)
+        if self.last_failure == "llm_invalid_output":
+            if exhausted == "tokens":
+                self.remaining = 0
+            else:
+                self.deadline = 0
+        return response
+
+    monkeypatch.setattr(ReplayLLM, "complete", complete)
+    case = policy_case()
+    case["responses"]["synthesis"] = [
+        {"raw_text": "not json", "usage": {"total_tokens": 100}}
+    ]
+    result = await replay(case)
+    calls = [c for c in result["model_calls"] if c["stage"] == "synthesis"]
+    assert len(calls) == 1
+    record = next(
+        e["snapshot"]
+        for e in result["output"]["evidence"]
+        if e["query_id"] == "rca_synthesis"
+    )
+    assert record["diagnostics"]["json_retry"] == "budget_or_deadline_exhausted"
+    assert "synthesis_failed" in result["output"]["result"]["missing_inputs"]
