@@ -29,7 +29,8 @@ import { aggregateReasons } from '../components/AggregateReport';
 import { reportReceivedRange } from '../lib/reportPeriod';
 import { dayKey } from '../lib/incidentOverview';
 import { AlarmIdentity, More, QueryState } from '../components/live';
-import { Badge } from '../components/ui';
+import { Badge, NavTabs } from '../components/ui';
+import { reportTabs } from '../lib/reportNavigation';
 import { ReportOrigin, ReportPeriod, ReportScope } from '../components/ReportMeta';
 import { NewWorkspace, incidentTitle, summaryState, targetLabel } from './NewWorkspace';
 import { ReportFilters } from './Reports';
@@ -611,6 +612,85 @@ export function OperatorReportList({
   from: string;
   compact?: boolean;
 }) {
+  if (compact)
+    return (
+      <div
+        className="c2-surface c2-table-scroll c2-report-table-wrap"
+        tabIndex={0}
+        role="region"
+        aria-label="운영 보고서 목록"
+      >
+        <table className="c2-table c2-report-table">
+          <caption className="sr-only">보고서별 분석 기간, 대상, 요청 접수와 진행·결과</caption>
+          <thead>
+            <tr>
+              <th scope="col">보고서 · 분석 기간</th>
+              <th scope="col">분석 대상</th>
+              <th scope="col">요청 접수</th>
+              <th scope="col">진행 · 결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((j) => (
+              <tr key={str(j.id)}>
+                <td>
+                  <Link
+                    className="c2-incident-title"
+                    to={`/reports/${encoded(j.id)}`}
+                    state={{ from }}
+                  >
+                    {reportTitle(j)}
+                  </Link>
+                  <ReportPeriod value={j.time_range} />
+                  {!!j.result_ref && !j.deletion && (
+                    <details className="c2-report-preview">
+                      <summary>저장된 주요 변화·한계 보기</summary>
+                      <ReportPreview value={obj(j.report_preview)} />
+                    </details>
+                  )}
+                </td>
+                <td>
+                  <ReportScope job={j} compact labeled />
+                </td>
+                <td>
+                  <time dateTime={str(j.created_at) || undefined}>
+                    {formatDate(str(j.created_at))}
+                  </time>
+                  <ReportOrigin value={j.report_origin} />
+                </td>
+                <td>
+                  <dl className="c2-report-states">
+                    <div>
+                      <dt>진행</dt>
+                      <dd>
+                        <Badge status={str(j.status) || 'unknown'} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>결과</dt>
+                      <dd>
+                        {j.result_ref && !j.deletion ? (
+                          <Badge status={str(j.result_status) || 'unknown'} />
+                        ) : (
+                          <span>{j.deletion ? '삭제된 보고서' : '결과 미발행'}</span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                  <Link
+                    className="c2-result-link"
+                    to={`/reports/${encoded(j.id)}`}
+                    state={{ from }}
+                  >
+                    {j.deletion ? '삭제 기록' : j.result_ref ? '보고서 읽기' : '작성 현황'} →
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   return (
     <div className="console-report-list">
       {items.map((j) => (
@@ -619,30 +699,15 @@ export function OperatorReportList({
             <FileText size={24} />
           </div>
           <div className="console-report-body">
-            {!compact && <ReportOrigin value={j.report_origin} />}
+            <ReportOrigin value={j.report_origin} />
             <h3>
               <Link to={`/reports/${encoded(j.id)}`} state={{ from }}>
                 {reportTitle(j)}
               </Link>
             </h3>
             <ReportPeriod value={j.time_range} />
-            <ReportScope job={j} compact={compact} />
-            {compact && (
-              <div className="c2-created">
-                <ReportOrigin value={j.report_origin} />
-                <span>요청 접수 {formatDate(str(j.created_at))}</span>
-              </div>
-            )}
-            {!!j.result_ref &&
-              !j.deletion &&
-              (compact ? (
-                <details className="c2-report-preview">
-                  <summary>저장된 주요 변화·한계 보기</summary>
-                  <ReportPreview value={obj(j.report_preview)} />
-                </details>
-              ) : (
-                <ReportPreview value={obj(j.report_preview)} />
-              ))}
+            <ReportScope job={j} />
+            {!!j.result_ref && !j.deletion && <ReportPreview value={obj(j.report_preview)} />}
           </div>
           <div className="console-report-result">
             <Badge status={str(j.status) || 'unknown'} />
@@ -756,9 +821,9 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
   const from = location.pathname + location.search;
   return (
     <div className="console-page">
-      <header className="console-heading">
+      <header className={compact ? 'c2-heading' : 'console-heading'}>
         <div>
-          <span className="console-kicker">GPU OPERATIONS</span>
+          {!compact && <span className="console-kicker">GPU OPERATIONS</span>}
           <h1 tabIndex={-1}>
             {reportsOnly
               ? compact
@@ -776,20 +841,23 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
         </div>
         {!casesOnly && (
           <div className="head-actions">
-            {reportsOnly && params.toString() && (
+            {reportsOnly && !compact && params.toString() && (
               <button className="button" onClick={() => setParams({})}>
                 모든 조건 해제
               </button>
             )}
-            <Link className="button" to="/schedules">
-              자동 보고서 설정
-            </Link>
+            {!compact && (
+              <Link className="button" to="/schedules">
+                자동 보고서 설정
+              </Link>
+            )}
             <Link className="button primary" to="/reports/new">
               보고서 만들기 <ArrowRight size={16} />
             </Link>
           </div>
         )}
       </header>
+      {compact && reportsOnly && <NavTabs items={reportTabs} />}
       {!reportsOnly && (
         <section className="console-surface" aria-labelledby="incident-list-title">
           <header className="console-section-head">
@@ -870,39 +938,64 @@ export function OperatorConsole({ compact = false }: { compact?: boolean }) {
         </section>
       )}
       {!casesOnly && (
-        <section className="console-surface" aria-labelledby="report-list-title">
-          <header className="console-section-head">
-            <div>
-              <h2 id="report-list-title">{compact ? '분석 기간으로 찾기' : '기간별 Ops 보고서'}</h2>
-              <p>
-                {compact
-                  ? '요청 접수 최신순 · 과거 기간의 재생성 보고서도 위에 표시됩니다.'
-                  : '접수 최신순 · 분석 기간은 각 보고서에 표시됩니다.'}
-              </p>
-            </div>
-            {!reportsOnly && (
-              <Link className="text-link" to="/reports">
-                전체 보고서 →
-              </Link>
+        <section
+          className={compact ? 'c2-report-results' : 'console-surface'}
+          aria-labelledby="report-list-title"
+        >
+          <div className={compact ? 'c2-surface c2-report-filters' : undefined}>
+            <header className={compact ? 'sr-only' : 'console-section-head'}>
+              <div>
+                <h2 id="report-list-title">
+                  {compact ? '분석 기간으로 찾기' : '기간별 Ops 보고서'}
+                </h2>
+                <p>
+                  {compact
+                    ? '요청 접수 최신순 · 과거 기간의 재생성 보고서도 위에 표시됩니다.'
+                    : '접수 최신순 · 분석 기간은 각 보고서에 표시됩니다.'}
+                </p>
+              </div>
+              {!reportsOnly && (
+                <Link className="text-link" to="/reports">
+                  전체 보고서 →
+                </Link>
+              )}
+            </header>
+            {reportsOnly && (
+              <>
+                <DateFilter prefix="analysis" label="분석" quick={compact} />
+                <details
+                  className="console-secondary-filters"
+                  open={
+                    params.has('status') ||
+                    params.has('tab') ||
+                    params.has('topic') ||
+                    params.has('received_from') ||
+                    params.has('received_to') ||
+                    undefined
+                  }
+                >
+                  <summary>
+                    {compact ? '추가 필터 · 상태·주제·요청 접수일' : '상태·주제·요청 접수일 조건'}
+                  </summary>
+                  <ReportFilters resetLabel="상태·접수 조건 해제" />
+                </details>
+              </>
             )}
-          </header>
-          {reportsOnly && (
-            <>
-              <DateFilter prefix="analysis" label="분석" quick={compact} />
-              <details
-                className="console-secondary-filters"
-                open={
-                  params.has('status') ||
-                  params.has('topic') ||
-                  params.has('received_from') ||
-                  params.has('received_to') ||
-                  undefined
-                }
-              >
-                <summary>상태·주제·요청 접수일 조건</summary>
-                <ReportFilters resetLabel="상태·접수 조건 해제" />
-              </details>
-            </>
+          </div>
+          {compact && (
+            <div className="c2-list-note">
+              {!reports.isPending && !reports.isError && !received.error && !analysis.error && (
+                <>
+                  <b>불러온 {reports.items.length}건</b>
+                  <span>요청 접수 최신순 · 분석 기간과 요청 접수일은 다릅니다.</span>
+                </>
+              )}
+              {params.toString() && (
+                <button className="text-link" onClick={() => setParams({})}>
+                  모든 조건 해제
+                </button>
+              )}
+            </div>
           )}
           {reportsOnly && (received.error || analysis.error) ? (
             <p role="alert" className="live-padding">

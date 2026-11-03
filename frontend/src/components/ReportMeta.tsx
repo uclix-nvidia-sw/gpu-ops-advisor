@@ -44,7 +44,15 @@ export function ReportPeriod({ value }: { value: unknown }) {
   );
 }
 
-export function ReportScope({ job, compact = false }: { job: Row; compact?: boolean }) {
+export function ReportScope({
+  job,
+  compact = false,
+  labeled = false,
+}: {
+  job: Row;
+  compact?: boolean;
+  labeled?: boolean;
+}) {
   const clusters = reportScopeClusters(job);
   if (!clusters.length) return <span>분석 대상 미확인</span>;
   if (compact)
@@ -52,8 +60,21 @@ export function ReportScope({ job, compact = false }: { job: Row; compact?: bool
       <ul className="c2-scope" aria-label="클러스터별 분석 대상">
         {clusters.map(({ cluster, namespaces }, index) => (
           <li key={index}>
-            <strong>{cluster}</strong>
-            <span>{namespaces}</span>
+            {labeled ? (
+              <dl className="c2-scope-fields">
+                <dt>클러스터</dt>
+                <dd>
+                  <strong>{cluster}</strong>
+                </dd>
+                <dt>네임스페이스</dt>
+                <dd>{namespaces === '전체 Namespace' ? '전체' : namespaces}</dd>
+              </dl>
+            ) : (
+              <>
+                <strong>{cluster}</strong>
+                <span>{namespaces}</span>
+              </>
+            )}
           </li>
         ))}
       </ul>
