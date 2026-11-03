@@ -281,6 +281,7 @@ export function NamespaceCharts({
   focus?: NamespaceFocus | null;
   onClearFocus?: () => void;
 }) {
+  const Heading = reader ? 'h4' : 'h3';
   const [memoryFields, setMemoryFields] = useState<Record<string, string>>({});
   const hasMemory = groups.some((g) => g.models.some((r) => r.gpu_memory != null));
   const names = [...new Set(groups.map((g) => g.namespace))].sort();
@@ -296,7 +297,9 @@ export function NamespaceCharts({
       tabIndex={reader ? -1 : undefined}
       className="aggregate-cluster-charts"
     >
-      <h3 className="aggregate-subheading">{headingNumber}. 클러스터별 Namespace 시간대 비교</h3>
+      <Heading className="aggregate-subheading">
+        {!reader && `${headingNumber}. `}클러스터별 Namespace 시간대 비교
+      </Heading>
       {focus && (
         <div className="c2-chart-focus">
           <b>

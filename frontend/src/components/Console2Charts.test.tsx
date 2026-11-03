@@ -2,7 +2,12 @@ import { expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { incidentViews } from '../lib/incidentOverview';
-import { IncidentCharts, ReportVisualSummary, reportChartRows } from './Console2Charts';
+import {
+  IncidentCharts,
+  ReportGpuComparison,
+  ReportIncidentComparison,
+  reportChartRows,
+} from './Console2Charts';
 
 it('keeps measured zero, missing values and separate cluster/model rows distinct', () => {
   const value = {
@@ -48,7 +53,7 @@ it('keeps measured zero, missing values and separate cluster/model rows distinct
     [null, null, null],
     [null, null, null],
   ]);
-  const html = renderToStaticMarkup(<ReportVisualSummary value={value} />);
+  const html = renderToStaticMarkup(<ReportGpuComparison value={value} />);
   expect(html).toContain('활동률 0.00% · 이전 기간 50.00%');
   expect(html).toContain('메모리 사용 비율 90.00%');
   expect(html).toContain('수치 미확인 2개');
@@ -60,17 +65,18 @@ it('shows unknown instead of a fabricated zero or period delta', () => {
   const value = {
     topics: [{ topic_id: 'incident_summary', summary: { count: 0, previous_count: null } }],
   };
-  const html = renderToStaticMarkup(<ReportVisualSummary value={value} />);
+  const html = renderToStaticMarkup(<ReportIncidentComparison value={value} />);
   expect(html).toContain('현재 기간 0건, 이전 기간 미확인건');
   expect(html).toContain('이전 기간 비교 미확인');
   expect(html).not.toContain('Namespace별 GPU 사용 관측');
   expect(html).not.toMatch(/NaN|Infinity/);
-  expect(renderToStaticMarkup(<ReportVisualSummary value={{ topics: [] }} />)).toBe('');
+  expect(renderToStaticMarkup(<ReportGpuComparison value={{ topics: [] }} />)).toBe('');
+  expect(renderToStaticMarkup(<ReportIncidentComparison value={{ topics: [] }} />)).toBe('');
 });
 
 it('compares stored incident counts without converting them to current fault status', () => {
   const html = renderToStaticMarkup(
-    <ReportVisualSummary
+    <ReportIncidentComparison
       value={{
         topics: [{ topic_id: 'incident_summary', summary: { count: 180, previous_count: 78 } }],
       }}
@@ -99,4 +105,22 @@ it('plots KST daily totals and links each date and category to the matching case
   expect(html).toContain('/cases?period=7&amp;category=link');
   expect(html).toContain('GPU 자체 1건, GPU 간 연결 1건');
   expect(render([])).not.toMatch(/NaN|Infinity|pathLength="100"/);
+});
+
+it('groups display rows by cluster, namespace and model without changing saved order or values', () => {
+  const records = [
+    { cluster_id: 'cpc-2', namespace: 'same', gpu_model: 'A100', activity_percent: 20 },
+    { cluster_id: 'cpc-1', namespace: 'z', gpu_model: 'A100', activity_percent: 30 },
+    { cluster_id: 'cpc-1', namespace: 'same', gpu_model: 'H100', activity_percent: 40 },
+    { cluster_id: 'cpc-1', namespace: 'same', gpu_model: 'A100', activity_percent: 50 },
+  ];
+  const value = { topics: [{ topic_id: 'namespace_usage', rows: records }] };
+  const saved = JSON.stringify(value);
+  expect(reportChartRows(value).map((row) => row.activity)).toEqual([50, 40, 30, 20]);
+  const html = renderToStaticMarkup(<ReportGpuComparison value={value} />);
+  expect(html.indexOf('aria-label="cpc-1 GPU 사용 관측"')).toBeLessThan(
+    html.indexOf('aria-label="cpc-2 GPU 사용 관측"'),
+  );
+  expect(html.match(/class="c2-comparison-row"/g)).toHaveLength(4);
+  expect(JSON.stringify(value)).toBe(saved);
 });

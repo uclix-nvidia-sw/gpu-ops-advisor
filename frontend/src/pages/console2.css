@@ -773,6 +773,93 @@
   border-left-color: #76b900;
   font-weight: 700;
 }
+.c2-toc-number {
+  display: inline-block;
+  min-width: 2ch;
+  margin-right: 8px;
+  color: #5f6c57;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.c2-toc button[aria-current] .c2-toc-number {
+  color: inherit;
+  font-weight: inherit;
+}
+.c2-ops-reader [data-c2-section-number]::before {
+  content: attr(data-c2-section-number) ' ';
+  display: inline-block;
+  min-width: 2ch;
+  margin-right: 10px;
+  color: #5f6c57;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.c2-ops-reader .c2-toc nav :is(button, summary) {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  white-space: normal;
+  line-height: 1.6;
+}
+.c2-ops-reader .c2-toc-number {
+  flex-shrink: 0;
+}
+.c2-ops-reader .c2-toc nav > .c2-toc-utility {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.c2-toc-group {
+  margin: 0;
+}
+.c2-toc-group > summary {
+  padding: 9px 10px;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6d7a61;
+  list-style: none;
+}
+.c2-toc-group > summary::-webkit-details-marker {
+  display: none;
+}
+.c2-toc-group > summary svg {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+.c2-toc-group:not([open]) > summary svg {
+  transform: rotate(-90deg);
+}
+.c2-toc-group > summary[aria-current],
+.c2-toc-group:not([open]) > summary[data-active] {
+  color: #344d1d;
+  background: #e4ecdc;
+  border-left-color: #76b900;
+  font-weight: 700;
+}
+.c2-toc-children {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 4px 10px;
+  padding-left: 6px;
+  border-left: 1px solid #dfe7d8;
+}
+.c2-toc-children .c2-toc-number {
+  min-width: 3ch;
+}
+@media (min-width: 651px) {
+  .c2-reader-layout.c2-ops-reader {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+.c2-ops-reader .c2-observations-heading {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
 .c2-toc > button {
   text-align: left;
   font-size: 12px;
@@ -954,10 +1041,40 @@
   line-height: 1.8;
   font-size: 11px;
 }
-.c2-ops-reader .aggregate-report > .c2-report-visual {
-  margin: 0;
-  padding: 0;
+.c2-ops-reader .aggregate-major-topic > #c2-report-summary {
+  margin: 0 0 24px;
+  padding: 0 0 24px;
   border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+}
+.c2-ops-reader .c2-observation-cluster + .c2-observation-cluster {
+  margin-top: 24px;
+}
+.c2-ops-reader .c2-observation-cluster > h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.c2-ops-reader .c2-observation-cluster-row > th {
+  padding: 12px;
+  text-align: left;
+  background: #f4f6f3;
+  color: var(--ink);
+  font-size: 13px;
+}
+.c2-ops-reader .c2-advice-group {
+  margin-top: 24px;
+}
+.view-operations.console2-shell .c2-ops-reader h3.c2-advice-group-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.c2-ops-reader .c2-incident-advice-link {
+  margin: 16px 0 24px;
 }
 .c2-ops-reader .c2-reader-content {
   container: ops-report / inline-size;
@@ -1103,28 +1220,77 @@
 .c2-ops-reader .aggregate-report > .aggregate-static-note {
   margin: 8px 0;
 }
-/* Keep Ops hierarchy and disclosure spacing independent of the RCA reader. */
-.view-operations.console2-shell .c2-ops-reader .aggregate-report h2 {
+/* Use the same title scale for Ops sections, including disclosure and review headings. */
+.view-operations.console2-shell .c2-ops-reader .aggregate-report h2,
+.view-operations.console2-shell .c2-ops-reader .aggregate-report > .aggregate-evidence > summary,
+.view-operations.console2-shell .c2-ops-reader #new-review-records h2 {
   font-size: 20px;
+  font-weight: 650;
   line-height: 1.5;
-  margin-bottom: 16px;
+  letter-spacing: -0.035em;
+  color: #1c2e46;
+  margin: 0 0 16px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report .aggregate-major-topic > h3 {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0 0 20px;
 }
 .view-operations.console2-shell
   .c2-ops-reader
   .aggregate-report
-  :is(.aggregate-subheading, .c2-chart-card h3) {
+  .aggregate-major-topic
+  :where(h4, .aggregate-interpretation h3) {
   font-size: 16px;
+  font-weight: 650;
   line-height: 1.5;
+  margin: 0 0 12px;
 }
-.view-operations.console2-shell .c2-ops-reader .aggregate-report h4 {
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  .aggregate-major-topic
+  > h4.aggregate-subheading {
+  margin-top: 24px;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  :is(.aggregate-chart-heading h4, .aggregate-model-detail h4, .aggregate-chart-metric-title) {
   font-size: 14px;
+  font-weight: 600;
   line-height: 1.6;
+  margin: 0 0 8px;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  :is(.c2-hourly-overview, .aggregate-workload-charts, .c2-incident-evidence) {
+  margin-block: 24px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report > .aggregate-evidence {
+  margin: 32px 0 0;
+  padding-top: 24px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report > .aggregate-evidence > summary {
+  margin: 0;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  > .aggregate-evidence[open]
+  > summary {
+  margin-bottom: 16px;
+}
+.c2-ops-reader .aggregate-report > .aggregate-evidence > summary::marker {
+  font-size: 14px;
 }
 .view-operations.console2-shell
   .c2-ops-reader
   .aggregate-report
   details
-  > summary:not(.c2-advice-summary) {
+  > summary:where(:not(.c2-advice-summary)) {
   padding: 8px 0;
   font-size: 13px;
   line-height: 1.6;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { obj, rows, str, type Row } from '../lib/live';
 import { reportRequestTime } from '../lib/reportPeriod';
 import { memoryPercent } from './NamespaceCharts';
+import { compareReportTargets } from '../lib/report';
 
 const percentage = (v: unknown): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
@@ -89,9 +90,9 @@ export function OperationalInsights({ value }: { value: Row }) {
     )
     .sort((a, b) => Number(b.peak.activity_percent) - Number(a.peak.activity_percent))[0];
   return (
-    <section id="c2-ops-insights" className="c2-ops-insights" aria-label="수치로 확인한 관측">
+    <section id="c2-ops-insights" className="c2-ops-insights" aria-label="관측 요약">
       <header>
-        <h2>수치로 확인한 관측</h2>
+        <h2>관측 요약</h2>
         <span>저장된 수치·선별 기준으로 표시 · AI 해석과 구분된 관측 요약</span>
       </header>
       <div className="c2-coverage-strip">
@@ -175,7 +176,7 @@ export function OperationalInsights({ value }: { value: Row }) {
 }
 
 export function HourlyOverview({ value }: { value: Row }) {
-  const evidence = operationalEvidence(value);
+  const evidence = operationalEvidence(value).sort((a, b) => compareReportTargets(a.row, b.row));
   const period = obj(value.time_range);
   const start = Date.parse(str(period.start)),
     end = Date.parse(str(period.end));
@@ -192,7 +193,7 @@ export function HourlyOverview({ value }: { value: Row }) {
     <section id="c2-hourly-overview" className="c2-hourly-overview">
       <header>
         <div>
-          <h3>시간대별 활동과 메모리 점유</h3>
+          <h4>시간대별 활동과 메모리 점유</h4>
           <p>활동률 0–100% · 회색은 자료 없음 · 테두리는 같은 시간의 낮은 활동·높은 메모리</p>
         </div>
         {days.length > 1 && (
@@ -218,39 +219,47 @@ export function HourlyOverview({ value }: { value: Row }) {
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {evidence.map((r) => (
-                <tr key={r.key}>
-                  <th scope="row">
-                    {str(r.row.namespace)}
-                    <small>
-                      {str(r.row.cluster_id)} · {str(r.row.gpu_model)}
-                    </small>
+            {[...new Set(evidence.map((r) => str(r.row.cluster_id)))].map((cluster) => (
+              <tbody key={cluster}>
+                <tr className="c2-observation-cluster-row">
+                  <th scope="rowgroup" colSpan={shown.length + 1}>
+                    클러스터 <code>{cluster || '미확인'}</code>
                   </th>
-                  {shown.map((s) => {
-                    const h = r.hours.find((h) => Date.parse(str(h.start)) === Date.parse(s));
-                    const paired = h && r.paired.find((p) => p.hour === h);
-                    const overlap = h && r.overlap.some((p) => p.hour === h);
-                    const v = h ? Number(h.activity_percent) : null;
-                    const text = `${label(r.row)} · ${time(s)} KST · 활동률 ${v === null ? '미확인' : v.toFixed(2) + '%'} · 메모리 ${paired ? paired.memory.toFixed(2) + '%' : '미확인'}${overlap ? ` · 활동률 ${r.low}% 미만·메모리 ${r.high}% 이상` : ''}`;
-                    return (
-                      <td key={s}>
-                        <button
-                          type="button"
-                          className={`c2-heat-cell${overlap ? ' c2-heat-overlap' : ''}`}
-                          aria-label={text}
-                          style={{
-                            background: v === null ? '#e5e8e6' : `hsl(87 57% ${96 - v * 0.65}%)`,
-                          }}
-                        >
-                          <span className="c2-heat-tip">{text}</span>
-                        </button>
-                      </td>
-                    );
-                  })}
                 </tr>
-              ))}
-            </tbody>
+                {evidence
+                  .filter((r) => str(r.row.cluster_id) === cluster)
+                  .map((r) => (
+                    <tr key={r.key}>
+                      <th scope="row">
+                        {str(r.row.namespace)}
+                        <small>{str(r.row.gpu_model)}</small>
+                      </th>
+                      {shown.map((s) => {
+                        const h = r.hours.find((h) => Date.parse(str(h.start)) === Date.parse(s));
+                        const paired = h && r.paired.find((p) => p.hour === h);
+                        const overlap = h && r.overlap.some((p) => p.hour === h);
+                        const v = h ? Number(h.activity_percent) : null;
+                        const text = `${label(r.row)} · ${time(s)} KST · 활동률 ${v === null ? '미확인' : v.toFixed(2) + '%'} · 메모리 ${paired ? paired.memory.toFixed(2) + '%' : '미확인'}${overlap ? ` · 활동률 ${r.low}% 미만·메모리 ${r.high}% 이상` : ''}`;
+                        return (
+                          <td key={s}>
+                            <button
+                              type="button"
+                              className={`c2-heat-cell${overlap ? ' c2-heat-overlap' : ''}`}
+                              aria-label={text}
+                              style={{
+                                background:
+                                  v === null ? '#e5e8e6' : `hsl(87 57% ${96 - v * 0.65}%)`,
+                              }}
+                            >
+                              <span className="c2-heat-tip">{text}</span>
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+              </tbody>
+            ))}
           </table>
         </div>
       )}

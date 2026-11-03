@@ -101,7 +101,8 @@ export function WorkloadCharts({
                 </p>
               )}
               <p className="aggregate-workload-caption">
-                첫 최대 관측 시간대입니다. 대기 시간은 아닙니다.
+                {compact && '최대 대기 Pod 수가 큰 Namespace 상위 3개 · '}첫 최대 관측 시간대입니다.
+                대기 시간은 아닙니다.
               </p>
               <details className="aggregate-workload-detail">
                 <summary>Namespace별 모든 시간대 보기</summary>

@@ -1276,7 +1276,7 @@ it.each(['namespace_usage', 'incident_summary'])(
   },
 );
 
-it('puts saved advice before the console 2 observations without duplicating or rewriting it', () => {
+it('puts console 2 observations before saved advice without duplicating or rewriting it', () => {
   const value = {
     narrative_status: 'complete',
     quality: { report: { method: 'llm_interpreted' } },
@@ -1309,7 +1309,7 @@ it('puts saved advice before the console 2 observations without duplicating or r
   };
   const before = JSON.stringify(value);
   const html = renderToStaticMarkup(<AggregateReport value={value} reader />);
-  expect(html.indexOf('id="c2-ops-advice"')).toBeLessThan(html.indexOf('id="c2-ops-insights"'));
+  expect(html.indexOf('id="c2-ops-insights"')).toBeLessThan(html.indexOf('id="c2-ops-advice"'));
   expect(html.match(/저장된 조건부 제안 문장/g)).toHaveLength(1);
   expect(html).toContain('<details class="aggregate-advice-namespace">');
   expect(html).toContain('할당 전 확인 조건');
@@ -1407,3 +1407,111 @@ it.each([false, true])(
     expect(fallback).not.toContain('aggregate-advice-intro');
   },
 );
+
+it.each(['legacy', 'structured', 'historical', 'fallback'])(
+  'moves incident-only %s interpretation to advice once, preserving its status and classic placement',
+  (state) => {
+    const section =
+      state === 'fallback'
+        ? {
+            topic_id: 'incident_summary',
+            interpretation_source: 'deterministic_fallback',
+            text: '저장된 사건 계산 결과입니다.',
+          }
+        : {
+            topic_id: 'incident_summary',
+            observation: '관측된 XID 79입니다.',
+            meaning:
+              state === 'historical'
+                ? '알림 발생 중으로 저장됐습니다.'
+                : '같은 종류의 알림 기록입니다.',
+            next_check: '기존 조사 기록을 확인하세요.',
+            ...(state === 'legacy' ? {} : { check_target: '' }),
+          };
+    const value = {
+      narrative_status: state === 'fallback' ? 'failed' : 'complete',
+      quality: {
+        report: { method: state === 'fallback' ? 'partial_interpretation' : 'llm_interpreted' },
+      },
+      topics: [{ topic_id: 'incident_summary', summary: { count: 1, previous_count: 0 } }],
+      narrative: [section],
+    };
+    const saved = JSON.stringify(value);
+    const render = (reader: boolean) =>
+      renderToStaticMarkup(
+        <MemoryRouter>
+          <AggregateReport value={value} reader={reader} />
+        </MemoryRouter>,
+      );
+    const modern = render(true),
+      classic = render(false);
+    const text = 'meaning' in section ? section.meaning : section.text;
+    expect(modern.split(text)).toHaveLength(2);
+    expect(modern.indexOf(text)).toBeLessThan(modern.indexOf('id="c2-observations"'));
+    expect(modern.indexOf('id="c2-incident-advice"')).toBeLessThan(modern.indexOf(text));
+    expect(classic.indexOf('id="incident-summary-title"')).toBeLessThan(classic.indexOf(text));
+    expect(classic).not.toContain('c2-incident-advice');
+    expect(modern).toContain('href="#c2-incident-advice"');
+    if (state === 'fallback') {
+      expect(modern).toContain('incident_summary 계산 결과 요약');
+      expect(modern).not.toContain('incident_summary AI 운영 해석');
+    }
+    if (state === 'historical') expect(modern).toContain('과거 알림 상태를 포함한 저장 해석 원문');
+    expect(JSON.stringify(value)).toBe(saved);
+  },
+);
+
+it('orders full observations only in the reader and preserves pending rank and the default detail selection', () => {
+  const targets = [
+    { cluster_id: 'cpc-2', namespace: 'same' },
+    { cluster_id: 'cpc-1', namespace: 'z' },
+    { cluster_id: 'cpc-1', namespace: 'same' },
+  ];
+  const value = {
+    topics: [
+      {
+        topic_id: 'namespace_usage',
+        rows: targets.map((target) => ({ ...target, gpu_model: 'A100', hours: [] })),
+        workloads: targets.map((target, i) => ({
+          ...target,
+          pending_peak: i + 1,
+          hours: [
+            { start: '2026-10-22T00:00:00Z', end: '2026-10-22T01:00:00Z', pending_peak: i + 1 },
+          ],
+        })),
+        workload_context: {
+          version: 'v1',
+          records: targets.map((target) => ({ ...target, regular_gpu_request: 1 })),
+          completed_jobs: targets.map((target) => ({ ...target, job_name: 'saved-job' })),
+        },
+      },
+    ],
+  };
+  const saved = JSON.stringify(value);
+  const render = (reader: boolean) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport value={value} reader={reader} />
+      </MemoryRouter>,
+    );
+  const modern = render(true),
+    classic = render(false);
+  const selected = modern.match(/<option value="[^"]*" selected="">([^<]+)<\/option>/)?.[1];
+  expect(selected).toBe('cpc-2 / same');
+  const options = [...modern.matchAll(/<option value="[^"]*"[^>]*>(cpc-[^<]+)<\/option>/g)].map(
+    (match) => match[1],
+  );
+  expect(options).toEqual(['cpc-1 / same', 'cpc-1 / z', 'cpc-2 / same']);
+  expect(modern).toContain('scope="rowgroup"');
+  expect(classic).not.toContain('c2-observation-cluster-row');
+  expect(modern.indexOf('aria-label="cpc-1 작업 대기·완료"')).toBeLessThan(
+    modern.indexOf('aria-label="cpc-2 작업 대기·완료"'),
+  );
+  expect(modern).toContain('최대 대기 Pod 수가 큰 Namespace 상위 3개');
+  const context = modern
+    .split('<caption>연결된 작업 일부의 관측 범위</caption>')[1]
+    .split('</table>')[0];
+  expect(context.indexOf('cpc-1')).toBeLessThan(context.indexOf('cpc-2'));
+  expect(context.indexOf('same')).toBeLessThan(context.indexOf('>z<'));
+  expect(JSON.stringify(value)).toBe(saved);
+});
