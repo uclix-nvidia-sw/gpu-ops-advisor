@@ -115,13 +115,28 @@ class IncidentLabelsTest(unittest.TestCase):
         self.assertEqual(len(codes), 63)
         for code in codes:
             definition = labels[f"xid:{code}"]["official"]
-            self.assertIn("미사용(Unused)", definition["meaning"])
+            self.assertIn("Unused", definition["meaning"])
+            self.assertRegex(
+                definition["meaning"],
+                r"Volta 및 이전 세대 GPU(?:용|를 위한) NVIDIA 문서",
+            )
+            self.assertIn("현행 카탈로그", definition["meaning"])
             self.assertNotIn("Unused", definition["name"])
         self.assertIn("시험용 오류", labels["xid:14"]["official"]["name"])
-        self.assertIn("XID 137", labels["xid:108"]["official"]["meaning"])
+        for code in (14, 108):
+            self.assertIn(
+                "A100·H100·B100·GB200 모두 적용 대상으로 표시",
+                labels[f"xid:{code}"]["official"]["meaning"],
+            )
         for code in codes - {14, 108}:
             self.assertIn(
-                "적용하지 않는 코드", labels[f"xid:{code}"]["official"]["meaning"]
+                "A100·H100·B100·GB200 기준 미사용(Unused) 코드",
+                labels[f"xid:{code}"]["official"]["meaning"],
+            )
+        for code in (87, 90, 91, 108):
+            self.assertIn(
+                "번호만 예약되어 있고 오류 의미는 별도로 정의되지 않은 코드",
+                labels[f"xid:{code}"]["official"]["meaning"],
             )
 
     def test_actions_describe_checks_instead_of_internal_workflows(self):

@@ -1254,7 +1254,7 @@ export function operatorView(result: Row) {
     currentReasons: component
       ? matchedReasons(component, str(logs[0]?.message) || plainReason(title))
       : [],
-    meaning: (codes.length === 1 && xidDefinition(codes[0])?.meaning) || str(g0.meaning),
+    meaning: str(g0.meaning) || (codes.length === 1 && xidDefinition(codes[0])?.meaning) || '',
     officialDefinition: codes.length === 1 ? xidDefinition(codes[0]) : undefined,
     causeNote: str(g0.cause_note),
     targetCheck,

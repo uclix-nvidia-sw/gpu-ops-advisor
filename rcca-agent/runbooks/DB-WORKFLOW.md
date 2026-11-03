@@ -34,7 +34,21 @@ python -m rcca_agent.runbook_audit rcca-agent/runbooks --profile agents/config.e
 
 XID/SXID 작성 원본은 모두 전체 observation plan을 한 수집 단계에서 실행하고, 같은 호스트의 최근 14일 Incident 이력을 함께 보고서로 구성한다. 보고서 수집은 required_queries에 메트릭 조회가 있는 XID/SXID revision에서 켜지며 D09만 필수인 기존 발행본은 기존 경로를 쓴다. XID 79는 D09·D44·D02·D11, SXID 11001은 D09·D47·D33·D34를 사용하고, 나머지 264건의 유형별 계획은 [CATALOG](CATALOG.md#운영자-보고서-지침과-조회-계획-2026-10-22-개정)를 따른다. 새 경로에서 required_queries는 기존 계약과 기능 식별을 위한 필드이며 추가 조회 판단이나 재조사 루프에 쓰지 않는다. 보고서는 대상·로그 시각·반복 보고 구간·관련 메트릭·이력·공식 대응 지침을 제공한다. 구 발행본도 같은 단일 수집·분석·보고서 작성 흐름을 사용한다.
 
-**Worker/UI 배포만으로 새 런북이 적용되지는 않는다.** 기존 knowledge ID와 검수된 compatibility를 유지하여 변경할 런북을 새 revision으로 등록·검토·발행한다. 빈 compatibility인 저장소 JSON을 그대로 발행하지 않는다. Worker/UI 배포를 먼저 완료하고 실제 실행 프로필에 각 D 조회가 허용되는지 확인한 뒤 발행한다. 신규 사건 또는 승인된 재실행에서 JC가 새 revision/hash를 고정하는지 확인한다. 기존 결과와 발행 revision은 수정하지 않는다. 문제 발생 시 새 revision을 retire하고 이전 발행 revision 선택과 이전 RCA 이미지로 복귀하는 절차를 확인한다. Ops 런북의 발행은 이 절의 대상이 아니다.
+### 배포 후 수정 런북 교체 순서
+
+**Worker/UI 배포만으로 새 런북이 적용되지는 않는다.** 아래 순서는 RCA 런북만 대상으로 하며 Ops 이미지·설정·런북 및 Grafana 알림 규칙은 변경하지 않는다. PR CI 통과, main 병합 후 이미지 발행, 배포, 런북 발행은 별도 단계다.
+
+1. **배포 확인:** 병합된 main의 CI 성공과 배포 이미지 digest를 확인하고 RCA Worker/frontend 준비 상태를 확인한다. 기존 이미지·실행 프로필과 발행 revision을 보존한다. 실행 중인 RCA의 고정 revision과 과거 보고서는 변경하지 않는다.
+2. **교체 대상 확정:** `catalog-manifest.json`의 `content_review.catalog_audit.current_verification.operator_semantics_review`에서 수정한 205종을 확인하고 현재 published 본문과 대조한다. 이미 동일한 본문이면 중복 revision을 만들지 않는다. 추가 지적 없이 유지한 79종과 Ops 런북은 교체 대상에서 제외한다. 실제 대상마다 knowledge ID, 이전 revision·version·content hash·compatibility·scope·visibility와 전체 응답을 로컬 보관한다.
+3. **새 초안 준비:** 기존 knowledge ID에 검수한 전체 content로 새 draft를 만든다. 기존 compatibility를 그대로 신뢰하지 말고 현재 RCA 프로필·대상과 다시 대조한다. 특히 XID 92의 필수 교정 가능 ECC 조회와 XID 108의 보조 NVLink 조회가 실제 프로필에 등록·허용되는지 확인한다. 저장소의 빈 compatibility 또는 예제 프로필만으로 운영 승인을 하지 않는다.
+4. **검토·발행:** 아래 CLI 절차의 `check --runtime → draft → request → approve → publish`를 각 대상에 적용한다. 단계별 receipt와 고유 request key를 보존하고 응답의 실제 revision을 사용한다. 발행 직후 GET으로 `published`, `content_hash == reviewed_content_hash == 검토한 본문 hash`를 확인한다. 실패한 항목은 중단하고 해당 이전 발행본을 유지한다. 아직 이전 revision을 폐기하지 않는다.
+5. **발행 후 검증:** 신규 사건 또는 승인된 재실행에서 JC가 새 revision/hash를 고정했는지 확인한다. 전체 계획의 로그·메트릭 수집, 실패/빈 값의 구분, 코드별 설명과 실제 모델 분석·대응의 일관성, 기존 폰트·6단 구성과 참고 자료를 검수한다. 대표 검증에는 Unused/예약 코드, XID 32·92·108, SXID의 플랫폼별 절차와 컴포넌트 변경을 포함한다. 항목별 hash 대조와 실제 실행 검증 범위를 각각 기록한다. 로컬 미리보기는 실제 모델 재실행을 대신하지 않는다.
+6. **이전 revision 폐기:** 교체 본문과 합의한 실제 실행 검증이 통과한 항목만 이전 revision을 다시 GET해 ID·hash·state·version을 확인한다. 새 발행본이 아닌 **해당 이전 revision의 최신 응답**을 `runbook_admin retire`의 receipt로 사용하고 새 revision 번호·교체 사유를 기록한다. 항목별로 수행하며 모든 과거 revision을 일괄 폐기하지 않는다. GET으로 이전 상태 `retired`와 새 상태 `published`를 확인한다. 실행 중인 claim과 과거 결과의 고정 참조는 그대로 보존한다.
+7. **최종 확인:** 변경한 각 knowledge ID의 유효한 새 published revision/hash와 폐기 결과를 대조하고, 다음 RCA가 새 본문을 선택하는지 확인한다. 기존 보고서는 자동 갱신되지 않는다. 보고서 실패를 숨기거나 상태만 완전 산출로 바꾸지 않는다.
+
+문제 발생 시 **이전 revision 폐기 전**에는 새 revision을 retire하고 다음 claim이 보존된 이전 published revision을 선택하는지 확인한다. **이전 revision까지 폐기한 뒤**에는 retired를 곧바로 publish할 수 없다. 보관한 이전 content와 검증된 compatibility로 같은 knowledge ID에 새 draft를 만들고 다시 검토·발행해 복구한 후 문제 revision을 폐기한다. 이미 실행 중인 작업이나 과거 결과는 소급 수정하지 않는다. 이미지 복귀가 필요하면 보관한 RCA/frontend digest만 사용하며 DB/PVC는 삭제하지 않는다.
+
+개별 등록·승인·발행·폐기의 명령과 receipt 사용법은 아래 5절 및 7.2~7.5절을 따른다. 실제 ID·응답·원문·인증정보는 PR에 넣지 않는다.
 
 XID 79·SXID 11001의 1.1 변경 hash와 이전 1.0 복원 정보는 [기존 검토 기록](incident-report-review-20261015.json)의 `decision_policy_update`에 연결했다. 이는 로컬 구조 검토이며 운영 발행 승인 기록이 아니다.
 

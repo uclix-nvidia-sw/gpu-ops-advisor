@@ -80,7 +80,7 @@
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "Fleet library 점검이 GPU가 있는 노드에서 NVIDIA 드라이버 사용자 공간 라이브러리(libnvidia-ml.so, libcuda.so)를 찾지 못해 Unhealthy로 보고한 것입니다. 이 라이브러리가 없으면 nvidia-smi, DCGM, CUDA 작업이 GPU를 쓰지 못합니다.",
+      "meaning": "Fleet library 점검이 GPU가 있는 노드에서 NVIDIA 드라이버 사용자 공간 라이브러리(libnvidia-ml.so, libcuda.so)를 찾지 못해 Unhealthy로 보고한 것입니다. 누락된 라이브러리가 NVML(libnvidia-ml.so)이면 관리·모니터링 조회, CUDA 드라이버(libcuda.so)이면 CUDA 실행 경로를 각각 확인합니다. 실제 작업 영향은 별도로 대조합니다.",
       "cause_note": "드라이버 설치·업그레이드 실패나 파일 누락, GPU Operator 드라이버 컨테이너 문제, 라이브러리 경로 설정 문제가 주요 원인 후보입니다.",
       "next_checks": [
         {

@@ -204,13 +204,13 @@
       ]
     },
     "analysis_guidance": [
-      "수집 항목: 오류·상태 로그, Fabric Manager 상태 코드, NVLink 수신량, NVLink 송신량. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
+      "수집은 이 Runbook의 observation_plan 전체를 같은 사건 구간으로 수행한다. 로그와 각 지표의 반환 시각·대상·단위를 확인하고, 아래 코드별 판단 및 최근 호스트 사건 이력과 연결한다. 계획에 포함됐다는 사실과 실제 값을 받았다는 사실을 구분한다.",
       "판단: 오류 줄의 스위치 PCI·Link 번호를 보존하고, access/trunk 포트와 연결 GPU·VM·파티션이 확인된 범위에서만 영향 대상을 정한다. 같은 시각 GPU 쪽 XID 74와 다른 SXID, 이전 사건 이력의 같은 스위치·다른 스위치 반복을 대조한다.",
       "Fleet 고정 카탈로그: ingress SRC-VC buffer underflow; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "GPUd 고정 기본 action: REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "GPUd 고정 정의: event_type=Fatal, PotentialFatal=true, AlwaysFatal=true.",
       "적용 조건: NVSwitch·FM 버전과 bare metal/VM·partition 모드 확인. B200/B300에는 적용하지 않는다.",
-      "문헌상 전체 fabric/system fatal 범주다. bare metal은 모든 작업을 배출한 뒤 호스트를 재시작하고, 공유 NVSwitch 가상화는 관련 guest partition을 모두 종료한 뒤 host 재시작 또는 GPU/NVSwitch SBR과 Service VM 복구 경로를 운영자가 선택한다. Agent는 실행하지 않는다.",
+      "bare metal에서는 치명 오류의 실제 포트·작업 영향을 확인합니다. access 포트 오류는 해당 GPU와 같은 작업의 GPU를 작업 배출 후 리셋하고, trunk 포트 오류는 모든 GPU 작업을 종료한 뒤 Fabric Manager를 중지하고 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋한 다음 Fabric Manager를 시작합니다. 리셋 뒤에도 지속되면 노드 재부팅 또는 전원 사이클을 검토합니다. 공유 NVSwitch 가상화의 Always Fatal 절차는 모든 guest 파티션을 종료한 뒤 호스트를 재시작하거나, GPU·NVSwitch의 SBR 리셋과 service VM 복구를 수행하는 것입니다. 플랫폼·FM 버전과 리셋 권한을 확인하고 유지보수 승인 뒤 운영자가 수행합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다.",
       "GPUd의 재부팅·점검 목록에는 조건이 있다. 운영자가 수행한 재부팅 뒤 같은 SXid가 같은 대상에서 재발했는지 확인한 뒤 NVSwitch 점검/수리 검토로 이어간다. 정적 배열을 동시 실행 지시로 해석하지 않는다."
     ],
     "recommendations": [
@@ -225,7 +225,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "영향 범위: fabric/system 전체에 항상 치명적입니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다.",
+        "text": "영향 범위: FM 가이드의 공유 NVSwitch 가상화 표에서 Always Fatal로 분류됩니다. bare metal의 영향 범위는 실제 오류 포트와 작업 상태를 확인합니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -235,7 +235,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "복구 조치: 호스트를 재시작해 fabric 전체를 리셋합니다. 공유 NVSwitch 가상화 모드는 관련 guest 파티션을 모두 종료한 뒤 service VM 복구 경로를 따릅니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다.",
+        "text": "복구 조치: bare metal에서는 치명 오류의 실제 포트·작업 영향을 확인합니다. access 포트 오류는 해당 GPU와 같은 작업의 GPU를 작업 배출 후 리셋하고, trunk 포트 오류는 모든 GPU 작업을 종료한 뒤 Fabric Manager를 중지하고 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋한 다음 Fabric Manager를 시작합니다. 리셋 뒤에도 지속되면 노드 재부팅 또는 전원 사이클을 검토합니다. 공유 NVSwitch 가상화의 Always Fatal 절차는 모든 guest 파티션을 종료한 뒤 호스트를 재시작하거나, GPU·NVSwitch의 SBR 리셋과 service VM 복구를 수행하는 것입니다. 플랫폼·FM 버전과 리셋 권한을 확인하고 유지보수 승인 뒤 운영자가 수행합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -254,7 +254,7 @@
     "investigation_only": true,
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
-      "meaning": "SXID 23011: 입력 SRC-VC 버퍼 부족 보고입니다. SXID 23011(ingress SRC-VC buffer underflow)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 항상 치명(Always Fatal)입니다. fabric/system 전체에 항상 치명적입니다.",
+      "meaning": "SXID 23011: 입력 SRC-VC 버퍼 부족 보고입니다. SXID 23011(ingress SRC-VC buffer underflow)는 NVSwitch 오류입니다. Fabric Manager 가이드 분류는 항상 치명(Always Fatal)입니다. FM 가이드의 공유 NVSwitch 가상화 표에서 Always Fatal로 분류됩니다. bare metal의 영향 범위는 실제 오류 포트와 작업 상태를 확인합니다.",
       "cause_note": "NVSwitch 포트·링크 이상, 연결 GPU 측 오류 전파, Fabric Manager·펌웨어 문제가 주요 원인 후보입니다.",
       "next_checks": [
         {
@@ -271,11 +271,11 @@
         },
         {
           "title": "영향 범위",
-          "text": "fabric/system 전체에 항상 치명적입니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
+          "text": "FM 가이드의 공유 NVSwitch 가상화 표에서 Always Fatal로 분류됩니다. bare metal의 영향 범위는 실제 오류 포트와 작업 상태를 확인합니다. 같은 시각 GPU 쪽 XID 74나 다른 SXID가 있으면 해당 GPU·링크를 우선 영향 범위로 봅니다. 동시 발생만으로 원인 관계를 확정하지 않습니다."
         },
         {
           "title": "복구 조치",
-          "text": "bare metal: 오류 포트가 GPU 연결 포트(access)면 오류가 GPU로 전파돼 그 GPU의 CUDA 작업이 끝나고 XID 74·45가 함께 보일 수 있으며, Fabric Manager는 다른 작업을 중단하지 않습니다. 해당 GPU와 같은 작업의 GPU를 nvidia-smi -r로 리셋합니다. 베이스보드 사이 포트(trunk)면 Fabric Manager가 모든 CUDA 작업을 중단하고 새 실행을 막습니다. Fabric Manager를 정지하고 GPU를 쓰는 프로그램을 모두 멈춘 뒤 모든 GPU·NVSwitch를 nvidia-smi -r(-i 옵션 없이)로 리셋하고 Fabric Manager를 다시 시작합니다. 계속되면 재부팅하거나 전원을 다시 넣습니다. 공유 NVSwitch 가상화: guest VM 파티션을 모두 종료한 뒤 호스트를 재시작하거나, GPU·NVSwitch를 SBR로 리셋한 뒤 service VM을 재시작합니다. 포트 종류(access·trunk)는 Fabric Manager 로그의 같은 시각 SXID 줄로 확인합니다. Fabric Manager 로그에 같은 SXID 줄이 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다. 조치 전 플랫폼·FM 버전·bare-metal/가상화 모드를 대조하고, 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행합니다."
+          "text": "bare metal에서는 치명 오류의 실제 포트·작업 영향을 확인합니다. access 포트 오류는 해당 GPU와 같은 작업의 GPU를 작업 배출 후 리셋하고, trunk 포트 오류는 모든 GPU 작업을 종료한 뒤 Fabric Manager를 중지하고 -i 없이 nvidia-smi -r로 모든 GPU·NVSwitch를 리셋한 다음 Fabric Manager를 시작합니다. 리셋 뒤에도 지속되면 노드 재부팅 또는 전원 사이클을 검토합니다. 공유 NVSwitch 가상화의 Always Fatal 절차는 모든 guest 파티션을 종료한 뒤 호스트를 재시작하거나, GPU·NVSwitch의 SBR 리셋과 service VM 복구를 수행하는 것입니다. 플랫폼·FM 버전과 리셋 권한을 확인하고 유지보수 승인 뒤 운영자가 수행합니다. B200/B300에는 이 SXID 절차를 적용하지 않습니다."
         },
         {
           "title": "복구 확인",
@@ -292,7 +292,7 @@
           "source_indices": [
             2
           ],
-          "text": "항상 치명(Always Fatal). 영향: fabric/system 전체에 항상 치명적입니다. 복구: 호스트를 재시작해 fabric 전체를 리셋합니다. 공유 NVSwitch 가상화 모드는 관련 guest 파티션을 모두 종료한 뒤 service VM 복구 경로를 따릅니다."
+          "text": "항상 치명(Always Fatal). 영향: FM 가이드의 공유 NVSwitch 가상화 표에서 Always Fatal로 분류됩니다. bare metal의 영향 범위는 실제 오류 포트와 작업 상태를 확인합니다. 복구: 공유 NVSwitch 가상화에서는 모든 guest 파티션 종료 후 호스트 재시작 또는 GPU·NVSwitch SBR과 service VM 복구를 적용합니다. bare metal은 실제 access·trunk 포트와 작업 영향에 따라 아래 대응 절차로 복구합니다."
         },
         {
           "title": "Fleet·GPUd 분류",
