@@ -406,7 +406,45 @@ async def generate(llm, payload, diagnostics):
             response = await complete_once(llm, prompt, view, "synthesis", diagnostics)
         finally:
             llm.request_attempt_limit = request_limit
+        format_retried = False
+        if (
+            response is None
+            and getattr(llm, "last_failure", None) == "llm_invalid_output"
+        ):
+            # Retry only a received but unparseable response, within the original
+            # deadline/token budget. Never retry an uncertain transport outcome.
+            retry_check = (
+                llm.request_budget(prompt, view, "synthesis")
+                if hasattr(llm, "request_budget")
+                else {}
+            )
+            diagnostics["json_retry"] = "budget_or_deadline_exhausted"
+            if (
+                time.monotonic() < getattr(llm, "deadline", float("inf"))
+                and retry_check.get("output_token_cap", 1) > 0
+            ):
+                format_retried = True
+                trace["excluded_reasons"] = ["llm_invalid_output"]
+                trace = {
+                    **deepcopy(trace),
+                    "attempt": 2,
+                    "request_check": {**check, **retry_check},
+                    "excluded_reasons": [],
+                }
+                diagnostics["requests"].append(trace)
+                diagnostics["json_retry_initial_error"] = "llm_invalid_output"
+                llm.request_attempt_limit = 1
+                try:
+                    response = await llm.complete(prompt, view, "synthesis")
+                finally:
+                    llm.request_attempt_limit = request_limit
+                diagnostics["json_retry"] = (
+                    "response_received" if response is not None else "failed"
+                )
         if response is None:
+            if getattr(llm, "last_failure", None) == "llm_http_error":
+                diagnostics["http_status"] = getattr(llm, "last_http_status", None)
+                diagnostics["error_type"] = getattr(llm, "last_error_type", None)
             diagnostics["error_code"] = (
                 getattr(llm, "last_failure", None) or "llm_no_response"
             )
@@ -415,9 +453,13 @@ async def generate(llm, payload, diagnostics):
             interpretation, candidates, limitations, errors = validate_author(
                 response, view, semantic_criteria(payload), details, dropped
             )
-            if errors and any(
-                d.get("rule") in {"numeric", "non_korean", "unknown_reference"}
-                for d in dropped + details
+            if (
+                errors
+                and not format_retried
+                and any(
+                    d.get("rule") in {"numeric", "non_korean", "unknown_reference"}
+                    for d in dropped + details
+                )
             ):
                 # One repair request with fixed feedback; the same view is revalidated.
                 numeric = any(d.get("rule") == "numeric" for d in dropped)
@@ -457,13 +499,24 @@ async def generate(llm, payload, diagnostics):
             if errors:
                 diagnostics["error_code"] = "invalid_author_response"
                 diagnostics["validation_failures"] = [
-                    {"attempt": 1, "reasons": errors, "details": details}
+                    {
+                        "attempt": 2 if format_retried else 1,
+                        "reasons": errors,
+                        "details": details,
+                    }
                 ]
+    if diagnostics.get("json_retry") == "response_received":
+        diagnostics["json_retry"] = (
+            "applied"
+            if interpretation is not None and not errors
+            else "failed_validation"
+        )
     adopted_attempt = (
         2
-        if any(
+        if diagnostics.get("json_retry") == "failed_validation"
+        or any(
             diagnostics.get(key) == "applied"
-            for key in ("numeric_repair", "validation_repair")
+            for key in ("numeric_repair", "validation_repair", "json_retry")
         )
         else 1
     )

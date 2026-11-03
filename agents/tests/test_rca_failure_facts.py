@@ -1,4 +1,4 @@
-"""Failure reports preserve scoped observations without retrying model analysis."""
+"""Failure reports preserve scoped observations after bounded model retries."""
 
 from copy import deepcopy
 
@@ -14,7 +14,7 @@ from test_rca_component_guidance import component_case
 
 @pytest.mark.parametrize("kind", ["xid", "sxid", "disk"])
 @pytest.mark.parametrize("failure", ["http", "invalid", "truncated"])
-async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
+async def test_author_failure_keeps_reports_after_bounded_calls(kind, failure):
     case = component_case() if kind == "disk" else policy_case(kind)
     if failure == "http":
         # A gateway rejection gets exactly one more call, with a lower output cap;
@@ -22,20 +22,20 @@ async def test_author_failure_keeps_reports_without_extra_calls(kind, failure):
         case["output_caps"] = {**case["output_caps"], "synthesis": 32768}
         case["responses"]["synthesis"] = [{"http_status": 400}, {"http_status": 400}]
     elif failure == "invalid":
-        case["responses"]["synthesis"] = [{"raw_text": "{broken"}]
+        case["responses"]["synthesis"] = [{"raw_text": "{broken"}] * 2
     else:
         case["responses"]["synthesis"][0]["finish_reason"] = "length"
     outcome = await replay(case)
     assert not outcome["missing_inputs"]
     assert sum(c["matched"] for c in outcome["query_calls"]) == 1
-    retry = ["synthesis"] if failure == "http" else []
+    retry = ["synthesis"] if failure in {"http", "invalid"} else []
     assert [c["stage"] for c in outcome["model_calls"]] == [
         "synthesis",
         *retry,
         "report_writing",
     ]
     assert all(len(c["requests"]) == 1 for c in outcome["model_calls"])
-    if retry:
+    if failure == "http":
         assert outcome["model_calls"][1]["requests"][0]["output_cap"] == 16384
     output = outcome["output"]["result"]
     problem = next(r for r in output["narrative"] if r["id"] == "problem")

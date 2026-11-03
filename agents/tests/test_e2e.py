@@ -141,6 +141,7 @@ class Upstream(BaseHTTPRequestHandler):
     requests = []
     llm_fail = False
     author_http_fail = False
+    author_json_failures = 0
     reject_tool_requests = False
     api_key = "fixture-only"
     logs_fail = False
@@ -187,6 +188,19 @@ class Upstream(BaseHTTPRequestHandler):
             data = json.loads(body["messages"][1]["content"])
             if self.author_http_fail and data.get("generation_mode") == "combined":
                 return self.send({"error": "fixture author failure"}, 400)
+            if (
+                data.get("generation_mode") == "combined"
+                and type(self).author_json_failures
+            ):
+                type(self).author_json_failures -= 1
+                return self.send(
+                    {
+                        "choices": [
+                            {"message": {"content": "{broken"}, "finish_reason": "stop"}
+                        ],
+                        "usage": {"total_tokens": 100},
+                    }
+                )
             message = {
                 "role": "assistant",
                 "content": json.dumps(
@@ -3864,7 +3878,9 @@ def test_aggregate_invalid_interpretation_keeps_published_calculations(
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize("invalid_interpretation", [False, True, "http", "revision"])
+@pytest.mark.parametrize(
+    "invalid_interpretation", [False, True, "http", "revision", "json_once"]
+)
 @pytest.mark.parametrize("component", ["sxid", "disk"])
 def test_combined_runbook_goal_freezes_rca_material_before_report_and_publication(
     stack, monkeypatch, invalid_interpretation, component
@@ -3893,6 +3909,8 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         )
 
     monkeypatch.setattr(sys.modules[__name__], "review_reply", critic)
+    if invalid_interpretation == "json_once":
+        monkeypatch.setattr(Upstream, "author_json_failures", 1)
     if invalid_interpretation == "http":
         monkeypatch.setattr(Upstream, "author_http_fail", True)
         # The lower-cap retry needs a configured cap above it, as in production.
@@ -4004,7 +4022,9 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         assert diagnostics["reduced_output_retry"]["after_status"] == 400
         assert diagnostics["reduced_output_retry"]["succeeded"] is False
     else:
-        assert diagnostics["request_attempts"] == 1
+        assert diagnostics["request_attempts"] == (
+            2 if invalid_interpretation == "json_once" else 1
+        )
     assert (
         stored["rca_result_frozen"]["material_hash"]
         == stored["report_assembly"]["material_hash"]
@@ -4050,6 +4070,15 @@ def test_combined_runbook_goal_freezes_rca_material_before_report_and_publicatio
         assert diagnostics["adoption"] == "validated_response"
         assert diagnostics["validation_failures"] == []
 
+    if invalid_interpretation == "json_once":
+        assert diagnostics["json_retry"] == "applied"
+        assert diagnostics["request_attempts"] == 2
+        assert diagnostics["response_attempt"] == 2
+        assert "synthesis_failed" not in result["missing_inputs"]
+        assert (
+            diagnostics["requests"][0]["input_view_hash"]
+            == diagnostics["requests"][1]["input_view_hash"]
+        )
     assert review_calls == []
     assert sum(q == "rca_synthesis" for q, _ in evidence) == 1
 
