@@ -14,11 +14,15 @@
 - InfiniBand 포트별 상태·속도·오류, 파일시스템 읽기 전용 상태·SMART·RAID, BMC 냉각·전원, C2C 링크, 작업별 NCCL 로그·결과는 직접 연결할 수집 계약이 추가로 필요하다. 현장 확보 항목은 해당 런북의 대응 순서에 유지한다. Library·peermem은 일반 GPU 사용률을 붙이는 대신 라이브러리·모듈 조회 결과와 실제 작업 경로를 대조한다.
 - PCIe 복구는 동일 부하 조건과 장비 지원 사양으로 비교하고, NVLink는 토폴로지에서 사용하도록 구성한 포트로 비교한다. NCCL·peermem은 Fleet 점검 정상화와 실제 작업 완료를 별도로 확인한다.
 
-284종의 현재 공식 근거 대조는 `catalog-manifest.json` → `content_review.catalog_audit.current_verification`에서 파일별 내용 hash·대조 항목·근거의 적용 경계를 확인한다. CPU·메모리·디스크·Ethernet·OS 세부 절차는 Linux 공식 문서가 1차 근거이며 NVIDIA GPU Node Triage는 GPU·시스템 대응 맥락으로 사용한다. 공식 코드 정의가 없는 SXID 20009에 코드별 NVIDIA 복구 절차를 만들어 넣지 않는다.
+284종의 현재 공식 근거 대조는 `catalog-manifest.json` → `content_review.catalog_audit.current_verification`에서 파일별 내용 hash·대조 항목·근거의 적용 경계를 확인한다. 그 안의 `operator_semantics_review`는 main `7393dbb` 기준으로 XID 173종·SXID 93종·컴포넌트 17종·일반 1종의 설명·원인·대응·모델 분석 지침·수집 계획 간 일관성을 다시 검수한 결과다. 보강 권고 205종의 본문을 수정했으며, 추가 지적이 없던 79종은 원본을 유지했다. 33개 지적 유형별 수정 상태와 284종의 변경 전후 hash를 기록한다. 이는 로컬 원본 검수이며 새 revision 발행·운영 배포·실제 모델 재실행 완료를 뜻하지 않는다.
+
+공통 조사 분류를 원인 확률로 단정하던 문장, IGNORE인데 리셋을 전제하던 복구 확인, GPU 세대·가상화 방식이 다른 복구 절차의 혼용을 바로잡았다. 화면용 대응과 모델 권고에도 같은 조건을 적용했다. Unused 63종은 과거 의미와 현행 적용 범위를 연결한다. 과거 Reserved인 XID 87·90·91은 “번호만 예약되어 있고 오류 의미는 별도로 정의되지 않은 코드”로 설명하며, XID 108은 현행 네 제품 적용이 YES인 예외를 보존한다. CPU·메모리·디스크·Ethernet·OS 세부 절차는 Linux 공식 문서가 1차 근거이며 NVIDIA GPU Node Triage는 GPU·시스템 대응 맥락으로 사용한다. 공식 코드 정의가 없는 SXID 20009에 코드별 NVIDIA 복구 절차를 만들어 넣지 않는다.
+
+수집 계획은 XID 92의 교정 가능 ECC 지표를 필수로 정렬하고, XID 108에 기존 NVLink 오류 조회를 보조 계획으로 연결했다. 공유 수집 profile은 바꾸지 않았다. DCGM 메모리·NCCL·peermem 지침은 현재 계획 및 알림 정의와 맞췄다. 계획에 포함됐다는 이유로 실제 값이 수집됐다고 표현하지 않으며, 직접 C2C·FM 로그·물리 토폴로지 등 추가 원천이 필요한 항목은 수집 경계에 남긴다. RCA의 “무엇”은 저장된 런북 설명을 우선해 전체 문구를 표시하며, 기존 폰트와 여섯 장 구성은 유지한다. 동일 저장 보고서 비교는 로그·메트릭·산출 상태·과거 모델 분석을 보존하는 화면 미리보기로, 새 모델 분석의 검증 결과와 구분한다.
 
 Fleet의 세 예외는 XID 133의 실행 매핑 부재, XID 63·64의 조건부 제외다. 고정 commit `84f99beef3e633071ad0998b10629b01fb294eaf`의 `Match`는 `GetDetail` 실패 시 사건을 만들지 않으며 133은 해당 `details`에 없다. 63·64는 `shouldDiscardRowRemappingXID`가 GPU를 식별하고 그 제품의 RowRemapping 지원을 확인한 경우에만 제외한다. GPU 신원이 없으면 보존한다. 별도 memory 상태가 같은 XID 이벤트를 대체한다고 간주하지 않으며, 이 정적 소스 확인이 배포 이미지 확인을 대신하지 않는다.
 
-운영 검증: 2026-11-02 전수 대조 후 수정 262종의 새 revision을 발행하고, 교체 본문 hash 확인 후 이전 revision 262건을 retired 처리했다. 최종 API의 published 284종은 각각 검수 본문·승인 hash와 일치했다. 과거 사건 보고서는 재생성하지 않았으며 Worker 코드·수집 profile 배포와는 별개다. 자세한 검증 경계는 [Agent QA](../../agents/QA.md)를 따른다.
+이전 발행 검증(이번 205종 수정 이전 본문): 2026-11-02 전수 대조 후 수정 262종의 새 revision을 발행하고, 교체 본문 hash 확인 후 이전 revision 262건을 retired 처리했다. 최종 API의 published 284종은 각각 검수 본문·승인 hash와 일치했다. 과거 사건 보고서는 재생성하지 않았으며 Worker 코드·수집 profile 배포와는 별개다. 자세한 검증 경계는 [Agent QA](../../agents/QA.md)를 따른다.
 
 ## 파일 구성
 

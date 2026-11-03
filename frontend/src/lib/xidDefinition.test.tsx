@@ -47,7 +47,9 @@ it.each(codes)(
       },
     };
     const saved = JSON.stringify(result);
-    expect(operatorView(result)?.meaning).toBe(definition.meaning);
+    // A saved report owns its explanation; the current catalog remains a
+    // separately attributed reference instead of silently replacing it.
+    expect(operatorView(result)?.meaning).toBe('Fleet·GPUd 고정 정의는 Reserved입니다.');
     const html = renderToStaticMarkup(<RcaOperatorReport result={result} />);
     expect(html).toContain(definition.meaning);
     expect(html).toContain('저장 당시 오류 설명 원문');

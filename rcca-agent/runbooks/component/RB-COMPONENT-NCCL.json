@@ -8,7 +8,7 @@
   "content": {
     "schema": "gpu-rca-runbook/1.2",
     "title": "NCCL 라이브러리 segfault 보고 조사 (Fleet nccl)",
-    "description": "Fleet nccl 점검이 커널 로그의 libnccl.so 내부 segfault를 Unhealthy로 보고한 사건의 조사 자료를 작성한다.",
+    "description": "Fleet nccl의 커널 로그 읽기 실패와 별도 libnccl.so segfault 이벤트를 구분해 조사한다.",
     "claim": "보고된 컴포넌트 오류와 관련 관측을 정리하고 적용 가능한 공식 대응 지침을 제시한다. 근본 원인은 미확정이다.",
     "classification": {
       "domain": "NETWORK_IB",
@@ -92,8 +92,8 @@
       }
     ],
     "analysis_guidance": [
-      "오류·상태 로그에서 같은 노드 nccl 컴포넌트의 Unhealthy 보고 사유와 시각을 확인한다. 보고는 프로세스 비정상 종료 패턴이며 하드웨어 고장 판정이 아니다.",
-      "같은 시각의 GPU XID·IB 포트 보고는 수집한 오류·상태 로그 범위에 없으므로 운영자 확인 항목으로 남긴다."
+      "Fleet nccl의 Unhealthy는 커널 로그 읽기 실패 여부를 먼저 확인한다. libnccl.so segfault는 별도 이벤트이며 실제 NCCL 작업 실패와 원인 여부는 작업 로그·종료 기록으로 확인한다.",
+      "P2P 확인은 실제 토폴로지·플랫폼이 지원하는 GPU 쌍과 작업의 통신 경로만 대상으로 한다. 모든 GPU 쌍의 P2P 지원을 요구하지 않는다."
     ],
     "operator_guidance": {
       "schema": "gpu-rca-guidance/1.0",
@@ -114,7 +114,7 @@
         },
         {
           "title": "노드 점검",
-          "text": "segfault 줄이 있을 때: GPUDirect RDMA를 쓰면 lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인합니다. nvidia-smi topo -p2p n으로 GPU 쌍의 NVLink P2P가 모두 OK인지 확인합니다. 노드 하드웨어 조치는 같은 노드에서 반복되고 다른 오류가 함께 있을 때만 검토합니다."
+          "text": "segfault 줄이 있을 때: GPUDirect RDMA를 쓰면 lsmod | grep nvidia_peermem으로 모듈이 올라와 있는지 확인합니다. nvidia-smi topo -p2p n으로 토폴로지에서 지원하도록 구성된 GPU 쌍의 NVLink P2P가 OK인지 확인합니다. 노드 하드웨어 조치는 같은 노드에서 반복되고 다른 오류가 함께 있을 때만 검토합니다."
         },
         {
           "title": "복구",

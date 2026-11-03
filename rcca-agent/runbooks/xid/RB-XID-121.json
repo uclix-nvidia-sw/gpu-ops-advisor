@@ -131,8 +131,8 @@
       ]
     },
     "analysis_guidance": [
-      "수집 항목: 오류·상태 로그, GPU 전력, GPU 온도, GPU 사용률. 한 수집 단계에서 같은 30분 구간으로 조회하고 최근 14일 호스트 사건 이력과 함께 보고서에 쓴다.",
-      "판단: 같은 시각 C2C로 연결된 다른 GPU의 동반 오류와 이전 사건 이력의 반복 여부를 대조한다.",
+      "수집은 이 Runbook의 observation_plan 전체를 같은 사건 구간으로 수행한다. 로그와 각 지표의 반환 시각·대상·단위를 확인하고, 아래 코드별 판단 및 최근 호스트 사건 이력과 연결한다. 계획에 포함됐다는 사실과 실제 값을 받았다는 사실을 구분한다.",
+      "판단: Grace CPU와 GPU의 C2C 오류 원문과 발생 시각을 대조한다. 현재 계획의 GPU 사용률·전력·온도는 영향 확인용 보조 관측이며 C2C 오류 계수가 아니다.",
       "NVIDIA 발생 조건: Grace CPU와의 C2C NVLink 연결에서 정정된(corrected) 오류가 관측되면 기록됩니다. 시스템이 정정하므로 운영 영향은 없고, 가능한 점검 시간에 GPU를 리셋하면 링크를 다시 학습합니다. 반복 보고될 수 있으며 VBIOS 97.00.90.00.00이 이를 완화할 수 있습니다.",
       "Fleet 고정 카탈로그: C2C Link Error; event_type=Fatal; 기본 action=REBOOT_SYSTEM, HARDWARE_INSPECTION.",
       "NVIDIA 적용: GB200; 제외: A100, H100, B100.",
@@ -152,7 +152,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "복구 조치: NVIDIA 즉시 조치 분류 IGNORE: 즉시 조치는 필요하지 않습니다. 반복 여부와 함께 보고된 다른 오류만 확인합니다. 로그 주입 시험에는 복구 조치를 적용하지 않습니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
+        "text": "복구 조치: NVIDIA 즉시 조치 분류 IGNORE: 즉시 조치는 필요하지 않습니다. 반복 여부와 함께 보고된 다른 오류만 확인합니다. 커널 로그(NVRM: Xid 줄)에 같은 오류가 없고 Fleet 보고만 있으면, 복구 조치를 하지 않고 보고 경로부터 확인합니다. 리셋·재시작은 실행 중인 작업을 정리하고 유지보수 승인을 받은 뒤 수행하며, 가상화 환경은 GPU 할당 방식에 맞는 VM 절차를 따릅니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -186,11 +186,11 @@
       "next_checks": [
         {
           "title": "즉시 확인·영향",
-          "text": "dmesg -T(또는 journalctl -k)의 NVRM: Xid 121 줄을 확인하고, nvidia-smi nvlink -s(링크 상태)와 nvidia-smi nvlink -e(오류 카운터)로 해당 GPU의 링크를 봅니다. NVSwitch 시스템이면 Fabric Manager 로그의 같은 시각 SXID 줄도 확인하고, 중단된 작업을 작업 소유자에게 확인합니다."
+          "text": "XID 121 원문의 GPU 식별자와 C2C 오류 세부 정보를 확인하고, Grace CPU와 GPU의 모델·연결 관계를 대조합니다. 일반 GPU 간 NVLink 트래픽과 C2C 상태를 구분하고 같은 시각 연결 상대의 오류 로그 및 작업 영향을 확인합니다."
         },
         {
           "title": "진단 자료 보존",
-          "text": "재시작·리셋 전에 nvidia-bug-report.sh 결과와 사건 전후 커널 로그(NVRM Xid 줄)를 보존합니다. C2C 링크 양 끝(GPU·Grace CPU) 로그와 VBIOS 버전(nvidia-smi -q)을 함께 기록합니다."
+          "text": "조치 전에 nvidia-bug-report.sh와 같은 시각 커널 오류 원문, Grace CPU와 GPU의 모델·펌웨어·연결 정보를 보존합니다. 플랫폼이 제공하는 C2C 상태·오류 자료를 확보합니다. 일반 NVLink 카운터로 C2C 링크 상태를 대신 판정하지 않습니다."
         },
         {
           "title": "오류별 판단 기준",

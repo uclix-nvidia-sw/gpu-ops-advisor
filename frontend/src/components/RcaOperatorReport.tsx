@@ -10,6 +10,7 @@ import { Ids, RcaPoints, RcaStepPoints, ToneBadge } from './RcaReportParts';
 import { RcaTriageObservations } from './RcaTriageObservations';
 import { RcaHostHistory } from './RcaHostHistory';
 import { RcaVisualEvidence } from './RcaVisualEvidence';
+import { isOperatorGuidanceReference, isOperatorReference } from '../lib/rcaReferences';
 
 const TRIAGE_URL = 'https://docs.nvidia.com/deploy/gpu-debug-guidelines/gpu-node-triage.html';
 const FM_URL = 'https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html';
@@ -74,6 +75,9 @@ export function RcaOperatorReport({
   // Older results without source items keep their stored cause prose.
   const noteTexts = sources.length ? notes.map((r) => str(r.text)) : paragraphs('cause');
   const refs = guidance.flatMap((g) => rows(g.sources));
+  const internalRefs = [...new Map(refs.map((r) => [str(r.url), r])).values()].filter(
+    (r) => /^https:\/\//.test(str(r.url)) && !isOperatorReference(r),
+  );
   const links = (value: unknown) =>
     [...new Set(strings(value))].map((id, i, all) =>
       onEvidence ? (
@@ -218,7 +222,7 @@ export function RcaOperatorReport({
           <RcaPoints
             compactRelated
             items={[
-              `무엇: ${v.codes.join(', ')} — ${sentences(v.meaning).slice(0, 2).join(' ') || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
+              `무엇: ${v.codes.join(', ')} — ${v.meaning || v.message}${v.family === 'component' && !v.currentReasons.length ? ` · Fleet 보고 사유: ${v.message}` : ''}`,
               ...(v.currentReasons.length
                 ? [
                     `이번 사유: ${v.currentReasons.map((r) => r.label).join(' · ')} (Fleet 원문: ${v.message})`,
@@ -621,7 +625,7 @@ export function RcaOperatorReport({
               ].map((r) => [str(r.url), r]),
             ).values(),
           ]
-            .filter((r) => /^https:\/\//.test(str(r.url)))
+            .filter(isOperatorReference)
             .map((r) => (
               <li key={str(r.url)}>
                 <a href={str(r.url)} target="_blank" rel="noreferrer">
@@ -655,24 +659,50 @@ export function RcaOperatorReport({
                 </dd>
               </div>
             )}
-            {rows(obj(g.guidance).references).map((r, j) => (
-              <div key={j}>
-                <dt>{str(r.title)}</dt>
-                <dd>
-                  {str(r.text).includes('계획된 자동 수집:') && (
-                    <p>
-                      아래는 이 오류의 수집 대상 안내입니다. 이번 실행의 수집 완료 목록은 아니며,
-                      실제 값·시각·대상은 3장 관련 로그·메트릭에서 확인합니다.
-                    </p>
-                  )}
-                  <RcaPoints items={sentences(str(r.text))} />
-                </dd>
-              </div>
-            ))}
+            {rows(obj(g.guidance).references)
+              .filter((r) => isOperatorGuidanceReference(r, g.sources))
+              .map((r, j) => (
+                <div key={j}>
+                  <dt>{str(r.title)}</dt>
+                  <dd>
+                    {str(r.text).includes('계획된 자동 수집:') && (
+                      <p>
+                        아래는 이 오류의 수집 대상 안내입니다. 이번 실행의 수집 완료 목록은 아니며,
+                        실제 값·시각·대상은 3장 관련 로그·메트릭에서 확인합니다.
+                      </p>
+                    )}
+                    <RcaPoints items={sentences(str(r.text))} />
+                  </dd>
+                </div>
+              ))}
           </dl>
         ))}
         <details>
           <summary>수집 원문·처리 상세</summary>
+          {internalRefs.length > 0 && (
+            <>
+              <h5>수집 설정·분류 구현 출처</h5>
+              <ul>
+                {internalRefs.map((r) => (
+                  <li key={str(r.url)}>
+                    <a href={str(r.url)} target="_blank" rel="noreferrer">
+                      {str(r.section) || str(r.url)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {guidance.flatMap((g, i) =>
+            rows(obj(g.guidance).references)
+              .filter((r) => !isOperatorGuidanceReference(r, g.sources))
+              .map((r, j) => (
+                <section key={`reference-${i}-${j}`}>
+                  <h5>{str(r.title)}</h5>
+                  <RcaPoints items={sentences(str(r.text))} />
+                </section>
+              )),
+          )}
           {sources
             .filter((r) => r.detail_only === true)
             .map((r, i) => (
