@@ -23,11 +23,7 @@ function ScheduleList() {
       <PageHead
         eyebrow=""
         title="자동 보고서 설정"
-        description={
-          app.mode === 'new'
-            ? '매일·매주 보고서를 만드는 일정을 관리합니다. 기존 월간 일정도 여기에서 확인할 수 있습니다.'
-            : '매일·매주·매월 지정한 시각에 보고서를 자동으로 만듭니다.'
-        }
+        description="일일 보고서 일정을 등록하고 기존 일정을 관리합니다. 기존 주간 일정은 자동으로 중지되지 않으므로 필요하면 일시 정지하세요."
         actions={
           <Link className="button primary" to="/reports/new?schedule=true">
             {app.mode === 'new' ? '자동 보고서 일정 추가' : '자동 생성 설정'}
@@ -375,7 +371,7 @@ export function ScheduleExecution({
   );
 }
 
-function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => void }) {
+export function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => void }) {
   const cmd = useCommand(),
     app = useApp(),
     calendar = initial;
@@ -388,6 +384,7 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
     [time, setTime] = useNewDraft(`${draftKey}/time`, str(calendar.local_time, '09:00')),
     [day, setDay] = useNewDraft(`${draftKey}/day`, num(calendar.day, 1)),
     [weekday, setWeekday] = useNewDraft(`${draftKey}/weekday`, num(calendar.weekday, 1));
+  const supportedFrequency = frequency !== 'weekly' || calendar.frequency === 'weekly';
   return (
     <Modal title="일정 실행 조건 편집" onClose={onClose}>
       <form
@@ -396,6 +393,10 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
         className="stack"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (!supportedFrequency) {
+            cmd.setError('주간 일정으로 변경할 수 없습니다. 반복 주기를 다시 선택해 주세요.');
+            return;
+          }
           if (
             await cmd.run(
               `/schedules/${str(initial.id)}`,
@@ -415,8 +416,17 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
         }}
       >
         <Field label="반복 주기">
-          <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+          <select
+            value={supportedFrequency ? frequency : ''}
+            onChange={(e) => setFrequency(e.target.value)}
+          >
+            {!supportedFrequency && (
+              <option value="" disabled>
+                반복 주기를 다시 선택하세요
+              </option>
+            )}
             {Object.entries(scheduleLabels)
+              .filter(([value]) => value !== 'weekly' || calendar.frequency === 'weekly')
               .filter(
                 ([value]) =>
                   app.mode !== 'new' ||
@@ -442,7 +452,7 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
         >
           <input required type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
-        {frequency === 'weekly' && (
+        {supportedFrequency && frequency === 'weekly' && (
           <Field label="요일 (월요일 1 ~ 일요일 7)">
             <input
               required
@@ -466,14 +476,17 @@ function ScheduleEditor({ initial, onClose }: { initial: Row; onClose: () => voi
             />
           </Field>
         )}
+        {!supportedFrequency && (
+          <Notice>저장된 주간 선택은 적용할 수 없습니다. 반복 주기를 다시 선택해 주세요.</Notice>
+        )}
         <Notice>
-          {scheduleWindows[frequency]} 전체를 분석합니다.{' '}
+          {supportedFrequency ? scheduleWindows[frequency] : '선택한 기간'} 전체를 분석합니다.{' '}
           {app.mode === 'new'
             ? '변경 내용은 이후 회차부터 적용됩니다.'
             : '저장된 새 revision은 이후 회차에 적용됩니다.'}
         </Notice>
         <CommandError error={cmd.error} />
-        <button className="button primary" disabled={cmd.busy}>
+        <button className="button primary" disabled={cmd.busy || !supportedFrequency}>
           조건 저장
         </button>
       </form>

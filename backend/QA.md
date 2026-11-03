@@ -184,6 +184,8 @@ go test -tags=e2e ./internal/api -run '^$' -bench BenchmarkPublishedReportProjec
 
 ## Ops 최종 보고서 HTML — 2026-09-30
 
+2026-11-03, #269 포함 main `2f8cef3`과 가이드 커밋 `056f56e` 기반 로컬 변경: 서버 HTML의 7개 소제목·제안 기준을 웹과 맞추고 상세 근거의 중복 안내를 제거했다. Backend `go vet ./...`·`go test -race ./...`·`go build ./...`, 새 임시 loopback PostgreSQL에서 `go test -tags=e2e ./internal/api -run TestPublishedReportProjection -count=1 -timeout=5m` 통과. 프런트엔드 형식 검사·685개 검사·빌드 통과(기존 번들 크기 경고 유지). 로컬 저장 보고서 10/15·10/22·10/23의 제안 14개로 7개 유형 전체를 실제 Backend 내보내기 함수와 통합/신규 콘솔2 렌더러에서 대조했다. 소제목·제안 기준·본문·시간·표시 순서가 일치하고 수정 전후 저장 본문·수치 표·CSV가 동일했다. 종류 미기록·부분 채택·계산 요약·HTML escaping은 fixture 검사다. 브라우저에서 22일 웹과 서버 HTML, 서버 HTML 1440×1000·390×844 및 상세 근거 펼침/접기를 확인했다. AI 원문·RCA·기존 계산/선별/검증·생성/채택/발행 경로와 Worker artifact는 변경하지 않았다. 새 LLM 호출·운영 DB·운영 다운로드 API·배포는 미검증이며 운영 자료의 재수집이나 새 보고서 생성은 하지 않았다.
+
 main `40b68d3` 기반. 임시 소스 복사본의 Backend `go vet ./...`, `go test -race ./...`, `go build ./...` 및 새 격리 PostgreSQL의 `go test -tags=e2e ./tests -v -count=1 -timeout=5m` **통과**. 최종 narrative 제목/본문·fallback 상태의 HTML escape와 CSV 원래 수치 보존을 검사했다. 실제 Backend→JC→Ops→공개 HTML 검사는 [Agent QA](../agents/QA.md)에 기록했다. 운영 배포/실제 모델 품질은 **미검증**, DB migration/API 변경은 **해당 없음**.
 
 - **통과:** Backend 디렉터리 기준 `go vet ./...`, `go test -race ./...`, `go build -o ../.local/backend-e2e ./cmd/server`. HTML 연결 GPU 고유 대수 이름·GPU·시간 설명·한계 우선 표시, HTML escape와 CSV 원시 단위·정밀도 보존을 검사했다.

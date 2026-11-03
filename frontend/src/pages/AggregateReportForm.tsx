@@ -30,15 +30,19 @@ export function AggregateReportForm() {
   const [frequency, setFrequency] = useNewDraft(`${draftKey}/frequency`, 'daily');
   const [lastDay, setLastDay] = useNewDraft(`${draftKey}/lastDay`, previousReportDay());
   const [time, setTime] = useNewDraft(`${draftKey}/time`, '09:00');
-  const [weekday, setWeekday] = useNewDraft(`${draftKey}/weekday`, '1');
+  const supportedPeriod = frequency === 'daily';
   let period;
   try {
-    period = aggregatePeriod(lastDay, frequency);
+    period = supportedPeriod ? aggregatePeriod(lastDay, 'daily') : undefined;
   } catch {
     period = undefined;
   }
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!supportedPeriod) {
+      command.setError('현재 신규 보고서는 일일만 지원합니다. 분석 기간을 다시 선택해 주세요.');
+      return;
+    }
     try {
       const spec = {
         scope: app.scope,
@@ -53,7 +57,6 @@ export function AggregateReportForm() {
             local_time: time,
             timezone: 'Asia/Seoul',
             period: schedulePeriods[frequency],
-            ...(frequency === 'weekly' ? { weekday: Number(weekday) } : {}),
           }
         : {
             ...spec,
@@ -101,9 +104,16 @@ export function AggregateReportForm() {
             </label>
             <label>
               분석 기간
-              <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+              <select
+                value={supportedPeriod ? frequency : ''}
+                onChange={(e) => setFrequency(e.target.value)}
+              >
+                {!supportedPeriod && (
+                  <option value="" disabled>
+                    분석 기간을 다시 선택하세요
+                  </option>
+                )}
                 <option value="daily">일일 · 하루</option>
-                <option value="weekly">주간 · 7일</option>
               </select>
             </label>
             {!scheduled && (
@@ -129,29 +139,17 @@ export function AggregateReportForm() {
                 />
               </label>
             )}
-            {scheduled && frequency === 'weekly' && (
-              <label>
-                실행 요일
-                <select value={weekday} onChange={(e) => setWeekday(e.target.value)}>
-                  {['월', '화', '수', '목', '금', '토', '일'].map((day, i) => (
-                    <option key={day} value={i + 1}>
-                      {day}요일
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
           </div>
           <div className="live-padding">
+            {!supportedPeriod && (
+              <Notice>저장된 분석 기간은 현재 지원하지 않습니다. 일일을 다시 선택해 주세요.</Notice>
+            )}
             {scheduled ? (
-              <p>
-                {frequency === 'daily' ? '직전 완료된 하루' : '직전 완료된 월요일~일요일'}를
-                분석합니다. 기존 일정은 자동 변경되지 않습니다.
-              </p>
+              <p>직전 완료된 하루를 분석합니다. 기존 일정은 자동 변경되지 않습니다.</p>
             ) : (
               period && <ReportPeriod value={period} />
             )}
-            <p>이전 기간 비교는 같은 범위의 직전 하루 또는 직전 7일을 함께 조회합니다.</p>
+            <p>신규 보고서는 일일만 지원하며, 같은 범위의 직전 하루와 비교합니다.</p>
           </div>
         </Panel>
         <Panel title="보고서에 포함되는 내용">
@@ -171,7 +169,7 @@ export function AggregateReportForm() {
           <button
             className="button primary"
             type="submit"
-            disabled={!app.canOperate || command.busy}
+            disabled={!app.canOperate || command.busy || !supportedPeriod}
           >
             {scheduled ? '자동 보고서 등록' : '요청 보내기'}
           </button>

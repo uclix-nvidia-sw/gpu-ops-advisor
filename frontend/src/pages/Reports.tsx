@@ -125,7 +125,6 @@ export function LegacyReportForm() {
     [scheduled, setScheduled] = useState(params.get('schedule') === 'true'),
     [frequency, setFrequency] = useState('daily'),
     [localTime, setLocalTime] = useState('09:00'),
-    [weekday, setWeekday] = useState(1),
     [day, setDay] = useState(1),
     [start, setStart] = useState(previousReportDay()),
     [end, setEnd] = useState(previousReportDay()),
@@ -163,6 +162,8 @@ export function LegacyReportForm() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      if (scheduled && frequency === 'weekly')
+        throw new Error('신규 주간 일정은 현재 지원하지 않습니다. 반복 주기를 다시 선택해 주세요.');
       if (!selection.topic_ids.length) throw new Error('보고서 종류를 하나 이상 선택하세요.');
       if (compare && !actionRefs.trim()) {
         throw new Error(
@@ -200,7 +201,7 @@ export function LegacyReportForm() {
             local_time: localTime,
             timezone: 'Asia/Seoul',
             period: schedulePeriods[frequency],
-            ...(frequency === 'weekly' ? { weekday } : frequency === 'monthly' ? { day } : {}),
+            ...(frequency === 'monthly' ? { day } : {}),
           }
         : {
             ...template,
@@ -416,11 +417,13 @@ export function LegacyReportForm() {
                 <div className="form-grid">
                   <Field label="반복 주기">
                     <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-                      {Object.entries(scheduleLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
+                      {Object.entries(scheduleLabels)
+                        .filter(([value]) => value !== 'weekly')
+                        .map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
                     </select>
                   </Field>
                   <Field label="실행 시각">
@@ -431,17 +434,6 @@ export function LegacyReportForm() {
                       onChange={(e) => setLocalTime(e.target.value)}
                     />
                   </Field>
-                  {frequency === 'weekly' && (
-                    <Field label="요일">
-                      <select value={weekday} onChange={(e) => setWeekday(+e.target.value)}>
-                        {['월', '화', '수', '목', '금', '토', '일'].map((d, i) => (
-                          <option value={i + 1} key={d}>
-                            {d}요일
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  )}
                   {frequency === 'monthly' && (
                     <Field label="날짜">
                       <input
