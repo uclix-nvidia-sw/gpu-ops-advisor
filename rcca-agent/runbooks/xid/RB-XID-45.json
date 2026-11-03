@@ -129,7 +129,7 @@
     ],
     "recommendations": [
       {
-        "text": "오류별 판단 기준: 먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다.",
+        "text": "오류별 판단 기준: 먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45 오류가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -139,7 +139,7 @@
         "execution": "not_performed"
       },
       {
-        "text": "복구 조치: 먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다.",
+        "text": "복구 조치: 먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45 오류가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다.",
         "preconditions": [
           {
             "field": "error_code",
@@ -181,11 +181,11 @@
         },
         {
           "title": "오류별 판단 기준",
-          "text": "먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다."
+          "text": "먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45 오류가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다."
         },
         {
           "title": "복구 조치",
-          "text": "먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다."
+          "text": "먼저 선행 XID·SXID, 작업 종료·GPU 리셋 기록을 확인하고 선행 오류의 대응을 따릅니다. XID 45 오류가 단독 발생했고 실제 NVSwitch·Fabric Manager 사용 환경이라면 서비스 상태와 로그를 확인한 뒤 GPU Node Triage의 FM 재시작 분기를 검토합니다. FM을 사용하지 않는 노드에는 해당 분기를 적용하지 않습니다."
         },
         {
           "title": "복구 확인",

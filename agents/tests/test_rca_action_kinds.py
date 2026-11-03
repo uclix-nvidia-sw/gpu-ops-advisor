@@ -107,7 +107,9 @@ async def test_every_xid_report_avoids_access_loss_and_restart_assumptions(name)
     if "같은 조치입니다" in joined:
         assert plan["action"] == "REBOOT_SYSTEM" or plan["action"] in RESTART_GROUP
     if findings.get("model_applicability") == "excluded":
-        assert "작업 배출" not in joined and "조치 후 확인" not in joined
+        # Excluded models must not receive an executable recommendation.
+        # The appendix retains the source Runbook, including conditional procedures.
+        assert "작업 배출" not in primary and "조치 후 확인" not in primary
     assert result["recommendations"] == []
 
 
