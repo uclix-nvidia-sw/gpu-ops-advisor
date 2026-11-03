@@ -1052,6 +1052,7 @@
 }
 .c2-ops-reader .new-print {
   align-items: center;
+  justify-content: flex-start;
   margin-bottom: 16px;
 }
 .view-operations.console2-shell .c2-ops-reader .new-print .button {
@@ -1068,7 +1069,7 @@
   }
 }
 .c2-ops-reader .new-print .c2-report-management {
-  margin: 0 auto 0 0;
+  margin: 0 0 0 auto;
   font-size: 12px;
   text-align: left;
 }

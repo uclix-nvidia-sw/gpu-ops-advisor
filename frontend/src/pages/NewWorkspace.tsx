@@ -1103,7 +1103,6 @@ function Report({ id }: { id: string }) {
           ) : job.result_ref && Object.keys(result).length ? (
             <>
               <div className="new-print">
-                {modern && actions}
                 {modern && <ReportExports id={id} />}
                 <button
                   className="button"
@@ -1123,6 +1122,7 @@ function Report({ id }: { id: string }) {
                   현재 화면 HTML 저장
                 </button>
                 <CommandError error={exportError} />
+                {modern && actions}
               </div>
               <div
                 className={`report-workspace${aggregatePublished ? ' new-report-body' : ''}`}
