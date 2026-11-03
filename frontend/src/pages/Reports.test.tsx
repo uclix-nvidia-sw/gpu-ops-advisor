@@ -165,7 +165,7 @@ it.each(['/reports/new', '/reports/new?schedule=true'])(
     );
     expect(html).toContain('Namespace 활동과 변화');
     expect(html).toContain('사건과 반복 현황');
-    expect(html).toContain('이전 기간 비교');
+    expect(html).toContain('직전 하루와 비교');
     expect(html).not.toContain('월간 (매월)');
     expect(html).not.toContain('type="checkbox" checked="" value="O');
     if (path.includes('schedule')) {
@@ -226,7 +226,8 @@ it('previews the complete requested period and explains worker preflight before 
   );
   expect(html).toContain('분석 범위와 기간');
   expect(html).toContain('24시간');
-  expect(html).toContain('직전 하루 또는 직전 7일');
+  expect(html).toContain('신규 보고서는 일일만 지원');
+  expect(html).not.toContain('value="weekly"');
 });
 
 const expectedKinds = [

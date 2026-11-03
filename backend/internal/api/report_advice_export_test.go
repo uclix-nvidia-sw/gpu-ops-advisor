@@ -67,8 +67,12 @@ func TestAdviceExportKindsTimeAndEscaping(t *testing.T) {
 				}
 			}
 			article := page[strings.Index(page, "<article"):]
-			if strings.Index(article, "&lt;script&gt;") > strings.Index(article, "<dl>") || strings.Index(article, adviceBases[kind]) < strings.Index(article, "<details>") {
-				t.Fatal("advice body must precede metadata; generic basis belongs in details")
+			introEnd := strings.Index(article, "</header>")
+			if strings.Index(article, title) > strings.Index(article, adviceBases[kind]) || strings.Index(article, adviceBases[kind]) > introEnd || introEnd > strings.Index(article, "&lt;script&gt;") || strings.Index(article, "&lt;script&gt;") > strings.Index(article, "<dl>") {
+				t.Fatal("heading and generic basis must precede the unchanged advice and metadata")
+			}
+			if strings.Count(article, adviceBases[kind]) != 1 || !strings.Contains(article[:introEnd], ">제안 기준</span>") {
+				t.Fatal("generic basis must be labeled once, separately from AI prose")
 			}
 			if strings.Contains(page, "<script>") {
 				t.Fatal("unescaped HTML")
@@ -97,6 +101,44 @@ func TestAdviceExportMissingTargetsAndLegacy(t *testing.T) {
 	body["versions"] = Object{"criteria": "1.3"}
 	if reportNarrative(body)[0]["advice_groups"] != nil {
 		t.Fatal("legacy/RCA presentation changed")
+	}
+}
+
+func TestAdviceExportPreservesSourceAndMissingKind(t *testing.T) {
+	for _, source := range []string{"llm_interpreted", "deterministic_fallback"} {
+		t.Run(source, func(t *testing.T) {
+			section := Object{"topic_id": "namespace_usage", "interpretation_source": source, "text": "stored topic text"}
+			if source == "llm_interpreted" {
+				section["advice"] = []any{Object{
+					"fact_id": "old", "summary": "stored sentence without kind",
+					"recommendation": "stored title", "observation": "stored evidence",
+				}}
+			}
+			body := Object{"versions": Object{"criteria": AggregateReportVersion}, "narrative_status": "failed",
+				"quality": Object{"report": Object{"method": "partial_interpretation"}}, "narrative": []any{section}}
+			before, _ := json.Marshal(body)
+			out := httptest.NewRecorder()
+			if err := exportMetrics(out, "id", "html", body, nil, nil); err != nil {
+				t.Fatal(err)
+			}
+			page := out.Body.String()
+			if strings.Contains(page, ">제안 기준</span>") || !strings.Contains(page, "stored topic text") {
+				t.Fatal("missing kind must not acquire a criterion")
+			}
+			if source == "llm_interpreted" {
+				for _, want := range []string{"stored title", "stored sentence without kind", "stored evidence", "시간 범위 미확인"} {
+					if !strings.Contains(page, want) {
+						t.Fatal("missing", want)
+					}
+				}
+			} else if strings.Contains(page, `class="ops-advice-card-title"`) {
+				t.Fatal("calculation fallback presented as AI advice")
+			}
+			after, _ := json.Marshal(body)
+			if string(before) != string(after) {
+				t.Fatal("stored narrative or quality state mutated")
+			}
+		})
 	}
 }
 
