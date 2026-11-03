@@ -172,7 +172,7 @@ it('derives memory share only from valid used and free observations', () => {
   }
 });
 
-it('links reader selections across both metrics and replaces unavailable plots with an explanation', () => {
+it('keeps reader activity and memory selections independent and explains unavailable plots', () => {
   const data: NamespaceGroup[] = [
     group('cpc-1', 'dept-a', ['A100']),
     group('cpc-2', 'dept-a', ['A100']),
@@ -194,11 +194,21 @@ it('links reader selections across both metrics and replaces unavailable plots w
       />,
     );
   const selected = renderReader(new Set());
-  expect((selected.match(/checked=""/g) || []).length).toBe(2);
+  expect((selected.match(/checked=""/g) || []).length).toBe(4);
   expect(selected).toContain('0.00%');
-  const hidden = renderReader(new Set([JSON.stringify(['both', data[0].key])]));
-  expect((hidden.match(/checked=""/g) || []).length).toBe(1);
-  expect((hidden.match(/<g aria-label="dept-a \/ A100"/g) || []).length).toBe(2);
+  const activityHidden = renderReader(new Set([JSON.stringify(['activity', data[0].key])]));
+  const memoryHidden = renderReader(new Set([JSON.stringify(['memory', data[0].key])]));
+  for (const hidden of [activityHidden, memoryHidden]) {
+    expect((hidden.match(/checked=""/g) || []).length).toBe(3);
+    expect((hidden.match(/<g aria-label="dept-a \/ A100"/g) || []).length).toBe(3);
+  }
+  const charts = (html: string) =>
+    [...html.matchAll(/<svg[^>]*role="img"[\s\S]*?<\/svg>/g)].map((m) => m[0]);
+  expect(charts(activityHidden)[0]).not.toContain('<g aria-label=');
+  expect(charts(activityHidden)[1]).toBe(charts(selected)[1]);
+  expect(charts(memoryHidden)[0]).toBe(charts(selected)[0]);
+  expect(charts(memoryHidden)[1]).not.toContain('<g aria-label=');
+  expect(charts(memoryHidden).slice(2)).toEqual(charts(selected).slice(2));
   const missing = renderReader(new Set(), [
     { ...data[0], models: [{ gpu_model: 'A100', hours: [], gpu_memory: { hours: [] } }] },
   ]);

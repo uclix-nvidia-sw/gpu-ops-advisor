@@ -118,10 +118,10 @@ it('ranks absolute category changes, excludes unknown comparisons and deduplicat
   expect(html).toContain('+3건');
   expect(html).toContain('-2건');
   expect(html).not.toContain('unknown');
-  expect(html).toContain('저장된 사건 내역 1건');
+  expect(html).toContain('저장된 사건 1건에서');
 });
 
-it('groups the heatmap while preserving the input order used by observation highlights', () => {
+it('separates cluster heatmaps with the same hour columns without changing observations', () => {
   const value = report([
     row('same', { cluster_id: 'cpc-2' }),
     row('z'),
@@ -133,7 +133,19 @@ it('groups the heatmap while preserving the input order used by observation high
   const highlights = renderToStaticMarkup(<OperationalInsights value={value} />);
   const html = renderToStaticMarkup(<HourlyOverview value={value} />);
   const heatmap = html.split('id="c2-observation-coverage"')[0];
-  expect(heatmap.match(/scope="rowgroup"/g)).toHaveLength(2);
+  const tables = [...heatmap.matchAll(/<table class="c2-heatmap"[\s\S]*?<\/table>/g)].map(
+    (m) => m[0],
+  );
+  expect(tables).toHaveLength(2);
+  expect(tables[0]).toContain('aria-label="cpc-1 시간대별 GPU 활동률"');
+  expect(tables[0]).not.toContain('cpc-2');
+  expect(tables[1]).toContain('aria-label="cpc-2 시간대별 GPU 활동률"');
+  expect(tables[1]).not.toContain('cpc-1');
+  expect(tables[0].match(/<thead>[\s\S]*?<\/thead>/)?.[0]).toBe(
+    tables[1].match(/<thead>[\s\S]*?<\/thead>/)?.[0],
+  );
+  expect(tables[0].match(/class="c2-heat-cell/g)).toHaveLength(6);
+  expect(tables[1].match(/class="c2-heat-cell/g)).toHaveLength(2);
   const labels = [...heatmap.matchAll(/aria-label="([^"]+) · 2026/g)].map((match) => match[1]);
   expect(labels.filter((_, index) => index % 2 === 0)).toEqual([
     'cpc-1 / same · A100',

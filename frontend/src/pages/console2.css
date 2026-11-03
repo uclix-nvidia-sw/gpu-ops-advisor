@@ -803,6 +803,11 @@
   white-space: normal;
   line-height: 1.6;
 }
+.c2-ops-reader .c2-toc nav :is(button, summary) > span:not(.c2-toc-number) {
+  min-width: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .c2-ops-reader .c2-toc-number {
   flex-shrink: 0;
 }
@@ -847,12 +852,20 @@
   padding-left: 6px;
   border-left: 1px solid #dfe7d8;
 }
+.c2-ops-reader .c2-toc-children .c2-toc-children {
+  margin-left: 4px;
+  padding-left: 2px;
+}
 .c2-toc-children .c2-toc-number {
   min-width: 3ch;
 }
 @media (min-width: 651px) {
   .c2-reader-layout.c2-ops-reader {
     grid-template-columns: 180px minmax(0, 1fr);
+  }
+  .c2-ops-reader .c2-toc nav {
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto;
   }
 }
 .c2-ops-reader .c2-observations-heading {
@@ -1027,6 +1040,31 @@
   background: #fff;
   z-index: 1;
 }
+/* Only column headings stick vertically; body headings must not cover them. */
+.c2-ops-reader .aggregate-report .aggregate-table-scroll {
+  isolation: isolate;
+}
+.c2-ops-reader .aggregate-report tbody th {
+  position: static;
+  top: auto;
+}
+.c2-ops-reader .aggregate-report .aggregate-namespace-table tbody th[scope='row'] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+}
+.c2-ops-reader .aggregate-report .aggregate-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f6f3;
+  box-shadow: 0 1px 0 var(--line);
+}
+.c2-ops-reader .aggregate-report .aggregate-namespace-table thead th:first-child {
+  left: 0;
+  z-index: 3;
+}
 .c2-reader-content .aggregate-advice-cluster {
   border: 1px solid #e0e7d9;
   border-left: 3px solid #879e64;
@@ -1042,20 +1080,10 @@
   font-size: 11px;
 }
 .c2-ops-reader .aggregate-major-topic > #c2-report-summary {
-  margin: 0 0 24px;
-  padding: 0 0 24px;
+  margin: 0;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--line);
   border-radius: 0;
-}
-.c2-ops-reader .c2-observation-cluster + .c2-observation-cluster {
-  margin-top: 24px;
-}
-.c2-ops-reader .c2-observation-cluster > h5 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.6;
 }
 .c2-ops-reader .c2-observation-cluster-row > th {
   padding: 12px;
@@ -1254,6 +1282,21 @@
   > h4.aggregate-subheading {
   margin-top: 24px;
 }
+.view-operations.console2-shell .c2-ops-reader #c2-incident-records {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report #c2-workload-context > summary {
+  padding: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0;
+}
+.view-operations.console2-shell .c2-ops-reader #c2-workload-context[open] > summary {
+  margin-bottom: 12px;
+}
 .view-operations.console2-shell
   .c2-ops-reader
   .aggregate-report
@@ -1268,6 +1311,101 @@
   .aggregate-report
   :is(.c2-hourly-overview, .aggregate-workload-charts, .c2-incident-evidence) {
   margin-block: 24px;
+}
+/* Group detailed observations by reading purpose, then by target. */
+.c2-ops-reader .c2-observation-block {
+  margin-block: 32px;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  .aggregate-major-topic
+  > .c2-observation-block {
+  margin: 32px 0 0;
+  padding: 24px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+.c2-ops-reader h4[data-c2-section-number] {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 8px;
+}
+.c2-ops-reader h4[data-c2-section-number]::before {
+  margin-right: 0;
+  white-space: nowrap;
+}
+.c2-ops-reader .c2-observation-block + .c2-observation-block {
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-major-topic :is(h5, h6) {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+/* Keep target headers consistent across bars, heatmaps and line charts. */
+.c2-ops-reader .aggregate-report .c2-observation-cluster {
+  margin: 24px 0 0;
+  padding: 0;
+  border: 0;
+}
+.c2-ops-reader .aggregate-report .c2-observation-cluster > .aggregate-chart-heading {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report .c2-observation-cluster-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #dce3df;
+  border-radius: 4px;
+  background: #f4f6f3;
+  color: #52675b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.c2-ops-reader .c2-observation-cluster-heading code,
+.c2-ops-reader .c2-observation-cluster-row code {
+  padding: 1px 6px;
+  border: 1px solid #d5dfd8;
+  border-radius: 4px;
+  background: #fff;
+  color: #29432f;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.c2-ops-reader .c2-comparison-key {
+  justify-content: flex-end;
+  gap: 6px 20px;
+  border: 0;
+  padding: 0;
+  text-align: right;
+}
+.c2-ops-reader .c2-comparison-key span:last-child {
+  justify-content: flex-end;
+  color: #59685f;
+}
+.c2-ops-reader .c2-comparison-row:first-child {
+  padding-top: 0;
+}
+.c2-ops-reader .c2-heatmap-scroll {
+  margin-top: 0;
+}
+.c2-ops-reader .c2-cluster-empty p {
+  display: block;
+  margin: 12px 0;
+}
+.c2-ops-reader .c2-observation-block > .c2-incident-evidence {
+  margin-block: 12px 0;
 }
 .view-operations.console2-shell .c2-ops-reader .aggregate-report > .aggregate-evidence {
   margin: 32px 0 0;

@@ -190,11 +190,15 @@ export function HourlyOverview({ value }: { value: Row }) {
   const shown = slots.filter((s) => time(s).slice(0, -9) === day);
   if (!evidence.length) return null;
   return (
-    <section id="c2-hourly-overview" className="c2-hourly-overview">
+    <section id="c2-hourly-overview" className="c2-hourly-overview c2-observation-block">
       <header>
         <div>
-          <h4>시간대별 활동과 메모리 점유</h4>
-          <p>활동률 0–100% · 회색은 자료 없음 · 테두리는 같은 시간의 낮은 활동·높은 메모리</p>
+          <h4>시간대별 GPU 활동률 분포</h4>
+          <p>
+            GPU 활동이 많거나 적었던 시간대를 색으로 비교합니다. 활동률은 0–100%이며, 회색은 자료가
+            없는 구간입니다. 테두리가 있는 칸은 같은 시간에 활동률은 낮고 메모리 사용은 높았던
+            구간입니다.
+          </p>
         </div>
         {days.length > 1 && (
           <label>
@@ -207,62 +211,70 @@ export function HourlyOverview({ value }: { value: Row }) {
           </label>
         )}
       </header>
-      {!!shown.length && (
-        <div className="c2-heatmap-scroll">
-          <table className="c2-heatmap">
-            <caption>{day} KST · 각 칸은 1시간 · 포커스 또는 마우스로 수치 확인</caption>
-            <thead>
-              <tr>
-                <th>Namespace / 모델</th>
-                {shown.map((s) => (
-                  <th key={s}>{time(s).slice(-8, -6)}</th>
-                ))}
-              </tr>
-            </thead>
-            {[...new Set(evidence.map((r) => str(r.row.cluster_id)))].map((cluster) => (
-              <tbody key={cluster}>
-                <tr className="c2-observation-cluster-row">
-                  <th scope="rowgroup" colSpan={shown.length + 1}>
-                    클러스터 <code>{cluster || '미확인'}</code>
-                  </th>
-                </tr>
-                {evidence
-                  .filter((r) => str(r.row.cluster_id) === cluster)
-                  .map((r) => (
-                    <tr key={r.key}>
-                      <th scope="row">
-                        {str(r.row.namespace)}
-                        <small>{str(r.row.gpu_model)}</small>
+      {!!shown.length &&
+        [...new Set(evidence.map((r) => str(r.row.cluster_id)))].map((cluster) => (
+          <section
+            className="c2-observation-cluster"
+            key={cluster}
+            aria-label={`${cluster || '미확인'} GPU 활동률 분포`}
+          >
+            <h5 className="c2-observation-cluster-heading">
+              대상 클러스터 : <code>{cluster || '미확인'}</code>
+            </h5>
+            <div className="c2-heatmap-scroll">
+              <table
+                className="c2-heatmap"
+                aria-label={`${cluster || '미확인'} 시간대별 GPU 활동률`}
+              >
+                <caption>{day} KST · 각 칸은 1시간 · 포커스 또는 마우스로 수치 확인</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Namespace / 모델</th>
+                    {shown.map((s) => (
+                      <th scope="col" key={s}>
+                        {time(s).slice(-8, -6)}
                       </th>
-                      {shown.map((s) => {
-                        const h = r.hours.find((h) => Date.parse(str(h.start)) === Date.parse(s));
-                        const paired = h && r.paired.find((p) => p.hour === h);
-                        const overlap = h && r.overlap.some((p) => p.hour === h);
-                        const v = h ? Number(h.activity_percent) : null;
-                        const text = `${label(r.row)} · ${time(s)} KST · 활동률 ${v === null ? '미확인' : v.toFixed(2) + '%'} · 메모리 ${paired ? paired.memory.toFixed(2) + '%' : '미확인'}${overlap ? ` · 활동률 ${r.low}% 미만·메모리 ${r.high}% 이상` : ''}`;
-                        return (
-                          <td key={s}>
-                            <button
-                              type="button"
-                              className={`c2-heat-cell${overlap ? ' c2-heat-overlap' : ''}`}
-                              aria-label={text}
-                              style={{
-                                background:
-                                  v === null ? '#e5e8e6' : `hsl(87 57% ${96 - v * 0.65}%)`,
-                              }}
-                            >
-                              <span className="c2-heat-tip">{text}</span>
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-              </tbody>
-            ))}
-          </table>
-        </div>
-      )}
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidence
+                    .filter((r) => str(r.row.cluster_id) === cluster)
+                    .map((r) => (
+                      <tr key={r.key}>
+                        <th scope="row">
+                          {str(r.row.namespace)}
+                          <small>{str(r.row.gpu_model)}</small>
+                        </th>
+                        {shown.map((s) => {
+                          const h = r.hours.find((h) => Date.parse(str(h.start)) === Date.parse(s));
+                          const paired = h && r.paired.find((p) => p.hour === h);
+                          const overlap = h && r.overlap.some((p) => p.hour === h);
+                          const v = h ? Number(h.activity_percent) : null;
+                          const text = `${label(r.row)} · ${time(s)} KST · 활동률 ${v === null ? '미확인' : v.toFixed(2) + '%'} · 메모리 ${paired ? paired.memory.toFixed(2) + '%' : '미확인'}${overlap ? ` · 활동률 ${r.low}% 미만·메모리 ${r.high}% 이상` : ''}`;
+                          return (
+                            <td key={s}>
+                              <button
+                                type="button"
+                                className={`c2-heat-cell${overlap ? ' c2-heat-overlap' : ''}`}
+                                aria-label={text}
+                                style={{
+                                  background:
+                                    v === null ? '#e5e8e6' : `hsl(87 57% ${96 - v * 0.65}%)`,
+                                }}
+                              >
+                                <span className="c2-heat-tip">{text}</span>
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
       {!shown.length && (
         <p>시간대 요약을 표시할 수 없는 기간입니다. 상세 그래프와 저장 근거를 확인하세요.</p>
       )}

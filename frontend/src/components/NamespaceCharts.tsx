@@ -282,6 +282,8 @@ export function NamespaceCharts({
   onClearFocus?: () => void;
 }) {
   const Heading = reader ? 'h4' : 'h3';
+  const ClusterHeading = reader ? 'h5' : 'h4';
+  const MetricHeading = reader ? 'p' : 'h5';
   const [memoryFields, setMemoryFields] = useState<Record<string, string>>({});
   const hasMemory = groups.some((g) => g.models.some((r) => r.gpu_memory != null));
   const names = [...new Set(groups.map((g) => g.namespace))].sort();
@@ -295,10 +297,12 @@ export function NamespaceCharts({
     <div
       id={reader ? 'c2-namespace-charts' : undefined}
       tabIndex={reader ? -1 : undefined}
-      className="aggregate-cluster-charts"
+      className={`aggregate-cluster-charts${reader ? ' c2-observation-block' : ''}`}
     >
       <Heading className="aggregate-subheading">
-        {!reader && `${headingNumber}. `}클러스터별 Namespace 시간대 비교
+        {reader
+          ? '시간대별 GPU 활동률·메모리 추이'
+          : `${headingNumber}. 클러스터별 Namespace 시간대 비교`}
       </Heading>
       {focus && (
         <div className="c2-chart-focus">
@@ -329,10 +333,8 @@ export function NamespaceCharts({
       )}
       <p>
         {reader
-          ? '비교할 Namespace를 선택하세요. 활동률과 메모리 그래프에 함께 적용됩니다.'
-          : '각 그래프에서 비교할 Namespace를 선택하세요. 선택은 해당 그래프에만 적용됩니다.'}{' '}
-        모두 해제하면 선과 점만 숨겨집니다. 색은 Namespace, 선 모양은 GPU 모델이며 빈 구간은 산출
-        불가입니다.
+          ? 'GPU 활동률과 메모리 사용이 시간에 따라 어떻게 달라졌는지 봅니다. 각 그래프에서 비교할 네임스페이스를 고를 수 있고, 선택은 그 그래프에만 적용됩니다. 모두 해제하면 선과 점만 숨겨집니다. 색은 네임스페이스, 선 모양은 GPU 모델을 구분하며, 빈 구간은 값을 계산할 수 없었던 시간입니다.'
+          : '각 그래프에서 비교할 Namespace를 선택하세요. 선택은 해당 그래프에만 적용됩니다. 모두 해제하면 선과 점만 숨겨집니다. 색은 Namespace, 선 모양은 GPU 모델이며 빈 구간은 산출 불가입니다.'}
       </p>
       {[...new Set(groups.map((g) => g.cluster))].map((cluster) => {
         const clusterGroups = groups.filter((g) => g.cluster === cluster);
@@ -355,8 +357,10 @@ export function NamespaceCharts({
           )
         )
           return (
-            <div className="c2-cluster-empty" key={cluster}>
-              <b>{cluster} 클러스터</b>
+            <div className="c2-cluster-empty c2-observation-cluster" key={cluster}>
+              <h5 className="c2-observation-cluster-heading">
+                대상 클러스터 : <code>{cluster || '미확인'}</code>
+              </h5>
               <p>활동률·메모리를 비교할 유효 관측이 없습니다.</p>
               <a href="#c2-observation-coverage">대상별 자료 범위 확인 →</a>
             </div>
@@ -365,19 +369,26 @@ export function NamespaceCharts({
         return (
           <section
             key={cluster}
-            className="aggregate-chart"
+            className={`aggregate-chart${reader ? ' c2-observation-cluster' : ''}`}
             aria-label={`${cluster} Namespace 그래프`}
           >
             <div className="aggregate-chart-heading">
-              <h4>{cluster} 클러스터</h4>
+              <ClusterHeading className={reader ? 'c2-observation-cluster-heading' : undefined}>
+                {reader ? (
+                  <>
+                    대상 클러스터 : <code>{cluster || '미확인'}</code>
+                  </>
+                ) : (
+                  `${cluster} 클러스터`
+                )}
+              </ClusterHeading>
             </div>
             {(hasMemory ? ['activity', 'memory'] : ['activity']).map((metric) => {
               const isMemory = metric === 'memory';
               const title = isMemory
                 ? `GPU 메모리 ${memoryField === 'used_gib_per_gpu' ? '사용' : '여유'} 비율`
                 : 'GPU 활동률';
-              const selectionKey = (g: NamespaceGroup) =>
-                JSON.stringify([reader ? 'both' : metric, g.key]);
+              const selectionKey = (g: NamespaceGroup) => JSON.stringify([metric, g.key]);
               const selected = clusterGroups.filter((g) => !hidden.has(selectionKey(g)));
               const series = selected.flatMap((g) =>
                 g.models.map((r) => ({
@@ -407,7 +418,9 @@ export function NamespaceCharts({
                   aria-label={`${cluster} ${isMemory ? '메모리' : '활동률'} 그래프`}
                 >
                   <div className="aggregate-chart-heading">
-                    <h5 className="aggregate-chart-metric-title">{title} (%)</h5>
+                    <MetricHeading className="aggregate-chart-metric-title">
+                      {title} (%)
+                    </MetricHeading>
                   </div>
                   {isMemory && (
                     <label className="aggregate-detail-selector">
@@ -442,75 +455,73 @@ export function NamespaceCharts({
                       focus={focus?.cluster === cluster ? focus : null}
                     />
                   )}
-                  {(!reader || !isMemory) && (
-                    <div className="aggregate-chart-controls">
-                      <div className="aggregate-chart-actions">
-                        <button
-                          type="button"
-                          className="button"
-                          onClick={() => onSetCluster(clusterGroups.map(selectionKey), true)}
-                        >
-                          전체 선택
-                        </button>
-                        <button
-                          type="button"
-                          className="button"
-                          onClick={() => onSetCluster(clusterGroups.map(selectionKey), false)}
-                        >
-                          전체 해제
-                        </button>
-                      </div>
-                      <fieldset className="aggregate-chart-legend">
-                        <legend>
-                          {selected.length
-                            ? `표시할 Namespace · ${selected.length}/${clusterGroups.length} 선택`
-                            : '선택 없음 · 선과 점 숨김'}
-                        </legend>
-                        {clusterGroups.map((g) => (
-                          <label key={g.key}>
-                            <input
-                              type="checkbox"
-                              checked={!hidden.has(selectionKey(g))}
-                              onChange={() => onToggle(selectionKey(g))}
-                              aria-label={`${cluster} ${g.namespace} ${title} 표시`}
-                            />
-                            <span
-                              className="aggregate-color-key"
-                              style={{ backgroundColor: colorOf(g.namespace) }}
-                            />
-                            <span>{g.namespace}</span>
-                          </label>
-                        ))}
-                      </fieldset>
-                      <div
-                        className="aggregate-model-legend"
-                        aria-label={`${cluster} ${title} 모델 선 모양`}
+                  <div className="aggregate-chart-controls">
+                    <div className="aggregate-chart-actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => onSetCluster(clusterGroups.map(selectionKey), true)}
                       >
-                        {[
-                          ...new Set(
-                            clusterGroups.flatMap((g) => g.models.map((r) => str(r.gpu_model))),
-                          ),
-                        ]
-                          .sort()
-                          .map((model) => (
-                            <span key={model}>
-                              <svg viewBox="0 0 40 12" aria-hidden="true">
-                                <line
-                                  x1="0"
-                                  x2="40"
-                                  y1="6"
-                                  y2="6"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeDasharray={dashOf(model)}
-                                />
-                              </svg>
-                              {model || '모델 미확인'}
-                            </span>
-                          ))}
-                      </div>
+                        전체 선택
+                      </button>
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => onSetCluster(clusterGroups.map(selectionKey), false)}
+                      >
+                        전체 해제
+                      </button>
                     </div>
-                  )}
+                    <fieldset className="aggregate-chart-legend">
+                      <legend>
+                        {selected.length
+                          ? `표시할 Namespace · ${selected.length}/${clusterGroups.length} 선택`
+                          : '선택 없음 · 선과 점 숨김'}
+                      </legend>
+                      {clusterGroups.map((g) => (
+                        <label key={g.key}>
+                          <input
+                            type="checkbox"
+                            checked={!hidden.has(selectionKey(g))}
+                            onChange={() => onToggle(selectionKey(g))}
+                            aria-label={`${cluster} ${g.namespace} ${title} 표시`}
+                          />
+                          <span
+                            className="aggregate-color-key"
+                            style={{ backgroundColor: colorOf(g.namespace) }}
+                          />
+                          <span>{g.namespace}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    <div
+                      className="aggregate-model-legend"
+                      aria-label={`${cluster} ${title} 모델 선 모양`}
+                    >
+                      {[
+                        ...new Set(
+                          clusterGroups.flatMap((g) => g.models.map((r) => str(r.gpu_model))),
+                        ),
+                      ]
+                        .sort()
+                        .map((model) => (
+                          <span key={model}>
+                            <svg viewBox="0 0 40 12" aria-hidden="true">
+                              <line
+                                x1="0"
+                                x2="40"
+                                y1="6"
+                                y2="6"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeDasharray={dashOf(model)}
+                              />
+                            </svg>
+                            {model || '모델 미확인'}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
                 </section>
               );
             })}

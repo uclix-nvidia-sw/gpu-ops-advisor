@@ -634,8 +634,7 @@ export function AggregateReport({
     setSelection(key);
     setHiddenNamespaces((previous) => {
       const next = new Set(previous);
-      for (const metric of ['activity', 'memory', 'both'])
-        next.delete(JSON.stringify([metric, key]));
+      for (const metric of ['activity', 'memory']) next.delete(JSON.stringify([metric, key]));
       return next;
     });
     setGraphFocus({
@@ -680,6 +679,7 @@ export function AggregateReport({
             Number(a.topic_id === 'incident_summary') - Number(b.topic_id === 'incident_summary'),
         )
     : [];
+  const displayedIncidents = rows(summary.incidents).slice(0, incidentLimit);
   const incidentNumber = usage ? 2 : 1;
   const IncidentDetails = reader ? 'details' : 'div';
   const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
@@ -691,30 +691,42 @@ export function AggregateReport({
       : '저장된 주요 변화';
   const TopicHeading = reader ? 'h3' : 'h2';
   const Subheading = reader ? 'h4' : 'h3';
+  const DetailHeading = reader ? 'h5' : 'h3';
   const SummaryHeading = reader ? 'h2' : 'h3';
   const workloadObservations = usage && (
     <>
       <h3 id={reader ? 'c2-workloads' : undefined} className="aggregate-subheading">
-        {reader ? '작업 대기·완료' : '1.4. GPU 작업 대기·완료 (보조 관측)'}
+        {reader ? '작업 대기·실행·완료 현황' : '1.4. GPU 작업 대기·완료 (보조 관측)'}
       </h3>
-      <WorkloadContext
-        value={obj(usage.workload_context)}
-        onEvidence={onEvidence}
-        reader={reader}
-      />
+      {!reader && <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />}
       {str(usage.workload_unavailable_reason) && (
         <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
       )}
       {workloads.length > 0 && (
-        <section aria-label="GPU 작업 보조 관측">
-          <h4>GPU 작업 대기·완료 관측</h4>
-          <p className="aggregate-static-note">
-            GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
-            완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
-            아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며 수집
-            공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로 다를 수
-            있습니다.
-          </p>
+        <section id={reader ? 'c2-workload-summary' : undefined} aria-label="GPU 작업 보조 관측">
+          <h4>{reader ? '네임스페이스별 대기·실행·완료 현황' : 'GPU 작업 대기·완료 관측'}</h4>
+          {reader ? (
+            <>
+              <p>
+                GPU를 요청한 일반 컨테이너가 있는 Pod의 대기·노드 배정·실행 상태와 완료된 Job을 함께
+                봅니다. 대기 Pod가 있어도 GPU 부족이 원인이라고 단정할 수는 없습니다.
+              </p>
+              <p className="aggregate-static-note">
+                최대값은 자료가 있는 시점만 비교한 값이며, 항목마다 가장 높았던 시각은 다를 수
+                있습니다. 자료가 없는 구간을 0으로 보지 않습니다. 완료 건수와 평균 경과시간은 성공
+                완료가 확인된 Job만 대상으로 하므로 전체 작업을 대표하지 않습니다. 경과시간에는
+                대기·준비도 포함되어 GPU가 실제 계산한 시간과는 다릅니다.
+              </p>
+            </>
+          ) : (
+            <p className="aggregate-static-note">
+              GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
+              완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
+              아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며
+              수집 공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로
+              다를 수 있습니다.
+            </p>
+          )}
           <div className="aggregate-table-scroll">
             <table>
               <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
@@ -734,7 +746,7 @@ export function AggregateReport({
                     {reader && (
                       <tr className="c2-observation-cluster-row">
                         <th scope="rowgroup" colSpan={6}>
-                          클러스터 <code>{cluster || '미확인'}</code>
+                          대상 클러스터 : <code>{cluster || '미확인'}</code>
                         </th>
                       </tr>
                     )}
@@ -771,8 +783,17 @@ export function AggregateReport({
               )}
             </table>
           </div>
-          <WorkloadCharts workloads={workloads} compact={reader} />
+          {!reader && <WorkloadCharts workloads={workloads} />}
         </section>
+      )}
+      {reader && workloads.length > 0 && (
+        <>
+          <WorkloadCharts workloads={workloads} compact metric="pending" />
+          <WorkloadCharts workloads={workloads} compact metric="completed" />
+        </>
+      )}
+      {reader && (
+        <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} reader />
       )}
     </>
   );
@@ -795,6 +816,280 @@ export function AggregateReport({
         })
       }
     />
+  );
+  const namespaceDetails = usage && (
+    <>
+      <DetailHeading className="aggregate-subheading">
+        {reader ? '관측 노드·GPU 구성과 기간 평균' : '1.1. Namespace별 비교'}
+      </DetailHeading>
+      <p>
+        {reader
+          ? '각 네임스페이스에서 어떤 노드와 GPU가 관측됐는지, 기간 평균은 얼마였는지 확인합니다. 그래프에서 선택을 바꿔도 이 표에는 전체 대상이 남습니다. GPU 수는 기간 중 확인한 서로 다른 GPU의 개수이며, 서버 수나 동시에 할당된 GPU 수는 아닙니다.'
+          : '표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수 있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이 아닙니다.'}
+      </p>
+      {!groups.length ? (
+        <Notice>
+          선택한 기간에는 Namespace에 연결해 비교할 수 있는 자료가 없습니다. 새 작업을 오늘
+          시작했다면 어제 보고서에는 포함되지 않습니다.
+        </Notice>
+      ) : (
+        <>
+          <div className="aggregate-table-scroll">
+            <table
+              className={`aggregate-namespace-table${hasMemory ? ' aggregate-namespace-memory' : ''}`}
+            >
+              <caption className="sr-only">클러스터·Namespace별 관측 구성</caption>
+              <thead>
+                <tr>
+                  <th>클러스터 / Namespace</th>
+                  <th>관측 노드</th>
+                  <th>관측 GPU 수</th>
+                  <th>평균 GPU 활동률</th>
+                  {hasMemory && <th>GPU 메모리 사용 비율</th>}
+                </tr>
+              </thead>
+              {(reader ? [...new Set(groups.map((group) => group.cluster))] : [null]).map(
+                (cluster) => (
+                  <tbody key={cluster}>
+                    {reader && (
+                      <tr className="c2-observation-cluster-row">
+                        <th scope="rowgroup" colSpan={hasMemory ? 5 : 4}>
+                          대상 클러스터 : <code>{cluster || '미확인'}</code>
+                        </th>
+                      </tr>
+                    )}
+                    {groups
+                      .filter((group) => cluster === null || group.cluster === cluster)
+                      .map((group) => {
+                        return (
+                          <tr key={group.key}>
+                            <th scope="row">
+                              {!reader && <span>{group.cluster}</span>}
+                              {group.namespace}
+                            </th>
+                            <td>{selectedNodes(group.models).join(', ') || '미확인'}</td>
+                            <td className="aggregate-number">{observedCount(group.models)}</td>
+                            <td className="aggregate-number">
+                              {namespaceActivity(group.models)}
+                              {group.models.length > 1 && <small>모델별 평균 범위</small>}
+                              {group.models.some((r) => r.quality_status !== 'ready') && (
+                                <small>일부 자료 기준</small>
+                              )}
+                            </td>
+                            {hasMemory && (
+                              <td className="aggregate-number">
+                                <span className="aggregate-memory-percent">
+                                  {memoryRange(group.models, 'used_gib_per_gpu', true)}
+                                </span>
+                                <small>
+                                  사용 {memoryRange(group.models, 'used_gib_per_gpu')} / 전체{' '}
+                                  {memoryRange(group.models, 'total')}
+                                </small>
+                                {group.models.some((r) =>
+                                  rows(obj(r.gpu_memory).hours).some(
+                                    (h) => h.used_gib_per_gpu == null,
+                                  ),
+                                ) && <small>일부 자료 기준</small>}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                ),
+              )}
+            </table>
+          </div>
+          <p className="aggregate-table-note aggregate-static-note">
+            활동률은 확인된 자료의 평균입니다. 여러 GPU 모델을 사용하면 모델별 평균의 최소–최대
+            범위를 표시합니다. 자료가 일부뿐이면 전체 기간의 사용 패턴으로 단정하지 않습니다.
+          </p>
+          {hasMemory && (
+            <p className="aggregate-table-note aggregate-static-note">
+              메모리 사용 비율은 사용량 ÷ (사용량 + 여유량) × 100입니다. 보조 수치는 GPU당 평균
+              사용량 / 전체 용량(GiB)입니다. 전체 용량은 관측된 사용량과 여유량의 합입니다. 연결
+              GPU의 관측값이며 Namespace의 전용 사용량이나 할당량이 아닙니다. 활동률과 메모리는 각각
+              확인된 구간의 평균이므로 반영 구간이 다를 수 있습니다. 시간대별 비교는{' '}
+              {reader ? '위' : '아래'}
+              그래프에서 확인하세요. 여러 모델은 모델별 평균 범위를 표시합니다.
+            </p>
+          )}
+          {!reader && namespaceCharts}
+          {!reader && (
+            <Subheading className="aggregate-subheading">1.3. 세부 수치와 사용 패턴</Subheading>
+          )}
+          <details className="aggregate-model-detail">
+            <summary>
+              {reader ? '모델별·시간대별 수치와 자료 상태' : '세부 수치와 자료 상태'}
+            </summary>
+            <label className="aggregate-detail-selector">
+              확인할 Namespace
+              <select
+                value={selected?.key || ''}
+                onChange={(event) => {
+                  setSelection(event.target.value);
+                  setModelSelection('');
+                }}
+              >
+                {groups.map((group) => (
+                  <option key={group.key} value={group.key}>
+                    {group.cluster} / {group.namespace}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p>
+              현재 자료가 충분해도 이전 기간에 공백이 있으면 증감 비교는 보류합니다. 다른 GPU 모델의
+              활동률을 하나의 평균으로 합치지 않습니다.
+            </p>
+            <div className="aggregate-table-scroll">
+              <table className="aggregate-model-table">
+                <thead>
+                  <tr>
+                    <th>GPU 모델 / 상세 선택</th>
+                    <th>관측 GPU 수</th>
+                    <th>현재 활동률</th>
+                    <th>이전 활동률</th>
+                    <th>변화</th>
+                    <th>유효 시간대</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((row) => (
+                    <tr key={keyOf(row)} className={row === active ? 'selected' : ''}>
+                      <th scope="row">
+                        <button
+                          type="button"
+                          aria-pressed={row === active}
+                          onClick={() => setModelSelection(keyOf(row))}
+                        >
+                          {str(row.gpu_model) || '모델 미확인'}
+                        </button>
+                      </th>
+                      <td className="aggregate-number">
+                        {row.observed_gpu_count == null ? '미확인' : `${row.observed_gpu_count}개`}
+                      </td>
+                      <td className="aggregate-number">
+                        {pct(row.activity_percent)}
+                        {row.quality_status !== 'ready' && <small>확인된 시간대만</small>}
+                      </td>
+                      <td className="aggregate-number">{pct(row.previous_activity_percent)}</td>
+                      <td>
+                        {difference(row.change_percentage_points)}
+                        <small>{comparisonReason(row)}</small>
+                      </td>
+                      <td className="aggregate-number">
+                        {String(row.valid_hours)} / {String(row.expected_hours)}시간
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="aggregate-hour-detail">
+              {reader ? <h6>선택한 모델의 시간대별 수치</h6> : <h4>선택한 모델의 시간대별 수치</h4>}
+              <p>
+                {str(active?.cluster_id)} / {str(active?.namespace)} / {str(active?.gpu_model)}
+              </p>
+              <p>
+                {active?.low_activity_hours == null
+                  ? '자료가 부족해 낮은 활동 시간대 수는 판단을 보류합니다.'
+                  : `평균 활동률 5% 미만: ${active.low_activity_hours}개 시간대. 이 기준은 보고서 분류 기준이며 운영정책이 아닙니다.`}
+              </p>
+              <details>
+                <summary>시간대별 수치와 자료 부족 사유</summary>
+                <div className="aggregate-table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>시간대 시작</th>
+                        <th>평균 활동률</th>
+                        {active?.gpu_memory != null && <th>메모리 사용 비율</th>}
+                        <th>자료 상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hours.map((h) => (
+                        <tr key={str(h.end)}>
+                          <td>{reportRequestTime(str(h.start))}</td>
+                          <td>{pct(h.activity_percent)}</td>
+                          {active?.gpu_memory != null && (
+                            <td>
+                              {(() => {
+                                const memory = rows(obj(active?.gpu_memory).hours).find(
+                                  (m) => m.end === h.end,
+                                );
+                                const percent = memory ? memoryPercent(memory) : null;
+                                return percent == null || !memory ? (
+                                  '확인 불가'
+                                ) : (
+                                  <>
+                                    <span className="aggregate-memory-percent">
+                                      {percent.toFixed(1)}%
+                                    </span>
+                                    <small>
+                                      사용 {Number(memory.used_gib_per_gpu).toFixed(2)} GiB · 여유{' '}
+                                      {Number(memory.free_gib_per_gpu).toFixed(2)} GiB
+                                    </small>
+                                  </>
+                                );
+                              })()}
+                            </td>
+                          )}
+                          <td>
+                            {strings(h.reasons)
+                              .map((r) => aggregateReasons[r] || r)
+                              .join(' · ') || '관측 조건 확인'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+            {active && (
+              <div className="aggregate-patterns">
+                {reader ? <h6>저장된 사용 패턴 요약</h6> : <h4>사용 패턴 요약</h4>}
+                {rows(usage.findings)
+                  .filter(
+                    (f) =>
+                      str(obj(f.target).cluster_id) === str(active.cluster_id) &&
+                      str(obj(f.target).namespace) === str(active.namespace) &&
+                      str(obj(f.target).model) === str(active.gpu_model),
+                  )
+                  .map((f) => (
+                    <p key={str(f.id)}>{str(f.text)}</p>
+                  ))}
+              </div>
+            )}
+          </details>
+        </>
+      )}
+      {!reader && workloadObservations}
+
+      {unattributed.length > 0 && (
+        <details className="aggregate-unattributed">
+          <summary>Namespace에 연결하지 못한 관측 · {unattributed.length}개 모델 묶음</summary>
+          <p>
+            {obj(usage.quality).namespace_status_basis ===
+            'attributed_rows_with_current_cluster_coverage_v1'
+              ? '이 자료는 Namespace 활동 판정에 포함하지 않습니다. 미할당 여부와 전체 GPU 귀속의 완전성은 확인하지 않았습니다.'
+              : '이 자료는 Namespace별 사용량 비교에서 제외했습니다. 미사용 GPU라고 판단한 것은 아닙니다.'}
+          </p>
+          <ul>
+            {unattributed.map((row) => (
+              <li key={keyOf(row)}>
+                {str(row.cluster_id)} · {str(row.gpu_model)}:{' '}
+                {Array.from(new Set(rows(row.hours).flatMap((h) => strings(h.reasons))))
+                  .map((r) => aggregateReasons[r] || r)
+                  .join(' · ') || 'Namespace 식별 정보 부족'}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
   return (
     <section
@@ -901,12 +1196,12 @@ export function AggregateReport({
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
           <TopicHeading id="namespace-summary-title">
-            {reader ? 'GPU 활동·메모리' : '1. Namespace별 GPU 활동 현황'}
+            {reader ? 'GPU 활동률·메모리 사용 현황' : '1. Namespace별 GPU 활동 현황'}
           </TopicHeading>
           {reader && <ReportGpuComparison value={value} />}
           {diagnosticMessages.length > 0 && (
             <section aria-label="부분 산출 원인">
-              <Subheading>활동률 산출·기간 비교의 제한</Subheading>
+              <DetailHeading>활동률 산출·기간 비교의 제한</DetailHeading>
               <p>
                 일부 관측을 활동률 계산이나 기간 비교에 사용할 수 없었습니다. 검증 미실행은 신원
                 충돌이 확인됐다는 뜻이 아닙니다.
@@ -934,277 +1229,19 @@ export function AggregateReport({
               onFocus={reader ? focusAdvice : undefined}
             />
           )}
-          {reader && <HourlyOverview value={value} />}
-          {reader && groups.length > 0 && namespaceCharts}
-          <Subheading className="aggregate-subheading">
-            {!reader && '1.1. '}Namespace별 비교
-          </Subheading>
-          <p>
-            표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
-            있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
-            아닙니다.
-          </p>
-          {!groups.length ? (
-            <Notice>
-              선택한 기간에는 Namespace에 연결해 비교할 수 있는 자료가 없습니다. 새 작업을 오늘
-              시작했다면 어제 보고서에는 포함되지 않습니다.
-            </Notice>
-          ) : (
+          {reader && (
             <>
-              <div className="aggregate-table-scroll">
-                <table
-                  className={`aggregate-namespace-table${hasMemory ? ' aggregate-namespace-memory' : ''}`}
-                >
-                  <caption className="sr-only">클러스터·Namespace별 관측 구성</caption>
-                  <thead>
-                    <tr>
-                      <th>클러스터 / Namespace</th>
-                      <th>관측 노드</th>
-                      <th>관측 GPU 수</th>
-                      <th>평균 GPU 활동률</th>
-                      {hasMemory && <th>GPU 메모리 사용 비율</th>}
-                    </tr>
-                  </thead>
-                  {(reader ? [...new Set(groups.map((group) => group.cluster))] : [null]).map(
-                    (cluster) => (
-                      <tbody key={cluster}>
-                        {reader && (
-                          <tr className="c2-observation-cluster-row">
-                            <th scope="rowgroup" colSpan={hasMemory ? 5 : 4}>
-                              클러스터 <code>{cluster || '미확인'}</code>
-                            </th>
-                          </tr>
-                        )}
-                        {groups
-                          .filter((group) => cluster === null || group.cluster === cluster)
-                          .map((group) => {
-                            return (
-                              <tr key={group.key}>
-                                <th scope="row">
-                                  {!reader && <span>{group.cluster}</span>}
-                                  {group.namespace}
-                                </th>
-                                <td>{selectedNodes(group.models).join(', ') || '미확인'}</td>
-                                <td className="aggregate-number">{observedCount(group.models)}</td>
-                                <td className="aggregate-number">
-                                  {namespaceActivity(group.models)}
-                                  {group.models.length > 1 && <small>모델별 평균 범위</small>}
-                                  {group.models.some((r) => r.quality_status !== 'ready') && (
-                                    <small>일부 자료 기준</small>
-                                  )}
-                                </td>
-                                {hasMemory && (
-                                  <td className="aggregate-number">
-                                    <span className="aggregate-memory-percent">
-                                      {memoryRange(group.models, 'used_gib_per_gpu', true)}
-                                    </span>
-                                    <small>
-                                      사용 {memoryRange(group.models, 'used_gib_per_gpu')} / 전체{' '}
-                                      {memoryRange(group.models, 'total')}
-                                    </small>
-                                    {group.models.some((r) =>
-                                      rows(obj(r.gpu_memory).hours).some(
-                                        (h) => h.used_gib_per_gpu == null,
-                                      ),
-                                    ) && <small>일부 자료 기준</small>}
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    ),
-                  )}
-                </table>
-              </div>
-              <p className="aggregate-table-note aggregate-static-note">
-                활동률은 확인된 자료의 평균입니다. 여러 GPU 모델을 사용하면 모델별 평균의 최소–최대
-                범위를 표시합니다. 자료가 일부뿐이면 전체 기간의 사용 패턴으로 단정하지 않습니다.
-              </p>
-              {hasMemory && (
-                <p className="aggregate-table-note aggregate-static-note">
-                  메모리 사용 비율은 사용량 ÷ (사용량 + 여유량) × 100입니다. 보조 수치는 GPU당 평균
-                  사용량 / 전체 용량(GiB)입니다. 전체 용량은 관측된 사용량과 여유량의 합입니다. 연결
-                  GPU의 관측값이며 Namespace의 전용 사용량이나 할당량이 아닙니다. 활동률과 메모리는
-                  각각 확인된 구간의 평균이므로 반영 구간이 다를 수 있습니다. 시간대별 비교는{' '}
-                  {reader ? '위' : '아래'}
-                  그래프에서 확인하세요. 여러 모델은 모델별 평균 범위를 표시합니다.
-                </p>
-              )}
-              {!reader && namespaceCharts}
-              <Subheading className="aggregate-subheading">
-                {!reader && '1.3. '}세부 수치와 사용 패턴
-              </Subheading>
-              <details className="aggregate-model-detail">
-                <summary>세부 수치와 자료 상태</summary>
-                <label className="aggregate-detail-selector">
-                  확인할 Namespace
-                  <select
-                    value={selected?.key || ''}
-                    onChange={(event) => {
-                      setSelection(event.target.value);
-                      setModelSelection('');
-                    }}
-                  >
-                    {groups.map((group) => (
-                      <option key={group.key} value={group.key}>
-                        {group.cluster} / {group.namespace}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p>
-                  현재 자료가 충분해도 이전 기간에 공백이 있으면 증감 비교는 보류합니다. 다른 GPU
-                  모델의 활동률을 하나의 평균으로 합치지 않습니다.
-                </p>
-                <div className="aggregate-table-scroll">
-                  <table className="aggregate-model-table">
-                    <thead>
-                      <tr>
-                        <th>GPU 모델 / 상세 선택</th>
-                        <th>관측 GPU 수</th>
-                        <th>현재 활동률</th>
-                        <th>이전 활동률</th>
-                        <th>변화</th>
-                        <th>유효 시간대</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {models.map((row) => (
-                        <tr key={keyOf(row)} className={row === active ? 'selected' : ''}>
-                          <th scope="row">
-                            <button
-                              type="button"
-                              aria-pressed={row === active}
-                              onClick={() => setModelSelection(keyOf(row))}
-                            >
-                              {str(row.gpu_model) || '모델 미확인'}
-                            </button>
-                          </th>
-                          <td className="aggregate-number">
-                            {row.observed_gpu_count == null
-                              ? '미확인'
-                              : `${row.observed_gpu_count}개`}
-                          </td>
-                          <td className="aggregate-number">
-                            {pct(row.activity_percent)}
-                            {row.quality_status !== 'ready' && <small>확인된 시간대만</small>}
-                          </td>
-                          <td className="aggregate-number">{pct(row.previous_activity_percent)}</td>
-                          <td>
-                            {difference(row.change_percentage_points)}
-                            <small>{comparisonReason(row)}</small>
-                          </td>
-                          <td className="aggregate-number">
-                            {String(row.valid_hours)} / {String(row.expected_hours)}시간
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="aggregate-hour-detail">
-                  <h4>선택한 모델의 시간대별 수치</h4>
-                  <p>
-                    {str(active?.cluster_id)} / {str(active?.namespace)} / {str(active?.gpu_model)}
-                  </p>
-                  <p>
-                    {active?.low_activity_hours == null
-                      ? '자료가 부족해 낮은 활동 시간대 수는 판단을 보류합니다.'
-                      : `평균 활동률 5% 미만: ${active.low_activity_hours}개 시간대. 이 기준은 보고서 분류 기준이며 운영정책이 아닙니다.`}
-                  </p>
-                  <details>
-                    <summary>시간대별 수치와 자료 부족 사유</summary>
-                    <div className="aggregate-table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>시간대 시작</th>
-                            <th>평균 활동률</th>
-                            {active?.gpu_memory != null && <th>메모리 사용 비율</th>}
-                            <th>자료 상태</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hours.map((h) => (
-                            <tr key={str(h.end)}>
-                              <td>{reportRequestTime(str(h.start))}</td>
-                              <td>{pct(h.activity_percent)}</td>
-                              {active?.gpu_memory != null && (
-                                <td>
-                                  {(() => {
-                                    const memory = rows(obj(active?.gpu_memory).hours).find(
-                                      (m) => m.end === h.end,
-                                    );
-                                    const percent = memory ? memoryPercent(memory) : null;
-                                    return percent == null || !memory ? (
-                                      '확인 불가'
-                                    ) : (
-                                      <>
-                                        <span className="aggregate-memory-percent">
-                                          {percent.toFixed(1)}%
-                                        </span>
-                                        <small>
-                                          사용 {Number(memory.used_gib_per_gpu).toFixed(2)} GiB ·
-                                          여유 {Number(memory.free_gib_per_gpu).toFixed(2)} GiB
-                                        </small>
-                                      </>
-                                    );
-                                  })()}
-                                </td>
-                              )}
-                              <td>
-                                {strings(h.reasons)
-                                  .map((r) => aggregateReasons[r] || r)
-                                  .join(' · ') || '관측 조건 확인'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </details>
-                </div>
-                {active && (
-                  <div className="aggregate-patterns">
-                    <h4>사용 패턴 요약</h4>
-                    {rows(usage.findings)
-                      .filter(
-                        (f) =>
-                          str(obj(f.target).cluster_id) === str(active.cluster_id) &&
-                          str(obj(f.target).namespace) === str(active.namespace) &&
-                          str(obj(f.target).model) === str(active.gpu_model),
-                      )
-                      .map((f) => (
-                        <p key={str(f.id)}>{str(f.text)}</p>
-                      ))}
-                  </div>
-                )}
-              </details>
+              <HourlyOverview value={value} />
+              {groups.length > 0 && namespaceCharts}
             </>
           )}
-          {!reader && workloadObservations}
-
-          {unattributed.length > 0 && (
-            <details className="aggregate-unattributed">
-              <summary>Namespace에 연결하지 못한 관측 · {unattributed.length}개 모델 묶음</summary>
-              <p>
-                {obj(usage.quality).namespace_status_basis ===
-                'attributed_rows_with_current_cluster_coverage_v1'
-                  ? '이 자료는 Namespace 활동 판정에 포함하지 않습니다. 미할당 여부와 전체 GPU 귀속의 완전성은 확인하지 않았습니다.'
-                  : '이 자료는 Namespace별 사용량 비교에서 제외했습니다. 미사용 GPU라고 판단한 것은 아닙니다.'}
-              </p>
-              <ul>
-                {unattributed.map((row) => (
-                  <li key={keyOf(row)}>
-                    {str(row.cluster_id)} · {str(row.gpu_model)}:{' '}
-                    {Array.from(new Set(rows(row.hours).flatMap((h) => strings(h.reasons))))
-                      .map((r) => aggregateReasons[r] || r)
-                      .join(' · ') || 'Namespace 식별 정보 부족'}
-                  </li>
-                ))}
-              </ul>
-            </details>
+          {reader ? (
+            <section className="c2-observation-block" aria-labelledby="c2-gpu-details-title">
+              <h4 id="c2-gpu-details-title">관측 대상과 상세 수치</h4>
+              {namespaceDetails}
+            </section>
+          ) : (
+            namespaceDetails
           )}
         </section>
       )}
@@ -1236,9 +1273,9 @@ export function AggregateReport({
           )}
           <IncidentDetails className={reader ? 'c2-incident-details' : undefined}>
             {reader && <summary>전체 오류 종류별 수치와 저장 집계 설명</summary>}
-            <Subheading className="aggregate-subheading">
+            <DetailHeading className="aggregate-subheading">
               {!reader && `${incidentNumber}.1. `}장애 종류별 발생 현황
-            </Subheading>
+            </DetailHeading>
             {rows(incident.findings)
               .filter((f) => !str(f.id).startsWith('incident-node-'))
               .map((f) => (
@@ -1297,9 +1334,18 @@ export function AggregateReport({
             </Notice>
           )}
 
-          <Subheading className="aggregate-subheading">
-            {!reader && `${incidentNumber}.2. `}사건별 알림 내용
+          <Subheading
+            id={reader ? 'c2-incident-records' : undefined}
+            className="aggregate-subheading"
+          >
+            {reader ? '개별 사건의 발생 시각과 알림 내용' : `${incidentNumber}.2. 사건별 알림 내용`}
           </Subheading>
+          {reader && (
+            <p>
+              어떤 노드에서 언제 어떤 알림이 왔는지 확인합니다. 사건별 상세 화면이나 발행된 RCA를
+              열어 원인과 대응 내용을 살펴볼 수 있습니다.
+            </p>
+          )}
           {summary.count === 0 ? (
             <Notice>
               선택한 범위·기간에 저장된 사건이 없습니다. 장비 전체의 무장애를 뜻하지 않습니다.
@@ -1329,40 +1375,54 @@ export function AggregateReport({
                         <th>상세 보기</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {rows(summary.incidents)
-                        .slice(0, incidentLimit)
-                        .map((row) => (
-                          <tr key={str(row.id)}>
-                            <td className="aggregate-date">
-                              <time dateTime={str(row.occurred_at)}>
-                                {reportRequestTime(str(row.occurred_at))
-                                  .split(/ (?=\d{2}:\d{2}:\d{2}$)/)
-                                  .map((part, index) => (
-                                    <span key={index}>{part}</span>
-                                  ))}
-                              </time>
-                            </td>
-                            <td>{str(row.cluster_id) || '미확인'}</td>
-                            <td>{str(obj(row.target).node) || '미확인'}</td>
-                            <td>
-                              <span className="aggregate-alert-title">
-                                {incidentShortTitle(str(row.symptom))}
-                              </span>
-                              {obj(row.target).test_alarm === true && (
-                                <small>시험 알림으로 표시됨</small>
-                              )}
-                            </td>
-
-                            <td>
-                              <TextLink to={`/incidents/${encodeURIComponent(str(row.id))}`}>
-                                {row.result_id ? 'RCA 보기' : '사건 보기'}
-                              </TextLink>
-                              {!row.result_id && <small>RCA 미발행</small>}
-                            </td>
+                    {(reader
+                      ? [...new Set(displayedIncidents.map((row) => str(row.cluster_id)))].sort(
+                          (a, b) => compareReportTargets({ cluster_id: a }, { cluster_id: b }),
+                        )
+                      : [null]
+                    ).map((cluster) => (
+                      <tbody key={cluster}>
+                        {reader && (
+                          <tr className="c2-observation-cluster-row">
+                            <th scope="rowgroup" colSpan={5}>
+                              대상 클러스터 : <code>{cluster || '미확인'}</code>
+                            </th>
                           </tr>
-                        ))}
-                    </tbody>
+                        )}
+                        {displayedIncidents
+                          .filter((row) => cluster === null || str(row.cluster_id) === cluster)
+                          .map((row) => (
+                            <tr key={str(row.id)}>
+                              <td className="aggregate-date">
+                                <time dateTime={str(row.occurred_at)}>
+                                  {reportRequestTime(str(row.occurred_at))
+                                    .split(/ (?=\d{2}:\d{2}:\d{2}$)/)
+                                    .map((part, index) => (
+                                      <span key={index}>{part}</span>
+                                    ))}
+                                </time>
+                              </td>
+                              <td>{str(row.cluster_id) || '미확인'}</td>
+                              <td>{str(obj(row.target).node) || '미확인'}</td>
+                              <td>
+                                <span className="aggregate-alert-title">
+                                  {incidentShortTitle(str(row.symptom))}
+                                </span>
+                                {obj(row.target).test_alarm === true && (
+                                  <small>시험 알림으로 표시됨</small>
+                                )}
+                              </td>
+
+                              <td>
+                                <TextLink to={`/incidents/${encodeURIComponent(str(row.id))}`}>
+                                  {row.result_id ? 'RCA 보기' : '사건 보기'}
+                                </TextLink>
+                                {!row.result_id && <small>RCA 미발행</small>}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    ))}
                   </table>
                 </div>
                 {rows(summary.incidents).length > incidentLimit && (

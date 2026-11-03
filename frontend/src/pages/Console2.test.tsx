@@ -13,6 +13,7 @@ import { useRecentIncidents } from '../components/IncidentOverview';
 import { incidentViews } from '../lib/incidentOverview';
 import { AggregateReport } from '../components/AggregateReport';
 import { NamespaceCharts } from '../components/NamespaceCharts';
+import { numberReportSections } from '../lib/reportNavigation';
 
 vi.mock('../components/IncidentOverview', async (original) => ({
   ...(await original<typeof import('../components/IncidentOverview')>()),
@@ -22,6 +23,62 @@ vi.mock('../components/IncidentOverview', async (original) => ({
     truncated: false,
   })),
 }));
+
+it('numbers nested Ops sections without advancing their siblings or numbering review records', () => {
+  const sections = [
+    ['summary', '관측 요약'],
+    ['advice', '운영 해석·제안'],
+    ['observations', '상세 관측'],
+    ['gpu', 'GPU 활동률·메모리 사용 현황', 'observations'],
+    ['average', '네임스페이스별 기간 평균', 'gpu'],
+    ['distribution', '시간대별 GPU 활동률 분포', 'gpu'],
+    ['trends', '시간대별 GPU 활동률·메모리 추이', 'gpu'],
+    ['values', '관측 대상과 상세 수치', 'gpu'],
+    ['workloads', '작업 대기·실행·완료 현황', 'observations'],
+    ['workload-summary', '네임스페이스별 대기·실행·완료 현황', 'workloads'],
+    ['pending', '시간대별 최대 대기 Pod 수', 'workloads'],
+    ['completed', '완료 Job별 경과시간', 'workloads'],
+    ['context', '작업 유형·GPU 요청·노드 배정 근거', 'workloads'],
+    ['incidents', '사건 기록', 'observations'],
+    ['incident-comparison', '이전 기간과 사건 건수 비교', 'incidents'],
+    ['incident-distribution', '오류 종류·노드별 사건 분포', 'incidents'],
+    ['incident-records', '개별 사건의 발생 시각과 알림 내용', 'incidents'],
+    ['limits', '집계 기준·자료 한계'],
+    ['new-review-records', '보고서 검토·조치 기록'],
+  ];
+  const saved = JSON.stringify(sections);
+  expect(numberReportSections(sections).map(([, , number]) => number)).toEqual([
+    '01',
+    '02',
+    '03',
+    '3.1',
+    '3.1.1',
+    '3.1.2',
+    '3.1.3',
+    '3.1.4',
+    '3.2',
+    '3.2.1',
+    '3.2.2',
+    '3.2.3',
+    '3.2.4',
+    '3.3',
+    '3.3.1',
+    '3.3.2',
+    '3.3.3',
+    '04',
+    '',
+  ]);
+  const partial = numberReportSections(
+    sections.filter(([id]) => !['distribution', 'context'].includes(id)),
+  );
+  expect(partial.find(([id]) => id === 'values')?.[2]).toBe('3.1.3');
+  expect(partial.find(([id]) => id === 'workloads')?.[2]).toBe('3.2');
+  expect(partial.find(([id]) => id === 'incident-records')?.[2]).toBe('3.3.3');
+  expect(numberReportSections([['incidents', '사건 기록', 'missing']])).toEqual([
+    ['incidents', '사건 기록', '01', ''],
+  ]);
+  expect(JSON.stringify(sections)).toBe(saved);
+});
 
 it('opens all recorded incidents by default while retaining explicit dashboard and calendar periods', () => {
   const render = (path: string) =>
@@ -144,7 +201,7 @@ it('groups GPU and incident comparisons with their details, preserves interpreta
   expect(positions.every((position) => position >= 0)).toBe(true);
   expect(positions).toEqual([...positions].sort((a, b) => a - b));
   expect(modern.indexOf('id="incident-summary-title"')).toBeLessThan(
-    modern.indexOf('기간 내 사건 비교'),
+    modern.indexOf('이전 기간과 사건 건수 비교'),
   );
   expect(modern.match(/추가 할당 가능 여부 미확인/g)).toHaveLength(1);
   expect(modern).toMatch(
@@ -157,7 +214,7 @@ it('groups GPU and incident comparisons with their details, preserves interpreta
   expect(modern).toContain('이 대상·구간을 그래프에서 확인');
   expect(classic).not.toContain('c2-report-summary');
   expect(modern).toContain('<h2>상세 관측</h2>');
-  expect(modern).toContain('<h3 id="namespace-summary-title">GPU 활동·메모리</h3>');
+  expect(modern).toContain('<h3 id="namespace-summary-title">GPU 활동률·메모리 사용 현황</h3>');
   expect(modern).toContain('<h3 id="incident-summary-title">사건 기록</h3>');
   expect(modern).not.toContain('1. Namespace별 GPU 활동 현황');
   expect(modern).not.toContain('1.4. GPU 작업 대기·완료');
