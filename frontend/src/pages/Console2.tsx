@@ -24,7 +24,7 @@ import {
 } from '../lib/incidentOverview';
 import { labels } from '../lib/domain';
 import { reportTitle } from '../lib/workflow';
-import { reportTabs } from '../lib/reportNavigation';
+import { numberReportSections, reportTabs } from '../lib/reportNavigation';
 import { ReportPeriod } from '../components/ReportMeta';
 import { OperatorConsole } from './ConsoleWorkspace';
 import { NewWorkspace } from './NewWorkspace';
@@ -904,9 +904,20 @@ const opsReportSections = [
   ['c2-ops-advice', '운영 해석·제안'],
   ['report-summary-title', '계산 결과 요약'],
   ['c2-observations', '상세 관측'],
-  ['namespace-summary-title', 'GPU 활동·메모리', 'c2-observations'],
-  ['c2-workloads', '작업 대기·완료', 'c2-observations'],
+  ['namespace-summary-title', 'GPU 활동률·메모리 사용 현황', 'c2-observations'],
+  ['c2-report-summary', '네임스페이스별 기간 평균', 'namespace-summary-title'],
+  ['c2-hourly-overview', '시간대별 GPU 활동률 분포', 'namespace-summary-title'],
+  ['c2-namespace-charts', '시간대별 GPU 활동률·메모리 추이', 'namespace-summary-title'],
+  ['c2-gpu-details-title', '관측 대상과 상세 수치', 'namespace-summary-title'],
+  ['c2-workloads', '작업 대기·실행·완료 현황', 'c2-observations'],
+  ['c2-workload-summary', '네임스페이스별 대기·실행·완료 현황', 'c2-workloads'],
+  ['c2-workload-pending', '시간대별 최대 대기 Pod 수', 'c2-workloads'],
+  ['c2-workload-completed', '완료 Job별 경과시간', 'c2-workloads'],
+  ['c2-workload-context', '작업 유형·GPU 요청·노드 배정 근거', 'c2-workloads'],
   ['incident-summary-title', '사건 기록', 'c2-observations'],
+  ['c2-incident-comparison', '이전 기간과 사건 건수 비교', 'incident-summary-title'],
+  ['c2-incident-evidence', '오류 종류·노드별 사건 분포', 'incident-summary-title'],
+  ['c2-incident-records', '개별 사건의 발생 시각과 알림 내용', 'incident-summary-title'],
   ['report-evidence', '집계 기준·자료 한계'],
   ['new-review-records', '보고서 검토·조치 기록'],
 ];
@@ -922,36 +933,24 @@ function Reader({ children }: { children: ReactNode }) {
     let frame = 0;
     const definitions = opsReport ? opsReportSections : reportSections;
     const scan = () => {
-      let major = 0,
-        minor = 0;
-      const found = definitions
+      const available = definitions
         .filter(([id]) => element.querySelector(`[id="${id}"]`))
         .map(([id, label, parent]) => {
-          const numbered = opsReport && id !== 'new-review-records';
-          if (numbered) {
-            if (parent) minor++;
-            else {
-              major++;
-              minor = 0;
-            }
-          }
           const target = element.querySelector(`[id="${id}"]`);
-          const heading = target?.matches('h2, h3, summary')
+          const heading = target?.matches('h2, h3, h4, summary')
             ? target
-            : target?.querySelector('h2, h3, summary');
-          return [
-            id,
-            opsReport ? heading?.textContent || label : label,
-            numbered ? (parent ? `${major}.${minor}` : String(major).padStart(2, '0')) : '',
-            parent || '',
-          ];
+            : target?.querySelector('h2, h3, h4, summary');
+          return [id, opsReport ? heading?.textContent || label : label, parent || ''];
         });
+      const found = opsReport
+        ? numberReportSections(available)
+        : available.map(([id, label]) => [id, label, '', '']);
       if (opsReport)
         found.forEach(([id, , number]) => {
           const target = element.querySelector<HTMLElement>(`[id="${id}"]`);
-          const heading = target?.matches('h2, h3, summary')
+          const heading = target?.matches('h2, h3, h4, summary')
             ? target
-            : target?.querySelector<HTMLElement>('h2, h3, summary');
+            : target?.querySelector<HTMLElement>('h2, h3, h4, summary');
           if (heading) {
             if (number) heading.dataset.c2SectionNumber = number;
             else delete heading.dataset.c2SectionNumber;
@@ -1004,6 +1003,46 @@ function Reader({ children }: { children: ReactNode }) {
     target.focus({ preventScroll: true });
     target.scrollIntoView({ block: 'start' });
   };
+  const tocEntries = (parentId = ''): ReactNode =>
+    sections
+      .filter(([, , , parent]) => parent === parentId)
+      .map(([id, label, number]) =>
+        sections.some(([, , , parent]) => parent === id) ? (
+          <details className="c2-toc-group" key={id} open>
+            <summary
+              aria-current={active === id ? 'location' : undefined}
+              data-active={
+                sections.some(
+                  ([child, , childNumber]) =>
+                    child === active && childNumber.startsWith(`${number.replace(/^0/, '')}.`),
+                ) || undefined
+              }
+              onClick={() => jump(id)}
+            >
+              <span className="c2-toc-number">{number} </span>
+              <span>{label}</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </summary>
+            <div className="c2-toc-children">{tocEntries(id)}</div>
+          </details>
+        ) : (
+          <button
+            key={id}
+            className={opsReport && !number ? 'c2-toc-utility' : undefined}
+            aria-current={active === id ? 'location' : undefined}
+            onClick={() => jump(id)}
+          >
+            {opsReport ? (
+              <>
+                {number && <span className="c2-toc-number">{number} </span>}
+                <span>{label}</span>
+              </>
+            ) : (
+              label
+            )}
+          </button>
+        ),
+      );
   return (
     <div className={`c2-reader-layout${opsReport ? ' c2-ops-reader' : ''}`}>
       <aside className="c2-toc" aria-label="보고서 탐색">
@@ -1015,54 +1054,7 @@ function Reader({ children }: { children: ReactNode }) {
             </option>
           ))}
         </select>
-        <nav aria-label="고정 보고서 목차">
-          {sections
-            .filter(([, , , parent]) => !parent)
-            .map(([id, label, number]) => {
-              const children = sections.filter(([, , , parent]) => parent === id);
-              return children.length ? (
-                <details className="c2-toc-group" key={id} open>
-                  <summary
-                    aria-current={active === id ? 'location' : undefined}
-                    data-active={children.some(([child]) => child === active) || undefined}
-                    onClick={() => jump(id)}
-                  >
-                    <span className="c2-toc-number">{number} </span>
-                    <span>{label}</span>
-                    <ChevronDown size={14} aria-hidden="true" />
-                  </summary>
-                  <div className="c2-toc-children">
-                    {children.map(([child, childLabel, childNumber]) => (
-                      <button
-                        key={child}
-                        aria-current={active === child ? 'location' : undefined}
-                        onClick={() => jump(child)}
-                      >
-                        <span className="c2-toc-number">{childNumber} </span>
-                        <span>{childLabel}</span>
-                      </button>
-                    ))}
-                  </div>
-                </details>
-              ) : (
-                <button
-                  key={id}
-                  className={opsReport && !number ? 'c2-toc-utility' : undefined}
-                  aria-current={active === id ? 'location' : undefined}
-                  onClick={() => jump(id)}
-                >
-                  {opsReport ? (
-                    <>
-                      {number && <span className="c2-toc-number">{number} </span>}
-                      <span>{label}</span>
-                    </>
-                  ) : (
-                    label
-                  )}
-                </button>
-              );
-            })}
-        </nav>
+        <nav aria-label="고정 보고서 목차">{tocEntries()}</nav>
         <button
           className="text-link"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

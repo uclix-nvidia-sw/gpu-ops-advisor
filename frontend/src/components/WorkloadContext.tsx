@@ -34,11 +34,15 @@ export function WorkloadContext({
     groups.get(key)!.push(record);
   }
   return (
-    <details className="aggregate-evidence">
+    <details
+      id={reader ? 'c2-workload-context' : undefined}
+      className={`aggregate-evidence${reader ? ' c2-observation-block' : ''}`}
+    >
       <summary>작업 유형·GPU 요청·노드 배정 근거</summary>
-      <p className="aggregate-static-note">
-        당시 작업 라벨과 상태를 연결한 보충 자료입니다. GPU 요청량은 실제 할당량이 아니며, 테스트
-        유형은 실제 서빙·학습 목적과 구분합니다.
+      <p className={reader ? undefined : 'aggregate-static-note'}>
+        {reader
+          ? '작업에 붙은 라벨, 요청한 GPU 수, 당시 노드 배정 상태를 함께 봅니다. 요청량이 실제 할당량을 뜻하지는 않으며, 테스트용 유형 라벨만으로 실제 서빙·학습 작업이라고 판단할 수는 없습니다.'
+          : '당시 작업 라벨과 상태를 연결한 보충 자료입니다. GPU 요청량은 실제 할당량이 아니며, 테스트 유형은 실제 서빙·학습 목적과 구분합니다.'}
       </p>
       {!records.length ? (
         <p>

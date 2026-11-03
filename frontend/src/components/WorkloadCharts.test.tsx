@@ -87,3 +87,49 @@ describe('WorkloadCharts', () => {
     expect(html).not.toContain('최대 대기 0개');
   });
 });
+
+it('separates pending and completed views without dropping source values or showing invalid counts as zero', () => {
+  const workloads = [
+    {
+      cluster_id: 'cpc-1',
+      namespace: 'forecast',
+      hours: [
+        { start: '2026-10-22T00:00:00Z', end: '2026-10-22T01:00:00Z', pending_peak: 3 },
+        { start: '2026-10-22T01:00:00Z', end: '2026-10-22T02:00:00Z', pending_peak: 0 },
+      ],
+      completed_jobs: [
+        {
+          job_name: 'completed-job',
+          started_at: '2026-10-21T23:00:00Z',
+          completed_at: '2026-10-22T01:00:00Z',
+          elapsed_seconds: 7200,
+        },
+      ],
+    },
+  ];
+  const source = JSON.stringify(workloads);
+  const pending = renderToStaticMarkup(
+    <WorkloadCharts workloads={workloads} compact metric="pending" />,
+  );
+  const completed = renderToStaticMarkup(
+    <WorkloadCharts workloads={workloads} compact metric="completed" />,
+  );
+  expect(pending).toContain('최대 대기 3개');
+  expect(pending).toContain('최대 대기 0개');
+  expect(pending).not.toContain('completed-job');
+  expect(completed).toContain('completed-job');
+  expect(completed).toContain('120분 0초');
+  expect(completed).not.toContain('aggregate-workload-highlights');
+  expect(JSON.stringify(workloads)).toBe(source);
+  for (const pending_peak of [null, -1, Number.NaN, 0]) {
+    const html = renderToStaticMarkup(
+      <WorkloadCharts
+        workloads={[{ cluster_id: 'cpc-2', hours: [{ pending_peak }] }]}
+        compact
+        metric="pending"
+      />,
+    );
+    expect(html).toContain(pending_peak === 0 ? '관측된 대기 최대 0개' : '대기 자료 없음');
+    expect(html).not.toContain('rca-bar-track');
+  }
+});

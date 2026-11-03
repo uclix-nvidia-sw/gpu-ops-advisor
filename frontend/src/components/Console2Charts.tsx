@@ -234,8 +234,11 @@ export function ReportGpuComparison({ value }: { value: Row }) {
     <section id="c2-report-summary" className="c2-report-visual c2-chart-card">
       <header>
         <div>
-          <h4>Namespace별 GPU 사용 관측</h4>
-          <p>모델별 표시 · 활동률과 메모리 사용 비율은 서로 다른 지표입니다.</p>
+          <h4>네임스페이스별 기간 평균</h4>
+          <p>
+            보고 기간에 각 네임스페이스의 GPU 활동률과 메모리 사용 비율이 평균적으로 얼마였는지
+            비교합니다. GPU 모델이 다르면 따로 표시합니다.
+          </p>
         </div>
         <a href="#c2-namespace-charts">시간대별 추이 →</a>
       </header>
@@ -256,8 +259,8 @@ export function ReportGpuComparison({ value }: { value: Row }) {
           aria-label={`${cluster || '미확인'} GPU 사용 관측`}
           key={cluster}
         >
-          <h5>
-            클러스터 <code>{cluster || '미확인'}</code>
+          <h5 className="c2-observation-cluster-heading">
+            대상 클러스터 : <code>{cluster || '미확인'}</code>
           </h5>
           <div className="c2-comparison-rows">
             {observed
@@ -320,11 +323,14 @@ export function ReportIncidentComparison({ value }: { value: Row }) {
   const delta = current !== null && previous !== null ? current - previous : null;
   if (!incident) return null;
   return (
-    <section className="c2-report-visual c2-chart-card">
+    <section id="c2-incident-comparison" className="c2-report-visual c2-chart-card">
       <header>
         <div>
-          <h4>기간 내 사건 비교</h4>
-          <p>직전 같은 길이의 기간과 비교 · 수신 기록 기준</p>
+          <h4>이전 기간과 사건 건수 비교</h4>
+          <p>
+            보고 기간에 받은 사건 알림이 직전 같은 길이의 기간보다 늘었는지 줄었는지 봅니다. 현재
+            장애가 진행 중인 장비 수를 뜻하지는 않습니다.
+          </p>
         </div>
       </header>
       <div className="c2-period-comparison">
@@ -342,7 +348,7 @@ export function ReportIncidentComparison({ value }: { value: Row }) {
         <p className="c2-chart-note">
           현재 기간 {current ?? '미확인'}건, 이전 기간 {previous ?? '미확인'}건
         </p>
-        <a href="#incident-summary-title">장애 종류·노드별 내역 →</a>
+        <a href="#c2-incident-evidence">오류 종류·노드별 내역 →</a>
       </div>
     </section>
   );
@@ -373,64 +379,70 @@ export function IncidentBreakdown({ summary }: { summary: Row }) {
   const ranked = [...nodes.values()].sort((a, b) => b.count - a.count);
   const maxNode = Math.max(1, ...ranked.map((n) => n.count));
   return (
-    <div id="c2-incident-evidence" className="c2-incident-evidence">
-      <section className="c2-chart-card">
-        <h4>어떤 오류 종류가 늘거나 줄었나</h4>
-        <p className="c2-chart-note">
-          직전 같은 길이의 기간 대비 · 변화 폭 상위 6개 · 수신 기록 기준
-        </p>
-        <div className="c2-category-bars">
-          {changes.slice(0, 6).map((r) => (
-            <div key={`${r.cluster_id}/${r.name}`}>
-              <span>
-                {str(r.name)}{' '}
-                <small>
-                  {str(r.cluster_id)} · {r.before} → {r.now}건
-                </small>
-              </span>
-              <strong>
-                {r.delta > 0 ? '+' : ''}
-                {r.delta}건
-              </strong>
-              <span className="c2-count-track" aria-hidden="true">
-                <i
-                  style={{
-                    width: `${(Math.abs(r.delta) / maxChange) * 100}%`,
-                    background: r.delta > 0 ? '#397fc2' : '#72837a',
-                  }}
-                />
-              </span>
-            </div>
-          ))}
-        </div>
-        {!changes.length && (
-          <p>
-            비교 가능한 증감이 없습니다. 전체 종류별 표에서 동일 값과 비교 자료 유무를 확인하세요.
+    <section id="c2-incident-evidence" className="c2-observation-block">
+      <h4>오류 종류·노드별 사건 분포</h4>
+      <p>어떤 오류의 알림이 크게 늘거나 줄었는지, 어느 노드에 알림이 많았는지 나누어 봅니다.</p>
+      <div className="c2-incident-evidence">
+        <section className="c2-chart-card">
+          <h5>오류 종류별 사건 증감</h5>
+          <p className="c2-chart-note">
+            직전 같은 길이의 기간과 비교해 알림 건수가 많이 늘거나 줄어든 오류 종류를 최대 6개
+            표시합니다.
           </p>
-        )}
-      </section>
-      <section className="c2-chart-card">
-        <h4>어느 노드의 기록을 확인할까</h4>
-        <p className="c2-chart-note">
-          저장된 사건 내역 {seen.size}건 · 상위 6개 · 현재 장애 수가 아닙니다.
-        </p>
-        <div className="c2-category-bars">
-          {ranked.slice(0, 6).map((n) => (
-            <div key={n.name}>
-              <span>{n.name}</span>
-              <strong>{n.count}건</strong>
-              <span className="c2-count-track" aria-hidden="true">
-                <i style={{ width: `${(n.count / maxNode) * 100}%`, background: '#76a900' }} />
-              </span>
-            </div>
-          ))}
-        </div>
-        {!ranked.length && <p>노드별로 대조할 사건 내역이 없습니다.</p>}
-        <p className="c2-chart-note">
-          시험 알림 여부와 관련 RCA를 대조하세요. 수신 건수만으로 위험도·동일 원인을 판정하지
-          않습니다.
-        </p>
-      </section>
-    </div>
+          <div className="c2-category-bars">
+            {changes.slice(0, 6).map((r) => (
+              <div key={`${r.cluster_id}/${r.name}`}>
+                <span>
+                  {str(r.name)}{' '}
+                  <small>
+                    {str(r.cluster_id)} · {r.before} → {r.now}건
+                  </small>
+                </span>
+                <strong>
+                  {r.delta > 0 ? '+' : ''}
+                  {r.delta}건
+                </strong>
+                <span className="c2-count-track" aria-hidden="true">
+                  <i
+                    style={{
+                      width: `${(Math.abs(r.delta) / maxChange) * 100}%`,
+                      background: r.delta > 0 ? '#397fc2' : '#72837a',
+                    }}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+          {!changes.length && (
+            <p>
+              비교 가능한 증감이 없습니다. 전체 종류별 표에서 동일 값과 비교 자료 유무를 확인하세요.
+            </p>
+          )}
+        </section>
+        <section className="c2-chart-card">
+          <h5>노드별 사건 건수</h5>
+          <p className="c2-chart-note">
+            저장된 사건 {seen.size}건에서 알림이 많았던 노드를 최대 6개 표시합니다. 현재 장애 수와는
+            다릅니다.
+          </p>
+          <div className="c2-category-bars">
+            {ranked.slice(0, 6).map((n) => (
+              <div key={n.name}>
+                <span>{n.name}</span>
+                <strong>{n.count}건</strong>
+                <span className="c2-count-track" aria-hidden="true">
+                  <i style={{ width: `${(n.count / maxNode) * 100}%`, background: '#76a900' }} />
+                </span>
+              </div>
+            ))}
+          </div>
+          {!ranked.length && <p>노드별로 대조할 사건 내역이 없습니다.</p>}
+          <p className="c2-chart-note">
+            알림이 많다고 더 위험하거나 모두 같은 원인인 것은 아닙니다. 시험 알림이 포함됐는지와
+            관련 RCA를 함께 확인하세요.
+          </p>
+        </section>
+      </div>
+    </section>
   );
 }

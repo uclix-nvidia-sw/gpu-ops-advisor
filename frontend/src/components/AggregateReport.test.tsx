@@ -1504,8 +1504,8 @@ it('orders full observations only in the reader and preserves pending rank and t
   expect(options).toEqual(['cpc-1 / same', 'cpc-1 / z', 'cpc-2 / same']);
   expect(modern).toContain('scope="rowgroup"');
   expect(classic).not.toContain('c2-observation-cluster-row');
-  expect(modern.indexOf('aria-label="cpc-1 작업 대기·완료"')).toBeLessThan(
-    modern.indexOf('aria-label="cpc-2 작업 대기·완료"'),
+  expect(modern.indexOf('aria-label="cpc-1 시간대별 대기"')).toBeLessThan(
+    modern.indexOf('aria-label="cpc-2 시간대별 대기"'),
   );
   expect(modern).toContain('최대 대기 Pod 수가 큰 Namespace 상위 3개');
   const context = modern
@@ -1514,4 +1514,35 @@ it('orders full observations only in the reader and preserves pending rank and t
   expect(context.indexOf('cpc-1')).toBeLessThan(context.indexOf('cpc-2'));
   expect(context.indexOf('same')).toBeLessThan(context.indexOf('>z<'));
   expect(JSON.stringify(value)).toBe(saved);
+});
+
+it('groups the already visible incidents by cluster without changing the limit or order inside a cluster', () => {
+  const incidents = Array.from({ length: 51 }, (_, i) => ({
+    id: `saved-event-${i}`,
+    cluster_id: i % 2 ? 'cpc-1' : 'cpc-2',
+    occurred_at: '2026-10-22T00:00:00Z',
+    symptom: 'XID 79',
+    target: { node: 'node-1' },
+  }));
+  const value = { topics: [{ topic_id: 'incident_summary', summary: { count: 51, incidents } }] };
+  const source = JSON.stringify(value);
+  const render = (reader: boolean) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <AggregateReport value={value} reader={reader} />
+      </MemoryRouter>,
+    );
+  const targets = (html: string) =>
+    [
+      ...html
+        .split('<table class="aggregate-incident-table">')[1]
+        .split('</table>')[0]
+        .matchAll(/href="\/incidents\/(saved-event-\d+)"/g),
+    ].map((m) => m[1]);
+  const selected = incidents.slice(0, 50);
+  expect(targets(render(true))).toEqual(
+    ['cpc-1', 'cpc-2'].flatMap((c) => selected.filter((i) => i.cluster_id === c).map((i) => i.id)),
+  );
+  expect(targets(render(false))).toEqual(selected.map((i) => i.id));
+  expect(JSON.stringify(value)).toBe(source);
 });

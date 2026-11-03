@@ -57,7 +57,7 @@ it('keeps measured zero, missing values and separate cluster/model rows distinct
   expect(html).toContain('활동률 0.00% · 이전 기간 50.00%');
   expect(html).toContain('메모리 사용 비율 90.00%');
   expect(html).toContain('수치 미확인 2개');
-  expect(html).not.toContain('기간 내 사건 비교');
+  expect(html).not.toContain('이전 기간과 사건 건수 비교');
   expect(JSON.stringify(value)).toBe(before);
 });
 
@@ -68,7 +68,7 @@ it('shows unknown instead of a fabricated zero or period delta', () => {
   const html = renderToStaticMarkup(<ReportIncidentComparison value={value} />);
   expect(html).toContain('현재 기간 0건, 이전 기간 미확인건');
   expect(html).toContain('이전 기간 비교 미확인');
-  expect(html).not.toContain('Namespace별 GPU 사용 관측');
+  expect(html).not.toContain('네임스페이스별 기간 평균');
   expect(html).not.toMatch(/NaN|Infinity/);
   expect(renderToStaticMarkup(<ReportGpuComparison value={{ topics: [] }} />)).toBe('');
   expect(renderToStaticMarkup(<ReportIncidentComparison value={{ topics: [] }} />)).toBe('');
@@ -84,7 +84,7 @@ it('compares stored incident counts without converting them to current fault sta
   );
   expect(html).toContain('이전 기간 대비 +102건');
   expect(html).toContain('현재 기간 180건, 이전 기간 78건');
-  expect(html).not.toContain('현재 장애');
+  expect(html).toContain('현재 장애가 진행 중인 장비 수를 뜻하지는 않습니다.');
 });
 
 it('plots KST daily totals and links each date and category to the matching case filter', () => {
