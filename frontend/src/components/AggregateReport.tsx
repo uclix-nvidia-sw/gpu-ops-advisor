@@ -9,8 +9,9 @@ import '../lib/advice-colors.css';
 import { memoryPercent, NamespaceCharts, type NamespaceFocus } from './NamespaceCharts';
 import { WorkloadCharts } from './WorkloadCharts';
 import { WorkloadContext } from './WorkloadContext';
-import { IncidentBreakdown, ReportVisualSummary } from './Console2Charts';
+import { IncidentBreakdown, ReportGpuComparison, ReportIncidentComparison } from './Console2Charts';
 import { HourlyOverview, OperationalInsights } from './OperationalInsights';
+import { compareReportTargets } from '../lib/report';
 
 export const aggregateReasons: Record<string, string> = {
   unobserved_hour: '이 시간대 관측 없음',
@@ -598,7 +599,12 @@ export function AggregateReport({
   const topics = rows(value.topics);
   const usage = topics.find((t) => t.topic_id === 'namespace_usage');
   const incident = topics.find((t) => t.topic_id === 'incident_summary');
-  const comparisons = rows(usage?.rows);
+  const comparisons = reader
+    ? [...rows(usage?.rows)].sort(compareReportTargets)
+    : rows(usage?.rows);
+  const workloads = reader
+    ? [...rows(usage?.workloads)].sort(compareReportTargets)
+    : rows(usage?.workloads);
   const groups = namespaceGroups(comparisons);
   const hasMemory = comparisons.some((r) => r.gpu_memory != null);
   const selectedNodes = (models: Row[]) =>
@@ -609,7 +615,11 @@ export function AggregateReport({
   const [selection, setSelection] = useState('');
   const [modelSelection, setModelSelection] = useState('');
   const [incidentLimit, setIncidentLimit] = useState(50);
-  const selected = groups.find((g) => g.key === selection) || groups[0];
+  const defaultRow = rows(usage?.rows).find((row) => str(row.namespace));
+  const selected =
+    groups.find((g) => g.key === selection) ||
+    groups.find((g) => defaultRow && g.key === namespaceKey(defaultRow)) ||
+    groups[0];
   const models = selected?.models || [];
   const active =
     models.find((r) => keyOf(r) === modelSelection) ||
@@ -654,6 +664,22 @@ export function AggregateReport({
   const aiInterpreted =
     (value.narrative_status === 'complete' && summaryMethod === 'llm_interpreted') ||
     partialInterpretation;
+  const interpretedTopics = aiInterpreted
+    ? topics
+        .filter((topic) => {
+          if (!['namespace_usage', 'incident_summary'].includes(str(topic.topic_id))) return false;
+          const section = rows(value.narrative).find((s) => s.topic_id === topic.topic_id);
+          return (
+            section &&
+            (section.interpretation_source === 'deterministic_fallback' ||
+              ['observation', 'meaning', 'next_check'].every((key) => str(section[key])))
+          );
+        })
+        .sort(
+          (a, b) =>
+            Number(a.topic_id === 'incident_summary') - Number(b.topic_id === 'incident_summary'),
+        )
+    : [];
   const incidentNumber = usage ? 2 : 1;
   const IncidentDetails = reader ? 'details' : 'div';
   const aiSelected = value.narrative_status === 'complete' && summaryMethod === 'llm_prioritized';
@@ -663,9 +689,95 @@ export function AggregateReport({
     : calculatedSummary
       ? '계산 결과 요약'
       : '저장된 주요 변화';
+  const TopicHeading = reader ? 'h3' : 'h2';
+  const Subheading = reader ? 'h4' : 'h3';
+  const SummaryHeading = reader ? 'h2' : 'h3';
+  const workloadObservations = usage && (
+    <>
+      <h3 id={reader ? 'c2-workloads' : undefined} className="aggregate-subheading">
+        {reader ? '작업 대기·완료' : '1.4. GPU 작업 대기·완료 (보조 관측)'}
+      </h3>
+      <WorkloadContext
+        value={obj(usage.workload_context)}
+        onEvidence={onEvidence}
+        reader={reader}
+      />
+      {str(usage.workload_unavailable_reason) && (
+        <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
+      )}
+      {workloads.length > 0 && (
+        <section aria-label="GPU 작업 보조 관측">
+          <h4>GPU 작업 대기·완료 관측</h4>
+          <p className="aggregate-static-note">
+            GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
+            완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
+            아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며 수집
+            공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로 다를 수
+            있습니다.
+          </p>
+          <div className="aggregate-table-scroll">
+            <table>
+              <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
+              <thead>
+                <tr>
+                  <th>클러스터 / Namespace</th>
+                  <th>관측 최대 대기 Pod</th>
+                  <th>관측 최대 미배치 Pod</th>
+                  <th>관측 최대 실행 Pod</th>
+                  <th>확인된 완료 Job</th>
+                  <th>평균 Job 경과시간</th>
+                </tr>
+              </thead>
+              {(reader ? [...new Set(workloads.map((w) => str(w.cluster_id)))] : [null]).map(
+                (cluster) => (
+                  <tbody key={cluster}>
+                    {reader && (
+                      <tr className="c2-observation-cluster-row">
+                        <th scope="rowgroup" colSpan={6}>
+                          클러스터 <code>{cluster || '미확인'}</code>
+                        </th>
+                      </tr>
+                    )}
+                    {workloads
+                      .filter((w) => cluster === null || str(w.cluster_id) === cluster)
+                      .map((w) => (
+                        <tr key={`${w.cluster_id}/${w.namespace}`}>
+                          <th scope="row">
+                            {!reader && (
+                              <>
+                                {str(w.cluster_id)}
+                                <br />
+                              </>
+                            )}
+                            {str(w.namespace)}
+                          </th>
+                          {[
+                            w.pending_peak,
+                            w.unscheduled_peak,
+                            w.running_peak,
+                            w.completed_observed,
+                          ].map((v, i) => (
+                            <td key={i}>{typeof v === 'number' ? v : '자료 없음'}</td>
+                          ))}
+                          <td>
+                            {typeof w.mean_elapsed_seconds === 'number'
+                              ? `${(w.mean_elapsed_seconds / 60).toFixed(1)}분`
+                              : '자료 없음'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                ),
+              )}
+            </table>
+          </div>
+          <WorkloadCharts workloads={workloads} compact={reader} />
+        </section>
+      )}
+    </>
+  );
   const namespaceCharts = (
     <NamespaceCharts
-      headingNumber={reader ? '1.1' : '1.2'}
       reader={reader}
       focus={graphFocus}
       onClearFocus={() => setGraphFocus(null)}
@@ -709,7 +821,8 @@ export function AggregateReport({
       )}
       {reader && (
         <>
-          {usage && aiInterpreted && (
+          <OperationalInsights value={value} />
+          {interpretedTopics.length > 0 && (
             <section
               id="c2-ops-advice"
               className="c2-ops-advice"
@@ -720,17 +833,31 @@ export function AggregateReport({
                 분석 기간에 저장된 해석입니다. 제안별 대상·조건을 읽고 해당 시간대의 근거를
                 확인하세요.
               </p>
-              <TopicInterpretation
-                topic={usage}
-                narrative={rows(value.narrative)}
-                onEvidence={onEvidence}
-                onFocus={focusAdvice}
-                reader
-              />
+              {interpretedTopics.map((topic) => (
+                <section
+                  key={str(topic.topic_id)}
+                  id={topic.topic_id === 'incident_summary' ? 'c2-incident-advice' : undefined}
+                  className="c2-advice-group"
+                  aria-label={
+                    topic.topic_id === 'incident_summary' ? '사건 해석·확인사항' : '작업 운영 제안'
+                  }
+                >
+                  <h3 className="c2-advice-group-title">
+                    {topic.topic_id === 'incident_summary'
+                      ? '사건 해석·확인사항'
+                      : '작업 운영 제안'}
+                  </h3>
+                  <TopicInterpretation
+                    topic={topic}
+                    narrative={rows(value.narrative)}
+                    onEvidence={onEvidence}
+                    onFocus={focusAdvice}
+                    reader
+                  />
+                </section>
+              ))}
             </section>
           )}
-          <OperationalInsights value={value} />
-          <ReportVisualSummary value={value} />
         </>
       )}
       {partialInterpretation && (
@@ -744,7 +871,7 @@ export function AggregateReport({
           className={`aggregate-summary${aiSelected ? ' aggregate-summary-ai' : ''}`}
           aria-labelledby="report-summary-title"
         >
-          <h3 id="report-summary-title">{summaryTitle}</h3>
+          <SummaryHeading id="report-summary-title">{summaryTitle}</SummaryHeading>
           <p className="aggregate-summary-source">
             {aiSelected
               ? '계산된 관측 결과 중 AI가 선택한 항목입니다. 문장과 수치는 계산 결과이며, AI가 원인이나 운영 조치를 판단한 내용은 아닙니다.'
@@ -761,6 +888,11 @@ export function AggregateReport({
           </ul>
         </section>
       )}
+      {reader && (usage || incident) && (
+        <header id="c2-observations" className="c2-observations-heading">
+          <h2>상세 관측</h2>
+        </header>
+      )}
       <p className="aggregate-static-note">
         <strong>해석 기준</strong>
         활동률은 연결 GPU의 관측 표본 평균입니다. 부서의 독점 사용량·할당 효율이나 GPU 회수 가능량을
@@ -768,10 +900,13 @@ export function AggregateReport({
       </p>
       {usage && (
         <section className="aggregate-major-topic" aria-labelledby="namespace-summary-title">
-          <h2 id="namespace-summary-title">1. Namespace별 GPU 활동 현황</h2>
+          <TopicHeading id="namespace-summary-title">
+            {reader ? 'GPU 활동·메모리' : '1. Namespace별 GPU 활동 현황'}
+          </TopicHeading>
+          {reader && <ReportGpuComparison value={value} />}
           {diagnosticMessages.length > 0 && (
             <section aria-label="부분 산출 원인">
-              <h3>활동률 산출·기간 비교의 제한</h3>
+              <Subheading>활동률 산출·기간 비교의 제한</Subheading>
               <p>
                 일부 관측을 활동률 계산이나 기간 비교에 사용할 수 없었습니다. 검증 미실행은 신원
                 충돌이 확인됐다는 뜻이 아닙니다.
@@ -801,7 +936,9 @@ export function AggregateReport({
           )}
           {reader && <HourlyOverview value={value} />}
           {reader && groups.length > 0 && namespaceCharts}
-          <h3 className="aggregate-subheading">{reader ? '1.2' : '1.1'}. Namespace별 비교</h3>
+          <Subheading className="aggregate-subheading">
+            {!reader && '1.1. '}Namespace별 비교
+          </Subheading>
           <p>
             표는 전체 Namespace의 관측 구성을 보여줍니다. 그래프에서만 비교 대상을 선택할 수
             있습니다. 관측 GPU 수는 기간 내 확인된 고유 GPU 개수이며 서버 수나 동시 할당량이
@@ -828,43 +965,56 @@ export function AggregateReport({
                       {hasMemory && <th>GPU 메모리 사용 비율</th>}
                     </tr>
                   </thead>
-                  <tbody>
-                    {groups.map((group) => {
-                      return (
-                        <tr key={group.key}>
-                          <th scope="row">
-                            <span>{group.cluster}</span>
-                            {group.namespace}
-                          </th>
-                          <td>{selectedNodes(group.models).join(', ') || '미확인'}</td>
-                          <td className="aggregate-number">{observedCount(group.models)}</td>
-                          <td className="aggregate-number">
-                            {namespaceActivity(group.models)}
-                            {group.models.length > 1 && <small>모델별 평균 범위</small>}
-                            {group.models.some((r) => r.quality_status !== 'ready') && (
-                              <small>일부 자료 기준</small>
-                            )}
-                          </td>
-                          {hasMemory && (
-                            <td className="aggregate-number">
-                              <span className="aggregate-memory-percent">
-                                {memoryRange(group.models, 'used_gib_per_gpu', true)}
-                              </span>
-                              <small>
-                                사용 {memoryRange(group.models, 'used_gib_per_gpu')} / 전체{' '}
-                                {memoryRange(group.models, 'total')}
-                              </small>
-                              {group.models.some((r) =>
-                                rows(obj(r.gpu_memory).hours).some(
-                                  (h) => h.used_gib_per_gpu == null,
-                                ),
-                              ) && <small>일부 자료 기준</small>}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+                  {(reader ? [...new Set(groups.map((group) => group.cluster))] : [null]).map(
+                    (cluster) => (
+                      <tbody key={cluster}>
+                        {reader && (
+                          <tr className="c2-observation-cluster-row">
+                            <th scope="rowgroup" colSpan={hasMemory ? 5 : 4}>
+                              클러스터 <code>{cluster || '미확인'}</code>
+                            </th>
+                          </tr>
+                        )}
+                        {groups
+                          .filter((group) => cluster === null || group.cluster === cluster)
+                          .map((group) => {
+                            return (
+                              <tr key={group.key}>
+                                <th scope="row">
+                                  {!reader && <span>{group.cluster}</span>}
+                                  {group.namespace}
+                                </th>
+                                <td>{selectedNodes(group.models).join(', ') || '미확인'}</td>
+                                <td className="aggregate-number">{observedCount(group.models)}</td>
+                                <td className="aggregate-number">
+                                  {namespaceActivity(group.models)}
+                                  {group.models.length > 1 && <small>모델별 평균 범위</small>}
+                                  {group.models.some((r) => r.quality_status !== 'ready') && (
+                                    <small>일부 자료 기준</small>
+                                  )}
+                                </td>
+                                {hasMemory && (
+                                  <td className="aggregate-number">
+                                    <span className="aggregate-memory-percent">
+                                      {memoryRange(group.models, 'used_gib_per_gpu', true)}
+                                    </span>
+                                    <small>
+                                      사용 {memoryRange(group.models, 'used_gib_per_gpu')} / 전체{' '}
+                                      {memoryRange(group.models, 'total')}
+                                    </small>
+                                    {group.models.some((r) =>
+                                      rows(obj(r.gpu_memory).hours).some(
+                                        (h) => h.used_gib_per_gpu == null,
+                                      ),
+                                    ) && <small>일부 자료 기준</small>}
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    ),
+                  )}
                 </table>
               </div>
               <p className="aggregate-table-note aggregate-static-note">
@@ -882,7 +1032,9 @@ export function AggregateReport({
                 </p>
               )}
               {!reader && namespaceCharts}
-              <h3 className="aggregate-subheading">1.3. 세부 수치와 사용 패턴</h3>
+              <Subheading className="aggregate-subheading">
+                {!reader && '1.3. '}세부 수치와 사용 패턴
+              </Subheading>
               <details className="aggregate-model-detail">
                 <summary>세부 수치와 자료 상태</summary>
                 <label className="aggregate-detail-selector">
@@ -1031,65 +1183,7 @@ export function AggregateReport({
               </details>
             </>
           )}
-          <h3 id={reader ? 'c2-workloads' : undefined} className="aggregate-subheading">
-            1.4. GPU 작업 대기·완료 (보조 관측)
-          </h3>
-          <WorkloadContext value={obj(usage.workload_context)} onEvidence={onEvidence} />
-          {str(usage.workload_unavailable_reason) && (
-            <Notice>작업 관측의 조회 범위를 초과해 대기·완료 집계를 표시하지 않습니다.</Notice>
-          )}
-          {rows(usage.workloads).length > 0 && (
-            <section aria-label="GPU 작업 보조 관측">
-              <h4>GPU 작업 대기·완료 관측</h4>
-              <p className="aggregate-static-note">
-                GPU를 요청한 일반 컨테이너가 있는 Pod 기준입니다. 대기는 GPU 부족을 뜻하지 않습니다.
-                완료·경과시간은 성공 완료가 확인된 Job 표본이며, 전체 작업 수나 GPU 연산 시간이
-                아닙니다. Job 경과시간에는 대기·준비가 포함됩니다. 최대값은 확인된 시점만 반영하며
-                수집 공백은 포함하지 않습니다. 미수집은 0이 아닙니다. 각 최대값의 발생 시각은 서로
-                다를 수 있습니다.
-              </p>
-              <div className="aggregate-table-scroll">
-                <table>
-                  <caption className="sr-only">Namespace별 GPU 작업 보조 관측</caption>
-                  <thead>
-                    <tr>
-                      <th>클러스터 / Namespace</th>
-                      <th>관측 최대 대기 Pod</th>
-                      <th>관측 최대 미배치 Pod</th>
-                      <th>관측 최대 실행 Pod</th>
-                      <th>확인된 완료 Job</th>
-                      <th>평균 Job 경과시간</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows(usage.workloads).map((w) => (
-                      <tr key={`${w.cluster_id}/${w.namespace}`}>
-                        <th>
-                          {str(w.cluster_id)}
-                          <br />
-                          {str(w.namespace)}
-                        </th>
-                        {[
-                          w.pending_peak,
-                          w.unscheduled_peak,
-                          w.running_peak,
-                          w.completed_observed,
-                        ].map((v, i) => (
-                          <td key={i}>{typeof v === 'number' ? v : '자료 없음'}</td>
-                        ))}
-                        <td>
-                          {typeof w.mean_elapsed_seconds === 'number'
-                            ? `${(w.mean_elapsed_seconds / 60).toFixed(1)}분`
-                            : '자료 없음'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <WorkloadCharts workloads={rows(usage.workloads)} compact={reader} />
-            </section>
-          )}
+          {!reader && workloadObservations}
 
           {unattributed.length > 0 && (
             <details className="aggregate-unattributed">
@@ -1114,13 +1208,25 @@ export function AggregateReport({
           )}
         </section>
       )}
+      {reader && usage && (
+        <section className="aggregate-major-topic" aria-labelledby="c2-workloads">
+          {workloadObservations}
+        </section>
+      )}
       {incident && (
         <section className="aggregate-major-topic" aria-labelledby="incident-summary-title">
-          <h2 id="incident-summary-title">
-            {incidentNumber}. {reader ? '기간 내 사건 기록' : '기간 내 장애 알림 현황'}
-          </h2>
+          <TopicHeading id="incident-summary-title">
+            {!reader && `${incidentNumber}. `}
+            {reader ? '사건 기록' : '기간 내 장애 알림 현황'}
+          </TopicHeading>
+          {reader && <ReportIncidentComparison value={value} />}
           {reader && <IncidentBreakdown summary={summary} />}
-          {aiInterpreted && (
+          {reader && interpretedTopics.some((topic) => topic.topic_id === 'incident_summary') && (
+            <p className="c2-incident-advice-link">
+              <a href="#c2-incident-advice">사건 해석·확인사항은 운영 해석·제안에서 확인 →</a>
+            </p>
+          )}
+          {aiInterpreted && !reader && (
             <TopicInterpretation
               topic={incident}
               reader={reader}
@@ -1130,7 +1236,9 @@ export function AggregateReport({
           )}
           <IncidentDetails className={reader ? 'c2-incident-details' : undefined}>
             {reader && <summary>전체 오류 종류별 수치와 저장 집계 설명</summary>}
-            <h3 className="aggregate-subheading">{incidentNumber}.1. 장애 종류별 발생 현황</h3>
+            <Subheading className="aggregate-subheading">
+              {!reader && `${incidentNumber}.1. `}장애 종류별 발생 현황
+            </Subheading>
             {rows(incident.findings)
               .filter((f) => !str(f.id).startsWith('incident-node-'))
               .map((f) => (
@@ -1189,7 +1297,9 @@ export function AggregateReport({
             </Notice>
           )}
 
-          <h3 className="aggregate-subheading">{incidentNumber}.2. 사건별 알림 내용</h3>
+          <Subheading className="aggregate-subheading">
+            {!reader && `${incidentNumber}.2. `}사건별 알림 내용
+          </Subheading>
           {summary.count === 0 ? (
             <Notice>
               선택한 범위·기간에 저장된 사건이 없습니다. 장비 전체의 무장애를 뜻하지 않습니다.
@@ -1295,7 +1405,7 @@ export function AggregateReport({
         </section>
       )}
       <details className="aggregate-evidence" id="report-evidence">
-        <summary>집계 기준과 근거</summary>
+        <summary>{reader ? '집계 기준·자료 한계' : '집계 기준과 근거'}</summary>
         <p>
           일평균끼리 평균내지 않고 활동률 합계와 표본 수를 합산합니다. 이전 보고서의 시간가중 평균과
           계산 방식이 다릅니다.

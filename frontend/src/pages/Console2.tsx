@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowUpRight, FileText, ScanSearch, Activity } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, FileText, ScanSearch, Activity } from 'lucide-react';
 import { CodeBadge, useRecentIncidents } from '../components/IncidentOverview';
 import { QueryState } from '../components/live';
 import { RangeCalendar } from '../components/RangeCalendar';
@@ -899,17 +899,64 @@ const reportSections = [
   ['new-incident-state', '처리 상태'],
   ['new-review-records', '검토·조치 기록'],
 ];
+const opsReportSections = [
+  ['c2-ops-insights', '관측 요약'],
+  ['c2-ops-advice', '운영 해석·제안'],
+  ['report-summary-title', '계산 결과 요약'],
+  ['c2-observations', '상세 관측'],
+  ['namespace-summary-title', 'GPU 활동·메모리', 'c2-observations'],
+  ['c2-workloads', '작업 대기·완료', 'c2-observations'],
+  ['incident-summary-title', '사건 기록', 'c2-observations'],
+  ['report-evidence', '집계 기준·자료 한계'],
+  ['new-review-records', '보고서 검토·조치 기록'],
+];
 function Reader({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const [sections, setSections] = useState<string[][]>([]),
     [active, setActive] = useState('');
   const location = useLocation();
+  const opsReport = location.pathname.startsWith('/reports/');
   useEffect(() => {
     const element = root.current;
     if (!element) return;
     let frame = 0;
+    const definitions = opsReport ? opsReportSections : reportSections;
     const scan = () => {
-      const found = reportSections.filter(([id]) => element.querySelector(`[id="${id}"]`));
+      let major = 0,
+        minor = 0;
+      const found = definitions
+        .filter(([id]) => element.querySelector(`[id="${id}"]`))
+        .map(([id, label, parent]) => {
+          const numbered = opsReport && id !== 'new-review-records';
+          if (numbered) {
+            if (parent) minor++;
+            else {
+              major++;
+              minor = 0;
+            }
+          }
+          const target = element.querySelector(`[id="${id}"]`);
+          const heading = target?.matches('h2, h3, summary')
+            ? target
+            : target?.querySelector('h2, h3, summary');
+          return [
+            id,
+            opsReport ? heading?.textContent || label : label,
+            numbered ? (parent ? `${major}.${minor}` : String(major).padStart(2, '0')) : '',
+            parent || '',
+          ];
+        });
+      if (opsReport)
+        found.forEach(([id, , number]) => {
+          const target = element.querySelector<HTMLElement>(`[id="${id}"]`);
+          const heading = target?.matches('h2, h3, summary')
+            ? target
+            : target?.querySelector<HTMLElement>('h2, h3, summary');
+          if (heading) {
+            if (number) heading.dataset.c2SectionNumber = number;
+            else delete heading.dataset.c2SectionNumber;
+          }
+        });
       setSections((previous) =>
         JSON.stringify(previous) === JSON.stringify(found) ? previous : found,
       );
@@ -923,7 +970,7 @@ function Reader({ children }: { children: ReactNode }) {
     const position = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const found = reportSections.filter(([id]) => element.querySelector(`[id="${id}"]`));
+        const found = definitions.filter(([id]) => element.querySelector(`[id="${id}"]`));
         setActive(
           found
             .filter(
@@ -940,10 +987,13 @@ function Reader({ children }: { children: ReactNode }) {
     window.addEventListener('scroll', position, { passive: true });
     return () => {
       observer.disconnect();
+      element
+        .querySelectorAll('[data-c2-section-number]')
+        .forEach((heading) => heading.removeAttribute('data-c2-section-number'));
       window.removeEventListener('scroll', position);
       cancelAnimationFrame(frame);
     };
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, opsReport]);
   const jump = (id: string) => {
     const target = document.getElementById(id);
     if (!target) return;
@@ -955,28 +1005,63 @@ function Reader({ children }: { children: ReactNode }) {
     target.scrollIntoView({ block: 'start' });
   };
   return (
-    <div
-      className={`c2-reader-layout${location.pathname.startsWith('/reports/') ? ' c2-ops-reader' : ''}`}
-    >
+    <div className={`c2-reader-layout${opsReport ? ' c2-ops-reader' : ''}`}>
       <aside className="c2-toc" aria-label="보고서 탐색">
         <b>목차</b>
         <select aria-label="보고서 구역 이동" value={active} onChange={(e) => jump(e.target.value)}>
-          {sections.map(([id, label]) => (
+          {sections.map(([id, label, number]) => (
             <option key={id} value={id}>
-              {label}
+              {number ? `${number} ${label}` : label}
             </option>
           ))}
         </select>
         <nav aria-label="고정 보고서 목차">
-          {sections.map(([id, label]) => (
-            <button
-              key={id}
-              aria-current={active === id ? 'location' : undefined}
-              onClick={() => jump(id)}
-            >
-              {label}
-            </button>
-          ))}
+          {sections
+            .filter(([, , , parent]) => !parent)
+            .map(([id, label, number]) => {
+              const children = sections.filter(([, , , parent]) => parent === id);
+              return children.length ? (
+                <details className="c2-toc-group" key={id} open>
+                  <summary
+                    aria-current={active === id ? 'location' : undefined}
+                    data-active={children.some(([child]) => child === active) || undefined}
+                    onClick={() => jump(id)}
+                  >
+                    <span className="c2-toc-number">{number} </span>
+                    <span>{label}</span>
+                    <ChevronDown size={14} aria-hidden="true" />
+                  </summary>
+                  <div className="c2-toc-children">
+                    {children.map(([child, childLabel, childNumber]) => (
+                      <button
+                        key={child}
+                        aria-current={active === child ? 'location' : undefined}
+                        onClick={() => jump(child)}
+                      >
+                        <span className="c2-toc-number">{childNumber} </span>
+                        <span>{childLabel}</span>
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              ) : (
+                <button
+                  key={id}
+                  className={opsReport && !number ? 'c2-toc-utility' : undefined}
+                  aria-current={active === id ? 'location' : undefined}
+                  onClick={() => jump(id)}
+                >
+                  {opsReport ? (
+                    <>
+                      {number && <span className="c2-toc-number">{number} </span>}
+                      <span>{label}</span>
+                    </>
+                  ) : (
+                    label
+                  )}
+                </button>
+              );
+            })}
         </nav>
         <button
           className="text-link"

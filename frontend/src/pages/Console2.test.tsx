@@ -86,7 +86,7 @@ it('filters published quality without inferring current health from legacy alarm
     1,
   );
 });
-it('shows visual comparisons before details, preserves visible interpretations and keeps classic presentation unchanged', () => {
+it('groups GPU and incident comparisons with their details, preserves interpretations and keeps classic presentation unchanged', () => {
   const value = {
     narrative_status: 'complete',
     quality: { report: { method: 'llm_interpreted' } },
@@ -130,8 +130,21 @@ it('shows visual comparisons before details, preserves visible interpretations a
     );
   const modern = render(true),
     classic = render(false);
-  expect(modern.indexOf('기간 내 사건 비교')).toBeLessThan(
-    modern.indexOf('id="namespace-summary-title"'),
+  expect(modern).not.toContain('id="c2-ops-insights"');
+  const orderedSections = [
+    'c2-ops-advice',
+    'c2-observations',
+    'namespace-summary-title',
+    'c2-report-summary',
+    'c2-workloads',
+    'incident-summary-title',
+    'report-evidence',
+  ];
+  const positions = orderedSections.map((id) => modern.indexOf(`id="${id}"`));
+  expect(positions.every((position) => position >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  expect(modern.indexOf('id="incident-summary-title"')).toBeLessThan(
+    modern.indexOf('기간 내 사건 비교'),
   );
   expect(modern.match(/추가 할당 가능 여부 미확인/g)).toHaveLength(1);
   expect(modern).toMatch(
@@ -143,6 +156,13 @@ it('shows visual comparisons before details, preserves visible interpretations a
   expect(modern).not.toContain('c2-saved-interpretation');
   expect(modern).toContain('이 대상·구간을 그래프에서 확인');
   expect(classic).not.toContain('c2-report-summary');
+  expect(modern).toContain('<h2>상세 관측</h2>');
+  expect(modern).toContain('<h3 id="namespace-summary-title">GPU 활동·메모리</h3>');
+  expect(modern).toContain('<h3 id="incident-summary-title">사건 기록</h3>');
+  expect(modern).not.toContain('1. Namespace별 GPU 활동 현황');
+  expect(modern).not.toContain('1.4. GPU 작업 대기·완료');
+  expect(classic).toContain('1. Namespace별 GPU 활동 현황');
+  expect(classic).toContain('1.4. GPU 작업 대기·완료');
   expect(classic).not.toContain('이 대상·구간을 그래프에서 확인');
   expect(classic).toContain('aria-label="보고서 목차"');
   expect(JSON.stringify(value)).toBe(before);

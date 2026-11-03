@@ -9,6 +9,7 @@ import {
 } from '../lib/incidentOverview';
 import { obj, rows, str, type Row } from '../lib/live';
 import { memoryPercent } from './NamespaceCharts';
+import { compareReportTargets } from '../lib/report';
 import './console2-charts.css';
 
 const categoryColors = ['#76b900', '#397fc2', '#cf8a25', '#8b6db0'];
@@ -165,6 +166,7 @@ export function reportChartRows(value: Row) {
   const topic = rows(value.topics).find((t) => t.topic_id === 'namespace_usage');
   return rows(topic?.rows)
     .filter((r) => str(r.namespace))
+    .sort(compareReportTargets)
     .map((r) => ({
       key: JSON.stringify([r.cluster_id, r.namespace, r.gpu_model]),
       cluster: str(r.cluster_id),
@@ -222,49 +224,49 @@ function PercentBar({
   );
 }
 
-export function ReportVisualSummary({ value }: { value: Row }) {
-  const topics = rows(value.topics);
-  const usage = topics.find((t) => t.topic_id === 'namespace_usage');
-  const incident = topics.find((t) => t.topic_id === 'incident_summary');
+export function ReportGpuComparison({ value }: { value: Row }) {
+  const usage = rows(value.topics).find((t) => t.topic_id === 'namespace_usage');
   const chartRows = reportChartRows(value);
   const observed = chartRows.filter((r) => r.activity !== null || r.memory !== null);
   const missing = chartRows.filter((r) => r.activity === null && r.memory === null);
-  const summary = obj(incident?.summary);
-  const current = count(summary.count),
-    previous = count(summary.previous_count);
-  const delta = current !== null && previous !== null ? current - previous : null;
-  if (!usage && !incident) return null;
+  if (!usage) return null;
   return (
-    <section id="c2-report-summary" className="c2-report-visual" aria-label="운영 지표 시각 요약">
-      <div className="c2-report-visual-grid">
-        {usage && (
-          <section className="c2-chart-card">
-            <header>
-              <div>
-                <h3>Namespace별 GPU 사용 관측</h3>
-                <p>모델별 표시 · 활동률과 메모리 사용 비율은 서로 다른 지표입니다.</p>
-              </div>
-              <a href="#c2-namespace-charts">시간대별 추이 →</a>
-            </header>
-            <div className="c2-comparison-key">
-              <span>
-                <i style={{ background: '#76b900' }} />
-                GPU 활동률
-              </span>
-              <span>
-                <i style={{ background: '#397fc2' }} />
-                GPU 메모리
-              </span>
-              <span>각 막대 0–100% · 세로 점선은 비교 가능한 이전 활동률</span>
-            </div>
-            <div className="c2-comparison-rows">
-              {observed.map((r) => (
+    <section id="c2-report-summary" className="c2-report-visual c2-chart-card">
+      <header>
+        <div>
+          <h4>Namespace별 GPU 사용 관측</h4>
+          <p>모델별 표시 · 활동률과 메모리 사용 비율은 서로 다른 지표입니다.</p>
+        </div>
+        <a href="#c2-namespace-charts">시간대별 추이 →</a>
+      </header>
+      <div className="c2-comparison-key">
+        <span>
+          <i style={{ background: '#76b900' }} />
+          GPU 활동률
+        </span>
+        <span>
+          <i style={{ background: '#397fc2' }} />
+          GPU 메모리
+        </span>
+        <span>각 막대 0–100% · 세로 점선은 비교 가능한 이전 활동률</span>
+      </div>
+      {[...new Set(observed.map((r) => r.cluster))].map((cluster) => (
+        <section
+          className="c2-observation-cluster"
+          aria-label={`${cluster || '미확인'} GPU 사용 관측`}
+          key={cluster}
+        >
+          <h5>
+            클러스터 <code>{cluster || '미확인'}</code>
+          </h5>
+          <div className="c2-comparison-rows">
+            {observed
+              .filter((r) => r.cluster === cluster)
+              .map((r) => (
                 <div className="c2-comparison-row" key={r.key}>
                   <div>
                     <strong>{r.namespace}</strong>
-                    <small>
-                      {r.cluster} · {r.model || '모델 미확인'}
-                    </small>
+                    <small>{r.model || '모델 미확인'}</small>
                   </div>
                   <div>
                     <span>활동률</span>
@@ -285,54 +287,62 @@ export function ReportVisualSummary({ value }: { value: Row }) {
                   </div>
                 </div>
               ))}
-              {!observed.length && (
-                <p className="c2-chart-empty">
-                  비교할 수 있는 활동률·메모리 관측이 없습니다. 자료 부족을 0%로 표시하지 않습니다.
-                </p>
-              )}
-            </div>
-            {!!missing.length && (
-              <details className="c2-chart-missing">
-                <summary>수치 미확인 {missing.length}개 Namespace·모델 기록 · 0%와 구분</summary>
-                <ul>
-                  {missing.map((r) => (
-                    <li key={r.key}>
-                      {r.cluster} / {r.namespace} · {r.model || '모델 미확인'}
-                    </li>
-                  ))}
-                </ul>
-                <a href="#namespace-summary-title">제외 사유와 관측 근거 확인 →</a>
-              </details>
-            )}
-          </section>
-        )}
-        {incident && (
-          <section className="c2-chart-card">
-            <header>
-              <div>
-                <h3>기간 내 사건 비교</h3>
-                <p>직전 같은 길이의 기간과 비교 · 수신 기록 기준</p>
-              </div>
-            </header>
-            <div className="c2-period-comparison">
-              <div className="c2-period-total">
-                <strong>
-                  {current === null ? '미확인' : current.toLocaleString()}
-                  <small>{current === null ? '' : '건'}</small>
-                </strong>
-                <span>
-                  {delta === null
-                    ? '이전 기간 비교 미확인'
-                    : `이전 기간 대비 ${delta > 0 ? '+' : ''}${delta}건`}
-                </span>
-              </div>
-              <p className="c2-chart-note">
-                현재 기간 {current ?? '미확인'}건, 이전 기간 {previous ?? '미확인'}건
-              </p>
-              <a href="#incident-summary-title">장애 종류·노드별 내역 →</a>
-            </div>
-          </section>
-        )}
+          </div>
+        </section>
+      ))}
+      {!observed.length && (
+        <p className="c2-chart-empty">
+          비교할 수 있는 활동률·메모리 관측이 없습니다. 자료 부족을 0%로 표시하지 않습니다.
+        </p>
+      )}
+      {!!missing.length && (
+        <details className="c2-chart-missing">
+          <summary>수치 미확인 {missing.length}개 Namespace·모델 기록 · 0%와 구분</summary>
+          <ul>
+            {missing.map((r) => (
+              <li key={r.key}>
+                {r.cluster} / {r.namespace} · {r.model || '모델 미확인'}
+              </li>
+            ))}
+          </ul>
+          <a href="#namespace-summary-title">제외 사유와 관측 근거 확인 →</a>
+        </details>
+      )}
+    </section>
+  );
+}
+
+export function ReportIncidentComparison({ value }: { value: Row }) {
+  const incident = rows(value.topics).find((t) => t.topic_id === 'incident_summary');
+  const summary = obj(incident?.summary);
+  const current = count(summary.count),
+    previous = count(summary.previous_count);
+  const delta = current !== null && previous !== null ? current - previous : null;
+  if (!incident) return null;
+  return (
+    <section className="c2-report-visual c2-chart-card">
+      <header>
+        <div>
+          <h4>기간 내 사건 비교</h4>
+          <p>직전 같은 길이의 기간과 비교 · 수신 기록 기준</p>
+        </div>
+      </header>
+      <div className="c2-period-comparison">
+        <div className="c2-period-total">
+          <strong>
+            {current === null ? '미확인' : current.toLocaleString()}
+            <small>{current === null ? '' : '건'}</small>
+          </strong>
+          <span>
+            {delta === null
+              ? '이전 기간 비교 미확인'
+              : `이전 기간 대비 ${delta > 0 ? '+' : ''}${delta}건`}
+          </span>
+        </div>
+        <p className="c2-chart-note">
+          현재 기간 {current ?? '미확인'}건, 이전 기간 {previous ?? '미확인'}건
+        </p>
+        <a href="#incident-summary-title">장애 종류·노드별 내역 →</a>
       </div>
     </section>
   );
@@ -365,7 +375,7 @@ export function IncidentBreakdown({ summary }: { summary: Row }) {
   return (
     <div id="c2-incident-evidence" className="c2-incident-evidence">
       <section className="c2-chart-card">
-        <h3>어떤 오류 종류가 늘거나 줄었나</h3>
+        <h4>어떤 오류 종류가 늘거나 줄었나</h4>
         <p className="c2-chart-note">
           직전 같은 길이의 기간 대비 · 변화 폭 상위 6개 · 수신 기록 기준
         </p>
@@ -400,7 +410,7 @@ export function IncidentBreakdown({ summary }: { summary: Row }) {
         )}
       </section>
       <section className="c2-chart-card">
-        <h3>어느 노드의 기록을 확인할까</h3>
+        <h4>어느 노드의 기록을 확인할까</h4>
         <p className="c2-chart-note">
           저장된 사건 내역 {seen.size}건 · 상위 6개 · 현재 장애 수가 아닙니다.
         </p>

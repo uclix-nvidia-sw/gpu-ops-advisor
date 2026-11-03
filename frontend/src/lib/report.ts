@@ -1,6 +1,23 @@
 import { rcaLabels } from './rcaLabels';
 import { obj, rows, str, strings, topics, type Row } from './live';
 
+// Display order only; callers sort copies, never stored evidence or ranked selections.
+export function compareReportTargets(a: Row, b: Row) {
+  for (const key of ['cluster_id', 'namespace', 'gpu_model']) {
+    const left = str(a[key]),
+      right = str(b[key]);
+    const order = !left
+      ? right
+        ? 1
+        : 0
+      : !right
+        ? -1
+        : left.localeCompare(right, 'en', { numeric: true });
+    if (order) return order;
+  }
+  return 0;
+}
+
 const names: Record<string, string> = {
   namespace_connected_gpu_count: '기간 중 연결이 확인된 GPU',
   namespace_activity_valid_hours: '활동률 계산에 사용한 시간',

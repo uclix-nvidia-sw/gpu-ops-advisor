@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { obj, rows, str, strings, type Row } from '../lib/live';
 import { reportRequestTime } from '../lib/reportPeriod';
+import { compareReportTargets } from '../lib/report';
 
 const phaseNames: Record<string, string> = {
   Pending: '실행 대기',
@@ -12,13 +13,20 @@ const phaseNames: Record<string, string> = {
 export function WorkloadContext({
   value,
   onEvidence,
+  reader = false,
 }: {
   value: Row;
   onEvidence?: (id: string) => void;
+  reader?: boolean;
 }) {
   const [showRecords, setShowRecords] = useState(false);
   if (!value.version) return null;
-  const records = rows(value.records);
+  const records = reader
+    ? [...rows(value.records)].sort(compareReportTargets)
+    : rows(value.records);
+  const completedJobs = reader
+    ? [...rows(value.completed_jobs)].sort(compareReportTargets)
+    : rows(value.completed_jobs);
   const groups = new Map<string, Row[]>();
   for (const record of records) {
     const key = JSON.stringify([record.cluster_id, record.namespace, record.workload_type]);
@@ -103,7 +111,7 @@ export function WorkloadContext({
           </table>
         </div>
       )}
-      {rows(value.completed_jobs).length > 0 && (
+      {completedJobs.length > 0 && (
         <div className="aggregate-table-scroll">
           <table>
             <caption>기존 완료 Job에 연결한 작업 유형</caption>
@@ -115,7 +123,7 @@ export function WorkloadContext({
               </tr>
             </thead>
             <tbody>
-              {rows(value.completed_jobs).map((j) => (
+              {completedJobs.map((j) => (
                 <tr key={`${j.cluster_id}/${j.namespace}/${j.job_name}/${j.created_at}`}>
                   <td>
                     {str(j.cluster_id)}

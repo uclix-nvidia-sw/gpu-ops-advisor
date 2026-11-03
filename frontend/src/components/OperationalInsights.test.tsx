@@ -120,3 +120,28 @@ it('ranks absolute category changes, excludes unknown comparisons and deduplicat
   expect(html).not.toContain('unknown');
   expect(html).toContain('저장된 사건 내역 1건');
 });
+
+it('groups the heatmap while preserving the input order used by observation highlights', () => {
+  const value = report([
+    row('same', { cluster_id: 'cpc-2' }),
+    row('z'),
+    row('same', { gpu_model: 'H100' }),
+    row('same'),
+  ]);
+  const saved = JSON.stringify(value);
+  const before = operationalEvidence(value).map((item) => item.key);
+  const highlights = renderToStaticMarkup(<OperationalInsights value={value} />);
+  const html = renderToStaticMarkup(<HourlyOverview value={value} />);
+  const heatmap = html.split('id="c2-observation-coverage"')[0];
+  expect(heatmap.match(/scope="rowgroup"/g)).toHaveLength(2);
+  const labels = [...heatmap.matchAll(/aria-label="([^"]+) · 2026/g)].map((match) => match[1]);
+  expect(labels.filter((_, index) => index % 2 === 0)).toEqual([
+    'cpc-1 / same · A100',
+    'cpc-1 / same · H100',
+    'cpc-1 / z · A100',
+    'cpc-2 / same · A100',
+  ]);
+  expect(operationalEvidence(value).map((item) => item.key)).toEqual(before);
+  expect(renderToStaticMarkup(<OperationalInsights value={value} />)).toBe(highlights);
+  expect(JSON.stringify(value)).toBe(saved);
+});
