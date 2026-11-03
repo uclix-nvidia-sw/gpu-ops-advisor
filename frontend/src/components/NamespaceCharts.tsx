@@ -130,7 +130,7 @@ function TimeChart({
     <div className="aggregate-chart-frame">
       <svg
         className="aggregate-time-chart"
-        viewBox="0 0 960 270"
+        viewBox="0 0 960 280"
         role="img"
         aria-label={`${label}. 색은 Namespace, 선 모양은 GPU 모델. 상세 수치는 아래에서 확인할 수 있습니다.`}
         onPointerMove={(event) => {
@@ -215,16 +215,23 @@ function TimeChart({
         {Number.isFinite(start) &&
           Number.isFinite(end) &&
           end > start &&
-          [0, 0.25, 0.5, 0.75, 1].map((f) => (
-            <text
-              key={f}
-              x={48 + 876 * f}
-              y="250"
-              textAnchor={f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}
-            >
-              {reportRequestTime(new Date(start + (end - start) * f).toISOString()).slice(0, -3)}
-            </text>
-          ))}
+          [0, 0.25, 0.5, 0.75, 1].map((f) => {
+            const label = reportRequestTime(new Date(start + (end - start) * f).toISOString());
+            const x = 48 + 876 * f;
+            return (
+              <text
+                key={f}
+                x={x}
+                y="246"
+                textAnchor={f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}
+              >
+                <tspan x={x}>{label.slice(0, -9)}</tspan>{' '}
+                <tspan x={x} dy="22">
+                  {label.slice(-8, -3)}
+                </tspan>
+              </text>
+            );
+          })}
       </svg>
       {hover !== null && hoverRows.length > 0 && (
         <div

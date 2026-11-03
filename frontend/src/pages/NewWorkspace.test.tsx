@@ -224,6 +224,35 @@ it('uses the shared aggregate reader styles and shows its analysis period once w
   expect(html).toContain('저장된 계산 근거');
   expect(html).toContain('해석 근거와 계산 결과');
 });
+it('keeps saved scope, analysis period and partial result distinct in the Console2 header', () => {
+  data.mode = 'operations';
+  data.job.report_origin = 'manual';
+  data.job.kind = 'report';
+  data.job.can_delete = true;
+  data.job.version = 1;
+  data.job.time_range = { start: '2026-10-21T15:00:00Z', end: '2026-10-22T15:00:00Z' };
+  data.job.result = {
+    ...(data.job.result as Row),
+    scope: { clusters: [{ cluster_id: 'saved-result-cluster', namespaces: ['training'] }] },
+  };
+  const html = render('/reports/published');
+  expect(html).toContain('분석 대상</span>');
+  expect(html).toContain('saved-result-cluster');
+  expect(html).toContain('training');
+  expect(html).toContain('분석 기간</span>');
+  expect(html.match(/class="report-period"/g)).toHaveLength(1);
+  expect(html).toContain('정확한 시간 범위');
+  expect(html).toContain('실행 완료');
+  expect(html).toContain('부분 산출');
+  expect(html).toContain('aria-label="생성 방식: 직접 요청"');
+  expect(html).toContain('보고서 삭제</button>');
+  expect(html).not.toContain('<summary>보고서 관리</summary>');
+  data.job.can_delete = false;
+  expect(render('/reports/published')).not.toContain('보고서 삭제</button>');
+  expect(html).toContain('메모리 오류가 보고되었습니다.');
+  data.mode = 'new';
+  expect(render('/reports/published')).not.toContain('c2-report-meta-field');
+});
 it('uses an explicit developer switch on direct diagnostic routes', () => {
   for (const path of ['/jobs', '/knowledge', '/settings/models', '/fleet/assets'])
     expect(render(path)).toContain('개발자 화면으로 전환');

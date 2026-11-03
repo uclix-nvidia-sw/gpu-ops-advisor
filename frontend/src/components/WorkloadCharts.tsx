@@ -73,10 +73,15 @@ export function WorkloadCharts({
                 <ul className="aggregate-workload-highlights">
                   {shownPendingHighlights.map(({ namespace, peak, firstPeak }) => (
                     <li key={namespace}>
-                      <strong>{namespace}</strong> · 최대 {peak}개 ·{' '}
-                      {reportRequestTime(str(firstPeak.start)).slice(0, -9)}{' '}
-                      {reportRequestTime(str(firstPeak.start)).slice(-8, -3)}–
-                      {reportRequestTime(str(firstPeak.end)).slice(-8, -3)}
+                      <strong>{namespace}</strong>{' '}
+                      <span className="aggregate-workload-peak">
+                        최대 {peak}개 ·{' '}
+                        <span>{reportRequestTime(str(firstPeak.start)).slice(0, -9)}</span>{' '}
+                        <span>
+                          {reportRequestTime(str(firstPeak.start)).slice(-8, -3)}–
+                          {reportRequestTime(str(firstPeak.end)).slice(-8, -3)}
+                        </span>
+                      </span>
                     </li>
                   ))}
                   {pendingHighlights.length > shownPendingHighlights.length && (

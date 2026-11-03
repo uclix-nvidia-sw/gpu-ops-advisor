@@ -1364,8 +1364,9 @@ it.each([false, true])(
     const html = render(value);
     if (reader) {
       expect(html).toContain(
-        '<summary class="c2-advice-summary"><span class="c2-advice-target-label">네임스페이스 :</span> <code>batch</code>',
+        '<summary class="c2-advice-summary"><span class="c2-advice-target" role="heading" aria-level="4"><span class="c2-advice-target-label">네임스페이스 :</span> <code>batch</code>',
       );
+      expect(html).toContain('<h3 class="aggregate-advice-cluster-target">');
       expect(html.match(/class="c2-advice-target-label"/g)).toHaveLength(1);
     }
     expect((html.match(/class="aggregate-advice-basis-label"/g) || []).length).toBe(7);

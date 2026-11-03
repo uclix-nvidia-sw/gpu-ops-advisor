@@ -51,6 +51,20 @@ const render = (hidden = new Set<string>(), data = groups) =>
   renderToStaticMarkup(
     <NamespaceCharts groups={data} hidden={hidden} onToggle={() => {}} onSetCluster={() => {}} />,
   );
+it('keeps KST dates across midnight when axis labels use separate date and time lines', () => {
+  const html = render(new Set(), [
+    { ...groups[0], models: [{ gpu_model: 'A100', hours: [hour(0, 0), hour(23, 50)] }] },
+  ]);
+  const ticks = [...html.matchAll(/<text[^>]*y="246"[^>]*>(.*?)<\/text>/g)];
+  expect(ticks.map((tick) => tick[1].replace(/<[^>]+>/g, ''))).toEqual([
+    '2026. 10. 13. 09:00',
+    '2026. 10. 13. 15:00',
+    '2026. 10. 13. 21:00',
+    '2026. 10. 14. 03:00',
+    '2026. 10. 14. 09:00',
+  ]);
+  expect(ticks.every((tick) => (tick[1].match(/<tspan /g) || []).length === 2)).toBe(true);
+});
 it('starts with all cluster/namespace series and shares color but not model stroke', () => {
   const html = render();
   expect(html.indexOf('role="img"')).toBeLessThan(html.indexOf('<fieldset'));

@@ -445,6 +445,7 @@ function TopicInterpretation({
   }
   const advice = rows(section.advice);
   const NamespaceSection = reader ? 'details' : 'section';
+  const ClusterHeading = reader ? 'h3' : 'p';
   const hasSummary = advice.length > 0 && advice.every((item) => str(item.summary));
   const selection = obj(section.selection);
   const criteria = obj(selection.criteria);
@@ -463,9 +464,9 @@ function TopicInterpretation({
               aria-label={`${cluster.cluster || '미확인'} 클러스터 AI 운영 해석`}
             >
               <h3 className="aggregate-advice-card-title">AI 운영 해석</h3>
-              <p className="aggregate-advice-cluster-target">
+              <ClusterHeading className="aggregate-advice-cluster-target">
                 <span>대상 클러스터 :</span> <code>{cluster.cluster || '미확인'}</code>
-              </p>
+              </ClusterHeading>
               <p className="aggregate-advice-time-note">
                 구간 시각은 KST 기준이며 끝 시각은 포함하지 않습니다.
               </p>
@@ -473,8 +474,10 @@ function TopicInterpretation({
                 <NamespaceSection className="aggregate-advice-namespace" key={ns.key}>
                   {reader ? (
                     <summary className="c2-advice-summary">
-                      <span className="c2-advice-target-label">네임스페이스 :</span>{' '}
-                      <code>{ns.namespace || '미확인'}</code>{' '}
+                      <span className="c2-advice-target" role="heading" aria-level={4}>
+                        <span className="c2-advice-target-label">네임스페이스 :</span>{' '}
+                        <code>{ns.namespace || '미확인'}</code>
+                      </span>{' '}
                       <span className="c2-advice-topics">
                         {ns.items.map((item) => advicePresentation(item).title).join(' · ')}
                       </span>
