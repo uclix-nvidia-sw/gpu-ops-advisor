@@ -1046,11 +1046,16 @@ function Report({ id }: { id: string }) {
     navigate = useNavigate();
   const [exportError, setExportError] = useState('');
   const [evidence, setEvidence] = useState<string | null>(null);
+  const scope = <ReportScope job={result.scope ? result : job} compact={modern} />;
+  const period = (!aggregatePublished || modern) && (
+    <ReportPeriod value={result.time_range || job.time_range} />
+  );
+  const status = <Status job={{ ...job, result_status: result.result_status }} />;
+  const origin = <ReportOrigin value={job.report_origin} />;
   const actions = modern ? (
-    <details className="c2-report-management">
-      <summary>보고서 관리</summary>
+    <div className="c2-report-management">
       <ReportActions job={job} />
-    </details>
+    </div>
   ) : (
     <ReportActions job={job} />
   );
@@ -1065,12 +1070,32 @@ function Report({ id }: { id: string }) {
       <QueryState query={q}>
         <div id="new-report-document" className="report-workspace new-report-document">
           <div className="new-detail-meta">
-            <ReportScope job={result.scope ? result : job} compact={modern} />
-            {(!aggregatePublished || modern) && (
-              <ReportPeriod value={result.time_range || job.time_range} />
+            {modern ? (
+              <>
+                <div className="c2-report-meta-field">
+                  <span className="c2-report-meta-label">분석 대상</span>
+                  {scope}
+                </div>
+                <div className="c2-report-meta-field">
+                  <span className="c2-report-meta-label">분석 기간</span>
+                  {period}
+                </div>
+                <div className="c2-report-status-row">
+                  {status}
+                  <div className="c2-report-origin">
+                    <span className="c2-report-meta-label">생성 방식</span>
+                    {origin}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {scope}
+                {period}
+                {status}
+                {origin}
+              </>
             )}
-            <Status job={{ ...job, result_status: result.result_status }} />
-            <ReportOrigin value={job.report_origin} />
           </div>
           {(!modern || job.deletion || !job.result_ref || !Object.keys(result).length) && actions}
           {job.deletion ? (

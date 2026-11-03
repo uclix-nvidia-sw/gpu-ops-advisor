@@ -844,10 +844,6 @@
   font-size: 11px;
   text-align: right;
 }
-.c2-report-management > summary {
-  cursor: pointer;
-  color: #748169;
-}
 .c2-reader-content .new-print {
   margin: 0 0 14px;
   gap: 8px;
@@ -951,7 +947,7 @@
 }
 .c2-reader-content .aggregate-advice-decision {
   font-size: 13px;
-  line-height: 1.9;
+  line-height: 1.75;
   max-width: 78ch;
 }
 .c2-reader-content .aggregate-static-note {
@@ -963,29 +959,120 @@
   padding: 0;
   border: 0;
 }
+.c2-ops-reader .c2-reader-content {
+  container: ops-report / inline-size;
+}
+.c2-ops-reader .c2-report-visual-grid {
+  align-items: start;
+}
+@container ops-report (max-width: 1040px) {
+  .c2-ops-reader .c2-report-visual-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.c2-ops-reader .aggregate-evidence-buttons,
+.c2-ops-reader .aggregate-evidence-links {
+  gap: 8px;
+  margin: 12px 0;
+}
+.c2-ops-reader .aggregate-evidence-buttons .text-link,
+.c2-ops-reader .aggregate-evidence-links .text-link {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  color: #416d00;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
+  cursor: pointer;
+}
 .view-operations.console2-shell .c2-ops-reader .page-head h1 {
   color: #25312a;
 }
 .c2-ops-reader .new-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   background: #fff;
-  padding: 12px 16px;
+  padding: 16px;
   gap: 12px 24px;
+  margin-bottom: 8px;
 }
-.c2-ops-reader .new-detail-meta > .new-status {
+.c2-ops-reader .new-detail-meta > .c2-report-meta-field {
+  min-width: 0;
+  gap: 4px;
+}
+.c2-ops-reader .c2-report-meta-label {
+  font-size: 12px;
+  color: #62736a;
+}
+.c2-ops-reader .new-detail-meta .c2-scope {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.c2-ops-reader .new-detail-meta .report-period {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.c2-ops-reader .new-detail-meta .report-period details {
+  margin-top: 4px;
+}
+.c2-ops-reader .new-detail-meta > .c2-report-status-row {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
+  gap: 8px 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
-.c2-ops-reader .new-detail-meta > .report-period {
-  gap: 4px;
+.c2-ops-reader .c2-report-status-row .new-status {
+  gap: 8px 20px;
+  font-size: 12px;
+}
+.c2-ops-reader .c2-report-origin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.c2-ops-reader .c2-report-origin .report-origin {
+  padding: 3px 8px;
+  color: #52645d;
+  background: #f4f6f3;
+  border-color: var(--line);
+  font-size: 12px;
+  font-weight: 400;
+}
+.c2-ops-reader .new-print {
+  align-items: center;
+  margin-bottom: 16px;
+}
+.view-operations.console2-shell .c2-ops-reader .new-print .button {
+  min-height: 36px;
+  padding: 6px 10px;
+}
+.c2-ops-reader .aggregate-report > .c2-ops-advice {
+  margin-top: 0;
+  padding-top: 16px;
+}
+@container ops-report (max-width: 560px) {
+  .c2-ops-reader .new-detail-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .c2-ops-reader .new-print .c2-report-management {
   margin: 0 auto 0 0;
   font-size: 12px;
   text-align: left;
 }
-.c2-ops-reader .new-print .c2-report-management[open] {
+.c2-ops-reader .new-print .c2-report-management:has(.new-command) {
   flex-basis: 100%;
 }
 .c2-ops-reader .c2-chart-card > header p {
@@ -1014,6 +1101,69 @@
 }
 .c2-ops-reader .aggregate-report > .aggregate-static-note {
   margin: 8px 0;
+}
+/* Keep Ops hierarchy and disclosure spacing independent of the RCA reader. */
+.view-operations.console2-shell .c2-ops-reader .aggregate-report h2 {
+  font-size: 20px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  :is(.aggregate-subheading, .c2-chart-card h3) {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report h4 {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  details
+  > summary:not(.c2-advice-summary) {
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.view-operations.console2-shell
+  .c2-ops-reader
+  .aggregate-report
+  details[open]:not(.aggregate-advice-namespace)
+  > :not(summary) {
+  margin-inline-start: 16px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report details > p {
+  margin-block: 8px 12px;
+  line-height: 1.75;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-advice-evidence[open] > summary {
+  margin-bottom: 0;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-advice-evidence > p > strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-report :is(th, td) {
+  line-height: 1.6;
+}
+.c2-ops-reader .aggregate-workload-peak {
+  display: block;
+}
+.c2-ops-reader .aggregate-workload-peak > span {
+  white-space: nowrap;
+}
+.c2-ops-reader .aggregate-workload-highlights li + li {
+  margin-top: 8px;
+}
+.view-operations.console2-shell .c2-ops-reader .aggregate-workload-caption {
+  margin-top: 12px;
+}
+.c2-ops-reader .aggregate-workload-namespace + .aggregate-workload-namespace {
+  padding-top: 16px;
+  margin-top: 16px;
 }
 .c2-ops-reader .aggregate-time-chart text {
   font-size: 18px;
@@ -1709,40 +1859,44 @@
   min-width: 0;
 }
 @media (min-width: 1400px) {
-  .c2-reader-content .aggregate-chart {
+  .c2-reader-content .aggregate-cluster-charts .aggregate-chart {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     align-items: start;
   }
-  .c2-reader-content .aggregate-chart > .aggregate-chart-heading {
+  .c2-reader-content .aggregate-cluster-charts .aggregate-chart > .aggregate-chart-heading {
     grid-column: 1 / -1;
   }
-  .c2-reader-content .aggregate-metric-chart {
+  .c2-reader-content .aggregate-cluster-charts .aggregate-metric-chart {
     margin: 0;
   }
-  .view-operations.console2-shell .c2-ops-reader .aggregate-report .aggregate-metric-chart {
+  .view-operations.console2-shell
+    .c2-ops-reader
+    .aggregate-report
+    .aggregate-cluster-charts
+    .aggregate-metric-chart {
     display: grid;
-    grid-template-rows: 32px 48px auto auto;
+    grid-template-rows: minmax(32px, auto) minmax(48px, auto) auto auto;
     grid-template-columns: minmax(0, 1fr);
     margin: 0;
     padding: 16px;
     border: 1px solid #dce3df;
     border-radius: 6px;
   }
-  .c2-ops-reader .aggregate-metric-chart > .aggregate-chart-heading {
+  .c2-ops-reader .aggregate-cluster-charts .aggregate-metric-chart > .aggregate-chart-heading {
     grid-row: 1;
   }
-  .c2-ops-reader .aggregate-metric-chart > .aggregate-detail-selector {
+  .c2-ops-reader .aggregate-cluster-charts .aggregate-metric-chart > .aggregate-detail-selector {
     grid-row: 2;
     margin: 0;
     align-self: start;
   }
-  .c2-ops-reader .aggregate-metric-chart > .aggregate-chart-frame,
-  .c2-ops-reader .aggregate-metric-chart > .notice {
+  .c2-ops-reader .aggregate-cluster-charts .aggregate-metric-chart > .aggregate-chart-frame,
+  .c2-ops-reader .aggregate-cluster-charts .aggregate-metric-chart > .notice {
     grid-row: 3;
   }
-  .c2-ops-reader .aggregate-metric-chart > .aggregate-chart-controls {
+  .c2-ops-reader .aggregate-cluster-charts .aggregate-metric-chart > .aggregate-chart-controls {
     grid-row: 4;
   }
 }
@@ -1776,15 +1930,16 @@
 .c2-reader-content .c2-ops-advice {
   margin: 0 0 26px;
 }
-.c2-ops-advice > h2 {
-  font-size: 21px;
-  margin: 0 0 8px;
-}
 .c2-ops-advice .aggregate-interpretation {
   margin-top: 12px;
 }
 .c2-ops-advice .aggregate-advice-cluster {
   padding: 12px 16px;
+}
+.c2-ops-reader .aggregate-advice-cluster > .aggregate-advice-cluster-target {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
 }
 .c2-ops-advice .aggregate-advice-card-title,
 .c2-ops-advice .aggregate-advice-time-note {
@@ -1802,29 +1957,37 @@
   cursor: pointer;
   font-size: 13px;
 }
+.c2-advice-summary .c2-advice-target {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  vertical-align: top;
+}
 .c2-advice-summary code {
+  min-width: 0;
   color: #52675b;
-  margin-right: 16px;
   overflow-wrap: anywhere;
 }
 .c2-advice-summary > span {
   font-weight: 600;
   color: #29432f;
 }
-.c2-advice-summary > .c2-advice-target-label {
+.c2-advice-summary .c2-advice-target-label {
   font-weight: 400;
   color: var(--muted);
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .c2-advice-summary > .c2-advice-topics {
-    display: block;
-    margin: 4px 0 0 13px;
-  }
+.c2-advice-summary > .c2-advice-topics {
+  display: block;
+  margin: 2px 0 0 16px;
+}
+.c2-ops-advice details[open] > .c2-advice-summary > .c2-advice-topics {
+  display: none;
 }
 .c2-ops-advice details[open] > .aggregate-namespace-summary {
-  margin: 12px 0 0;
+  margin: 0 0 16px 16px;
 }
 .c2-analysis-meta {
   display: flex;

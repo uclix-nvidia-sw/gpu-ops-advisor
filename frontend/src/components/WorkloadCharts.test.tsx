@@ -46,7 +46,8 @@ describe('WorkloadCharts', () => {
     );
     expect(html).toContain('최대 대기 2개');
     expect(html).toContain('최대 대기 0개');
-    expect(html).toContain('forecast</strong> · 최대 2개');
+    expect(html).toContain('forecast</strong>');
+    expect(html).toContain('최대 2개 · <span>2026. 10. 15.</span> <span>13:00–14:00</span>');
     expect(html).toContain('<details class="aggregate-workload-detail">');
     expect(html).toContain('<summary>Namespace별 모든 시간대 보기</summary>');
     expect(html).toContain('20분 9초');
