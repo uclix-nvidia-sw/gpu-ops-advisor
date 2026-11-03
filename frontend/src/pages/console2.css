@@ -1811,6 +1811,18 @@
   font-weight: 600;
   color: #29432f;
 }
+.c2-advice-summary > .c2-advice-target-label {
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .c2-advice-summary > .c2-advice-topics {
+    display: block;
+    margin: 4px 0 0 13px;
+  }
+}
 .c2-ops-advice details[open] > .aggregate-namespace-summary {
   margin: 12px 0 0;
 }

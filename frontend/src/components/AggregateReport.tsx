@@ -473,8 +473,9 @@ function TopicInterpretation({
                 <NamespaceSection className="aggregate-advice-namespace" key={ns.key}>
                   {reader ? (
                     <summary className="c2-advice-summary">
-                      <code>{ns.namespace || '미확인'}</code>
-                      <span>
+                      <span className="c2-advice-target-label">네임스페이스 :</span>{' '}
+                      <code>{ns.namespace || '미확인'}</code>{' '}
+                      <span className="c2-advice-topics">
                         {ns.items.map((item) => advicePresentation(item).title).join(' · ')}
                       </span>
                     </summary>

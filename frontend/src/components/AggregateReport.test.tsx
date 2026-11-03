@@ -1362,6 +1362,12 @@ it.each([false, true])(
         </MemoryRouter>,
       );
     const html = render(value);
+    if (reader) {
+      expect(html).toContain(
+        '<summary class="c2-advice-summary"><span class="c2-advice-target-label">네임스페이스 :</span> <code>batch</code>',
+      );
+      expect(html.match(/class="c2-advice-target-label"/g)).toHaveLength(1);
+    }
     expect((html.match(/class="aggregate-advice-basis-label"/g) || []).length).toBe(7);
     let previous = -1;
     advice.forEach((item) => {
@@ -1382,6 +1388,7 @@ it.each([false, true])(
     });
     expect(old).toContain('유형과 시각이 없는 옛 원문입니다.');
     expect(old).toContain('시간 범위 미확인');
+    if (reader) expect(old).toContain('네임스페이스 :</span> <code>미확인</code>');
     expect(old).not.toContain('aggregate-advice-basis-label');
     const fallback = render({
       ...value,
