@@ -432,8 +432,10 @@ it('uses received alert identity for console 2 report titles and keeps other con
   expect(html).toContain('XID 171 · Additional details</h1>');
   expect(html).toContain('GPU · dgx02 · cpc-1 · PCI 0000:47:00');
   expect(html).toContain('<summary>수신 알림 원문</summary>');
-  expect(html).toContain('사건 검토·처리 기록');
-  expect(html).toContain('#new-investigation-history');
+  expect(html).not.toContain('선택한 조사에서 발행된 보고서입니다.');
+  expect(html).not.toContain('사건 검토·처리 기록');
+  expect(html).not.toContain('?analysis=published#new-investigation-history');
+  expect(html).not.toContain('#new-investigation-history');
   data.mode = 'new';
   const original = render('/analyses/published');
   expect(original).toContain('저장된 사건 분석</h1>');

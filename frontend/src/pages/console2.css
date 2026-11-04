@@ -45,6 +45,8 @@
 .view-operations.console2-shell .brand strong {
   color: #f1f4ee;
   font-size: 15px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .view-operations.console2-shell .brand-icon {
   display: grid;
@@ -54,12 +56,14 @@
   color: #132000;
   border-radius: 4px;
 }
-.view-operations.console2-shell .sidebar .brand > div > span {
-  display: block;
-  color: #95a18f;
-  font-size: 12px;
-  letter-spacing: 0;
-  margin-top: 4px;
+.view-operations.console2-shell .brand-icon.gpu-brand {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  background: #f3f2ec;
+  color: #20271c;
+  border-radius: 8px;
 }
 .view-operations.console2-shell .workspace-label,
 .view-operations.console2-shell .profile {

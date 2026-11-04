@@ -385,7 +385,7 @@ function Overview() {
     : '선택 범위의 저장 사건 기준';
   return (
     <div className="c2-page c2-dashboard">
-      <Heading title="운영 개요" note={`최근 ${period}일 · ${dateTimeText(now)} 기준`}>
+      <Heading title="대시보드" note={`최근 ${period}일 · ${dateTimeText(now)} 기준`}>
         <PeriodButtons period={period} onChange={(v) => setParams({ period: v })} />
         <Link className="button primary" to="/reports/new">
           <FileText size={16} /> 보고서 만들기
