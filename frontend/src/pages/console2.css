@@ -1164,16 +1164,29 @@
   font-size: 13px;
   line-height: 1.85;
 }
-.c2-reader-content details.rca-glance {
-  margin: 18px 0;
-  background: #fafbf8;
-  border: 1px solid #e1e8d9;
-  padding: 12px 16px;
+.c2-reader-content .rca-operator-report > .rca-glance {
+  padding: 24px 0;
+  background: transparent;
 }
-.c2-reader-content details.rca-glance > summary {
-  font-size: 12px;
-  cursor: pointer;
-  color: #526944;
+.c2-reader-content .rca-operator-report .rca-current-reason {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  color: var(--rca-warn);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.c2-reader-content .rca-operator-report .c2-rca-hardware h5 {
+  margin: 0 0 8px;
+}
+.c2-reader-content .rca-operator-report .rca-reset-guide > summary {
+  font-weight: 600;
 }
 .c2-reader-content .rca-narrative-section,
 .c2-reader-content .aggregate-major-topic {
