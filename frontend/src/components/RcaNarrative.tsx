@@ -97,6 +97,7 @@ export function RcaNarrative({
   alarm?: Row;
 }) {
   if (
+    decisionSummary ||
     obj(obj(result.quality).triage_observations).schema === 'rca-triage-observations/1' ||
     obj(obj(result.quality).analysis).workflow === 'single_collection'
   ) {

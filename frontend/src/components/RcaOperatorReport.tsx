@@ -1,3 +1,5 @@
+import { RcaResetGuide } from './RcaResetGuide';
+import { isOperatorCollectionReference, operatorReportResult } from '../lib/rcaOperatorText';
 import { useApp } from '../lib/store';
 import { num, obj, rows, str, strings, type Row } from '../lib/live';
 import { aiFailure, operatorView, sentences, valueText } from '../lib/rcaOperatorView';
@@ -29,6 +31,7 @@ export function RcaOperatorReport({
   alarm?: Row;
 }) {
   const classic = useApp()?.mode === 'classic';
+  if (decisionSummary) result = operatorReportResult(result);
   const quality = obj(result.quality);
   const v = operatorView(result);
   // Judgment-step labels for the reason this alert reported (component Runbooks).
@@ -75,6 +78,13 @@ export function RcaOperatorReport({
   // Older results without source items keep their stored cause prose.
   const noteTexts = sources.length ? notes.map((r) => str(r.text)) : paragraphs('cause');
   const refs = guidance.flatMap((g) => rows(g.sources));
+  const meaningKey = (g: Row) => str(obj(g.guidance).meaning).replace(/\s+/g, ' ').trim();
+  const history = obj(quality.host_incident_history);
+  const historyPeriod = obj(history.period);
+  const hasHistory =
+    history.schema === 'rca-host-history/1' &&
+    Number.isFinite(Date.parse(str(historyPeriod.start))) &&
+    Number.isFinite(Date.parse(str(historyPeriod.end)));
   const internalRefs = [...new Map(refs.map((r) => [str(r.url), r])).values()].filter(
     (r) => /^https:\/\//.test(str(r.url)) && !isOperatorReference(r),
   );
@@ -109,6 +119,11 @@ export function RcaOperatorReport({
   ];
   const savedChecks = [...paragraphs('action'), ...paragraphs('next')];
   const first = v?.actionChecks[0];
+  // Match the role of the step, not its ordinal or a particular XID/SXID.
+  const resetStep =
+    v?.family !== 'component'
+      ? (v?.actionChecks || []).findIndex((step) => /^복구(?:$|[:：]| 조치)/.test(str(step.title)))
+      : -1;
   // Inspection-area figures keyed by the alert code (or component) and step title.
   const figures = inspectionFigures(
     (v?.family === 'component' ? v.component : v?.codes[0]) || '',
@@ -119,6 +134,14 @@ export function RcaOperatorReport({
   const books = rows(result.runbook_revisions).filter(
     (b) => !str(b.knowledge_key).includes('GENERAL'),
   );
+  const fallbackResetGuidance =
+    !v && books.some((b) => /^RB-S?XID-/.test(str(b.knowledge_key)))
+      ? guidance.findIndex((g) =>
+          rows(obj(g.guidance).next_checks).some((c) =>
+            /^복구(?:$|[:：]| 조치)/.test(str(c.title)),
+          ),
+        )
+      : -1;
   const used = books.length
     ? ` (사용 Runbook: ${books.map((b) => `${str(b.knowledge_key)} rev ${num(b.revision)}`).join(', ')})`
     : '';
@@ -142,7 +165,7 @@ export function RcaOperatorReport({
         {[v.gpuModel, v.driver && `드라이버 ${v.driver}`].filter(Boolean).map((x) => ` · ${x}`)}
       </p>
     ) : null;
-  const Glance = decisionSummary ? 'details' : 'section';
+
   return (
     <section
       id="final-report"
@@ -159,10 +182,10 @@ export function RcaOperatorReport({
           </p>
         )}
         {decisionSummary && hardware ? (
-          <details className="c2-rca-hardware">
-            <summary>장비 상세 · 모델·드라이버·UUID</summary>
+          <section className="c2-rca-hardware" aria-label="장비 상세">
+            <h5>장비 상세 · 모델·드라이버·UUID</h5>
             {hardware}
-          </details>
+          </section>
         ) : (
           hardware
         )}
@@ -214,8 +237,7 @@ export function RcaOperatorReport({
       {decisionSummary && v && <RcaVisualEvidence view={v} onEvidence={onEvidence} />}
 
       {v && (
-        <Glance id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
-          {decisionSummary && <summary>사건 대상·시각과 관련 관측 자세히 보기</summary>}
+        <section id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
           <h4>
             1. 한눈에 보기 · {v.node} · {v.codes.join(', ') || '장애 알림'}
           </h4>
@@ -269,31 +291,47 @@ export function RcaOperatorReport({
                 : []),
             ]}
           />
-        </Glance>
+        </section>
       )}
       {!v && (
         <section id="rca-glance" className="rca-glance" aria-label="사건 핵심 요약">
           <h4>1. 한눈에 보기</h4>
-          <p className="rca-muted">{noSummary}</p>
+          {decisionSummary && (
+            <RcaPoints
+              items={savedFacts.length ? savedFacts : [str(result.summary)].filter(Boolean)}
+            />
+          )}
+          <p className="rca-muted">
+            {decisionSummary
+              ? '이 보고서에 사건 대상·시각을 대조할 관측 요약이 저장되지 않았습니다. 확보된 기록과 아래 판단 한계를 함께 확인하세요.'
+              : noSummary}
+          </p>
         </section>
       )}
 
       <section id="rca-response-reference" className="rca-narrative-section">
         <h4>2. 대응 순서</h4>
-        <p className="rca-muted">
-          <a href={TRIAGE_URL} target="_blank" rel="noreferrer">
-            NVIDIA GPU Node Triage
-          </a>{' '}
-          순서: 대상 확정 → 진단 자료 보존 → 작업 배출·복구 → 조치 후 확인 → 공급사 전달. 실제
-          조치는 운영자가 수행하며, 직전에 노드와 장치 PCI 주소를 다시 대조하세요.
-        </p>
+        {!decisionSummary || (v && v.family !== 'component') ? (
+          <p className="rca-muted">
+            <a href={TRIAGE_URL} target="_blank" rel="noreferrer">
+              NVIDIA GPU Node Triage
+            </a>{' '}
+            순서: 대상 확정 → 진단 자료 보존 → 작업 배출·복구 → 조치 후 확인 → 공급사 전달. 실제
+            조치는 운영자가 수행하며, 직전에 노드와 장치 PCI 주소를 다시 대조하세요.
+          </p>
+        ) : (
+          <p className="rca-muted">
+            대상과 작업 영향 확인 → 진단 자료 보존 → 오류별 대응 → 조치 후 확인. 실제 조치는
+            운영자가 수행합니다.
+          </p>
+        )}
         {v && guidance.length ? (
           <>
             {v.message && (
               <p>
                 이번 로그 원문: <Ids text={v.message} />
                 {branches.length > 0 &&
-                  ` — '${v.currentReasons.map((r) => r.label).join(' · ')}'에 해당합니다. 판단 단계 맨 위에 ▶로 표시한 항목을 따르세요.`}
+                  ` — '${v.currentReasons.map((r) => r.label).join(' · ')}'에 해당합니다. 판단 단계 맨 위에 ${decisionSummary ? '‘해당 증상’으로' : '▶로'} 표시한 항목을 따르세요.`}
               </p>
             )}
             <nav className="rca-step-toc" aria-label="대응 단계 목차">
@@ -327,7 +365,12 @@ export function RcaOperatorReport({
                       실제 값·시각·대상은 3장 관련 로그·메트릭에서 확인합니다.
                     </p>
                   )}
-                  <RcaStepPoints items={sentences(str(c.text))} branches={branches} />
+                  <RcaStepPoints
+                    items={sentences(str(c.text))}
+                    branches={branches}
+                    reasonLabel={decisionSummary}
+                  />
+                  {decisionSummary && i === resetStep && <RcaResetGuide />}
                   {figures.get(str(c.title)) && (
                     <InspectionFigures ids={figures.get(str(c.title))!} />
                   )}
@@ -429,48 +472,40 @@ export function RcaOperatorReport({
                 </table>
               </div>
             )}
-            {v.family !== 'component' && (
-              <details>
-                <summary>GPU·NVSwitch 리셋 방식 선택 (NVIDIA GPU Node Triage 표 2)</summary>
-                <div className="rca-history-table">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>구성</th>
-                        <th>리셋 방식</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Ampere+ NVSwitch · bare metal · FM 실행 중</td>
-                        <td>GPU 개별 리셋 가능, FM이 해당 NVSwitch 링크를 함께 리셋</td>
-                      </tr>
-                      <tr>
-                        <td>Ampere+ NVSwitch · bare metal · FM 미실행</td>
-                        <td>개별 리셋 불가, NVLink로 연결된 GPU·NVSwitch 전체 리셋</td>
-                      </tr>
-                      <tr>
-                        <td>Hopper+ NVSwitch · bare metal</td>
-                        <td>개별 리셋 지원, -i 없이 nvidia-smi 리셋 시 전체 리셋</td>
-                      </tr>
-                      <tr>
-                        <td>가상화(VM 안의 GPU)</td>
-                        <td>
-                          GPU 리셋 미지원 → VM 재시작 (Hopper+는 하이퍼바이저 권한에 따라 다름)
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <p className="rca-muted">
-                  리셋은 대상 GPU를 쓰는 프로세스가 없어야 하며 root 권한이 필요합니다. 작업 배출 후
-                  수행합니다.
-                </p>
-              </details>
-            )}
+            {v.family !== 'component' && (!decisionSummary || resetStep < 0) && <RcaResetGuide />}
           </>
         ) : (
-          paragraphs('action').map((text, i) => <p key={i}>{text}</p>)
+          <>
+            {paragraphs('action').map((text, i) => (
+              <p key={i}>{text}</p>
+            ))}
+            {decisionSummary &&
+              guidance.map((g, i) => (
+                <ol className="rca-steps" key={i}>
+                  {rows(obj(g.guidance).next_checks).map((check, j) => (
+                    <li key={j}>
+                      <div className="rca-step-head">
+                        <strong>{str(check.title)}</strong>
+                      </div>
+                      <RcaStepPoints items={sentences(str(check.text))} />
+                      {i === fallbackResetGuidance &&
+                        j ===
+                          rows(obj(g.guidance).next_checks).findIndex((c) =>
+                            /^복구(?:$|[:：]| 조치)/.test(str(c.title)),
+                          ) && <RcaResetGuide />}
+                    </li>
+                  ))}
+                </ol>
+              ))}
+            {decisionSummary &&
+              !paragraphs('action').length &&
+              !guidance.some((g) => rows(obj(g.guidance).next_checks).length) && (
+                <p className="rca-muted">
+                  이 보고서에는 대응 지침이 저장되지 않았습니다. 대상과 오류 원문을 확인한 뒤 해당
+                  장비의 운영 절차를 대조하세요.
+                </p>
+              )}
+          </>
         )}
         {decisionSummary && savedChecks.length > 0 && (
           <details className="c2-saved-evidence">
@@ -480,7 +515,10 @@ export function RcaOperatorReport({
         )}
       </section>
 
-      <section id="rca-observation-detail">
+      <section
+        id="rca-observation-detail"
+        className={decisionSummary ? 'rca-narrative-section' : undefined}
+      >
         {decisionSummary && savedFacts.length > 0 && (
           <details className="c2-saved-evidence">
             <summary>저장된 관측 사실 {savedFacts.length}건</summary>
@@ -492,7 +530,11 @@ export function RcaOperatorReport({
         ) : (
           <section className="rca-host-history" aria-label="사건 로그와 관련 지표">
             <h4>3. 관련 로그·메트릭</h4>
-            <p className="rca-muted">{noSummary}</p>
+            <p className="rca-muted">
+              {decisionSummary
+                ? '이 보고서에 사건 전후 로그·지표 비교 자료가 저장되지 않았습니다. 자료 부재는 정상이나 복구를 뜻하지 않습니다.'
+                : noSummary}
+            </p>
           </section>
         )}
       </section>
@@ -566,7 +608,17 @@ export function RcaOperatorReport({
             )}
           </>
         ) : (
-          paragraphs('cause').map((text, i) => <p key={i}>{text}</p>)
+          <>
+            {paragraphs('cause').map((text, i) => (
+              <p key={i}>{text}</p>
+            ))}
+            {decisionSummary && !paragraphs('cause').length && (
+              <p className="rca-muted">
+                이 보고서에는 원인 해석이 저장되지 않았습니다. 관측 사실만으로 원인을 확정할 수
+                없습니다.
+              </p>
+            )}
+          </>
         )}
         <details>
           <summary>저장된 비교 원문</summary>
@@ -603,6 +655,12 @@ export function RcaOperatorReport({
           </figure>
         )}
         <RcaHostHistory result={result} embedded visual={decisionSummary} />
+        {decisionSummary && !hasHistory && (
+          <p className="rca-muted">
+            이 보고서에는 조회 기간이 확인되는 이전 사건 이력이 저장되지 않았습니다. 처음 발생한
+            장애로 단정할 수 없습니다.
+          </p>
+        )}
       </section>
 
       <section
@@ -615,7 +673,9 @@ export function RcaOperatorReport({
             ...new Map(
               [
                 ...refs,
-                { url: TRIAGE_URL, section: 'NVIDIA GPU Node Triage' },
+                ...(!decisionSummary || (v && v.family !== 'component')
+                  ? [{ url: TRIAGE_URL, section: 'NVIDIA GPU Node Triage' }]
+                  : []),
                 ...(v?.officialDefinition
                   ? [{ url: v.officialDefinition.source, section: 'NVIDIA Xid 공식 오류 정의' }]
                   : []),
@@ -644,23 +704,37 @@ export function RcaOperatorReport({
         )}
         {guidance.map((g, i) => (
           <dl key={i} className="rca-reference-guide">
-            {str(obj(g.guidance).meaning) && (
-              <div>
-                <dt>오류 의미</dt>
-                <dd>
-                  {v?.officialDefinition ? (
-                    <details>
-                      <summary>저장 당시 오류 설명 원문</summary>
-                      <p>{str(obj(g.guidance).meaning)}</p>
-                    </details>
-                  ) : (
-                    str(obj(g.guidance).meaning)
-                  )}
-                </dd>
-              </div>
-            )}
+            {str(obj(g.guidance).meaning) &&
+              (!decisionSummary ||
+                guidance.findIndex((entry) => meaningKey(entry) === meaningKey(g)) === i) &&
+              (!decisionSummary ||
+                !v?.officialDefinition ||
+                str(obj(g.guidance).meaning).replace(/\s+/g, ' ').trim() !==
+                  v.officialDefinition.meaning.replace(/\s+/g, ' ').trim()) && (
+                <div>
+                  <dt>
+                    {decisionSummary && v?.officialDefinition
+                      ? '조사 당시 추가 참고 설명'
+                      : '오류 의미'}
+                  </dt>
+                  <dd>
+                    {v?.officialDefinition && !decisionSummary ? (
+                      <details>
+                        <summary>저장 당시 오류 설명 원문</summary>
+                        <p>{str(obj(g.guidance).meaning)}</p>
+                      </details>
+                    ) : (
+                      str(obj(g.guidance).meaning)
+                    )}
+                  </dd>
+                </div>
+              )}
             {rows(obj(g.guidance).references)
-              .filter((r) => isOperatorGuidanceReference(r, g.sources))
+              .filter(
+                (r) =>
+                  isOperatorGuidanceReference(r, g.sources) &&
+                  (!decisionSummary || !isOperatorCollectionReference(r)),
+              )
               .map((r, j) => (
                 <div key={j}>
                   <dt>{str(r.title)}</dt>
@@ -679,7 +753,7 @@ export function RcaOperatorReport({
         ))}
         <details>
           <summary>수집 원문·처리 상세</summary>
-          {internalRefs.length > 0 && (
+          {!decisionSummary && internalRefs.length > 0 && (
             <>
               <h5>수집 설정·분류 구현 출처</h5>
               <ul>
@@ -695,10 +769,18 @@ export function RcaOperatorReport({
           )}
           {guidance.flatMap((g, i) =>
             rows(obj(g.guidance).references)
-              .filter((r) => !isOperatorGuidanceReference(r, g.sources))
+              .filter((r) =>
+                decisionSummary
+                  ? isOperatorCollectionReference(r)
+                  : !isOperatorGuidanceReference(r, g.sources),
+              )
               .map((r, j) => (
                 <section key={`reference-${i}-${j}`}>
-                  <h5>{str(r.title)}</h5>
+                  <h5>
+                    {decisionSummary && isOperatorCollectionReference(r)
+                      ? '확인할 자료와 대조 방법'
+                      : str(r.title)}
+                  </h5>
                   <RcaPoints items={sentences(str(r.text))} />
                 </section>
               )),

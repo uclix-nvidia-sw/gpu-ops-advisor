@@ -18,7 +18,7 @@ it('removes the duplicate decision card while preserving facts, limits and check
   const html = renderToStaticMarkup(<RcaOperatorReport result={result} decisionSummary />);
   expect(html).not.toContain('aria-label="사건 판단 요약"');
   for (const section of result.narrative) expect(html).toContain(section.text);
-  expect(html.indexOf('노드에서 오류가 보고되었습니다.')).toBeGreaterThan(
+  expect(html.indexOf('노드에서 오류가 보고되었습니다.')).toBeLessThan(
     html.indexOf('id="rca-observation-detail"'),
   );
   expect(html.indexOf('작업 영향은 확인하지 못했습니다.')).toBeGreaterThan(

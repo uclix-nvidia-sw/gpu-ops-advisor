@@ -200,8 +200,16 @@ export function Marked({ text }: { text: string }) {
   );
 }
 
-/** Response-step sentences; the branch this alert reported moves first, marked with ▶. */
-export function RcaStepPoints({ items, branches = [] }: { items: string[]; branches?: string[] }) {
+/** Response-step sentences; the branch this alert reported moves first and is highlighted. */
+export function RcaStepPoints({
+  items,
+  branches = [],
+  reasonLabel = false,
+}: {
+  items: string[];
+  branches?: string[];
+  reasonLabel?: boolean;
+}) {
   if (!items.length) return null;
   const hit = (text: string) => branches.some((b) => text.startsWith(`${b}:`));
   const ordered = [...items.filter(hit), ...items.filter((text) => !hit(text))];
@@ -212,7 +220,8 @@ export function RcaStepPoints({ items, branches = [] }: { items: string[]; branc
         const labelled = at > 0 && at <= 32;
         return (
           <li key={i} className={hit(text) ? 'rca-branch-hit' : undefined}>
-            {hit(text) && '▶ '}
+            {hit(text) &&
+              (reasonLabel ? <span className="rca-current-reason">해당 증상</span> : '▶ ')}
             {labelled ? (
               <>
                 <strong>{text.slice(0, at)}</strong>
