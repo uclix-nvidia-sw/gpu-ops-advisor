@@ -817,29 +817,17 @@ function Analysis({ id }: { id: string }) {
       )}
       <QueryState query={q}>
         {incidentId ? (
-          <Notice>
-            {modern
-              ? '선택한 조사에서 발행된 보고서입니다. '
-              : '사건 검토와 수행한 조치는 원래 사건에 기록합니다. '}
-            <Link
-              to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-review-records`}
-              state={back}
-            >
-              {modern ? '사건 검토·처리 기록' : '이 RCA를 읽은 사건에서 검토·처리하기'}
-            </Link>
-            {modern && (
-              <>
-                {' '}
-                ·{' '}
-                <Link
-                  to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-investigation-history`}
-                  state={back}
-                >
-                  조사 이력
-                </Link>
-              </>
-            )}
-          </Notice>
+          !modern && (
+            <Notice>
+              사건 검토와 수행한 조치는 원래 사건에 기록합니다.{' '}
+              <Link
+                to={`/incidents/${encodeURIComponent(incidentId)}?analysis=${encodeURIComponent(id)}#new-review-records`}
+                state={back}
+              >
+                이 RCA를 읽은 사건에서 검토·처리하기
+              </Link>
+            </Notice>
+          )
         ) : (
           <Notice>
             원래 사건의 연결 정보가 없어 사건 기록을 열 수 없습니다. 아래는 이 분석에 남긴 이전

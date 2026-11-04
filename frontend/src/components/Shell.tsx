@@ -2,6 +2,7 @@ import {
   BookOpen,
   ChartNoAxesCombined,
   ChevronDown,
+  Cpu,
   History,
   Layers,
   LayoutDashboard,
@@ -84,7 +85,13 @@ export function Shell() {
     app.mode === 'operations'
       ? consoleNav
           .filter((n) => n.to !== '/fleet/assets')
-          .map((n) => (n.to === '/reports' ? { ...n, label: '운영 보고서' } : n))
+          .map((n) =>
+            n.to === '/dashboard'
+              ? { ...n, label: '대시보드' }
+              : n.to === '/reports'
+                ? { ...n, label: '운영 보고서' }
+                : n,
+          )
       : app.mode === 'classic'
         ? consoleNav
         : app.mode === 'new'
@@ -128,12 +135,18 @@ export function Shell() {
   const sidebar = (
     <>
       <Link to="/dashboard" className="brand">
-        <span className="brand-icon turtle-brand">
-          <img src="/turtle-mark.png" alt="" />
-        </span>
+        {app.mode === 'operations' ? (
+          <span className="brand-icon gpu-brand">
+            <Cpu size={24} strokeWidth={1.7} aria-hidden="true" />
+          </span>
+        ) : (
+          <span className="brand-icon turtle-brand">
+            <img src="/turtle-mark.png" alt="" />
+          </span>
+        )}
         <div>
           <strong>GPU Ops Advisor</strong>
-          <span>{app.mode === 'operations' ? '운영자' : 'GPU OPERATIONS'}</span>
+          {app.mode !== 'operations' && <span>GPU OPERATIONS</span>}
         </div>
       </Link>
       <div className="workspace-label">
@@ -208,9 +221,11 @@ export function Shell() {
             <span>
               {app.mode === 'workbench'
                 ? 'DEVELOPER'
-                : app.mode === 'classic' || app.mode === 'operations'
-                  ? 'OPERATIONS'
-                  : 'Workspace'}
+                : app.mode === 'operations'
+                  ? 'GPU Ops Advisor'
+                  : app.mode === 'classic'
+                    ? 'OPERATIONS'
+                    : 'Workspace'}
             </span>
             <span>/</span>
             <b>{menus.find((n) => active(n.to))?.label || '업무 상세'}</b>
